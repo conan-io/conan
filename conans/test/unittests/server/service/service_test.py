@@ -15,7 +15,7 @@ from conans.server.service.v1.service import ConanService
 from conans.server.service.v1.upload_download_service import FileUploadDownloadService
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.test.assets.cpp_test_files import cpp_hello_source_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, md5sum, mkdir, save, save_files
 
@@ -94,26 +94,23 @@ class ConanServiceTest(unittest.TestCase):
         self.service = ConanService(authorizer, self.server_store, "lasote")
         self.search_service = SearchService(authorizer, self.server_store, "lasote")
 
-        files = cpp_hello_source_files("test")
+        files = {"conanfile.py": str(GenConanfile("test"))}
         save_files(self.server_store.export(self.ref), files)
         self.server_store.update_last_revision(self.ref)
         manifest = FileTreeManifest.create(self.server_store.export(self.ref))
         conan_digest_path = os.path.join(self.server_store.export(self.ref), CONAN_MANIFEST)
         save(conan_digest_path, repr(manifest))
 
-        files = cpp_hello_source_files("package")
+        files = {"boost.lib": "", "boost2.lib": ""}
         save_files(self.server_store.package(self.pref), files)
 
     def test_get_recipe_snapshot(self):
         snap = self.service.get_recipe_snapshot(self.ref)
         base_path = self.server_store.export(self.ref)
 
-        snap_expected = {'hello.cpp': md5sum(os.path.join(base_path, "hello.cpp")),
-                         'conanmanifest.txt': md5sum(os.path.join(base_path, "conanmanifest.txt")),
-                         'executable': md5sum(os.path.join(base_path, "executable")),
-                         'main.cpp':  md5sum(os.path.join(base_path, "main.cpp")),
-                         'CMakeLists.txt':  md5sum(os.path.join(base_path, "CMakeLists.txt")),
-                         'hellotest.h':  md5sum(os.path.join(base_path, "hellotest.h"))}
+        snap_expected = {'conanmanifest.txt': md5sum(os.path.join(base_path, "conanmanifest.txt")),
+                         'conanfile.py': md5sum(os.path.join(base_path, "conanfile.py")),
+                         }
 
         self.assertEqual(snap, snap_expected)
 
@@ -128,12 +125,8 @@ class ConanServiceTest(unittest.TestCase):
                     + "/" + self.ref.revision
                     + "/export/" + filename)
 
-        expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
-                         'conanmanifest.txt': fake_url_build('conanmanifest.txt'),
-                         'executable': fake_url_build('executable'),
-                         'hello.cpp': fake_url_build('hello.cpp'),
-                         'hellotest.h': fake_url_build('hellotest.h'),
-                         'main.cpp': fake_url_build('main.cpp')}
+        expected_urls = {'conanfile.py': fake_url_build('conanfile.py'),
+                         'conanmanifest.txt': fake_url_build('conanmanifest.txt')}
         self.assertEqual(urls, expected_urls)
 
     def test_get_package_download_urls(self):
@@ -149,11 +142,8 @@ class ConanServiceTest(unittest.TestCase):
                     + "/" + self.pref.revision
                     + "/" + filename)
 
-        expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
-                         'executable': fake_url_build('executable'),
-                         'hello.cpp': fake_url_build('hello.cpp'),
-                         'hellopackage.h': fake_url_build('hellopackage.h'),
-                         'main.cpp': fake_url_build('main.cpp')}
+        expected_urls = {'boost.lib': fake_url_build('boost.lib'),
+                         'boost2.lib': fake_url_build('boost2.lib')}
         self.assertEqual(urls, expected_urls)
 
     def test_get_conanfile_upload_urls(self):
@@ -226,16 +216,20 @@ class ConanServiceTest(unittest.TestCase):
         self.assertEqual(info, [ref3.copy_clear_rev()])
 
         info = self.search_service.search_packages(ref2, None)
-        self.assertEqual(info, {'12345587754': {'full_requires': [],
+        self.assertEqual(info, {'12345587754': {'content': '\n[options]\n    use_Qt=False\n',
+                                                'full_requires': [],
                                                 'options': {'use_Qt': 'False'},
-                                                'settings': {},
-                                                'recipe_hash': None}})
+                                                'recipe_hash': None,
+                                                'settings': {}
+                                                }})
 
         info = self.search_service.search_packages(ref3, None)
-        self.assertEqual(info, {'77777777777': {'full_requires': [],
+        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n',
+                                                'full_requires': [],
                                                 'options': {'use_Qt': 'True'},
-                                                'settings': {},
-                                                'recipe_hash': None}})
+                                                'recipe_hash': None,
+                                                'settings': {}}
+                                })
 
     def test_remove(self):
         ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION_V1)

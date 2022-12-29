@@ -2,13 +2,11 @@ import os
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.assets.multi_config import multi_config_files
 from conans.test.utils.tools import TestClient
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeConfigsTest(unittest.TestCase):

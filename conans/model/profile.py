@@ -1,10 +1,13 @@
 import copy
 from collections import OrderedDict, defaultdict
 
+from conan.tools.env.environment import ProfileEnvironment
 from conans.client import settings_preprocessor
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
+from conans.model.ref import ConanFileReference
 from conans.model.values import Values
 
 
@@ -19,6 +22,9 @@ class Profile(object):
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
+        self.conf = ConfDefinition()
+        self.buildenv = ProfileEnvironment()
+        self.runenv = ProfileEnvironment()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -81,17 +87,46 @@ class Profile(object):
         result.append("[env]")
         result.append(self.env_values.dumps())
 
+        if self.conf:
+            result.append("[conf]")
+            result.append(self.conf.dumps())
+
+        if self.buildenv:
+            result.append("[buildenv]")
+            result.append(self.buildenv.dumps())
+
+        if self.runenv:
+            result.append("[runenv]")
+            result.append(self.runenv.dumps())
+
         return "\n".join(result).replace("\n\n", "\n")
 
-    def update(self, other):
+    def compose_profile(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
         # this is the opposite
         other.env_values.update(self.env_values)
         self.env_values = other.env_values
         self.options.update(other.options)
+        # It is possible that build_requires are repeated, or same package but different versions
         for pattern, req_list in other.build_requires.items():
-            self.build_requires.setdefault(pattern, []).extend(req_list)
+            existing_build_requires = self.build_requires.get(pattern)
+            existing = OrderedDict()
+            if existing_build_requires is not None:
+                for br in existing_build_requires:
+                    # TODO: Understand why sometimes they are str and other are ConanFileReference
+                    r = ConanFileReference.loads(br) \
+                         if not isinstance(br, ConanFileReference) else br
+                    existing[r.name] = br
+            for req in req_list:
+                r = ConanFileReference.loads(req) \
+                     if not isinstance(req, ConanFileReference) else req
+                existing[r.name] = req
+            self.build_requires[pattern] = list(existing.values())
+
+        self.conf.update_conf_definition(other.conf)
+        self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
+        self.runenv.update_profile_env(other.runenv)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

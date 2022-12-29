@@ -5,12 +5,12 @@ from collections import namedtuple
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
+from conans.client.downloaders.download import run_downloader
+from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV1Router
-from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, handle_return_deserializer
-from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException, NotFoundException, NoRestV2Available, \
     PackageNotFoundException
 from conans.model.info import ConanInfo
@@ -44,20 +44,19 @@ class RestV1Methods(RestCommonMethods):
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
-        download_cache = self._config.download_cache
-        if download_cache:
-            assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
-            downloader = CachedFileDownloader(download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        retry = self._config.retry
+        retry_wait = self._config.retry_wait
+        download_cache = self._config.download_cache
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
             auth, _ = self._file_server_capabilities(resource_url)
-            if download_cache:
-                md5 = snapshot_md5[filename]
-                contents = downloader.download(resource_url, auth=auth, md5=md5)
-            else:
-                contents = downloader.download(resource_url, auth=auth)
+            md5 = snapshot_md5.get(filename, None) if snapshot_md5 else None
+            assert not download_cache or snapshot_md5, \
+                "if download_cache is set, we need the file checksums"
+            contents = run_downloader(self.requester, None, self.verify_ssl, retry=retry,
+                                      retry_wait=retry_wait, download_cache=download_cache,
+                                      url=resource_url, auth=auth, md5=md5)
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -145,7 +144,7 @@ class RestV1Methods(RestCommonMethods):
         # Get the upload urls and then upload files
         url = self.router.package_upload_urls(pref)
         file_sizes = {filename: os.stat(abs_path).st_size for filename,
-                      abs_path in files_to_upload.items()}
+                                                              abs_path in files_to_upload.items()}
         logger.debug("Requesting upload urls...")
         urls = self._get_file_to_url_dict(url, data=file_sizes)
         if self._matrix_params:
@@ -164,7 +163,7 @@ class RestV1Methods(RestCommonMethods):
         for filename, resource_url in sorted(file_urls.items()):
             if output and not output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
-                            "Uploading %s -> %s" % (filename, display_name))
+                    "Uploading %s -> %s" % (filename, display_name))
                 output.writeln(msg)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
@@ -188,25 +187,23 @@ class RestV1Methods(RestCommonMethods):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
-        download_cache = self._config.download_cache
-        if download_cache:
-            assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
-            downloader = CachedFileDownloader(download_cache, downloader)
-
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        retry = self._config.retry
+        retry_wait = self._config.retry_wait
+        download_cache = self._config.download_cache
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
             if self._output and not self._output.is_terminal:
                 self._output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
             abs_path = os.path.join(to_folder, filename)
-            if download_cache:
-                md5 = snapshot_md5[filename]
-                downloader.download(resource_url, abs_path, auth=auth, md5=md5)
-            else:
-                downloader.download(resource_url, abs_path, auth=auth)
+            md5 = snapshot_md5.get(filename, None) if snapshot_md5 else None
+            assert not download_cache or snapshot_md5, \
+                "if download_cache is set, we need the file checksums"
+            run_downloader(self.requester, self._output, self.verify_ssl, retry=retry,
+                           retry_wait=retry_wait, download_cache=download_cache,
+                           url=resource_url, file_path=abs_path, auth=auth, md5=md5)
             ret[filename] = abs_path
         return ret
 
@@ -282,7 +279,8 @@ class RestV1Methods(RestCommonMethods):
                         ret.append(tmp)
             return sorted(ret)
         else:
-            downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
+            downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config.retry,
+                                        self._config.retry_wait)
             auth, _ = self._file_server_capabilities(urls[path])
             content = downloader.download(urls[path], auth=auth)
 
@@ -314,7 +312,7 @@ class RestV1Methods(RestCommonMethods):
         if not package_ids and ret.status_code == 404:
             # Double check if it is a 404 because there are no packages
             try:
-                if not self.search_packages(ref, query=None):
+                if not self.search_packages(ref):
                     return namedtuple("_", ['status_code', 'content'])(200, b'')
             except Exception as e:
                 logger.warning("Unexpected error searching {} packages"

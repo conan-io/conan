@@ -6,7 +6,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 from conans.test.assets.visual_project_files import get_vs_project_files
@@ -26,11 +25,10 @@ Hello1/0.1@lasote/testing
 
 class VisualStudioTest(unittest.TestCase):
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_cmake
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_build_vs_project_with_a(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -96,7 +94,6 @@ class VisualStudioTest(unittest.TestCase):
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("Hello world!!!", client.out)
 
-    @pytest.mark.tool_compiler
     def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
@@ -114,6 +111,9 @@ class VisualStudioTest(unittest.TestCase):
             from conans import ConanFile
 
             class Consumer(ConanFile):
+                name = "Consumer"
+                version = "0.1"
+
                 requires = "mylib/1.0@us/ch"
                 generators = "visual_studio"
                 """)
@@ -123,6 +123,8 @@ class VisualStudioTest(unittest.TestCase):
         client.run("install conanfile_consumer.py")
 
         content = client.load("conanbuildinfo.props")
+        self.assertIn("<ConanPackageName>Consumer</ConanPackageName>", content)
+        self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", content)
         self.assertIn("<ConanLibraries>lib1.lib;</ConanLibraries>", content)
         self.assertIn("<ConanSystemDeps>sys1.lib;</ConanSystemDeps>", content)
         self.assertIn("<AdditionalLibraryDirectories>$(ConanLibraryDirectories)"

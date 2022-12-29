@@ -1,12 +1,16 @@
 import os
+import platform
 from collections import OrderedDict, defaultdict
 
+from jinja2 import Environment, FileSystemLoader
+
+from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
+from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 from conans.util.log import logger
@@ -40,7 +44,7 @@ class ProfileParser(object):
             else:
                 try:
                     name, value = line.split("=", 1)
-                except ValueError as error:
+                except ValueError:
                     raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
                 name = name.strip()
                 if " " in name:
@@ -81,17 +85,17 @@ class ProfileParser(object):
 
 
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
-    def valid_path(profile_path):
-        if exists and not os.path.isfile(profile_path):
-            raise ConanException("Profile not found: %s" % profile_path)
-        return profile_path
+    def valid_path(_profile_path, _profile_name=None):
+        if exists and not os.path.isfile(_profile_path):
+            raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
+        return _profile_path
 
     if os.path.isabs(profile_name):
         return valid_path(profile_name)
 
-    if profile_name[:2] in ("./", ".\\"):  # local
+    if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        return valid_path(profile_path)
+        return valid_path(profile_path, profile_name)
 
     if not os.path.exists(default_folder):
         mkdir(default_folder)
@@ -116,6 +120,14 @@ def read_profile(profile_name, cwd, default_folder):
     logger.debug("PROFILE LOAD: %s" % profile_path)
     text = load(profile_path)
 
+    if profile_name.endswith(".jinja"):
+        base_path = os.path.dirname(profile_path)
+        context = {"platform": platform,
+                   "os": os,
+                   "profile_dir": base_path}
+        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        text = rtemplate.render(context)
+
     try:
         return _load_profile(text, profile_path, default_folder)
     except ConanV2Exception:
@@ -137,7 +149,7 @@ def _load_profile(text, profile_path, default_folder):
         for include in profile_parser.get_includes():
             # Recursion !!
             profile, included_vars = read_profile(include, cwd, default_folder)
-            inherited_profile.update(profile)
+            inherited_profile.compose_profile(profile)
             profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
@@ -149,9 +161,8 @@ def _load_profile(text, profile_path, default_folder):
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
-        if 'scopes' in doc._sections:
-            conan_v2_behavior("Field 'scopes' in profile is deprecated")
+                           allowed_fields=["build_requires", "tool_requires", "settings", "env",
+                                           "options", "conf", "buildenv", "runenv"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -185,15 +196,15 @@ def _apply_inner_profile(doc, base_profile):
 
     def get_package_name_value(item):
         """Parse items like package:name=value or name=value"""
-        package_name = None
+        packagename = None
         if ":" in item:
             tmp = item.split(":", 1)
-            package_name, item = tmp
+            packagename, item = tmp
 
-        name, value = item.split("=", 1)
-        name = name.strip()
-        value = unquote(value)
-        return package_name, name, value
+        result_name, result_value = item.split("=", 1)
+        result_name = result_name.strip()
+        result_value = unquote(result_value)
+        return packagename, result_name, result_value
 
     for setting in doc.settings.splitlines():
         setting = setting.strip()
@@ -211,6 +222,10 @@ def _apply_inner_profile(doc, base_profile):
         for req in doc.build_requires.splitlines():
             _load_single_build_require(base_profile, req)
 
+    if doc.tool_requires:
+        for req in doc.tool_requires.splitlines():
+            _load_single_build_require(base_profile, req)
+
     if doc.options:
         base_profile.options.update(OptionsValues.loads(doc.options))
 
@@ -221,31 +236,56 @@ def _apply_inner_profile(doc, base_profile):
     current_env_values.update(base_profile.env_values)
     base_profile.env_values = current_env_values
 
+    if doc.conf:
+        new_prof = ConfDefinition()
+        new_prof.loads(doc.conf, profile=True)
+        base_profile.conf.update_conf_definition(new_prof)
 
-def profile_from_args(profiles, settings, options, env, cwd, cache):
+    if doc.buildenv:
+        buildenv = ProfileEnvironment.loads(doc.buildenv)
+        base_profile.buildenv.update_profile_env(buildenv)
+
+    if doc.runenv:
+        runenv = ProfileEnvironment.loads(doc.runenv)
+        base_profile.runenv.update_profile_env(runenv)
+
+
+def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_profile=False):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    default_profile = cache.default_profile  # Ensures a default profile creating
+    # Ensures a default profile creating
+    default_profile = cache.default_profile
+    create_profile = profiles or settings or options or env or conf or not build_profile
 
     if profiles is None:
-        result = default_profile
+        default_name = "core:default_build_profile" if build_profile else "core:default_profile"
+        default_conf = cache.new_config[default_name]
+        if default_conf is not None:
+            default_profile_path = default_conf if os.path.isabs(default_conf) \
+                else os.path.join(cache.profiles_path, default_conf)
+            result, _ = read_profile(default_profile_path, os.getcwd(), cache.profiles_path)
+        elif create_profile:
+            result = default_profile
+        else:
+            result = None
     else:
         result = Profile()
         for p in profiles:
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
-            result.update(tmp)
+            result.compose_profile(tmp)
 
-    args_profile = _profile_parse_args(settings, options, env)
+    args_profile = _profile_parse_args(settings, options, env, conf)
 
     if result:
-        result.update(args_profile)
+        result.compose_profile(args_profile)
     else:
-        result = args_profile
+        if create_profile:
+            result = args_profile
     return result
 
 
-def _profile_parse_args(settings, options, envs):
+def _profile_parse_args(settings, options, envs, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -276,23 +316,29 @@ def _profile_parse_args(settings, options, envs):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(env, package_env):
-        env_values = EnvValues()
-        for name, value in env:
-            env_values.add(name, EnvValues.load_value(value))
-        for package, data in package_env.items():
+    def _get_env_values(_env, _package_env):
+        _env_values = EnvValues()
+        for name, value in _env:
+            _env_values.add(name, EnvValues.load_value(value))
+        for package, data in _package_env.items():
             for name, value in data:
-                env_values.add(name, EnvValues.load_value(value), package)
-        return env_values
+                _env_values.add(name, EnvValues.load_value(value), package)
+        return _env_values
 
-    result = Profile()
     options = _get_tuples_list_from_extender_arg(options)
-    result.options = OptionsValues(options)
     env, package_env = _get_simple_and_package_tuples(envs)
     env_values = _get_env_values(env, package_env)
-    result.env_values = env_values
     settings, package_settings = _get_simple_and_package_tuples(settings)
+
+    result = Profile()
+    result.options = OptionsValues(options)
+    result.env_values = env_values
     result.settings = OrderedDict(settings)
+    if conf:
+        result.conf = ConfDefinition()
+        result.conf.loads("\n".join(conf))
+
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
+
     return result

@@ -25,7 +25,8 @@ def gather_files(folder):
     symlinks = {}
     keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
     for root, dirs, files in walk(folder):
-        dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
+        if not keep_python:
+            dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
@@ -71,8 +72,7 @@ class FileTreeManifest(object):
 
     @staticmethod
     def loads(text):
-        """ parses a string representation, generated with __repr__ of a
-        ConanDigest
+        """ parses a string representation, generated with __repr__
         """
         tokens = text.split("\n")
         the_time = int(tokens[0])
@@ -80,7 +80,7 @@ class FileTreeManifest(object):
         keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
         for md5line in tokens[1:]:
             if md5line:
-                filename, file_md5 = md5line.split(": ")
+                filename, file_md5 = md5line.rsplit(": ", 1)
                 # FIXME: This is weird, it should never happen, maybe remove?
                 if not discarded_file(filename, keep_python):
                     file_sums[filename] = file_md5

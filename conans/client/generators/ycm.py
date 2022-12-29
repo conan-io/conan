@@ -140,7 +140,7 @@ def GetCompilationInfoForFile( filename ):
   return database.GetCompilationInfoForFile( filename )
 
 
-def FlagsForFile( filename, **kwargs ):
+def Settings( filename, **kwargs ):
   relative_to = None
   compiler_flags = None
 

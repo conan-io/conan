@@ -1,5 +1,5 @@
 import unittest
-from collections import namedtuple, Counter
+from collections import namedtuple, Counter, defaultdict
 
 import six
 from mock import Mock
@@ -22,7 +22,7 @@ from conans.model.requires import Requirements
 from conans.model.settings import Settings, bad_value_msg
 from conans.model.values import Values
 from conans.test.unittests.model.fake_retriever import Retriever
-from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, test_profile, GenConanfile)
+from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, create_profile, GenConanfile)
 from conans.test.utils.mocks import TestBufferConanOutput
 
 hello_ref = ConanFileReference.loads("Hello/1.2@user/testing")
@@ -87,6 +87,7 @@ class GraphTest(unittest.TestCase):
                                         self.resolver, None)
         cache = Mock()
         cache.config.default_package_id_mode = "semver_direct_mode"
+        cache.new_config = defaultdict(Mock)
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
 
     def build_graph(self, content, options="", settings=""):
@@ -96,7 +97,7 @@ class GraphTest(unittest.TestCase):
         profile = Profile()
         profile.processed_settings = full_settings
         profile.options = OptionsValues.loads(options)
-        profile = test_profile(profile=profile)
+        profile = create_profile(profile=profile)
         root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
                                              profile_host=profile, profile_build=None)
@@ -1482,7 +1483,7 @@ class ConsumerConan(ConanFile):
         self.retriever.save_recipe(libd_ref, self.libd_content)
 
     def build_graph(self, content):
-        profile = test_profile()
+        profile = create_profile()
         root_conan = self.retriever.root(content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
                                              profile_host=profile, profile_build=None)
@@ -1735,8 +1736,8 @@ class SayConan(ConanFile):
             self.build_graph(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Macos',
-                                     'Neutrino', 'SunOS', 'Windows', 'WindowsCE', 'WindowsStore',
-                                     'iOS', 'tvOS', 'watchOS']),
+                                     'Neutrino', 'SunOS', 'VxWorks', 'Windows', 'WindowsCE',
+                                     'WindowsStore', 'baremetal', 'iOS', 'tvOS', 'watchOS']),
                       str(cm.exception))
 
     def test_config_remove2(self):
@@ -1753,8 +1754,6 @@ class SayConan(ConanFile):
 """
         deps_graph = self.build_graph(content, settings="os=Windows\n compiler=gcc\narch=x86\n"
                                       "compiler.libcxx=libstdc++")
-        self.assertIn("WARN: config() has been deprecated. Use config_options() and configure()",
-                      self.output)
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
@@ -1868,7 +1867,7 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
 
-        profile = test_profile(profile=profile)
+        profile = create_profile(profile=profile)
         root_conan = self.retriever.root(chat_content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
                                              profile_host=profile, profile_build=None)

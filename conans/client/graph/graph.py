@@ -21,6 +21,7 @@ BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
+BINARY_INVALID = "Invalid"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -64,6 +65,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -88,6 +90,9 @@ class Node(object):
         self.graph_lock_node = None  # the locking information can be None
         self.id_direct_prefs = None
         self.id_indirect_prefs = None
+
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
+        self.should_build = False  # If the --build or policy wants to build this binary
 
     @property
     def id(self):
@@ -233,7 +238,7 @@ class Edge(object):
         return self.require.build_require
 
     def __eq__(self, other):
-        return self.src == self.src and self.dst == other.dst
+        return self.src == other.src and self.dst == other.dst
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -247,6 +252,7 @@ class DepsGraph(object):
         self.nodes = set()
         self.root = None
         self.aliased = {}
+        self.new_aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def add_node(self, node):

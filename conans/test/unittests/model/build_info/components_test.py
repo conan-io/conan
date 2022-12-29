@@ -414,3 +414,14 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual([os.path.join(folder, "include")], list(deps_cpp_info.include_paths))
         self.assertListEqual([os.path.join(folder, "include")],
                              list(deps_cpp_info["my_lib"].components["Component"].include_paths))
+
+    def test_deps_cpp_info_components_includedirs(self):
+        info = CppInfo("my_lib", "root")
+        info.components["component"].includedirs = ["include1", "include2"]
+        info.components["component"].filter_empty = False
+        dep_info = DepCppInfo(info)
+        expected = [os.path.join("root", "include1"), os.path.join("root", "include2")]
+        self.assertListEqual(expected, list(dep_info.include_paths))
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.add("my_lib", dep_info)
+        self.assertListEqual(expected, list(deps_cpp_info.includedirs))

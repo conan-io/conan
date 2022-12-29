@@ -6,7 +6,7 @@ import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.client.output import Color
-from conans.client.tools import detected_os, OSInfo
+from conans.client.tools import detected_os, detected_architecture
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
@@ -41,7 +41,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         if ret != 0:
             return None
         compiler = "gcc"
-        installed_version = re.search("([0-9]+(\.[0-9])?)", out).group()
+        installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
@@ -61,7 +61,7 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        installed_version = re.search("([0-9]+\.[0-9])", out).group()
+        installed_version = re.search(r"([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
@@ -73,11 +73,11 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
         _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
-        installed_version = re.search("Sun C.*([0-9]+\.[0-9]+)", out)
+        installed_version = re.search(r"Sun C.*([0-9]+\.[0-9]+)", out)
         if installed_version:
             installed_version = installed_version.group(1)
         else:
-            installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
+            installed_version = re.search(r"([0-9]+\.[0-9]+)", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
@@ -107,14 +107,14 @@ def _get_default_compiler(output):
             if compiler:
                 return compiler
         else:
+            if "clang" in command.lower():
+                return _clang_compiler(output, command)
             if "gcc" in command:
                 gcc = _gcc_compiler(output, command)
                 if platform.system() == "Darwin" and gcc is None:
                     output.error("%s detected as a frontend using apple-clang. "
                                  "Compiler not supported" % command)
                 return gcc
-            if "clang" in command.lower():
-                return _clang_compiler(output, command)
             if platform.system() == "SunOS" and command.lower() == "cc":
                 return _sun_cc_compiler(output, command)
         # I am not able to find its version
@@ -156,9 +156,14 @@ def _get_profile_compiler_version(compiler, version, output):
     elif compiler == "gcc" and int(major) >= 5:
         output.info("gcc>=5, using the major as version")
         return major
+    elif compiler == "apple-clang" and int(major) >= 13:
+        output.info("apple-clang>=13, using the major as version")
+        return major
     elif compiler == "Visual Studio":
         return major
     elif compiler == "intel" and (int(major) < 19 or (int(major) == 19 and int(minor) == 0)):
+        return major
+    elif compiler == "msvc":
         return major
     return version
 
@@ -221,7 +226,7 @@ def _detect_compiler_version(result, output, profile_path):
     except Exception:
         compiler, version = None, None
     if not compiler or not version:
-        output.error("Unable to find a working compiler")
+        output.info("No compiler was detected (one may not be needed)")
         return
 
     result.append(("compiler", compiler))
@@ -244,32 +249,48 @@ def _detect_compiler_version(result, output, profile_path):
             result.append(("compiler.libcxx", "libstdc++"))
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
+    elif compiler == "mcst-lcc":
+        result.append(("compiler.base", "gcc"))  # do the same for Intel?
+        result.append(("compiler.base.libcxx", "libstdc++"))
+        version = Version(version)
+        if version >= "1.24":
+            result.append(("compiler.base.version", "7.3"))
+        elif version >= "1.23":
+            result.append(("compiler.base.version", "5.5"))
+        elif version >= "1.21":
+            result.append(("compiler.base.version", "4.8"))
+        else:
+            result.append(("compiler.base.version", "4.4"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
 
 
 def _detect_os_arch(result, output):
-    architectures = {'i386': 'x86',
-                     'i686': 'x86',
-                     'i86pc': 'x86',
-                     'amd64': 'x86_64',
-                     'aarch64': 'armv8',
-                     'sun4v': 'sparc'}
+    from conans.client.conf import get_default_settings_yml
+    from conans.model.settings import Settings
+
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
 
-    platform_machine = platform.machine().lower()
-    if platform_machine:
-        arch = architectures.get(platform_machine, platform_machine)
+    arch = detected_architecture()
+
+    if arch:
         if arch.startswith('arm'):
-            for a in ("armv6", "armv7hf", "armv7", "armv8"):
+            settings = Settings.loads(get_default_settings_yml())
+            defined_architectures = settings.arch.values_range
+            defined_arm_architectures = [v for v in defined_architectures if v.startswith("arm")]
+
+            for a in defined_arm_architectures:
                 if arch.startswith(a):
                     arch = a
                     break
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
-        elif OSInfo().is_aix:
-            arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
         result.append(("arch_build", arch))

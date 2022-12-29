@@ -8,9 +8,8 @@ from conans.test.utils.tools import TestClient
 
 class MesonTest(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for vcvars")
-    @pytest.mark.tool_compiler
-    @pytest.mark.tool_meson
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for vcvars")
+    @pytest.mark.tool_visual_studio
     def test_vcvars_priority(self):
         # https://github.com/conan-io/conan/issues/5999
         client = TestClient()

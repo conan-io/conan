@@ -2,7 +2,6 @@ import os
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
@@ -198,7 +197,6 @@ class V3D(ConanFile):
             self.assertIn("set(CONAN_LIBS mylibLibA0.1lib ${CONAN_LIBS})", conanbuildinfo)
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class PrivateDepsTest(unittest.TestCase):

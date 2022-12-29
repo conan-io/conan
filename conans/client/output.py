@@ -137,6 +137,8 @@ class ConanOutput(object):
     def warn(self, data):
         self.writeln("WARN: {}".format(data), Color.BRIGHT_YELLOW, error=True)
 
+    warning = warn
+
     def error(self, data):
         self.writeln("ERROR: {}".format(data), Color.BRIGHT_RED, error=True)
 
@@ -166,7 +168,8 @@ class ScopedOutput(ConanOutput):
         self._color = output._color
 
     def write(self, data, front=None, back=None, newline=False, error=False):
-        assert self.scope != "virtual", "printing with scope==virtual"
+        if self.scope == "virtual":
+            return
         super(ScopedOutput, self).write("%s: " % self.scope, front=front, back=back,
                                         newline=False, error=error)
         super(ScopedOutput, self).write("%s" % data, front=Color.BRIGHT_WHITE, back=back,

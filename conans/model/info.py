@@ -14,6 +14,7 @@ from conans.util.sha import sha1
 
 PREV_UNKNOWN = "PREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
+PACKAGE_ID_INVALID = "INVALID"
 
 
 class RequirementInfo(object):
@@ -65,6 +66,8 @@ class RequirementInfo(object):
     def sha(self):
         if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
             return None
+        if self.package_id == PACKAGE_ID_INVALID:
+            return PACKAGE_ID_INVALID
         vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
         # This is done later to NOT affect existing package-IDs (before revisions)
         if self.recipe_revision:
@@ -218,6 +221,8 @@ class RequirementsInfo(object):
             s = data[key].sha
             if s is None:
                 return None
+            if s == PACKAGE_ID_INVALID:
+                return PACKAGE_ID_INVALID
             result.append(s)
         return sha1('\n'.join(result).encode())
 
@@ -344,6 +349,9 @@ class PythonRequireInfo(object):
         self._channel = self._ref.channel
         self._revision = self._ref.revision
 
+    def unrelated_mode(self):
+        self._name = self._version = self._user = self._channel = self._revision = None
+
 
 class PythonRequiresInfo(object):
 
@@ -425,6 +433,7 @@ class ConanInfo(object):
         """ Useful for build_id implementation
         """
         result = ConanInfo()
+        result.invalid = self.invalid
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
@@ -435,6 +444,7 @@ class ConanInfo(object):
     def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode,
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
+        result.invalid = None
         result.full_settings = settings
         result.settings = settings.copy()
         result.full_options = options
@@ -461,6 +471,7 @@ class ConanInfo(object):
                                      "requires", "full_requires", "scope", "recipe_hash", "env"],
                               raise_unexpected_field=False)
         result = ConanInfo()
+        result.invalid = None
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
         result.options = OptionsValues.loads(parser.options)
@@ -534,6 +545,8 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
+        if self.invalid:
+            return PACKAGE_ID_INVALID
         result = [self.settings.sha]
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
@@ -541,9 +554,14 @@ class ConanInfo(object):
         requires_sha = self.requires.sha
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
+        if requires_sha == PACKAGE_ID_INVALID:
+            self.invalid = "Invalid transitive dependencies"
+            return PACKAGE_ID_INVALID
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)
+        if hasattr(self, "conf"):
+            result.append(self.conf.sha)
         package_id = sha1('\n'.join(result).encode())
         return package_id
 
@@ -557,10 +575,43 @@ class ConanInfo(object):
                            "recipe_hash": self.recipe_hash}
         return conan_info_json
 
+    # FIXME: Rename this to "clear" in 2.0
     def header_only(self):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+
+    clear = header_only
+
+    def msvc_compatible(self):
+        if self.settings.compiler != "msvc":
+            return
+
+        compatible = self.clone()
+        version = compatible.settings.compiler.version
+        runtime = compatible.settings.compiler.runtime
+        runtime_type = compatible.settings.compiler.runtime_type
+
+        compatible.settings.compiler = "Visual Studio"
+        from conan.tools.microsoft.visual import msvc_version_to_vs_ide_version
+        visual_version = msvc_version_to_vs_ide_version(version)
+        compatible.settings.compiler.version = visual_version
+        runtime = "MT" if runtime == "static" else "MD"
+        if runtime_type == "Debug":
+            runtime = "{}d".format(runtime)
+        compatible.settings.compiler.runtime = runtime
+        return compatible
+
+    def apple_clang_compatible(self):
+        # https://github.com/conan-io/conan/pull/10797
+        # apple-clang compiler version 13 will be compatible with 13.0
+        if not self.settings.compiler or \
+           (self.settings.compiler != "apple-clang" or self.settings.compiler.version != "13"):
+            return
+
+        compatible = self.clone()
+        compatible.settings.compiler.version = "13.0"
+        return compatible
 
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
@@ -598,7 +649,11 @@ class ConanInfo(object):
         If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
         """
-
+        if self.full_settings.compiler == "msvc":
+            # This post-processing of package_id was a hack to introduce this in a non-breaking way
+            # This whole function will be removed in Conan 2.0, and the responsibility will be
+            # of the input profile
+            return
         if (self.full_settings.compiler and
                 self.full_settings.compiler.version):
             default = cppstd_default(self.full_settings)

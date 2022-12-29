@@ -9,9 +9,19 @@ from conans.client.output import ConanOutput
 from conans.client.tools.files import which
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidSystemRequirements
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.mocks import MockSettings, MockConanfile, TestBufferConanOutput
+
+
+class RunnerMultipleMock(object):
+    def __init__(self, expected=None):
+        self.calls = 0
+        self.expected = expected
+
+    def __call__(self, command, *args, **kwargs):  # @UnusedVariable
+        self.calls += 1
+        return 0 if command in self.expected else 1
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -90,10 +100,10 @@ class SystemPackageToolTest(unittest.TestCase):
                 sudo_cmd = "sudo " if isatty else "sudo -A "
 
             runner = RunnerOrderedMock()
-            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if gpg_key:
                 runner.commands.append(
                     ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if update:
                 runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
 
@@ -351,16 +361,22 @@ class SystemPackageToolTest(unittest.TestCase):
                                  'choco search --local-only --exact a_package | '
                                  'findstr /c:"1 packages installed."')
 
+    def test_opensuse_zypper_aptitude(self):
+        # https://github.com/conan-io/conan/issues/8737
+        os_info = OSInfo()
+        os_info.is_linux = True
+        os_info.is_solaris = False
+        os_info.is_macos = False
+        os_info.is_windows = False
+        os_info.linux_distro = "opensuse"
+        runner = RunnerMock()
+
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+            spt.update()
+            self.assertEqual(runner.command_called, "zypper --non-interactive ref")
+
     def test_system_package_tool_try_multiple(self):
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, output):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | '
@@ -387,16 +403,6 @@ class SystemPackageToolTest(unittest.TestCase):
         Allowed values: (enabled, verify, disabled). Parser accepts it in lower/upper
         case or any combination.
         """
-
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, *args, **kwargs):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
         packages = ["a_package", "another_package", "yet_another_package"]
 
         # Check invalid mode raises ConanException
@@ -421,7 +427,7 @@ class SystemPackageToolTest(unittest.TestCase):
             packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
-            with self.assertRaises(ConanException) as exc:
+            with self.assertRaises(ConanInvalidSystemRequirements) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
             self.assertIn('\n'.join(packages), self.out)
@@ -463,7 +469,7 @@ class SystemPackageToolTest(unittest.TestCase):
             runner = RunnerMultipleMock(["sudo -A apt-get update"])
             spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out,
                                     default_mode="verify")
-            with self.assertRaises(ConanException) as exc:
+            with self.assertRaises(ConanInvalidSystemRequirements) as exc:
                 spt.install(packages)
             self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
             self.assertIn('\n'.join(packages), self.out)
@@ -529,3 +535,143 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
+
+    def test_install_all_packages(self):
+        """ SystemPackageTool must install all packages
+        """
+        # No packages installed
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(["sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package another_package yet_another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(5, runner.calls)
+
+    def test_install_few_packages(self):
+        """ SystemPackageTool must install 2 packages only
+        """
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " another_package yet_another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(5, runner.calls)
+
+    def test_packages_installed(self):
+        """ SystemPackageTool must not install. All packages are installed.
+        """
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' yet_another_package | '
+                                         'grep -q "ok installed"',
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(3, runner.calls)
+
+    def test_empty_package_list(self):
+        """ Install nothing
+        """
+        packages = []
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock()
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
+                                    output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(0, runner.calls)
+
+    def test_install_variants_and_packages(self):
+        """ SystemPackageTool must install one of variants and all packages at same list
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(["sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " varianta",
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(8, runner.calls)
+
+    def test_installed_variant_and_install_packages(self):
+        """ Only packages must be installed. Variants are already installed
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' varianta | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(5, runner.calls)
+
+    def test_installed_packages_and_install_variant(self):
+        """ Only variant must be installed. Packages are already installed
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " varianta",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(7, runner.calls)
+
+    def test_variants_and_packages_installed(self):
+        """ Install nothing, all is already installed
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' varianta | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(3, runner.calls)
+
+    def test_empty_variants_and_packages(self):
+        packages = [(),]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock()
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
+                                    output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(0, runner.calls)
+
+    def test_install_all_multiple_package_list(self):
+        """ Separated string list must be treated as full package list to be installed
+        """
+        packages = "varianta variantb", "variantc variantd"
+        runner = RunnerMultipleMock([])
+        spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+        with self.assertRaises(ConanException) as error:
+            spt.install_packages(packages)
+            self.assertEqual("Each string must contain only one package to be installed."
+                             " Use a list instead e.g. ['foo', 'bar'].", str(error.exception))

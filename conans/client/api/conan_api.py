@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 
 from tqdm import tqdm
@@ -10,11 +9,9 @@ from conans.client.cache.cache import ClientCache
 from conans.client.migrations import ClientMigrator
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
-from conans.errors import NoRemoteAvailable, ConanException
+from conans.errors import NoRemoteAvailable
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe
 
 
@@ -55,9 +52,6 @@ class ConanAPIV2(object):
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
-        if not get_env(CONAN_V2_MODE_ENVVAR, False):
-            # FIXME Remove in Conan 2.0
-            sys.path.append(os.path.join(self.cache_folder, "python"))
 
     @api_method
     def user_list(self, remote_name=None):

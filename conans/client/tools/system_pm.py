@@ -1,10 +1,11 @@
 import os
 import sys
+import six
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
 from conans.client.tools.files import which
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidSystemRequirements
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
 
@@ -92,9 +93,9 @@ class SystemPackageTool(object):
         self._tool.update()
 
     def install(self, packages, update=True, force=False, arch_names=None):
-        """ Get the system package tool install command.
+        """ Get the system package tool install command and install one package
 
-        :param packages: String with all package to be installed e.g. "libusb-dev libfoobar-dev"
+        :param packages: String with a package to be installed or a list with its variants e.g. "libusb-dev libxusb-devel"
         :param update: Run update command before to install
         :param force: Force installing all packages
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
@@ -115,8 +116,9 @@ class SystemPackageTool(object):
             if mode == "verify" and not self._installed(packages):
                 self._output.error("The following packages need to be installed:\n %s"
                                    % "\n".join(packages))
-                raise ConanException("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                raise ConanInvalidSystemRequirements("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
                                      "Some system packages need to be installed" % mode)
+            return
 
         if not force and self._installed(packages):
             return
@@ -125,6 +127,64 @@ class SystemPackageTool(object):
         if update and not self._is_up_to_date:
             self.update()
         self._install_any(packages)
+
+    def install_packages(self, packages, update=True, force=False, arch_names=None):
+        """ Get the system package tool install command and install all packages and/or variants.
+            Inputs:
+            "pkg-variant1"  # (1) Install only one package
+            ["pkg-variant1", "otherpkg", "thirdpkg"] # (2) All must be installed
+            [("pkg-variant1", "pkg-variant2"), "otherpkg", "thirdpkg"] # (3) Install only one variant
+                                                                             and all other packages
+            "pkg1 pkg2", "pkg3 pkg4" # (4) Invalid
+            ["pkg1 pkg2", "pkg3 pkg4"] # (5) Invalid
+
+        :param packages: Supports multiple formats (string,list,tuple). Lists and tuples into a list
+        are considered variants and is processed just like self.install(). A list of string is
+        considered a list of packages to be installed (only not installed yet).
+        :param update: Run update command before to install
+        :param force: Force installing all packages, including all installed.
+        :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
+        :return: None
+        """
+        packages = [packages] if isinstance(packages, six.string_types) else list(packages)
+        # only one (first) variant will be installed
+        list_variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
+        # all packages will be installed
+        packages = list(filter(lambda x: not isinstance(x, (tuple, list)), packages))
+
+        if [pkg for pkg in packages if " " in pkg]:
+            raise ConanException("Each string must contain only one package to be installed. "
+                                 "Use a list instead e.g. ['foo', 'bar'].")
+
+        for variant in list_variants:
+            self.install(variant, update=update, force=force, arch_names=arch_names)
+
+        packages = self._get_package_names(packages, arch_names)
+
+        mode = self._get_sysrequire_mode()
+
+        if mode in ("verify", "disabled"):
+            # Report to output packages need to be installed
+            if mode == "disabled":
+                self._output.info("The following packages need to be installed:\n %s"
+                                  % "\n".join(packages))
+                return
+
+            if mode == "verify" and self._to_be_installed(packages):
+                self._output.error("The following packages need to be installed:\n %s"
+                                   % "\n".join(packages))
+                raise ConanInvalidSystemRequirements("Aborted due to CONAN_SYSREQUIRES_MODE=%s. "
+                                     "Some system packages need to be installed" % mode)
+            return
+
+        packages = packages if force else self._to_be_installed(packages)
+        if not force and not packages:
+            return
+
+        # From here system packages can be updated/modified
+        if update and not self._is_up_to_date:
+            self.update()
+        self._install_all(packages)
 
     def _get_package_names(self, packages, arch_names):
         """ Parse package names according it architecture
@@ -138,16 +198,27 @@ class SystemPackageTool(object):
             arch = host_arch or build_arch
             parsed_packages = []
             for package in packages:
-                for package_name in package.split(" "):
-                    parsed_packages.append(self._tool.get_package_name(package_name, arch,
-                                                                       arch_names))
+                if isinstance(package, (tuple, list)):
+                    parsed_packages.append(tuple(self._get_package_names(package, arch_names)))
+                else:
+                    for package_name in package.split(" "):
+                        parsed_packages.append(self._tool.get_package_name(package_name, arch,
+                                                                           arch_names))
             return parsed_packages
         return packages
 
     def installed(self, package_name):
         return self._tool.installed(package_name)
 
+    def _to_be_installed(self, packages):
+        """ Returns a list with all not installed packages.
+        """
+        not_installed = [pkg for pkg in packages if not self._tool.installed(pkg)]
+        return not_installed
+
     def _installed(self, packages):
+        """ Return True if at least one of the packages is installed.
+        """
         if not packages:
             return True
 
@@ -156,6 +227,9 @@ class SystemPackageTool(object):
                 self._output.info("Package already installed: %s" % pkg)
                 return True
         return False
+
+    def _install_all(self, packages):
+        self._tool.install(" ".join(sorted(packages)))
 
     def _install_any(self, packages):
         if len(packages) == 1:
@@ -200,11 +274,11 @@ class NullTool(BaseTool):
 
 class AptTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
-        _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository),
-             output=self._output)
         if repo_key:
             _run(self._runner, "wget -qO - %s | %sapt-key add -" % (repo_key, self._sudo_str),
                  output=self._output)
+        _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository),
+             output=self._output)
 
     def update(self):
         _run(self._runner, "%sapt-get update" % self._sudo_str, output=self._output)

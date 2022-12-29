@@ -1,19 +1,20 @@
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.boostbuild import BoostBuildGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class BoostJamGeneratorTest(unittest.TestCase):
 
     def test_variables_setup(self):
 
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")

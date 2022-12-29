@@ -5,19 +5,24 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.client import tools
 
 
 class FakeSettings(object):
-    def __init__(self, _os, _arch):
+    def __init__(self, _os, _arch, _os_sdk=None):
         self._os = _os
         self._arch = _arch
+        self._os_sdk = _os_sdk
 
     def get_safe(self, name):
         if name == 'os':
             return self._os
         elif name == 'arch':
             return self._arch
+        elif name == 'os.sdk':
+            return self._os_sdk
 
 
 class AppleTest(unittest.TestCase):
@@ -52,7 +57,13 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'armv8')), 'appletvos')
         self.assertIsNone(tools.apple_sdk_name(FakeSettings('Windows', 'x86')))
 
-    def test_apple_sdk_name_custom_settings(self):
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8')), 'iphoneos')
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphoneos')),
+                         'iphoneos')
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphonesimulator')),
+                         'iphonesimulator')
+
+    def test_apple_sdk_name_build_folder_vars(self):
         self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'ios_fat')), 'macosx')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'ios_fat')), 'iphoneos')
         self.assertEqual(tools.apple_sdk_name(FakeSettings('watchOS', 'ios_fat')), 'watchos')
@@ -73,15 +84,46 @@ class AppleTest(unittest.TestCase):
     def test_deployment_target_flag_name(self):
         self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1"),
                          '-mmacosx-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1", 'macosx'),
+                         '-mmacosx-version-min=10.1')
+
         self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1"),
                          '-mios-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iphoneos'),
+                         '-mios-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iphonesimulator'),
+                         '-mios-simulator-version-min=10.1')
+
         self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1"),
                          '-mwatchos-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchos'),
+                         '-mwatchos-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchsimulator'),
+                         '-mwatchos-simulator-version-min=10.1')
+
         self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1"),
-                         '-mappletvos-version-min=10.1')
+                         '-mtvos-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvos'),
+                         '-mtvos-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvsimulator'),
+                         '-mtvos-simulator-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", None, "catalyst"),
+                         '-mios-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", "macosx", "catalyst"),
+                         '-mios-version-min=10.1')
+
         self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires OSX")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
     def test_xcrun(self):
 
         def _common_asserts(xcrun_):

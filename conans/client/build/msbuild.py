@@ -5,7 +5,6 @@ import re
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
-from conans.client.toolchain.msbuild import MSBuildCmd
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.intel import intel_compilervars
 from conans.client.tools.oss import cpu_count
@@ -20,30 +19,13 @@ from conans.util.runners import version_runner
 
 
 class MSBuild(object):
-    def __new__(cls, conanfile, *args, **kwargs):
-        """ Inject the proper MSBuild base class in the hierarchy """
-
-        # If already injected, create and return
-        if MSBuildHelper in cls.__bases__ or MSBuildCmd in cls.__bases__:
-            return super(MSBuild, cls).__new__(cls)
-
-        # If not, add the proper CMake implementation
-        if hasattr(conanfile, "toolchain"):
-            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildCmd), {})
-        else:
-            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildHelper), {})
-
-        return msbuild_class.__new__(msbuild_class, conanfile, *args, **kwargs)
-
-    @staticmethod
-    def get_version(settings):
-        return MSBuildHelper.get_version(settings)
-
-
-class MSBuildHelper(object):
 
     def __init__(self, conanfile):
         if isinstance(conanfile, ConanFile):
+            if getattr(conanfile, "must_use_new_helpers", None):
+                raise ConanException(
+                    "Using the wrong 'MSBuild' helper. To use MSBuildDeps, MSBuildToolchain "
+                    "you should use 'from conan.tools.microsoft import MSBuild'")
             self._conanfile = conanfile
             self._settings = self._conanfile.settings
             self._output = self._conanfile.output
@@ -178,7 +160,7 @@ class MSBuildHelper(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuildHelper.get_version(self._settings)
+            msbuild_version = MSBuild.get_version(self._settings)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)
@@ -274,7 +256,7 @@ class MSBuildHelper(object):
         try:
             out = version_runner(command, shell=True)
             version_line = decode_text(out).split("\n")[-1]
-            prog = re.compile("(\d+\.){2,3}\d+")
+            prog = re.compile(r"(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()
             return Version(result)
         except Exception as e:

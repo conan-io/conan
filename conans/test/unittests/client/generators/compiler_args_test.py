@@ -38,8 +38,8 @@ class CompilerArgsTest(unittest.TestCase):
     def _get_conanfile(settings, frameworks=False, system_libs=False):
         conan_file = ConanFileMock()
         conan_file.settings = settings
-        conan_file.source_folder = "my_cache_source_folder"
-        conan_file.build_folder = "my_cache_build_folder"
+        conan_file.folders.set_base_source("my_cache_source_folder")
+        conan_file.folders.set_base_build("my_cache_build_folder")
         conan_file.deps_env_info = DepsEnvInfo()
         conan_file.deps_user_info = DepsUserInfo()
         conan_file.deps_cpp_info = DepsCppInfo()
@@ -76,9 +76,9 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG'
-                         ' -Wl,-rpath="/root/lib" -Wl,-rpath="/root/path/to/lib1"'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -F /root/Frameworks -std=gnu++17', gcc.content)
+                         ' -F"/root/Frameworks" -std=gnu++17', gcc.content)
 
         settings.arch = "x86_64"
         settings.build_type = "Debug"
@@ -87,18 +87,18 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -g'
-                         ' -Wl,-rpath="/root/lib" -Wl,-rpath="/root/path/to/lib1"'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -D_GLIBCXX_USE_CXX11_ABI=1 -F /root/Frameworks -std=gnu++17',
+                         ' -D_GLIBCXX_USE_CXX11_ABI=1 -F"/root/Frameworks" -std=gnu++17',
                          gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -g'
-                         ' -Wl,-rpath="/root/lib" -Wl,-rpath="/root/path/to/lib1"'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
+                         ' -D_GLIBCXX_USE_CXX11_ABI=0 -F"/root/Frameworks" -std=gnu++17',
                          gcc.content)
 
         settings.os = "Windows"
@@ -110,9 +110,9 @@ class CompilerArgsTest(unittest.TestCase):
         # GCC generator ignores the compiler setting, it is always gcc
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG'
-                         ' -Wl,-rpath="/root/lib" -Wl,-rpath="/root/path/to/lib1"'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
+                         ' -D_GLIBCXX_USE_CXX11_ABI=0 -F"/root/Frameworks" -std=gnu++17',
                          gcc.content)
 
     def test_compiler_args(self):
@@ -142,7 +142,7 @@ class CompilerArgsTest(unittest.TestCase):
                          ' cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG'
                          ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -F /root/Frameworks', gen.content)
+                         ' -F"/root/Frameworks"', gen.content)
 
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
@@ -158,7 +158,7 @@ class CompilerArgsTest(unittest.TestCase):
                          ' cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG'
                          ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -F /root/Frameworks', args.content)
+                         ' -F"/root/Frameworks"', args.content)
 
     def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())
@@ -175,8 +175,8 @@ class CompilerArgsTest(unittest.TestCase):
                          ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -framework AVFoundation -framework VideoToolbox'
-                         ' -F /root/Frameworks -F /root/path/to/Frameworks1'
-                         ' -F /root/path/to/Frameworks2', args.content)
+                         ' -F"/root/Frameworks" -F"/root/path/to/Frameworks1"'
+                         ' -F"/root/path/to/Frameworks2"', args.content)
 
     def test_system_libs(self):
         settings = Settings.loads(get_default_settings_yml())
@@ -190,6 +190,6 @@ class CompilerArgsTest(unittest.TestCase):
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m64 -O3 -s -DNDEBUG'
-                         ' -Wl,-rpath="/root/lib" -Wl,-rpath="/root/path/to/lib1"'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib -lsystem_lib1'
-                         ' -F /root/Frameworks', args.content)
+                         ' -F"/root/Frameworks"', args.content)

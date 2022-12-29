@@ -3,6 +3,8 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.client.file_copier import FileCopier
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
@@ -36,7 +38,7 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
         self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
 
-    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_basic_with_linked_dir(self):
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "subdir1")
@@ -68,7 +70,7 @@ class FileCopierTest(unittest.TestCase):
             self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
             self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
 
-    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_folder_missing_error(self):
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "subdir1")
@@ -89,7 +91,7 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir1/file1.txt")))
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir2/file1.txt")))
 
-    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_relative(self):
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "foo/other/file")
@@ -104,7 +106,7 @@ class FileCopierTest(unittest.TestCase):
         self.assertTrue(os.path.islink(symlink))
         self.assertTrue(load(os.path.join(symlink, "file.txt")), "Hello")
 
-    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_folder_nested(self):
         # https://github.com/conan-io/conan/issues/2959
         folder1 = temp_folder()
@@ -118,7 +120,7 @@ class FileCopierTest(unittest.TestCase):
         copied = copier("*.cpp", links=True)
         self.assertEqual(copied, [])
 
-    @unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_folder_copy_from_linked_folder(self):
         # https://github.com/conan-io/conan/issues/5114
         folder1 = temp_folder(path_with_spaces=False)
@@ -174,6 +176,28 @@ class FileCopierTest(unittest.TestCase):
         copier = FileCopier([folder1], folder2)
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
+
+    def test_excludes_camelcase_folder(self):
+        # https://github.com/conan-io/conan/issues/8153
+        folder1 = temp_folder()
+        save(os.path.join(folder1, "UPPER.txt"), "")
+        save(os.path.join(folder1, "lower.txt"), "")
+        sub2 = os.path.join(folder1, "CamelCaseIgnore")
+        save(os.path.join(sub2, "file3.txt"), "")
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier("*", excludes=["CamelCaseIgnore", "UPPER.txt"])
+        self.assertFalse(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
+        self.assertFalse(os.path.exists(os.path.join(folder2, "UPPER.txt")))
+        self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier("*")
+        self.assertTrue(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
+        self.assertTrue(os.path.exists(os.path.join(folder2, "UPPER.txt")))
+        self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
 
     def test_multifolder(self):
         src_folder1 = temp_folder()

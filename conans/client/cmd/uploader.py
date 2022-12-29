@@ -10,7 +10,7 @@ from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
 from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
-from conans.client.source import complete_recipe_sources
+from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
@@ -109,7 +109,14 @@ class _UploadCollecter(object):
 
                 # TODO: This search of binary packages has to be improved, more robust
                 # So only real packages are retrieved
-                if all_packages or query:
+                if conanfile.upload_policy == "skip":
+                    # TODO: This build_policy CANNOT be conditional, so all binaries will be skipped
+                    #   this could be a future feature, but will require annotating/metadata of the
+                    #   binaries created with this policy value for each binary
+                    self._output.info("{}: Skipping upload of binaries, because "
+                                      "upload_policy='skip'".format(ref))
+                    packages_ids = []
+                elif all_packages or query:
                     if all_packages:
                         query = None
                     # better to do a search, that will retrieve real packages with ConanInfo
@@ -150,6 +157,259 @@ class _UploadCollecter(object):
         return refs_by_remote
 
 
+class _PackagePreparator(object):
+    def __init__(self, cache, remote_manager, hook_manager, output):
+        self._cache = cache
+        self._remote_manager = remote_manager
+        self._output = output
+        self._hook_manager = hook_manager
+
+    def prepare_recipe(self, ref, conanfile, remote, remotes, policy):
+        """ do a bunch of things that are necessary before actually executing the upload:
+        - retrieve exports_sources to complete the recipe if necessary
+        - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
+        - check if package is ok to be uploaded, if scm info missing, will raise
+        - check if the remote recipe is newer, raise
+        - compare and decide which files need to be uploaded (and deleted from server)
+        """
+        layout = self._cache.package_layout(ref)
+        current_remote_name = layout.load_metadata().recipe.remote
+
+        if remote.name != current_remote_name:
+            retrieve_exports_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
+
+        conanfile_path = layout.conanfile()
+        self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
+                                   reference=ref, remote=remote)
+
+        t1 = time.time()
+        cache_files = self._compress_recipe_files(layout, ref)
+
+        with layout.update_metadata() as metadata:
+            metadata.recipe.checksums = calc_files_checksum(cache_files)
+
+        local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
+
+        remote_manifest = None
+        if policy != UPLOAD_POLICY_FORCE:
+            # Check SCM data for auto fields
+            if hasattr(conanfile, "scm") and (
+                    conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto" or
+                    conanfile.scm.get("type") is None or conanfile.scm.get("url") is None or
+                    conanfile.scm.get("revision") is None):
+                raise ConanException("The recipe contains invalid data in the 'scm' attribute"
+                                     " (some 'auto' values or missing fields 'type', 'url' or"
+                                     " 'revision'). Use '--force' to ignore this error or export"
+                                     " again the recipe ('conan export' or 'conan create') to"
+                                     " fix these issues.")
+
+            remote_manifest = self._check_recipe_date(ref, remote, local_manifest)
+
+        if policy == UPLOAD_POLICY_SKIP:
+            return
+
+        files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, cache_files, remote,
+                                                                remote_manifest, local_manifest)
+        return files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name, layout
+
+    def _check_recipe_date(self, ref, remote, local_manifest):
+        try:
+            remote_recipe_manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
+        except NotFoundException:
+            return  # First time uploading this package
+
+        if (remote_recipe_manifest != local_manifest and
+                remote_recipe_manifest.time > local_manifest.time):
+            self._print_manifest_information(remote_recipe_manifest, local_manifest, ref, remote)
+            raise ConanException("Remote recipe is newer than local recipe: "
+                                 "\n Remote date: %s\n Local date: %s" %
+                                 (remote_recipe_manifest.time, local_manifest.time))
+
+        return remote_recipe_manifest
+
+    def _print_manifest_information(self, remote_recipe_manifest, local_manifest, ref, remote):
+        try:
+            self._output.info("\n%s" % ("-"*40))
+            self._output.info("Remote manifest:")
+            self._output.info(remote_recipe_manifest)
+            self._output.info("Local manifest:")
+            self._output.info(local_manifest)
+            difference = remote_recipe_manifest.difference(local_manifest)
+            if "conanfile.py" in difference:
+                contents = load(self._cache.package_layout(ref).conanfile())
+                endlines = "\\r\\n" if "\r\n" in contents else "\\n"
+                self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
+                remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
+                                                                       remote=remote)
+                endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
+                self._output.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
+            self._output.info("\n%s" % ("-"*40))
+        except Exception as e:
+            self._output.info("Error printing information about the diff: %s" % str(e))
+
+    def _recipe_files_to_upload(self, ref, policy, files, remote, remote_manifest, local_manifest):
+        self._remote_manager.check_credentials(remote)
+        remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
+        if not remote_snapshot:
+            return files, set()
+
+        deleted = set(remote_snapshot).difference(files)
+        if policy != UPLOAD_POLICY_FORCE:
+            if remote_manifest is None:
+                # This is the weird scenario, we have a snapshot but don't have a manifest.
+                # Can be due to concurrency issues, so we can try retrieve it now
+                try:
+                    remote_manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
+                except NotFoundException:
+                    # This is weird, the manifest still not there, better upload everything
+                    self._output.warn("The remote recipe doesn't have the 'conanmanifest.txt' "
+                                      "file and will be uploaded: '{}'".format(ref))
+                    return files, deleted
+
+            if remote_manifest == local_manifest:
+                return None, None
+
+            if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
+                raise ConanException("Local recipe is different from the remote recipe. "
+                                     "Forbidden overwrite.")
+
+        return files, deleted
+
+    def _compress_recipe_files(self, layout, ref):
+        download_export_folder = layout.download_export()
+
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
+            tgz_path = os.path.join(download_export_folder, f)
+            if is_dirty(tgz_path):
+                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
+                os.remove(tgz_path)
+                clean_dirty(tgz_path)
+
+        export_folder = layout.export()
+        files, symlinks = gather_files(export_folder)
+        if CONANFILE not in files or CONAN_MANIFEST not in files:
+            raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
+        export_src_folder = layout.export_sources()
+        src_files, src_symlinks = gather_files(export_src_folder)
+
+        result = {CONANFILE: files.pop(CONANFILE),
+                  CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
+
+        def add_tgz(tgz_name, tgz_files, tgz_symlinks, msg):
+            tgz = os.path.join(download_export_folder, tgz_name)
+            if os.path.isfile(tgz):
+                result[tgz_name] = tgz
+            elif tgz_files:
+                if self._output and not self._output.is_terminal:
+                    self._output.writeln(msg)
+                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder,
+                                     self._output)
+                result[tgz_name] = tgz
+
+        add_tgz(EXPORT_TGZ_NAME, files, symlinks, "Compressing recipe...")
+        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, src_symlinks, "Compressing recipe sources...")
+
+        return result
+
+    def prepare_package(self, pref, integrity_check, policy, p_remote):
+        pkg_layout = self._cache.package_layout(pref.ref)
+        cache_files = self._compress_package_files(pkg_layout, pref, integrity_check)
+
+        if policy == UPLOAD_POLICY_SKIP:
+            return None
+        files_to_upload, deleted = self._package_files_to_upload(pref, policy, cache_files, p_remote)
+        return files_to_upload, deleted, cache_files
+
+    def _compress_package_files(self, layout, pref, integrity_check):
+        t1 = time.time()
+        if layout.package_is_dirty(pref):
+            raise ConanException("Package %s is corrupted, aborting upload.\n"
+                                 "Remove it with 'conan remove %s -p=%s'"
+                                 % (pref, pref.ref, pref.id))
+
+        download_pkg_folder = layout.download_package(pref)
+        package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
+        if is_dirty(package_tgz):
+            self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
+            os.remove(package_tgz)
+            clean_dirty(package_tgz)
+
+        # Get all the files in that directory
+        # existing package, will use short paths if defined
+        package_folder = layout.package(pref)
+        files, symlinks = gather_files(package_folder)
+
+        if CONANINFO not in files or CONAN_MANIFEST not in files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
+
+        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
+        if integrity_check:
+            self._package_integrity_check(pref, files, package_folder)
+            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
+                         % (time.time() - t1))
+
+        if not os.path.isfile(package_tgz):
+            if self._output and not self._output.is_terminal:
+                self._output.writeln("Compressing package...")
+            tgz_files = {f: path for f, path in files.items() if
+                         f not in [CONANINFO, CONAN_MANIFEST]}
+            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder,
+                                      self._output)
+            assert tgz_path == package_tgz
+            assert os.path.exists(package_tgz)
+
+        return {PACKAGE_TGZ_NAME: package_tgz,
+                CONANINFO: files[CONANINFO],
+                CONAN_MANIFEST: files[CONAN_MANIFEST]}
+
+    def _package_integrity_check(self, pref, files, package_folder):
+        # If package has been modified remove tgz to regenerate it
+        self._output.rewrite_line("Checking package integrity...")
+
+        # short_paths = None is enough if there exist short_paths
+        layout = self._cache.package_layout(pref.ref, short_paths=None)
+        read_manifest, expected_manifest = layout.package_manifests(pref)
+
+        if read_manifest != expected_manifest:
+            self._output.writeln("")
+            diff = read_manifest.difference(expected_manifest)
+            for fname, (h1, h2) in diff.items():
+                self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                  % (fname, h1, h2))
+
+            if PACKAGE_TGZ_NAME in files:
+                tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
+                try:
+                    os.unlink(tgz_path)
+                except OSError:
+                    pass
+            error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                        % (fname, h1, h2) for fname, (h1, h2) in diff.items())
+            logger.error("Manifests doesn't match!\n%s" % error_msg)
+            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
+        else:
+            self._output.rewrite_line("Package integrity OK!")
+        self._output.writeln("")
+
+    def _package_files_to_upload(self, pref, policy, the_files, remote):
+        self._remote_manager.check_credentials(remote)
+        remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
+
+        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
+            if not is_package_snapshot_complete(remote_snapshot):
+                return the_files, set()
+            remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
+            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
+            if remote_manifest == local_manifest:
+                return None, None
+            if policy == UPLOAD_POLICY_NO_OVERWRITE:
+                raise ConanException("Local package is different from the remote package. Forbidden"
+                                     " overwrite.")
+        deleted = set(remote_snapshot).difference(the_files)
+        return the_files, deleted
+
+
 class CmdUpload(object):
     """ This class is responsible for uploading packages to remotes. The flow is:
     - Collect all the packages to be uploaded with the UploadCollecter
@@ -159,7 +419,7 @@ class CmdUpload(object):
               changes, do not allow uploading if the remote date is newer than the
               local cache one
             - Retrieve the sources (exports_sources), if they are not cached, and
-              uploading to a different remote. "complete_recipe_sources"
+              uploading to a different remote. "retrieve_exports_sources"
             - Gather files and create 2 .tgz (exports, exports_sources) with
               "_compress_recipe_files"
             - Decide which files have to be uploaded and deleted from the server
@@ -191,6 +451,7 @@ class CmdUpload(object):
         self._hook_manager = hook_manager
         self._upload_thread_pool = None
         self._exceptions_list = []
+        self._preparator = _PackagePreparator(cache, remote_manager, hook_manager, self._output)
 
     def upload(self, reference_or_pattern, remotes, upload_recorder, package_id=None,
                all_packages=None, confirm=False, retry=None, retry_wait=None, integrity_check=False,
@@ -207,7 +468,6 @@ class CmdUpload(object):
             cpu_count() if parallel_upload else 1)
 
         for remote, refs in refs_by_remote.items():
-
             self._output.info("Uploading to remote '{}':".format(remote.name))
 
             def upload_ref(ref_conanfile_prefs):
@@ -292,48 +552,17 @@ class CmdUpload(object):
                                        remote=recipe_remote)
 
     def _upload_recipe(self, ref, conanfile, retry, retry_wait, policy, remote, remotes):
-        layout = self._cache.package_layout(ref)
-        current_remote_name = layout.load_metadata().recipe.remote
+        prep = self._preparator.prepare_recipe(ref, conanfile, remote, remotes, policy)
 
-        if remote.name != current_remote_name:
-            complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
-
-        conanfile_path = layout.conanfile()
-        self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
-                                   reference=ref, remote=remote)
-
-        t1 = time.time()
-        cache_files = self._compress_recipe_files(layout, ref)
-
-        with layout.update_metadata() as metadata:
-            metadata.recipe.checksums = calc_files_checksum(cache_files)
-
-        local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
-
-        remote_manifest = None
-        if policy != UPLOAD_POLICY_FORCE:
-            # Check SCM data for auto fields
-            if hasattr(conanfile, "scm") and (
-                  conanfile.scm.get("url") == "auto" or conanfile.scm.get("revision") == "auto" or
-                  conanfile.scm.get("type") is None or conanfile.scm.get("url") is None or
-                  conanfile.scm.get("revision") is None):
-                raise ConanException("The recipe contains invalid data in the 'scm' attribute"
-                                     " (some 'auto' values or missing fields 'type', 'url' or"
-                                     " 'revision'). Use '--force' to ignore this error or export"
-                                     " again the recipe ('conan export' or 'conan create') to"
-                                     " fix these issues.")
-
-            remote_manifest = self._check_recipe_date(ref, remote, local_manifest)
         if policy == UPLOAD_POLICY_SKIP:
             return ref
 
-        files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, cache_files, remote,
-                                                                remote_manifest, local_manifest)
-
+        files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name, layout = prep
         if files_to_upload or deleted:
             self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
-            self._upload_recipe_end_msg(ref, remote)
+            msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
+            self._output.info(left_justify_message(msg))
         else:
             self._output.info("Recipe is up to date, upload skipped")
         duration = time.time() - t1
@@ -362,11 +591,10 @@ class CmdUpload(object):
                                    remote=p_remote)
 
         t1 = time.time()
-        the_files = self._compress_package_files(pkg_layout, pref, integrity_check)
-
+        prep = self._preparator.prepare_package(pref, integrity_check, policy, p_remote)
         if policy == UPLOAD_POLICY_SKIP:
             return None
-        files_to_upload, deleted = self._package_files_to_upload(pref, policy, the_files, p_remote)
+        files_to_upload, deleted, cache_files = prep
 
         if files_to_upload or deleted:
             self._remote_manager.upload_package(pref, files_to_upload, deleted, p_remote, retry,
@@ -376,14 +604,14 @@ class CmdUpload(object):
             self._output.info("Package is up to date, upload skipped")
 
         duration = time.time() - t1
-        log_package_upload(pref, duration, the_files, p_remote)
+        log_package_upload(pref, duration, cache_files, p_remote)
         self._hook_manager.execute("post_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=p_remote)
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
         # Update the package metadata
-        checksums = calc_files_checksum(the_files)
+        checksums = calc_files_checksum(cache_files)
         with pkg_layout.update_metadata() as metadata:
             cur_package_remote = metadata.packages[pref.id].remote
             if not cur_package_remote:
@@ -392,200 +620,17 @@ class CmdUpload(object):
 
         return pref
 
-    def _compress_recipe_files(self, layout, ref):
-        download_export_folder = layout.download_export()
 
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
-            tgz_path = os.path.join(download_export_folder, f)
-            if is_dirty(tgz_path):
-                self._output.warn("%s: Removing %s, marked as dirty" % (str(ref), f))
-                os.remove(tgz_path)
-                clean_dirty(tgz_path)
 
-        export_folder = layout.export()
-        files, symlinks = gather_files(export_folder)
-        if CONANFILE not in files or CONAN_MANIFEST not in files:
-            raise ConanException("Cannot upload corrupted recipe '%s'" % str(ref))
-        export_src_folder = layout.export_sources()
-        src_files, src_symlinks = gather_files(export_src_folder)
 
-        result = {CONANFILE: files.pop(CONANFILE),
-                  CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
 
-        def add_tgz(tgz_name, tgz_files, tgz_symlinks, msg):
-            tgz = os.path.join(download_export_folder, tgz_name)
-            if os.path.isfile(tgz):
-                result[tgz_name] = tgz
-            elif tgz_files:
-                if self._output and not self._output.is_terminal:
-                    self._output.writeln(msg)
-                tgz = compress_files(tgz_files, tgz_symlinks, tgz_name, download_export_folder,
-                                     self._output)
-                result[tgz_name] = tgz
 
-        add_tgz(EXPORT_TGZ_NAME, files, symlinks, "Compressing recipe...")
-        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, src_symlinks, "Compressing recipe sources...")
 
-        return result
 
-    def _compress_package_files(self, layout, pref, integrity_check):
-        t1 = time.time()
-        if layout.package_is_dirty(pref):
-            raise ConanException("Package %s is corrupted, aborting upload.\n"
-                                 "Remove it with 'conan remove %s -p=%s'"
-                                 % (pref, pref.ref, pref.id))
 
-        download_pkg_folder = layout.download_package(pref)
-        package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
-        if is_dirty(package_tgz):
-            self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
-            os.remove(package_tgz)
-            clean_dirty(package_tgz)
 
-        # Get all the files in that directory
-        # existing package, will use short paths if defined
-        package_folder = layout.package(pref)
-        files, symlinks = gather_files(package_folder)
 
-        if CONANINFO not in files or CONAN_MANIFEST not in files:
-            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
 
-        logger.debug("UPLOAD: Time remote_manager build_files_set : %f" % (time.time() - t1))
-        if integrity_check:
-            self._package_integrity_check(pref, files, package_folder)
-            logger.debug("UPLOAD: Time remote_manager check package integrity : %f"
-                         % (time.time() - t1))
-
-        if not os.path.isfile(package_tgz):
-            if self._output and not self._output.is_terminal:
-                self._output.writeln("Compressing package...")
-            tgz_files = {f: path for f, path in files.items() if
-                         f not in [CONANINFO, CONAN_MANIFEST]}
-            tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, download_pkg_folder,
-                                      self._output)
-            assert tgz_path == package_tgz
-            assert os.path.exists(package_tgz)
-
-        return {PACKAGE_TGZ_NAME: package_tgz,
-                CONANINFO: files[CONANINFO],
-                CONAN_MANIFEST: files[CONAN_MANIFEST]}
-
-    def _recipe_files_to_upload(self, ref, policy, files, remote, remote_manifest,
-                                local_manifest):
-        self._remote_manager.check_credentials(remote)
-        remote_snapshot = self._remote_manager.get_recipe_snapshot(ref, remote)
-        if not remote_snapshot:
-            return files, set()
-
-        deleted = set(remote_snapshot).difference(files)
-        if policy != UPLOAD_POLICY_FORCE:
-            if remote_manifest is None:
-                # This is the weird scenario, we have a snapshot but don't have a manifest.
-                # Can be due to concurrency issues, so we can try retrieve it now
-                try:
-                    remote_manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
-                except NotFoundException:
-                    # This is weird, the manifest still not there, better upload everything
-                    self._output.warn("The remote recipe doesn't have the 'conanmanifest.txt' "
-                                      "file and will be uploaded: '{}'".format(ref))
-                    return files, deleted
-
-            if remote_manifest == local_manifest:
-                return None, None
-
-            if policy in (UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE):
-                raise ConanException("Local recipe is different from the remote recipe. "
-                                     "Forbidden overwrite.")
-
-        return files, deleted
-
-    def _package_files_to_upload(self, pref, policy, the_files, remote):
-        self._remote_manager.check_credentials(remote)
-        remote_snapshot = self._remote_manager.get_package_snapshot(pref, remote)
-
-        if remote_snapshot and policy != UPLOAD_POLICY_FORCE:
-            if not is_package_snapshot_complete(remote_snapshot):
-                return the_files, set()
-            remote_manifest, _ = self._remote_manager.get_package_manifest(pref, remote)
-            local_manifest = FileTreeManifest.loads(load(the_files["conanmanifest.txt"]))
-            if remote_manifest == local_manifest:
-                return None, None
-            if policy == UPLOAD_POLICY_NO_OVERWRITE:
-                raise ConanException("Local package is different from the remote package. Forbidden"
-                                     " overwrite.")
-        deleted = set(remote_snapshot).difference(the_files)
-        return the_files, deleted
-
-    def _upload_recipe_end_msg(self, ref, remote):
-        msg = "\rUploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
-        url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
-        msg += ": %s" % url
-        self._output.info(left_justify_message(msg))
-
-    def _package_integrity_check(self, pref, files, package_folder):
-        # If package has been modified remove tgz to regenerate it
-        self._output.rewrite_line("Checking package integrity...")
-
-        # short_paths = None is enough if there exist short_paths
-        layout = self._cache.package_layout(pref.ref, short_paths=None)
-        read_manifest, expected_manifest = layout.package_manifests(pref)
-
-        if read_manifest != expected_manifest:
-            self._output.writeln("")
-            diff = read_manifest.difference(expected_manifest)
-            for fname, (h1, h2) in diff.items():
-                self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                  % (fname, h1, h2))
-
-            if PACKAGE_TGZ_NAME in files:
-                tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
-                try:
-                    os.unlink(tgz_path)
-                except OSError:
-                    pass
-            error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
-                                        % (fname, h1, h2) for fname, (h1, h2) in diff.items())
-            logger.error("Manifests doesn't match!\n%s" % error_msg)
-            raise ConanException("Cannot upload corrupted package '%s'" % str(pref))
-        else:
-            self._output.rewrite_line("Package integrity OK!")
-        self._output.writeln("")
-
-    def _check_recipe_date(self, ref, remote, local_manifest):
-        try:
-            remote_recipe_manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
-        except NotFoundException:
-            return  # First time uploading this package
-
-        if (remote_recipe_manifest != local_manifest and
-                remote_recipe_manifest.time > local_manifest.time):
-            self._print_manifest_information(remote_recipe_manifest, local_manifest, ref, remote)
-            raise ConanException("Remote recipe is newer than local recipe: "
-                                 "\n Remote date: %s\n Local date: %s" %
-                                 (remote_recipe_manifest.time, local_manifest.time))
-
-        return remote_recipe_manifest
-
-    def _print_manifest_information(self, remote_recipe_manifest, local_manifest, ref, remote):
-        try:
-            self._output.info("\n%s" % ("-"*40))
-            self._output.info("Remote manifest:")
-            self._output.info(remote_recipe_manifest)
-            self._output.info("Local manifest:")
-            self._output.info(local_manifest)
-            difference = remote_recipe_manifest.difference(local_manifest)
-            if "conanfile.py" in difference:
-                contents = load(self._cache.package_layout(ref).conanfile())
-                endlines = "\\r\\n" if "\r\n" in contents else "\\n"
-                self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
-                remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
-                                                                       remote=remote)
-                endlines = "\\r\\n" if "\r\n" in remote_contents else "\\n"
-                self._output.info("Remote 'conanfile.py' using '%s' line-ends" % endlines)
-            self._output.info("\n%s" % ("-"*40))
-        except Exception as e:
-            self._output.info("Error printing information about the diff: %s" % str(e))
 
 
 def compress_files(files, symlinks, name, dest_dir, output=None):

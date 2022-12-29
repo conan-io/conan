@@ -15,19 +15,28 @@ from conans.util.files import save_files, mkdir
 from conans.util.runners import check_output_runner
 
 
+def git_create_bare_repo(folder=None, reponame="repo.git"):
+    folder = folder or temp_folder()
+    cwd = os.getcwd()
+    try:
+        os.chdir(folder)
+        check_output_runner('git init --bare {}'.format(reponame))
+        return os.path.join(folder, reponame).replace("\\", "/")
+    finally:
+        os.chdir(cwd)
+
+
 def create_local_git_repo(files=None, branch=None, submodules=None, folder=None, commits=1,
-                          tags=None, origin_url=None):
+                          tags=None, origin_url=None, main_branch="master"):
     tmp = folder or temp_folder()
     tmp = get_cased_path(tmp)
     if files:
         save_files(tmp, files)
     git = Git(tmp)
     git.run("init .")
-    git.run('config user.email "you@example.com"')
     git.run('config user.name "Your Name"')
-
-    if branch:
-        git.run("checkout -b %s" % branch)
+    git.run('config user.email "you@example.com"')
+    git.run("checkout -b {}".format(branch or main_branch))
 
     git.run("add .")
     for i in range(0, commits):
@@ -46,6 +55,19 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
         git.run('remote add origin {}'.format(origin_url))
 
     return tmp.replace("\\", "/"), git.get_revision()
+
+
+def git_add_changes_commit(folder, msg="fix"):
+    cwd = os.getcwd()
+    try:
+        os.chdir(folder)
+        # Make sure user and email exist, otherwise it can error
+        check_output_runner('git config user.name "Your Name"')
+        check_output_runner('git config user.email "you@example.com"')
+        check_output_runner('git add . && git commit -m "{}"'.format(msg))
+        return check_output_runner("git rev-parse HEAD").strip()
+    finally:
+        os.chdir(cwd)
 
 
 def create_local_svn_checkout(files, repo_url, rel_project_path=None,

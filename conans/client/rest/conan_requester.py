@@ -5,6 +5,7 @@ import platform
 import time
 import warnings
 
+import urllib3
 import requests
 from requests.adapters import HTTPAdapter
 
@@ -25,7 +26,8 @@ class ConanRequester(object):
             self._http_requester = http_requester
         else:
             self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=config.retry)
+            adapter = HTTPAdapter(max_retries=self._get_retries(config.retry))
+
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
@@ -61,6 +63,25 @@ class ConanRequester(object):
             else:
                 self._client_certificates = self._client_cert_path
 
+    def _get_retries(self, retry):
+        retry = retry if retry is not None else 2
+        if retry == 0:
+            return 0
+        retry_status_code_set = {
+            requests.codes.internal_server_error,
+            requests.codes.bad_gateway,
+            requests.codes.service_unavailable,
+            requests.codes.gateway_timeout,
+            requests.codes.variant_also_negotiates,
+            requests.codes.insufficient_storage,
+            requests.codes.bandwidth_limit_exceeded
+        }
+        return urllib3.Retry(
+            total=retry,
+            backoff_factor = 0.05,
+            status_forcelist=retry_status_code_set
+        )
+
     def _should_skip_proxy(self, url):
         for entry in self._no_proxy_match:
             if fnmatch.fnmatch(url, entry):
@@ -84,8 +105,11 @@ class ConanRequester(object):
 
         # Only set User-Agent if none was provided
         if not kwargs["headers"].get("User-Agent"):
-            user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
-                                                      requests.utils.default_user_agent())
+            platform_info = "; ".join([
+                " ".join([platform.system(), platform.release()]),
+                "Python "+platform.python_version(),
+                platform.machine()])
+            user_agent = "Conan/%s (%s)" % (client_version, platform_info)
             kwargs["headers"]["User-Agent"] = user_agent
 
         return kwargs

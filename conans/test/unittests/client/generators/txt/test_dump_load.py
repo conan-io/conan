@@ -1,5 +1,7 @@
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.text import TXTGenerator
 from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
@@ -8,7 +10,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
-from conans.test.utils.tools import TestBufferConanOutput
 
 
 class DumpLoadTestCase(unittest.TestCase):
@@ -19,7 +20,7 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info.names["txt"] = "txt_name"
         cpp_info.names["cmake_find_package"] = "SpecialName"
         cpp_info.filenames["cmake_find_package"] = "SpecialFileName"
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
         content = TXTGenerator(conanfile).content
@@ -32,7 +33,7 @@ class DumpLoadTestCase(unittest.TestCase):
         self.assertEqual(parsed_cpp_info.get_name("pkg_config"), "pkg_name")
 
     def test_idempotent(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         # Add some cpp_info
@@ -87,7 +88,7 @@ class DumpLoadTestCase(unittest.TestCase):
         after_cpp_info, after_user_info, after_env_info, after_user_info_build = \
             TXTGenerator.loads(master_content, filter_empty=False)
         # Assign them to a different conanfile
-        other_conanfile = ConanFile(TestBufferConanOutput(), None)
+        other_conanfile = ConanFile(Mock(), None)
         other_conanfile.initialize(Settings({}), EnvValues())
         other_conanfile.deps_cpp_info = after_cpp_info
         other_conanfile.deps_env_info = after_env_info

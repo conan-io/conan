@@ -84,6 +84,16 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be.make()
         self.assertIsNone(conan_file.command)
 
+    def test_nmake_no_parallel(self):
+        conan_file = ConanFileMock()
+        conan_file.deps_cpp_info = self._creat_deps_cpp_info()
+        conan_file.settings = Settings()
+        be = AutoToolsBuildEnvironment(conan_file)
+        be.make(make_program="nmake")
+        assert "-j" not in conan_file.command
+        be.make(make_program="make")
+        assert "-j" in conan_file.command
+
     def test_warn_when_no_triplet(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = self._creat_deps_cpp_info()
@@ -226,7 +236,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                 '-D_GLIBCXX_USE_CXX11_ABI=0',
                     'CXXFLAGS': 'a_c_flag -m32 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
-                               '-F one/framework/path -m32 --sysroot=/path/to/folder -Lone/lib/path',
+                               '-F\"one/framework/path\" -m32 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
 
         self.assertEqual(be.vars, expected)
@@ -244,7 +254,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                 ' -D_GLIBCXX_USE_CXX11_ABI=0',
                     'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
-                               '-F one/framework/path -m64 --sysroot=/path/to/folder -Lone/lib/path',
+                               '-F\"one/framework/path\" -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEqual(be.vars, expected)
@@ -262,7 +272,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                 ' -DNDEBUG -D_GLIBCXX_USE_CXX11_ABI=0',
                     'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cxx_flag -stdlib=libstdc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
-                               '-F one/framework/path -m64 --sysroot=/path/to/folder -Lone/lib/path',
+                               '-F\"one/framework/path\" -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEqual(be.vars, expected)
@@ -279,7 +289,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag -m64 -O3 --sysroot=/path/to/folder a_cxx_flag -stdlib=libc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
-                               '-F one/framework/path -m64 --sysroot=/path/to/folder -Lone/lib/path',
+                               '-F\"one/framework/path\" -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEqual(be.vars, expected)
@@ -297,7 +307,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
                     'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
-                               '-F one/framework/path -m64 --sysroot=/path/to/folder -Lone/lib/path',
+                               '-F\"one/framework/path\" -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEqual(be.vars, expected)
@@ -377,8 +387,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
                     'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
-                               '-F one/framework/path -m64 --sysroot=/path/to/folder '
-                               '-Wl,-rpath="one/lib/path" -Lone/lib/path',
+                               '-F\"one/framework/path\" -m64 --sysroot=/path/to/folder '
+                               '-Wl,-rpath,"one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
         self.assertEqual(be.vars, expected)
@@ -404,7 +414,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                         'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cxx_flag -additionalcxxflag',
                         'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib -additionallibs',
                         'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework '
-                                   '-framework twoframework -F one/framework/path -m64 '
+                                   '-framework twoframework -F\"one/framework/path\" -m64 '
                                    '--sysroot=/path/to/folder -Lone/lib/path -additionalldflag',
                         'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder -additionalcflag'}
             self.assertEqual(be.vars, expected)
@@ -485,9 +495,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
             self.assertIn("./configure  --build=x86_64-linux-gnu --host=x86_64-w64-mingw32",
                           runner.command_called)
         else:
+            build_arch = "aarch64" if platform.machine() == "arm64" else platform.machine()
             self.assertIn("x86_64-w64-mingw32", ab.host)
-            self.assertIn("x86_64-apple-darwin", ab.build)
-            self.assertIn("./configure  --build=x86_64-apple-darwin --host=x86_64-w64-mingw32",
+            self.assertIn(f"{build_arch}-apple-darwin", ab.build)
+            self.assertIn(f"./configure  --build={build_arch}-apple-darwin --host=x86_64-w64-mingw32",
                           runner.command_called)
 
         ab.configure(build="fake_build_triplet", host="fake_host_triplet")
@@ -519,7 +530,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
             flags_available = set(default_dirs_flags) - set([flag_to_remove])
             runner = RunnerMockWithHelp(available_args=flags_available)
             conanfile = MockConanfileWithOutput(MockSettings({}), None, runner)
-            conanfile.package_folder = "/package_folder"
+            conanfile.folders.set_base_package("/package_folder")
             ab = AutoToolsBuildEnvironment(conanfile)
             ab.configure()
             self.assertNotIn(flag_to_remove, runner.command_called)
@@ -539,7 +550,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         runner = RunnerMockWithHelpFailing(available_args=default_dirs_flags)
         conanfile = MockConanfileWithOutput(MockSettings({}), None, runner)
-        conanfile.package_folder = "/package_folder"
+        conanfile.folders.set_base_package("/package_folder")
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         for flag_applied in default_dirs_flags:
@@ -559,7 +570,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertNotIn("--includedir", runner.command_called)
         self.assertNotIn("--datarootdir", runner.command_called)
         # package folder defined
-        conanfile.package_folder = "/package_folder"
+        conanfile.folders.set_base_package("/package_folder")
         ab.configure()
         if platform.system() == "Windows":
             self.assertIn("./configure --prefix=/package_folder --bindir=${prefix}/bin "
@@ -678,7 +689,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertEqual("", expected)
+        self.assertNotIn("-mmacosx-version-min", expected)
 
         settings = MockSettings({"os": "Macos",
                                  "os.version": "10.13",
@@ -686,15 +697,15 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("10.13", expected)
+        self.assertIn("-mmacosx-version-min=10.13", expected)
 
         with tools.environment_append({"CFLAGS": "-mmacosx-version-min=10.9"}):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = be.vars["CFLAGS"]
-            self.assertIn("10.9", expected)
-            self.assertNotIn("10.13", expected)
+            self.assertIn("-mmacosx-version-min=10.9", expected)
+            self.assertNotIn("-mmacosx-version-min=10.13", expected)
 
         with tools.environment_append({"CXXFLAGS": "-mmacosx-version-min=10.9"}):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = be.vars["CFLAGS"]
-            self.assertNotIn("10.13", expected)
+            self.assertNotIn("-mmacosx-version-min=10.13", expected)

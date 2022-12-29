@@ -504,16 +504,27 @@ class GraphLock(object):
             node.graph_lock_node = locked_node
             if locked_node.options is not None:  # This was a "partial" one, not a "base" one
                 node.conanfile.options.values = locked_node.options
-                node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
         the lockfile. Requires remove their version ranges.
         """
+        # Important to remove the overrides, they do not need to be locked or evaluated
+        requires = [r for r in requires if not r.override]
         if not node.graph_lock_node:
+            # For --build-require case, this is the moment the build require can be locked
+            if build_requires and node.recipe == RECIPE_VIRTUAL:
+                for require in requires:
+                    node_id = self._find_node_by_requirement(require.ref)
+                    locked_ref = self._nodes[node_id].ref
+                    require.lock(locked_ref, node_id)
             # This node is not locked yet, but if it is relaxed, one requirement might
             # match the root node of the exising lockfile
-            if self._relaxed:
+            # If it is a test_package, with a build_require, it shouldn't even try to find it in
+            # lock, build_requires are private, if node is not locked, dont lokk for them
+            # https://github.com/conan-io/conan/issues/8744
+            # TODO: What if a test_package contains extra requires?
+            if self._relaxed and not build_requires:
                 for require in requires:
                     locked_id = self._match_relaxed_require(require.ref)
                     if locked_id:
@@ -556,6 +567,8 @@ class GraphLock(object):
         if self._relaxed:
             return
         locked_node = node.graph_lock_node
+        if locked_node is None:
+            return
         locked_requires = locked_node.build_requires
         if not locked_requires:
             return
@@ -585,7 +598,8 @@ class GraphLock(object):
         if version_range:
             for id_, node in self._nodes.items():
                 root_ref = node.ref
-                if (ref.name == root_ref.name and ref.user == root_ref.user and
+                if (root_ref is not None and ref.name == root_ref.name and
+                        ref.user == root_ref.user and
                         ref.channel == root_ref.channel):
                     output = []
                     result = satisfying([str(root_ref.version)], version_range, output)
@@ -637,10 +651,13 @@ class GraphLock(object):
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
-    def find_require_and_lock(self, reference, conanfile):
-        node_id = self._find_node_by_requirement(reference)
-        if node_id is None:  # relaxed and not found
-            return
+    def find_require_and_lock(self, reference, conanfile, lockfile_node_id=None):
+        if lockfile_node_id:
+            node_id = lockfile_node_id
+        else:
+            node_id = self._find_node_by_requirement(reference)
+            if node_id is None:  # relaxed and not found
+                return
 
         locked_ref = self._nodes[node_id].ref
         assert locked_ref is not None

@@ -5,7 +5,6 @@ https://github.com/pypa/sampleproject
 """
 
 import os
-import platform
 import re
 # To use a consistent encoding
 from codecs import open
@@ -47,13 +46,13 @@ def load_version():
 
 def generate_long_description_file():
     this_directory = path.abspath(path.dirname(__file__))
-    with open(path.join(this_directory, 'README.rst'), encoding='utf-8') as f:
+    with open(path.join(this_directory, 'README.rst')) as f:
         long_description = f.read()
     return long_description
 
-
 setup(
     name='conan',
+    python_requires='>=3.6',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
@@ -65,6 +64,11 @@ setup(
 
     # The project's main homepage.
     url='https://conan.io',
+    project_urls={
+        'Documentation': 'https://docs.conan.io',
+        'Source': 'https://github.com/conan-io/conan',
+        'Tracker': 'https://github.com/conan-io/conan/issues',
+    },
 
     # Author details
     author='JFrog LTD',

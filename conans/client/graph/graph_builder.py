@@ -3,7 +3,7 @@ import time
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
@@ -65,7 +65,9 @@ class DepsGraphBuilder(object):
         t1 = time.time()
         self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
                           update, remotes, profile_host, profile_build, graph_lock)
+
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
+
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
@@ -86,6 +88,7 @@ class DepsGraphBuilder(object):
             r = Requirement(ref)
             r.build_require = True
             r.build_require_context = context
+            r.force_host_context = getattr(ref, "force_host_context", False)
             build_requires.append(r)
 
         if graph_lock:
@@ -93,6 +96,8 @@ class DepsGraphBuilder(object):
             # TODO: Add info about context?
             graph_lock.lock_node(node, build_requires, build_requires=True)
 
+        for require in build_requires:
+            self._resolve_alias(node, require, graph, update, update, remotes)
         self._resolve_ranges(graph, build_requires, scope, update, remotes)
 
         for br in build_requires:
@@ -144,6 +149,43 @@ class DepsGraphBuilder(object):
                 if alias:
                     require.ref = alias
 
+    def _resolve_alias(self, node, require, graph, check_updates, update, remotes):
+        alias = require.alias
+        if alias is None:
+            return
+
+        # First try cached
+        cached = graph.new_aliased.get(alias)
+        if cached is not None:
+            while True:
+                new_cached = graph.new_aliased.get(cached)
+                if new_cached is None:
+                    break
+                else:
+                    cached = new_cached
+            require.ref = cached
+            return
+
+        while alias is not None:
+            # if not cached, then resolve
+            try:
+                result = self._proxy.get_recipe(alias, check_updates, update, remotes, self._recorder)
+                conanfile_path, recipe_status, remote, new_ref = result
+            except ConanException as e:
+                raise e
+
+            dep_conanfile = self._loader.load_basic(conanfile_path)
+            try:
+                pointed_ref = ConanFileReference.loads(dep_conanfile.alias)
+            except Exception as e:
+                raise ConanException("Alias definition error in {}: {}".format(alias, str(e)))
+
+            # UPDATE THE REQUIREMENT!
+            require.ref = require.range_ref = pointed_ref
+            graph.new_aliased[alias] = pointed_ref  # Caching the alias
+            new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
+            alias = new_req.alias
+
     def _get_node_requirements(self, node, graph, down_ref, down_options, down_reqs, graph_lock,
                                update, remotes):
         """ compute the requirements of a node, evaluating requirements(), propagating
@@ -153,6 +195,8 @@ class DepsGraphBuilder(object):
         if graph_lock:
             graph_lock.pre_lock_node(node)
         new_options = self._config_node(node, down_ref, down_options)
+        for require in node.conanfile.requires.values():
+            self._resolve_alias(node, require, graph, update, update, remotes)
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
         self._resolve_cached_alias(node.conanfile.requires.values(), graph)
 
@@ -286,7 +330,8 @@ class DepsGraphBuilder(object):
                         "in your root package."
                         % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
                            previous.ref, new_ref.name))
-            return True
+            return "Unresolvable conflict between {} and {}".format(previous.ref, new_ref)
+
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
@@ -428,4 +473,5 @@ class DepsGraphBuilder(object):
 
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node, requirement)
+
         return new_node

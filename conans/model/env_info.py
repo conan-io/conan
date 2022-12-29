@@ -1,8 +1,10 @@
 import copy
+import fnmatch
 import re
 from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.util.log import logger
 
 
@@ -144,7 +146,7 @@ class EnvValues(object):
             else:
                 raise ConanException("unknown env type: %s" % env_obj)
 
-    def env_dicts(self, package_name):
+    def env_dicts(self, package_name, version=None, user=None, channel=None):
         """Returns two dicts of env variables that applies to package 'name',
          the first for simple values A=1, and the second for multiple A=1;2;3"""
         ret = {}
@@ -152,7 +154,13 @@ class EnvValues(object):
         # First process the global variables
 
         global_pairs = self._data.get(None)
-        own_pairs = self._data.get(package_name)
+        own_pairs = None
+        str_ref = str(ConanFileReference(package_name, version, user, channel, validate=False))
+        for pattern, v in self._data.items():
+            if pattern is not None and (package_name == pattern or fnmatch.fnmatch(str_ref,
+                                                                                   pattern)):
+                own_pairs = v
+                break
 
         if global_pairs:
             for name, value in global_pairs.items():

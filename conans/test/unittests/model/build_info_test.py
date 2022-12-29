@@ -8,7 +8,7 @@ from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
-from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.build_info import BuildModulesDict, CppInfo, DepCppInfo, dict_to_abs_paths
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -125,6 +125,19 @@ VAR2=23
                          deps_cpp_info2["Boost"].cxxflags)
         self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
 
+    def test_BuildModulesDict(self):
+        build_modules = BuildModulesDict({"cmake": ["whatever.cmake"]})
+        build_modules.extend(["hello.cmake"])
+        assert build_modules["cmake"] == ["whatever.cmake", "hello.cmake"]
+        build_modules = dict_to_abs_paths(build_modules, "root")
+        assert build_modules["cmake"] == [os.path.join("root", "whatever.cmake"),
+                                          os.path.join("root", "hello.cmake")]
+        build_modules = BuildModulesDict.from_list(["this.cmake", "this_not.pc"])
+        assert build_modules == {"cmake": ["this.cmake"],
+                                 "cmake_multi": ["this.cmake"],
+                                 "cmake_find_package": ["this.cmake"],
+                                 "cmake_find_package_multi": ["this.cmake"]}
+
     def test_configs(self):
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.filter_empty = False
@@ -228,14 +241,30 @@ VAR2=23
     def test_cpp_info_build_modules(self):
         folder = temp_folder()
         info = CppInfo("myname", folder)
-        info.build_modules.append("my_module.cmake")
-        info.debug.build_modules = ["mod-release.cmake"]
+        info.build_modules.append("old.cmake")  # Test old behavior with .cmake build modules
+        info.build_modules.extend(["other_old.cmake", "file.pc"])  # .pc not considered
+        info.build_modules["generator"].append("my_module.cmake")
+        info.debug.build_modules["other_gen"] = ["mod-release.cmake"]
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
+        for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:
+            self.assertListEqual([os.path.join(folder, "old.cmake"),
+                                  os.path.join(folder, "other_old.cmake")],
+                                 list(deps_cpp_info["myname"].build_modules_paths[gen]))
         self.assertListEqual([os.path.join(folder, "my_module.cmake")],
-                             list(deps_cpp_info["myname"].build_modules_paths))
+                             list(deps_cpp_info["myname"].build_modules_paths["generator"]))
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
-                             list(deps_cpp_info["myname"].debug.build_modules_paths))
+                             list(deps_cpp_info["myname"].debug.build_modules_paths["other_gen"]))
+
+    def test_cpp_info_build_modules_old_behavior(self):
+        folder = temp_folder()
+        info = CppInfo("myname", folder)
+        info.build_modules = ["old.cmake"]  # Test old behavior with .cmake build modules as list
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.add("myname", DepCppInfo(info))
+        for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:
+            assert list(deps_cpp_info["myname"].build_modules_paths[gen]) ==\
+                   [os.path.join(folder, "old.cmake")]
 
     def test_cppinfo_public_interface(self):
         folder = temp_folder()

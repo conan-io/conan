@@ -95,6 +95,8 @@ def detected_architecture():
         return "sparc"
     elif "aarch64" in machine:
         return "armv8"
+    elif "arm64" in machine:
+        return "armv8"
     elif "64" in machine:
         return "x86_64"
     elif "86" in machine:
@@ -109,6 +111,10 @@ def detected_architecture():
         return "s390x"
     elif "s390" in machine:
         return "s390"
+    elif "sun4v" in machine:
+        return "sparc"
+    elif "e2k" in machine:
+        return OSInfo.get_e2k_architecture()
 
     return None
 
@@ -181,6 +187,10 @@ class OSInfo(object):
         if not self.is_linux:
             return False
 
+        # https://github.com/conan-io/conan/issues/8737 zypper-aptitude can fake it
+        if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
+            return False
+
         apt_location = which('apt-get')
         if apt_location:
             # Check if we actually have the official apt package.
@@ -198,7 +208,7 @@ class OSInfo(object):
     def with_yum(self):
         return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos",
                                                        "redhat", "rhel", "xenserver", "amazon",
-                                                       "oracle")
+                                                       "oracle", "amzn", "almalinux", "rocky")
 
     @property
     def with_dnf(self):
@@ -341,6 +351,21 @@ class OSInfo(object):
             return "sparcv9" if kernel_bitness == "64bit" else "sparc"
         elif "i386" in processor:
             return "x86_64" if kernel_bitness == "64bit" else "x86"
+
+    @staticmethod
+    def get_e2k_architecture():
+        return {
+            "E1C+": "e2k-v4",  # Elbrus 1C+ and Elbrus 1CK
+            "E2C+": "e2k-v2",  # Elbrus 2CM
+            "E2C+DSP": "e2k-v2",  # Elbrus 2C+
+            "E2C3": "e2k-v6",  # Elbrus 2C3
+            "E2S": "e2k-v3",  # Elbrus 2S (aka Elbrus 4C)
+            "E8C": "e2k-v4",  # Elbrus 8C and Elbrus 8C1
+            "E8C2": "e2k-v5",  # Elbrus 8C2 (aka Elbrus 8CB)
+            "E12C": "e2k-v6",  # Elbrus 12C
+            "E16C": "e2k-v6",  # Elbrus 16C
+            "E32C": "e2k-v7",  # Elbrus 32C
+        }.get(platform.processor())
 
     @staticmethod
     def get_freebsd_version():
@@ -539,6 +564,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "s390-ibm"
         elif "sh4" in arch:
             machine = "sh4"
+        elif "e2k" in arch:
+            # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
+            machine = "e2k-unknown"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "

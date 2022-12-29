@@ -5,6 +5,8 @@ import platform
 import unittest
 from parameterized.parameterized import parameterized
 
+import pytest
+
 from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
     build_type_flags, format_defines, format_include_paths, format_libraries, \
     format_library_paths, libcxx_define, libcxx_flag, pic_flag, sysroot_flag
@@ -41,6 +43,21 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "os": the_os})
         self.assertEqual(architecture_flag(settings), flag)
 
+    def test_catalyst(self):
+        settings = MockSettings({"compiler": "apple-clang",
+                                 "arch": "x86_64",
+                                 "os": "Macos",
+                                 "os.subsystem": "catalyst",
+                                 "os.subsystem.ios_version": "13.1"})
+        self.assertEqual(architecture_flag(settings), "--target=x86_64-apple-ios13.1-macabi")
+
+        settings = MockSettings({"compiler": "apple-clang",
+                                 "arch": "armv8",
+                                 "os": "Macos",
+                                 "os.subsystem": "catalyst",
+                                 "os.subsystem.ios_version": "13.1"})
+        self.assertEqual(architecture_flag(settings), "--target=arm64-apple-ios13.1-macabi")
+
     @parameterized.expand([("gcc", "x86", "-m32"),
                            ("gcc", "x86_64", "-m64"),
                            ("Visual Studio", "x86", "/Qm32"),
@@ -49,6 +66,19 @@ class CompilerFlagsTest(unittest.TestCase):
     def test_arch_flag_intel(self, base, arch, flag):
         settings = MockSettings({"compiler": "intel",
                                  "compiler.base": base,
+                                 "arch": arch})
+        self.assertEqual(architecture_flag(settings), flag)
+
+    @parameterized.expand([("e2k-v2", "-march=elbrus-v2"),
+                           ("e2k-v3", "-march=elbrus-v3"),
+                           ("e2k-v4", "-march=elbrus-v4"),
+                           ("e2k-v5", "-march=elbrus-v5"),
+                           ("e2k-v6", "-march=elbrus-v6"),
+                           ("e2k-v7", "-march=elbrus-v7"),
+                           ])
+    def test_arch_flag_mcst_lcc(self, arch, flag):
+        settings = MockSettings({"compiler": "mcst-lcc",
+                                 "compiler.base": "gcc",
                                  "arch": arch})
         self.assertEqual(architecture_flag(settings), flag)
 
@@ -166,7 +196,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual('"home/www root"', adjust_path('home\\www root', MockSettings({})))
         self.assertEqual('"home/www root"', adjust_path('home\\www root', settings))
 
-    @unittest.skipUnless(platform.system() == "Windows", "requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
     def test_adjust_path_visual_studio(self):
         #  NOTE : test cannot be run on *nix systems, as adjust_path uses
         # tools.unix_path which is Windows-only

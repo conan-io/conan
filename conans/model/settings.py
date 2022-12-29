@@ -45,7 +45,7 @@ class SettingsItem(object):
             self._definition = "ANY"
         else:
             # list or tuple of possible values
-            self._definition = sorted(str(v) for v in definition)
+            self._definition = [str(v) for v in definition]
 
     def __contains__(self, value):
         return value in (self._value or "")
@@ -212,6 +212,19 @@ class Settings(object):
         if tmp is not None and tmp.value and tmp.value != "None":  # In case of subsettings is None
             return str(tmp)
         return default
+
+    def rm_safe(self, name):
+        try:
+            tmp = self
+            attr_ = name
+            if "." in name:
+                fields = name.split(".")
+                attr_ = fields.pop()
+                for prop in fields:
+                    tmp = getattr(tmp, prop)
+            delattr(tmp, attr_)
+        except ConanException:
+            pass
 
     def copy(self):
         """ deepcopy, recursive

@@ -59,12 +59,16 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                         comp,
                         comp_requires_gennames)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
+                # Mechanism to avoid overwriting the component PC file in case of being
+                # the same as the root package one.
+                # Issue related: https://github.com/conan-io/conan/issues/10341
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
                                                                               comp_gennames)
         return ret
 
     def _pc_file_content(self, name, cpp_info, requires_gennames):
+        version = cpp_info.get_property("component_version") or cpp_info.version
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
@@ -81,12 +85,16 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             includedir_vars = varnames
             lines.extend(dir_lines)
 
+        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content")
+        if pkg_config_custom_content:
+            lines.append(pkg_config_custom_content)
+
         lines.append("")
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
-        lines.append("Version: %s" % cpp_info.version)
-        libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
+        lines.append("Version: %s" % version)
+        libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
@@ -105,13 +113,13 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                                                         rpaths,
                                                         frameworks,
                                                         framework_paths]))
-        include_dirs_flags = ["-I${%s}" % name for name in includedir_vars]
+        include_dirs_flags = ['-I"${%s}"' % name for name in includedir_vars]
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,
-             cpp_info.cxxflags,
-             cpp_info.cflags,
-             ["-D%s" % d for d in cpp_info.defines]]))
+             [flag.replace('"', '\\"') for flag in cpp_info.cxxflags],
+             [flag.replace('"', '\\"') for flag in cpp_info.cflags],
+             ["-D%s" % d.replace('"', '\\"') for d in cpp_info.defines]]))
 
         if requires_gennames:
             public_deps = " ".join(requires_gennames)

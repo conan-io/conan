@@ -2,6 +2,8 @@ import os
 import unittest
 import xml.etree.ElementTree
 
+from mock import Mock
+
 from conans.client import tools
 from conans.client.generators import VisualStudioGenerator
 from conans.model.build_info import CppInfo
@@ -10,14 +12,13 @@ from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
 class VisualStudioGeneratorTest(unittest.TestCase):
 
     def test_valid_xml(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
@@ -36,7 +37,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
                       content)
 
     def test_user_profile(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         tmp_folder = temp_folder()
@@ -73,7 +74,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
     def test_multi_config(self):
         tmp_folder = temp_folder()
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         cpp_info = CppInfo(ref.name, tmp_folder)
         cpp_info.defines = ["_WIN32_WINNT=x0501"]
@@ -115,7 +116,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
     def test_addional_dependencies(self):
 
         def validate_additional_dependencies(lib, additional_dep):
-            conanfile = ConanFile(TestBufferConanOutput(), None)
+            conanfile = ConanFile(Mock(), None)
             conanfile.initialize(Settings({}), EnvValues())
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
             cpp_info = CppInfo(ref.name, "dummy_root_folder1")

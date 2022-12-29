@@ -102,3 +102,18 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(v1.build, "build2")
         v2 = Version("0.2.3+b178")
         self.assertEqual(v2.build, "b178")
+
+    def test_msvc_generic(self):
+        v1 = Version("19.1X")
+        v2 = Version("19.2X")
+        v3 = Version("19.3X")
+
+        assert v1 < v2
+        assert v1 < v3
+        assert v1 < "19.2X"
+        assert v1 < "19.21"
+        assert v1 < "19.11"
+        assert not v1 > "19.13"
+        assert v2 < v3
+        assert v2 < "19.37"
+

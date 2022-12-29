@@ -38,7 +38,7 @@ class SCMData(object):
         data = getattr(conanfile, "scm")
         self.type = _get_dict_value(data, "type", string_types)
         self.url = _get_dict_value(data, "url", string_types)
-        self.revision = _get_dict_value(data, "revision", string_types + (int, ),
+        self.revision = _get_dict_value(data, "revision", string_types + (int,),
                                         disallowed_type=bool)  # bool is subclass of integer
         self.verify_ssl = _get_dict_value(data, "verify_ssl", bool, SCMData.VERIFY_SSL_DEFAULT)
         self.username = _get_dict_value(data, "username", string_types)
@@ -65,11 +65,12 @@ class SCMData(object):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type,
              "subfolder": self.subfolder, "submodule": self.submodule}
+        d = {k: v for k, v in d.items() if v is not None}
+        # Preserve the value 'None' for those entries with not falsy default.
         if self.shallow != self.SHALLOW_DEFAULT:
             d.update({"shallow": self.shallow})
         if self.verify_ssl != self.VERIFY_SSL_DEFAULT:
             d.update({"verify_ssl": self.verify_ssl})
-        d = {k: v for k, v in d.items() if v is not None}
         return d
 
     def __repr__(self):
@@ -78,6 +79,8 @@ class SCMData(object):
         def _kv_to_string(key, value):
             if isinstance(value, bool):
                 return '"{}": {}'.format(key, value)
+            elif value is None:
+                return '"{}": None'.format(key)
             else:
                 value_str = str(value).replace('"', r'\"')
                 return '"{}": "{}"'.format(key, value_str)

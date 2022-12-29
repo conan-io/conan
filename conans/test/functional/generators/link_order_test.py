@@ -11,7 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool_cmake(version="3.19")
 class LinkOrderTest(unittest.TestCase):
     """ Check that the link order of libraries is preserved when using CMake generators
         https://github.com/conan-io/conan/issues/6280
@@ -268,26 +268,17 @@ class LinkOrderTest(unittest.TestCase):
     @staticmethod
     def _get_link_order_from_xcode(content):
         libs = []
-        for line in content.splitlines():
-            split_key = 'OTHER_LDFLAGS = " -Wl,-search_paths_first -Wl,-headerpad_max_install_names'
-            if split_key in line.strip():
-                _, links = line.split(split_key)
-                if links.strip() == '";':
-                    continue
-                for it_lib in links.strip().split():
-                    if it_lib.strip() == '";':
-                        continue
-                    if it_lib.startswith("-l"):
-                        libs.append(it_lib[2:].strip('";'))
-                    elif it_lib == "-framework":
-                        continue
-                    else:
-                        try:
-                            _, libname = it_lib.rsplit('/', 1)
-                        except ValueError:
-                            libname = it_lib
-                        finally:
-                            libs.append(libname.strip('";'))
+        start_key = 'OTHER_LDFLAGS = (" -Wl,-search_paths_first -Wl,-headerpad_max_install_names",'
+        end_key = '");'
+        libs_content = content.split(start_key, 1)[1].split(end_key, 1)[0]
+        libs_unstripped = libs_content.split(",")
+        for lib in libs_unstripped:
+            if ".a" in lib:
+                libs.append(lib.strip('"').rsplit('/', 1)[1])
+            elif "-l" in lib:
+                libs.append(lib.strip('"')[2:])
+            elif "-framework" in lib:
+                libs.append(lib.strip('"')[11:])
         return libs
 
     def _create_find_package_project(self, multi):

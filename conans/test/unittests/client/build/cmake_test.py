@@ -8,13 +8,14 @@ import unittest
 import mock
 import six
 from parameterized.parameterized import parameterized
+import pytest
 
 from conans.client import tools
 from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import cmake_in_local_cache_var_name
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools import cross_building
-from conans.client.tools.oss import cpu_count, detected_architecture
+from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.ref import ConanFileReference
@@ -22,6 +23,7 @@ from conans.model.settings import Settings
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
+from conans.model.conf import ConfDefinition
 
 
 def _format_path_as_cmake(pathstr):
@@ -46,9 +48,9 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.name = "MyPkg"
         conanfile.settings = Settings()
-        conanfile.source_folder = os.path.join(self.tempdir, "src")
-        conanfile.build_folder = os.path.join(self.tempdir, "build")
-        conanfile.package_folder = os.path.join(self.tempdir, "pkg")
+        conanfile.folders.set_base_source(os.path.join(self.tempdir, "src"))
+        conanfile.folders.set_base_build(os.path.join(self.tempdir, "build"))
+        conanfile.folders.set_base_package(os.path.join(self.tempdir, "pkg"))
         conanfile.deps_cpp_info = DepsCppInfo()
 
         msg = "FOLDER: " + _format_path_as_cmake(conanfile.package_folder)
@@ -74,9 +76,9 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.name = "MyPkg"
         conanfile.settings = Settings()
-        conanfile.source_folder = os.path.join(self.tempdir, "src")
-        conanfile.build_folder = os.path.join(self.tempdir, "build")
-        conanfile.package_folder = os.path.join(self.tempdir, "pkg")
+        conanfile.folders.set_base_source(os.path.join(self.tempdir, "src"))
+        conanfile.folders.set_base_build(os.path.join(self.tempdir, "build"))
+        conanfile.folders.set_base_package(os.path.join(self.tempdir, "pkg"))
         conanfile.deps_cpp_info = DepsCppInfo()
 
         ref = ConanFileReference.loads("MyPkg1/0.1@user/channel")
@@ -133,7 +135,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.should_build = True
         conanfile.should_install = False
         conanfile.should_test = True
-        conanfile.package_folder = temp_folder()
+        conanfile.folders.set_base_package(temp_folder())
         cmake = CMake(conanfile, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conanfile.command)
@@ -182,6 +184,15 @@ class CMakeTest(unittest.TestCase):
         self.assertNotIn("cmake --build %s" %
                          CMakeTest.scape(". --target test -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
+
+    def test_conan_run_tests(self):
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.should_test = True
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        with tools.environment_append({"CONAN_RUN_TESTS": "0"}):
+            cmake.test()
+            self.assertIsNone(conanfile.command)
 
     def test_cmake_generator(self):
         conanfile = ConanFileMock()
@@ -447,8 +458,8 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Release"
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conanfile.folders.set_base_source(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conanfile.folders.set_base_build(os.path.join(self.tempdir, "my_cache_build_folder"))
 
         # Existing make
         make_path = os.path.join(self.tempdir, "make")
@@ -479,8 +490,8 @@ class CMakeTest(unittest.TestCase):
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conanfile.folders.set_base_source(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conanfile.folders.set_base_build(os.path.join(self.tempdir, "my_cache_build_folder"))
         with tools.chdir(self.tempdir):
             linux_stuff = ""
             if platform.system() != "Linux":
@@ -651,7 +662,6 @@ class CMakeTest(unittest.TestCase):
 
         def check(text, build_config, generator=None, set_cmake_flags=False):
             the_os = str(settings.os)
-            arch = str(settings.arch)
             os_ver = str(settings.os.version) if settings.get_safe('os.version') else None
             for cmake_system_name in (True, False):
                 cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
@@ -875,7 +885,6 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
-        settings.os = "Windows"
         if platform.system() == "Windows":
             cmake = CMake(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
@@ -886,6 +895,22 @@ build_type: [ Release]
             cmake = CMake(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], "somevalue")
+
+    def test_sysroot_envvar(self):
+        settings = Settings.loads(get_default_settings_yml())
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        settings.os = "Linux"
+        settings.os_build = "Windows"
+        settings.compiler = "gcc"
+        settings.compiler.version = "5"
+        settings.arch_build = "x86_64"
+        settings.arch = "armv7"
+
+        # Now activate cross build and check sysroot and system processor
+        with(tools.environment_append({"CONAN_CMAKE_SYSROOT": "/path/to/var/sysroot"})):
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/var/sysroot")
 
     def test_deprecated_behaviour(self):
         """"Remove when deprecate the old settings parameter to CMake and
@@ -1119,7 +1144,7 @@ build_type: [ Release]
                          '%s' % CMakeTest.scape('. --target test'),
                          conanfile.command)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
     def test_clean_sh_path(self):
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
         save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")
@@ -1154,7 +1179,7 @@ build_type: [ Release]
     def test_pkg_config_path(self):
         conanfile = ConanFileMock()
         conanfile.generators = ["pkg_config"]
-        conanfile.install_folder = "/my_install/folder/"
+        conanfile.folders.set_base_install("/my_install/folder/")
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -1332,7 +1357,7 @@ build_type: [ Release]
 
     def test_install_definitions(self):
         conanfile = ConanFileMock()
-        conanfile.package_folder = None
+        conanfile.folders.set_base_package(None)
         conanfile.settings = Settings.loads(get_default_settings_yml())
         install_defintions = {"CMAKE_INSTALL_PREFIX": conanfile.package_folder,
                               "CMAKE_INSTALL_BINDIR": "bin",
@@ -1349,7 +1374,7 @@ build_type: [ Release]
             self.assertNotIn(key, install_defintions.keys())
 
         # With package_folder
-        conanfile.package_folder = "my_package_folder"
+        conanfile.folders.set_base_package("my_package_folder")
         install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.package_folder
         cmake = CMake(conanfile)
         for key, value in install_defintions.items():
@@ -1412,7 +1437,7 @@ build_type: [ Release]
                            ('NMake Makefiles', 'clang', 6.0),
                            ('NMake Makefiles JOM', 'clang', 6.0)
                            ])
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows vcvars")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows vcvars")
     def test_vcvars_applied(self, generator, compiler, version):
         conanfile = ConanFileMock()
         settings = Settings.loads(get_default_settings_yml())
@@ -1576,6 +1601,17 @@ build_type: [ Release]
         self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
         self.assertIn('-T "v141,host=x64"', cmake.command_line)
 
-        cmake = CMake(conanfile, generator="Visual Studio 15 2017", generator_platform="x64", toolset="v141,host=x64")
+        cmake = CMake(conanfile, generator="Visual Studio 15 2017", generator_platform="x64",
+                      toolset="v141,host=x64")
         self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
         self.assertIn('-T "v141,host=x64"', cmake.command_line)
+
+    def test_skip_test(self):
+        conf = ConfDefinition()
+        conf.loads("tools.build:skip_test=1")
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf = conf.get_conanfile_conf(None)
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake.test()
+        self.assertIsNone(conanfile.command)

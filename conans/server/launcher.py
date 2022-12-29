@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import os
+import sys
 
 from conans import SERVER_CAPABILITIES, REVISIONS
 from conans.paths import conan_expand_user
@@ -8,27 +9,39 @@ from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.migrate import migrate_and_get_server_config
-from conans.server.plugin_loader import load_authentication_plugin
+from conans.server.plugin_loader import load_authentication_plugin, load_authorization_plugin
 from conans.server.rest.server import ConanServer
 
 from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 
 
 class ServerLauncher(object):
-    def __init__(self, force_migration=False):
+    def __init__(self, force_migration=False, server_dir=None):
+        if sys.version_info.major == 2:
+            raise Exception("The conan_server needs Python>=3 for running")
         self.force_migration = force_migration
-        user_folder = conan_expand_user("~")
-        server_folder = os.path.join(user_folder, '.conan_server')
+        if server_dir:
+            user_folder = server_folder = server_dir
+        else:
+            user_folder = conan_expand_user("~")
+            server_folder = os.path.join(user_folder, '.conan_server')
 
-        server_config = migrate_and_get_server_config(user_folder, self.force_migration)
-        custom_auth = server_config.custom_authenticator
-        if custom_auth:
-            authenticator = load_authentication_plugin(server_folder, custom_auth)
+        server_config = migrate_and_get_server_config(
+            user_folder, self.force_migration, server_dir is not None
+        )
+        custom_authn = server_config.custom_authenticator
+        if custom_authn:
+            authenticator = load_authentication_plugin(server_folder, custom_authn)
         else:
             authenticator = BasicAuthenticator(dict(server_config.users))
 
-        authorizer = BasicAuthorizer(server_config.read_permissions,
-                                     server_config.write_permissions)
+        custom_authz = server_config.custom_authorizer
+        if custom_authz:
+            authorizer = load_authorization_plugin(server_folder, custom_authz)
+        else:
+            authorizer = BasicAuthorizer(server_config.read_permissions,
+                                         server_config.write_permissions)
+
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
 

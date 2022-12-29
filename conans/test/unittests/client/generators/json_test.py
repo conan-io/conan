@@ -1,5 +1,8 @@
 import json
+import os
 import unittest
+
+from mock import Mock
 
 from conans.client.generators.json_generator import JsonGenerator
 from conans.model.build_info import CppInfo
@@ -8,13 +11,12 @@ from conans.model.env_info import EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.user_info import UserInfo, DepsUserInfo
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class JsonTest(unittest.TestCase):
 
     def test_variables_setup(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         # Add some cpp_info for dependencies
@@ -24,6 +26,7 @@ class JsonTest(unittest.TestCase):
         cpp_info.cflags.append("-Flag1=23")
         cpp_info.version = "1.3"
         cpp_info.description = "My cool description"
+        cpp_info.build_modules.append("cmake/module.cmake")
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
@@ -64,6 +67,20 @@ class JsonTest(unittest.TestCase):
         self.assertEqual(my_pkg["name"], "MyPkg")
         self.assertEqual(my_pkg["description"], "My cool description")
         self.assertEqual(my_pkg["defines"], ["MYDEFINE1"])
+        self.assertListEqual(my_pkg["build_modules"]["cmake"], ["cmake/module.cmake"])
+        self.assertListEqual(my_pkg["build_modules"]["cmake_multi"], ["cmake/module.cmake"])
+        self.assertListEqual(my_pkg["build_modules"]["cmake_find_package"], ["cmake/module.cmake"])
+        self.assertListEqual(my_pkg["build_modules"]["cmake_find_package_multi"],
+                             ["cmake/module.cmake"])
+        self.assertListEqual(my_pkg["build_modules_paths"]["cmake"],
+                             [os.path.join("dummy_root_folder1", "cmake/module.cmake")])
+        self.assertListEqual(my_pkg["build_modules_paths"]["cmake_multi"],
+                             [os.path.join("dummy_root_folder1", "cmake/module.cmake")])
+        self.assertListEqual(my_pkg["build_modules_paths"]["cmake_find_package"],
+                             [os.path.join("dummy_root_folder1", "cmake/module.cmake")])
+        self.assertListEqual(my_pkg["build_modules_paths"]["cmake_find_package_multi"],
+                             [os.path.join("dummy_root_folder1", "cmake/module.cmake")])
+
 
         # Check env_info
         env_info = parsed["deps_env_info"]

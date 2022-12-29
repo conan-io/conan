@@ -41,10 +41,10 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
 
     def test_scripts(self):
         content = self.result[self.environment_sh_env]
-        self.assertIn('DYLD_LIBRARY_PATH="lib1":"lib2"${DYLD_LIBRARY_PATH+:$DYLD_LIBRARY_PATH}',
+        self.assertIn('DYLD_LIBRARY_PATH="lib1":"lib2"${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}',
                       content)
-        self.assertIn('LD_LIBRARY_PATH="lib1":"lib2"${LD_LIBRARY_PATH+:$LD_LIBRARY_PATH}', content)
-        self.assertIn('PATH="bin1":"bin2"${PATH+:$PATH}', content)
+        self.assertIn('LD_LIBRARY_PATH="lib1":"lib2"${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}', content)
+        self.assertIn('PATH="bin1":"bin2"${PATH:+:$PATH}', content)
 
         if platform.system() == "Windows":
             content = self.result[self.environment_bat_env]

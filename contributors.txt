@@ -1,7 +1,9 @@
 Contributors
 -------------
 
-This is the list of contributors to this project source code, in alphabetical order.
+This is a very partial list of contributors to this project source code, in alphabetical order, those who
+explicitly wanted to add details here. For the whole list (+220), refer to https://github.com/conan-io/conan/graphs/contributors
+
 Many thanks to all of them!
 
 - Bocanegra Algarra, Raul (raul.bocanegra.algarra@gmail.com)
@@ -22,3 +24,4 @@ Many thanks to all of them!
 - Ries, Uilian (uilianries@gmail.com, @uilianries)
 - Sechet, Olivier (osechet@gmail.com)
 - Sturm, Fabian (f@rtfs.org, @sturmf)
+- Williams, Jordan (jordan@jwillikers.com)

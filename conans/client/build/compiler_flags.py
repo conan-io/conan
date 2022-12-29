@@ -10,7 +10,7 @@
 
 """
 
-from conans.client.tools.apple import is_apple_os
+from conans.client.tools.apple import to_apple_arch
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import unix_path
 
@@ -28,7 +28,7 @@ def rpath_flags(settings, os_build, lib_paths):
     if not os_build:
         return []
     if compiler in GCC_LIKE:
-        rpath_separator = "," if is_apple_os(os_build) else "="
+        rpath_separator = ","
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
     return []
@@ -42,11 +42,17 @@ def architecture_flag(settings):
     compiler_base = settings.get_safe("compiler.base")
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
+    subsystem = settings.get_safe("os.subsystem")
+    subsystem_ios_version = settings.get_safe("os.subsystem.ios_version")
     if not compiler or not arch:
         return ""
 
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(arch) in ['x86_64', 'sparcv9', 's390x']:
+        if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
+            apple_arch = to_apple_arch(arch)
+            if apple_arch:
+                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
+        elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
             return '-m32'
@@ -63,6 +69,13 @@ def architecture_flag(settings):
             return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
         elif str(arch) == "x86_64":
             return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
+    elif str(compiler) == "mcst-lcc":
+        return {"e2k-v2": "-march=elbrus-v2",
+                "e2k-v3": "-march=elbrus-v3",
+                "e2k-v4": "-march=elbrus-v4",
+                "e2k-v5": "-march=elbrus-v5",
+                "e2k-v6": "-march=elbrus-v6",
+                "e2k-v7": "-march=elbrus-v7"}.get(str(arch), "")
     return ""
 
 
@@ -145,7 +158,7 @@ def build_type_flags(settings):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc"]:
+        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.
@@ -267,4 +280,4 @@ def format_framework_paths(framework_paths, settings):
     compiler_base = settings.get_safe("compiler.base")
     if (str(compiler) not in GCC_LIKE) and (str(compiler_base) not in GCC_LIKE):
         return []
-    return ["-F %s" % adjust_path(framework_path, settings) for framework_path in framework_paths]
+    return ["-F\"%s\"" % adjust_path(framework_path, settings) for framework_path in framework_paths]

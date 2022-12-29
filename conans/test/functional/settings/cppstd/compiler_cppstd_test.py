@@ -8,7 +8,6 @@ import pytest
 from parameterized.parameterized import parameterized_class
 
 from conans.client.tools import environment_append, save
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
@@ -64,11 +63,10 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
 
     def test_value_different_with_general_setting(self):
         deprecation_number = 1 if self.recipe_cppstd else 0
-        with catch_deprecation_warning(self, n=deprecation_number):
-            self.t.run("create . hh/0.1@user/channel"
-                       " -s cppstd=17"
-                       " -s hh:compiler=gcc"
-                       " -s hh:compiler.cppstd=14", assert_error=True)
+        self.t.run("create . hh/0.1@user/channel"
+                   " -s cppstd=17"
+                   " -s hh:compiler=gcc"
+                   " -s hh:compiler.cppstd=14", assert_error=True)
         self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
                       " 'compiler.cppstd' together with 'cppstd'", self.t.out)
 
@@ -82,12 +80,11 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         t = TestClient(cache_folder=temp_folder())
         t.save({'conanfile.py': conanfile})
 
-        with catch_deprecation_warning(self):
-            # No mismatch, because settings for this conanfile does not include `compiler`
-            t.run("create . hh/0.1@user/channel"
-                  " -s cppstd=17"
-                  " -s hh:compiler=gcc"
-                  " -s hh:compiler.cppstd=14", assert_error=True)
+        # No mismatch, because settings for this conanfile does not include `compiler`
+        t.run("create . hh/0.1@user/channel"
+              " -s cppstd=17"
+              " -s hh:compiler=gcc"
+              " -s hh:compiler.cppstd=14", assert_error=True)
         self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
                       " 'compiler.cppstd' together with 'cppstd'", t.out)
 
@@ -104,17 +101,15 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         t = TestClient(cache_folder=temp_folder())
         t.save({'conanfile.py': conanfile}, clean_first=True)
 
-        with catch_deprecation_warning(self):
-            # No mismatch, because settings for this conanfile does not include `compiler`
-            t.run("create . hh/0.1@user/channel"
-                  " -s cppstd=17"
-                  " -s hh:compiler=gcc"
-                  " -s hh:compiler.cppstd=14", assert_error=True)
+        # No mismatch, because settings for this conanfile does not include `compiler`
+        t.run("create . hh/0.1@user/channel"
+              " -s cppstd=17"
+              " -s hh:compiler=gcc"
+              " -s hh:compiler.cppstd=14", assert_error=True)
         self.assertIn("ERROR: Error in resulting settings for package 'hh': Do not use settings"
                       " 'compiler.cppstd' together with 'cppstd'", t.out)
 
 
-@pytest.mark.tool_compiler
 class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
@@ -132,14 +127,8 @@ class UseCompilerCppStdSettingTests(unittest.TestCase):
         self.t = TestClient()
         self.t.save({'conanfile.py': self.conanfile})
 
-    def test_user_notice(self):
-        self.t.run("info .")
-        self.assertIn("WARN: Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                      " please update your recipe.", self.t.out)
-
     def test_only_cppstd(self):
-        with catch_deprecation_warning(self):
-            self.t.run("info . -s cppstd=14")
+        self.t.run("info . -s cppstd=14")
         self.assertNotIn(">>> compiler.cppstd: 14", self.t.out)
         self.assertIn(">>> cppstd: 14", self.t.out)
         self.assertIn(">>> compiler.cppstd: None", self.t.out)

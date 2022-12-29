@@ -10,12 +10,13 @@ from conans.model.ref import PackageReference
 
 class PackageEditableLayout(object):
 
-    def __init__(self, base_folder, layout_file, ref, conanfile_path):
+    def __init__(self, base_folder, layout_file, ref, conanfile_path, output_folder):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
         self._base_folder = base_folder
         self._layout_file = layout_file
         self._conanfile_path = conanfile_path
+        self.output_folder = output_folder
 
     @property
     def ref(self):
@@ -63,3 +64,6 @@ class PackageEditableLayout(object):
 
     def get_path(self, package_id=None, path=None):
         raise ConanException("Operation not allowed on a package installed as editable")
+
+    def package_ids(self):
+        raise ConanException("Package in editable mode cannot list binaries")

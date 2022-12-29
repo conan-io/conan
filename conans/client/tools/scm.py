@@ -16,7 +16,7 @@ from conans.util.runners import check_output_runner, version_runner, muted_runne
 
 
 def _check_repo(cmd, folder):
-    msg = "Not a valid '{0}' repository or '{0}' not found.".format(cmd[0])
+    msg = "'{0}' is not a valid '{1}' repository or '{1}' not found.".format(folder, cmd[0])
     try:
         ret = muted_runner(cmd, folder=folder)
     except Exception:
@@ -61,15 +61,72 @@ class SCMBase(object):
                     else:
                         return self._runner(command)
 
+    def _handle_scp_pattern(self, user, domain, url):
+        if self._password:
+            self._output.warn("SCM password cannot be set for scp url, ignoring parameter")
+        if self._username:
+            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+        return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
+
+    def _handle_url_pattern(self, scheme, url, user=None, password=None):
+        if scheme in ["file", "git"]:
+            if self._username:
+                self._output.warn("SCM username cannot be set for {} url, ignoring "
+                                  "parameter".format(scheme))
+            if self._password:
+                self._output.warn("SCM password cannot be set for {} url, ignoring "
+                                  "parameter".format(scheme))
+            if user or password:
+                self._output.warn("Username/Password in URL cannot be set for '{}' SCM type, "
+                                  "removing it".format(scheme))
+            return "{scheme}://{url}".format(scheme=scheme, url=url)
+        elif scheme == "ssh" and self._password:
+            self._output.warn("SCM password cannot be set for ssh url, ignoring parameter")
+        elif password and self._password:
+            self._output.warn("SCM password got from URL, ignoring 'password' parameter")
+
+        if user and self._username:
+            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+
+        the_user = user or self._username
+        the_password = password or self._password
+
+        if the_password and the_user and scheme != "ssh":
+            return "{scheme}://{user}:{password}@{url}".format(scheme=scheme,
+                                                               user=quote_plus(the_user),
+                                                               password=quote_plus(the_password),
+                                                               url=url)
+        elif the_user:
+            if scheme == "ssh" and password:
+                self._output.warn("Password in URL cannot be set for 'ssh' SCM type, removing it")
+            return "{scheme}://{user}@{url}".format(scheme=scheme, user=quote_plus(the_user),
+                                                    url=url)
+        else:
+            return "{scheme}://{url}".format(scheme=scheme, url=url)
+
     def get_url_with_credentials(self, url):
-        if not self._username or not self._password:
-            return url
-        if urlparse(url).password:
+        if not self._username and not self._password:
             return url
 
-        user_enc = quote_plus(self._username)
-        pwd_enc = quote_plus(self._password)
-        url = url.replace("://", "://" + user_enc + ":" + pwd_enc + "@", 1)
+        scp_regex = re.compile("^(?P<user>[a-zA-Z0-9_]+)@(?P<domain>[a-zA-Z0-9._-]+):(?P<url>.*)$")
+        url_user_pass_regex = re.compile(
+            r"^(?P<scheme>file|http|https|git|ssh)://(?P<user>\w+):(?P<password>\w+)@(?P<url>.*)$")
+        url_user_regex = re.compile(
+            r"^(?P<scheme>file|http|https|git|ssh)://(?P<user>\w+)@(?P<url>.*)$")
+        url_basic_regex = re.compile(r"^(?P<scheme>file|http|https|git|ssh)://(?P<url>.*)$")
+
+        url_patterns = [
+            (scp_regex, self._handle_scp_pattern),
+            (url_user_pass_regex, self._handle_url_pattern),
+            (url_user_regex, self._handle_url_pattern),
+            (url_basic_regex, self._handle_url_pattern)
+        ]
+
+        for regex, handler in url_patterns:
+            match = regex.match(url)
+            if match:
+                return handler(**match.groupdict())
+        self._output.warn("URL type not supported, ignoring 'username' and 'password' parameters")
         return url
 
     @classmethod
@@ -90,6 +147,13 @@ class Git(SCMBase):
     @property
     def _configure_ssl_verify(self):
         return "-c http.sslVerify=%s " % ("true" if self._verify_ssl else "false")
+
+    @property
+    def version(self):
+        if not hasattr(self, '_version'):
+            version = Git.get_version()
+            setattr(self, '_version', version)
+        return getattr(self, '_version')
 
     def run(self, command):
         command = self._configure_ssl_verify + command

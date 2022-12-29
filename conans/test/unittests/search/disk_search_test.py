@@ -19,7 +19,7 @@ class SearchTest(unittest.TestCase):
         self.cache = ClientCache(folder, output=TestBufferConanOutput())
         mkdir(self.cache.store)
 
-    def basic_test2(self):
+    def test_basic_2(self):
         with chdir(self.cache.store):
             ref1 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
             root_folder = str(ref1).replace("@", "/")

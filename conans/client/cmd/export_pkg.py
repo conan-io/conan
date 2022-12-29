@@ -2,15 +2,15 @@ import os
 
 from conans.client import packager
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.graph import BINARY_SKIP
+from conans.client.graph.graph import BINARY_SKIP, BINARY_INVALID
 from conans.client.graph.graph_manager import load_deps_info
 from conans.client.installer import add_env_conaninfo
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.ref import PackageReference
 
 
 def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
-               graph_info, force, remotes):
+               graph_info, force, remotes, source_conanfile_path):
     ref = full_ref.copy_clear_rev()
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
     graph_manager = app.graph_manager
@@ -29,6 +29,9 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
     pkg_node = nodes[0]
+    if pkg_node.binary == BINARY_INVALID:
+        msg = "{}: Invalid ID: {}".format(ref, pkg_node.conanfile.info.invalid)
+        raise ConanInvalidConfiguration(msg)
     conanfile = pkg_node.conanfile
 
     def _init_conanfile_infos():
@@ -54,18 +57,29 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     recipe_hash = layout.recipe_manifest().summary_hash
     conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
+    if hasattr(conanfile, "layout"):
+        conanfile_folder = os.path.dirname(source_conanfile_path)
+        conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
+        conanfile.folders.set_base_package(dest_package_folder)
+    else:
+        conanfile.folders.set_base_build(build_folder)
+        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_package(dest_package_folder)
+        conanfile.folders.set_base_install(install_folder)
+
     with layout.set_dirty_context_manager(pref):
         if package_folder:
-            prev = packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
-                                       hook_manager, conan_file_path, ref)
+            # FIXME: To be removed in 2.0
+            prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
+                                       conan_file_path, ref)
         else:
-            prev = run_package_method(conanfile, package_id, source_folder, build_folder,
-                                      dest_package_folder, install_folder, hook_manager,
-                                      conan_file_path, ref)
+            prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)
     if pkg_node.graph_lock_node:
+        pkg_node.graph_lock_node.relax()
+        pkg_node.graph_lock_node.unlock_prev()
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
         pkg_node.graph_lock_node.prev = pref.revision

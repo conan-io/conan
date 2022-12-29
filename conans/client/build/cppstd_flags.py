@@ -32,7 +32,9 @@ def cppstd_flag(compiler, compiler_version, cppstd, compiler_base=None):
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
             "Visual Studio": _cppstd_visualstudio,
-            "intel": cppstd_intel}.get(str(compiler), None)
+            "msvc": _cppstd_msvc,
+            "intel": cppstd_intel,
+            "mcst-lcc": _cppstd_mcst_lcc}.get(str(compiler), None)
     flag = None
     if func:
         flag = func(str(compiler_version), str(cppstd))
@@ -48,30 +50,31 @@ def cppstd_flag_new(settings):
 
 
 def cppstd_default(settings):
-    if getattr(settings, "get_safe", None):
-        compiler = settings.get_safe("compiler")
-        compiler_version = settings.get_safe("compiler.version")
-        compiler_base = settings.get_safe("compiler.base")
-    else:
-        compiler = str(settings.compiler)
-        compiler_version = str(settings.compiler.version)
-        compiler_base = str(settings.compiler.base)
+
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    compiler_base = settings.get_safe("compiler.base")
     intel_cppstd_default = _intel_visual_cppstd_default if compiler_base == "Visual Studio" \
         else _intel_gcc_cppstd_default
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
+               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"; 14.0 still the same
                "Visual Studio": _visual_cppstd_default(compiler_version),
-               "intel": intel_cppstd_default(compiler_version)}.get(str(compiler), None)
+               "intel": intel_cppstd_default(compiler_version),
+               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
 
 def _clang_cppstd_default(compiler_version):
+    if Version(compiler_version) >= "16":
+        return "gnu17"
     # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
     return "gnu98" if Version(compiler_version) < "6" else "gnu14"
 
 
 def _gcc_cppstd_default(compiler_version):
+    if Version(compiler_version) >= "11":
+        return "gnu17"
     return "gnu98" if Version(compiler_version) < "6" else "gnu14"
 
 
@@ -89,11 +92,16 @@ def _intel_gcc_cppstd_default(_):
     return "gnu98"
 
 
+def _mcst_lcc_cppstd_default(compiler_version):
+    return "gnu14" if Version(compiler_version) >= "1.24" else "gnu98"
+
+
 def _cppstd_visualstudio(visual_version, cppstd):
     # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
     v14 = None
     v17 = None
     v20 = None
+    v23 = None
 
     if Version(visual_version) >= "14":
         v14 = "c++14"
@@ -101,8 +109,32 @@ def _cppstd_visualstudio(visual_version, cppstd):
     if Version(visual_version) >= "15":
         v17 = "c++17"
         v20 = "c++latest"
+    if Version(visual_version) >= "17":
+        v20 = "c++20"
+        v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
+    return "/std:%s" % flag if flag else None
+
+
+def _cppstd_msvc(visual_version, cppstd):
+    # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
+    v14 = None
+    v17 = None
+    v20 = None
+    v23 = None
+
+    if Version(visual_version) >= "190":
+        v14 = "c++14"
+        v17 = "c++latest"
+    if Version(visual_version) >= "191":
+        v17 = "c++17"
+        v20 = "c++latest"
+    if Version(visual_version) >= "193":
+        v20 = "c++20"
+        v23 = "c++latest"
+
+    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
     return "/std:%s" % flag if flag else None
 
 
@@ -112,7 +144,7 @@ def _cppstd_apple_clang(clang_version, cppstd):
     https://github.com/Kitware/CMake/blob/master/Modules/Compiler/AppleClang-CXX.cmake
     """
 
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
     if Version(clang_version) >= "4.0":
         v98 = "c++98"
@@ -127,24 +159,32 @@ def _cppstd_apple_clang(clang_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(clang_version) >= "6.1":
+    # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
+    # Note: cmake allows c++17 since version 10.0
+    if Version(clang_version) >= "9.1":
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
+    elif Version(clang_version) >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "9.1":
-        # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
-        v17 = "c++17"
-        vgnu17 = "gnu++17"
-
-    if Version(clang_version) >= "10.0":
+    if Version(clang_version) >= "13.0":
+        v20 = "c++20"
+        vgnu20 = "gnu++20"
+    elif Version(clang_version) >= "10.0":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
+
+    if Version(clang_version) >= "13.0":
+        v23 = "c++2b"
+        vgnu23 = "gnu++2b"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd, None)
+            "20": v20, "gnu20": vgnu20,
+            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
 
     return "-std=%s" % flag if flag else None
 
@@ -157,7 +197,7 @@ def _cppstd_clang(clang_version, cppstd):
 
     https://clang.llvm.org/cxx_status.html
     """
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
     if Version(clang_version) >= "2.1":
         v98 = "c++98"
@@ -188,18 +228,26 @@ def _cppstd_clang(clang_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
+    if Version(clang_version) >= "12":
+        v20 = "c++20"
+        vgnu20 = "gnu++20"
+
+        v23 = "c++2b"
+        vgnu23 = "gnu++2b"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd, None)
+            "20": v20, "gnu20": vgnu20,
+            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
     return "-std=%s" % flag if flag else None
 
 
 def _cppstd_gcc(gcc_version, cppstd):
     """https://github.com/Kitware/CMake/blob/master/Modules/Compiler/GNU-CXX.cmake"""
     # https://gcc.gnu.org/projects/cxx-status.html
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
 
     if Version(gcc_version) >= "3.4":
         v98 = "c++98"
@@ -219,7 +267,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(gcc_version) >= "5.1":
+    if Version(gcc_version) >= "5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
@@ -231,11 +279,16 @@ def _cppstd_gcc(gcc_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
+    if Version(gcc_version) >= "11":
+        v23 = "c++2b"
+        vgnu23 = "gnu++2b"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd)
+            "20": v20, "gnu20": vgnu20,
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
     return "-std=%s" % flag if flag else None
 
 
@@ -274,3 +327,29 @@ def _cppstd_intel_gcc(intel_version, cppstd):
 def _cppstd_intel_visualstudio(intel_version, cppstd):
     flag = _cppstd_intel_common(intel_version, cppstd, None, None)
     return "/Qstd=%s" % flag if flag else None
+
+
+def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
+    v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+
+    if Version(mcst_lcc_version) >= "1.21":
+        v11 = "c++11"
+        vgnu11 = "gnu++11"
+        v14 = "c++14"
+        vgnu14 = "gnu++14"
+
+    if Version(mcst_lcc_version) >= "1.24":
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
+
+    if Version(mcst_lcc_version) >= "1.25":
+        v20 = "c++2a"
+        vgnu20 = "gnu++2a"
+
+    flag = {"98": "c++98", "gnu98": "gnu++98",
+            "03": "c++03", "gnu03": "gnu++03",
+            "11": v11, "gnu11": vgnu11,
+            "14": v14, "gnu14": vgnu14,
+            "17": v17, "gnu17": vgnu17,
+            "20": v20, "gnu20": vgnu20}.get(cppstd)
+    return "-std=%s" % flag if flag else None

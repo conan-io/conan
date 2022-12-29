@@ -1,12 +1,13 @@
 import os
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.cmake_paths import CMakePathsGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.errors import ConanException
 
 
@@ -37,7 +38,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
 
     def test_cmake_vars_unit(self):
         settings = _MockSettings("Release")
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo("MyLib", tmp)
@@ -51,14 +52,14 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         custom_dir = custom_dir.replace('\\', '/')
         cmake_lines = generator.content.replace('\\', '/').replace("\n\t\t\t", " ").splitlines()
         self.assertEqual('set(CONAN_MYLIB_ROOT "%s")' % path, cmake_lines[0])
-        self.assertEqual('set(CMAKE_MODULE_PATH "%s/" "%s" ${CMAKE_MODULE_PATH} '
+        self.assertEqual('set(CMAKE_MODULE_PATH "%s/" "%s" ${CONAN_MYLIB_ROOT} ${CMAKE_MODULE_PATH} '
                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[1])
-        self.assertEqual('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CMAKE_PREFIX_PATH} '
+        self.assertEqual('set(CMAKE_PREFIX_PATH "%s/" "%s" ${CONAN_MYLIB_ROOT} ${CMAKE_PREFIX_PATH} '
                          '${CMAKE_CURRENT_LIST_DIR})' % (path, custom_dir), cmake_lines[2])
 
     def test_cpp_info_name(self):
         settings = _MockSettings("Release")
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo("pkg_reference_name", tmp)
@@ -69,7 +70,7 @@ class CMakePathsGeneratorTest(unittest.TestCase):
 
     def test_cpp_info_names(self):
         settings = _MockSettings("Release")
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(settings, EnvValues())
         tmp = temp_folder()
         cpp_info = CppInfo("pkg_reference_name", tmp)

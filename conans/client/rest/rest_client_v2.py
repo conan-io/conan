@@ -3,12 +3,11 @@ import time
 import traceback
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.downloaders.download import run_downloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
-from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
-from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.info import ConanInfo
@@ -41,10 +40,12 @@ class RestV2Methods(RestCommonMethods):
 
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
-        downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
-        if use_cache and self._config.download_cache:
-            downloader = CachedFileDownloader(self._config.download_cache, downloader)
-        contents = downloader.download(url, auth=self.auth, headers=headers)
+        retry = self._config.retry
+        retry_wait = self._config.retry_wait
+        download_cache = False if not use_cache else self._config.download_cache
+        contents = run_downloader(self.requester, None, self.verify_ssl, retry=retry,
+                                  retry_wait=retry_wait, download_cache=download_cache, url=url,
+                                  auth=self.auth, headers=headers)
         return contents
 
     def _get_snapshot(self, url):
@@ -195,7 +196,7 @@ class RestV2Methods(RestCommonMethods):
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
-                            "Uploading %s -> %s" % (filename, display_name))
+                    "Uploading %s -> %s" % (filename, display_name))
                 self._output.writeln(msg)
             resource_url = urls[filename]
             try:
@@ -216,17 +217,19 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
-        if use_cache and self._config.download_cache:
-            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        retry = self._config.retry
+        retry_wait = self._config.retry_wait
+        download_cache = False if not use_cache else self._config.download_cache
         for filename in sorted(files, reverse=True):
             if self._output and not self._output.is_terminal:
                 self._output.writeln("Downloading %s" % filename)
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            downloader.download(resource_url, abs_path, auth=self.auth)
+            run_downloader(self.requester, self._output, self.verify_ssl, retry=retry,
+                           retry_wait=retry_wait, download_cache=download_cache,
+                           url=resource_url, file_path=abs_path, auth=self.auth)
 
     def _remove_conanfile_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed

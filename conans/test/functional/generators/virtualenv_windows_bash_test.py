@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import decode_text, save
 
 
-@unittest.skipIf(platform.system() != "Windows", "Only for Windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
 class VirtualenvWindowsBashTestCase(unittest.TestCase):
     """
     We are running the full example inside Bash (generation of environment files and activate/deactivate), so we need
@@ -116,4 +116,4 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
         self.assertEqual(environment["WHATEVER2"], "list:existing_value")
 
         # Variable: list with spaces
-        self.assertEqual(environment["CFLAGS"], "cflags1 cflags2  existing_value")  # FIXME: extra blank
+        self.assertEqual(environment["CFLAGS"], "cflags1 cflags2 existing_value")

@@ -5,9 +5,8 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
-from conans.test.functional.scm.workflows.common import TestWorkflow
+from conans.test.integration.scm.workflows.common import TestWorkflow
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient
 
@@ -22,7 +21,6 @@ class SCMSubfolder(TestWorkflow):
     scm_subfolder = "scm_subfolder"
 
 
-@attr("svn")
 @pytest.mark.tool_svn
 class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
@@ -88,7 +86,6 @@ class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
         self._run_remote_test(t, os.path.join(t.current_folder, "lib1"), self.path_to_conanfile)
 
 
-@attr("git")
 @pytest.mark.tool_git
 class GitConanfileInRepoRootTest(SCMSubfolder, unittest.TestCase):
 

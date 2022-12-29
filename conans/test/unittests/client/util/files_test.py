@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import unittest
 
@@ -27,7 +28,12 @@ class FilesTest(unittest.TestCase):
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_a = md5sum(file_path)
-        self.assertEqual(md5_a, "df220cfbc0652e8992a89a77666c03b5")
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9:
+            # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
+            # https://github.com/conan-io/conan/issues/8020
+            self.assertEqual(md5_a, "79255eaf79cbb743da7cdb8786f4730a")
+        else:
+            self.assertEqual(md5_a, "df220cfbc0652e8992a89a77666c03b5")
 
         time.sleep(1)  # Timestamps change
 

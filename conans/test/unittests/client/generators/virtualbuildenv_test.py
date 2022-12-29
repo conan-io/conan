@@ -40,11 +40,11 @@ class VirtualBuildEnvGeneratorGCCTest(unittest.TestCase):
 
     def test_scripts(self):
         content = self.result["environment_build.sh.env"]
-        self.assertIn('CPPFLAGS="-DNDEBUG ${CPPFLAGS+ $CPPFLAGS}"', content)
-        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CXXFLAGS+ $CXXFLAGS}"', content)
-        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot ${CFLAGS+ $CFLAGS}"', content)
-        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot ${LDFLAGS+ $LDFLAGS}"', content)
-        self.assertIn('LIBS="${LIBS+ $LIBS}"', content)
+        self.assertIn('CPPFLAGS="-DNDEBUG${CPPFLAGS:+ $CPPFLAGS}"', content)
+        self.assertIn('CXXFLAGS="-O3 -s --sysroot=/path/to/sysroot${CXXFLAGS:+ $CXXFLAGS}"', content)
+        self.assertIn('CFLAGS="-O3 -s --sysroot=/path/to/sysroot${CFLAGS:+ $CFLAGS}"', content)
+        self.assertIn('LDFLAGS="--sysroot=/path/to/sysroot${LDFLAGS:+ $LDFLAGS}"', content)
+        self.assertIn('LIBS="${LIBS:+ $LIBS}"', content)
 
         content = self.result["environment_build.ps1.env"]
         self.assertIn('CPPFLAGS=-DNDEBUG $env:CPPFLAGS', content)

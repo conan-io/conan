@@ -6,26 +6,27 @@ from conans.paths import CONANINFO
 from conans.util.files import mkdir, save
 
 
-def export_pkg(conanfile, package_id, src_package_folder, package_folder, hook_manager,
-               conanfile_path, ref):
-    mkdir(package_folder)
-    conanfile.package_folder = package_folder
+def export_pkg(conanfile, package_id, src_package_folder, hook_manager, conanfile_path, ref):
+
+    # NOTE: The layout folder is not taken into account for the cache, it is not useful to introduce
+    #       a subfolder there.
+    mkdir(conanfile.package_folder)
+
     output = conanfile.output
     output.info("Exporting to cache existing package from user folder")
-    output.info("Package folder %s" % package_folder)
+    output.info("Package folder %s" % conanfile.package_folder)
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    copier = FileCopier([src_package_folder], package_folder)
+    copier = FileCopier([src_package_folder], conanfile.package_folder)
     copier("*", symlinks=True)
 
-    conanfile.package_folder = package_folder
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
-    manifest = FileTreeManifest.create(package_folder)
-    manifest.save(package_folder)
+    save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
+    manifest = FileTreeManifest.create(conanfile.package_folder)
+    manifest.save(conanfile.package_folder)
     report_files_from_manifest(output, manifest)
 
     output.success("Package '%s' created" % package_id)

@@ -28,13 +28,17 @@ class ConanServerConfigParser(ConfigParser):
     values from environment variables or from file.
     Environment variables have PRECEDENCE over file values
     """
-    def __init__(self, base_folder, environment=None):
+
+    def __init__(self, base_folder, environment=None, is_custom_path=False):
         environment = environment or os.environ
 
         ConfigParser.__init__(self)
         environment = environment or os.environ
         self.optionxform = str  # This line keeps the case of the key, important for users case
-        self.conan_folder = os.path.join(base_folder, '.conan_server')
+        if is_custom_path:
+            self.conan_folder = base_folder
+        else:
+            self.conan_folder = os.path.join(base_folder, '.conan_server')
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')
         self._loaded = False
         self.env_config = {"updown_secret": get_env("CONAN_UPDOWN_SECRET", None, environment),
@@ -49,6 +53,7 @@ class ConanServerConfigParser(ConfigParser):
                            "public_port": get_env("CONAN_SERVER_PUBLIC_PORT", None, environment),
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
                            "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
+                           "custom_authorizer": get_env("CONAN_CUSTOM_AUTHORIZER", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
@@ -161,6 +166,13 @@ class ConanServerConfigParser(ConfigParser):
     def custom_authenticator(self):
         try:
             return self._get_conf_server_string("custom_authenticator")
+        except ConanException:
+            return None
+
+    @property
+    def custom_authorizer(self):
+        try:
+            return self._get_conf_server_string("custom_authorizer")
         except ConanException:
             return None
 

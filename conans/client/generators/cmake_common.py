@@ -257,7 +257,7 @@ class CMakeCommonMacros:
     conan_find_libraries_abs_path = textwrap.dedent("""
         function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
             foreach(_LIBRARY_NAME ${libraries})
-                find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
+                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
@@ -277,7 +277,7 @@ class CMakeCommonMacros:
             unset(_CONAN_ACTUAL_TARGETS CACHE)
             unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
             foreach(_LIBRARY_NAME ${libraries})
-                find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
+                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
                     conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
@@ -471,6 +471,8 @@ class CMakeCommonMacros:
                 # https://cmake.org/cmake/help/v2.8.2/cmake.html#variable:MSVC_VERSION
                 # https://cmake.org/cmake/help/v3.14/variable/MSVC_VERSION.html
                 if(
+                    # 1930 = VS 17.0 (v143 toolset)
+                    (CONAN_COMPILER_VERSION STREQUAL "17" AND NOT((MSVC_VERSION EQUAL 1930) OR (MSVC_VERSION GREATER 1930))) OR
                     # 1920-1929 = VS 16.0 (v142 toolset)
                     (CONAN_COMPILER_VERSION STREQUAL "16" AND NOT((MSVC_VERSION GREATER 1919) AND (MSVC_VERSION LESS 1930))) OR
                     # 1910-1919 = VS 15.0 (v141 toolset)
@@ -524,9 +526,11 @@ class CMakeCommonMacros:
                 if(NOT ${_CHECK_VERSION} VERSION_EQUAL ${_CONAN_VERSION})
                     conan_error_compiler_version()
                 endif()
-            elseif(CONAN_COMPILER STREQUAL "apple-clang" OR CONAN_COMPILER STREQUAL "sun-cc")
+            elseif(CONAN_COMPILER STREQUAL "apple-clang" OR CONAN_COMPILER STREQUAL "sun-cc" OR CONAN_COMPILER STREQUAL "mcst-lcc")
                 conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
-                if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
+                if(${CONAN_COMPILER_MAJOR} VERSION_GREATER_EQUAL "13" AND "${CONAN_COMPILER_MINOR}" STREQUAL "" AND ${CONAN_COMPILER_MAJOR} VERSION_EQUAL ${VERSION_MAJOR})
+                   # This is correct,  13.X is considered 13
+                elseif(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
                    conan_error_compiler_version()
                 endif()
             elseif(CONAN_COMPILER STREQUAL "intel")
@@ -583,7 +587,9 @@ class CMakeCommonMacros:
             # If using VS, verify toolset
             if (CONAN_COMPILER STREQUAL "Visual Studio")
                 if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
-                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "llvm" OR
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang" OR
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Clang")
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
                 elseif (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Intel")
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "Intel")
@@ -850,7 +856,7 @@ class CMakeCommonMacros:
                 endif()
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()

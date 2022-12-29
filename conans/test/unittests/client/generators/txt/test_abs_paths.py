@@ -1,20 +1,22 @@
 import platform
 import unittest
 
+import pytest
+from mock import Mock
+
 from conans.client.generators.text import TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.tools import TestBufferConanOutput
 
 
 class AbsPathsTestCase(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "Uses unix-like paths")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Uses unix-like paths")
     def test_abs_path_unix(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("pkg/0.1")
         cpp_info = CppInfo(ref.name, "/rootdir")
@@ -27,9 +29,9 @@ class AbsPathsTestCase(unittest.TestCase):
         self.assertListEqual(after_cpp_info[ref.name].includedirs, ["../an/absolute/dir"])
         self.assertListEqual(after_cpp_info[ref.name].include_paths, ["/rootdir/../an/absolute/dir"])
 
-    @unittest.skipUnless(platform.system() == "Windows", "Uses windows-like paths")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Uses windows-like paths")
     def test_absolute_directory(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("pkg/0.1")
         cpp_info = CppInfo(ref.name, "C:/my/root/path")

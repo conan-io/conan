@@ -6,17 +6,15 @@ from collections import OrderedDict
 
 import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.build_info.conan_build_info import get_build_info
 from conans.client import tools
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MyBuildInfo(unittest.TestCase):
 
     def setUp(self):
@@ -29,8 +27,9 @@ class MyBuildInfo(unittest.TestCase):
                                                               "alternative": [("lasote", "lasote")]})
 
     def test_only_download(self):
-        files = cpp_hello_conan_files("Hello", "1.0", build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello", "1.0").with_exports("*").
+                         with_package_file("file", "content"),
+                          "file.h": ""})
         self.client.run("export . lasote/stable")
         self.client.run("upload '*' -c --all")
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
@@ -45,18 +44,20 @@ class MyBuildInfo(unittest.TestCase):
         self.assertEqual(len(data["modules"][0]["dependencies"]), 3)
 
     def test_json(self):
-
         # Upload to server Hello1 => Hello0 and Hello2 => Hello0
-        files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello0", "1.0").with_exports("*").
+                         with_package_file("file", "content"),
+                          "file.h": ""})
         self.client.run("export . lasote/stable")
 
-        files = cpp_hello_conan_files("Hello1", "1.0", deps=["Hello0/1.0@lasote/stable"], build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello1", "1.0").
+                         with_requires("Hello0/1.0@lasote/stable").with_exports("*").
+                         with_package_file("file", "content")})
         self.client.run("export . lasote/stable")
 
-        files = cpp_hello_conan_files("Hello2", "1.0", deps=["Hello0/1.0@lasote/stable"], build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello2", "1.0").with_exports("*").
+                         with_package_file("file", "content").
+                         with_requires("Hello0/1.0@lasote/stable")})
         self.client.run("export . lasote/stable")
         self.client.run("install Hello1/1.0@lasote/stable --build missing")
         self.client.run("install Hello2/1.0@lasote/stable --build missing")
@@ -100,12 +101,11 @@ class MyBuildInfo(unittest.TestCase):
     def test_cross_remotes(self):
 
         # Upload to alternative server Hello0 but Hello1 to the default
-        files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello0", "1.0")})
         self.client.run("export . lasote/stable")
 
-        files = cpp_hello_conan_files("Hello1", "1.0", deps=["Hello0/1.0@lasote/stable"], build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello1", "1.0").
+                         with_requires("Hello0/1.0@lasote/stable")})
         self.client.run("export . lasote/stable")
 
         self.client.run("export . lasote/stable")
@@ -127,15 +127,13 @@ class MyBuildInfo(unittest.TestCase):
             module = _get_module(data, "Hello1/1.0@lasote/stable")
             self.assertEqual(0, len(module["dependencies"]))
 
-    @attr('ide_fail')
     @pytest.mark.ide_fail
     def test_trace_command(self):
         from conans.build_info.command import run
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         # Generate some traces
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
-            files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
-            self.client.save(files)
+            self.client.save({"conanfile.py": GenConanfile("Hello0", "1.0")})
             self.client.run("export . lasote/stable")
             self.client.run("install Hello0/1.0@lasote/stable --build")
             self.client.run("upload '*' --all -c")

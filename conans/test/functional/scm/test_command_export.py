@@ -5,14 +5,12 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 
 
-@attr("svn")
 @pytest.mark.tool_svn
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
@@ -36,8 +34,9 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                                                                 rev_value=rev_value)
                           })
         self.client.run("export . lib/version@user/channel", assert_error=True)
-        self.assertIn("ERROR: Not a valid '{}' repository".format(repo_type.lower()),
-                      self.client.out)
+        self.assertIn("ERROR: '{}' is not a valid '{}' repository".format(
+                      self.client.current_folder, repo_type.lower()), self.client.out)
+
 
 @pytest.mark.tool_git
 class ExportCommandTestCase(unittest.TestCase):

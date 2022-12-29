@@ -1,20 +1,12 @@
 import os
-import platform
 import re
 import unittest
 
-import mock
-import pytest
-import six
 from parameterized import parameterized
 
 from conans.client import tools
-from conans.client.tools.files import chdir
 from conans.client.build.msbuild import MSBuild
-from conans.errors import ConanException
-from conans.model.version import Version
-from conans.test.utils.mocks import MockSettings, MockConanfile, ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from conans.test.utils.mocks import MockSettings, MockConanfile
 
 
 class MSBuildTest(unittest.TestCase):
@@ -72,34 +64,6 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn('/p:MyProp1="MyValue1"', command)
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    @pytest.mark.tool_visual_studio
-    def test_binary_logging_on(self):
-        settings = MockSettings({"build_type": "Debug",
-                                 "compiler": "Visual Studio",
-                                 "compiler.version": "15",
-                                 "arch": "x86_64",
-                                 "compiler.runtime": "MDd"})
-        conanfile = MockConanfile(settings)
-        msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("dummy.sln", output_binary_log=True)
-        self.assertIn("/bl", command)
-
-    @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def test_binary_logging_on_with_filename(self):
-        bl_filename = "a_special_log.log"
-        settings = MockSettings({"build_type": "Debug",
-                                 "compiler": "Visual Studio",
-                                 "compiler.version": "15",
-                                 "arch": "x86_64",
-                                 "compiler.runtime": "MDd"})
-        conanfile = MockConanfile(settings)
-        msbuild = MSBuild(conanfile)
-        command = msbuild.get_command("dummy.sln", output_binary_log=bl_filename)
-        expected_command = '/bl:"%s"' % bl_filename
-        self.assertIn(expected_command, command)
-
     def test_binary_logging_off_explicit(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -122,44 +86,14 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("dummy.sln")
         self.assertNotIn("/bl", command)
 
-    @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
-    def test_binary_logging_not_supported(self, mock_get_version):
-        mock_get_version.return_value = Version("14")
-
-        mocked_settings = MockSettings({"build_type": "Debug",
-                                        "compiler": "Visual Studio",
-                                        "compiler.version": "15",
-                                        "arch": "x86_64",
-                                        "compiler.runtime": "MDd"})
-        conanfile = MockConanfile(mocked_settings)
-        except_text = "MSBuild version detected (14) does not support 'output_binary_log' ('/bl')"
-        msbuild = MSBuild(conanfile)
-
-        with self.assertRaises(ConanException) as exc:
-            msbuild.get_command("dummy.sln", output_binary_log=True)
-        self.assertIn(except_text, str(exc.exception))
-
-    def error_targets_argument_Test(self):
+    def test_error_targets_argument(self):
         conanfile = MockConanfile(MockSettings({}))
         msbuild = MSBuild(conanfile)
         with self.assertRaises(TypeError):
             msbuild.get_command("dummy.sln", targets="sometarget")
 
-    @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def test_get_version(self):
-        settings = MockSettings({"build_type": "Debug",
-                                 "compiler": "Visual Studio",
-                                 "compiler.version": "15",
-                                 "arch": "x86_64",
-                                 "compiler.runtime": "MDd"})
-        version = MSBuild.get_version(settings)
-        six.assertRegex(self, version, r"(\d+\.){2,3}\d+")
-        self.assertGreater(version, "15.1")
-
-    @parameterized.expand([("16", "v142"),
+    @parameterized.expand([("17", "v143"),
+                           ("16", "v142"),
                            ("15", "v141"),
                            ("14", "v140"),
                            ("12", "v120"),
@@ -177,38 +111,8 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
-    @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def test_skip_toolset(self):
-        settings = MockSettings({"build_type": "Debug",
-                                 "compiler": "Visual Studio",
-                                 "compiler.version": "15",
-                                 "arch": "x86_64"})
-
-        class Runner(object):
-
-            def __init__(self):
-                self.commands = []
-
-            def __call__(self, *args, **kwargs):
-                self.commands.append(args[0])
-
-        with chdir(tools.mkdir_tmp()):
-            runner = Runner()
-            conanfile = MockConanfile(settings, runner=runner)
-            msbuild = MSBuild(conanfile)
-            msbuild.build("myproject", toolset=False)
-            self.assertEqual(len(runner.commands), 1)
-            self.assertNotIn("PlatformToolset", runner.commands[0])
-
-            runner = Runner()
-            conanfile = MockConanfile(settings, runner=runner)
-            msbuild = MSBuild(conanfile)
-            msbuild.build("myproject", toolset="mytoolset")
-            self.assertEqual(len(runner.commands), 1)
-            self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
-
-    @parameterized.expand([("v142",),
+    @parameterized.expand([("v143",),
+                           ("v142",),
                            ("v141",),
                            ("v140",),
                            ("v120",),
@@ -324,26 +228,6 @@ class MSBuildTest(unittest.TestCase):
         msbuild = MSBuild(conanfile)
         command = msbuild.get_command("test.sln")
         self.assertIn('/p:Platform="YOUR PLATFORM SDK (ARMV4)"', command)
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio installation path")
-    def test_arch_override(self):
-        settings = MockSettings({"build_type": "Release",
-                                 "compiler": "Visual Studio",
-                                 "compiler.version": "15",
-                                 "compiler.runtime": "MDd",
-                                 "os": "Windows",
-                                 "arch": "x86_64"})
-        conanfile = ConanFileMock()
-        conanfile.settings = settings
-        props_file_path = os.path.join(temp_folder(), "conan_build.props")
-
-        msbuild = MSBuild(conanfile)
-        msbuild.build("project_file.sln", property_file_name=props_file_path)
-        self.assertIn("vcvarsall.bat\" amd64", conanfile.command)
-        self.assertIn("/p:Platform=\"x64\"", conanfile.command)
-        msbuild.build("project_file.sln", arch="x86", property_file_name=props_file_path)
-        self.assertIn("vcvarsall.bat\" x86", conanfile.command)
-        self.assertIn("/p:Platform=\"x86\"", conanfile.command)
 
     def test_intel(self):
         settings = MockSettings({"build_type": "Debug",

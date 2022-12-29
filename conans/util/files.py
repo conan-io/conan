@@ -309,12 +309,12 @@ def path_exists(path, basedir):
     return True
 
 
-def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+def gzopen_without_timestamps(name, mode="r", fileobj=None, **kwargs):
     """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
         setted in Gzip file causing md5 to change. Not possible using the
         previous tarfile open because arguments are not passed to GzipFile constructor
     """
-    compresslevel = compresslevel or int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
+    compresslevel = int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")

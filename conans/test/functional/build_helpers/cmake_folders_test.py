@@ -7,6 +7,7 @@ from parameterized import parameterized
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
+
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFoldersTest(unittest.TestCase):

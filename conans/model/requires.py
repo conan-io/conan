@@ -22,6 +22,7 @@ class Requirement(object):
         self.private = private
         self.build_require = False
         self.build_require_context = None
+        self.force_host_context = False
         self._locked_id = None
 
     def lock(self, locked_ref, locked_id):
@@ -42,6 +43,13 @@ class Requirement(object):
         version = self.range_ref.version
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
+
+    @property
+    def alias(self):
+        version = self.ref.version
+        if version.startswith("(") and version.endswith(")"):
+            return ConanFileReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
+                                      self.ref.revision, validate=False)
 
     @property
     def is_resolved(self):
@@ -99,6 +107,8 @@ class Requirements(OrderedDict):
     def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
+        if reference is None:
+            return
         assert isinstance(reference, six.string_types)
         ref = ConanFileReference.loads(reference)
         self.add_ref(ref, private, override)
@@ -109,10 +119,24 @@ class Requirements(OrderedDict):
         new_requirement = Requirement(ref, private, override)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
-            raise ConanException("Duplicated requirement %s != %s"
-                                 % (old_requirement, new_requirement))
+            if old_requirement.override:
+                # If this is a consumer package with requirements() method,
+                # conan install . didn't add the requires yet, so they couldnt be overriden at
+                # the override() method, override now
+                self[name] = Requirement(old_requirement.ref, private, override)
+            else:
+                raise ConanException("Duplicated requirement %s != %s"
+                                     % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
+
+    def override(self, ref):
+        name = ref.name
+        old_requirement = self.get(ref.name)
+        if old_requirement is not None:
+            self[name] = Requirement(ref, private=False, override=False)
+        else:
+            self[name] = Requirement(ref, private=False, override=True)
 
     def update(self, down_reqs, output, own_ref, down_ref):
         """ Compute actual requirement values when downstream values are defined
@@ -156,7 +180,7 @@ class Requirements(OrderedDict):
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, reference, private=False, override=False):
+    def __call__(self, reference, private=False, override=False, **kwargs):
         self.add(reference, private, override)
 
     def __repr__(self):

@@ -84,11 +84,13 @@ class GeneratorComponentsMixin(object):
         pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
         pkg_build_info = self.deps_build_info[pkg]
         pkg_name = self._get_name(pkg_build_info)
+        # fallback namespace to pkg_name if not defined
+        pkg_namespace = pkg_name
         if cmp in pkg_build_info.components:
             cmp_name = self._get_name(pkg_build_info.components[cmp])
         else:
             cmp_name = pkg_name
-        return pkg_name, cmp_name
+        return pkg_namespace, cmp_name
 
     def _get_components(self, pkg_name, cpp_info):
         ret = []

@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.text import TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -9,13 +11,12 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
-from conans.test.utils.tools import TestBufferConanOutput
 
 
 class ConentGenerationTestCase(unittest.TestCase):
 
     def test_cpp_info(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
@@ -47,7 +48,7 @@ class ConentGenerationTestCase(unittest.TestCase):
             -cxxflag_parent"""), txt_out)
 
     def test_env_info(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         env_info = EnvInfo()
@@ -72,7 +73,7 @@ class ConentGenerationTestCase(unittest.TestCase):
                     VAR1=other-value1"""), txt_out)
 
     def test_user_info(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         user_info = UserInfo()
@@ -93,7 +94,7 @@ class ConentGenerationTestCase(unittest.TestCase):
                     VAR1=other-value1"""), txt_out)
 
     def test_user_info_build(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         conanfile.user_info_build = DepsUserInfo()

@@ -1,65 +1,19 @@
 import mock
-import platform
-import subprocess
 import unittest
 
-import pytest
+from mock import Mock
 from parameterized import parameterized
 
 from conans.client import tools
 from conans.client.conf.detect import detect_defaults_settings
 from conans.paths import DEFAULT_PROFILE_NAME
 from conans.test.utils.mocks import TestBufferConanOutput
-from conans.util.runners import check_output_runner
 
 
 class DetectTest(unittest.TestCase):
-
-    @pytest.mark.tool_compiler
-    def test_detect_default_compilers(self):
-        platform_default_compilers = {
-            "Linux": "gcc",
-            "Darwin": "apple-clang",
-            "Windows": "Visual Studio"
-        }
-        output = TestBufferConanOutput()
-        result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
-        # result is a list of tuples (name, value) so converting it to dict
-        result = dict(result)
-        platform_compiler = platform_default_compilers.get(platform.system(), None)
-        if platform_compiler is not None:
-            self.assertEqual(result.get("compiler", None), platform_compiler)
-
-    @unittest.skipIf(platform.system() != "Darwin", "only OSX test")
-    def test_detect_default_in_mac_os_using_gcc_as_default(self):
-        """
-        Test if gcc in Mac OS X is using apple-clang as frontend
-        """
-        # See: https://github.com/conan-io/conan/issues/2231
-        try:
-            output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:
-            # gcc is not installed or there is any error (no test scenario)
-            return
-
-        if "clang" not in output:
-            # Not test scenario gcc should display clang in output
-            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
-            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
-
-        output = TestBufferConanOutput()
-        with tools.environment_append({"CC": "gcc"}):
-            result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
-        # result is a list of tuples (name, value) so converting it to dict
-        result = dict(result)
-        # No compiler should be detected
-        self.assertIsNone(result.get("compiler", None))
-        self.assertIn("gcc detected as a frontend using apple-clang", output)
-        self.assertIsNotNone(output.error)
-
     @mock.patch("platform.machine", return_value="")
     def test_detect_empty_arch(self, _):
-        result = detect_defaults_settings(output=TestBufferConanOutput(),
+        result = detect_defaults_settings(output=Mock(),
                                           profile_path=DEFAULT_PROFILE_NAME)
         result = dict(result)
         self.assertTrue("arch" not in result)
@@ -108,10 +62,43 @@ class DetectTest(unittest.TestCase):
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
                 mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
-            result = detect_defaults_settings(output=TestBufferConanOutput(),
+            result = detect_defaults_settings(output=Mock(),
                                               profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual("AIX", result['os'])
             self.assertEqual("AIX", result['os_build'])
             self.assertEqual(expected_arch, result['arch'])
             self.assertEqual(expected_arch, result['arch_build'])
+
+    @parameterized.expand([
+        ['arm64', 'armv8'],
+        ['i386', 'x86'],
+        ['i686', 'x86'],
+        ['i86pc', 'x86'],
+        ['amd64', 'x86_64'],
+        ['aarch64', 'armv8'],
+        ['sun4v', 'sparc']
+    ])
+    def test_detect_arch(self, machine, expected_arch):
+        with mock.patch("platform.machine", mock.MagicMock(return_value=machine)):
+            result = detect_defaults_settings(output=Mock(),
+                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = dict(result)
+            self.assertEqual(expected_arch, result['arch'])
+            self.assertEqual(expected_arch, result['arch_build'])
+
+    @mock.patch("conans.client.conf.detect._clang_compiler", return_value=("clang", "9"))
+    def test_detect_clang_gcc_toolchain(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
+            detect_defaults_settings(output, profile_path="./MyProfile")
+            self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
+
+    def test_vs2022(self):
+        with mock.patch("conans.client.conf.detect._get_default_compiler",
+                        mock.MagicMock(return_value=("Visual Studio", "17"))):
+            result = detect_defaults_settings(output=Mock(),
+                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = dict(result)
+            self.assertEqual('Visual Studio', result['compiler'])
+            self.assertEqual('17', result['compiler.version'])

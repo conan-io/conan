@@ -29,7 +29,7 @@ class OutputTest(unittest.TestCase):
 # -*- coding: utf-8 -*-
 
 from conans import ConanFile
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 class PkgConan(ConanFile):
     def source(self):

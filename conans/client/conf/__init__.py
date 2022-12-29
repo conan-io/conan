@@ -8,20 +8,19 @@ from six.moves.configparser import ConfigParser, NoSectionError
 from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
 _t_default_settings_yml = Template(textwrap.dedent("""
     # Only for cross building, 'os_build/arch_build' is the system that runs Conan
-    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX]
-    arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le]
+    os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS, AIX, VxWorks]
+    arch_build: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7]
 
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
     # which the tools generate code
     os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
-    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
+    arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106, xtensalx7]
 
     # Rest of the settings are "host" settings:
     # - For native building/cross building: Where the library/program will run.
@@ -35,16 +34,40 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             platform: ANY
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
+        iOS:
+            version: &ios_version
+                     ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3",
+                      "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6", "13.7",
+                      "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7", "14.8",
+                      "15.0", "15.1", "15.2", "15.3", "15.4", "15.5", "15.6", "16.0", "16.1"]
+            sdk: [None, "iphoneos", "iphonesimulator"]
+            sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
+                          "13.0", "13.1", "13.2", "13.4", "13.5", "13.6", "13.7",
+                          "14.0", "14.1", "14.2", "14.3", "14.4", "14.5", "15.0", "15.2", "15.4", "15.5", "16.0", "16.1"]
+        watchOS:
+            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                      "7.0", "7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.0", "8.1", "8.3", "8.4", "8.5", "8.6", "8.7", "9.0", "9.1"]
+            sdk: [None, "watchos", "watchsimulator"]
+            sdk_version: [None, "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1", "6.2",
+                          "7.0", "7.1", "7.2", "7.4", "8.0", "8.0.1", "8.3", "8.5", "9.0", "9.1"]
+        tvOS:
+            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4",
+                      "13.0", "13.2", "13.3", "13.4", "14.0", "14.2", "14.3", "14.4", "14.5", "14.6", "14.7",
+                      "15.0", "15.1", "15.2", "15.3", "15.4", "15.5", "15.6", "16.0", "16.1"]
+            sdk: [None, "appletvos", "appletvsimulator"]
+            sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
+                          "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2", "15.4", "16.0", "16.1"]
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
+            sdk: [None, "macosx"]
+            sdk_version: [None, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3", "13.0"]
+            subsystem:
+                None:
+                catalyst:
+                    ios_version: *ios_version
         Android:
             api_level: ANY
-        iOS:
-            version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6"]
-        watchOS:
-            version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
-        tvOS:
-            version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0"]
         FreeBSD:
         SunOS:
         AIX:
@@ -53,7 +76,10 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Emscripten:
         Neutrino:
             version: ["6.4", "6.5", "6.6", "7.0", "7.1"]
-    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le]
+        baremetal:
+        VxWorks:
+            version: ["7"]
+    arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106, xtensalx7]
     compiler:
         sun-cc:
             version: ["5.10", "5.11", "5.12", "5.13", "5.14", "5.15"]
@@ -65,34 +91,46 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "6", "6.1", "6.2", "6.3", "6.4", "6.5",
                       "7", "7.1", "7.2", "7.3", "7.4", "7.5",
                       "8", "8.1", "8.2", "8.3", "8.4",
-                      "9", "9.1", "9.2", "9.3",
-                      "10", "10.1"]
+                      "9", "9.1", "9.2", "9.3", "9.4",
+                      "10", "10.1", "10.2", "10.3",
+                      "11", "11.1", "11.2", "11.3",
+                      "12", "12.1", "12.2"]
             libcxx: [libstdc++, libstdc++11]
-            threads: [None, posix, win32] #  Windows MinGW
-            exception: [None, dwarf2, sjlj, seh] # Windows MinGW
-            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            threads: [None, posix, win32]  # Windows MinGW
+            exception: [None, dwarf2, sjlj, seh]  # Windows MinGW
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
-            version: ["8", "9", "10", "11", "12", "14", "15", "16"]
+            version: ["8", "9", "10", "11", "12", "14", "15", "16", "17"]
             toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp,
                       v140, v140_xp, v140_clang_c2, LLVM-vs2012, LLVM-vs2012_xp,
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
-                      llvm, ClangCL]
-            cppstd: [None, 14, 17, 20]
+                      llvm, ClangCL, v143]
+            cppstd: [None, 14, 17, 20, 23]
+        msvc:
+            version: [170, 180, 190, 191, 192, 193]
+            update: [None, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            runtime: [static, dynamic]
+            runtime_type: [Debug, Release]
+            cppstd: [98, 14, 17, 20, 23]
+            toolset: [None, v110_xp, v120_xp, v140_xp, v141_xp]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
-                      "8", "9", "10", "11"]
+                      "8", "9", "10", "11", "12", "13", "14", "15", "16"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
-            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-            runtime: [None, MD, MT, MTd, MDd]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+            runtime: [None, MD, MT, MTd, MDd, static, dynamic]
+            runtime_type: [None, Debug, Release]
+            runtime_version: [None, v140, v141, v142, v143]
         apple-clang: &apple_clang
-            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0"]
+            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0"]
             libcxx: [libstdc++, libc++]
-            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         intel:
             version: ["11", "12", "13", "14", "15", "16", "17", "18", "19", "19.1"]
+            update: [None, ANY]
             base:
                 gcc:
                     <<: *gcc
@@ -102,22 +140,36 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                     <<: *visual_studio
                 apple-clang:
                     <<: *apple_clang
+        intel-cc:
+            version: ["2021.1", "2021.2", "2021.3"]
+            update: [None, ANY]
+            mode: ["icx", "classic", "dpcpp"]
+            libcxx: [None, libstdc++, libstdc++11, libc++]
+            cppstd: [None, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+            runtime: [None, static, dynamic]
+            runtime_type: [None, Debug, Release]
         qcc:
             version: ["4.4", "5.4", "8.3"]
             libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
+        mcst-lcc:
+            version: ["1.19", "1.20", "1.21", "1.22", "1.23", "1.24", "1.25"]
+            base:
+                gcc:
+                    <<: *gcc
+                    threads: [None]
+                    exceptions: [None]
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
-    {% if not conan_v2 %}
-    cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
-    {% endif %}
+
+    cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]  # Deprecated, use compiler.cppstd
+
     """))
 
 
-def get_default_settings_yml(force_v1=False):
-    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
-    return _t_default_settings_yml.render(conan_v2=conan_v2)
+def get_default_settings_yml():
+    return _t_default_settings_yml.render()
 
 
 _t_default_client_conf = Template(textwrap.dedent("""
@@ -174,12 +226,11 @@ _t_default_client_conf = Template(textwrap.dedent("""
 
     # cacert_path                         # environment CONAN_CACERT_PATH
     # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
-    {% if conan_v2 %}
-    revisions_enabled = 1
-    {% endif %}
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
+
+    # keep_python_files = False           # environment CONAN_KEEP_PYTHON_FILES
 
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
@@ -200,18 +251,14 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
 
-    {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
     [hooks]    # environment CONAN_HOOKS
     attribute_checker
-    {% endif %}
 
-    # Default settings now declared in the default profile
     """))
 
 
 def get_default_client_conf(force_v1=False):
-    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
-    return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
+    return _t_default_client_conf.render(default_profile=DEFAULT_PROFILE_NAME)
 
 
 class ConanClientConfigParser(ConfigParser, object):
@@ -423,7 +470,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 revisions_enabled = self.get_item("general.revisions_enabled")
             return revisions_enabled.lower() in ("1", "true")
         except ConanException:
-            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+            return False
 
     @property
     def parallel_download(self):
@@ -453,7 +500,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 scm_to_conandata = self.get_item("general.scm_to_conandata")
             return scm_to_conandata.lower() in ("1", "true")
         except ConanException:
-            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+            return False
 
     @property
     def default_package_id_mode(self):
@@ -486,6 +533,11 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
+        if not short_paths_home:
+            try:
+                short_paths_home = self.get_item("general.user_home_short")
+            except ConanException:
+                return None
         if short_paths_home:
             current_dir = os.path.dirname(os.path.normpath(os.path.normcase(self.filename)))
             short_paths_dir = os.path.normpath(os.path.normcase(short_paths_home))
@@ -559,7 +611,7 @@ class ConanClientConfigParser(ConfigParser, object):
             # For explicit cacert files, the file should already exist
             if not os.path.exists(cacert_path):
                 raise ConanException("Configured file for 'cacert_path'"
-                                     " doesn't exists: '{}'".format(cacert_path))
+                                     " doesn't exist: '{}'".format(cacert_path))
         return cacert_path
 
     @property
@@ -574,7 +626,7 @@ class ConanClientConfigParser(ConfigParser, object):
             path = os.path.join(cache_folder, path)
             if not os.path.exists(path):
                 raise ConanException("Configured file for 'client_cert_path'"
-                                     " doesn't exists: '{}'".format(path))
+                                     " doesn't exist: '{}'".format(path))
         return os.path.normpath(path)
 
     @property
@@ -589,7 +641,7 @@ class ConanClientConfigParser(ConfigParser, object):
             path = os.path.join(cache_folder, path)
             if not os.path.exists(path):
                 raise ConanException("Configured file for 'client_cert_key_path'"
-                                     " doesn't exists: '{}'".format(path))
+                                     " doesn't exist: '{}'".format(path))
         return os.path.normpath(path)
 
     @property
@@ -705,16 +757,19 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def config_install_interval(self):
+        item = "general.config_install_interval"
         try:
-            interval = self.get_item("general.config_install_interval")
+            interval = self.get_item(item)
         except ConanException:
             return None
 
         try:
             return timedelta_from_text(interval)
         except Exception:
-            raise ConanException("Incorrect definition of general.config_install_interval: %s"
-                                 % interval)
+            self.rm_item(item)
+            raise ConanException("Incorrect definition of general.config_install_interval: {}. "
+                                 "Removing it from conan.conf to avoid possible loop error."
+                                 .format(interval))
 
     @property
     def required_conan_version(self):
