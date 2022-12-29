@@ -760,6 +760,13 @@ def test_info_not_hit_server():
     c.run("install consumer/0.1@")
     assert "Downloaded" in c.out
     # break the server to make sure it is not being contacted at all
-    c.servers["default"] = {}
+    c.servers["default"] = None
     c.run("info consumer/0.1@")
     assert "Downloaded" not in c.out
+    c.run("remove pkg* -f")
+    c.run("info consumer/0.1@", assert_error=True)
+    assert "ERROR: 'NoneType' object " in c.out
+    c.run("remote disable *")
+    c.run("info consumer/0.1@", assert_error=True)
+    assert "ERROR: 'NoneType' object " not in c.out
+    assert "ERROR: No remote defined" in c.out
