@@ -110,18 +110,24 @@ class ListAPI:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
             select_bundle.add_refs(rrevs)
+
             # Show only the latest recipe revision or all of them
             if search_mode in (ListPatternMode.SHOW_ALL_RREVS, ListPatternMode.SHOW_LATEST_RREV):
                 continue
 
             for rrev in rrevs:
-                packages = self.conan_api.list.packages_configurations(rrev, remote)
-                if package_query is not None:
-                    packages = self.conan_api.list.filter_packages_configurations(packages,
-                                                                                  package_query)
-                prefs = packages.keys()
-                if pattern.package_id is not None:
-                    prefs = pattern.filter_prefs(prefs)
+                packages = {}
+                prefs = []
+                if pattern.package_id and "*" not in pattern.package_id:
+                    prefs.append(PkgReference(rrev, package_id=pattern.package_id))
+                else:
+                    packages = self.conan_api.list.packages_configurations(rrev, remote)
+                    if package_query is not None:
+                        packages = self.conan_api.list.filter_packages_configurations(packages,
+                                                                                      package_query)
+                    prefs = packages.keys()
+                    if pattern.package_id is not None:
+                        prefs = pattern.filter_prefs(prefs)
 
                 # Show all the package IDs and their configurations
                 if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:

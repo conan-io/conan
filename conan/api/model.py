@@ -81,15 +81,22 @@ class SelectBundle:
         return prefs
 
     def add_prefs(self, prefs, configurations=None):
-        confs = configurations or {}
+        confs = configurations or OrderedDict()
         for pref in prefs:
-            binary_info = confs.get(pref, {})
+            binary_info = confs.get(pref, OrderedDict())
             self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
 
-    def serialize(self):
-        ret = {}
+    @property
+    def ordered_recipes_by_name(self):
+        ret = OrderedDict()
         for ref, prefs in self.recipes.items():
-            pref_ret = {}
+            ret.setdefault(ref.name, OrderedDict()).setdefault(ref, prefs)
+        return ret
+
+    def serialize(self):
+        ret = OrderedDict()
+        for ref, prefs in self.recipes.items():
+            pref_ret = OrderedDict()
             if prefs:
                 for pref, binary_info in prefs:
                     pref_ret[pref.repr_notime()] = binary_info
