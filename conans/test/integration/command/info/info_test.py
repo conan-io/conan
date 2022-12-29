@@ -298,3 +298,31 @@ class TestErrorsInGraph:
         exit_code = c.run("graph info consumer", assert_error=True)
         assert "ERROR: Package 'dep/0.1' not resolved: dep/0.1: Cannot load" in c.out
         assert exit_code == ERROR_GENERAL
+
+
+def test_info_not_hit_server():
+    """
+    the command graph info shouldn't be hitting the server if packages are in the Conan cache
+    :return:
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "consumer/conanfile.py": GenConanfile("consumer", "0.1").with_require("pkg/0.1")})
+    c.run("create pkg")
+    c.run("create consumer")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    c.run("install --requires=consumer/0.1@")
+    assert "Downloaded" in c.out
+    # break the server to make sure it is not being contacted at all
+    c.servers["default"] = None
+    c.run("graph info --requires=consumer/0.1@")
+    assert "Downloaded" not in c.out
+    # Now we remove the local, so it will raise errors
+    c.run("remove pkg* -c")
+    c.run("graph info --requires=consumer/0.1@", assert_error=True)
+    assert "'NoneType' object " in c.out
+    c.run("remote disable *")
+    c.run("graph info --requires=consumer/0.1@", assert_error=True)
+    assert "'NoneType' object " not in c.out
+    assert "No remote defined" in c.out
