@@ -44,7 +44,7 @@ def create(conan_api, parser, *args):
                                                conanfile_path=path,
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     out = ConanOutput()

@@ -38,8 +38,11 @@ def _add_common_install_arguments(parser, build_help, update_help=None):
     if build_help:
         parser.add_argument("-b", "--build", action="append", help=build_help)
 
-    parser.add_argument("-r", "--remote", action="append", default=None,
-                        help='Look in the specified remote or remotes server')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-r", "--remote", action="append", default=None,
+                       help='Look in the specified remote or remotes server')
+    group.add_argument("-nr", "--no-remote", action="store_true",
+                       help='Do not use remote, resolve exclusively in the cache')
 
     if not update_help:
         update_help = ("Will check the remote and in case a newer version and/or revision of "

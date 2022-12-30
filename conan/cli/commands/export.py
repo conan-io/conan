@@ -21,8 +21,11 @@ def export(conan_api, parser, *args):
     Export recipe to the Conan package cache
     """
     common_args_export(parser)
-    parser.add_argument("-r", "--remote", action="append", default=None,
-                        help='Look in the specified remote or remotes server')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-r", "--remote", action="append", default=None,
+                       help='Look in the specified remote or remotes server')
+    group.add_argument("-nr", "--no-remote", action="store_true",
+                       help='Do not use remote, resolve exclusively in the cache')
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile.")
     parser.add_argument("--lockfile-out", action=OnceArgument,
@@ -35,7 +38,7 @@ def export(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
