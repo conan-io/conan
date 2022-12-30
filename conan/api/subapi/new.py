@@ -17,7 +17,7 @@ class NewAPI:
 
     @api_method
     def get_builtin_template(self, template_name):
-        from conan.internal.api.new.barebones import barebones_file
+        from conan.internal.api.new.basic import basic_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
         from conan.internal.api.new.cmake_lib import cmake_lib_files
@@ -29,7 +29,7 @@ class NewAPI:
         from conan.internal.api.new.bazel_exe import bazel_exe_files
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
-        new_templates = {"barebones": barebones_file,
+        new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,
@@ -85,11 +85,19 @@ class NewAPI:
         return template_files, non_template_files
 
     @staticmethod
+    def render_requires(requires):
+        if isinstance(requires, str):
+            requires = [requires]
+
+        return "\n".join([f'self.requires("{require}")' for require in requires])
+
+    @staticmethod
     def render(template_files, definitions):
         result = {}
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
         definitions["package_name"] = name.replace("-", "_").replace("+", "_").replace(".", "_")
+        definitions["render_requires"] = lambda x: NewAPI.render_requires(x)
         for k, v in template_files.items():
             k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
             v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)

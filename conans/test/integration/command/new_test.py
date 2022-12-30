@@ -45,6 +45,20 @@ class TestNewCommand:
         client.run("new cmake_lib -d version=myversion", assert_error=True)
         assert "Missing definitions for the template. Required definitions are: 'name', 'version'" in client.out
 
+    def test_new_basic_template(self):
+        tc = TestClient()
+        try:
+            tc.run("new basic")
+        except Exception as e:
+            assert False, f"conan new basic should work without any extra arguments: {e}"
+
+        tc.run("new basic -d name=mygame -d requires=math/1.0 -d requires=ai/1.0")
+        tc.assert_in_file_contents("conanfile.py", [
+            'self.requires("math/1.0")',
+            'self.requires("ai/1.0")',
+            'name = "myname"'
+        ])
+
 
 class TestNewCommandUserTemplate:
 

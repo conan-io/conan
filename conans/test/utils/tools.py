@@ -14,6 +14,7 @@ import uuid
 import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
+from typing import List
 from urllib.parse import urlsplit, urlunsplit
 
 import bottle
@@ -717,6 +718,15 @@ class TestClient(object):
                     break
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
+
+    def assert_in_file_contents(self, filename, contents: List[str], path=None):
+        path = path or self.current_folder
+        file = os.path.join(path, filename)
+        assert os.path.exists(file)
+        with open(file) as f:
+            file_contents = "\n".join(f.readlines())
+            for bit in contents:
+                assert bit in file_contents
 
     def created_package_id(self, ref):
         package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),

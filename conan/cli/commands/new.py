@@ -34,7 +34,14 @@ def new(conan_api, parser, *args):
         except ValueError:
             raise ConanException(f"Template definitions must be 'key=value', received {u}")
         k = k.replace("-", "")  # Remove possible "--name=value"
-        definitions[k] = v
+        # For variables that only show up once, no need for list to keep compatible behaviour
+        if k in definitions:
+            if isinstance(definitions[k], list):
+                definitions[k].append(v)
+            else:
+                definitions[k] = [definitions[k], v]
+        else:
+            definitions[k] = v
 
     files = conan_api.new.get_template(args.template)  # First priority: user folder
     if not files:  # then, try the templates in the Conan home
