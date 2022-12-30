@@ -150,7 +150,9 @@ class RemoteManager(object):
     def search_packages(self, remote, ref):
         packages = self._call_remote(remote, "search_packages", ref)
         # Avoid serializing conaninfo in server side
-        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+        # TODO: This has to be implemented in Artifactory too
+        packages = {PkgReference(ref, pid, data.get("prev"), data.get("timestamp")):
+                    load_binary_info(data["content"])
                     if "content" in data else data
                     for pid, data in packages.items() if not data.get("recipe_hash")}
         return packages

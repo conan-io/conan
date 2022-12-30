@@ -35,8 +35,7 @@ def search(conan_api: ConanAPI, parser, *args):
         except Exception as e:
             results[remote.name] = {"error": str(e)}
         else:
-            results[remote.name] = list_bundle.serialize() if args.format == "json" \
-                else list_bundle.ordered_recipes_by_name
+            results[remote.name] = list_bundle.serialize()
     return {
         "results": results,
         "search_mode": search_mode,

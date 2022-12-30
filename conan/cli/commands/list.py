@@ -113,8 +113,7 @@ def list(conan_api: ConanAPI, parser, *args):
         except Exception as e:
             results[name] = {"error": str(e)}
         else:
-            results[name] = list_bundle.serialize() if args.format in ("json", "html") \
-                else list_bundle.ordered_recipes_by_name
+            results[name] = list_bundle.serialize()
     return {
         "results": results,
         "search_mode": ref_pattern.mode,

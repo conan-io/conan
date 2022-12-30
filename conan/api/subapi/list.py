@@ -44,6 +44,8 @@ class ListAPI:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
             ret = app.cache.get_latest_package_reference(pref)
+        if ret is None:
+            raise ConanException(f"Binary package not found: '{pref}'")
 
         return ret
 
@@ -96,10 +98,9 @@ class ListAPI:
         search_mode = search_mode or pattern.mode
         select_bundle = SelectBundle()
         refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
-        pattern.check_refs(refs)
 
         # Show only the recipe references
-        if search_mode == ListPatternMode.SHOW_REFS:
+        if refs and search_mode == ListPatternMode.SHOW_REFS:
             select_bundle.add_refs(refs)
             return select_bundle
 
@@ -138,7 +139,11 @@ class ListAPI:
                 for pref in prefs:
                     if search_mode in (ListPatternMode.SHOW_LATEST_PREV,
                                        ListPatternMode.SHOW_ALL_PREVS):
+                        pref.revision = None  # Need to invalidate
                         if pattern.is_latest_prev:
+                            # TODO: This might be unnecessary, if we
+                            #  called before package_configurations() that already
+                            #  returns latest prev
                             prevs = [self.conan_api.list.latest_package_revision(pref, remote)]
                         else:
                             prevs = self.conan_api.list.package_revisions(pref, remote)
