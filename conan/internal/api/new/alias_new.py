@@ -3,7 +3,7 @@ from conan import ConanFile
 
 class AliasConanfile(ConanFile):
     name = "{{name}}"
-    {% if version %}version = "{{version}}"{%endif%}
+    {% if version is defined %}version = "{{version}}"{%endif%}
     alias = "{{name}}/{{target}}"
     revision_mode = "{{revision_mode|default('hash')}}"
 '''

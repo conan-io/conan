@@ -9,7 +9,9 @@ class BasicConanfile(ConanFile):
     # Text about the requirements() method
     def requirements(self):
         {% if requires is defined -%}
-        {{ render_requires(requires) | indent | indent }}
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
         {% else -%}
         # Uncommenting this line will add the zlib/1.2.13 dependency to your project
         # self.requires("zlib/1.2.13")

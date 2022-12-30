@@ -84,12 +84,6 @@ class NewAPI:
 
         return template_files, non_template_files
 
-    @staticmethod
-    def render_requires(requires):
-        if isinstance(requires, str):
-            requires = [requires]
-
-        return "\n".join([f'self.requires("{require}")' for require in requires])
 
     @staticmethod
     def render(template_files, definitions):
@@ -97,7 +91,7 @@ class NewAPI:
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
         definitions["package_name"] = name.replace("-", "_").replace("+", "_").replace(".", "_")
-        definitions["render_requires"] = lambda x: NewAPI.render_requires(x)
+        definitions["as_iterable"] = lambda x: [x] if isinstance(x, str) else x
         for k, v in template_files.items():
             k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
             v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)

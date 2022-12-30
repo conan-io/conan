@@ -49,6 +49,7 @@ class TestNewCommand:
         tc = TestClient()
         try:
             tc.run("new basic")
+            tc.assert_in_file_contents("conanfile.py", ['# self.requires("zlib/1.2.13")'])
         except Exception as e:
             assert False, f"conan new basic should work without any extra arguments: {e}"
 
