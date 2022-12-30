@@ -726,7 +726,7 @@ class TestClient(object):
         with open(file) as f:
             file_contents = "\n".join(f.readlines())
             for bit in contents:
-                assert bit in file_contents
+                assert bit in file_contents, f"{path} does not contain '{bit}'"
 
     def created_package_id(self, ref):
         package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),

@@ -53,11 +53,11 @@ class TestNewCommand:
         except Exception as e:
             assert False, f"conan new basic should work without any extra arguments: {e}"
 
-        tc.run("new basic -d name=mygame -d requires=math/1.0 -d requires=ai/1.0")
+        tc.run("new basic -d name=mygame -d requires=math/1.0 -d requires=ai/1.0 -f")
         tc.assert_in_file_contents("conanfile.py", [
             'self.requires("math/1.0")',
             'self.requires("ai/1.0")',
-            'name = "myname"'
+            'name = "mygame"'
         ])
 
 
