@@ -14,7 +14,6 @@ import uuid
 import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
-from typing import List
 from urllib.parse import urlsplit, urlunsplit
 
 import bottle
@@ -816,7 +815,6 @@ class TurboTestClient(TestClient):
                  assert_error=assert_error)
         data = json.loads(self.load(".tmp.json"))
         return data
-
 
     def massive_uploader(self, ref, revisions, num_prev, remote=None):
         """Uploads N revisions with M package revisions. The revisions can be specified like:
