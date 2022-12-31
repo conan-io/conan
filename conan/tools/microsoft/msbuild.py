@@ -1,3 +1,5 @@
+import os
+
 from conans.errors import ConanException
 
 
@@ -45,6 +47,15 @@ class MSBuild(object):
             if not isinstance(targets, list):
                 raise ConanException("targets argument should be a list")
             cmd += " /target:{}".format(";".join(targets))
+
+        props_paths = []
+        for props_file in ("conantoolchain.props", "conandeps.props"):
+            props_path = os.path.join(self._conanfile.generators_folder, props_file)
+            if os.path.exists(props_path):
+                props_paths.append(props_path)
+        if props_paths:
+            props_paths = ";".join(props_paths)
+            cmd += f" /p:ForceImportBeforeCppTargets=\"{props_paths}\""
 
         return cmd
 
