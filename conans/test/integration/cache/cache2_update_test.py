@@ -256,7 +256,6 @@ class TestUpdateFlows:
         assert "liba/1.0.0: Checking remote: server0" in self.client.out
         assert "liba/1.0.0: Checking remote: server1" not in self.client.out
         assert "liba/1.0.0: Checking remote: server2" not in self.client.out
-        assert "liba/1.0.0: Trying with 'server0'..." in self.client.out
         server_rrev_norev = copy.copy(server_rrev)
         server_rrev_norev.revision = None
         latest_cache_revision = self.client.cache.get_latest_recipe_reference(server_rrev_norev)

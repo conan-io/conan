@@ -282,27 +282,11 @@ class UploadExecutor:
                 if package.upload:
                     self.upload_package(package, remote)
 
-    def _recipe_files_to_upload(self, ref, files, remote, force):
-        if not force:
-            return files, set()
-        # only check difference if it is a force upload
-        remote_snapshot = self._app.remote_manager.get_recipe_snapshot(ref, remote)
-        if not remote_snapshot:
-            return files, set()
-
-        deleted = set(remote_snapshot).difference(files)
-        return files, deleted
-
     def upload_recipe(self, ref, bundle, remote):
         self._output.info(f"Uploading recipe '{ref.repr_notime()}'")
         t1 = time.time()
         cache_files = bundle.files
-        force = bundle.force
-        files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
-
-        upload_ref = ref
-        self._app.remote_manager.upload_recipe(upload_ref, files_to_upload, deleted, remote)
-
+        self._app.remote_manager.upload_recipe(ref, cache_files, remote)
         duration = time.time() - t1
         log_recipe_upload(ref, duration, cache_files, remote.name)
         return ref
