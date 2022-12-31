@@ -1,5 +1,7 @@
 import os
 
+from conan.tools.microsoft.msbuilddeps import MSBuildDeps
+from conan.tools.microsoft.toolchain import MSBuildToolchain
 from conans.errors import ConanException
 
 
@@ -49,7 +51,7 @@ class MSBuild(object):
             cmd += " /target:{}".format(";".join(targets))
 
         props_paths = []
-        for props_file in ("conantoolchain.props", "conandeps.props"):
+        for props_file in (MSBuildToolchain.filename, MSBuildDeps.filename):
             props_path = os.path.join(self._conanfile.generators_folder, props_file)
             if os.path.exists(props_path):
                 props_paths.append(props_path)

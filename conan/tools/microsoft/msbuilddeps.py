@@ -19,6 +19,8 @@ class MSBuildDeps(object):
 
     """
 
+    filename = "conandeps.props"
+
     _vars_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -251,7 +253,6 @@ class MSBuildDeps(object):
         """ this is a .props file including direct declared dependencies
         """
         # Current directory is the generators_folder
-        conandeps_filename = "conandeps.props"
         direct_deps = self._conanfile.dependencies.filter({"direct": True})
         pkg_aggregated_content = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
@@ -262,12 +263,12 @@ class MSBuildDeps(object):
             """)
         for req, dep in direct_deps.items():
             dep_name = self._dep_name(dep, req.build)
-            filename = "conan_%s.props" % dep_name
+            dep_filename = "conan_%s.props" % dep_name
             comp_condition = "'$(conan_%s_props_imported)' != 'True'" % dep_name
-            pkg_aggregated_content = self._dep_props_file("", conandeps_filename, filename,
+            pkg_aggregated_content = self._dep_props_file("", self.filename, dep_filename,
                                                           condition=comp_condition,
                                                           content=pkg_aggregated_content)
-        return {conandeps_filename: pkg_aggregated_content}
+        return {self.filename: pkg_aggregated_content}
 
     def _package_props_files(self, dep, build=False):
         """ all the files for a given package:
