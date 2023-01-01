@@ -61,10 +61,6 @@ vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <RootNamespace>{{name}}</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <ImportGroup Label="PropertySheets">
-      <Import Project="conan\\conantoolchain.props" />
-      {{dependencies}}
-  </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>{{type}}</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
@@ -399,14 +395,12 @@ int main() {
 
 
 def get_msbuild_lib_files(name, version, package_name="Pkg"):
-    d = {"name": name, "version": version, "pkg_name": package_name, "type": "StaticLibrary",
-         "dependencies": ""}
+    d = {"name": name, "version": version, "pkg_name": package_name, "type": "StaticLibrary"}
     sln = Template(sln_file, keep_trailing_newline=True).render(d)
     vcp = Template(vcxproj, keep_trailing_newline=True).render(d)
     conanfile = Template(conanfile_sources_v2, keep_trailing_newline=True).render(d)
     test_d = {"name": "test_" + name, "version": version, "pkg_name": package_name,
-              "type": "Application",
-              "dependencies": '<Import Project="conan\\conandeps.props" />'}
+              "type": "Application"}
     test_sln = Template(sln_file, keep_trailing_newline=True).render(test_d)
     test_vcp = Template(vcxproj, keep_trailing_newline=True).render(test_d)
     test_conanfile = Template(test_conanfile_v2, keep_trailing_newline=True).render(test_d)
@@ -496,8 +490,7 @@ int main() {
 
 
 def get_msbuild_exe_files(name, version, package_name="Pkg"):
-    d = {"name": name, "version": version, "pkg_name": package_name, "type": "Application",
-         "dependencies": ""}
+    d = {"name": name, "version": version, "pkg_name": package_name, "type": "Application"}
     sln = Template(sln_file, keep_trailing_newline=True).render(d)
     vcp = Template(vcxproj, keep_trailing_newline=True).render(d)
     conanfile = Template(conanfile_exe, keep_trailing_newline=True).render(d)
