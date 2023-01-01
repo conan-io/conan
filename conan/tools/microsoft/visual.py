@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+from conan.tools.intel.intel_cc import IntelCC
 from conans.client.tools import vs_installation_path
 from conans.client.tools.version import Version
 from conans.errors import ConanException, ConanInvalidConfiguration
@@ -268,3 +269,34 @@ def is_msvc_static_runtime(conanfile):
     :return: True, if msvc + runtime MT. Otherwise, False
     """
     return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
+
+
+def msvs_toolset(conanfile):
+    settings = conanfile.settings
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    if compiler == "msvc":
+        subs_toolset = settings.get_safe("compiler.toolset")
+        if subs_toolset:
+            return subs_toolset
+        return msvc_version_to_toolset_version(compiler_version)
+    if compiler == "intel":
+        compiler_version = compiler_version if "." in compiler_version else \
+            "%s.0" % compiler_version
+        return "Intel C++ Compiler " + compiler_version
+    if compiler == "intel-cc":
+        return IntelCC(conanfile).ms_toolset
+    if compiler == "Visual Studio":
+        toolset = settings.get_safe("compiler.toolset")
+        if not toolset:
+            toolsets = {"17": "v143",
+                        "16": "v142",
+                        "15": "v141",
+                        "14": "v140",
+                        "12": "v120",
+                        "11": "v110",
+                        "10": "v100",
+                        "9": "v90",
+                        "8": "v80"}
+            toolset = toolsets.get(compiler_version)
+        return toolset or ""

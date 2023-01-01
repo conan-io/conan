@@ -2,6 +2,7 @@ import os
 
 from conan.tools.microsoft.msbuilddeps import MSBuildDeps
 from conan.tools.microsoft.toolchain import MSBuildToolchain
+from conan.tools.microsoft.visual import msvs_toolset
 from conans.errors import ConanException
 
 
@@ -31,6 +32,7 @@ class MSBuild(object):
         if conanfile.settings.get_safe("os") == "WindowsCE":
             msvc_arch = conanfile.settings.get_safe("os.platform")
         self.platform = msvc_arch
+        self.toolset = msvs_toolset(conanfile)
 
     def command(self, sln, targets=None):
         cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
@@ -49,6 +51,9 @@ class MSBuild(object):
             if not isinstance(targets, list):
                 raise ConanException("targets argument should be a list")
             cmd += " /target:{}".format(";".join(targets))
+
+        if self.toolset:
+            cmd += f" /p:PlatformToolset=\"{self.toolset}\""
 
         props_paths = []
         for props_file in (MSBuildToolchain.filename, MSBuildDeps.filename):
