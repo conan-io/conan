@@ -35,8 +35,17 @@ class MSBuild(object):
         self.toolset = msvs_toolset(conanfile)
 
     def command(self, sln, targets=None):
-        cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
-               % (sln, self.build_type, self.platform))
+        cmd = (f'msbuild "{sln}" /p:Configuration={self.build_type} '
+               f"/p:Platform={self.platform} /p:PlatformToolset={self.toolset}")
+
+        props_paths = []
+        for props_file in (MSBuildToolchain.filename, MSBuildDeps.filename):
+            props_path = os.path.join(self._conanfile.generators_folder, props_file)
+            if os.path.exists(props_path):
+                props_paths.append(props_path)
+        if props_paths:
+            props_paths = ";".join(props_paths)
+            cmd += f" /p:ForceImportBeforeCppTargets=\"{props_paths}\""
 
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
         if verbosity:
@@ -51,18 +60,6 @@ class MSBuild(object):
             if not isinstance(targets, list):
                 raise ConanException("targets argument should be a list")
             cmd += " /target:{}".format(";".join(targets))
-
-        if self.toolset:
-            cmd += f" /p:PlatformToolset=\"{self.toolset}\""
-
-        props_paths = []
-        for props_file in (MSBuildToolchain.filename, MSBuildDeps.filename):
-            props_path = os.path.join(self._conanfile.generators_folder, props_file)
-            if os.path.exists(props_path):
-                props_paths.append(props_path)
-        if props_paths:
-            props_paths = ";".join(props_paths)
-            cmd += f" /p:ForceImportBeforeCppTargets=\"{props_paths}\""
 
         return cmd
 
