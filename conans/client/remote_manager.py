@@ -35,14 +35,10 @@ class RemoteManager(object):
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
 
-    def get_recipe_snapshot(self, ref, remote):
-        assert ref.revision, "get_recipe_snapshot requires revision"
-        return self._call_remote(remote, "get_recipe_snapshot", ref)
-
-    def upload_recipe(self, ref, files_to_upload, deleted, remote):
+    def upload_recipe(self, ref, files_to_upload, remote):
         assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
-        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted)
+        self._call_remote(remote, "upload_recipe", ref, files_to_upload)
 
     def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"

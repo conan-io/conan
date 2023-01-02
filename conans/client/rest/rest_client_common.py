@@ -203,18 +203,9 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, ref, files_to_upload, deleted):
+    def upload_recipe(self, ref, files_to_upload):
         if files_to_upload:
             self._upload_recipe(ref, files_to_upload)
-        if deleted:
-            self._remove_recipe_files(ref, deleted)
-
-    def get_recipe_snapshot(self, ref):
-        # this method is used only for UPLOADING, then it requires the credentials
-        # Check of credentials is done in the uploader
-        url = self.router.recipe_snapshot(ref)
-        snap = self._get_snapshot(url)
-        return snap
 
     def upload_package(self, pref, files_to_upload):
         self._upload_package(pref, files_to_upload)

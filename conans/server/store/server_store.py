@@ -138,12 +138,6 @@ class ServerStore(object):
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
 
-    def remove_recipe_files(self, ref, files):
-        subpath = self.export(ref)
-        for filepath in files:
-            path = join(subpath, filepath)
-            self._storage_adapter.delete_file(path)
-
     def remove_package_files(self, pref, files):
         subpath = self.package(pref)
         for filepath in files:
