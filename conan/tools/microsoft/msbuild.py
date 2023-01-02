@@ -4,7 +4,6 @@ import xml.etree.ElementTree as ET
 
 from conan.tools.microsoft.msbuilddeps import MSBuildDeps
 from conan.tools.microsoft.toolchain import MSBuildToolchain
-from conan.tools.microsoft.visual import msbuild_arch
 from conans.errors import ConanException
 
 
@@ -16,6 +15,20 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
         return '/verbosity:{}'.format(verbosity)
 
 
+def msbuild_arch(arch):
+    return {'x86': 'x86',
+            'x86_64': 'x64',
+            'armv7': 'ARM',
+            'armv8': 'ARM64'}.get(str(arch))
+
+
+def msbuild_arch_to_conf_arch(arch):
+    return {'x86': 'Win32',
+            'x64': 'x64',
+            'ARM': 'ARM',
+            'ARM64': 'ARM64'}.get(str(arch))
+
+
 class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -23,7 +36,8 @@ class MSBuild(object):
         self.configuration = conanfile.settings.get_safe("build_type")
         # if platforms:
         #    msvc_arch.update(platforms)
-        msvc_arch = msbuild_arch(conanfile)
+        arch = conanfile.settings.get_safe("arch")
+        msvc_arch = msbuild_arch(arch)
         if conanfile.settings.get_safe("os") == "WindowsCE":
             msvc_arch = conanfile.settings.get_safe("os.platform")
         self.platform = msvc_arch
@@ -68,7 +82,8 @@ class MSBuild(object):
         namespace = namespace.group(0) if namespace else ""
         importgroup_element = root.find(f"{namespace}ImportGroup")
         if importgroup_element:
-            expected_condition = f"'$(Configuration)' == '{self.configuration}' And '$(Platform)' == '{self.platform}'"
+            expected_condition = (f"'$(Configuration)' == '{self.configuration}' And "
+                                  f"$(Platform)' == '{msbuild_arch_to_conf_arch(self.platform)}'")
             for import_element in importgroup_element.iter(f"{namespace}Import"):
                 condition = import_element.attrib.get("Condition")
                 if expected_condition == condition:
@@ -81,8 +96,7 @@ class MSBuild(object):
         if not concrete_props_file or not os.path.exists(concrete_props_file):
             raise ConanException(
                 f"MSBuildToolchain props file is missing for configuration={self.configuration} and "
-                f"platform={self.platform}. 'configuration' and 'platform' attributes must be the same "
-                "respectively in MSBuildToolchain and MSBuild."
+                f"platform={msbuild_arch_to_conf_arch(self.platform)}."
             )
 
         return concrete_props_file
