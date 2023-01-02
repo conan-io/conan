@@ -39,12 +39,17 @@ class ListAPI:
 
     def latest_package_revision(self, pref: PkgReference, remote=None):
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
+        assert pref.package_id is not None, "package_id must be defined"
         app = ConanApp(self.conan_api.cache_folder)
         if remote:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
             ret = app.cache.get_latest_package_reference(pref)
         if ret is None:
+            # if we are providing a package_id and asking for latest, it must have a prev,
+            # otherwise it is an error
+            # But this is not the same as for ``latest_recipe_revision``
+            # TODO: Move this to remote and cache logic
             raise ConanException(f"Binary package not found: '{pref}'")
 
         return ret
