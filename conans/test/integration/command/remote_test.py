@@ -67,6 +67,17 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("remote0", self.client.out)
         self.assertNotIn("remote2", self.client.out)
 
+    def test_remove_remote_all(self):
+        self.client.run("remote list")
+        self.assertIn("remote0: http://", self.client.out)
+        self.assertIn("remote1: http://", self.client.out)
+        self.assertIn("remote2: http://", self.client.out)
+        self.client.run("remote remove *")
+        self.client.run("remote list")
+        self.assertNotIn("remote1", self.client.out)
+        self.assertNotIn("remote0", self.client.out)
+        self.assertNotIn("remote2", self.client.out)
+
     def test_remove_remote_no_user(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("remote remove remote0")
@@ -114,8 +125,7 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
 
-        client.run("remote update r2 --url https://r2new")
-        client.run("remote move r2 0")
+        client.run("remote update r2 --url https://r2new --index=0")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r2: https://r2new", lines[0])
@@ -123,7 +133,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("r3: https://r3", lines[2])
 
         client.run("remote update r2 --url https://r2new2")
-        client.run("remote move r2 2")
+        client.run("remote update r2 --index=2")
         client.run("remote list")
         lines = str(client.out).splitlines()
         self.assertIn("r1: https://r1", lines[0])
@@ -137,14 +147,14 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
         client.run("remote update r2 --url https://r2")
-        client.run("remote move r2 0")
+        client.run("remote update r2 --index 0")
         client.run("remote list")
         self.assertLess(str(client.out).find("r2"), str(client.out).find("r1"))
         self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
 
     def test_verify_ssl(self):
         client = TestClient()
-        client.run("remote add my-remote http://someurl --secure")
+        client.run("remote add my-remote http://someurl")
         client.run("remote add my-remote2 http://someurl2 --insecure")
         client.run("remote add my-remote3 http://someurl3")
 
@@ -229,7 +239,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: The specified remote doesn't exist", self.client.out)
+        self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
 
     def test_duplicated_error(self):
         """ check remote name and URL are not duplicated

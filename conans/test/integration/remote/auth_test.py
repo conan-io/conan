@@ -3,16 +3,15 @@ import os
 import textwrap
 import unittest
 
-import pytest
 from requests.models import Response
 
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestRequester
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestRequester
 from conans.test.utils.tools import TestServer
 from conans.util.env import environment_update
 from conans.util.files import save
@@ -172,7 +171,7 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
                       client.out)
         client.run("search pkg -r=default")
-        self.assertIn("There are no matching recipe references", client.out)
+        self.assertIn("ERROR: Recipe 'pkg' not found", client.out)
 
 
 def test_token_expired():
@@ -207,7 +206,7 @@ def test_token_expired():
     c.users = {}
     conan_conf = "core:non_interactive=True"
     c.save({"global.conf": conan_conf}, path=c.cache.cache_folder)
-    c.run("remove * -f")
+    c.run("remove * -c")
     c.run("install --requires=pkg/0.1@user/stable")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"

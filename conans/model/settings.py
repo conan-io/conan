@@ -96,7 +96,7 @@ class SettingsItem(object):
         delattr(child_setting, item)
 
     def _validate(self, value):
-        value = str(value)
+        value = str(value) if value is not None else None
         if "ANY" not in self._definition and value not in self._definition:
             raise ConanException(bad_value_msg(self._name, value, self._definition))
         return value
@@ -294,9 +294,14 @@ class Settings(object):
         for (name, value) in vals:
             list_settings = name.split(".")
             attr = self
-            for setting in list_settings[:-1]:
-                attr = getattr(attr, setting)
-            setattr(attr, list_settings[-1], str(value))
+            try:
+                for setting in list_settings[:-1]:
+                    attr = getattr(attr, setting)
+            except ConanException:  # fails if receiving settings doesn't have it defined
+                pass
+            else:
+                value = str(value) if value is not None else None
+                setattr(attr, list_settings[-1], value)
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object

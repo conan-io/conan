@@ -25,6 +25,8 @@ def client():
         build_type=Release
         compiler=clang
         compiler.version=13
+        [conf]
+        tools.build:compiler_executables={"cpp": "clang++", "c": "clang", "rc": "clang"}
         """)
     conanfile = textwrap.dedent("""
         import os

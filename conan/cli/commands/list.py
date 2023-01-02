@@ -1,15 +1,15 @@
 import json
-from collections import OrderedDict
 
+from conan.api.conan_api import ConanAPI
 from conan.api.output import Color, cli_out_write
-from conan.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
-from conan.cli.commands import default_json_formatter
+from conan.cli.command import conan_command, OnceArgument
+from conan.cli.commands import ConanJSONEncoder
 from conan.cli.formatters.list import list_packages_html
-from conans.errors import ConanException, InvalidNameException, NotFoundException
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.api.select_pattern import ListPattern, ListPatternMode
+from conans.util.dates import timestamp_to_str
 
 remote_color = Color.BRIGHT_BLUE
+recipe_name_color = Color.GREEN
 recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 error_color = Color.BRIGHT_RED
@@ -17,262 +17,106 @@ field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
 
 
-def print_list_recipes(results):
-    for remote, result in results.items():
+def print_list_text(results):
+    info = results["results"]
+    search_mode = results["search_mode"]
+    indentation = "  "
+
+    for remote, info_per_ref_name in info.items():
         cli_out_write(f"{remote}:", fg=remote_color)
-        if result.get("error"):
-            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
-        else:
-            recipes = result.get("recipes", [])
-            if not recipes:
-                # FIXME: this should be an error message, NOT FOUND
-                cli_out_write("  There are no matching recipe references")
-            else:
-                current_recipe = None
-                for ref in recipes:
-                    if ref.name != current_recipe:
-                        current_recipe = ref.name
-                        cli_out_write(f"  {current_recipe}", fg=recipe_color)
 
-                    cli_out_write(f"    {ref}", fg=reference_color)
+        if info_per_ref_name.get("error"):
+            cli_out_write(f"  ERROR: {info_per_ref_name.get('error')}", fg=error_color)
+            continue
 
+        if not info_per_ref_name:
+            cli_out_write(f"  There are no matching recipe references", fg=recipe_color)
+            continue
 
-def print_list_recipe_revisions(results):
-    for remote, result in results.items():
-        name = remote if remote is not None else "Local Cache"
-        cli_out_write(f"{name}:", fg=remote_color)
-        if result.get("error"):
-            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
-        else:
-            revisions = result.get("revisions", [])
-            if not revisions:
-                # FIXME: this should be an error message, NOT FOUND
-                cli_out_write("  There are no matching recipe references")
-            else:
-                for ref in revisions:
-                    cli_out_write(f"  {ref.repr_humantime()}", fg=recipe_color)
-
-
-def print_list_package_revisions(results):
-    for remote, result in results.items():
-        name = remote if remote is not None else "Local Cache"
-        cli_out_write(f"{name}:", fg=remote_color)
-        if result.get("error"):
-            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
-        else:
-            revisions = result.get("revisions", [])
-            if not revisions:
-                # FIXME: this should be an error message, NOT FOUND
-                cli_out_write(f"  There are no matching package references")
-            else:
-                for pref in revisions:
-                    cli_out_write(f"  {pref.repr_humantime()}", fg=recipe_color)
-
-
-def print_list_package_ids(results):
-    for remote, result in results.items():
-        name = remote if remote is not None else "Local Cache"
-        cli_out_write(f"{name}:", fg=remote_color)
-        if result.get("error"):
-            cli_out_write(f"  ERROR: {result.get('error')}", fg=error_color)
-        else:
-            packages = result.get("packages", [])
-            if not packages:
-                # It is legal not to have binaries
-                cli_out_write("  There are no packages")
-            else:
-                for pref, binary_info in packages.items():
-                    cli_out_write(f"  {pref.repr_notime()}", fg=reference_color)
-                    for item, contents in binary_info.items():
-                        if not contents:
+        for ref_name, refs in info_per_ref_name.items():
+            cli_out_write(f"{indentation}{ref_name}", fg=recipe_name_color)
+            for ref, prefs in refs.items():
+                cli_out_write(f"{indentation * 2}{ref.repr_humantime() if ref.timestamp else ref}",
+                              fg=recipe_color)
+                if prefs:
+                    for pref, binary_info in prefs:
+                        pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp \
+                                                                             else ""
+                        if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
+                            cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
+                                          fg=reference_color)
+                            if not binary_info:
+                                cli_out_write(f"{indentation * 4}Empty package information",
+                                              fg=field_color)
+                                continue
+                        elif search_mode in (ListPatternMode.SHOW_ALL_PREVS,
+                                             ListPatternMode.SHOW_LATEST_PREV):
+                            cli_out_write(f"{indentation * 3}PID: {pref.package_id}",
+                                          fg=reference_color)
+                            cli_out_write(f"{indentation * 4}PREV: {pref.revision}{pref_date}",
+                                          fg=field_color)
                             continue
-                        cli_out_write(f"    {item}:", fg=field_color)
-                        if not isinstance(contents, dict):
-                            for c in contents:
-                                cli_out_write(f"      {c}", fg=value_color)
-                        else:
-                            for k, v in contents.items():
-                                cli_out_write(f"      {k}={v}", fg=value_color)
+                        for item, contents in binary_info.items():
+                            if not contents:
+                                continue
+                            cli_out_write(f"{indentation * 4}{item}:", fg=field_color)
+                            if isinstance(contents, dict):
+                                for k, v in contents.items():
+                                    cli_out_write(f"{indentation * 5}{k}={v}", fg=value_color)
+                            else:
+                                for c in contents:
+                                    cli_out_write(f"{indentation * 5}{c}", fg=value_color)
+                elif search_mode in (ListPatternMode.SHOW_PACKAGE_IDS,
+                                     ListPatternMode.SHOW_ALL_PREVS,
+                                     ListPatternMode.SHOW_LATEST_PREV):
+                    cli_out_write(f"{indentation * 3}There are no packages for this revision.",
+                                  fg=field_color)
 
 
-def _add_remotes_and_cache_options(subparser):
-    subparser.add_argument("-r", "--remote", default=None, action=Extender,
-                           help="Remote names. Accepts wildcards")
-    subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
+def print_list_json(data):
+    results = data["results"]
+    myjson = json.dumps(results, indent=4, cls=ConanJSONEncoder)
+    cli_out_write(myjson)
 
 
-def _selected_cache_remotes(conan_api, args):
+@conan_command(group="Creator", formatters={"text": print_list_text,
+                                            "json": print_list_json,
+                                            "html": list_packages_html})
+def list(conan_api: ConanAPI, parser, *args):
+    """
+    Lists existing recipes, revisions or packages in the cache or in remotes given a complete
+    reference or a pattern.
+    """
+    parser.add_argument('reference', help="Recipe reference or package reference. "
+                                          "Both can contain * as wildcard at any reference field. "
+                                          "If revision is not specified, it is assumed latest one.")
+    parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
+                        help="Only list packages matching a specific query. e.g: os=Windows AND "
+                             "(arch=x86 OR compiler=gcc)")
+    parser.add_argument("-r", "--remote", default=None, action="append",
+                        help="Remote names. Accepts wildcards")
+    parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
+
+    args = parser.parse_args(*args)
+    ref_pattern = ListPattern(args.reference)
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
     if args.cache or not args.remote:
         remotes.append(None)
     if args.remote:
         remotes.extend(conan_api.remotes.list(args.remote))
-    return remotes
-
-
-@conan_subcommand(formatters={"text": print_list_recipes, "json": default_json_formatter})
-def list_recipes(conan_api, parser, subparser, *args):
-    """
-    Search available recipes in the local cache or in the remotes
-    """
-    subparser.add_argument(
-        "query",
-        help="Search query to find package recipe reference, e.g., 'boost', 'lib*'"
-    )
-    _add_remotes_and_cache_options(subparser)
-    args = parser.parse_args(*args)
-
-    remotes = _selected_cache_remotes(conan_api, args)
-
-    results = OrderedDict()
+    results = {}
     for remote in remotes:
         name = getattr(remote, "name", "Local Cache")
         try:
-            results[name] = {"recipes": conan_api.search.recipes(args.query, remote)}
-        except NotFoundException:
-            # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f'There are not recipes matching {args.query}'}
+            list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
         except Exception as e:
             results[name] = {"error": str(e)}
-
-    return results
-
-
-@conan_subcommand(formatters={"text": print_list_recipe_revisions, "json": default_json_formatter})
-def list_recipe_revisions(conan_api, parser, subparser, *args):
-    """
-    List all the revisions of a recipe reference.
-    """
-    subparser.add_argument("reference", help="Recipe reference, e.g., libyaml/0.2.5")
-    _add_remotes_and_cache_options(subparser)
-    args = parser.parse_args(*args)
-
-    ref = RecipeReference.loads(args.reference)
-    if ref.revision:
-        raise ConanException(f"Cannot list the revisions of a specific recipe revision")
-
-    remotes = _selected_cache_remotes(conan_api, args)
-
-    results = OrderedDict()
-    for remote in remotes:
-        name = getattr(remote, "name", "Local Cache")
-        try:
-            results[name] = {"revisions": conan_api.list.recipe_revisions(ref, remote=remote)}
-        except NotFoundException:
-            # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"Recipe not found: '{ref}'. [Remote: {remote.name}]"}
-        except Exception as e:
-            results[name] = {"error": str(e)}
-
-    return results
-
-
-@conan_subcommand(formatters={"text": print_list_package_revisions, "json": default_json_formatter})
-def list_package_revisions(conan_api, parser, subparser, *args):
-    """
-    List all the revisions of a package ID reference.
-    """
-    subparser.add_argument("package_reference", help="Package reference, e.g., libyaml/0.2.5"
-                                                     "#80b7cbe095ac7f38844b6511e69e453a:"
-                                                     "ef93ea55bee154729e264db35ca6a16ecab77eb7")
-    _add_remotes_and_cache_options(subparser)
-    args = parser.parse_args(*args)
-
-    try:
-        pref = PkgReference.loads(args.package_reference)
-    except (ConanException, InvalidNameException):
-        raise ConanException(f"{args.package_reference} is not a valid package reference,"
-                             f" provide a reference in the form "
-                             f"name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID")
-    if pref.revision:
-        raise ConanException(f"Cannot list the revisions of a specific package revision")
-
-    remotes = _selected_cache_remotes(conan_api, args)
-
-    results = OrderedDict()
-    for remote in remotes:
-        name = getattr(remote, "name", "Local Cache")
-        try:
-            results[name] = {"revisions": conan_api.list.package_revisions(pref, remote=remote)}
-        except NotFoundException:
-            # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"Recipe or package not found: '{pref}'. [Remote: {remote.name}]"}
-        except Exception as e:
-            results[name] = {"error": str(e)}
-
-    return results
-
-
-def _list_packages_json(results):
-    for remote, d in results.items():
-        d["reference"] = repr(d["reference"])
-        try:
-            d["packages"] = {k.repr_notime(): v for k, v in d["packages"].items()}
-        except KeyError:
-            pass
-    myjson = json.dumps(results, indent=4)
-    cli_out_write(myjson)
-
-
-@conan_subcommand(formatters={"text": print_list_package_ids, "json": _list_packages_json,
-                              "html": list_packages_html})
-def list_packages(conan_api, parser, subparser, *args):
-    """
-    List all the package IDs for a given recipe revision.
-    """
-    subparser.add_argument(
-        "reference",
-        help="Recipe reference and revision, e.g., libyaml/0.2.5#latest or "
-             "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a"
-        )
-    _add_remotes_and_cache_options(subparser)
-    args = parser.parse_args(*args)
-
-    try:
-        ref = RecipeReference.loads(args.reference)
-    except (ConanException, InvalidNameException):
-        raise ConanException(f"{args.reference} is not a valid recipe reference, provide a reference"
-                             f" in the form name/version[@user/channel][#RECIPE_REVISION]")
-
-    if not ref.revision:
-        raise ConanException(f"Invalid '{args.reference}' missing revision. Please specify one "
-                             "revision or '#latest' one")
-
-    remotes = _selected_cache_remotes(conan_api, args)
-
-    results = OrderedDict()
-    for remote in remotes:
-        name = getattr(remote, "name", "Local Cache")
-        if ref.revision == "latest":
-            try:
-                ref.revision = None
-                ref = conan_api.list.latest_recipe_revision(ref, remote)
-            except NotFoundException:
-                # TODO: Remove this try-except whenever Artifactory is returning proper messages
-                results[name] = {"error": f"Recipe not found: '{ref}'. [Remote: {remote.name}]"}
-                continue
-            except Exception as e:
-                results[name] = {"error": str(e)}
-                continue
-            if not ref:
-                results[name] = {"error": f"There are no recipes matching '{ref}'"}
-                continue
-        try:
-            # TODO: This should error in the cache if the revision doesn't exist
-            results[name] = {"packages": conan_api.list.packages_configurations(ref, remote=remote)}
-        except NotFoundException:
-            # TODO: Remove this try-except whenever Artifactory is returning proper messages
-            results[name] = {"error": f"Recipe not found: '{ref}'. [Remote: {remote.name}]"}
-        except Exception as e:
-            results[name] = {"error": str(e)}
-        results[name]["reference"] = ref
-
-    return results
-
-
-@conan_command(group=COMMAND_GROUPS['consumer'])
-def list(conan_api, parser, *args):
-    """
-    Gets information about a recipe or package reference
-    """
+        else:
+            results[name] = list_bundle.serialize() if args.format in ("json", "html") \
+                else list_bundle.ordered_recipes_by_name
+    return {
+        "results": results,
+        "search_mode": ref_pattern.mode,
+        "conan_api": conan_api
+    }

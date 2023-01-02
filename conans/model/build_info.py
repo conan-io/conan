@@ -43,6 +43,7 @@ class MockInfoProperty(object):
 
     def __getitem__(self, key):
         ConanOutput().warning(self._message)
+        return []
 
     def __setitem__(self, key, value):
         ConanOutput().warning(self._message)
@@ -50,6 +51,7 @@ class MockInfoProperty(object):
     def __getattr__(self, attr):
         if attr != "_message":
             ConanOutput().warning(self._message)
+        return []
 
     def __setattr__(self, attr, value):
         if attr != "_message":
@@ -89,8 +91,7 @@ class _Component(object):
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = MockInfoProperty("cpp_info.names")
         self.filenames = MockInfoProperty("cpp_info.filenames")
-        self.user_info = MockInfoProperty("cpp_info.user_info")
-        self.env_info = MockInfoProperty("cpp_info.env_info")
+        self.build_modules = MockInfoProperty("cpp_info.build_modules")
 
         if set_defaults:
             self.includedirs = ["include"]

@@ -1,16 +1,15 @@
 import os
 
-from conan.cli.command import conan_command, COMMAND_GROUPS
-from conan.cli.commands.install import _get_conanfile_path
+from conan.cli.command import conan_command
 from conan.cli.args import add_reference_args
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.source import run_source_method
 from conans.errors import conanfile_exception_formatter
 
 
-@conan_command(group=COMMAND_GROUPS['creator'])
+@conan_command(group="Creator")
 def source(conan_api, parser, *args):
     """
     Calls the source() method
@@ -23,7 +22,7 @@ def source(conan_api, parser, *args):
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
-    path = _get_conanfile_path(args.path, cwd, py=True)
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
 
     # TODO: Decide API to put this

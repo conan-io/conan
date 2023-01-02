@@ -1,11 +1,11 @@
 from conan.api.model import UploadBundle
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
+from conan.internal.api.select_pattern import SelectPattern
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
     UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.errors import ConanException
 
 
 class UploadAPI:
@@ -15,40 +15,22 @@ class UploadAPI:
 
     @api_method
     def get_bundle(self, expression, package_query=None, only_recipe=False):
-        ret = UploadBundle()
-        if ":" in expression or package_query:
-            # We are uploading the selected packages and the recipes belonging to that
-            prefs = self.conan_api.search.package_revisions(expression, query=package_query)
-            if not prefs:
-                raise ConanException("There are no packages matching {}".format(expression))
-            ret.add_prefs(prefs)
-        else:
-            # Upload the recipes and all the packages
-            refs = self.conan_api.search.recipe_revisions(expression)
-            if only_recipe:
-                for ref in refs:
-                    ret.add_ref(ref)
-                return ret
-            app = ConanApp(self.conan_api.cache_folder)
-            for ref in refs:
-                # Get all the prefs and all the prevs
-                pkg_ids = app.cache.get_package_references(ref, only_latest_prev=False)
-                if pkg_ids:
-                    ret.add_prefs(pkg_ids)
-                else:
-                    ret.add_ref(ref)
+        ref_pattern = SelectPattern(expression)
+        select_bundle = self.conan_api.search.select(ref_pattern, only_recipe, package_query)
+        upload_bundle = UploadBundle(select_bundle)
 
         # This is necessary to upload_policy = "skip"
         app = ConanApp(self.conan_api.cache_folder)
-        for recipe in ret.recipes:
-            layout = app.cache.ref_layout(recipe.ref)
+        for ref, bundle in upload_bundle.recipes.items():
+            layout = app.cache.ref_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path)
             if conanfile.upload_policy == "skip":
-                ConanOutput().info(f"{recipe.ref}: Skipping upload of binaries, "
+                ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
-                recipe.packages = []
-        return ret
+                bundle.packages = []
+
+        return upload_bundle
 
     @api_method
     def check_integrity(self, upload_data):

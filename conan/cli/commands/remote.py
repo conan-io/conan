@@ -2,7 +2,7 @@ import json
 from collections import OrderedDict
 
 from conan.api.output import cli_out_write
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
@@ -52,7 +52,7 @@ def output_remotes_json(results):
 
 
 @conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})
-def remote_list(conan_api: ConanAPIV2, parser, subparser, *args):
+def remote_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List current remotes
     """
@@ -66,28 +66,16 @@ def remote_add(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("name", help="Name of the remote to add")
     subparser.add_argument("url", help="Url of the remote")
-    subparser.add_argument("--secure", dest="secure", action='store_true',
-                           help="Don't allow insecure server connections when using SSL")
     subparser.add_argument("--insecure", dest="secure", action='store_false',
                            help="Allow insecure server connections when using SSL")
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
-    index = _check_index_argument(args.index)
     r = Remote(args.name, args.url, args.secure, disabled=False)
     conan_api.remotes.add(r)
-    if index is not None:
-        conan_api.remotes.move(r, index)
-
-
-def _check_index_argument(index):
-    if index is None:
-        return None
-    try:
-        return int(index)
-    except ValueError:
-        raise ConanException("index argument must be an integer")
+    if args.index is not None:
+        conan_api.remotes.move(r, args.index)
 
 
 @conan_subcommand()
@@ -116,7 +104,7 @@ def remote_update(conan_api, parser, subparser, *args):
                            help="Insert the remote at a specific position in the remote list")
     subparser.set_defaults(secure=None)
     args = parser.parse_args(*args)
-    if not (args.url is not None or args.secure is not None):
+    if args.url is None and args.secure is None and args.index is None:
         subparser.error("Please add at least one argument to update")
     r = conan_api.remotes.get(args.remote)
     if args.url is not None:
@@ -124,6 +112,8 @@ def remote_update(conan_api, parser, subparser, *args):
     if args.secure is not None:
         r.verify_ssl = args.secure
     conan_api.remotes.update(r)
+    if args.index is not None:
+        conan_api.remotes.move(r, args.index)
 
 
 @conan_subcommand()
@@ -136,20 +126,6 @@ def remote_rename(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     r = conan_api.remotes.get(args.remote)
     conan_api.remotes.rename(r, args.new_name)
-
-
-@conan_subcommand()
-def remote_move(conan_api, parser, subparser, *args):
-    """
-    Move the position of the remote in the remotes list (first in the list: first called)
-    """
-    subparser.add_argument("remote", help="Name of the remote to update")
-    subparser.add_argument("index", action=OnceArgument, type=int,
-                           help="Insert remote at specific index")
-    args = parser.parse_args(*args)
-    r = conan_api.remotes.get(args.remote)
-    index = _check_index_argument(args.index)
-    conan_api.remotes.move(r, index)
 
 
 @conan_subcommand()
@@ -261,7 +237,7 @@ def remote_logout(conan_api, parser, subparser, *args):
     return ret
 
 
-@conan_command()
+@conan_command(group="Consumer")
 def remote(conan_api, parser, *args):
     """
     Manages the remote list and the users authenticated on them.

@@ -4,6 +4,7 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
+from conan.internal import check_duplicated_generator
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars, msvc_version_to_toolset_version
@@ -91,6 +92,7 @@ class MSBuildToolchain(object):
         valid XML format with all the good settings like any other VS project ``*.props`` file. The
         last one emulates the ``vcvarsall.bat`` env script. See also :class:`VCVars`.
         """
+        check_duplicated_generator(self, self._conanfile)
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
         # Writing the props files

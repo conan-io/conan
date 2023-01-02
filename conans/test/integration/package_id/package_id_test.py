@@ -77,7 +77,7 @@ def test_value_parse():
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
     client.run("upload test/0.1@danimtb/testing -r default")
-    client.run("remove test/0.1@danimtb/testing --force")
+    client.run("remove test/0.1@danimtb/testing --confirm")
     client.run("install --requires=test/0.1@danimtb/testing")
     client.run("search test/0.1@danimtb/testing")
     assert "arch: kk=kk" in client.out
@@ -143,3 +143,44 @@ def test_build_type_remove_windows():
                '-s compiler.version=190 -s build_type=Debug -s compiler.runtime=dynamic')
     client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
 
+
+def test_package_id_requires_info():
+    """ if we dont restrict ``package_id()`` to use only ``self.info`` it will do nothing and fail
+    if we ``del self.settings.arch`` instead of ``del self.info.settings.arch``
+    https://github.com/conan-io/conan/issues/12693
+    """
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            settings = "os", "arch"
+
+            def package_id(self):
+                if self.info.settings.os == "Windows":
+                    del self.info.settings.arch
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=pkg --version=0.1 -s os=Windows -s arch=armv8")
+    client.assert_listed_binary({"pkg/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Build")})
+    client.run("create . --name=pkg --version=0.1 -s os=Windows -s arch=x86_64")
+    client.assert_listed_binary({"pkg/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Build")})
+
+
+def test_package_id_validate_settings():
+    """ ``self.info`` has some validation, the first time it executes
+    https://github.com/conan-io/conan/issues/12693
+    """
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            settings = "os", "arch"
+
+            def package_id(self):
+                if self.info.settings.os == "DONT_EXIST":
+                    del self.info.settings.arch
+        """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile})
+    c.run("create . --name=pkg --version=0.1", assert_error=True)
+    print(c.out)
+    assert "ConanException: Invalid setting 'DONT_EXIST' is not a valid 'settings.os' value" in c.out

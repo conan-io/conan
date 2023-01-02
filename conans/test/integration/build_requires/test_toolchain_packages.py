@@ -1,5 +1,7 @@
+import json
 import textwrap
 
+from conans.model.package_ref import PkgReference
 from conans.test.utils.tools import TestClient
 
 
@@ -103,7 +105,7 @@ def test_android_ndk():
     # IMPORTANT: The consumption via test_package allows specifying the type of requires
     # in this case: None, as this is intended to be injected via profile [tool_requires]
     # can be tested like that
-    c.run("remove * -f")
+    c.run("remove * -c")
     c.save({"test_package/conanfile.py": test})
 
     # Creating the NDK packages for Windows, Linux
@@ -375,10 +377,13 @@ def test_compiler_gcc():
     assert "gcc/0.1 (test package): LIBCXX LIBS: libcxx-armv8!!!" in c.out
     assert "gcc/0.1 (test package): libcxx-Linux-armv8!" in c.out
     assert "gcc/0.1 (test package): gcc-Linux-x86_64" in c.out
-
     # check the list packages
-    c.run("list packages gcc/0.1#latest")
-    assert """settings_target:
-      arch=armv7
-      build_type=Release
-      os=Linux""" in c.out
+    c.run("list gcc/0.1:* --format=json", redirect_stdout="packages.json")
+    pkgs_json = json.loads(c.load("packages.json"))
+    pref = PkgReference.loads("gcc/0.1#a8d725d9988de633accf410fb04cd162:6190ea2804cd4777609ec7174ccfdee22c6318c3")
+    settings_target = {
+        "arch": "armv7",
+        "build_type": "Release",
+        "os": "Linux"
+    }
+    assert settings_target == pkgs_json["Local Cache"][pref.ref.repr_notime()][pref.repr_notime()]["settings_target"]

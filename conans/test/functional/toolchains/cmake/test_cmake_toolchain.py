@@ -1224,7 +1224,7 @@ def test_find_program_for_tool_requires():
         "CMakeLists.txt": cmakelists_consumer,
         "host_profile": host_profile,
         "build_profile": build_profile}, clean_first=True)
-    client.run("install conanfile_consumer.py --requires=pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
+    client.run("install conanfile_consumer.py -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
 
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
@@ -1232,3 +1232,59 @@ def test_find_program_for_tool_requires():
         # and library comes from host context package
         assert f"{build_context_package_folder}/bin/foobin" in client.out
         assert f"{host_context_package_folder}/include" in client.out
+
+
+@pytest.mark.tool("pkg_config")
+def test_cmaketoolchain_and_pkg_config_path():
+    """
+    Lightweight test which is loading a dependency as a *.pc file through
+    CMake thanks to pkg_check_modules macro.
+    It's working because PKG_CONFIG_PATH env variable is being loaded automatically
+    by the CMakeToolchain generator.
+    """
+    client = TestClient()
+    dep = textwrap.dedent("""
+    from conan import ConanFile
+    class DepConan(ConanFile):
+        name = "dep"
+        version = "1.0"
+        def package_info(self):
+            self.cpp_info.libs = ["dep"]
+    """)
+    pkg = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, cmake_layout
+    class HelloConan(ConanFile):
+        name = "pkg"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "PkgConfigDeps", "CMakeToolchain"
+        exports_sources = "CMakeLists.txt"
+
+        def requirements(self):
+            self.requires("dep/1.0")
+
+        def layout(self):
+            cmake_layout(self)
+
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
+    """)
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(pkg CXX)
+
+    find_package(PkgConfig REQUIRED)
+    # We should have PKG_CONFIG_PATH created in the current environment
+    pkg_check_modules(DEP REQUIRED IMPORTED_TARGET dep)
+    """)
+    client.save({
+        "dep/conanfile.py": dep,
+        "pkg/conanfile.py": pkg,
+        "pkg/CMakeLists.txt": cmakelists
+    })
+    client.run("create dep/conanfile.py")
+    client.run("create pkg/conanfile.py")
+    assert "Found dep, version 1.0" in client.out

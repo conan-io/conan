@@ -8,7 +8,7 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, Color, cli_out_write
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
@@ -27,7 +27,7 @@ class Cli:
     """
 
     def __init__(self, conan_api):
-        assert isinstance(conan_api, ConanAPIV2), \
+        assert isinstance(conan_api, ConanAPI), \
             "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
         self._groups = defaultdict(list)
@@ -110,8 +110,8 @@ class Cli:
         max_len = max((len(c) for c in self._commands)) + 1
         line_format = '{{: <{}}}'.format(max_len)
 
-        for group_name, comm_names in self._groups.items():
-            cli_out_write(group_name, Color.BRIGHT_MAGENTA)
+        for group_name, comm_names in sorted(self._groups.items()):
+            cli_out_write(group_name + " commands", Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 cli_out_write(line_format.format(name), Color.GREEN, endline="")
@@ -133,7 +133,7 @@ class Cli:
                 cli_out_write(txt)
 
         cli_out_write("")
-        cli_out_write('Conan commands. Type "conan help <command>" for help', Color.BRIGHT_YELLOW)
+        cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
@@ -208,7 +208,7 @@ def main(args):
     """
 
     try:
-        conan_api = ConanAPIV2()
+        conan_api = ConanAPI()
     except ConanMigrationError:  # Error migrating
         sys.exit(ERROR_MIGRATION)
     except ConanException as e:

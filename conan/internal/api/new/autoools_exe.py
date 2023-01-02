@@ -52,7 +52,7 @@ bin_PROGRAMS = {{name}}
 test_conanfile_exe_v2 = """
 import os
 from conan import ConanFile
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 from conan.tools.layout import basic_layout
 
 
@@ -66,7 +66,7 @@ class {{package_name}}TestConan(ConanFile):
         basic_layout(self)
 
     def test(self):
-        if not cross_building(self):
+        if can_run(self):
             self.run("{{name}}", env="conanrun")
 """
 

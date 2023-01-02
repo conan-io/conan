@@ -12,7 +12,7 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
@@ -353,7 +353,8 @@ class BinaryInstaller:
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
                 if hasattr(conanfile, "package_info"):
-                    conanfile.package_info()
+                    with conanfile_remove_attr(conanfile, ['info'], "package_info"):
+                        conanfile.package_info()
 
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
@@ -365,10 +366,12 @@ class BinaryInstaller:
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build.copy()
                     build_cppinfo.set_relative_base_folder(conanfile.build_folder)
+                    conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source.copy()
                     source_cppinfo.set_relative_base_folder(conanfile.source_folder)
+                    conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()
                     full_editable_cppinfo.merge(source_cppinfo)
@@ -376,6 +379,20 @@ class BinaryInstaller:
                     # In editables if we defined anything in the cpp infos we want to discard
                     # the one defined in the conanfile cpp_info
                     conanfile.cpp_info.merge(full_editable_cppinfo, overwrite=True)
+
+                    # Paste the editable cpp_info but prioritizing it, only if a
+                    # variable is not declared at build/source, the package will keep the value
+                    conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
+                    conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                    conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
+                    conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                else:
+                    conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
+                    conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)
+                    conanfile.runenv_info.compose_env(conanfile.layouts.package.runenv_info)
+                    conanfile.conf_info.compose_conf(conanfile.layouts.package.conf_info)
 
                 self._hook_manager.execute("post_package_info", conanfile=conanfile)
 

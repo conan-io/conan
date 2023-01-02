@@ -18,7 +18,7 @@ def client():
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeToolchain"
 
-            def run(self, cmd):  # INTERCEPTOR of running
+            def run(self, cmd, env=None):  # INTERCEPTOR of running
                 self.output.info("RECIPE-RUN: {}".format(cmd))
 
             def build(self):
@@ -191,7 +191,7 @@ def test_conf_package_patterns():
     conanfile = GenConanfile()
     generate = """
     def generate(self):
-        value = self.conf["user.build:myconfig"]
+        value = self.conf.get("user.build:myconfig")
         self.output.warning("{} Config:{}".format(self.ref.name, value))
 """
     client.save({"dep/conanfile.py": str(conanfile) + generate,

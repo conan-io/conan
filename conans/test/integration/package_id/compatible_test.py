@@ -101,7 +101,7 @@ class CompatibleIDsTest(unittest.TestCase):
         # Create the recipe and upload it into the remote
         client.run("create . -s build_type=Release")
         client.run("upload pkg* -r=default --confirm")
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         # Install locally the uploaded package
         client.run("install --requires=pkga/0.1")

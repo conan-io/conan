@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
@@ -115,6 +116,7 @@ class XcodeDeps(object):
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         if self.configuration is None:
             raise ConanException("XcodeDeps.configuration is None, it should have a value")
         if self.architecture is None:

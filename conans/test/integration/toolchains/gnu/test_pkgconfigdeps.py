@@ -719,3 +719,48 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default", assert_error=True)
     assert "The packages ['tool'] exist both as 'require' and as 'build require'" in client.out
+
+
+def test_error_missing_pc_build_context():
+    """
+    PkgConfigDeps was failing, not generating the zlib.pc in the
+    build context, for a test_package that both requires(example/1.0) and
+    tool_requires(example/1.0), which depends on zlib
+    # https://github.com/conan-io/conan/issues/12664
+    """
+    c = TestClient()
+    example = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Example(ConanFile):
+            name = "example"
+            version = "1.0"
+            requires = "game/1.0"
+            generators = "PkgConfigDeps"
+            settings = "build_type"
+            def build(self):
+                assert os.path.exists("math.pc")
+                assert os.path.exists("engine.pc")
+                assert os.path.exists("game.pc")
+            """)
+    c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
+                                                                .with_require("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
+                                                            .with_requires("engine/1.0"),
+            "example/conanfile.py": example,
+            # With ``with_test()`` it already generates a requires(example/1.0)
+            "example/test_package/conanfile.py": GenConanfile().with_build_requires("example/1.0")
+                                                               .with_test("pass")})
+    c.run("create math")
+    c.run("create engine")
+    c.run("create game")
+    # This used to crash because of the assert inside the build() method
+    c.run("create example -pr:b=default -pr:h=default")
+    # Now make sure we can actually build with build!=host context
+    # The debug binaries are missing, so adding --build=missing
+    c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
+          "--build=example")
+
+    c.assert_listed_require({"example/1.0": "Cache"})
+    c.assert_listed_require({"example/1.0": "Cache"}, build=True)

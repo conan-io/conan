@@ -191,3 +191,276 @@ def test_cmakedeps_cppinfo_complex_strings():
     assert r"spaces=me you" in deps
     assert r"foobar=bazbuz" in deps
     assert r"answer=42" in deps
+
+
+def test_dependency_props_from_consumer():
+    client = TestClient(path_with_spaces=False)
+    bar = textwrap.dedent(r'''
+        from conan import ConanFile
+        class FooConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_find_mode", "both")
+                self.cpp_info.components["component1"].requires = []
+        ''')
+
+    foo = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps, cmake_layout
+        class FooConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "bar/1.0"
+            def layout(self):
+                cmake_layout(self)
+            def generate(self):
+                deps = CMakeDeps(self)
+                {set_find_mode}
+                deps.set_property("bar", "cmake_file_name", "custom_bar_file_name")
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_module_file_name")
+                deps.set_property("bar", "cmake_target_name", "custom_bar_target_name")
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_module_target_name")
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_component_target_name")
+                deps.generate()
+        ''')
+
+    set_find_mode = """
+        deps.set_property("bar", "cmake_find_mode", {find_mode})
+    """
+
+    client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
+
+    module_file = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_nameTargets.cmake")
+
+    # uses cmake_find_mode set in bar: both
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
+    assert os.path.exists(module_file)
+    assert os.path.exists(config_file)
+    module_content = client.load(module_file)
+    assert "add_library(custom_bar_module_target_name INTERFACE IMPORTED)" in module_content
+    config_content = client.load(config_file)
+    assert "add_library(custom_bar_target_name INTERFACE IMPORTED)" in config_content
+    components_module_content = client.load(components_module)
+    assert "add_library(bar_custom_bar_component_target_name_DEPS_TARGET INTERFACE IMPORTED)" in components_module_content
+
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
+    assert not os.path.exists(module_file)
+    assert not os.path.exists(config_file)
+
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
+    assert os.path.exists(module_file)
+    assert not os.path.exists(config_file)
+
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
+    assert not os.path.exists(module_file)
+    assert os.path.exists(config_file)
+
+
+def test_props_from_consumer_build_context_activated():
+    client = TestClient(path_with_spaces=False)
+    bar = textwrap.dedent(r'''
+        from conan import ConanFile
+        class FooConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_find_mode", "both")
+                self.cpp_info.components["component1"].requires = []
+        ''')
+
+    foo = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps, cmake_layout
+        class FooConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "bar/1.0"
+            tool_requires = "bar/1.0"
+            def layout(self):
+                cmake_layout(self)
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.build_context_activated = ["bar"]
+                deps.build_context_suffix = {{"bar": "_BUILD"}}
+                {set_find_mode}
+
+                deps.set_property("bar", "cmake_file_name", "custom_bar_file_name")
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_module_file_name")
+                deps.set_property("bar", "cmake_target_name", "custom_bar_target_name")
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_module_target_name")
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_component_target_name")
+
+                deps.set_property("bar", "cmake_file_name", "custom_bar_build_file_name", build_context=True)
+                deps.set_property("bar", "cmake_module_file_name", "custom_bar_build_module_file_name", build_context=True)
+                deps.set_property("bar", "cmake_target_name", "custom_bar_build_target_name", build_context=True)
+                deps.set_property("bar", "cmake_module_target_name", "custom_bar_build_module_target_name", build_context=True)
+                deps.set_property("bar::component1", "cmake_target_name", "custom_bar_build_component_target_name", build_context=True)
+
+                deps.generate()
+        ''')
+
+    set_find_mode = """
+        deps.set_property("bar", "cmake_find_mode", {find_mode})
+        deps.set_property("bar", "cmake_find_mode", {find_mode}, build_context=True)
+    """
+
+    client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
+
+    module_file = os.path.join(client.current_folder, "build", "generators",
+                               "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(client.current_folder, "build", "generators",
+                                     "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(client.current_folder, "build", "generators",
+                               "custom_bar_file_nameTargets.cmake")
+
+    module_file_build = os.path.join(client.current_folder, "build", "generators",
+                                     "module-custom_bar_build_module_file_name_BUILDTargets.cmake")
+    components_module_build = os.path.join(client.current_folder, "build", "generators",
+                                           "custom_bar_build_file_name_BUILD-Target-release.cmake")
+    config_file_build = os.path.join(client.current_folder, "build", "generators",
+                                     "custom_bar_build_file_name_BUILDTargets.cmake")
+
+    # uses cmake_find_mode set in bar: both
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
+    assert os.path.exists(module_file)
+    assert os.path.exists(config_file)
+    assert os.path.exists(module_file_build)
+    assert os.path.exists(config_file_build)
+
+    module_content = client.load(module_file)
+    assert "add_library(custom_bar_module_target_name INTERFACE IMPORTED)" in module_content
+    config_content = client.load(config_file)
+    assert "add_library(custom_bar_target_name INTERFACE IMPORTED)" in config_content
+
+    module_content_build = client.load(module_file_build)
+    assert "add_library(custom_bar_build_module_target_name INTERFACE IMPORTED)" in module_content_build
+    config_content_build = client.load(config_file_build)
+    assert "add_library(custom_bar_build_target_name INTERFACE IMPORTED)" in config_content_build
+
+    components_module_content = client.load(components_module)
+    assert "add_library(bar_custom_bar_component_target_name_DEPS_TARGET INTERFACE IMPORTED)" in components_module_content
+
+    components_module_content_build = client.load(components_module_build)
+    assert "add_library(bar_BUILD_custom_bar_build_component_target_name_DEPS_TARGET INTERFACE IMPORTED)" in components_module_content_build
+
+    client.save(
+        {"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")), "bar.py": bar},
+        clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
+    assert not os.path.exists(module_file)
+    assert not os.path.exists(config_file)
+    assert not os.path.exists(module_file_build)
+    assert not os.path.exists(config_file_build)
+
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
+    assert os.path.exists(module_file)
+    assert not os.path.exists(config_file)
+    assert os.path.exists(module_file_build)
+    assert not os.path.exists(config_file_build)
+
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
+    assert not os.path.exists(module_file)
+    assert os.path.exists(config_file)
+    assert not os.path.exists(module_file_build)
+    assert os.path.exists(config_file_build)
+
+    # invalidate upstream property setting a None, will use config that's the default
+    client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="None")),
+                 "bar.py": bar}, clean_first=True)
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
+    assert not os.path.exists(module_file)
+    assert os.path.exists(config_file)
+    assert not os.path.exists(module_file_build)
+    assert os.path.exists(config_file_build)
+
+
+def test_skip_transitive_components():
+    """ when a transitive depenency is skipped, because its binary is not necessary
+    (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
+    was erroring with KeyError, as the dependency info was not there
+    """
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            package_type = "shared-library"
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].requires = ["dep::dep"]
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": pkg,
+            "consumer/conanfile.py": GenConanfile().with_settings("build_type")
+                                                   .with_requires("pkg/0.1")})
+    c.run("create dep")
+    c.run("create pkg")
+    c.run("install consumer -g CMakeDeps")
+    c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
+    # This used to error, as CMakeDeps was raising a KeyError
+    assert "'CMakeDeps' calling 'generate()'" in c.out
+
+
+def test_error_missing_config_build_context():
+    """
+    CMakeDeps was failing, not generating the zlib-config.cmake in the
+    build context, for a test_package that both requires(example/1.0) and
+    tool_requires(example/1.0), which depends on zlib
+    # https://github.com/conan-io/conan/issues/12664
+    """
+    c = TestClient()
+    example = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Example(ConanFile):
+            name = "example"
+            version = "1.0"
+            requires = "game/1.0"
+            generators = "CMakeDeps"
+            settings = "build_type"
+            def build(self):
+                assert os.path.exists("math-config.cmake")
+                assert os.path.exists("engine-config.cmake")
+                assert os.path.exists("game-config.cmake")
+            """)
+    c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
+                                                                .with_require("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
+                                                            .with_requires("engine/1.0"),
+            "example/conanfile.py": example,
+            # The example test_package contains already requires(self.tested_reference_str)
+            "example/test_package/conanfile.py": GenConanfile().with_build_requires("example/1.0")
+                                                               .with_test("pass")})
+    c.run("create math")
+    c.run("create engine")
+    c.run("create game")
+    # This used to crash because of the assert inside the build() method
+    c.run("create example -pr:b=default -pr:h=default")
+    # Now make sure we can actually build with build!=host context
+    # The debug binaries are missing, so adding --build=missing
+    c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
+          "--build=example")
+    # listed as both requires and build_requires
+    c.assert_listed_require({"example/1.0": "Cache"})
+    c.assert_listed_require({"example/1.0": "Cache"}, build=True)

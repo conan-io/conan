@@ -4,10 +4,12 @@ from pathlib import Path
 from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
+from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.layout import Folders, Infos
+from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
+
 from conans.model.requires import Requirements
 
 
@@ -245,7 +247,8 @@ class ConanFile:
         self.options = Options(self.options or {}, self.default_options)
 
         # user declared variables
-        self.user_info = None
+        self.user_info = MockInfoProperty("user_info")
+        self.env_info = MockInfoProperty("env_info")
         self._conan_dependencies = None
 
         if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
@@ -258,6 +261,7 @@ class ConanFile:
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
+        self.layouts = Layouts()
 
     def serialize(self):
         result = {}
@@ -426,7 +430,9 @@ class ConanFile:
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
             # they don't want any env-file applied
             env = "conanbuild" if scope == "build" else "conanrun"
-        env = [env] if env and isinstance(env, str) else []
+
+        env = [env] if env and isinstance(env, str) else (env or [])
+        assert isinstance(env, list), "env argument to ConanFile.run() should be a list"
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conans.util.runners import conan_run

@@ -11,7 +11,7 @@ def test_private_skip():
     client.run("create . --name=dep --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", visible=False)})
     client.run("create . --name=pkg --version=1.0")
-    client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
+    client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
@@ -30,7 +30,7 @@ def test_private_no_skip():
     client.run("create . --name=app --version=1.0 --build=app/* --build=pkg/*")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
 
-    client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
+    client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
     client.run("create . --name=app --version=1.0 --build=app/* --build=pkg/*", assert_error=True)
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Missing")})
 
@@ -60,7 +60,7 @@ def test_shared_link_static_skip():
     client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0").
                 with_shared_option(True)})
     client.run("create . --name=pkg --version=1.0")
-    client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
+    client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
@@ -77,8 +77,8 @@ def test_test_requires():
     client.save({"conanfile.py": GenConanfile().with_test_requires("gtest/1.0").
                 with_shared_option(False)})
     client.run("create . --name=pkg --version=1.0")
-    client.run("remove gtest/1.0 -p -f")  # Dep binary is removed not used at all
+    client.run("remove gtest/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
-    client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")})
+    client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)

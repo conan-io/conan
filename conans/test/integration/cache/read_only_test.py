@@ -46,12 +46,12 @@ class MyPkg(ConanFile):
     def test_remove(self):
         self.client.run("search")
         self.assertIn("pkg/0.1@lasote/channel", self.client.out)
-        self.client.run("remove pkg* -f")
+        self.client.run("remove pkg* -c")
         self.assertNotIn("pkg/0.1@lasote/channel", self.client.out)
 
     def test_upload(self):
         self.client.run("upload * --confirm -r default")
-        self.client.run("remove pkg* -f")
+        self.client.run("remove pkg* -c")
         self.client.run("install --requires=pkg/0.1@lasote/channel")
         self.test_basic()
 

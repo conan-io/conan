@@ -1,7 +1,7 @@
 from conan.api.model import Remote
 from conan.api.subapi import api_method
 from conan.api.output import ConanOutput
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -19,7 +19,7 @@ class DownloadAPI:
         app = ConanApp(self.conan_api.cache_folder)
         skip_download = app.cache.exists_rrev(ref)
         if skip_download:
-            output.info(f"Skip {ref.repr_notime()} download, already in cache")
+            output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
             return False
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
@@ -44,7 +44,7 @@ class DownloadAPI:
 
         skip_download = app.cache.exists_prev(pref)
         if skip_download:
-            output.info(f"Skip {pref.repr_notime()} download, already in cache")
+            output.info(f"Skip package {pref.repr_notime()} download, already in cache")
             return False
         layout = app.cache.ref_layout(pref.ref)
         conan_file_path = layout.conanfile()

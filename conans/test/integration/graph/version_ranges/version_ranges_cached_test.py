@@ -49,7 +49,7 @@ class TestVersionRangesCache:
             client.run("create .")
             client.run(f"upload liba/2.{minor}.0 -r server1 -c")
 
-        client.run("remove * -f")
+        client.run("remove * -c")
 
         client.save({"conanfile.py": GenConanfile("libb", "1.0").with_require("liba/[>=2.0]")})
         client.run("create .")
@@ -67,3 +67,23 @@ class TestVersionRangesCache:
             client.run("create . --update")
             assert self.counters["server0"] == 1
             assert self.counters["server1"] == 1
+
+
+class TestVersionRangesDiamond:
+
+    def test_caching_errors(self):
+        # https://github.com/conan-io/conan/issues/6110
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("zlib")})
+        c.run("create . --version=1.0")
+        c.run("create . --version=1.1")
+        c.save({"conanfile.py": GenConanfile("poco", "1.0").with_requires("zlib/1.0")})
+        c.run("create .")
+        c.save({"conanfile.py": GenConanfile("boost", "1.0").with_requires("zlib/[*]")})
+        c.run("create .")
+
+        c.run("upload * -c -r=default")
+        c.run("remove * -c")
+        c.save({"conanfile.py": GenConanfile().with_requires("poco/1.0", "boost/1.0")})
+        c.run("install .")  # Ok, no conflict
+        c.run("install . --update")  # Fails due to conflict

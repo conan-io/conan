@@ -236,7 +236,7 @@ class DepsGraphBuilder(object):
                                      require.build, new_ref)
 
         context = CONTEXT_BUILD if require.build else node.context
-        new_node = Node(new_ref, dep_conanfile, context=context)
+        new_node = Node(new_ref, dep_conanfile, context=context, test=require.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
 

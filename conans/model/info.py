@@ -1,7 +1,5 @@
-from conans.client.graph.graph import BINARY_INVALID
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
-from conans.model.options import Options
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, Version
 from conans.util.config_parser import ConfigParser
@@ -291,41 +289,15 @@ class PythonRequiresInfo:
 
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
-    # TODO: Generalize
-    parser = ConfigParser(text, ["settings", "settings_target", "options", "requires", "conf",
-                                 "python_requires", "build_requires"],
-                          raise_unexpected_field=False)
+    parser = ConfigParser(text)
+    conan_info_json = {}
+    for section, lines in parser.line_items():
+        try:
+            items = [line.split("=", 1) for line in lines]
+            conan_info_json[section] = {item[0].strip(): item[1].strip() for item in items}
+        except IndexError:
+            conan_info_json[section] = lines
 
-    def _loads_settings(settings_text):
-        settings_result = []
-        for line in settings_text.splitlines():
-            if not line.strip():
-                continue
-            name, value = line.split("=", 1)
-            settings_result.append((name.strip(), value.strip()))
-        return settings_result
-
-    settings = _loads_settings(parser.settings)
-    settings_target = _loads_settings(parser.settings_target)
-    options = Options.loads(parser.options)
-
-    def parse_list(lines):
-        ret = lines.splitlines() if lines else []
-        return [r for r in ret if r]
-
-    requires = parse_list(parser.requires)
-    conf = parse_list(parser.conf)
-    python_requires = parse_list(parser.python_requires)
-    build_requires = parse_list(parser.build_requires)
-
-    conan_info_json = {"settings": dict(settings),
-                       "options": options.serialize(),
-                       "requires": requires,
-                       "settings_target": dict(settings_target),
-                       "conf": conf,
-                       "python_requires": python_requires,
-                       "build_requires": build_requires,
-                       }
     return conan_info_json
 
 
@@ -426,9 +398,9 @@ class ConanInfo:
         try:
             self.options.validate()
         except ConanException as e:
-            self.invalid = BINARY_INVALID, str(e)
+            self.invalid = str(e)
 
         try:
             self.settings.validate()
         except ConanException as e:
-            self.invalid = BINARY_INVALID, str(e)
+            self.invalid = str(e)

@@ -13,14 +13,20 @@ def test_legacy_names_filenames():
             def package_info(self):
                 self.cpp_info.components["comp"].names["cmake_find_package"] = "hello"
                 self.cpp_info.components["comp"].names["cmake_find_package_multi"] = "hello"
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"] = ["nice_rel_path"]
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"].append("some_file_name")
+                self.cpp_info.components["comp"].build_modules["cmake_find_package_multi"] = ["nice_rel_path"]
 
                 self.cpp_info.names["cmake_find_package"] = "absl"
                 self.cpp_info.names["cmake_find_package_multi"] = "absl"
                 self.cpp_info.filenames["cmake_find_package"] = "tensorflowlite"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "tensorflowlite"
+                self.cpp_info.build_modules["cmake_find_package"] = ["nice_rel_path"]
+                self.cpp_info.build_modules["cmake_find_package_multi"] = ["nice_rel_path"]
 
-                self.cpp_info.env_info.whatever = "whatever-env_info"
-                self.cpp_info.user_info.whatever = "whatever-user_info"
+                self.env_info.whatever = "whatever-env_info"
+                self.env_info.PATH.append("/path/to/folder")
+                self.user_info.whatever = "whatever-user_info"
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
@@ -28,5 +34,5 @@ def test_legacy_names_filenames():
               "Conan 2.X. Please, update your recipes unless you are maintaining compatibility " \
               "with Conan 1.X"
 
-    for name in ["cpp_info.names", "cpp_info.filenames", "cpp_info.env_info", "cpp_info.user_info"]:
+    for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
         assert message.format(name) in c.out

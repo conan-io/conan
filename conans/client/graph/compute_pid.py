@@ -1,8 +1,7 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    ConanErrorConfiguration, conanfile_remove_attr
+    conanfile_remove_attr
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
 
 
@@ -67,13 +66,11 @@ def run_validate_package_id(conanfile):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate"):
         with conanfile_exception_formatter(conanfile, "validate"):
-            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "validate"):
+            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
                 try:
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:
-                    conanfile.info.invalid = BINARY_INVALID, str(e)
-                except ConanErrorConfiguration as e:
-                    conanfile.info.invalid = BINARY_ERROR, str(e)
+                    conanfile.info.invalid = str(e)
 
     # Once we are done, call package_id() to narrow and change possible values
     if hasattr(conanfile, "package_id"):

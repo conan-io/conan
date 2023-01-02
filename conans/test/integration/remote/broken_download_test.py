@@ -21,7 +21,7 @@ class BrokenDownloadTest(unittest.TestCase):
         self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).export()))
         client.run("upload hello/0.1@lasote/stable -r default --only-recipe")
         export_folder = client.get_latest_ref_layout(ref).export()
-        client.run("remove hello/0.1@lasote/stable -f")
+        client.run("remove hello/0.1@lasote/stable -c")
         self.assertFalse(os.path.exists(export_folder))
 
         rev = server.server_store.get_last_revision(ref).revision

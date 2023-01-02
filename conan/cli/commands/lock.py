@@ -1,15 +1,16 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.command import conan_command, COMMAND_GROUPS, OnceArgument, conan_subcommand
+from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli.commands import make_abs_path
-from conan.cli.commands.install import common_graph_args, graph_compute
+from conan.cli.args import common_graph_args
+from conan.cli.printers.graph import print_graph_packages
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
 
-@conan_command(group=COMMAND_GROUPS['consumer'])
+@conan_command(group="Consumer")
 def lock(conan_api, parser, *args):
     """
     Create or manages lockfiles
@@ -29,12 +30,31 @@ def lock_create(conan_api, parser, subparser, *args):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
 
-    deps_graph, lockfile = graph_compute(args, conan_api, partial=True)
+    cwd = os.getcwd()
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
+                                               cwd=cwd, partial=True)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+    if path:
+        graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                    args.user, args.channel,
+                                                    profile_host, profile_build, lockfile,
+                                                    remotes, args.build, args.update)
+    else:
+        graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
+                                                    profile_host, profile_build, lockfile,
+                                                    remotes, args.build, args.update)
+
+    conan_api.graph.analyze_binaries(graph, args.build, remotes=remotes, update=args.update,
+                                     lockfile=lockfile)
+    print_graph_packages(graph)
+
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
-    conanfile_path = os.path.dirname(deps_graph.root.path) \
-        if deps_graph.root.path and args.lockfile_out is None else os.getcwd()
+    conanfile_path = os.path.dirname(graph.root.path) \
+        if graph.root.path and args.lockfile_out is None else cwd
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out or "conan.lock", conanfile_path)
 
 

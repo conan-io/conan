@@ -133,7 +133,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True -tf=None")
     client.run("upload hello/0.1 -c -r default")
-    client.run("remove * -f")
+    client.run("remove * -c")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -222,6 +222,7 @@ def test_autotools_fix_shared_libs():
         import os
 
         from conan import ConanFile
+        from conan.tools.files import save
         from conan.tools.gnu import AutotoolsToolchain, Autotools
         from conan.tools.layout import basic_layout
         from conan.tools.apple import fix_apple_shared_install_name
@@ -260,6 +261,10 @@ def test_autotools_fix_shared_libs():
                                                                                                          "lib", "libbye.0.dylib")))
                 self.run("install_name_tool {} -id /lib/libhello.dylib".format(os.path.join(self.package_folder,
                                                                                             "lib","libhello.0.dylib")))
+                # https://github.com/conan-io/conan/issues/12727
+                save(self, os.path.join(self.package_folder, "bin", "subfolder", "testfile"), "foobar")
+                save(self, os.path.join(self.package_folder, "lib", "subfolder", "randomfile"), "foobar")
+
                 fix_apple_shared_install_name(self)
 
             def package_info(self):

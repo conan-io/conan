@@ -148,7 +148,7 @@ class SayConan(ConanFile):
         conan_info = self._get_conaninfo("say/0.1@", client)
         self.assertEqual(conan_info["settings"]["os"], "Windows")
 
-        client.run("remove say/0.1 -f")
+        client.run("remove say/0.1 -c")
         client.run("create . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = self._get_conaninfo("say/0.1@", client)
@@ -237,11 +237,11 @@ class SayConan(ConanFile):
     settings = None
 """
         client.save({CONANFILE: content})
-        client.run("remove say/0.1 -f")
+        client.run("remove say/0.1 -c")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
         conan_info = self._get_conaninfo("say/0.1", client)
-        self.assertEqual(conan_info["settings"], {})
+        self.assertEqual(conan_info.get("settings"), None)
 
         # Settings is {}
         content = """
@@ -253,10 +253,10 @@ class SayConan(ConanFile):
     settings = {}
 """
         client.save({CONANFILE: content})
-        client.run("remove say/0.1 -f")
+        client.run("remove say/0.1 -c")
         client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
 
         conan_info = self._get_conaninfo("say/0.1", client)
 
-        self.assertEqual(conan_info["settings"], {})
+        self.assertEqual(conan_info.get("settings"), None)

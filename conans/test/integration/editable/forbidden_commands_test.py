@@ -16,33 +16,33 @@ class TestOtherCommands:
         t.run('editable add . lib/0.1')
 
         # Nothing in the cache
-        t.run("list recipes *")
+        t.run("list *")
         assert "There are no matching recipe references" in t.out
-        t.run('list packages lib/0.1#latest')
-        assert "There are no recipes" in t.out
+        t.run('list lib/0.1:*')
+        assert "ERROR: Recipe 'lib/0.1' not found" in t.out
 
         t.run('export . ')
         assert "lib/0.1: Exported revision" in t.out
-        t.run("list recipes *")
+        t.run("list *")
         assert "lib/0.1" in t.out
-        t.run('list packages lib/0.1#latest')
-        assert "There are no packages" in t.out  # One binary is listed
+        t.run('list lib/0.1:*')
+        assert "PID:" not in t.out  # One binary is listed
 
         t.run('export-pkg .')
         assert "lib/0.1: Exporting package" in t.out
 
-        t.run('list packages lib/0.1#latest')
+        t.run('list lib/0.1:*')
         assert "lib/0.1" in t.out  # One binary is listed
 
         t.run('upload lib/0.1 -r default')
         assert "Uploading recipe 'lib/0.1" in t.out
 
-        t.run("remove * -f")
+        t.run("remove * -c")
         # Nothing in the cache
-        t.run("list recipes *")
+        t.run("list *")
         assert "There are no matching recipe references" in t.out
-        t.run('list packages lib/0.1#latest')
-        assert "There are no recipes" in t.out
+        t.run('list lib/0.1:*')
+        assert "ERROR: Recipe 'lib/0.1' not found" in t.out
 
     def test_create_editable(self):
         """
@@ -62,7 +62,7 @@ class TestOtherCommands:
                 "consumer/conanfile.txt": "[requires]\nlib/0.1"})
         t.run('editable add . lib/0.1')
 
-        t.run("list recipes *")
+        t.run("list *")
         assert "There are no matching" in t.out
 
         t.run("create .")
@@ -71,7 +71,7 @@ class TestOtherCommands:
         t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
         assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
-        t.run("list recipes *")
+        t.run("list *")
         assert "lib/0.1" in t.out  # Because the create actually exports, TODO: avoid exporting?
 
         t.run("install consumer --build=*")

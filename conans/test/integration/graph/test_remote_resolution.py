@@ -16,7 +16,7 @@ def test_build_requires_ranges():
     client.run("create . --name=cmake --version=0.5")
     client.run("create . --name=cmake --version=1.0")
     client.run("upload cmake/1.0* -c -r default")
-    client.run("remove cmake/1.0* -f")
+    client.run("remove cmake/1.0* -c")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile

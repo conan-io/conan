@@ -1,5 +1,4 @@
-from collections import defaultdict
-from typing import List
+from collections import OrderedDict
 
 
 class Remote:
@@ -31,17 +30,15 @@ class Remote:
 
 
 class _RecipeUploadData:
-    def __init__(self, ref, prefs=None):
-        self.ref = ref
+    def __init__(self, prefs):
         self.upload = True
         self.force = None
         self.dirty = None
         self.files = None
-        self.packages = [_PackageUploadData(p) for p in prefs or []]
+        self.packages = [_PackageUploadData(pref) for pref in prefs]
 
     def serialize(self):
         return {
-            "ref": repr(self.ref),
             "dirty": self.dirty,
             "upload": self.upload,
             "force": self.force,
@@ -66,26 +63,61 @@ class _PackageUploadData:
         }
 
 
-class UploadBundle:
+class SelectBundle:
     def __init__(self):
-        self.recipes: List[_RecipeUploadData] = []
+        self.recipes = OrderedDict()
+
+    def add_refs(self, refs):
+        for ref in refs:
+            self.recipes.setdefault(ref, [])
+
+    def refs(self):
+        return self.recipes.keys()
+
+    def prefs(self):
+        prefs = []
+        for v in self.recipes.values():
+            prefs.extend(v)
+        return prefs
+
+    def add_prefs(self, prefs, configurations=None):
+        confs = configurations or OrderedDict()
+        for pref in prefs:
+            binary_info = confs.get(pref, OrderedDict())
+            self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
+
+    @property
+    def ordered_recipes_by_name(self):
+        ret = OrderedDict()
+        for ref, prefs in self.recipes.items():
+            ret.setdefault(ref.name, OrderedDict()).setdefault(ref, prefs)
+        return ret
 
     def serialize(self):
-        return [r.serialize() for r in self.recipes]
+        ret = OrderedDict()
+        for ref, prefs in self.recipes.items():
+            pref_ret = OrderedDict()
+            if prefs:
+                for pref, binary_info in prefs:
+                    pref_ret[pref.repr_notime()] = binary_info
+            ret[ref.repr_notime()] = pref_ret
+        return ret
 
-    def add_ref(self, ref):
-        self.recipes.append(_RecipeUploadData(ref))
 
-    def add_prefs(self, prefs):
-        refs = defaultdict(list)
-        for pref in prefs:
-            refs[pref.ref].append(pref)
-        for ref, prefs in refs.items():
-            self.recipes.append(_RecipeUploadData(ref, prefs))
+class UploadBundle:
+    def __init__(self, select_bundle):
+        self.recipes = OrderedDict()
+        # We reverse the bundle so older revisions are uploaded first
+        for ref, prefs in reversed(select_bundle.recipes.items()):
+            reversed_prefs = reversed([pref for pref, _ in prefs])
+            self.recipes[ref] = _RecipeUploadData(reversed_prefs)
+
+    def serialize(self):
+        return {r.repr_notime(): v.serialize() for r, v in self.recipes.items()}
 
     @property
     def any_upload(self):
-        for r in self.recipes:
+        for r in self.recipes.values():
             if r.upload:
                 return True
             for p in r.packages:

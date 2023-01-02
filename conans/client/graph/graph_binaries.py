@@ -4,7 +4,7 @@ from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_ERROR, BINARY_EDITABLE_BUILD)
+                                       BINARY_INVALID, BINARY_EDITABLE_BUILD)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 
@@ -56,7 +56,8 @@ class GraphBinariesAnalyzer(object):
         pref = node.pref
         for r in self._selected_remotes:
             try:
-                latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
+                info = node.conanfile.info
+                latest_pref = self._remote_manager.get_latest_package_reference(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._update:
                     break
@@ -137,11 +138,12 @@ class GraphBinariesAnalyzer(object):
         assert node.prev is None, "Node.prev should be None"
 
         self._process_node(node, build_mode)
-        if node.binary in (BINARY_MISSING, BINARY_INVALID) \
+        if node.binary in (BINARY_MISSING,) \
                 and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
             self._process_compatible_packages(node)
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
+            node.should_build = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
@@ -154,8 +156,8 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_is_cached(node):
             return
 
-        if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_ERROR:
-            node.binary = BINARY_ERROR
+        if node.conanfile.info.invalid:
+            node.binary = BINARY_INVALID
             return
 
         if node.recipe == RECIPE_EDITABLE:
@@ -201,8 +203,8 @@ class GraphBinariesAnalyzer(object):
             return
 
         # TODO: Test that this works
-        if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_ERROR:
-            node.binary = BINARY_ERROR
+        if node.conanfile.info.invalid:
+            node.binary = BINARY_INVALID
             return
 
         # Obtain the cache_latest valid one, cleaning things if dirty

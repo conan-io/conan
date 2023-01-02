@@ -11,6 +11,7 @@ def print_graph_basic(graph):
     output = ConanOutput()
     requires = {}
     build_requires = {}
+    test_requires = {}
     python_requires = {}
     deprecated = {}
     for node in graph.nodes:
@@ -22,7 +23,10 @@ def print_graph_basic(graph):
         if node.context == CONTEXT_BUILD:
             build_requires[node.ref] = node.recipe, node.remote
         else:
-            requires[node.ref] = node.recipe, node.remote
+            if node.test:
+                test_requires[node.ref] = node.recipe, node.remote
+            else:
+                requires[node.ref] = node.recipe, node.remote
         if node.conanfile.deprecated:
             deprecated[node.ref] = node.conanfile.deprecated
 
@@ -40,6 +44,7 @@ def print_graph_basic(graph):
             output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
+    _format_requires("Test requirements", test_requires)
     _format_requires("Build requirements", build_requires)
     _format_requires("Python requires", python_requires)
 
@@ -71,13 +76,17 @@ def print_graph_packages(graph):
     output = ConanOutput()
     requires = {}
     build_requires = {}
+    test_requires = {}
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
             build_requires[node.pref] = node.binary, node.binary_remote
         else:
-            requires[node.pref] = node.binary, node.binary_remote
+            if node.test:
+                test_requires[node.pref] = node.binary, node.binary_remote
+            else:
+                requires[node.pref] = node.binary, node.binary_remote
 
     def _format_requires(title, reqs_to_print):
         if not reqs_to_print:
@@ -89,4 +98,5 @@ def print_graph_packages(graph):
             output.info("    {} - {}".format(pref.repr_notime(), status), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
+    _format_requires("Test requirements", test_requires)
     _format_requires("Build requirements", build_requires)

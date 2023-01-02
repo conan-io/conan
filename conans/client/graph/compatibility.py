@@ -4,7 +4,7 @@ from collections import OrderedDict
 from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
 from conans.errors import conanfile_exception_formatter
-from conans.util.files import save
+
 
 # TODO: Define other compatibility besides applications
 _default_compat = """\
@@ -84,14 +84,22 @@ class BinaryCompatibility:
 
         result = OrderedDict()
         original_info = conanfile.info
+        original_settings = conanfile.settings
+        original_options = conanfile.options
         for c in compat_infos:
+            # we replace the conanfile, so ``validate()`` and ``package_id()`` can
+            # use the compatible ones
             conanfile.info = c
+            conanfile.settings = c.settings
+            conanfile.options = c.options
             run_validate_package_id(conanfile)
             pid = c.package_id()
             if pid not in result and not c.invalid:
                 result[pid] = c
         # Restore the original state
         conanfile.info = original_info
+        conanfile.settings = original_settings
+        conanfile.options = original_options
         return result
 
     @staticmethod

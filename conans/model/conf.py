@@ -1,4 +1,6 @@
 import re
+import os
+
 from collections import OrderedDict
 
 
@@ -10,6 +12,7 @@ BUILT_IN_CONFS = {
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
+    "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
     "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
     "core.download:parallel": "Number of concurrent threads to download packages",
@@ -60,6 +63,7 @@ BUILT_IN_CONFS = {
     "tools.google.bazel:configs": "Define Bazel config file",
     "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
+    "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
@@ -81,7 +85,8 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If it is set to True it will generate powershell launchers if os=Windows",
-    # Flags configuration
+    # Compilers/Flags configurations
+    "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain and AutotoolsToolchain",
@@ -94,9 +99,9 @@ BUILT_IN_CONFS = {
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
 
-CORE_CONF_PATTERN = re.compile(r"^core[\.:]")
-TOOLS_CONF_PATTERN = re.compile(r"^tools[\.:]")
-USER_CONF_PATTERN = re.compile(r"^user[\.:]")
+CORE_CONF_PATTERN = re.compile(r"^core[.:]")
+TOOLS_CONF_PATTERN = re.compile(r"^tools[.:]")
+USER_CONF_PATTERN = re.compile(r"^user[.:]")
 
 
 def _is_profile_module(module_name):
@@ -113,10 +118,13 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
-    def __init__(self, name, value):
+    def __init__(self, name, value, path=False):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
         self._name = name
         self._value = value
         self._value_type = type(value)
+        self._path = path
 
     def __repr__(self):
         return repr(self._value)
@@ -130,7 +138,7 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value)
+        return _ConfValue(self._name, self._value, self._path)
 
     def dumps(self):
         if self._value is None:
@@ -207,6 +215,17 @@ class _ConfValue(object):
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
 
+    def set_relative_base_folder(self, folder):
+        if not self._path:
+            return
+        if isinstance(self._value, list):
+            self._value = [os.path.join(folder, v) if v != _ConfVarPlaceHolder else v
+                           for v in self._value]
+        if isinstance(self._value, dict):
+            self._value = {k: os.path.join(folder, v) for k, v in self._value.items()}
+        elif isinstance(self._value, str):
+            self._value = os.path.join(folder, self._value)
+
 
 class Conf:
 
@@ -229,33 +248,10 @@ class Conf:
         """
         return other._values == self._values
 
-    def __getitem__(self, name):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
-        """
-        # FIXME: Keeping backward compatibility
-        return self.get(name)
-
-    def __setitem__(self, name, value):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0.
-        """
-        # FIXME: Keeping backward compatibility
-        self.define(name, value)  # it's like a new definition
-
     def items(self):
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
             yield k, v.value
-
-    @staticmethod
-    def _get_boolean_value(value):
-        if type(value) is bool:
-            return value
-        elif str(value).lower() in Conf.boolean_false_expressions:
-            return False
-        else:
-            return True
 
     def get(self, conf_name, default=None, check_type=None):
         """
@@ -277,7 +273,7 @@ class Conf:
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
-                return self._get_boolean_value(v)
+                return str(v).lower() not in Conf.boolean_false_expressions
             elif check_type is str and not isinstance(v, str):
                 return str(v)
             elif v is None:  # value was unset
@@ -301,11 +297,6 @@ class Conf:
         value = self.get(conf_name, default=default)
         self._values.pop(conf_name, None)
         return value
-
-    @staticmethod
-    def _validate_lower_case(name):
-        if name != name.lower():
-            raise ConanException("Conf '{}' must be lowercase".format(name))
 
     def copy(self):
         c = Conf()
@@ -334,8 +325,10 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._validate_lower_case(name)
         self._values[name] = _ConfValue(name, value)
+
+    def define_path(self, name, value):
+        self._values[name] = _ConfValue(name, value, path=True)
 
     def unset(self, name):
         """
@@ -352,8 +345,11 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, {})
+        self._values.setdefault(name, conf_value).update(value)
+
+    def update_path(self, name, value):
+        conf_value = _ConfValue(name, {}, path=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def append(self, name, value):
@@ -363,8 +359,11 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to append.
         """
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).append(value)
+
+    def append_path(self, name, value):
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).append(value)
 
     def prepend(self, name, value):
@@ -374,8 +373,11 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to prepend.
         """
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(name, conf_value).prepend(value)
+
+    def prepend_path(self, name, value):
+        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).prepend(value)
 
     def remove(self, name, value):
@@ -443,6 +445,10 @@ class Conf:
             if value:
                 result.define(conf_name, value)
         return result
+
+    def set_relative_base_folder(self, folder):
+        for v in self._values.values():
+            v.set_relative_base_folder(folder)
 
 
 class ConfDefinition:
@@ -563,16 +569,6 @@ class ConfDefinition:
             getattr(conf, method)(name, value)
         # Update
         self._update_conf_definition(pattern, conf)
-
-    def as_list(self):
-        result = []
-        for pattern, conf in self._pattern_confs.items():
-            for name, value in sorted(conf.items()):
-                if pattern:
-                    result.append(("{}:{}".format(pattern, name), value))
-                else:
-                    result.append((name, value))
-        return result
 
     def dumps(self):
         result = []

@@ -1,3 +1,4 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string
@@ -6,12 +7,12 @@ from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, is_msvc, msvc_runtime_flag
+from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile, namespace=None, prefix="/"):
         """
 
         :param conanfile: The current recipe object. Always use ``self``.
@@ -21,9 +22,11 @@ class AutotoolsToolchain:
                value is ``None`` meaning that the name of the generated file is *conanbuild.conf*. This
                namespace must be also set with the same value in the constructor of the Autotools build
                helper so that it reads the information from the proper file.
+        :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
         self._conanfile = conanfile
         self._namespace = namespace
+        self._prefix = prefix
 
         self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
         self.autoreconf_args = self._default_autoreconf_flags()
@@ -78,7 +81,7 @@ class AutotoolsToolchain:
             # Apple Stuff
             if os_build == "Macos":
                 # SDK path is mandatory for cross-building
-                sdk_path = conanfile.conf["tools.apple:sdk_path"]
+                sdk_path = conanfile.conf.get("tools.apple:sdk_path")
                 if not sdk_path:
                     raise ConanException("You must provide a valid SDK path for cross-compilation.")
                 apple_arch = to_apple_arch(self._conanfile)
@@ -139,9 +142,12 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
-        if is_msvc(self._conanfile):
-            env.define("CXX", "cl")
-            env.define("CC", "cl")
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        if compilers_by_conf:
+            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_by_conf:
+                    env.define(env_var, compilers_by_conf[comp])
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
@@ -153,6 +159,7 @@ class AutotoolsToolchain:
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
@@ -181,7 +188,7 @@ class AutotoolsToolchain:
             return "--{}=${{prefix}}/{}".format(argument_name, elements[0]) if elements else ""
 
         # If someone want arguments but not the defaults can pass them in args manually
-        configure_install_flags.extend(["--prefix=/",
+        configure_install_flags.extend([f"--prefix={self._prefix}",
                                        _get_argument("bindir", "bindirs"),
                                        _get_argument("sbindir", "bindirs"),
                                        _get_argument("libdir", "libdirs"),

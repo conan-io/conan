@@ -9,6 +9,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer
 
 
+# FIXME: we could remove this whenever @conan_alias_command will be implemented
 class TestSearch:
 
     @pytest.fixture
@@ -24,13 +25,13 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search", assert_error=True)
-        assert "error: the following arguments are required: query" in self.client.out
+        assert "error: the following arguments are required: reference" in self.client.out
 
     def test_search_no_matching_recipes(self, remotes):
         expected_output = ("remote1:\n"
-                           "  There are no matching recipe references\n"
+                           "  ERROR: Recipe 'whatever' not found\n"
                            "remote2:\n"
-                           "  There are no matching recipe references\n")
+                           "  ERROR: Recipe 'whatever' not found\n")
 
         self.client.run("search whatever")
         assert expected_output == self.client.out
@@ -40,7 +41,7 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search whatever", assert_error=True)
-        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "There are no remotes to search from" in self.client.out
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
@@ -94,7 +95,7 @@ class TestRemotes:
 
     def test_no_remotes(self):
         self.client.run("search something", assert_error=True)
-        expected_output = "Remotes for pattern '*' can't be found or are disabled"
+        expected_output = "There are no remotes to search from"
         assert expected_output in self.client.out
 
     def test_search_by_name(self):
@@ -187,7 +188,7 @@ class TestRemotes:
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
             "remote2:\n"
-            "  There are no matching recipe references\n"
+            "  ERROR: Recipe 'test_recipe' not found\n"
         )
 
         self._add_remote(remote1)

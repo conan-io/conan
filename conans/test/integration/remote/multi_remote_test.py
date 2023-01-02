@@ -32,7 +32,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         # Failure because remote removed the package
         client2 = TestClient(servers=servers, inputs=2*["admin", "password"])
         client2.run("install --requires=pkg/0.1@user/testing")
-        client2.run("remove * -r=default -f")
+        client2.run("remove * -r=default -c")
         client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
         self.assertIn("pkg/0.1@user/testing Error while compressing: The 'pkg/0.1@user/testing' ",
                       client2.out)
@@ -126,7 +126,7 @@ class MultiRemotesTest(unittest.TestCase):
         self._create(client, "hello0", "0.0", modifier=" ")
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
         client.run("upload hello0/0.0@lasote/stable#latest -r local")
-        client.run("remove '*' -f")
+        client.run("remove '*' -c")
 
         client.run("install --requires=hello0/0.0@lasote/stable")
         # If we don't set a remote we find between all remotes and get the first match

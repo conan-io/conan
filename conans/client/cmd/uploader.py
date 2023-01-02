@@ -1,10 +1,8 @@
 import os
 import shutil
-import stat
-import tarfile
 import time
 
-from conan.api.conan_app import ConanApp
+from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
@@ -36,9 +34,9 @@ class IntegrityChecker:
 
     def check(self, upload_data):
         corrupted = False
-        for recipe in upload_data.recipes:
-            corrupted = self._recipe_corrupted(recipe.ref) or corrupted
-            for package in recipe.packages:
+        for ref, recipe_bundle in upload_data.recipes.items():
+            corrupted = self._recipe_corrupted(ref) or corrupted
+            for package in recipe_bundle.packages:
                 corrupted = self._package_corrupted(package.pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")
@@ -83,16 +81,15 @@ class UploadUpstreamChecker:
         self._output = ConanOutput()
 
     def check(self, upload_bundle, remote, force):
-        for recipe in upload_bundle.recipes:
-            if recipe.upload:  # TODO: Why check it if it is always initialized to True?
-                self._check_upstream_recipe(recipe, remote, force)
-                for package in recipe.packages:
+        for ref, bundle in upload_bundle.recipes.items():
+            if bundle.upload:  # TODO: Why check it if it is always initialized to True?
+                self._check_upstream_recipe(ref, bundle, remote, force)
+                for package in bundle.packages:
                     if package.upload:  # TODO: Why check it if it is always initialized to True?
                         self._check_upstream_package(package, remote, force)
 
-    def _check_upstream_recipe(self, recipe, remote, force):
+    def _check_upstream_recipe(self, ref, recipe, remote, force):
         self._output.info("Checking which revisions exist in the remote server")
-        ref = recipe.ref
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
@@ -139,31 +136,30 @@ class PackagePreparator:
 
     def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
-        for recipe in upload_bundle.recipes:
-            layout = self._app.cache.ref_layout(recipe.ref)
+        for ref, bundle in upload_bundle.recipes.items():
+            layout = self._app.cache.ref_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
 
-            if recipe.upload:
-                self._prepare_recipe(recipe, conanfile, enabled_remotes)
-            for package in recipe.packages:
+            if bundle.upload:
+                self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
+            for package in bundle.packages:
                 if package.upload:
                     self._prepare_package(package)
 
-    def _prepare_recipe(self, recipe, conanfile, remotes):
+    def _prepare_recipe(self, ref, recipe, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            ref = recipe.ref
             recipe_layout = self._app.cache.ref_layout(ref)
             retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
             recipe.files = cache_files
         except Exception as e:
-            raise ConanException(f"{recipe.ref} Error while compressing: {e}")
+            raise ConanException(f"{ref} Error while compressing: {e}")
 
     def _compress_recipe_files(self, layout, ref):
         download_export_folder = layout.download_export()
@@ -279,10 +275,10 @@ class UploadExecutor:
     def upload(self, upload_data, remote):
         if upload_data.any_upload:
             self._output.info("Uploading artifacts")
-        for recipe in upload_data.recipes:
-            if recipe.upload:
-                self.upload_recipe(recipe, remote)
-            for package in recipe.packages:
+        for ref, bundle in upload_data.recipes.items():
+            if bundle.upload:
+                self.upload_recipe(ref, bundle, remote)
+            for package in bundle.packages:
                 if package.upload:
                     self.upload_package(package, remote)
 
@@ -297,12 +293,11 @@ class UploadExecutor:
         deleted = set(remote_snapshot).difference(files)
         return files, deleted
 
-    def upload_recipe(self, recipe, remote):
-        self._output.info(f"Uploading recipe '{recipe.ref.repr_notime()}'")
+    def upload_recipe(self, ref, bundle, remote):
+        self._output.info(f"Uploading recipe '{ref.repr_notime()}'")
         t1 = time.time()
-        ref = recipe.ref
-        cache_files = recipe.files
-        force = recipe.force
+        cache_files = bundle.files
+        force = bundle.force
         files_to_upload, deleted = self._recipe_files_to_upload(ref, cache_files, remote, force)
 
         upload_ref = ref

@@ -48,10 +48,10 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/0.1@user/testing#latest:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
@@ -214,14 +214,14 @@ class PyRequiresExtendTest(unittest.TestCase):
             class MyConanfileBase(ConanFile):
                 python_requires = "pkg1/1.0@user/channel", "pkg2/1.0@user/channel"
                 def build(self):
-                    self.output.info("PKG1 N: %s" % self.python_requires["pkg1"].conanfile.name)
-                    self.output.info("PKG1 V: %s" % self.python_requires["pkg1"].conanfile.version)
-                    self.output.info("PKG1 U: %s" % self.python_requires["pkg1"].conanfile.user)
-                    self.output.info("PKG1 C: %s" % self.python_requires["pkg1"].conanfile.channel)
-                    self.output.info("PKG1 : %s" % self.python_requires["pkg1"].module.myvar)
-                    self.output.info("PKG2 : %s" % self.python_requires["pkg2"].module.myvar)
-                    self.output.info("PKG1F : %s" % self.python_requires["pkg1"].module.myfunct())
-                    self.output.info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
+                    self.output.info("PKG1 N: %s" % self.python_requires["pkg1"].conanfile.name)\
+                               .info("PKG1 V: %s" % self.python_requires["pkg1"].conanfile.version)\
+                               .info("PKG1 U: %s" % self.python_requires["pkg1"].conanfile.user)\
+                               .info("PKG1 C: %s" % self.python_requires["pkg1"].conanfile.channel)\
+                               .info("PKG1 : %s" % self.python_requires["pkg1"].module.myvar)\
+                               .info("PKG2 : %s" % self.python_requires["pkg2"].module.myvar)\
+                               .info("PKG1F : %s" % self.python_requires["pkg1"].module.myfunct())\
+                               .info("PKG2F : %s" % self.python_requires["pkg2"].module.myfunct())
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing")
@@ -275,10 +275,10 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
 
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("install --requires=pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing: My cool package_info!", client.out)
-        client.run("remove * -f")
+        client.run("remove * -c")
         client.run("download pkg/0.1@user/testing#*:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
@@ -1080,3 +1080,38 @@ class TestTestPackagePythonRequire:
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
         c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out
+
+
+class TestResolveRemote:
+    def test_resolve_remote_export(self):
+        """ a "conan export" command should work even when a python_requires
+        is in the server
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"common/conanfile.py": GenConanfile("tool", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
+        c.run("export common")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("create pkg")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+        c.run("remove * -c")
+        c.run("export pkg")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+        c.run("remove * -c")
+        c.run("export pkg -r=default")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+        c.run("remove * -c")
+        c.run("create pkg -r=default")
+        assert "tool/0.1: Downloaded recipe" in c.out
+
+    def test_missing_python_require_error(self):
+        """ make sure the error is clear enough for users UX
+        """
+        c = TestClient()
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
+        c.run("create pkg", assert_error=True)
+        assert "Cannot resolve python_requires 'tool/0.1'" in c.out

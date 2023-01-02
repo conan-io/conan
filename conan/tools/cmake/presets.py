@@ -142,7 +142,8 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
     return ret
 
 
-def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
+def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
+                        user_presets_path=None):
     cache_variables = cache_variables or {}
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
         if "CMAKE_SH" not in cache_variables:
@@ -186,18 +187,27 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables):
 
     data = json.dumps(data, indent=4)
     save(preset_path, data)
-    save_cmake_user_presets(conanfile, preset_path)
+    save_cmake_user_presets(conanfile, preset_path, user_presets_path)
 
 
-def save_cmake_user_presets(conanfile, preset_path):
+def save_cmake_user_presets(conanfile, preset_path, user_presets_path=None):
+    if user_presets_path is False:
+        return
+
     # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
     if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
-        if os.path.exists(os.path.join(conanfile.source_folder, "CMakeLists.txt")):
+        if user_presets_path:
+            output_dir = os.path.join(conanfile.source_folder, user_presets_path) \
+                if not os.path.isabs(user_presets_path) else user_presets_path
+        else:
+            output_dir = conanfile.source_folder
+
+        if user_presets_path or os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
             """
                 Contents for the CMakeUserPresets.json
                 It uses schema version 4 unless it is forced to 2
             """
-            user_presets_path = os.path.join(conanfile.source_folder, "CMakeUserPresets.json")
+            user_presets_path = os.path.join(output_dir, "CMakeUserPresets.json")
             if not os.path.exists(user_presets_path):
                 data = {"version": _schema_version(conanfile, default=4),
                         "vendor": {"conan": dict()}}

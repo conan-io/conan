@@ -44,7 +44,7 @@ def test_package_python_files():
     assert ".DS_Store" not in manifest
 
     client.run("upload * -r=default --confirm")
-    client.run("remove * -f")
+    client.run("remove * -c")
     client.run("download pkg/0.1#*:* -r default")
 
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))

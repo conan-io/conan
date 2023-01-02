@@ -4,6 +4,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -13,6 +14,7 @@ class BazelDeps(object):
         self._conanfile = conanfile
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         local_repositories = []
         generators_folder = self._conanfile.generators_folder
 

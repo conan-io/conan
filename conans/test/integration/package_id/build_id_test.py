@@ -168,7 +168,7 @@ class BuildIdTest(unittest.TestCase):
 
         # TODO: cache2.0 check if we will maintain the remove -p
         # Check that repackaging works, not necessary to re-build
-        # client.run("remove pkg/0.1@user/channel -p -f")
+        # client.run("remove pkg/0.1@user/channel -p -c")
         # # Windows Debug
         # client.run('install . -s os=Windows -s build_type=Debug')
         # self.assertNotIn("Building my code!", client.out)
@@ -197,7 +197,7 @@ class BuildIdTest(unittest.TestCase):
         # self._check_conaninfo(client)
 
         # But if the build folder is removed, the packages are there, do nothing
-        client.run("remove pkg/0.1@user/channel -b -f")
+        client.run("remove pkg/0.1@user/channel -b -c")
         client.run('install . -s os=Windows -s build_type=Debug')
         self.assertNotIn("Building my code!", client.out)
         self.assertNotIn("Packaging Debug!", client.out)
@@ -245,9 +245,9 @@ class BuildIdTest(unittest.TestCase):
         build, packages = _check_builds()
         # TODO: cache2.0 remove -p and -b is not yet fully implemented
         # we are commenting the first part of this until it is
-        #client.run("remove pkg/0.1@user/channel -b %s -f" % packages[0])
+        #client.run("remove pkg/0.1@user/channel -b %s -c" % packages[0])
         #_check_builds()
-        #client.run("remove pkg/0.1@user/channel -b %s -f" % build)
+        #client.run("remove pkg/0.1@user/channel -b %s -c" % build)
         #cache_builds = client.cache.package_layout(ref).conan_builds()
         #self.assertEqual(0, len(cache_builds))
         #package_ids = client.cache.package_layout(ref).package_ids()

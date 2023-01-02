@@ -25,7 +25,7 @@ from webtest.app import TestApp
 
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
 from conans import REVISIONS
-from conan.api.conan_api import ConanAPIV2
+from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
@@ -427,7 +427,7 @@ class TestClient(object):
         return self.cache.store
 
     def update_servers(self):
-        api = ConanAPIV2(cache_folder=self.cache_folder)
+        api = ConanAPI(cache_folder=self.cache_folder)
         for r in api.remotes.list():
             api.remotes.remove(r.name)
 
@@ -481,7 +481,7 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = ConanAPIV2(cache_folder=self.cache_folder)
+        self.api = ConanAPI(cache_folder=self.cache_folder)
         command = Cli(self.api)
 
         error = None
@@ -510,6 +510,7 @@ class TestClient(object):
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.stdout = RedirectedTestOutput()  # Initialize each command
             self.stderr = RedirectedTestOutput()
+            self.out = ""
             with self.mocked_io():
                 real_servers = any(isinstance(s, (str, ArtifactoryServer))
                                    for s in self.servers.values())
@@ -584,7 +585,7 @@ class TestClient(object):
 
     # Higher level operations
     def remove_all(self):
-        self.run("remove '*' -f")
+        self.run("remove '*' -c")
 
     def export(self, ref, conanfile=GenConanfile(), args=None):
         """ export a ConanFile with as "ref" and return the reference with recipe revision
@@ -656,11 +657,11 @@ class TestClient(object):
         return ref_layout
 
     def get_default_host_profile(self):
-        api = ConanAPIV2(cache_folder=self.cache_folder)
+        api = ConanAPI(cache_folder=self.cache_folder)
         return api.profiles.get_profile([api.profiles.get_default_host()])
 
     def get_default_build_profile(self):
-        api = ConanAPIV2(cache_folder=self.cache_folder)
+        api = ConanAPI(cache_folder=self.cache_folder)
         return api.profiles.get_profile([api.profiles.get_default_build()])
 
     def recipe_exists(self, ref):
@@ -671,13 +672,15 @@ class TestClient(object):
         prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
-    def assert_listed_require(self, requires, build=False, python=False):
+    def assert_listed_require(self, requires, build=False, python=False, test=False):
         """ parses the current command output, and extract the first "Requirements" section
         """
         lines = self.out.splitlines()
         header = "Requirements" if not build else "Build requirements"
         if python:
             header = "Python requires"
+        if test:
+            header = "Test requirements"
         line_req = lines.index(header)
         reqs = []
         for line in lines[line_req+1:]:
@@ -691,13 +694,17 @@ class TestClient(object):
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
-    def assert_listed_binary(self, requires, build=False):
+    def assert_listed_binary(self, requires, build=False, test=False):
         """ parses the current command output, and extract the second "Requirements" section
         belonging to the computed package binaries
         """
         lines = self.out.splitlines()
         line_req = lines.index("-------- Computing necessary packages --------")
-        line_req = lines.index("Requirements" if not build else "Build requirements", line_req)
+        header = "Requirements" if not build else "Build requirements"
+        if test:
+            header = "Test requirements"
+        line_req = lines.index(header, line_req)
+
         reqs = []
         for line in lines[line_req+1:]:
             if not line.startswith("    "):
@@ -801,6 +808,7 @@ class TurboTestClient(TestClient):
         latest_prev = self.cache.get_latest_package_reference(tmp)
         return latest_prev.revision
 
+    # FIXME: 2.0: adapt this function to using the new "conan list xxxx" and recover the xfail tests
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""
         self.run("search {} --json {} {} {}".format(pattern, ".tmp.json", remote,
