@@ -7,6 +7,7 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.microsoft.visual import msbuild_arch
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -96,10 +97,7 @@ class MSBuildDeps(object):
         self.configuration = conanfile.settings.build_type
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
+        self.platform = msbuild_arch(conanfile)
         ca_exclude = "tools.microsoft.msbuilddeps:exclude_code_analysis"
         self.exclude_code_analysis = self._conanfile.conf.get(ca_exclude, check_type=list)
         check_using_build_profile(self._conanfile)

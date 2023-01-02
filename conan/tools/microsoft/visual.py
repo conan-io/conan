@@ -268,3 +268,14 @@ def is_msvc_static_runtime(conanfile):
     :return: True, if msvc + runtime MT. Otherwise, False
     """
     return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
+
+
+def msbuild_arch(conanfile):
+    if conanfile.settings.get_safe("os") == "WindowsCE":
+        return conanfile.settings.get_safe("os.platform")
+    return {
+        "x86": "x86",
+        "x86_64": "x64",
+        "armv7": "ARM",
+        "armv8": "ARM64",
+    }.get(str(conanfile.settings.get_safe("arch")))

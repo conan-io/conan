@@ -7,7 +7,7 @@ from jinja2 import Template
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
-from conan.tools.microsoft.visual import VCVars, msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import VCVars, msbuild_arch, msvc_version_to_toolset_version
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -52,6 +52,7 @@ class MSBuildToolchain(object):
         self.cflags = []
         self.ldflags = []
         self.configuration = conanfile.settings.build_type
+        self.platform = msbuild_arch(conanfile)
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile)
@@ -62,10 +63,7 @@ class MSBuildToolchain(object):
         props = [("Configuration", self.configuration),
                  # TODO: refactor, put in common with MSBuildDeps. Beware this is != msbuild_arch
                  #  because of Win32
-                 ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64',
-                               'armv7': 'ARM',
-                               'armv8': 'ARM64'}.get(settings.get_safe("arch")))]
+                 ("Platform", self.platform)]
 
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
