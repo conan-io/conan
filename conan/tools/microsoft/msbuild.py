@@ -23,7 +23,10 @@ class MSBuild(object):
         self.configuration = conanfile.settings.get_safe("build_type")
         # if platforms:
         #    msvc_arch.update(platforms)
-        self.platform = msbuild_arch(conanfile)
+        msvc_arch = msbuild_arch(conanfile)
+        if conanfile.settings.get_safe("os") == "WindowsCE":
+            msvc_arch = conanfile.settings.get_safe("os.platform")
+        self.platform = msvc_arch
 
     def command(self, sln, targets=None, force_import_generated_files=False):
         cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'

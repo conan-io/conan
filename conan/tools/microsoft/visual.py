@@ -271,8 +271,6 @@ def is_msvc_static_runtime(conanfile):
 
 
 def msbuild_arch(conanfile):
-    if conanfile.settings.get_safe("os") == "WindowsCE":
-        return conanfile.settings.get_safe("os.platform")
     return {
         "x86": "x86",
         "x86_64": "x64",
