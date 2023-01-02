@@ -132,6 +132,12 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
+  <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props.
+  If it goes after, the Toolset definition is ignored -->
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\conan\conan_hello.props" />
+    <Import Project="..\conan\conantoolchain.props" />
+  </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -575,13 +581,9 @@ class WinTest(unittest.TestCase):
                 configuration = build_type
 
             # The "conan build" command is not good enough, cannot do the switch between configs
-            props_paths = ";".join([
-                os.path.join(client.current_folder, "conan", "conantoolchain.props"),
-                os.path.join(client.current_folder, "conan", "conandeps.props"),
-            ])
             cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-                   f'"{vcvars_path}" x64 && msbuild "MyProject.sln" /p:Configuration={configuration} '
-                   f'/p:Platform={platform_arch} /p:ForceImportBeforeCppTargets="{props_paths}"')
+                   '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
+                   '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
             self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)

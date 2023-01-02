@@ -115,6 +115,9 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\conan_Hello3.props" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
@@ -282,6 +285,9 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="..\conan_Hello1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -577,9 +583,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp")
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
         files = {"MyProject.sln": sln_file,
-                 "MyProject/MyProject.vcxproj": myproject_vcxproj,
+                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_Hello3.props",
+                                                                          "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
-                 "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
+                                                              "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
 
@@ -764,6 +772,10 @@ def check_build_vs_project_with_a(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
+    props = os.path.join(client.current_folder, "conandeps.props")
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+    new = old + '<Import Project="{props}" />'.format(props=props)
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
     client.run('install . -s compiler="Visual Studio"'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
@@ -816,6 +828,10 @@ def check_build_vs_project_with_test_requires(vs_version):
     main_cpp = gen_function_cpp(name="main", includes=["mydep_pkg_team"], calls=["mydep_pkg_team"])
     files["MyProject/main.cpp"] = main_cpp
     files["conanfile.py"] = consumer
+    props = os.path.join(client.current_folder, "conandeps.props")
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+    new = old + '<Import Project="{props}" />'.format(props=props)
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
     client.run('install .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run("build .")
@@ -898,6 +914,10 @@ def test_build_requires():
           </PropertyGroup>
 
           <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+          <ImportGroup Label="PropertySheets">
+            <Import Project="..\conandeps.props" />
+          </ImportGroup>
 
           <PropertyGroup Label="UserMacros" />
 

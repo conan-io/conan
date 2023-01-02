@@ -153,9 +153,16 @@ def test_msbuild_deps_components():
                                                     'requires="chat/1.0"\n'
                                                     '    generators = "MSBuildDeps"\n'
                                                     '    settings = ')
+    vcproj = client.load("greet.vcxproj")
+    vcproj2 = vcproj.replace(r'<Import Project="conan\\conantoolchain.props" />',
+                             r"""<Import Project="conan\\conantoolchain.props" />
+                               <Import Project="conan\\conandeps.props" />
+                             """)
+    assert vcproj2 != vcproj
     client.save({"conanfile.py": conanfile,
                  "src/greet.cpp": gen_function_cpp(name="main", includes=["chat"],
-                                                   calls=["chat"])})
+                                                   calls=["chat"]),
+                 "greet.vcxproj": vcproj2})
     client.run("create .")
     assert "main: Release!" in client.out
     assert "core/1.0: Hello World Release!" in client.out
