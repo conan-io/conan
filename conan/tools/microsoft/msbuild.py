@@ -70,7 +70,7 @@ class MSBuild(object):
                     break
 
         if concrete_props_file:
-            concrete_props_file = os.path.join(self._conanfile.generators_folders, concrete_props_file)
+            concrete_props_file = os.path.join(self._conanfile.generators_folder, concrete_props_file)
 
         if not concrete_props_file or not os.path.exists(concrete_props_file):
             raise ConanException(
