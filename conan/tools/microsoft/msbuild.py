@@ -23,10 +23,13 @@ def msbuild_arch(arch):
 
 
 def msbuild_arch_to_conf_arch(arch):
-    return {'x86': 'Win32',
-            'x64': 'x64',
-            'ARM': 'ARM',
-            'ARM64': 'ARM64'}.get(str(arch))
+    return {
+        "Win32": "Win32",
+        "x86": "Win32",
+        "x64": "x64",
+        "ARM": "ARM",
+        "ARM64": "ARM64",
+    }.get(str(arch))
 
 
 class MSBuild(object):
