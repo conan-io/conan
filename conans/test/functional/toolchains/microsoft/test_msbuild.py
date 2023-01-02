@@ -581,8 +581,7 @@ class WinTest(unittest.TestCase):
             ])
             cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
                    f'"{vcvars_path}" x64 && msbuild "MyProject.sln" /p:Configuration={configuration} '
-                   f'/p:Platform={platform_arch} /p:PlatformToolset={self.toolset} '
-                   f'/p:ForceImportBeforeCppTargets="{props_paths}"')
+                   f'/p:Platform={platform_arch} /p:ForceImportBeforeCppTargets="{props_paths}"')
             client.run_command(cmd)
             self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
