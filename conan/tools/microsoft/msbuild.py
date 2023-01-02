@@ -1,4 +1,5 @@
 import os
+import re
 import xml.etree.ElementTree as ET
 
 from conan.tools.microsoft.msbuilddeps import MSBuildDeps
@@ -60,10 +61,12 @@ class MSBuild(object):
         concrete_props_file = ""
 
         root = ET.parse(root_props_file).getroot()
-        importgroup_element = root.find("ImportGroup")
+        namespace = re.match('\{.*\}', root.tag)
+        namespace = namespace.group(0) if namespace else ""
+        importgroup_element = root.find(f"{namespace}ImportGroup")
         if importgroup_element:
             expected_condition = f"'$(Configuration)' == '{self.configuration}' And '$(Platform)' == '{self.platform}'"
-            for import_element in importgroup_element.iter("Import"):
+            for import_element in importgroup_element.iter(f"{namespace}Import"):
                 condition = import_element.attrib.get("Condition")
                 if expected_condition == condition:
                     concrete_props_file = import_element.attrib.get("Project")
@@ -87,10 +90,13 @@ class MSBuild(object):
         # Get properties from props file of configuration and platform
         concrete_props_file = self._get_concrete_props_file(root_props_file)
         root = ET.parse(concrete_props_file).getroot()
-        for propertygroup in root.iter("PropertyGroup"):
+        namespace = re.match('\{.*\}', root.tag)
+        namespace = namespace.group(0) if namespace else ""
+        for propertygroup in root.iter(f"{namespace}PropertyGroup"):
             if propertygroup.attrib.get("Label") == "Configuration":
                 for child in propertygroup:
-                    properties[child.tag] = child.text
+                    propert_name = child.tag.replace(namespace, "")
+                    properties[propert_name] = child.text
         return properties
 
     def _force_import_generated_files_cmd_line_arg(self):
