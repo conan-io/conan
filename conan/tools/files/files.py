@@ -228,6 +228,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     if download_cache and not os.path.isabs(download_cache):
         raise ConanException("core.download:download_cache must be an absolute path")
 
+    filename = os.path.abspath(filename)
+    
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         if file_url.startswith("file:"):
@@ -235,6 +237,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
                                       sha1=sha1, sha256=sha256)
         else:
             downloader = CachingFileDownloader(requester, download_cache=download_cache)
+            os.makedirs(os.path.dirname(filename), exist_ok=True)  # filename in subfolder must exist
             downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
                                 verify_ssl=verify, retry=retry, retry_wait=retry_wait,
                                 headers=headers, md5=md5, sha1=sha1, sha256=sha256)

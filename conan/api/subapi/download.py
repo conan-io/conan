@@ -15,13 +15,14 @@ class DownloadAPI:
 
     @api_method
     def recipe(self, ref: RecipeReference, remote: Remote):
-        output = ConanOutput(scope=str(ref))
+        output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)
         skip_download = app.cache.exists_rrev(ref)
         if skip_download:
             output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
             return False
 
+        output.info(f"Downloading recipe '{ref.repr_notime()}'")
         app.remote_manager.get_recipe(ref, remote)
 
         layout = app.cache.ref_layout(ref)

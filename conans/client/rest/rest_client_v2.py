@@ -147,7 +147,7 @@ class RestV2Methods(RestCommonMethods):
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
             if parallel:
                 thread = Thread(target=downloader.download,
                                 kwargs={"url": resource_url, "file_path": abs_path, "retry": retry,

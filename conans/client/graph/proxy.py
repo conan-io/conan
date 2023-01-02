@@ -121,6 +121,7 @@ class ConanProxy(object):
     # searches in all the remotes and downloads the latest from all of them
     def _download_recipe(self, ref, remotes, scoped_output):
         def _retrieve_from_remote(the_remote, reference):
+            scoped_output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             if not reference.revision:
                 reference = self._remote_manager.get_latest_recipe_reference(ref, remote)

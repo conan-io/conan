@@ -286,7 +286,9 @@ class UploadExecutor:
         self._output.info(f"Uploading recipe '{ref.repr_notime()}'")
         t1 = time.time()
         cache_files = bundle.files
+
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
+
         duration = time.time() - t1
         log_recipe_upload(ref, duration, cache_files, remote.name)
         return ref

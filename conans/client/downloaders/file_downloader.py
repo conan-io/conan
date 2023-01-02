@@ -19,9 +19,10 @@ class FileDownloader:
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
-
-        if not os.path.isabs(file_path):
-            file_path = os.path.abspath(file_path)
+        """ in order to make the download concurrent, the folder for file_path MUST exist
+        """
+        assert file_path, "Conan 2.0 always download files to disk, not to memory"
+        assert os.path.isabs(file_path), "Target file_path must be absolute"
 
         if os.path.exists(file_path):
             if overwrite:
@@ -64,7 +65,6 @@ class FileDownloader:
 
     def _download_file(self, url, auth, headers, file_path, verify_ssl, try_resume=False):
         t1 = time.time()
-        assert file_path
         if try_resume and os.path.exists(file_path):
             range_start = os.path.getsize(file_path)
             headers = headers.copy() if headers else {}
@@ -104,15 +104,15 @@ class FileDownloader:
 
         try:
             total_length = get_total_length()
-            if total_length > 1000 * 1000:  # Only larger than 1Mb
+            if total_length > 1000 * 1000:  # Only larger than 1 Mb
                 action = "Downloading" if range_start == 0 else "Continuing download of"
                 self._output.info(f"{action} {os.path.basename(file_path)}")
 
-            chunksize = 1024 * 100
+            chunk_size = 1024 * 100
             total_downloaded_size = range_start
             mode = "ab" if range_start else "wb"
             with open(file_path, mode) as file_handler:
-                for chunk in response.iter_content(chunksize):
+                for chunk in response.iter_content(chunk_size):
                     file_handler.write(chunk)
                     total_downloaded_size += len(chunk)
 
@@ -129,6 +129,7 @@ class FileDownloader:
 
             duration = time.time() - t1
             log_download(url, duration)
+
         except Exception as e:
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"

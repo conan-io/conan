@@ -54,8 +54,6 @@ class RemoteManager(object):
 
         assert ref.revision, "get_recipe without revision specified"
 
-        output = ConanOutput(scope=str(ref))
-        output.info(f"Recipe download '{ref.repr_notime()}' from '{remote.name}'")
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()
 
@@ -66,13 +64,11 @@ class RemoteManager(object):
         ref_time = remote_refs[0].timestamp
         ref.timestamp = ref_time
         duration = time.time() - t1
-        output.debug(f"Downloaded recipe {repr(ref)} from {remote.name} in {duration:.2f}s")
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
         zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
         self._signer.verify(ref, download_export)
         export_folder = layout.export()
-        output.debug(f"Recipe folder: {export_folder}")
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
         if tgz_file:
