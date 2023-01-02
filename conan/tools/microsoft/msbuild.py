@@ -85,13 +85,16 @@ class MSBuild(object):
         namespace = namespace.group(0) if namespace else ""
         importgroup_element = root.find(f"{namespace}ImportGroup")
         if importgroup_element:
-            expected_condition = (f"'$(Configuration)' == '{self.configuration}' And "
-                                  f"'$(Platform)' == '{msbuild_arch_to_conf_arch(self.platform)}'")
-            for import_element in importgroup_element.iter(f"{namespace}Import"):
-                condition = import_element.attrib.get("Condition")
-                if expected_condition == condition:
-                    concrete_props_file = import_element.attrib.get("Project")
-                    break
+            import_elements = importgroup_element.findall(f"{namespace}Import")
+            if len(import_elements) == 1:
+                concrete_props_file = import_elements[0].attrib.get("Project")
+            else:
+                expected_condition = (f"'$(Configuration)' == '{self.configuration}' And "
+                                      f"'$(Platform)' == '{msbuild_arch_to_conf_arch(self.platform)}'")
+                for import_element in import_elements:
+                    if expected_condition == import_element.attrib.get("Condition"):
+                        concrete_props_file = import_element.attrib.get("Project")
+                        break
 
         if concrete_props_file:
             concrete_props_file = os.path.join(self._conanfile.generators_folder, concrete_props_file)
