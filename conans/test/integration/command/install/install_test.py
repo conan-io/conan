@@ -298,6 +298,17 @@ def test_install_disabled_remote(client):
     assert "ERROR: Remote 'default' can't be found or is disabled" in client.out
 
 
+def test_install_no_remotes(client):
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    client.run("create .")
+    client.run("upload * --confirm -r default")
+    client.run("remove * -c")
+    client.run("install --requires=pkg/0.1 -nr", assert_error=True)
+    assert "ERROR: Package 'pkg/0.1' not resolved: No remote defined" in client.out
+    client.run("install --requires=pkg/0.1")  # this works without issue
+    client.run("install --requires=pkg/0.1 -nr")  # and now this too, pkg in cache
+
+
 def test_install_skip_disabled_remote():
     client = TestClient(servers=OrderedDict({"default": TestServer(),
                                              "server2": TestServer(),

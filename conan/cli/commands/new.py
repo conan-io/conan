@@ -12,18 +12,20 @@ from conans.util.files import save
 @conan_command(group="Creator")
 def new(conan_api, parser, *args):
     """
-    Create a new recipe (with conanfile.py and other files) from a predefined template
+    Create a new recipe (with conanfile.py and other files) from either a predefined or a user-defined template
     """
-    parser.add_argument("template", help="Template name, built-in predefined one or user one. "
-                        "You can use built-in templates: cmake_lib, cmake_exe, "
+    parser.add_argument("template", help="Template name, "
+                        "either a predefined built-in or a user-provided one. "
+                        "Available built-in templates: basic, cmake_lib, cmake_exe, "
                         "meson_lib, meson_exe, msbuild_lib, msbuild_exe, bazel_lib, bazel_exe, "
                         "autotools_lib, autotools_exe. "
                         "E.g. 'conan new cmake_lib -d name=hello -d version=0.1'. "
-                        "You can define your own templates too."
+                        "You can define your own templates too by inputting an absolute path "
+                        "as your template, or a path relative to your conan home folder."
                         )
     parser.add_argument("-d", "--define", action="append",
                         help="Define a template argument as key=value")
-    parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if exists")
+    parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if it already exists")
 
     args = parser.parse_args(*args)
     # Manually parsing the remainder
@@ -34,7 +36,14 @@ def new(conan_api, parser, *args):
         except ValueError:
             raise ConanException(f"Template definitions must be 'key=value', received {u}")
         k = k.replace("-", "")  # Remove possible "--name=value"
-        definitions[k] = v
+        # For variables that only show up once, no need for list to keep compatible behaviour
+        if k in definitions:
+            if isinstance(definitions[k], list):
+                definitions[k].append(v)
+            else:
+                definitions[k] = [definitions[k], v]
+        else:
+            definitions[k] = v
 
     files = conan_api.new.get_template(args.template)  # First priority: user folder
     if not files:  # then, try the templates in the Conan home

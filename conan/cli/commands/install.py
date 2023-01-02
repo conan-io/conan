@@ -61,7 +61,7 @@ def install(conan_api, parser, *args):
         output_folder = None
 
     # Basic collaborators, remotes, lockfile, profiles
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
