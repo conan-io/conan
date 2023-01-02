@@ -34,14 +34,6 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_snapshot(self, url):
-        try:
-            data = self._get_file_list_json(url)
-            files_list = [os.path.normpath(filename) for filename in data["files"]]
-        except NotFoundException:
-            files_list = []
-        return files_list
-
     def get_recipe(self, ref, dest_folder):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
@@ -153,12 +145,9 @@ class RestV2Methods(RestCommonMethods):
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
             downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
                                 verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
-
-    def _remove_recipe_files(self, ref, files):
-        # V2 === revisions, do not remove files, it will create a new revision if the files changed
-        return
 
     def remove_all_packages(self, ref):
         """ Remove all packages from the specified reference"""

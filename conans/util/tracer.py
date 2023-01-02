@@ -118,17 +118,6 @@ def log_conan_api_call(name, kwargs):
     ConanOutput().trace(data)
 
 
-def log_command(name, kwargs):
-    parameters = copy.copy(kwargs)  # Ensure we don't alter any app object like args
-    data = {"_action": "COMMAND", "name": name, "parameters": parameters}
-    ConanOutput().trace(data)
-
-
-def log_exception(exc, message):
-    data = {"_action": "EXCEPTION", "class": str(exc.__class__.__name__), "message": message}
-    ConanOutput().trace(data)
-
-
 def log_download(url, duration):
     data = {"_action": "DOWNLOAD", "url": url, "duration": duration}
     ConanOutput().trace(data)
