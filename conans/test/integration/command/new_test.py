@@ -47,8 +47,8 @@ class TestNewCommand:
 
     def test_new_basic_template(self):
         tc = TestClient()
-    tc.run("new basic")
-    assert '# self.requires("zlib/1.2.13")' in tc.load("conanfile.py")
+        tc.run("new basic")
+        assert '# self.requires("zlib/1.2.13")' in tc.load("conanfile.py")
 
         tc.run("new basic -d name=mygame -d requires=math/1.0 -d requires=ai/1.0 -f")
         conanfile = tc.load("conanfile.py")
