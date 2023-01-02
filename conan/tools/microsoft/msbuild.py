@@ -34,16 +34,12 @@ class MSBuild(object):
         self.platform = msvc_arch
         self.toolset = msvs_toolset(conanfile)
 
-    def command(self, sln, targets=None, auto_inject_deps_props=True):
+    def command(self, sln, targets=None):
         cmd = (f'msbuild "{sln}" /p:Configuration={self.build_type} '
                f"/p:Platform={self.platform} /p:PlatformToolset={self.toolset}")
 
-        # Autoconsume toolchain props, but opt-out dependencies props
         props_paths = []
-        props_candidates = [MSBuildToolchain.filename]
-        if auto_inject_deps_props:
-            props_candidates.append(MSBuildDeps.filename)
-        for props_file in props_candidates:
+        for props_file in (MSBuildToolchain.filename, MSBuildDeps.filename):
             props_path = os.path.join(self._conanfile.generators_folder, props_file)
             if os.path.exists(props_path):
                 props_paths.append(props_path)
@@ -67,8 +63,8 @@ class MSBuild(object):
 
         return cmd
 
-    def build(self, sln, targets=None, auto_inject_deps_props=True):
-        cmd = self.command(sln, targets=targets, auto_inject_deps_props=auto_inject_deps_props)
+    def build(self, sln, targets=None):
+        cmd = self.command(sln, targets=targets)
         self._conanfile.run(cmd)
 
     @staticmethod
