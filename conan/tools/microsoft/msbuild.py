@@ -83,7 +83,7 @@ class MSBuild(object):
         importgroup_element = root.find(f"{namespace}ImportGroup")
         if importgroup_element:
             expected_condition = (f"'$(Configuration)' == '{self.configuration}' And "
-                                  f"$(Platform)' == '{msbuild_arch_to_conf_arch(self.platform)}'")
+                                  f"'$(Platform)' == '{msbuild_arch_to_conf_arch(self.platform)}'")
             for import_element in importgroup_element.iter(f"{namespace}Import"):
                 condition = import_element.attrib.get("Condition")
                 if expected_condition == condition:
