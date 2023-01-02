@@ -8,7 +8,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
 - Docs: https://docs.conan.io/en/latest/
-- Slack: https://cpplang.slack.com/?id=conan (#conan channel)
+- Slack: https://cpplang.slack.com (#conan channel)
 - Twitter: https://twitter.com/conan_io
 
 
@@ -28,15 +28,15 @@ Conan is a package manager for C and C++ developers:
 - Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
 
-
-+-------------------------+-------------------------+
-| **develop**             |    **Code Climate**     |
-+=========================+=========================+
-| |Build Status Develop|  |   |Develop climate|     |
-+-------------------------+-------------------------+
-
-
 This is the **developer/maintainer** documentation. For user documentation, go to https://docs.conan.io
+
+
++-------------------------+
+| **develop2**             |
++=========================+
+| |Build Status Develop|  |
++-------------------------+
+
 
 Setup
 =====
@@ -165,10 +165,7 @@ License
 `MIT LICENSE <./LICENSE.md>`__
 
 .. |Build Status Develop| image:: https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop
-   :target: https://ci.conan.io/job/ConanTestSuite/job/develop/
-
-.. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
-   :target: https://codeclimate.com/github/conan-io/conan/maintainability
+   :target: https://ci.conan.io/blue/organizations/jenkins/ConanTestSuitev2/activity
 
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 
