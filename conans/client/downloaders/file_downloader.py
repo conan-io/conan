@@ -104,9 +104,9 @@ class FileDownloader:
 
         try:
             total_length = get_total_length()
-            if total_length > 1000 * 1000:  # Only larger than 1 Mb
-                action = "Downloading" if range_start == 0 else "Continuing download of"
-                self._output.info(f"{action} {os.path.basename(file_path)}")
+            action = "Downloading" if range_start == 0 else "Continuing download of"
+            description = "{} {}".format(action, os.path.basename(file_path))
+            self._output.info(description)
 
             chunk_size = 1024 * 100
             total_downloaded_size = range_start

@@ -14,6 +14,7 @@ from conans.errors import ConanException, NotFoundException, PackageNotFoundExce
 from conans.model.package_ref import PkgReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
+from conans.util.thread import ExceptionThread
 
 
 class RestV2Methods(RestCommonMethods):
@@ -144,15 +145,16 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("core.download:download_cache must be an absolute path")
         downloader = CachingFileDownloader(self.requester, download_cache=download_cache)
         threads = []
+
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
             if parallel:
-                thread = Thread(target=downloader.download,
-                                kwargs={"url": resource_url, "file_path": abs_path, "retry": retry,
-                                        "retry_wait": retry_wait,"verify_ssl": self.verify_ssl,
-                                        "auth": self.auth})
+                kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
+                          "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
+                          "auth": self.auth}
+                thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
                 threads.append(thread)
                 thread.start()
             else:
