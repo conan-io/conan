@@ -378,7 +378,7 @@ def test_cmake_presets_binary_dir_available():
     else:
         build_dir = os.path.join(client.current_folder, "build")
 
-    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
+    presets = load_cmake_presets(os.path.join(build_dir, "generators"))
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
 
 

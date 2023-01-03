@@ -962,15 +962,15 @@ def test_cmake_presets_with_conanfile_txt():
     assert "Hello World Release!" in c.out
 
 
-def test_cmake_presets_forbidden_build_type():
+def test_cmake_presets_not_forbidden_build_type():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template cmake_exe")
     # client.run("new cmake_exe -d name=hello -d version=0.1")
     settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing", "settings.build_type"]\''
-    client.run("install . {}".format(settings_layout), assert_error=True)
-    assert "Error, don't include 'settings.build_type' in the " \
-           "'tools.cmake.cmake_layout:build_folder_vars' conf" in client.out
+    client.run("install . {}".format(settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "build/release/generators/conan_toolchain.cmake"))
 
 
 def test_resdirs_cmake_install():
@@ -1116,7 +1116,8 @@ def test_cmake_toolchain_vars_when_option_declared():
     # the CMakeLists
     fpic_option = "-o mylib:fPIC=False" if platform.system() != "Windows" else ""
     t.run(f"install . -o mylib:shared=False {fpic_option}")
-    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    folder = "build/generators" if platform.system() == "Windows" else "build/generators/Release"
+    t.run_command(f"cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE={folder}/conan_toolchain.cmake")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: OFF" in t.out
 
@@ -1185,8 +1186,6 @@ def test_find_program_for_tool_requires():
                 "build_profile": build_profile
                 })
 
-    xxx = client.get_default_build_profile()
-
     client.run("create . -pr:b build_profile -pr:h build_profile")
     client.run("create . -pr:b build_profile -pr:h host_profile")
 
@@ -1226,7 +1225,7 @@ def test_find_program_for_tool_requires():
     host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
 
     with client.chdir("build"):
-        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
         # Verify binary executable is found from build context package,
         # and library comes from host context package
         assert f"package/{build_context_package_id}/bin/foobin" in client.out
