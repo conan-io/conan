@@ -297,8 +297,13 @@ def test_install_output_directories():
     p_folder = client.cache.package_layout(pref.ref).package(pref)
     assert os.path.exists(os.path.join(p_folder, "mylibs"))
     assert not os.path.exists(os.path.join(p_folder, "lib"))
-    b_folder = client.cache.package_layout(pref.ref).build(pref)
-    toolchain = client.load(os.path.join(b_folder, "build", "generators", "conan_toolchain.cmake"))
+
+    if platform.system() != "Windows":
+        gen_folder = os.path.join(client.current_folder, "build", "Release", "generators")
+    else:
+        gen_folder = os.path.join(client.current_folder, "build", "generators")
+
+    toolchain = client.load(os.path.join(gen_folder, "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 
@@ -1116,7 +1121,7 @@ def test_cmake_toolchain_vars_when_option_declared():
     # the CMakeLists
     fpic_option = "-o mylib:fPIC=False" if platform.system() != "Windows" else ""
     t.run(f"install . -o mylib:shared=False {fpic_option}")
-    folder = "build/generators" if platform.system() == "Windows" else "build/generators/Release"
+    folder = "build/generators" if platform.system() == "Windows" else "build/Release/generators"
     t.run_command(f"cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE={folder}/conan_toolchain.cmake")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: OFF" in t.out

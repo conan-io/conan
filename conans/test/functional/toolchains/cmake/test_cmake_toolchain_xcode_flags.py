@@ -38,7 +38,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
     client.run("new hello/0.1 --template=cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
-    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join("build", "Release", "generators", "conan_toolchain.cmake"))
     # bitcode
     assert 'set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")' in toolchain
     assert 'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")' in toolchain
@@ -121,7 +121,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
     client.run("new hello/0.1 --template=cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
-    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join("build", "Release", "generators", "conan_toolchain.cmake"))
     # bitcode
     assert 'set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")' in toolchain
     assert 'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")' not in toolchain
@@ -163,7 +163,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_ver
     client.run("new hello/0.1 --template=cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
-    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join("build", "Release", "generators", "conan_toolchain.cmake"))
     # bitcode
     assert 'set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")' not in toolchain
     assert 'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")' not in toolchain
