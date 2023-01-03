@@ -476,7 +476,7 @@ class TestMSBuild:
                     ("build_type", build_type),
                     ("arch", arch)]
         if compiler == "msvc":
-            settings.append(("compiler.runtime_type"), "Debug" if build_type == "Debug" else "Release")
+            settings.append(("compiler.runtime_type", "Debug" if build_type == "Debug" else "Release"))
 
         profile = textwrap.dedent(f"""
             [settings]
@@ -509,13 +509,13 @@ class TestMSBuild:
             "armv8": "ARM64",
         }[arch]
         props_file = f"conantoolchain_{build_type.lower()}_{props_arch}.props"
-        self.assertIn(f"conanfile.py: MSBuildToolchain created {props_file}", client.out)
+        assert f"conanfile.py: MSBuildToolchain created {props_file}" in client.out
         client.run("build . -if=conan")
-        self.assertIn("Visual Studio {ide_year}".format(ide_year=self._vs_versions[vs_version]["ide_year"]), client.out)
-        self.assertIn(f"[vcvarsall.bat] Environment initialized for: '{arch}'", client.out)
+        assert "Visual Studio {ide_year}".format(ide_year=self._vs_versions[vs_version]["ide_year"]) in client.out
+        assert f"[vcvarsall.bat] Environment initialized for: '{arch}'" in client.out
 
         self._run_app(client, arch, build_type)
-        self.assertIn(f"Hello World {build_type}", client.out)
+        assert f"Hello World {build_type}" in client.out
         compiler_version = self._vs_versions[vs_version]["msvc_version"]
         check_exe_run(client.out, "main", "msvc", compiler_version, build_type, arch, cppstd,
                       {"DEFINITIONS_BOTH": "True",
@@ -581,8 +581,8 @@ class TestMSBuild:
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
-            self.assertIn("Visual Studio {ide_year}".format(self._vs_versions[version]["ide_year"]), client.out)
-            self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
+            assert "Visual Studio {ide_year}".format(self._vs_versions[version]["ide_year"]) in client.out
+            assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
 
             self._run_app(client, arch, build_type, shared)
             check_exe_run(client.out, "main", "msvc", self._vs_versions[version]["msvc_version"], build_type, arch, cppstd,
@@ -597,10 +597,10 @@ class TestMSBuild:
             cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, command_str))
             client.run_command(cmd)
             if shared:
-                self.assertIn("hello.dll", client.out)
+                assert "hello.dll" in client.out
             else:
-                self.assertNotIn("hello.dll", client.out)
-            self.assertIn("KERNEL32.dll", client.out)
+                assert "hello.dll" not in client.out
+            assert "KERNEL32.dll" in client.out
 
 
 def test_msvc_runtime_flag_common_usage():
