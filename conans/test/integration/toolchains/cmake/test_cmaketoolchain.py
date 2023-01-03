@@ -8,7 +8,6 @@ from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
@@ -422,6 +421,7 @@ def test_cmake_presets_multiconfig():
     # Repeat one
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["buildPresets"]) == 4
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
@@ -516,6 +516,7 @@ def test_toolchain_cache_variables():
         assert f"-D{var}={_format_val(value)}" in client.out
     assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
     assert f"-G {_format_val('MinGW Makefiles')}" in client.out
+
 
 def test_android_c_library():
     client = TestClient()
@@ -845,3 +846,36 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
+
+
+def test_cmake_layout_toolchain_folder():
+    """ in single-config generators, the toolchain is a different file per configuration
+    https://github.com/conan-io/conan/issues/12827
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+            """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Release "
+          "-s compiler.libcxx=libstdc++11")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/Release/generators/conan_toolchain.cmake"))
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
+          "-s compiler.libcxx=libstdc++11")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/Debug/generators/conan_toolchain.cmake"))
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
+          "-s compiler.libcxx=libstdc++11 -s arch=x86 "
+          "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.arch\", \"settings.build_type\"]'")
+    print(c.out)
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/x86-debug/generators/conan_toolchain.cmake"))
