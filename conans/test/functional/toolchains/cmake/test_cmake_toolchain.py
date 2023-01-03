@@ -298,10 +298,11 @@ def test_install_output_directories():
     assert os.path.exists(os.path.join(p_folder, "mylibs"))
     assert not os.path.exists(os.path.join(p_folder, "lib"))
 
+    b_folder = client.cache.package_layout(pref.ref).build(pref)
     if platform.system() != "Windows":
-        gen_folder = os.path.join(client.current_folder, "build", "Release", "generators")
+        gen_folder = os.path.join(b_folder, "build", "Release", "generators")
     else:
-        gen_folder = os.path.join(client.current_folder, "build", "generators")
+        gen_folder = os.path.join(b_folder, "build", "generators")
 
     toolchain = client.load(os.path.join(gen_folder, "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
@@ -1230,7 +1231,7 @@ def test_find_program_for_tool_requires():
     host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
 
     with client.chdir("build"):
-        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
         # Verify binary executable is found from build context package,
         # and library comes from host context package
         assert f"package/{build_context_package_id}/bin/foobin" in client.out

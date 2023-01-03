@@ -52,7 +52,8 @@ def test_shared_link_flags():
     client.run("new hello/1.0 -m cmake_lib")
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    t = os.path.join("test_package", "build", "generators", "hello-release-x86_64-data.cmake")
+    t = os.path.join("test_package", "build", "Release",
+                     "generators", "hello-release-x86_64-data.cmake")
     target_data_cmake_content = client.load(t)
     assert 'set(hello_SHARED_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
     assert 'set(hello_EXE_LINK_FLAGS_RELEASE "-z now;-z relro")' in target_data_cmake_content
