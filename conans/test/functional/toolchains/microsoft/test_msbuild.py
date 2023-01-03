@@ -438,7 +438,6 @@ class WinTest(unittest.TestCase):
         ]
     )
     @pytest.mark.parametrize("force_import_generated_files", [False, True])
-    @pytest.mark.tool_cmake
     def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd, force_import_generated_files):
         if self.vs_version != "15":
             pytest.skip("test for Visual Studio 2017")
@@ -458,6 +457,7 @@ class WinTest(unittest.TestCase):
         else:
             self.check_toolchain_win(compiler, version, runtime, cppstd, force_import_generated_files)
 
+    @pytest.mark.tool_cmake
     def check_toolchain_win(self, compiler, version, runtime, cppstd, force_import_generated_files):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler", compiler),
