@@ -609,7 +609,7 @@ class TestMSBuild:
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
-            assert "Visual Studio {ide_year}".format(self._vs_versions[version]["ide_year"]) in client.out
+            assert "Visual Studio {ide_year}".format(ide_year=self._vs_versions[version]["ide_year"]) in client.out
             assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
 
             self._run_app(client, arch, build_type, shared)
@@ -621,7 +621,7 @@ class TestMSBuild:
                 command_str = "%s\\MyApp.exe" % configuration
             else:
                 command_str = "x64\\%s\\MyApp.exe" % configuration
-            vcvars = vcvars_command(version, architecture="amd64")
+            vcvars = vcvars_command(version=version, architecture="amd64")
             cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, command_str))
             client.run_command(cmd)
             if shared:
