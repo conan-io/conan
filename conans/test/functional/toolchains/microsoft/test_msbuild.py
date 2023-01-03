@@ -57,7 +57,7 @@ EndGlobal
 
 def myapp_vcxproj(force_import_generated_files=False):
     intrusive_conan_integration = r"""
-<ImportGroup Label="PropertySheets">
+  <ImportGroup Label="PropertySheets">
     <Import Project="..\conan\conan_hello.props" />
     <Import Project="..\conan\conantoolchain.props" />
   </ImportGroup>
@@ -371,8 +371,8 @@ class WinTest(unittest.TestCase):
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 requires = "hello/0.1"
-                options = {"shared": [True, False]}
-                default_options = {"shared": False}
+                options = {{"shared": [True, False]}}
+                default_options = {{"shared": False}}
 
                 def layout(self):
                     self.folders.generators = "conan"
@@ -429,28 +429,36 @@ class WinTest(unittest.TestCase):
             command_str = "x64\\%s\\MyApp.exe" % configuration
         client.run_command(command_str)
 
+    @pytest.mark.parametrize(
+        "compiler,version,runtime,cppstd",
+        [
+            ("Visual Studio", "15", "MT", "17"),
+            ("msvc", "191", "static", "17"),
+            ("msvc", "190", "static", "14"),
+        ]
+    )
     @pytest.mark.parametrize("force_import_generated_files", [False, True])
-    @parameterized.expand([("Visual Studio", "15", "MT", "17"),
-                           ("msvc", "191", "static", "17"),
-                           ("msvc", "190", "static", "14")]
-                          )
     @pytest.mark.tool_cmake
-    def test_toolchain_win_vs2017(self, force_import_generated_files, compiler, version, runtime, cppstd):
+    def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd, force_import_generated_files):
         if self.vs_version != "15":
             pytest.skip("test for Visual Studio 2017")
         else:
-            self.check_toolchain_win(force_import_generated_files, compiler, version, runtime, cppstd)
+            self.check_toolchain_win(compiler, version, runtime, cppstd, force_import_generated_files)
 
-    @parameterized.expand([("Visual Studio", "17", "MT", "17"),
-                           ("msvc", "193", "static", "17")]
-                          )
-    def test_toolchain_win_vs2022(self, compiler, version, runtime, cppstd):
+    @pytest.mark.parametrize("compiler,version,runtime,cppstd",
+        [
+            ("Visual Studio", "17", "MT", "17"),
+            ("msvc", "193", "static", "17"),
+        ]
+    )
+    @pytest.mark.parametrize("force_import_generated_files", [False, True])
+    def test_toolchain_win_vs2022(self, compiler, version, runtime, cppstd, force_import_generated_files):
         if self.vs_version != "17":
             pytest.skip("test for Visual Studio 2022")
         else:
-            self.check_toolchain_win(compiler, version, runtime, cppstd)
+            self.check_toolchain_win(compiler, version, runtime, cppstd, force_import_generated_files)
 
-    def check_toolchain_win(self, force_import_generated_files, compiler, version, runtime, cppstd):
+    def check_toolchain_win(self, compiler, version, runtime, cppstd, force_import_generated_files):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler", compiler),
                     ("compiler.version", version),
