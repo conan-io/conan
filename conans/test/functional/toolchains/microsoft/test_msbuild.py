@@ -344,6 +344,11 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
     assert "MSVC FLAG=MD!!" in client.out
 
 
+def _has_tool_vc(vs_version):
+    return vs_version in tools_locations["visual_studio"] and \
+           not tools_locations["visual_studio"][vs_version].get("disabled", False)
+
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool_visual_studio
 class TestMSBuild:
@@ -379,11 +384,6 @@ class TestMSBuild:
             "ide_year": "2022",
         },
     }
-
-    @staticmethod
-    def _has_tool_vc(vs_version):
-        return vs_version in tools_locations["visual_studio"] and \
-               not tools_locations["visual_studio"][vs_version].get("disabled", False)
 
     @staticmethod
     def _conanfile(force_import_generated_files=False):
@@ -452,18 +452,35 @@ class TestMSBuild:
         client.run_command(command_str)
 
     @pytest.mark.parametrize("arch", ["x86", "x86_64"])
-    @pytest.mark.parametrize("compiler,version,runtime,cppstd", [("msvc", "190", "static", "14"),
-                                                                 ("Visual Studio", "15", "MT", "17"),
-                                                                 ("msvc", "191", "static", "17"),
-                                                                 ("Visual Studio", "17", "MT", "17"),
-                                                                 ("msvc", "193", "static", "17")])
+    @pytest.mark.parametrize(
+        "compiler,version,runtime,cppstd",
+        [
+            pytest.param(
+                "msvc", "190", "static", "14",
+                marks=pytest.mark.skipif(not _has_tool_vc("14"), reason="Visual Studio 14 not installed"),
+            ),
+            pytest.param(
+                "Visual Studio", "15", "MT", "17",
+                marks=pytest.mark.skipif(not _has_tool_vc("15"), reason="Visual Studio 15 not installed"),
+            ),
+            pytest.param(
+                "msvc", "191", "static", "17",
+                marks=pytest.mark.skipif(not _has_tool_vc("15"), reason="Visual Studio 15 not installed"),
+            ),
+            pytest.param(
+                "Visual Studio", "17", "MT", "17",
+                marks=pytest.mark.skipif(not _has_tool_vc("17"), reason="Visual Studio 17 not installed"),
+            ),
+            pytest.param(
+                "msvc", "193", "static", "17",
+                marks=pytest.mark.skipif(not _has_tool_vc("17"), reason="Visual Studio 17 not installed"),
+            ),
+        ])
     @pytest.mark.parametrize("build_type", ["Debug", "Release"])
     @pytest.mark.parametrize("force_import_generated_files", [False, True])
     @pytest.mark.tool_cmake
     def test_toolchain_win(self, arch, compiler, version, runtime, cppstd, build_type, force_import_generated_files):
         vs_version = msvc_version_to_vs_ide_version(version) if compiler == "msvc" else version
-        if not self._has_tool_vc(vs_version):
-            pytest.skip(f"Visual Studio {vs_version} not installed")
 
         if compiler == "Visual Studio" and build_type == "Debug":
             runtime += "d"
@@ -508,11 +525,11 @@ class TestMSBuild:
             "armv7": "ARM",
             "armv8": "ARM64",
         }[arch]
-        props_file = f"conantoolchain_{build_type.lower()}_{props_arch}.props"
+        props_file = f"conantoolchain_{build_type.lower()}_{props_arch.lower()}.props"
         assert f"conanfile.py: MSBuildToolchain created {props_file}" in client.out
         client.run("build . -if=conan")
         assert "Visual Studio {ide_year}".format(ide_year=self._vs_versions[vs_version]["ide_year"]) in client.out
-        assert f"[vcvarsall.bat] Environment initialized for: '{arch}'" in client.out
+        assert f"[vcvarsall.bat] Environment initialized for: '{props_arch}'" in client.out
 
         self._run_app(client, arch, build_type)
         assert f"Hello World {build_type}" in client.out
@@ -525,15 +542,20 @@ class TestMSBuild:
                        "DEFINITIONS_CONFIG2": build_type,
                        "DEFINITIONS_CONFIG_INT": "234" if build_type == "Debug" else "456"})
         static_runtime = runtime == "static" or "MT" in runtime
-        check_vs_runtime("{}{}/MyApp.exe".format("" if arch == "x86" else f"{arch}/", build_type), client,
+        check_vs_runtime("{}{}/MyApp.exe".format("" if arch == "x86" else f"{props_arch}/", build_type), client,
                          vs_version, build_type=build_type, static_runtime=static_runtime)
 
-    @pytest.mark.parametrize("compiler,version,runtime,cppstd", [("Visual Studio", "15", "MT", "17")])
+    @pytest.mark.parametrize(
+        "compiler,version,runtime,cppstd",
+        [
+            pytest.param(
+                "Visual Studio", "15", "MT", "17",
+                marks=pytest.mark.skipif(not _has_tool_vc("15"), reason="Visual Studio 15 not installed"),
+            ),
+        ]
+    )
     @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self, compiler, version, runtime, cppstd):
-        if not self._has_tool_vc(version):
-            pytest.skip(f"Visual Studio {version} not installed")
-
         client = TestClient(path_with_spaces=False)
 
         settings = [("compiler", compiler),
