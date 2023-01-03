@@ -344,7 +344,7 @@ def check_msvc_runtime_flag(vs_version, msvc_version):
     assert "MSVC FLAG=MD!!" in client.out
 
 
-def _has_tool_vc(vs_version):
+def is_visual_studio_installed(vs_version):
     return vs_version in tools_locations["visual_studio"] and \
            not tools_locations["visual_studio"][vs_version].get("disabled", False)
 
@@ -455,32 +455,23 @@ class TestMSBuild:
     @pytest.mark.parametrize(
         "compiler,version,runtime,cppstd",
         [
-            pytest.param(
-                "msvc", "190", "static", "14",
-                marks=pytest.mark.skipif(not _has_tool_vc("14"), reason="Visual Studio 14 not installed"),
-            ),
-            pytest.param(
-                "Visual Studio", "15", "MT", "17",
-                marks=pytest.mark.skipif(not _has_tool_vc("15"), reason="Visual Studio 15 not installed"),
-            ),
-            pytest.param(
-                "msvc", "191", "static", "17",
-                marks=pytest.mark.skipif(not _has_tool_vc("15"), reason="Visual Studio 15 not installed"),
-            ),
-            pytest.param(
-                "Visual Studio", "17", "MT", "17",
-                marks=pytest.mark.skipif(not _has_tool_vc("17"), reason="Visual Studio 17 not installed"),
-            ),
-            pytest.param(
-                "msvc", "193", "static", "17",
-                marks=pytest.mark.skipif(not _has_tool_vc("17"), reason="Visual Studio 17 not installed"),
-            ),
-        ])
+            ("Visual Studio", "14", "MT", "14"),
+            ("msvc", "190", "static", "14"),
+            ("Visual Studio", "15", "MT", "17"),
+            ("msvc", "191", "static", "17"),
+            ("Visual Studio", "16", "MT", "17"),
+            ("msvc", "192", "static", "17"),
+            ("Visual Studio", "17", "MT", "17"),
+            ("msvc", "193", "static", "17"),
+        ],
+    )
     @pytest.mark.parametrize("build_type", ["Debug", "Release"])
     @pytest.mark.parametrize("force_import_generated_files", [False, True])
     @pytest.mark.tool_cmake
     def test_toolchain_win(self, arch, compiler, version, runtime, cppstd, build_type, force_import_generated_files):
         vs_version = msvc_version_to_vs_ide_version(version) if compiler == "msvc" else version
+        if not is_visual_studio_installed(vs_version):
+            pytest.skip(f"Visual Studio {vs_version} not installed")
 
         if compiler == "Visual Studio" and build_type == "Debug":
             runtime += "d"
@@ -554,14 +545,22 @@ class TestMSBuild:
     @pytest.mark.parametrize(
         "compiler,version,runtime,cppstd",
         [
-            pytest.param(
-                "Visual Studio", "15", "MT", "17",
-                marks=pytest.mark.skipif(not _has_tool_vc("15"), reason="Visual Studio 15 not installed"),
-            ),
-        ]
+            ("Visual Studio", "14", "MT", "14"),
+            ("msvc", "190", "static", "14"),
+            ("Visual Studio", "15", "MT", "17"),
+            ("msvc", "191", "static", "17"),
+            ("Visual Studio", "16", "MT", "17"),
+            ("msvc", "192", "static", "17"),
+            ("Visual Studio", "17", "MT", "17"),
+            ("msvc", "193", "static", "17"),
+        ],
     )
     @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self, compiler, version, runtime, cppstd):
+        vs_version = msvc_version_to_vs_ide_version(version) if compiler == "msvc" else version
+        if not is_visual_studio_installed(vs_version):
+            pytest.skip(f"Visual Studio {vs_version} not installed")
+
         client = TestClient(path_with_spaces=False)
 
         settings = [("compiler", compiler),
@@ -577,9 +576,14 @@ class TestMSBuild:
             # TODO: It is a bit ugly to remove manually
             build_test_folder = os.path.join(client.current_folder, "test_package", "build")
             rmdir(build_test_folder)
-            runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
-                       " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
+            cmd = f"create . hello/0.1@ {settings} -s build_type={build_type} -s arch={arch} -o hello:shared={shared}"
+            if compiler == "Visual Studio":
+                runtime_suffix = "d" if build_type == "Debug" else ""
+                cmd += f" -s compiler.runtime={runtime}{runtime_suffix}"
+            else:
+                runtime_type = "Debug" if build_type == "Debug" else "Release"
+                cmd += f" -s compiler.runtime={runtime} -s compiler.runtime_type={runtime_type}"
+            client.run(cmd)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self._conanfile(),
@@ -590,11 +594,16 @@ class TestMSBuild:
 
         # Run the configure corresponding to this test case
         for build_type, arch, shared in configs:
-            runtime = "MT" if build_type == "Release" else "MTd"
-            client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
-                       " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
+            cmd = f"install . {settings} -s build_type={build_type} -s arch={arch} -o hello:shared={shared}"
+            if compiler == "Visual Studio":
+                runtime_suffix = "d" if build_type == "Debug" else ""
+                cmd += f" -s compiler.runtime={runtime}{runtime_suffix}"
+            else:
+                runtime_type = "Debug" if build_type == "Debug" else "Release"
+                cmd += f" -s compiler.runtime={runtime} -s compiler.runtime_type={runtime_type}"
+            client.run(cmd)
 
-        vs_path = vs_installation_path(version)
+        vs_path = vs_installation_path(vs_version)
         vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
 
         for build_type, arch, shared in configs:
@@ -609,11 +618,11 @@ class TestMSBuild:
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
-            assert "Visual Studio {ide_year}".format(ide_year=self._vs_versions[version]["ide_year"]) in client.out
+            assert "Visual Studio {ide_year}".format(ide_year=self._vs_versions[vs_version]["ide_year"]) in client.out
             assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
 
             self._run_app(client, arch, build_type, shared)
-            check_exe_run(client.out, "main", "msvc", self._vs_versions[version]["msvc_version"], build_type, arch, cppstd,
+            check_exe_run(client.out, "main", "msvc", self._vs_versions[vs_version]["msvc_version"], build_type, arch, cppstd,
                           {"DEFINITIONS_BOTH": "True",
                            "DEFINITIONS_CONFIG": build_type})
 
@@ -621,7 +630,7 @@ class TestMSBuild:
                 command_str = "%s\\MyApp.exe" % configuration
             else:
                 command_str = "x64\\%s\\MyApp.exe" % configuration
-            vcvars = vcvars_command(version=version, architecture="amd64")
+            vcvars = vcvars_command(version=vs_version, architecture="amd64")
             cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, command_str))
             client.run_command(cmd)
             if shared:
