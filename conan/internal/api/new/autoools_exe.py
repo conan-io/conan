@@ -43,6 +43,13 @@ class {{package_name}}Conan(ConanFile):
     def package(self):
         autotools = Autotools(self)
         autotools.install()
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 """
 makefile_am_exe = """
 bin_PROGRAMS = {{name}}

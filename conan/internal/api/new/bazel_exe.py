@@ -34,7 +34,14 @@ class {{package_name}}Recipe(ConanFile):
         build = os.path.join(self.build_folder, "bazel-bin", "main")
         copy(self, "{{name}}", build, dest_bin, keep_path=False)
         copy(self, "{{name}}.exe", build, dest_bin, keep_path=False)
-        """
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+"""
 
 test_conanfile_exe_v2 = """from conan import ConanFile
 from conan.tools.build import can_run

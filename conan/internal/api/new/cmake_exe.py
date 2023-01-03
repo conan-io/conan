@@ -37,6 +37,13 @@ class {{package_name}}Recipe(ConanFile):
     def package(self):
         cmake = CMake(self)
         cmake.install()
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 '''
 
 cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)

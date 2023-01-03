@@ -40,6 +40,13 @@ class {{package_name}}Conan(ConanFile):
     def package(self):
         copy(self, "*{{name}}.exe", src=self.build_folder,
              dst=os.path.join(self.package_folder, "bin"), keep_path=False)
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 """
 
 

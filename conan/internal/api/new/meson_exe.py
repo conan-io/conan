@@ -30,6 +30,13 @@ class {{package_name}}Conan(ConanFile):
     def package(self):
         meson = Meson(self)
         meson.install()
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 """
 
 test_conanfile_exe_v2 = """import os

@@ -43,6 +43,13 @@ class {{package_name}}Recipe(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["{{name}}"]
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 '''
 
 cmake_v2 = """cmake_minimum_required(VERSION 3.15)

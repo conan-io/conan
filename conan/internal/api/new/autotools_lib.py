@@ -52,6 +52,13 @@ class {{package_name}}Conan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["{{name}}"]
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in as_iterable(requires) -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 """
 
 configure_ac = """
