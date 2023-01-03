@@ -55,8 +55,15 @@ Global
 EndGlobal
 """
 
+def myapp_vcxproj(force_import_generated_files=False):
+    intrusive_conan_integration = r"""
+<ImportGroup Label="PropertySheets">
+    <Import Project="..\conan\conan_hello.props" />
+    <Import Project="..\conan\conantoolchain.props" />
+  </ImportGroup>
+"""
 
-myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
+    return r"""<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0"
           xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
@@ -87,7 +94,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{B58316C0-C78A-4E9B-AE8F-5D6368CE3840}</ProjectGuid>
+    <ProjectGuid>{{B58316C0-C78A-4E9B-AE8F-5D6368CE3840}}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MyApp</RootNamespace>
   </PropertyGroup>
@@ -134,10 +141,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   </PropertyGroup>
   <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props.
   If it goes after, the Toolset definition is ignored -->
-  <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan\conan_hello.props" />
-    <Import Project="..\conan\conantoolchain.props" />
-  </ImportGroup>
+{}
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -302,7 +306,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
-"""
+""".format("" if force_import_generated_files else intrusive_conan_integration)
 
 
 @pytest.mark.tool_visual_studio(version='15')
@@ -354,60 +358,63 @@ if "17" in tools_locations['visual_studio'] and not tools_locations['visual_stud
 @pytest.mark.tool_visual_studio
 class WinTest(unittest.TestCase):
 
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        from conan.tools.microsoft import MSBuildToolchain, MSBuild, MSBuildDeps
-        class App(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
-            requires = "hello/0.1"
-            options = {"shared": [True, False]}
-            default_options = {"shared": False}
-
-            def layout(self):
-                self.folders.generators = "conan"
-                self.folders.build = "."
-
-            def generate(self):
-                tc = MSBuildToolchain(self)
-                gen = MSBuildDeps(self)
-                if self.options["hello"].shared and self.settings.build_type == "Release":
-                    tc.configuration = "ReleaseShared"
-                    gen.configuration = "ReleaseShared"
-
-                tc.preprocessor_definitions["DEFINITIONS_BOTH"] = '"True"'
-                tc.preprocessor_definitions["DEFINITIONS_BOTH2"] = 'DEFINITIONS_BOTH'
-                tc.preprocessor_definitions["DEFINITIONS_BOTH_INT"] = 123
-                if self.settings.build_type == "Debug":
-                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = '"Debug"'
-                    tc.preprocessor_definitions["DEFINITIONS_CONFIG_INT"] = 234
-                else:
-                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = '"Release"'
-                    tc.preprocessor_definitions["DEFINITIONS_CONFIG_INT"] = 456
-                tc.preprocessor_definitions["DEFINITIONS_CONFIG2"] = 'DEFINITIONS_CONFIG'
-
-                tc.generate()
-                gen.generate()
-
-            def imports(self):
-                if self.options["hello"].shared and self.settings.build_type == "Release":
-                    configuration = "ReleaseShared"
-                    if self.settings.arch == "x86_64":
-                        dst = "x64/%s" % configuration
-                    else:
-                        dst = configuration
-                else:
-                    configuration = self.settings.build_type
-                    dst = "%s/%s" % (self.settings.arch, configuration)
-                self.copy("*.dll", src="bin", dst=dst, keep_path=False)
-
-            def build(self):
-                msbuild = MSBuild(self)
-                msbuild.build("MyProject.sln")
-        """)
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"],
                            preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_BOTH2",
                                          "DEFINITIONS_BOTH_INT", "DEFINITIONS_CONFIG",
                                          "DEFINITIONS_CONFIG2", "DEFINITIONS_CONFIG_INT"])
+
+    @staticmethod
+    def _conanfile(force_import_generated_files=False):
+        return textwrap.dedent(f"""
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuildToolchain, MSBuild, MSBuildDeps
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                requires = "hello/0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def layout(self):
+                    self.folders.generators = "conan"
+                    self.folders.build = "."
+
+                def generate(self):
+                    tc = MSBuildToolchain(self)
+                    gen = MSBuildDeps(self)
+                    if self.options["hello"].shared and self.settings.build_type == "Release":
+                        tc.configuration = "ReleaseShared"
+                        gen.configuration = "ReleaseShared"
+
+                    tc.preprocessor_definitions["DEFINITIONS_BOTH"] = '"True"'
+                    tc.preprocessor_definitions["DEFINITIONS_BOTH2"] = 'DEFINITIONS_BOTH'
+                    tc.preprocessor_definitions["DEFINITIONS_BOTH_INT"] = 123
+                    if self.settings.build_type == "Debug":
+                        tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = '"Debug"'
+                        tc.preprocessor_definitions["DEFINITIONS_CONFIG_INT"] = 234
+                    else:
+                        tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = '"Release"'
+                        tc.preprocessor_definitions["DEFINITIONS_CONFIG_INT"] = 456
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG2"] = 'DEFINITIONS_CONFIG'
+
+                    tc.generate()
+                    gen.generate()
+
+                def imports(self):
+                    if self.options["hello"].shared and self.settings.build_type == "Release":
+                        configuration = "ReleaseShared"
+                        if self.settings.arch == "x86_64":
+                            dst = "x64/%s" % configuration
+                        else:
+                            dst = configuration
+                    else:
+                        configuration = self.settings.build_type
+                        dst = "%s/%s" % (self.settings.arch, configuration)
+                    self.copy("*.dll", src="bin", dst=dst, keep_path=False)
+
+                def build(self):
+                    msbuild = MSBuild(self)
+                    msbuild.build("MyProject.sln", force_import_generated_files={force_import_generated_files})
+        """)
 
     @staticmethod
     def _run_app(client, arch, build_type, shared=None):
@@ -422,16 +429,17 @@ class WinTest(unittest.TestCase):
             command_str = "x64\\%s\\MyApp.exe" % configuration
         client.run_command(command_str)
 
+    @pytest.mark.parametrize("force_import_generated_files", [False, True])
     @parameterized.expand([("Visual Studio", "15", "MT", "17"),
                            ("msvc", "191", "static", "17"),
                            ("msvc", "190", "static", "14")]
                           )
     @pytest.mark.tool_cmake
-    def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd):
+    def test_toolchain_win_vs2017(self, force_import_generated_files, compiler, version, runtime, cppstd):
         if self.vs_version != "15":
             pytest.skip("test for Visual Studio 2017")
         else:
-            self.check_toolchain_win(compiler, version, runtime, cppstd)
+            self.check_toolchain_win(force_import_generated_files, compiler, version, runtime, cppstd)
 
     @parameterized.expand([("Visual Studio", "17", "MT", "17"),
                            ("msvc", "193", "static", "17")]
@@ -442,7 +450,7 @@ class WinTest(unittest.TestCase):
         else:
             self.check_toolchain_win(compiler, version, runtime, cppstd)
 
-    def check_toolchain_win(self, compiler, version, runtime, cppstd):
+    def check_toolchain_win(self, force_import_generated_files, compiler, version, runtime, cppstd):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler", compiler),
                     ("compiler.version", version),
@@ -466,9 +474,9 @@ class WinTest(unittest.TestCase):
         client.run("create . hello/0.1@ %s" % (settings, ))
 
         # Prepare the actual consumer package
-        client.save({"conanfile.py": self.conanfile,
+        client.save({"conanfile.py": self._conanfile(force_import_generated_files),
                      "MyProject.sln": sln_file,
-                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj(force_import_generated_files),
                      "MyApp/MyApp.cpp": self.app,
                      "myprofile": profile},
                     clean_first=True)
@@ -495,8 +503,9 @@ class WinTest(unittest.TestCase):
         check_vs_runtime("Release/MyApp.exe", client, self.vs_version, build_type="Release",
                          static_runtime=static_runtime)
 
+    @pytest.mark.parametrize("force_import_generated_files", [False, True])
     @pytest.mark.tool_cmake
-    def test_toolchain_win_debug(self):
+    def test_toolchain_win_debug(self, force_import_generated_files):
         client = TestClient(path_with_spaces=False)
         settings = [("compiler",  "Visual Studio"),
                     ("compiler.version",  self.vs_version),
@@ -512,9 +521,9 @@ class WinTest(unittest.TestCase):
         client.run("create . hello/0.1@ %s" % (settings,))
 
         # Prepare the actual consumer package
-        client.save({"conanfile.py": self.conanfile,
+        client.save({"conanfile.py": self._conanfile(force_import_generated_files),
                      "MyProject.sln": sln_file,
-                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj(force_import_generated_files),
                      "MyApp/MyApp.cpp": self.app},
                     clean_first=True)
 
@@ -558,9 +567,9 @@ class WinTest(unittest.TestCase):
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
         # Prepare the actual consumer package
-        client.save({"conanfile.py": self.conanfile,
+        client.save({"conanfile.py": self._conanfile(),
                      "MyProject.sln": sln_file,
-                     "MyApp/MyApp.vcxproj": myapp_vcxproj,
+                     "MyApp/MyApp.vcxproj": myapp_vcxproj(),
                      "MyApp/MyApp.cpp": self.app},
                     clean_first=True)
 
