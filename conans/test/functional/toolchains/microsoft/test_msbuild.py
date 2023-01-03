@@ -519,6 +519,12 @@ class TestMSBuild:
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan -pr=myprofile" % (settings, ))
+        msbuild_arch = {
+            "x86": "x86",
+            "x86_64": "x64",
+            "armv7": "ARM",
+            "armv8": "ARM64",
+        }[arch]
         props_arch = {
             "x86": "Win32",
             "x86_64": "x64",
@@ -529,7 +535,7 @@ class TestMSBuild:
         assert f"conanfile.py: MSBuildToolchain created {props_file}" in client.out
         client.run("build . -if=conan")
         assert "Visual Studio {ide_year}".format(ide_year=self._vs_versions[vs_version]["ide_year"]) in client.out
-        assert f"[vcvarsall.bat] Environment initialized for: '{props_arch}'" in client.out
+        assert f"[vcvarsall.bat] Environment initialized for: '{msbuild_arch.lower()}'" in client.out
 
         self._run_app(client, arch, build_type)
         assert f"Hello World {build_type}" in client.out
@@ -542,7 +548,7 @@ class TestMSBuild:
                        "DEFINITIONS_CONFIG2": build_type,
                        "DEFINITIONS_CONFIG_INT": "234" if build_type == "Debug" else "456"})
         static_runtime = runtime == "static" or "MT" in runtime
-        check_vs_runtime("{}{}/MyApp.exe".format("" if arch == "x86" else f"{props_arch}/", build_type), client,
+        check_vs_runtime("{}{}/MyApp.exe".format("" if arch == "x86" else f"{msbuild_arch}/", build_type), client,
                          vs_version, build_type=build_type, static_runtime=static_runtime)
 
     @pytest.mark.parametrize(
