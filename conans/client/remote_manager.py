@@ -20,7 +20,7 @@ from conans.util.files import mkdir, tar_extract
 
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
-                                log_recipe_download, log_recipe_sources_download,
+                                log_recipe_sources_download,
                                 log_uncompressed_file)
 
 
@@ -64,7 +64,6 @@ class RemoteManager(object):
         ref_time = remote_refs[0].timestamp
         ref.timestamp = ref_time
         duration = time.time() - t1
-        log_recipe_download(ref, duration, remote.name, zipped_files)
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
         zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
