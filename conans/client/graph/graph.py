@@ -202,13 +202,14 @@ class Node(object):
 
     def serialize(self):
         result = OrderedDict()
+        # id-reference
         result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
         result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
-        result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
+        result["recipe"] = self.recipe
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
         result["invalid_build"] = self.cant_build is not False
@@ -218,7 +219,6 @@ class Node(object):
         result.update(self.conanfile.serialize())
         result["context"] = self.context
         result["test"] = self.test
-        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
 

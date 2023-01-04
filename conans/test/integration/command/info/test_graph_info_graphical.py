@@ -62,6 +62,7 @@ class InfoTest(unittest.TestCase):
         # arbitrary case - file will be named according to argument
         self.client.run("graph info . --format=dot")
         contents = self.client.stdout
+        print(contents)
 
         expected = textwrap.dedent("""
             "hello8/0.1@lasote/stable" -> "hello9/0.1@lasote/stable"
@@ -173,7 +174,7 @@ def test_user_templates():
     template_folder = os.path.join(c.cache_folder, 'templates')
     c.save({"graph.html": '{{ base_template_path }}',
             "graph.dot": '{{ base_template_path }}'}, path=template_folder)
-    c.run("graph info --requires=app/0.1 --format=html", assert_error=True)
+    c.run("graph info --requires=lib/0.1 --format=html")
     assert template_folder in c.stdout
-    c.run("graph info --requires=app/0.1 --format=dot", assert_error=True)
+    c.run("graph info --requires=lib/0.1 --format=dot")
     assert template_folder in c.stdout

@@ -29,6 +29,10 @@ class Requirement:
         self._direct = direct
         self.options = options
 
+    def serialize(self):
+        return {"ref": self.ref.repr_notime(),
+                "direct": self.direct}
+
     @property
     def skip(self):
         return not (self.headers or self.libs or self.run or self.build)
