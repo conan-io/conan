@@ -1,6 +1,7 @@
 import copy
 import os
 import time
+from threading import Thread
 
 from conan.api.output import ConanOutput
 
@@ -13,6 +14,7 @@ from conans.errors import ConanException, NotFoundException, PackageNotFoundExce
 from conans.model.package_ref import PkgReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
+from conans.util.thread import ExceptionThread
 
 
 class RestV2Methods(RestCommonMethods):
@@ -43,7 +45,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        self._download_and_save_files(urls, dest_folder, files, parallel=True)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -133,7 +135,7 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
 
-    def _download_and_save_files(self, urls, dest_folder, files):
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
@@ -142,12 +144,24 @@ class RestV2Methods(RestCommonMethods):
         if download_cache and not os.path.isabs(download_cache):
             raise ConanException("core.download:download_cache must be an absolute path")
         downloader = CachingFileDownloader(self.requester, download_cache=download_cache)
+        threads = []
+
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
-            downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
-                                verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
+            if parallel:
+                kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
+                          "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
+                          "auth": self.auth}
+                thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
+                threads.append(thread)
+                thread.start()
+            else:
+                downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
+                                    verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
+        for t in threads:
+            t.join()
 
     def remove_all_packages(self, ref):
         """ Remove all packages from the specified reference"""
