@@ -111,6 +111,8 @@ class TestFilters:
         c.run("graph info . --filter=license --format=json")
         assert "author" not in c.out
         assert '"license": "MIT"' in c.out
+        c.run("graph info . --filter=license --format=html", assert_error=True)
+        assert "Formatted output 'html' cannot filter fields" in c.out
 
 
 class TestJsonOutput:

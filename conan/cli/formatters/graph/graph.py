@@ -100,14 +100,11 @@ def _render_graph(graph, template, template_folder):
 def format_graph_html(result):
     graph = result["graph"]
     conan_api = result["conan_api"]
-    field_filter = result["field_filter"]
-    if field_filter and "requires" not in field_filter:
-        field_filter.append("requires")
     package_filter = result["package_filter"]
     serial = graph.serialize()
     # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
     #  instead of the native graph
-    serial = filter_graph(serial, package_filter, field_filter)
+    serial = filter_graph(serial, package_filter)
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
@@ -119,14 +116,11 @@ def format_graph_html(result):
 def format_graph_dot(result):
     graph = result["graph"]
     conan_api = result["conan_api"]
-    field_filter = result["field_filter"]
-    if field_filter and "requires" not in field_filter:
-        field_filter.append("requires")
     package_filter = result["package_filter"]
     serial = graph.serialize()
     # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
     #  instead of the native graph
-    serial = filter_graph(serial, package_filter, field_filter)
+    serial = filter_graph(serial, package_filter)
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
