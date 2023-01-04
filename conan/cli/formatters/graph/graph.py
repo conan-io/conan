@@ -91,6 +91,7 @@ class _Grapher(object):
 
 
 def _render_graph(graph, template, template_folder):
+    graph = _Grapher(graph)
     from conans import __version__ as client_version
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
     return template.render(graph=graph, base_template_path=template_folder, version=client_version)
@@ -104,11 +105,13 @@ def format_graph_html(result):
         field_filter.append("requires")
     package_filter = result["package_filter"]
     serial = graph.serialize()
+    # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
+    #  instead of the native graph
     serial = filter_graph(serial, package_filter, field_filter)
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
-    cli_out_write(_render_graph(serial, template, template_folder))
+    cli_out_write(_render_graph(graph, template, template_folder))
     if graph.error:
         raise graph.error
 
@@ -121,11 +124,13 @@ def format_graph_dot(result):
         field_filter.append("requires")
     package_filter = result["package_filter"]
     serial = graph.serialize()
+    # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
+    #  instead of the native graph
     serial = filter_graph(serial, package_filter, field_filter)
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
-    cli_out_write(_render_graph(serial, template, template_folder))
+    cli_out_write(_render_graph(graph, template, template_folder))
     if graph.error:
         raise graph.error
 

@@ -62,7 +62,6 @@ class InfoTest(unittest.TestCase):
         # arbitrary case - file will be named according to argument
         self.client.run("graph info . --format=dot")
         contents = self.client.stdout
-        print(contents)
 
         expected = textwrap.dedent("""
             "hello8/0.1@lasote/stable" -> "hello9/0.1@lasote/stable"

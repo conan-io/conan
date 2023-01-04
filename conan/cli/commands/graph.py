@@ -125,8 +125,6 @@ def graph_info(conan_api, parser, subparser, *args):
                              "--requires")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
-    if args.format is not None and (args.filter or args.package_filter):
-        raise ConanException("Formatted outputs cannot be filtered")
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None

@@ -77,18 +77,9 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        d = OrderedDict((require,
-                         ConanFileInterface(transitive.node.conanfile) if transitive.node else None)
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
-
-    def serialize(self):
-        result = []
-        for r, conanfile in self._data.items():
-            result.append({"require": r.serialize(),
-                           "depends": {"ref": str(conanfile.pref.ref) if conanfile else None}
-                           })
-        return result
 
     def filter(self, require_filter):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object
