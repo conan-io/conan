@@ -10,16 +10,24 @@ from conans.util.files import save, load
 
 
 def _build_preset(conanfile, multiconfig):
+    return _common_build_and_test_preset_fields(conanfile, multiconfig)
+
+
+def _test_preset(conanfile, multiconfig):
+    return _common_build_and_test_preset_fields(conanfile, multiconfig)
+
+
+def _common_build_and_test_preset_fields(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
     configure_preset_name = _configure_preset_name(conanfile, multiconfig)
-    ret = {"name": _build_preset_name(conanfile),
+    ret = {"name": _build_and_test_preset_name(conanfile),
            "configurePreset": configure_preset_name}
     if multiconfig:
         ret["configuration"] = build_type
     return ret
 
 
-def _build_preset_name(conanfile):
+def _build_and_test_preset_name(conanfile):
     build_type = conanfile.settings.get_safe("build_type")
     custom_conf = get_build_folder_custom_vars(conanfile)
     if custom_conf:
@@ -137,6 +145,7 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
           }
     multiconfig = is_multi_configuration(generator)
     ret["buildPresets"].append(_build_preset(conanfile, multiconfig))
+    ret["testPresets"].append(_test_preset(conanfile, multiconfig))
     _conf = _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig)
     ret["configurePresets"].append(_conf)
     return ret
@@ -173,6 +182,13 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
             data["buildPresets"][position] = build_preset
         else:
             data["buildPresets"].append(build_preset)
+
+        test_preset = _test_preset(conanfile, multiconfig)
+        position = _get_already_existing_preset_index(build_preset["name"], data["testPresets"])
+        if position is not None:
+            data["testPresets"][position] = test_preset
+        else:
+            data["testPresets"].append(test_preset)
 
         configure_preset = _configure_preset(conanfile, generator, cache_variables, toolchain_file,
                                              multiconfig)
