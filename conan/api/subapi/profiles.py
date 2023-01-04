@@ -68,9 +68,7 @@ class ProfilesAPI:
         profiles = []
         profiles_path = self._cache.profiles_path
         if os.path.exists(profiles_path):
-            for current_directory, directories, files in os.walk(profiles_path, followlinks=True):
-                directories[:] = [dir for dir in directories if os.path.relpath(
-                    os.path.join(current_directory, dir)) not in paths_to_ignore]
+            for current_directory, _, files in os.walk(profiles_path, followlinks=True):
                 files = filter(lambda file: os.path.relpath(
                     os.path.join(current_directory, file), profiles_path) not in paths_to_ignore, files)
 

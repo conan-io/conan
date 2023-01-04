@@ -11,21 +11,14 @@ def test_profile_path():
 
 def test_ignore_paths_when_listing_profiles():
     c = TestClient()
-    ignore_paths = ['.DS_Store']
+    ignore_path = '.DS_Store'
 
-    # Create files, dirs if necessary, at the ignore paths
-    for path in ignore_paths:
-        rel_file_path = os.path.join(c.cache.profiles_path, path)
-
-        base_dir = os.path.join(c.cache.profiles_path, os.path.dirname(path))
-        if base_dir:
-            os.makedirs(base_dir, exist_ok=True)
-            open(os.path.join(base_dir, os.path.basename(path)), 'w').close()
-        else:
-            open(rel_file_path, 'w').close()
+    # just in case
+    os.makedirs(c.cache.profiles_path, exist_ok=True)
+    # This a "touch" equivalent
+    open(os.path.join(c.cache.profiles_path, '.DS_Store'), 'w').close()
+    os.utime(os.path.join(c.cache.profiles_path, ".DS_Store"))
 
     c.run("profile list")
 
-    for path in ignore_paths:
-        rel_file_path = os.path.relpath(os.path.join(c.cache.profiles_path, path))
-        assert rel_file_path not in c.out
+    assert ignore_path not in c.out
