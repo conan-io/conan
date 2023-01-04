@@ -110,6 +110,14 @@ def _configure_preset(conanfile, generator, cache_variables, toolchain_file, mul
     return ret
 
 
+def _insert_preset(data, preset_name, preset):
+    position = _get_already_existing_preset_index(preset["name"], data[preset_name])
+    if position is not None:
+        data[preset_name][position] = preset
+    else:
+        data[preset_name].append(preset)
+
+
 def _forced_schema_2(conanfile):
     version = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:max_schema_version",
                                  check_type=int)
@@ -177,27 +185,14 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
     if os.path.exists(preset_path):
         data = json.loads(load(preset_path))
         build_preset = _build_preset(conanfile, multiconfig)
-        position = _get_already_existing_preset_index(build_preset["name"], data["buildPresets"])
-        if position is not None:
-            data["buildPresets"][position] = build_preset
-        else:
-            data["buildPresets"].append(build_preset)
+        _insert_preset(data, "buildPresets", build_preset)
 
         test_preset = _test_preset(conanfile, multiconfig)
-        position = _get_already_existing_preset_index(build_preset["name"], data["testPresets"])
-        if position is not None:
-            data["testPresets"][position] = test_preset
-        else:
-            data["testPresets"].append(test_preset)
+        _insert_preset(data, "testPresets", test_preset)
 
         configure_preset = _configure_preset(conanfile, generator, cache_variables, toolchain_file,
                                              multiconfig)
-        position = _get_already_existing_preset_index(configure_preset["name"],
-                                                      data["configurePresets"])
-        if position is not None:
-            data["configurePresets"][position] = configure_preset
-        else:
-            data["configurePresets"].append(configure_preset)
+        _insert_preset(data, "configurePresets", configure_preset)
     else:
         data = _contents(conanfile, toolchain_file, cache_variables, generator)
 
