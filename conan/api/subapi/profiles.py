@@ -71,8 +71,8 @@ class ProfilesAPI:
             for current_directory, directories, files in os.walk(profiles_path, followlinks=True):
                 directories[:] = [dir for dir in directories if os.path.relpath(
                     os.path.join(current_directory, dir)) not in paths_to_ignore]
-                files = list(filter(lambda file: os.path.relpath(
-                    os.path.join(current_directory, file), profiles_path) not in paths_to_ignore, files))
+                files = filter(lambda file: os.path.relpath(
+                    os.path.join(current_directory, file), profiles_path) not in paths_to_ignore, files)
 
                 for filename in files:
                     rel_path = os.path.relpath(os.path.join(current_directory, filename),
