@@ -64,7 +64,7 @@ class MSBuildToolchain(object):
         self.properties = {}
         check_using_build_profile(self._conanfile)
 
-    def _name_condition(self, settings):
+    def _name_condition(self):
         props = [("Configuration", self.configuration),
                  ("Platform", self.platform)]
 
@@ -73,7 +73,7 @@ class MSBuildToolchain(object):
         return name.lower(), condition
 
     def generate(self):
-        name, condition = self._name_condition(self._conanfile.settings)
+        name, condition = self._name_condition()
         config_filename = "conantoolchain{}.props".format(name)
         # Writing the props files
         self._write_config_toolchain(config_filename)
