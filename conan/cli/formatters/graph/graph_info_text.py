@@ -4,7 +4,7 @@ from collections import OrderedDict
 from conan.api.output import ConanOutput
 
 
-def filter_graph(graph, package_filter, field_filter):
+def filter_graph(graph, package_filter, field_filter=None):
     if package_filter is not None:
         graph["nodes"] = [n for n in graph["nodes"]
                           if any(fnmatch.fnmatch(n["ref"] or "", p) for p in package_filter)]
