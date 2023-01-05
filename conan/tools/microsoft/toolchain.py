@@ -12,6 +12,15 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
+def arch_to_vcproj_platform(arch):
+    return {
+        "x86": "Win32",
+        "x86_64": "x64",
+        "armv7": "ARM",
+        "armv8": "ARM64",
+    }.get(arch)
+
+
 class MSBuildToolchain(object):
 
     filename = "conantoolchain.props"
@@ -52,12 +61,7 @@ class MSBuildToolchain(object):
         self.cflags = []
         self.ldflags = []
         self.configuration = conanfile.settings.build_type
-        # TODO: refactor, put in common with MSBuildDeps. Beware this is != msbuild_arch
-        #  because of Win32
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
+        self.platform = arch_to_vcproj_platform(str(conanfile.settings.arch))
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile)
