@@ -21,7 +21,10 @@ def _build_preset(conanfile, multiconfig):
 
 def _build_preset_name(conanfile):
     build_type = conanfile.settings.get_safe("build_type")
-    custom_conf = get_build_folder_custom_vars(conanfile)
+    custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
+    if user_defined_build:
+        return custom_conf
+
     if custom_conf:
         if build_type:
             return "{}-{}".format(custom_conf, build_type.lower())
@@ -32,7 +35,10 @@ def _build_preset_name(conanfile):
 
 def _configure_preset_name(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
-    custom_conf = get_build_folder_custom_vars(conanfile)
+    custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
+
+    if user_defined_build:
+        return custom_conf
 
     if multiconfig or not build_type:
         return "default" if not custom_conf else custom_conf

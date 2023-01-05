@@ -168,7 +168,8 @@ def test_cmake_layout_external_sources():
 
     # Local flow
     client.run("install . foo/1.0 -s os=Linux")
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators", "generate.txt"))
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "build", "Release", "generators", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
@@ -294,4 +295,4 @@ def test_cmake_layout_custom_build_folder():
     client.save({"conanfile.py": conanfile})
     client.run("install .")
     assert os.path.exists(os.path.join(client.current_folder,
-                                       "mybuild/generators/conan_toolchain.cmake"))
+                                       "mybuild/Release/generators/conan_toolchain.cmake"))

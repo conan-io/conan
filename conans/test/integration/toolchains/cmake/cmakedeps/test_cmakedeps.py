@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -225,9 +226,14 @@ def test_dependency_props_from_consumer():
 
     client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
 
-    module_file = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_module_file_nameTargets.cmake")
-    components_module = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_name-Target-release.cmake")
-    config_file = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_nameTargets.cmake")
+    if platform.system() != "Windows":
+        gen_folder = os.path.join(client.current_folder, "build", "Release", "generators")
+    else:
+        gen_folder = os.path.join(client.current_folder, "build", "generators")
+
+    module_file = os.path.join(gen_folder, "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(gen_folder, "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(gen_folder, "custom_bar_file_nameTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
     client.run("create bar.py bar/1.0@")
@@ -311,19 +317,20 @@ def test_props_from_consumer_build_context_activated():
 
     client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
 
-    module_file = os.path.join(client.current_folder, "build", "generators",
-                               "module-custom_bar_module_file_nameTargets.cmake")
-    components_module = os.path.join(client.current_folder, "build", "generators",
-                                     "custom_bar_file_name-Target-release.cmake")
-    config_file = os.path.join(client.current_folder, "build", "generators",
-                               "custom_bar_file_nameTargets.cmake")
+    if platform.system() != "Windows":
+        gen_folder = os.path.join(client.current_folder, "build", "Release", "generators")
+    else:
+        gen_folder = os.path.join(client.current_folder, "build", "generators")
 
-    module_file_build = os.path.join(client.current_folder, "build", "generators",
+    module_file = os.path.join(gen_folder, "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(gen_folder, "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(gen_folder, "custom_bar_file_nameTargets.cmake")
+
+    module_file_build = os.path.join(gen_folder,
                                      "module-custom_bar_build_module_file_name_BUILDTargets.cmake")
-    components_module_build = os.path.join(client.current_folder, "build", "generators",
+    components_module_build = os.path.join(gen_folder,
                                            "custom_bar_build_file_name_BUILD-Target-release.cmake")
-    config_file_build = os.path.join(client.current_folder, "build", "generators",
-                                     "custom_bar_build_file_name_BUILDTargets.cmake")
+    config_file_build = os.path.join(gen_folder, "custom_bar_build_file_name_BUILDTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
     client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
