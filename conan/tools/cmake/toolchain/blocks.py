@@ -221,7 +221,8 @@ class LinkerScriptsBlock(Block):
         """)
 
     def context(self):
-        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts")
+        linker_scripts = self._conanfile.conf.get(
+            "tools.build:linker_scripts", check_type=list, default=[])
         if not linker_scripts:
             return
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
