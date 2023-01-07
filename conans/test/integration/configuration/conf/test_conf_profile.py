@@ -182,6 +182,8 @@ def test_config_package_append(client):
         class Pkg(ConanFile):
             def generate(self):
                 self.output.info(f"MYCONF: {self.conf.get('user.myteam:myconf')}")
+            def build(self):
+                self.output.info(f"MYCONFBUILD: {self.conf.get('user.myteam:myconf')}")
             """)
     client.save({"profile1": profile1,
                  "profile2": profile2,
@@ -190,3 +192,8 @@ def test_config_package_append(client):
     assert "conanfile.py (mypkg/0.1): MYCONF: ['a', 'b', 'c', 'd']" in client.out
     client.run("install . mydep/0.1@ -pr=profile2")
     assert "conanfile.py (mydep/0.1): MYCONF: ['e', 'a', 'b', 'c']" in client.out
+
+    client.run("create . mypkg/0.1@ -pr=profile2")
+    assert "mypkg/0.1: MYCONFBUILD: ['a', 'b', 'c', 'd']" in client.out
+    client.run("create . mydep/0.1@ -pr=profile2")
+    assert "mydep/0.1: MYCONFBUILD: ['e', 'a', 'b', 'c']" in client.out
