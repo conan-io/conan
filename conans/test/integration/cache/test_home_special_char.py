@@ -7,8 +7,8 @@ import textwrap
 
 def test_home_special_chars():
     path_chars = "päthñç$"
-    cache_folder = os.path.join("C:\\Tmp", path_chars)
-    current_folder = os.path.join("C:\\Tmp", path_chars)
+    cache_folder = os.path.join(temp_folder(), path_chars)
+    current_folder = os.path.join(temp_folder(), path_chars)
     c = TestClient(cache_folder, current_folder)
 
     conan_file = textwrap.dedent("""
