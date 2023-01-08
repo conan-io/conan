@@ -299,8 +299,14 @@ def test_install_output_directories():
     p_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.exists(os.path.join(p_folder, "mylibs"))
     assert not os.path.exists(os.path.join(p_folder, "lib"))
+
     b_folder = client.get_latest_pkg_layout(pref).build()
-    toolchain = client.load(os.path.join(b_folder, "build", "generators", "conan_toolchain.cmake"))
+    if platform.system() != "Windows":
+        gen_folder = os.path.join(b_folder, "build", "Release", "generators")
+    else:
+        gen_folder = os.path.join(b_folder, "build", "generators")
+
+    toolchain = client.load(os.path.join(gen_folder, "conan_toolchain.cmake"))
     assert 'set(CMAKE_INSTALL_LIBDIR "mylibs")' in toolchain
 
 
@@ -963,14 +969,14 @@ def test_cmake_presets_with_conanfile_txt():
     assert "Hello World Release!" in c.out
 
 
-def test_cmake_presets_forbidden_build_type():
+def test_cmake_presets_not_forbidden_build_type():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
     settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing", "settings.build_type"]\''
-    client.run("install . {}".format(settings_layout), assert_error=True)
-    assert "Error, don't include 'settings.build_type' in the " \
-           "'tools.cmake.cmake_layout:build_folder_vars' conf" in client.out
+    client.run("install . {}".format(settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "build/release/generators/conan_toolchain.cmake"))
 
 
 def test_resdirs_cmake_install():
@@ -1116,7 +1122,8 @@ def test_cmake_toolchain_vars_when_option_declared():
     # the CMakeLists
     fpic_option = "-o mylib/*:fPIC=False" if platform.system() != "Windows" else ""
     t.run(f"install . -o mylib/*:shared=False {fpic_option}")
-    t.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    folder = "build/generators" if platform.system() == "Windows" else "build/Release/generators"
+    t.run_command(f"cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE={folder}/conan_toolchain.cmake")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: OFF" in t.out
 
@@ -1185,8 +1192,6 @@ def test_find_program_for_tool_requires():
                 "build_profile": build_profile
                 })
 
-    xxx = client.get_default_build_profile()
-
     client.run("create . -pr:b build_profile -pr:h build_profile")
     build_context_package_folder = re.search(r"Package folder ([\w\W]+).conan2([\w\W]+)", str(client.out)).group(2).strip()
     build_context_package_folder = build_context_package_folder.replace("\\", "/")
@@ -1227,7 +1232,7 @@ def test_find_program_for_tool_requires():
     client.run("install conanfile_consumer.py -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
 
     with client.chdir("build"):
-        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+        client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
         # Verify binary executable is found from build context package,
         # and library comes from host context package
         assert f"{build_context_package_folder}/bin/foobin" in client.out
