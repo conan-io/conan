@@ -302,12 +302,12 @@ class EnvVars:
             os.environ.update(old_env)
 
     def save_bat(self, file_location, generate_deactivate=True):
-        filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        _, filename = os.path.split(file_location)
+        deactivate_file = "deactivate_{}".format(filename)
         deactivate = textwrap.dedent("""\
             setlocal
-            echo @echo off > "{deactivate_file}"
-            echo echo Restoring environment >> "{deactivate_file}"
+            echo @echo off > "%~dp0/{deactivate_file}"
+            echo echo Restoring environment >> "%~dp0/{deactivate_file}"
             for %%v in ({vars}) do (
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
@@ -317,7 +317,7 @@ class EnvVars:
                     )
                 )
                 if not defined foundenvvar (
-                    echo set %%v=>> "{deactivate_file}"
+                    echo set %%v=>> "%~dp0/{deactivate_file}"
                 )
             )
             endlocal
@@ -335,9 +335,10 @@ class EnvVars:
         save(file_location, content)
 
     def save_ps1(self, file_location, generate_deactivate=True,):
-        filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        _, filename = os.path.split(file_location)
+        deactivate_file = "deactivate_{}".format(filename)
         deactivate = textwrap.dedent("""\
+            Push-Location $PSScriptRoot
             "echo `"Restoring environment`"" | Out-File -FilePath "{deactivate_file}"
             $vars = (Get-ChildItem env:*).name
             $updated_vars = @({vars})
@@ -354,6 +355,7 @@ class EnvVars:
                     Add-Content "{deactivate_file}" "`nif (Test-Path env:$var) {{ Remove-Item env:$var }}"
                 }}
             }}
+            Pop-Location
         """).format(
             deactivate_file=deactivate_file,
             vars=",".join(['"{}"'.format(var) for var in self._values.keys()])
@@ -375,8 +377,8 @@ class EnvVars:
         save(file_location, content)
 
     def save_sh(self, file_location, generate_deactivate=True):
-        filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        _, filename = os.path.split(file_location)
+        deactivate_file = "deactivate_{}".format(filename)
         deactivate = textwrap.dedent("""\
            echo "echo Restoring environment" > "{deactivate_file}"
            for v in {vars}
