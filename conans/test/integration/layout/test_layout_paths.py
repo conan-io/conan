@@ -30,10 +30,7 @@ def test_editable_layout_paths():
     # It doesn't crash anymore
 
     assert "dep/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709 - Editable" in c.out
-    arch = c.get_default_host_profile().settings['arch']
-    print(os.listdir(c.current_folder))
-    print(os.listdir(os.path.join(c.current_folder, "pkg")))
-    data = c.load(f"pkg/dep-release-{arch}-data.cmake")
+    data = c.load(f"pkg/dep-release-x86_64-data.cmake")
 
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in data
     pc = c.load("pkg/dep.pc")
