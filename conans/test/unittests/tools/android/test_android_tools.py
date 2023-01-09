@@ -3,7 +3,7 @@ from conan.tools.android import android_abi
 
 
 def test_tools_android_abi():
-    settings_linux = MockSettings({"os": "Linux", "arch": "x86_64"})
+    settings_linux = MockSettings({"os": "Linux", "arch": "foo"})
 
     for (arch, expected) in [
         ("armv5el", "armeabi"),
@@ -21,16 +21,44 @@ def test_tools_android_abi():
         conanfile = ConanFileMock()
         settings_android = MockSettings({"os": "Android", "arch": arch})
 
+        # 1 profile (legacy native build)
         conanfile.settings = settings_android
         assert android_abi(conanfile) == expected
         assert android_abi(conanfile, context="host") == expected
         assert android_abi(conanfile, context="build") == expected
         assert android_abi(conanfile, context="target") == expected
 
-        conanfile.settings = settings_linux
+        # 2 profiles
+        ## native build
+        conanfile.settings = settings_android
+        conanfile.settings_host = settings_android
         conanfile.settings_build = settings_android
+        assert android_abi(conanfile, context="host") == expected
         assert android_abi(conanfile, context="build") == expected
+        assert android_abi(conanfile, context="target") == expected
 
+        ## cross-build from Android to Linux (quite hypothetical)
+        conanfile.settings = settings_linux
+        conanfile.settings_host = settings_linux
+        conanfile.settings_build = settings_android
+        assert android_abi(conanfile, context="host") != expected
+        assert android_abi(conanfile, context="build") == expected
+        assert android_abi(conanfile, context="target") != expected
+
+        ## cross-build a recipe from Linux to Android:
+        ### test android_abi in recipe itself
+        conanfile.settings = settings_android
+        conanfile.settings_host = settings_android
+        conanfile.settings_build = settings_linux
+        assert android_abi(conanfile, context="host") == expected
+        assert android_abi(conanfile, context="build") != expected
+        assert android_abi(conanfile, context="target") == expected
+
+        ### test android_abi in "compiler recipe" (ie a android-ndk recipe in tool_requires of recipe being cross-build)
+        conanfile.settings = settings_linux
+        conanfile.settings_host = settings_linux
         conanfile.settings_build = settings_linux
         conanfile.settings_target = settings_android
+        assert android_abi(conanfile, context="host") != expected
+        assert android_abi(conanfile, context="build") != expected
         assert android_abi(conanfile, context="target") == expected
