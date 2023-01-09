@@ -32,7 +32,7 @@ This is the **developer/maintainer** documentation. For user documentation, go t
 
 
 +-------------------------+
-| **develop2**             |
+| **develop2**            |
 +=========================+
 | |Build Status Develop|  |
 +-------------------------+
