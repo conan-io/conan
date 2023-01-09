@@ -3,7 +3,7 @@ from typing import Dict
 from conan.api.model import Remote, SelectBundle
 from conan.internal.api.select_pattern import ListPatternMode
 from conan.internal.conan_app import ConanApp
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_cache_packages_binary_info, filter_packages
@@ -145,7 +145,10 @@ class ListAPI:
                     if search_mode in (ListPatternMode.SHOW_LATEST_PREV,
                                        ListPatternMode.SHOW_ALL_PREVS):
                         if pattern.is_latest_prev:
-                            prevs = [self.conan_api.list.latest_package_revision(pref, remote)]
+                            prev = self.conan_api.list.latest_package_revision(pref, remote)
+                            if prev is None:
+                                raise NotFoundException(f"Binary package not found: '{pref}")
+                            prevs = [prev]
                         else:
                             prevs = self.conan_api.list.package_revisions(pref, remote)
                             prevs = pattern.filter_prevs(prevs)

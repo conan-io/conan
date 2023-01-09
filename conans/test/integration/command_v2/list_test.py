@@ -181,10 +181,10 @@ class TestListPrefs:
         expected = textwrap.dedent(f"""\
             zli
               zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270 .*
+                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270
                   settings:
                     os=Linux
-                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715 .*
+                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                   settings:
                     os=Windows
                """)
@@ -196,7 +196,7 @@ class TestListPrefs:
         expected = textwrap.dedent("""\
             conf
               conf/1.0#e4e1703f72ed07c15d73a555ec3a2fa1 .*
-                PID: 78c6fa29e8164ce399087ad6067c8f9e2f1c4ad0 .*
+                PID: 78c6fa29e8164ce399087ad6067c8f9e2f1c4ad0
                   conf:
                     tools.build:cxxflags=\['--flag1'\]
             """)
@@ -208,7 +208,7 @@ class TestListPrefs:
         expected = textwrap.dedent("""\
           test
             test/1.0#7df6048d3cb39b75618717987fb96453 .*
-              PID: 81d0d9a6851a0208c2bb35fdb34eb156359d939b .*
+              PID: 81d0d9a6851a0208c2bb35fdb34eb156359d939b
                 requires:
                   zlix/1.Y.Z
                 python_requires:
@@ -222,13 +222,13 @@ class TestListPrefs:
         expected = textwrap.dedent(f"""\
             zli
               zli/1.0.0#f034dc90894493961d92dd32a9ee3b78 .*
-                PID: da39a3ee5e6b4b0d3255bfef95601890afd80709 .*
+                PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
                   Empty package information
               zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270 .*
+                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270
                   settings:
                     os=Linux
-                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715 .*
+                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                   settings:
                     os=Windows
                """)
