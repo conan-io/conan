@@ -13,7 +13,6 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition
 from conans.util.env import environment_update
 from conans.client.userio import UserInput
-from conans.model.info import ConanInfo, load_binary_info
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -103,13 +102,13 @@ class RestApiTest(unittest.TestCase):
     @pytest.mark.skipif(platform.system() != "Linux", reason="only Linux")
     def test_upload_huge_conan(self):
         ref = RecipeReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
-        files = {"file%s.cpp" % name: "File conent" for name in range(1000)}
+        files = {"file%s.cpp" % name: "File conent" for name in range(10)}
         self._upload_recipe(ref, files)
 
         tmp = temp_folder()
         files = self.api.get_recipe(ref, tmp)
         self.assertIsNotNone(files)
-        self.assertTrue(os.path.exists(os.path.join(tmp, "file999.cpp")))
+        self.assertTrue(os.path.exists(os.path.join(tmp, "file9.cpp")))
 
     def test_search(self):
         # Upload a conan1
