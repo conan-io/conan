@@ -334,6 +334,8 @@ class Requirement:
         if self.test:
             downstream_require.test = True
 
+        # If the current one is resolving conflicts, the downstream one will be too
+        downstream_require.force = require.force
         downstream_require.direct = False
         return downstream_require
 

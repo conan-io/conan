@@ -44,18 +44,6 @@ def log_package_upload(pref, duration, files_uploaded, remote):
     ConanOutput().trace(data)
 
 
-def log_recipe_download(ref, duration, remote_name, files_downloaded):
-    assert(isinstance(ref, RecipeReference))
-    files_downloaded = files_downloaded or {}
-    files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
-
-    data = {"_action": "DOWNLOADED_RECIPE", "_id": repr(ref),
-                                                    "duration": duration,
-                                                    "remote": remote_name,
-                                                    "files": files_downloaded}
-    ConanOutput().trace(data)
-
-
 def log_recipe_sources_download(ref, duration, remote_name, files_downloaded):
     assert(isinstance(ref, RecipeReference))
     files_downloaded = files_downloaded or {}
@@ -72,12 +60,6 @@ def log_package_download(pref, duration, remote, files_downloaded):
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     data = {"_action": "DOWNLOADED_PACKAGE", "_id": repr(pref), "duration": duration,
             "remote": remote.name, "files": files_downloaded}
-    ConanOutput().trace(data)
-
-
-def log_recipe_got_from_local_cache(ref):
-    assert(isinstance(ref, RecipeReference))
-    data = {"_action": "GOT_RECIPE_FROM_LOCAL_CACHE", "_id": repr(ref)}
     ConanOutput().trace(data)
 
 
@@ -115,17 +97,6 @@ def log_client_rest_api_call(url, method, duration, headers):
 def log_conan_api_call(name, kwargs):
     parameters = copy.copy(kwargs)  # Ensure we don't alter any app object like args
     data = {"_action": "CONAN_API", "name": name, "parameters": parameters}
-    ConanOutput().trace(data)
-
-
-def log_command(name, kwargs):
-    parameters = copy.copy(kwargs)  # Ensure we don't alter any app object like args
-    data = {"_action": "COMMAND", "name": name, "parameters": parameters}
-    ConanOutput().trace(data)
-
-
-def log_exception(exc, message):
-    data = {"_action": "EXCEPTION", "class": str(exc.__class__.__name__), "message": message}
     ConanOutput().trace(data)
 
 

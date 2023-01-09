@@ -101,17 +101,31 @@ class TestFilters:
         assert "license" in c.out
         assert "author: myself" in c.out
 
+    def test_filter_fields_json(self):
+        # The --filter arg should work, specifying which fields to show only
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile()
+               .with_class_attribute("author = 'myself'")
+               .with_class_attribute("license = 'MIT'")
+               .with_class_attribute("url = 'http://url.com'")})
+        c.run("graph info . --filter=license --format=json")
+        assert "author" not in c.out
+        assert '"license": "MIT"' in c.out
+        c.run("graph info . --filter=license --format=html", assert_error=True)
+        assert "Formatted output 'html' cannot filter fields" in c.out
+
 
 class TestJsonOutput:
-    def test_json_not_filtered(self):
+    def test_json_package_filter(self):
         # Formatted output like json or html doesn't make sense to be filtered
         client = TestClient()
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"conanfile.py": conanfile})
-        client.run("graph info . --filter=license --format=json", assert_error=True)
-        assert "Formatted outputs cannot be filtered" in client.out
-        client.run("graph info . --package-filter=license --format=html", assert_error=True)
-        assert "Formatted outputs cannot be filtered" in client.out
+        client.run("graph info . --package-filter=nothing --format=json")
+        assert '"nodes": []' in client.out
+        client.run("graph info . --package-filter=pkg* --format=json")
+        graph = json.loads(client.stdout)
+        assert graph["nodes"][0]["ref"] == "pkg/0.1"
 
     def test_json_info_outputs(self):
         client = TestClient()

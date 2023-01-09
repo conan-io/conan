@@ -3,7 +3,6 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE
                                        RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
 from conans.errors import ConanException, NotFoundException
-from conans.util.tracer import log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
@@ -19,10 +18,6 @@ class ConanProxy(object):
         # with layout.conanfile_write_lock(self._out):
         result = self._get_recipe(ref, remotes)
         conanfile_path, status, remote, new_ref = result
-
-        if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
-            log_recipe_got_from_local_cache(new_ref)
-
         return conanfile_path, status, remote, new_ref
 
     # return the remote where the recipe was found or None if the recipe was not found

@@ -500,7 +500,7 @@ def test_system_dep():
     files = pkg_cmake("mylib", "0.1", requires=["zlib/0.1"])
     files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("find_package(zlib)",
                                                               "find_package(ZLIB)")
-    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("zlib::zlib","ZLIB::ZLIB")
+    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("zlib::zlib", "ZLIB::ZLIB")
     client.save({os.path.join("mylib", name): content for name, content in files.items()})
     files = pkg_cmake("consumer", "0.1", requires=["mylib/0.1"])
     client.save({os.path.join("consumer", name): content for name, content in files.items()})
@@ -512,7 +512,7 @@ def test_system_dep():
     client.run("install consumer")
     if platform.system() != "Windows":
         host_arch = client.get_default_host_profile().settings['arch']
-        data = os.path.join(f"consumer/build/generators/mylib-release-{host_arch}-data.cmake")
+        data = f"consumer/build/Release/generators/mylib-release-{host_arch}-data.cmake"
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
 

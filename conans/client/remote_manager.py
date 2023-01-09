@@ -20,7 +20,7 @@ from conans.util.files import mkdir, tar_extract
 
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
-                                log_recipe_download, log_recipe_sources_download,
+                                log_recipe_sources_download,
                                 log_uncompressed_file)
 
 
@@ -35,14 +35,10 @@ class RemoteManager(object):
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
 
-    def get_recipe_snapshot(self, ref, remote):
-        assert ref.revision, "get_recipe_snapshot requires revision"
-        return self._call_remote(remote, "get_recipe_snapshot", ref)
-
-    def upload_recipe(self, ref, files_to_upload, deleted, remote):
+    def upload_recipe(self, ref, files_to_upload, remote):
         assert isinstance(ref, RecipeReference)
         assert ref.revision, "upload_recipe requires RREV"
-        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted)
+        self._call_remote(remote, "upload_recipe", ref, files_to_upload)
 
     def upload_package(self, pref, files_to_upload, remote):
         assert pref.ref.revision, "upload_package requires RREV"
@@ -68,7 +64,6 @@ class RemoteManager(object):
         ref_time = remote_refs[0].timestamp
         ref.timestamp = ref_time
         duration = time.time() - t1
-        log_recipe_download(ref, duration, remote.name, zipped_files)
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
         zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
