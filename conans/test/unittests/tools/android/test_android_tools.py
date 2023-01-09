@@ -33,6 +33,7 @@ def test_tools_android_abi():
         conanfile.settings = settings_android
         conanfile.settings_host = settings_android
         conanfile.settings_build = settings_android
+        assert android_abi(conanfile) == expected
         assert android_abi(conanfile, context="host") == expected
         assert android_abi(conanfile, context="build") == expected
         assert android_abi(conanfile, context="target") == expected
@@ -41,6 +42,7 @@ def test_tools_android_abi():
         conanfile.settings = settings_linux
         conanfile.settings_host = settings_linux
         conanfile.settings_build = settings_android
+        assert android_abi(conanfile) != expected
         assert android_abi(conanfile, context="host") != expected
         assert android_abi(conanfile, context="build") == expected
         assert android_abi(conanfile, context="target") != expected
@@ -50,6 +52,7 @@ def test_tools_android_abi():
         conanfile.settings = settings_android
         conanfile.settings_host = settings_android
         conanfile.settings_build = settings_linux
+        assert android_abi(conanfile) == expected
         assert android_abi(conanfile, context="host") == expected
         assert android_abi(conanfile, context="build") != expected
         assert android_abi(conanfile, context="target") == expected
@@ -59,6 +62,7 @@ def test_tools_android_abi():
         conanfile.settings_host = settings_linux
         conanfile.settings_build = settings_linux
         conanfile.settings_target = settings_android
+        assert android_abi(conanfile) != expected
         assert android_abi(conanfile, context="host") != expected
         assert android_abi(conanfile, context="build") != expected
         assert android_abi(conanfile, context="target") == expected
