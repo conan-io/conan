@@ -38,9 +38,7 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                     raise NotFoundException("")
                 content = load(info_path)
                 # From Conan 1.48 the conaninfo.txt is sent raw.
-                result[package_id] = {"content": content,
-                                      "prev": pref.revision,
-                                      "timestamp": revision_entry.timestamp}
+                result[package_id] = {"content": content}
             except Exception as exc:  # FIXME: Too wide
                 ConanOutput().error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):

@@ -38,6 +38,9 @@ class ListAPI:
         return results
 
     def latest_package_revision(self, pref: PkgReference, remote=None):
+        # TODO: This returns None if the given package_id is not existing. It should probably
+        #  raise NotFound, but to keep aligned with the above ``latest_recipe_revision`` which
+        #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
         app = ConanApp(self.conan_api.cache_folder)
@@ -45,13 +48,6 @@ class ListAPI:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
             ret = app.cache.get_latest_package_reference(pref)
-        if ret is None:
-            # if we are providing a package_id and asking for latest, it must have a prev,
-            # otherwise it is an error
-            # But this is not the same as for ``latest_recipe_revision``
-            # TODO: Move this to remote and cache logic
-            raise ConanException(f"Binary package not found: '{pref}'")
-
         return ret
 
     def package_revisions(self, pref: PkgReference, remote: Remote=None):
@@ -103,9 +99,10 @@ class ListAPI:
         search_mode = search_mode or pattern.mode
         select_bundle = SelectBundle()
         refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+        pattern.check_refs(refs)
 
         # Show only the recipe references
-        if refs and search_mode == ListPatternMode.SHOW_REFS:
+        if search_mode == ListPatternMode.SHOW_REFS:
             select_bundle.add_refs(refs)
             return select_bundle
 
@@ -138,17 +135,16 @@ class ListAPI:
                 # Show all the package IDs and their configurations
                 if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
                     # add pref and its package configuration
+                    # remove timestamp, as server does not provide it
+                    for p in prefs:
+                        p.timestamp = None
                     select_bundle.add_prefs(prefs, configurations=packages)
                     continue
 
                 for pref in prefs:
                     if search_mode in (ListPatternMode.SHOW_LATEST_PREV,
                                        ListPatternMode.SHOW_ALL_PREVS):
-                        pref.revision = None  # Need to invalidate
                         if pattern.is_latest_prev:
-                            # TODO: This might be unnecessary, if we
-                            #  called before package_configurations() that already
-                            #  returns latest prev
                             prevs = [self.conan_api.list.latest_package_revision(pref, remote)]
                         else:
                             prevs = self.conan_api.list.package_revisions(pref, remote)

@@ -108,9 +108,11 @@ class TestListRefs:
     @pytest.mark.parametrize("remote", [True, False])
     @pytest.mark.parametrize("pattern", ["nomatch", "nomatch*", "nomatch/*"])
     def test_list_recipe_no_match(self, client, pattern, remote):
-        expected = textwrap.dedent(f"""\
-            There are no matching recipe references
-            """)
+        if pattern == "nomatch":  # EXACT IS AN ERROR
+            expected = "ERROR: Recipe 'nomatch' not found"
+        else:
+            expected = "There are no matching recipe references"
+
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
@@ -309,11 +311,11 @@ class TestListRemotes:
     def test_search_no_matching_recipes(self, client):
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipe references
+          ERROR: Recipe 'whatever/0.1' not found
         default:
-          There are no matching recipe references
+          ERROR: Recipe 'whatever/0.1' not found
         other:
-          There are no matching recipe references
+          ERROR: Recipe 'whatever/0.1' not found
         """)
 
         client.run('list -c -r="*" whatever/0.1')
