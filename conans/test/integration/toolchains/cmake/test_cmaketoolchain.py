@@ -416,7 +416,6 @@ def test_cmake_presets_multiconfig():
     assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
     assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
 
-
     # Repeat one
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=Debug --profile:h=profile")
