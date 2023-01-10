@@ -312,7 +312,7 @@ class EnvVars:
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if /I "%%a" == "%%v" (
-                        echo set "%%a=%%b">> "{deactivate_file}"
+                        echo set "%%a=%%b">> "%~dp0/{deactivate_file}"
                         set foundenvvar=1
                     )
                 )
