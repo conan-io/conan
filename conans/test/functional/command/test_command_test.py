@@ -1,4 +1,5 @@
 import os
+import platform
 import time
 import unittest
 
@@ -26,5 +27,6 @@ class ConanTestTest(unittest.TestCase):
         client.run("test test_package hello/0.1@lasote/stable -s hello:build_type=Debug "
                    "--build missing")
         self.assertIn('hello/0.1: Hello World Debug!', client.out)
+        subfolder = "Release" if platform.system() != "Windows" else ""
         assert os.path.exists(os.path.join(client.current_folder, "test_package",
-                                           "build", "generators", "conaninfo.txt"))
+                                           "build", subfolder, "generators", "conaninfo.txt"))
