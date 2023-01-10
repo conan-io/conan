@@ -3,10 +3,10 @@ from unittest.mock import patch
 import pytest
 
 from conan.tools.gnu import AutotoolsToolchain
+from conan.tools.gnu.autotoolstoolchain import _options_to_string
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings
-from conans.tools import args_to_string
 
 
 @pytest.fixture()
@@ -159,7 +159,6 @@ def test_check_configure_args_overwriting_and_deletion(save_args, cross_building
     configure_args = save_args.call_args[0][0]['configure_args']
     assert "--build=x86_64-linux-gnu" in configure_args
     assert "--host=wasm32-local-emscripten" in configure_args
-    assert "--target=aarch64-linux-android" in configure_args
     assert "--with-cross-build=my_path" in configure_args
     assert "--something-host=my_host" in configure_args
     # https://github.com/conan-io/conan/issues/12431
@@ -175,16 +174,17 @@ def test_check_configure_args_overwriting_and_deletion(save_args, cross_building
 
 def test_update_or_prune_any_args(cross_building_conanfile):
     at = AutotoolsToolchain(cross_building_conanfile)
-    at.update_configure_args(prefix="/my/other/prefix", build=None, target=None, host=None)
-    new_configure_args = args_to_string(at.configure_args)
-    assert "--prefix=/my/other/prefix" in new_configure_args
-    assert "--host=" not in new_configure_args
-    assert "--build=" not in new_configure_args
-    assert "--target=" not in new_configure_args
-    at.update_autoreconf_args(**{"force": None})
-    new_autoreconf_args = args_to_string(at.autoreconf_args)
-    assert "--force" not in new_autoreconf_args
-    at.make_args.append("--complex-flag=complex-value")
-    at.update_make_args(**{"complex-flag": "new-value"})
-    new_make_args = args_to_string(at.make_args)
-    assert "--complex-flag=new-value" in new_make_args
+    at.use_new_options = True
+    at.configure_options["--prefix"] = "/my/other/prefix"
+    at.configure_options.pop("--build")
+    at.configure_options.pop("--host")
+    configure_options = _options_to_string(at.configure_options)
+    assert "--prefix=/my/other/prefix" in configure_options
+    assert "--host=" not in configure_options
+    assert "--build=" not in configure_options
+    at.autoreconf_options.pop("--force")
+    autoreconf_options = _options_to_string(at.autoreconf_options)
+    assert "--force" not in autoreconf_options
+    at.make_options["--complex-flag"] = "new-value"
+    make_options = _options_to_string(at.make_options)
+    assert "--complex-flag=new-value" in make_options

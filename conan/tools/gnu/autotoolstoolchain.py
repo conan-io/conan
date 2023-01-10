@@ -12,6 +12,32 @@ from conans.errors import ConanException
 from conans.tools import args_to_string
 
 
+# FIXME: Remove this whenever self.xxx_args disappear
+def _args_to_dict(args):
+    """
+    Given a list of arguments as GNU options, it'll return the same content but as a
+    dict-like Python object, e.g., {"--flag_name": "flag_value"}
+    """
+    ret = {}
+    for flag in args:
+        # Only splitting if "=" is there. No need to check if it starts by "--" or "-"
+        option = flag.split("=")
+        if len(option) == 2:
+            ret[option[0]] = option[1]
+        else:
+            ret[option[0]] = ""
+    return ret
+
+
+def _options_to_string(options):
+    opts = []
+    for k, v in options.items():
+        # If value, it's assumed the flag will be flag=value, else keeping flag only
+        # For instance: {"--opt1": "whatever", "-abc": ""} --> ["--opt1=whatever", "-abc"]
+        opts.append(f"{k}={v}" if v else k)
+    return args_to_string(opts)
+
+
 class AutotoolsToolchain:
     def __init__(self, conanfile, namespace=None, prefix="/"):
         self._conanfile = conanfile
@@ -58,12 +84,6 @@ class AutotoolsToolchain:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
-            # Target triplet
-            if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
-                settings_target = conanfile.settings_target
-                os_target = settings_target.get_safe("os")
-                arch_target = settings_target.get_safe("arch")
-                self._target = _get_gnu_triplet(os_target, arch_target, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos":
                 sdk_path = apple_sdk_path(conanfile)
@@ -76,12 +96,18 @@ class AutotoolsToolchain:
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
-
+        # DEPRECATED: self.xxxx_args attributes in favor of self.xxxxx_options ones since Conan 1.57
         self.configure_args = self._default_configure_shared_flags() + \
                               self._default_configure_install_flags() + \
                               self._get_triplets()
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
+        # FIXME: Remove this whenever self.xxx_args disappear
+        self.use_new_options = False  # Remove this whenever self.xxx_args are not used anymore
+        # New dict-like attributes since Conan 1.57
+        self.configure_options = _args_to_dict(self.configure_args)
+        self.autoreconf_options = _args_to_dict(self.autoreconf_args)
+        self.make_options = _args_to_dict(self.make_args)
 
         check_using_build_profile(self._conanfile)
 
@@ -199,50 +225,15 @@ class AutotoolsToolchain:
                 triplets.append(f'{flag}{value}')
         return triplets
 
-    def update_configure_args(self, **updated_flags):
-        """
-        Helper to update/prune flags from ``self.configure_args``.
-
-        :param updated_flags: ``dict`` with arguments as keys and their argument values.
-                              Notice that if argument value is ``None``, this one will be pruned.
-        """
-        self._update_flags("configure_args", **updated_flags)
-
-    def update_make_args(self, **updated_flags):
-        """
-        Helper to update/prune arguments from ``self.make_args``.
-
-        :param updated_flags: ``dict`` with arguments as keys and their argument values.
-                              Notice that if argument value is ``None``, this one will be pruned.
-        """
-        self._update_flags("make_args", **updated_flags)
-
-    def update_autoreconf_args(self, **updated_flags):
-        """
-        Helper to update/prune arguments from ``self.autoreconf_args``.
-
-        :param updated_flags: ``dict`` with arguments as keys and their argument values.
-                              Notice that if argument value is ``None``, this one will be pruned.
-        """
-        self._update_flags("autoreconf_args", **updated_flags)
-
-    def _update_flags(self, attr_name, **updated_flags):
-        _new_flags = []
-        self_args = getattr(self, attr_name)
-        for index, flag in enumerate(self_args):
-            flag_name = flag.split("=")[0].replace("--", "")
-            if flag_name in updated_flags:
-                new_flag_value = updated_flags[flag_name]
-                # if {"build": None} is passed, then "--build=xxxx" will be pruned
-                if new_flag_value is not None:
-                    _new_flags.append(f"--{flag_name}={new_flag_value}")
-            else:
-                _new_flags.append(flag)
-        # Update the current ones
-        setattr(self, attr_name, _new_flags)
-
     def generate_args(self):
-        args = {"configure_args": args_to_string(self.configure_args),
-                "make_args":  args_to_string(self.make_args),
-                "autoreconf_args": args_to_string(self.autoreconf_args)}
+        # FIXME: Remove this whenever self.xxx_args disappear
+        if self.use_new_options is False:
+            # Copying again the legacy args just in case recipes add/remove new ones
+            self.configure_options = _args_to_dict(self.configure_args)
+            self.make_options = _args_to_dict(self.make_args)
+            self.autoreconf_options = _args_to_dict(self.autoreconf_args)
+
+        args = {"configure_args": _options_to_string(self.configure_options),
+                "make_args":  _options_to_string(self.make_options),
+                "autoreconf_args": _options_to_string(self.autoreconf_options)}
         save_toolchain_args(args, namespace=self._namespace)
