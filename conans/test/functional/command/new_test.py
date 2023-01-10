@@ -3,6 +3,7 @@ import pytest as pytest
 from conans.test.utils.tools import TestClient
 
 
+# TODO: Remove this test once this feature is used elsewhere to test other things
 @pytest.mark.tool("cmake")
 def test_diamonds_cmake_with_new():
     tc = TestClient()
