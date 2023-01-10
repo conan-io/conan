@@ -3,7 +3,7 @@ import pytest as pytest
 from utils.tools import TestClient
 
 
-#@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake")
 def test_diamonds_cmake_with_new():
     tc = TestClient()
     tc.run("new cmake_lib -d name=math -d version=3.14")
