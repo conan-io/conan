@@ -48,7 +48,7 @@ class {{package_name}}Recipe(ConanFile):
 
     {% if requires is defined -%}
     def requirements(self):
-        {% for require in requires -%}
+        {% for require in as_iterable(requires) -%}
         self.requires("{{ require }}")
         {% endfor %}
     {%- endif %}
