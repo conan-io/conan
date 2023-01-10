@@ -174,7 +174,7 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
     if os.path.exists(preset_path):
         data = json.loads(load(preset_path))
         build_preset = _build_preset(conanfile, multiconfig)
-        position = _get_already_existing_preset_index(build_preset["name"], data["buildPresets"])
+        position = _get_already_existing_preset_index(build_preset["name"], data.setdefault("buildPresets", []))
         if position is not None:
             data["buildPresets"][position] = build_preset
         else:
