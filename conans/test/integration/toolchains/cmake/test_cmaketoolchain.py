@@ -898,6 +898,38 @@ def test_cmake_layout_toolchain_folder():
     c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
           "-s compiler.libcxx=libstdc++11 -s arch=x86 "
           "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.arch\", \"settings.build_type\"]'")
-    print(c.out)
     assert os.path.exists(os.path.join(c.current_folder,
                                        "build/x86-debug/generators/conan_toolchain.cmake"))
+
+
+def test_test_package_layout():
+    """
+    test that the ``test_package`` folder also follows the cmake_layout and the
+    build_folder_vars
+    """
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+            test_type = "explicit"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def layout(self):
+                cmake_layout(self)
+
+            def test(self):
+                pass
+    """)
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                 "test_package/conanfile.py": test_conanfile})
+    config = "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"
+    client.run(f"create . {config} -s compiler.cppstd=14")
+    client.run(f"create . {config} -s compiler.cppstd=17")
+    assert os.path.exists(os.path.join(client.current_folder, "test_package/build/14"))
+    assert os.path.exists(os.path.join(client.current_folder, "test_package/build/17"))
