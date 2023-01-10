@@ -102,8 +102,8 @@ class AutotoolsToolchain:
                               self._get_triplets()
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
-        # FIXME: Remove this whenever self.xxx_args disappear
-        self.use_new_options = False  # Remove this whenever self.xxx_args are not used anymore
+        # FIXME: Remove this whenever self.xxx_args are not used anymore
+        self.use_new_options = False
         # New dict-like attributes since Conan 1.57
         self.configure_options = _args_to_dict(self.configure_args)
         self.autoreconf_options = _args_to_dict(self.autoreconf_args)
