@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import textwrap
@@ -69,6 +70,14 @@ def client():
     return c
 
 
+def remove_timestamps(item):
+    if isinstance(item, dict):
+        if item.get("timestamp"):
+            item["timestamp"] = ""
+        for v in item.values():
+            remove_timestamps(v)
+
+
 class TestListRefs:
 
     @staticmethod
@@ -78,8 +87,18 @@ class TestListRefs:
         client.run(f"list {pattern} {r}")
         print(client.out)
         expected = textwrap.indent(expected, "  ")
-        expected_output = f"{r_msg}:\n" + expected
+        expected_output = f"{r_msg}\n" + expected
         assert bool(re.match(expected_output, str(client.out), re.MULTILINE))
+
+    @staticmethod
+    def check_json(client, pattern, remote, expected):
+        r = "-r=default" if remote else ""
+        r_msg = "default" if remote else "Local Cache"
+        client.run(f"list {pattern} {r} --format=json", redirect_stdout="file.json")
+        list_json = client.load("file.json")
+        print(list_json)
+        list_json = json.loads(list_json)
+        assert remove_timestamps(list_json[r_msg]) == remove_timestamps(expected)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipes(self, client, remote):
@@ -94,6 +113,19 @@ class TestListRefs:
             zlix/1.0.0
         """)
         self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zli": {
+                "zli/1.0.0": {}
+            },
+            "zlib": {
+                "zlib/1.0.0@user/channel": {},
+                "zlib/2.0.0@user/channel": {}
+            },
+            "zlix": {
+                "zlix/1.0.0": {}
+            }
+        }
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     @pytest.mark.parametrize("pattern", ["zlib", "zlib/*", "*@user/channel"])
@@ -104,6 +136,13 @@ class TestListRefs:
               zlib/2.0.0@user/channel
             """)
         self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zlib": {
+                "zlib/1.0.0@user/channel": {},
+                "zlib/2.0.0@user/channel": {}
+            }
+        }
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     @pytest.mark.parametrize("pattern", ["nomatch", "nomatch*", "nomatch/*"])
@@ -120,10 +159,24 @@ class TestListRefs:
         # by default, when a reference is complete, we show latest recipe revision
         pattern = "zli/1.0.0"
         expected = textwrap.dedent(f"""\
-            zli
-              zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-            """)
+          zli
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 .*
+          """)
         self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zli": {
+                "zli/1.0.0": {
+                    "revisions": {
+                        "b58eeddfe2fd25ac3a105f72836b3360": {
+                            "timestamp": "2023-01-10 00:25:32 UTC"
+                        }
+                    }
+                }
+            }
+        }
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipe_all_latest_revision(self, client, remote):
@@ -131,8 +184,12 @@ class TestListRefs:
         pattern = "zlib/*#latest"
         expected = textwrap.dedent(f"""\
             zlib
-              zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb .*
-              zlib/2.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb .*
+              zlib/1.0.0@user/channel
+                revisions
+                  ffd4bc45820ddb320ab224685b9ba3fb .*
+              zlib/2.0.0@user/channel
+                revisions
+                  ffd4bc45820ddb320ab224685b9ba3fb .*
             """)
         self.check(client, pattern, remote, expected)
 
@@ -142,8 +199,10 @@ class TestListRefs:
         pattern = "zli/1.0.0#*"
         expected = textwrap.dedent(f"""\
             zli
-              zli/1.0.0#f034dc90894493961d92dd32a9ee3b78 .*
-              zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
+              zli/1.0.0
+                revisions
+                  f034dc90894493961d92dd32a9ee3b78 .*
+                  b58eeddfe2fd25ac3a105f72836b3360 .*
             """)
         self.check(client, pattern, remote, expected)
 
@@ -151,14 +210,22 @@ class TestListRefs:
     def test_list_recipe_multiple_revision(self, client, remote):
         pattern = "zli*#*"
         expected = textwrap.dedent(f"""\
-          zli
-            zli/1.0.0#f034dc90894493961d92dd32a9ee3b78 .*
-            zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-          zlib
-            zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb .*
-            zlib/2.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb .*
-          zlix
-            zlix/1.0.0#81f598d1d8648389bb7d0494fffb654e .*
+            zli
+              zli/1.0.0
+                revisions
+                  f034dc90894493961d92dd32a9ee3b78 .*
+                  b58eeddfe2fd25ac3a105f72836b3360 .*
+            zlib
+              zlib/1.0.0@user/channel
+                revisions
+                  ffd4bc45820ddb320ab224685b9ba3fb .*
+              zlib/2.0.0@user/channel
+                revisions
+                  ffd4bc45820ddb320ab224685b9ba3fb .*
+            zlix
+              zlix/1.0.0
+                revisions
+                  81f598d1d8648389bb7d0494fffb654e .*
             """)
         self.check(client, pattern, remote, expected)
 
@@ -180,14 +247,47 @@ class TestListPrefs:
         pattern = "zli/1.0.0:*"
         expected = textwrap.dedent(f"""\
             zli
+             zli/1.0.0
               zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270
-                  settings:
-                    os=Linux
-                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                  settings:
-                    os=Windows
+                packages
+                  9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                    revisions
+                      prev1 .*
+                      prev2 .*
+                    info
+                      settings
+                        os=Linux
+                  ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                    settings:
+                      os=Windows
                """)
+        expected_json = {
+            "zli": {
+                "zli/1.0.0": {
+                    "revisions": {
+                        "b58eeddfe2fd25ac3a105f72836b3360": {
+                            "timestamp": "20-21-2032 12:11:13",
+                            "packages": {
+                                "9a4eb3c8701508aa9458b1a73d0633783ecc2270": {
+                                    "revisions": {"prev1": {"timestamp": "T1"}},
+                                    "info": {
+                                        "settings": {
+                                            "os": "Linux"
+                                        }
+                                    }
+                                },
+                                "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715": {
+                                    "info": {
+                                        "settings": {
+                                            "os": "Windows"
+                                        }
+                                    }
+                                }},
+                        }
+                    }
+                }
+            }
+        }
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])

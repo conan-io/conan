@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from conans.util.dates import timestamp_to_str
+
 
 class Remote:
 
@@ -89,7 +91,15 @@ class SelectBundle:
     def serialize(self):
         ret = {}
         for ref, prefs in sorted(self.recipes.items()):
-            ret.setdefault(ref.name, {})[ref] = prefs
+            name_dict = ret.setdefault(ref.name, {})
+            ref_dict = name_dict.setdefault(str(ref), {})
+            if ref.revision:
+                revisions_dict = ref_dict.setdefault("revisions", {})
+                rev_dict = revisions_dict.setdefault(ref.revision, {})
+                if ref.timestamp:
+                    rev_dict["timestamp"] = timestamp_to_str(ref.timestamp)
+                for pref in prefs or []:
+                    pid_dict = rev_dict["packages"].setdefault(pref.package_id, {})
         return ret
 
 
