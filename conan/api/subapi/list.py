@@ -119,7 +119,7 @@ class ListAPI:
                 continue
 
             for rrev in rrevs:
-                packages = {}
+                packages = None
                 prefs = []
                 if pattern.package_id and "*" not in pattern.package_id:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))

@@ -6,6 +6,15 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
 from conan.internal.api.select_pattern import ListPattern
 
+# Keep them so we don't break other commands that import them, but TODO: Remove later
+remote_color = Color.BRIGHT_BLUE
+recipe_name_color = Color.GREEN
+recipe_color = Color.BRIGHT_WHITE
+reference_color = Color.WHITE
+error_color = Color.BRIGHT_RED
+field_color = Color.BRIGHT_YELLOW
+value_color = Color.CYAN
+
 
 def print_serial(item, indent=None, color_index=None):
     indent = "" if indent is None else (indent + "  ")
@@ -15,10 +24,21 @@ def print_serial(item, indent=None, color_index=None):
     color = color_array[color_index % len(color_array)]
     if isinstance(item, dict):
         for k, v in item.items():
-            cli_out_write(f"{indent}{k}", fg=color)
-            print_serial(v, indent, color_index)
+            if isinstance(v, str):
+                if k.lower() == "error":
+                    color = Color.BRIGHT_RED
+                    k = "ERROR"
+                elif k.lower() == "warning":
+                    color = Color.BRIGHT_YELLOW
+                    k = "WARN"
+                cli_out_write(f"{indent}{k}: {v}", fg=color)
+            else:
+                cli_out_write(f"{indent}{k}", fg=color)
+                print_serial(v, indent, color_index)
+    elif isinstance(item, type([])):
+        for elem in item:
+            cli_out_write(f"{indent}{elem}", fg=color)
     elif item:
-        color = Color.BRIGHT_RED if "ERROR:" in item else color
         cli_out_write(f"{indent}{item}", fg=color)
 
 
@@ -27,22 +47,34 @@ def print_list_text(results):
     list bundle so it looks prettier on text output
     """
     info = results["results"]
-    info = {remote: "There are no matching recipe references" if not values else values
-            for remote, values in info.items()}
-    info = {remote: f"ERROR: {values.get('error')}" if values.get("error") else values
+
+    # Extract command single package name
+    new_info = {}
+    for remote, remote_info in info.items():
+        new_remote_info = {}
+        for ref, content in remote_info.items():
+            if ref == "error":
+                new_remote_info[ref] = content
+            else:
+                name, _ = ref.split("/", 1)
+                new_remote_info.setdefault(name, {})[ref] = content
+        new_info[remote] = new_remote_info
+    info = new_info
+
+    info = {remote: {"warning": "There are no matching recipe references"} if not values else values
             for remote, values in info.items()}
 
-    def transform_text_serial(item):
+    def format_timestamps(item):
         if isinstance(item, dict):
             result = {}
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
                     k = f"{k} ({timestamp})"
-                result[k] = transform_text_serial(v)
+                result[k] = format_timestamps(v)
             return result
         return item
-    info = {remote: transform_text_serial(values) for remote, values in info.items()}
+    info = {remote: format_timestamps(values) for remote, values in info.items()}
     print_serial(info)
 
 
@@ -87,7 +119,6 @@ def list(conan_api: ConanAPI, parser, *args):
             results[name] = {"error": str(e)}
         else:
             results[name] = list_bundle.serialize()
-
     return {
         "results": results,
         "search_mode": ref_pattern.mode,

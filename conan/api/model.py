@@ -83,23 +83,31 @@ class SelectBundle:
         return prefs
 
     def add_prefs(self, prefs, configurations=None):
-        confs = configurations or {}
         for pref in prefs:
-            binary_info = confs.get(pref, OrderedDict())
+            binary_info = configurations.get(pref) if configurations is not None else None
             self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
 
     def serialize(self):
         ret = {}
         for ref, prefs in sorted(self.recipes.items()):
-            name_dict = ret.setdefault(ref.name, {})
-            ref_dict = name_dict.setdefault(str(ref), {})
+            ref_dict = ret.setdefault(str(ref), {})
             if ref.revision:
                 revisions_dict = ref_dict.setdefault("revisions", {})
                 rev_dict = revisions_dict.setdefault(ref.revision, {})
                 if ref.timestamp:
                     rev_dict["timestamp"] = timestamp_to_str(ref.timestamp)
-                for pref in prefs or []:
-                    pid_dict = rev_dict["packages"].setdefault(pref.package_id, {})
+                if prefs:
+                    packages_dict = rev_dict.setdefault("packages", {})
+                    for pref_info in prefs:
+                        pref, info = pref_info
+                        pid_dict = packages_dict.setdefault(pref.package_id, {})
+                        if info is not None:
+                            pid_dict["info"] = info
+                        if pref.revision:
+                            prevs_dict = pid_dict.setdefault("revisions", {})
+                            prev_dict = prevs_dict.setdefault(pref.revision, {})
+                            if pref.timestamp:
+                                prev_dict["timestamp"] = timestamp_to_str(pref.timestamp)
         return ret
 
 

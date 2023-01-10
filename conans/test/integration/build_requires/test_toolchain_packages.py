@@ -386,4 +386,5 @@ def test_compiler_gcc():
         "build_type": "Release",
         "os": "Linux"
     }
-    assert settings_target == pkgs_json["Local Cache"][pref.ref.repr_notime()][pref.repr_notime()]["settings_target"]
+    revision_dict = pkgs_json["Local Cache"]["gcc/0.1"]["revisions"][pref.ref.revision]
+    assert settings_target == revision_dict["packages"][pref.package_id]["info"]["settings_target"]

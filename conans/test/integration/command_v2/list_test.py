@@ -76,6 +76,7 @@ def remove_timestamps(item):
             item["timestamp"] = ""
         for v in item.values():
             remove_timestamps(v)
+    return item
 
 
 class TestListRefs:
@@ -88,7 +89,9 @@ class TestListRefs:
         print(client.out)
         expected = textwrap.indent(expected, "  ")
         expected_output = f"{r_msg}\n" + expected
-        assert bool(re.match(expected_output, str(client.out), re.MULTILINE))
+        expected_output = re.sub(r"\(.*\)", "", expected_output)
+        output = re.sub(r"\(.*\)", "", str(client.out))
+        assert expected_output == output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -114,16 +117,10 @@ class TestListRefs:
         """)
         self.check(client, pattern, remote, expected)
         expected_json = {
-            "zli": {
-                "zli/1.0.0": {}
-            },
-            "zlib": {
-                "zlib/1.0.0@user/channel": {},
-                "zlib/2.0.0@user/channel": {}
-            },
-            "zlix": {
-                "zlix/1.0.0": {}
-            }
+            "zli/1.0.0": {},
+            "zlib/1.0.0@user/channel": {},
+            "zlib/2.0.0@user/channel": {},
+            "zlix/1.0.0": {}
         }
         self.check_json(client, pattern, remote, expected_json)
 
@@ -137,10 +134,8 @@ class TestListRefs:
             """)
         self.check(client, pattern, remote, expected)
         expected_json = {
-            "zlib": {
-                "zlib/1.0.0@user/channel": {},
-                "zlib/2.0.0@user/channel": {}
-            }
+            "zlib/1.0.0@user/channel": {},
+            "zlib/2.0.0@user/channel": {}
         }
         self.check_json(client, pattern, remote, expected_json)
 
@@ -148,11 +143,16 @@ class TestListRefs:
     @pytest.mark.parametrize("pattern", ["nomatch", "nomatch*", "nomatch/*"])
     def test_list_recipe_no_match(self, client, pattern, remote):
         if pattern == "nomatch":  # EXACT IS AN ERROR
-            expected = "ERROR: Recipe 'nomatch' not found"
+            expected = "ERROR: Recipe 'nomatch' not found\n"
         else:
-            expected = "There are no matching recipe references"
+            expected = "WARN: There are no matching recipe references\n"
 
         self.check(client, pattern, remote, expected)
+        if pattern == "nomatch":
+            expected_json = {"error": "Recipe 'nomatch' not found"}
+        else:
+            expected_json = {}
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipe_latest_revision(self, client, remote):
@@ -162,16 +162,14 @@ class TestListRefs:
           zli
             zli/1.0.0
               revisions
-                b58eeddfe2fd25ac3a105f72836b3360 .*
+                b58eeddfe2fd25ac3a105f72836b3360 (10-11-2023 10:13:13)
           """)
         self.check(client, pattern, remote, expected)
         expected_json = {
-            "zli": {
-                "zli/1.0.0": {
-                    "revisions": {
-                        "b58eeddfe2fd25ac3a105f72836b3360": {
-                            "timestamp": "2023-01-10 00:25:32 UTC"
-                        }
+            "zli/1.0.0": {
+                "revisions": {
+                    "b58eeddfe2fd25ac3a105f72836b3360": {
+                        "timestamp": "2023-01-10 00:25:32 UTC"
                     }
                 }
             }
@@ -186,10 +184,10 @@ class TestListRefs:
             zlib
               zlib/1.0.0@user/channel
                 revisions
-                  ffd4bc45820ddb320ab224685b9ba3fb .*
+                  ffd4bc45820ddb320ab224685b9ba3fb (10-11-2023 10:13:13)
               zlib/2.0.0@user/channel
                 revisions
-                  ffd4bc45820ddb320ab224685b9ba3fb .*
+                  ffd4bc45820ddb320ab224685b9ba3fb (10-11-2023 10:13:13)
             """)
         self.check(client, pattern, remote, expected)
 
@@ -201,8 +199,8 @@ class TestListRefs:
             zli
               zli/1.0.0
                 revisions
-                  f034dc90894493961d92dd32a9ee3b78 .*
-                  b58eeddfe2fd25ac3a105f72836b3360 .*
+                  f034dc90894493961d92dd32a9ee3b78 (10-11-2023 10:13:13)
+                  b58eeddfe2fd25ac3a105f72836b3360 (10-11-2023 10:13:13)
             """)
         self.check(client, pattern, remote, expected)
 
@@ -213,19 +211,19 @@ class TestListRefs:
             zli
               zli/1.0.0
                 revisions
-                  f034dc90894493961d92dd32a9ee3b78 .*
-                  b58eeddfe2fd25ac3a105f72836b3360 .*
+                  f034dc90894493961d92dd32a9ee3b78 (10-11-2023 10:13:13)
+                  b58eeddfe2fd25ac3a105f72836b3360 (10-11-2023 10:13:13)
             zlib
               zlib/1.0.0@user/channel
                 revisions
-                  ffd4bc45820ddb320ab224685b9ba3fb .*
+                  ffd4bc45820ddb320ab224685b9ba3fb (10-11-2023 10:13:13)
               zlib/2.0.0@user/channel
                 revisions
-                  ffd4bc45820ddb320ab224685b9ba3fb .*
+                  ffd4bc45820ddb320ab224685b9ba3fb (10-11-2023 10:13:13)
             zlix
               zlix/1.0.0
                 revisions
-                  81f598d1d8648389bb7d0494fffb654e .*
+                  81f598d1d8648389bb7d0494fffb654e (10-11-2023 10:13:13)
             """)
         self.check(client, pattern, remote, expected)
 
@@ -239,128 +237,202 @@ class TestListPrefs:
         client.run(f"list {pattern} {r}")
         print(client.out)
         expected = textwrap.indent(expected, "  ")
-        expected_output = f"{r_msg}:\n" + expected
-        assert bool(re.match(expected_output, str(client.out), re.MULTILINE))
+        expected_output = f"{r_msg}\n" + expected
+        expected_output = re.sub(r"\(.*\)", "", expected_output)
+        output = re.sub(r"\(.*\)", "", str(client.out))
+        assert expected_output == output
+
+    @staticmethod
+    def check_json(client, pattern, remote, expected):
+        r = "-r=default" if remote else ""
+        r_msg = "default" if remote else "Local Cache"
+        client.run(f"list {pattern} {r} --format=json", redirect_stdout="file.json")
+        list_json = client.load("file.json")
+        print(list_json)
+        list_json = json.loads(list_json)
+        assert remove_timestamps(list_json[r_msg]) == remove_timestamps(expected)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_pkg_ids(self, client, remote):
         pattern = "zli/1.0.0:*"
         expected = textwrap.dedent(f"""\
-            zli
-             zli/1.0.0
-              zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-                packages
-                  9a4eb3c8701508aa9458b1a73d0633783ecc2270
-                    revisions
-                      prev1 .*
-                      prev2 .*
-                    info
-                      settings
-                        os=Linux
-                  ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                    settings:
-                      os=Windows
-               """)
+          zli
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (10-11-2023 10:13:13)
+                  packages
+                    9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      info
+                        settings
+                          os: Linux
+                    ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      info
+                        settings
+                          os: Windows
+          """)
+        self.check(client, pattern, remote, expected)
         expected_json = {
-            "zli": {
-                "zli/1.0.0": {
-                    "revisions": {
-                        "b58eeddfe2fd25ac3a105f72836b3360": {
-                            "timestamp": "20-21-2032 12:11:13",
-                            "packages": {
-                                "9a4eb3c8701508aa9458b1a73d0633783ecc2270": {
-                                    "revisions": {"prev1": {"timestamp": "T1"}},
-                                    "info": {
-                                        "settings": {
-                                            "os": "Linux"
-                                        }
+            "zli/1.0.0": {
+                "revisions": {
+                    "b58eeddfe2fd25ac3a105f72836b3360": {
+                        "timestamp": "2023-01-10 16:30:27 UTC",
+                        "packages": {
+                            "9a4eb3c8701508aa9458b1a73d0633783ecc2270": {
+                                "info": {
+                                    "settings": {
+                                        "os": "Linux"
                                     }
-                                },
-                                "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715": {
-                                    "info": {
-                                        "settings": {
-                                            "os": "Windows"
-                                        }
+                                }
+                            },
+                            "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715": {
+                                "info": {
+                                    "settings": {
+                                        "os": "Windows"
                                     }
-                                }},
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        self.check(client, pattern, remote, expected)
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_pkg_ids_confs(self, client, remote):
         pattern = "conf/*:*"
         expected = textwrap.dedent("""\
-            conf
-              conf/1.0#e4e1703f72ed07c15d73a555ec3a2fa1 .*
-                PID: 78c6fa29e8164ce399087ad6067c8f9e2f1c4ad0
-                  conf:
-                    tools.build:cxxflags=\['--flag1'\]
-            """)
+          conf
+            conf/1.0
+              revisions
+                e4e1703f72ed07c15d73a555ec3a2fa1 (10-11-2023 10:13:13)
+                  packages
+                    78c6fa29e8164ce399087ad6067c8f9e2f1c4ad0
+                      info
+                        conf
+                          tools.build:cxxflags: ['--flag1']
+          """)
         self.check(client, pattern, remote, expected)
+        expected_json = {
+            "conf/1.0": {
+                "revisions": {
+                    "e4e1703f72ed07c15d73a555ec3a2fa1": {
+                        "timestamp": "2023-01-10 10:07:33 UTC",
+                        "packages": {
+                            "78c6fa29e8164ce399087ad6067c8f9e2f1c4ad0": {
+                                "info": {
+                                    "conf": {
+                                        "tools.build:cxxflags": "['--flag1']"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_pkg_ids_requires(self, client, remote):
         pattern = "test/*:*"
         expected = textwrap.dedent("""\
           test
-            test/1.0#7df6048d3cb39b75618717987fb96453 .*
-              PID: 81d0d9a6851a0208c2bb35fdb34eb156359d939b
-                requires:
-                  zlix/1.Y.Z
-                python_requires:
-                  zlix/1.0.Z
+            test/1.0
+              revisions
+                7df6048d3cb39b75618717987fb96453 (10-11-2023 10:13:13)
+                  packages
+                    81d0d9a6851a0208c2bb35fdb34eb156359d939b
+                      info
+                        requires
+                          zlix/1.Y.Z
+                        python_requires
+                          zlix/1.0.Z
           """)
         self.check(client, pattern, remote, expected)
+        expected_json = {
+            "test/1.0": {
+                "revisions": {
+                    "7df6048d3cb39b75618717987fb96453": {
+                        "timestamp": "2023-01-10 22:17:13 UTC",
+                        "packages": {
+                            "81d0d9a6851a0208c2bb35fdb34eb156359d939b": {
+                                "info": {
+                                    "requires": [
+                                        "zlix/1.Y.Z"
+                                    ],
+                                    "python_requires": [
+                                        "zlix/1.0.Z"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_pkg_ids_all_rrevs(self, client, remote):
         pattern = "zli/1.0.0#*:*"
         expected = textwrap.dedent(f"""\
-            zli
-              zli/1.0.0#f034dc90894493961d92dd32a9ee3b78 .*
-                PID: da39a3ee5e6b4b0d3255bfef95601890afd80709
-                  Empty package information
-              zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270
-                  settings:
-                    os=Linux
-                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                  settings:
-                    os=Windows
-               """)
+          zli
+            zli/1.0.0
+              revisions
+                f034dc90894493961d92dd32a9ee3b78 (2023-01-10 22:19:58 UTC)
+                  packages
+                    da39a3ee5e6b4b0d3255bfef95601890afd80709
+                      info
+                b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:19:59 UTC)
+                  packages
+                    9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      info
+                        settings
+                          os: Linux
+                    ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      info
+                        settings
+                          os: Windows
+           """)
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_latest_prevs(self, client, remote):
         pattern = "zli/1.0.0:*#latest"
+        # TODO: This is doing a package_id search, but not showing info
         expected = textwrap.dedent(f"""\
-            zli
-              zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-                PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270
-                  PREV: 9beff32b8c94ea0ce5a5e67dad95f525 .*
-                PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                  PREV: d9b1e9044ee265092e81db7028ae10e0 .*
-            """)
+          zli
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:27:34 UTC)
+                  packages
+                    9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      revisions
+                        9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
+                    ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
+          """)
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_all_prevs(self, client, remote):
         pattern = "zli/1.0.0:*#*"
-        # TODO: We might want to improve the output, grouping PREVS for the
-        #  same package_id
+        # TODO: This is doing a package_id search, but not showing info
         expected = textwrap.dedent(f"""\
           zli
-            zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-              PID: 9a4eb3c8701508aa9458b1a73d0633783ecc2270
-                PREV: 9beff32b8c94ea0ce5a5e67dad95f525 .*
-              PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                PREV: d9b1e9044ee265092e81db7028ae10e0 .*
-              PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                PREV: 24532a030b4fcdfed699511f6bfe35d3 .*
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:41:09 UTC)
+                  packages
+                    9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      revisions
+                        9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
+                    ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
+                        24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -369,13 +441,38 @@ class TestListPrefs:
         pattern = "zli/1.0.0:ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715#*"
         # TODO: We might want to improve the output, grouping PREVS for the
         #  same package_id
+        expected_json = {
+            "zli/1.0.0": {
+                "revisions": {
+                    "b58eeddfe2fd25ac3a105f72836b3360": {
+                        "timestamp": "2023-01-10 22:45:49 UTC",
+                        "packages": {
+                            "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715": {
+                                "revisions": {
+                                    "d9b1e9044ee265092e81db7028ae10e0": {
+                                        "timestamp": "2023-01-10 22:45:49 UTC"
+                                    },
+                                    "24532a030b4fcdfed699511f6bfe35d3": {
+                                        "timestamp": "2023-01-10 22:45:49 UTC"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        self.check_json(client, pattern, remote, expected_json)
         expected = textwrap.dedent(f"""\
           zli
-            zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-              PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                PREV: d9b1e9044ee265092e81db7028ae10e0 .*
-              PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                PREV: 24532a030b4fcdfed699511f6bfe35d3 .*
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:41:09 UTC)
+                  packages
+                    ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
+                        24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -384,9 +481,13 @@ class TestListPrefs:
         pattern = "zli/1.0.0:ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
         expected = textwrap.dedent(f"""\
           zli
-            zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360 .*
-              PID: ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                PREV: d9b1e9044ee265092e81db7028ae10e0 .*
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 23:13:12 UTC)
+                  packages
+                    ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 23:13:12 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -394,9 +495,11 @@ class TestListPrefs:
     def test_list_missing_package_id(self, client, remote):
         pattern = "zli/1.0.0:nonexists_id"
         # TODO: The message is still different in the server
-        expected = textwrap.dedent(f"""\
-            ERROR: Binary package not found: 'zli/1.0.0.*
-            """)
+        if remote:
+            expected = "ERROR: Binary package not found: 'zli/1.0.0@_/_#" \
+                       "b58eeddfe2fd25ac3a105f72836b3360:nonexists_id'. [Remote: default]\n"
+        else:
+            expected = "ERROR: Binary package not found: 'zli/1.0.0:nonexists_id\n"
         self.check(client, pattern, remote, expected)
 
     def test_query(self):
@@ -410,11 +513,11 @@ class TestListRemotes:
 
     def test_search_no_matching_recipes(self, client):
         expected_output = textwrap.dedent("""\
-        Local Cache:
+        Local Cache
           ERROR: Recipe 'whatever/0.1' not found
-        default:
+        default
           ERROR: Recipe 'whatever/0.1' not found
-        other:
+        other
           ERROR: Recipe 'whatever/0.1' not found
         """)
 
@@ -434,9 +537,9 @@ class TestListRemotes:
         with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
             client.run(f'list whatever/1.0 -r="*"')
         expected_output = textwrap.dedent(f"""\
-            default:
+            default
               {output}
-            other:
+            other
               {output}
             """)
         assert expected_output == client.out

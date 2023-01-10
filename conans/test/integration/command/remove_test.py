@@ -164,13 +164,13 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                RecipeReference.loads("foobar/0.1@user/testing"))
         self.client.run("list foobar/0.1@user/testing#{} -r default".format(ref.revision))
         default_arch = self.client.get_default_host_profile().settings['arch']
-        self.assertIn(f"arch={default_arch}", self.client.out)
-        self.assertIn("arch=x86", self.client.out)
+        self.assertIn(f"arch: {default_arch}", self.client.out)
+        self.assertIn("arch: x86", self.client.out)
 
         self.client.run("remove -c foobar/0.1@user/testing:* -r default")
         self.client.run("search foobar/0.1@user/testing -r default")
-        self.assertNotIn(f"arch={default_arch}", self.client.out)
-        self.assertNotIn("arch=x86", self.client.out)
+        self.assertNotIn(f"arch: {default_arch}", self.client.out)
+        self.assertNotIn("arch: x86", self.client.out)
 
 
 # populated packages of bar
