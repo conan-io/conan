@@ -1,6 +1,6 @@
 import pytest as pytest
 
-from utils.tools import TestClient
+from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake")
