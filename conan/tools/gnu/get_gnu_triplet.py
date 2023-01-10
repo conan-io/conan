@@ -67,10 +67,8 @@ def _get_gnu_triplet(os_, arch, compiler=None):
     # Calculate the OS
     if compiler == "gcc":
         windows_op = "w64-mingw32"
-    elif compiler == "msvc":
-        windows_op = "windows-msvc"
     else:
-        windows_op = "windows"
+        windows_op = "unknown-windows"
 
     op_system = {"Windows": windows_op,
                  "Linux": "linux-gnu",
