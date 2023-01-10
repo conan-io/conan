@@ -37,7 +37,7 @@ def remove_external_symlinks(conanfile, base_folder=None):
     for fullpath in get_symlinks(base_folder):
         link_target = os.readlink(fullpath)
         if not os.path.isabs(link_target):
-            link_target = os.path.join(base_folder, link_target)
+            link_target = os.path.join(os.path.dirname(fullpath), link_target)
         if not _path_inside(base_folder, link_target):
             os.unlink(fullpath)
 
@@ -47,6 +47,6 @@ def remove_broken_symlinks(conanfile, base_folder=None):
     for fullpath in get_symlinks(base_folder):
         link_target = os.readlink(fullpath)
         if not os.path.isabs(link_target):
-            link_target = os.path.join(base_folder, link_target)
+            link_target = os.path.join(os.path.dirname(fullpath), link_target)
         if not os.path.exists(link_target):
             os.unlink(fullpath)
