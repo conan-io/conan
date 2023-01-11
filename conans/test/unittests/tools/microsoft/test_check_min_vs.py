@@ -40,7 +40,7 @@ class TestCheckMinVS:
     @pytest.mark.parametrize(parametrize_vars, valid_parametrize_values)
     def test_valid_nothrows(self, compiler, version, update, minimum):
         conanfile = self._create_conanfile(compiler, version, update)
-        assert check_min_vs(conanfile, minimum, throw=False)
+        assert check_min_vs(conanfile, minimum, raise_invalid=False)
 
     @pytest.mark.parametrize(parametrize_vars, invalid_parametrize_values)
     def test_invalid(self, compiler, version, update, minimum):
@@ -51,4 +51,4 @@ class TestCheckMinVS:
     @pytest.mark.parametrize(parametrize_vars, invalid_parametrize_values)
     def test_invalid_nothrows(self, compiler, version, update, minimum):
         conanfile = self._create_conanfile(compiler, version, update)
-        assert not check_min_vs(conanfile, minimum, throw=False)
+        assert not check_min_vs(conanfile, minimum, raise_invalid=False)

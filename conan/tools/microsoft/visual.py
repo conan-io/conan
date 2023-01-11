@@ -9,7 +9,7 @@ from conan.tools.scm import Version
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
-def check_min_vs(conanfile, version, throw = True):
+def check_min_vs(conanfile, version, raise_invalid=True):
     """
     This is a helper method to allow the migration of 1.X -> 2.0 and VisualStudio -> msvc settings
     without breaking recipes.
@@ -17,7 +17,7 @@ def check_min_vs(conanfile, version, throw = True):
 
     :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
     :param version: ``str`` Visual Studio or msvc version number.
-    :param throw: ``bool`` Whether to throw or return False if the version check fails
+    :param raise_invalid: ``bool`` Whether to raise or return False if the version check fails
     """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = None
@@ -36,7 +36,7 @@ def check_min_vs(conanfile, version, throw = True):
             compiler_version += ".{}".format(compiler_update)
 
     if compiler_version and Version(compiler_version) < version:
-        if throw:
+        if raise_invalid:
             msg = f"This package doesn't work with VS compiler version '{compiler_version}'" \
                   f", it requires at least '{version}'"
             raise ConanInvalidConfiguration(msg)
