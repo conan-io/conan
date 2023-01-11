@@ -58,12 +58,6 @@ class AutotoolsToolchain:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
-            # Target triplet
-            if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
-                settings_target = conanfile.settings_target
-                os_target = settings_target.get_safe("os")
-                arch_target = settings_target.get_safe("arch")
-                self._target = _get_gnu_triplet(os_target, arch_target, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos":
                 sdk_path = apple_sdk_path(conanfile)
