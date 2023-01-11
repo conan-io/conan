@@ -224,23 +224,36 @@ class AutotoolsToolchain:
 
     # FIXME: Remove all these update_xxxx whenever xxxx_args are dicts or new ones replace them
     def _update_flags(self, attr_name, updated_flags):
-        _new_flags = []
-        self_args = getattr(self, attr_name)
-        for index, flag in enumerate(self_args):
-            flag_name = flag.split("=")[0]
-            if flag_name in updated_flags:
-                new_flag_value = updated_flags[flag_name]
-                # if {"build": None} is passed, then "--build=xxxx" will be pruned
-                if new_flag_value is None:
-                    continue
-                elif not new_flag_value:
-                    _new_flags.append(flag_name)
+
+        def _list_to_dict(flags):
+            ret = {}
+            for flag in flags:
+                # Only splitting if "=" is there
+                option = flag.split("=")
+                if len(option) == 2:
+                    ret[option[0]] = option[1]
                 else:
-                    _new_flags.append(f"{flag_name}={new_flag_value}")
-            else:
-                _new_flags.append(flag)
+                    ret[option[0]] = ""
+            return ret
+
+        def _dict_to_list(flags):
+            ret = []
+            for k, v in flags.items():
+                # None values are pruned from the global result
+                if v is None:
+                    continue
+                # If value, it's assumed the flag will be flag=value, else keeping flag only
+                # For instance: {"--opt1": "whatever", "-abc": ""} --> ["--opt1=whatever", "-abc"]
+                ret.append(f"{k}={v}" if v else k)
+            return ret
+
+        self_args = getattr(self, attr_name)
+        # FIXME: if xxxxx_args -> dict-type at some point, all these lines could be removed
+        options = _list_to_dict(self_args)
+        # Add/update/remove the current xxxxx_args with the new flags given
+        options.update(updated_flags)
         # Update the current ones
-        setattr(self, attr_name, _new_flags)
+        setattr(self, attr_name, _dict_to_list(options))
 
     def generate_args(self):
         args = {"configure_args": args_to_string(self.configure_args),

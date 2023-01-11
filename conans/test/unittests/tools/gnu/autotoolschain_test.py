@@ -189,7 +189,6 @@ def test_check_configure_args_overwriting_and_deletion(save_args, cross_building
 def test_update_or_prune_any_args(cross_building_conanfile):
     at = AutotoolsToolchain(cross_building_conanfile)
     at.configure_args.append("--enable-flag1=false")
-    at.make_args.append("--complex-flag=complex-value")
     # Update configure_args
     at.update_configure_args({"--prefix": "/my/other/prefix",
                               "--build": None,  # prune value
@@ -202,7 +201,7 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     at.update_autoreconf_args({"--force": None})
     new_autoreconf_args = args_to_string(at.autoreconf_args)
     assert "'--force" not in new_autoreconf_args
-    # Update make_args
-    at.update_make_args({"--complex-flag": "new-value"})
+    # Add new value to make_args
+    at.update_make_args({"--new-complex-flag": "new-value"})
     new_make_args = args_to_string(at.make_args)
-    assert "--complex-flag=new-value" in new_make_args
+    assert "--new-complex-flag=new-value" in new_make_args
