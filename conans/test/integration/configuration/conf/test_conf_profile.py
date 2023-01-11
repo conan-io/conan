@@ -294,12 +294,12 @@ def test_config_package_append(client):
     client.save({"profile1": profile1,
                  "profile2": profile2,
                  "conanfile.py": conanfile})
-    client.run("install . mypkg/0.1@ -pr=profile2")
+    client.run("install . --name=mypkg --version=0.1 -pr=profile2")
     assert "conanfile.py (mypkg/0.1): MYCONF: ['a', 'b', 'c', 'd']" in client.out
-    client.run("install . mydep/0.1@ -pr=profile2")
+    client.run("install . --name=mydep --version=0.1 -pr=profile2")
     assert "conanfile.py (mydep/0.1): MYCONF: ['e', 'a', 'b', 'c']" in client.out
 
-    client.run("create . mypkg/0.1@ -pr=profile2")
+    client.run("create . --name=mypkg --version=0.1 -pr=profile2")
     assert "mypkg/0.1: MYCONFBUILD: ['a', 'b', 'c', 'd']" in client.out
-    client.run("create . mydep/0.1@ -pr=profile2")
+    client.run("create . --name=mydep --version=0.1 -pr=profile2")
     assert "mydep/0.1: MYCONFBUILD: ['e', 'a', 'b', 'c']" in client.out

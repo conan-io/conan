@@ -958,6 +958,10 @@ def test_test_package_layout():
                  "test_package/conanfile.py": test_conanfile})
     config = "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"
     client.run(f"create . {config} -s compiler.cppstd=14")
+    assert os.path.exists(os.path.join(client.current_folder, "test_package/test_output/build/14"))
     client.run(f"create . {config} -s compiler.cppstd=17")
-    assert os.path.exists(os.path.join(client.current_folder, "test_package/build/14"))
-    assert os.path.exists(os.path.join(client.current_folder, "test_package/build/17"))
+    assert os.path.exists(os.path.join(client.current_folder, "test_package/test_output/build/17"))
+    # FIXME: We need to review this, it is counter-intuitive that you define a layout and it is
+    #  simply erased at every conan create invocation
+    assert not os.path.exists(os.path.join(client.current_folder,
+                                           "test_package/test_output/build/14"))

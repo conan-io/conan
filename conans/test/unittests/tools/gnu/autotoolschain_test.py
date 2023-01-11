@@ -2,11 +2,11 @@ from unittest.mock import patch
 
 import pytest
 
+from conan.tools.build import cmd_args_to_string
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings
-from conans.tools import args_to_string
 
 
 @pytest.fixture()
@@ -155,6 +155,7 @@ def test_linker_scripts():
     conanfile.conf.define("tools.build:linker_scripts", ["path_to_first_linker_script", "path_to_second_linker_script"])
     settings = MockSettings({"build_type": "Release",
                              "os": "Windows",
+                             "compiler": "gcc",
                              "arch": "x86_64"})
     conanfile.settings = settings
     autotoolschain = AutotoolsToolchain(conanfile)
@@ -196,15 +197,15 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     at.update_configure_args({"--prefix": "/my/other/prefix",
                               "--build": None,  # prune value
                               "--enable-flag1": ""})
-    new_configure_args = args_to_string(at.configure_args)
+    new_configure_args = cmd_args_to_string(at.configure_args)
     assert "--prefix=/my/other/prefix" in new_configure_args
     assert "--build=" not in new_configure_args  # pruned
     assert "--enable-flag1" in new_configure_args  # flag without value
     # Update autoreconf_args
     at.update_autoreconf_args({"--force": None})
-    new_autoreconf_args = args_to_string(at.autoreconf_args)
+    new_autoreconf_args = cmd_args_to_string(at.autoreconf_args)
     assert "'--force" not in new_autoreconf_args
     # Update make_args
     at.update_make_args({"--complex-flag": "new-value"})
-    new_make_args = args_to_string(at.make_args)
+    new_make_args = cmd_args_to_string(at.make_args)
     assert "--complex-flag=new-value" in new_make_args
