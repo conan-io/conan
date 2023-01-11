@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.microsoft import unix_path
+from conan.tools.microsoft import unix_path, unix_path_package_info_legacy
 from conans.model.conf import ConfDefinition
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 
@@ -27,5 +27,9 @@ def test_unix_path(subsystem, expected_path):
     conanfile.settings = settings
     conanfile.settings_build = settings
 
-    path = unix_path(conanfile, "c:/path/to/stuff")
+    test_path = "c:/path/to/stuff"
+    path = unix_path(conanfile, test_path)
     assert expected_path == path
+
+    package_info_legacy_path = unix_path_package_info_legacy(conanfile, test_path, path_flavor=subsystem)
+    assert package_info_legacy_path == test_path
