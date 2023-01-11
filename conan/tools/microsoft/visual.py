@@ -73,7 +73,7 @@ class VCVars:
             return
 
         vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
-        if vs_install_path == "disabled":
+        if vs_install_path == "":  # Empty string means "disable"
             return
 
         if compiler == "clang":
