@@ -4187,3 +4187,5 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 settings_1_56_0 = settings_1_55_0
 
 settings_1_57_0 = settings_1_56_0
+
+settings_1_58_0 = settings_1_57_0
