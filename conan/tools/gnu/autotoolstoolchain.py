@@ -237,15 +237,7 @@ class AutotoolsToolchain:
             return ret
 
         def _dict_to_list(flags):
-            ret = []
-            for k, v in flags.items():
-                # None values are pruned from the global result
-                if v is None:
-                    continue
-                # If value, it's assumed the flag will be flag=value, else keeping flag only
-                # For instance: {"--opt1": "whatever", "-abc": ""} --> ["--opt1=whatever", "-abc"]
-                ret.append(f"{k}={v}" if v else k)
-            return ret
+            return [f"{k}={v}" if v else k for k, v in flags.items() if v is not None]
 
         self_args = getattr(self, attr_name)
         # FIXME: if xxxxx_args -> dict-type at some point, all these lines could be removed
