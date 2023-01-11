@@ -117,7 +117,7 @@ def _configure_preset(conanfile, generator, cache_variables, toolchain_file, mul
 
 
 def _insert_preset(data, preset_name, preset):
-    position = _get_already_existing_preset_index(preset["name"], data[preset_name])
+    position = _get_already_existing_preset_index(preset["name"], data.setdefault(preset_name, []))
     if position is not None:
         data[preset_name][position] = preset
     else:
