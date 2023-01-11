@@ -1,9 +1,29 @@
+from unittest.mock import patch
+
 import pytest
 
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings
+from conans.tools import args_to_string
+
+
+@pytest.fixture()
+def cross_building_conanfile():
+    settings_build = MockSettings({"os": "Linux",
+                                   "arch": "x86_64",
+                                   "compiler": "gcc",
+                                   "compiler.version": "11",
+                                   "compiler.libcxx": "libstdc++",
+                                   "build_type": "Release"})
+    settings_target = MockSettings({"os": "Android", "arch": "armv8"})
+    settings = MockSettings({"os": "Emscripten", "arch": "wasm"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = settings_build
+    conanfile.settings_target = settings_target
+    return conanfile
 
 
 def test_get_gnu_triplet_for_cross_building():
@@ -139,3 +159,50 @@ def test_linker_scripts():
     env = autotoolschain.environment().vars(conanfile)
     assert "-T'path_to_first_linker_script'" in env["LDFLAGS"]
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
+
+
+@patch("conan.tools.gnu.autotoolstoolchain.save_toolchain_args")
+def test_check_configure_args_overwriting_and_deletion(save_args, cross_building_conanfile):
+    # Issue: https://github.com/conan-io/conan/issues/12642
+    at = AutotoolsToolchain(cross_building_conanfile)
+    at.configure_args.extend([
+        "--with-cross-build=my_path",
+        "--something-host=my_host"
+    ])
+    at.generate_args()
+    configure_args = save_args.call_args[0][0]['configure_args']
+    assert "--build=x86_64-linux-gnu" in configure_args
+    assert "--host=wasm32-local-emscripten" in configure_args
+    assert "--with-cross-build=my_path" in configure_args
+    assert "--something-host=my_host" in configure_args
+    # https://github.com/conan-io/conan/issues/12431
+    at.configure_args.remove("--build=x86_64-linux-gnu")
+    at.configure_args.remove("--host=wasm32-local-emscripten")
+    at.generate_args()
+    configure_args = save_args.call_args[0][0]['configure_args']
+    assert "--build=x86_64-linux-gnu" not in configure_args  # removed
+    assert "--host=wasm32-local-emscripten" not in configure_args  # removed
+    assert "--with-cross-build=my_path" in configure_args
+    assert "--something-host=my_host" in configure_args
+
+
+def test_update_or_prune_any_args(cross_building_conanfile):
+    at = AutotoolsToolchain(cross_building_conanfile)
+    at.configure_args.append("--enable-flag1=false")
+    at.make_args.append("--complex-flag=complex-value")
+    # Update configure_args
+    at.update_configure_args({"--prefix": "/my/other/prefix",
+                              "--build": None,  # prune value
+                              "--enable-flag1": ""})
+    new_configure_args = args_to_string(at.configure_args)
+    assert "--prefix=/my/other/prefix" in new_configure_args
+    assert "--build=" not in new_configure_args  # pruned
+    assert "--enable-flag1" in new_configure_args  # flag without value
+    # Update autoreconf_args
+    at.update_autoreconf_args({"--force": None})
+    new_autoreconf_args = args_to_string(at.autoreconf_args)
+    assert "'--force" not in new_autoreconf_args
+    # Update make_args
+    at.update_make_args({"--complex-flag": "new-value"})
+    new_make_args = args_to_string(at.make_args)
+    assert "--complex-flag=new-value" in new_make_args
