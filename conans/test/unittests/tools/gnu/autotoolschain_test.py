@@ -192,11 +192,14 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     # Update configure_args
     at.update_configure_args({"--prefix": "/my/other/prefix",
                               "--build": None,  # prune value
-                              "--enable-flag1": ""})
+                              "--enable-flag1": "",  # without value
+                              "-NEW-FLAG": "no"  # new flag
+                              })
     new_configure_args = args_to_string(at.configure_args)
     assert "--prefix=/my/other/prefix" in new_configure_args
     assert "--build=" not in new_configure_args  # pruned
     assert "--enable-flag1" in new_configure_args  # flag without value
+    assert "-NEW-FLAG=no" in new_configure_args  # new flag
     # Update autoreconf_args
     at.update_autoreconf_args({"--force": None})
     new_autoreconf_args = args_to_string(at.autoreconf_args)

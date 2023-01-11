@@ -68,7 +68,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
     if compiler == "gcc":
         windows_op = "w64-mingw32"
     elif compiler == "Visual Studio":
-        windows_op = "windows-msvc"
+        windows_op = "unknown-windows"
     else:
         windows_op = "windows"
 

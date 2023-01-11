@@ -8,7 +8,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
-def check_min_vs(conanfile, version):
+def check_min_vs(conanfile, version, raise_invalid=True):
     """ this is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
     withoug breaking recipes
     The legacy "Visual Studio" with different toolset is not managed, not worth the complexity
@@ -30,9 +30,13 @@ def check_min_vs(conanfile, version):
             compiler_version += ".{}".format(compiler_update)
 
     if compiler_version and Version(compiler_version) < version:
-        msg = "This package doesn't work with VS compiler version '{}'" \
-              ", it requires at least '{}'".format(compiler_version, version)
-        raise ConanInvalidConfiguration(msg)
+        if raise_invalid:
+            msg = f"This package doesn't work with VS compiler version '{compiler_version}'" \
+                  f", it requires at least '{version}'"
+            raise ConanInvalidConfiguration(msg)
+        else:
+            return False
+    return True
 
 
 def msvc_version_to_vs_ide_version(version):
@@ -72,6 +76,10 @@ class VCVars:
         if compiler not in ("Visual Studio", "msvc", "clang"):
             return
 
+        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
+        if vs_install_path == "":  # Empty string means "disable"
+            return
+
         if compiler == "clang":
             # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
             if not conanfile.settings.get_safe("compiler.runtime"):
@@ -93,7 +101,6 @@ class VCVars:
             vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = vcvars_arch(conanfile)
 
-        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
