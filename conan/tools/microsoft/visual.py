@@ -76,6 +76,10 @@ class VCVars:
         if compiler not in ("Visual Studio", "msvc", "clang"):
             return
 
+        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
+        if vs_install_path == "":  # Empty string means "disable"
+            return
+
         if compiler == "clang":
             # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
             if not conanfile.settings.get_safe("compiler.runtime"):
@@ -97,7 +101,6 @@ class VCVars:
             vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = vcvars_arch(conanfile)
 
-        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community

@@ -4,6 +4,7 @@ import os
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -34,6 +35,23 @@ def test_vcvars_generator(scope):
         assert "conanvcvars.bat" in bat_contents
     else:
         assert not os.path.exists(os.path.join(client.current_folder, "conanbuild.bat"))
+
+
+@pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
+def test_vcvars_generator_skip():
+    """
+    tools.microsoft.msbuild:installation_path=disabled avoids creation of conanvcvars.bat
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_generator("VCVars")
+                                               .with_settings("os", "compiler",
+                                                              "arch", "build_type"),
+                 "profile": 'include(default)\n[conf]\ntools.microsoft.msbuild:installation_path='})
+
+    client.run('install . -c tools.microsoft.msbuild:installation_path=""')
+    assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
+    client.run('install . -pr=profile')
+    assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
