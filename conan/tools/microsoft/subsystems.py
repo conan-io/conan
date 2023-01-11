@@ -6,7 +6,7 @@ def unix_path(conanfile, path, scope="build"):
     subsystem = deduce_subsystem(conanfile, scope=scope)
     return subsystem_path(subsystem, path)
 
-def unix_path_legacy_compat(conanfile, path, path_flavor=None):
+def unix_path_package_info_legacy(conanfile, path, path_flavor=None):
     # Call legacy implementation, which has different logic
     # to autodeduce the subsystem type for the conversion.
-    unix_path_legacy_tools(path, path_flavor)
+    return unix_path_legacy_tools(path, path_flavor)
