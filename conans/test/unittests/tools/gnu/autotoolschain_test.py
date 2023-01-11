@@ -171,34 +171,38 @@ def test_check_configure_args_overwriting_and_deletion(save_args, cross_building
     ])
     at.generate_args()
     configure_args = save_args.call_args[0][0]['configure_args']
-    assert "--build=x86_64-linux-gnu" in configure_args
-    assert "--host=wasm32-local-emscripten" in configure_args
-    assert "--target=aarch64-linux-android" in configure_args
-    assert "--with-cross-build=my_path" in configure_args
-    assert "--something-host=my_host" in configure_args
+    assert "'--build=x86_64-linux-gnu'" in configure_args
+    assert "'--host=wasm32-local-emscripten'" in configure_args
+    assert "'--with-cross-build=my_path'" in configure_args
+    assert "'--something-host=my_host'" in configure_args
     # https://github.com/conan-io/conan/issues/12431
     at.configure_args.remove("--build=x86_64-linux-gnu")
     at.configure_args.remove("--host=wasm32-local-emscripten")
     at.generate_args()
     configure_args = save_args.call_args[0][0]['configure_args']
-    assert "--build=x86_64-linux-gnu" not in configure_args  # removed
-    assert "--host=wasm32-local-emscripten" not in configure_args  # removed
-    assert "--with-cross-build=my_path" in configure_args
-    assert "--something-host=my_host" in configure_args
+    assert "'--build=x86_64-linux-gnu'" not in configure_args  # removed
+    assert "'--host=wasm32-local-emscripten'" not in configure_args  # removed
+    assert "'--with-cross-build=my_path'" in configure_args
+    assert "'--something-host=my_host'" in configure_args
 
 
 def test_update_or_prune_any_args(cross_building_conanfile):
     at = AutotoolsToolchain(cross_building_conanfile)
-    at.update_configure_args(prefix="/my/other/prefix", build=None, target=None, host=None)
-    new_configure_args = args_to_string(at.configure_args)
-    assert "--prefix=/my/other/prefix" in new_configure_args
-    assert "--host=" not in new_configure_args
-    assert "--build=" not in new_configure_args
-    assert "--target=" not in new_configure_args
-    at.update_autoreconf_args(**{"force": None})
-    new_autoreconf_args = args_to_string(at.autoreconf_args)
-    assert "--force" not in new_autoreconf_args
+    at.configure_args.append("--enable-flag1=false")
     at.make_args.append("--complex-flag=complex-value")
-    at.update_make_args(**{"complex-flag": "new-value"})
+    # Update configure_args
+    at.update_configure_args({"--prefix": "/my/other/prefix",
+                              "--build": None,  # prune value
+                              "--enable-flag1": ""})
+    new_configure_args = args_to_string(at.configure_args)
+    assert "'--prefix=/my/other/prefix'" in new_configure_args
+    assert "'--build=" not in new_configure_args  # pruned
+    assert "'--enable-flag1'" in new_configure_args  # flag without value
+    # Update autoreconf_args
+    at.update_autoreconf_args({"--force": None})
+    new_autoreconf_args = args_to_string(at.autoreconf_args)
+    assert "'--force'" not in new_autoreconf_args
+    # Update make_args
+    at.update_make_args({"--complex-flag": "new-value"})
     new_make_args = args_to_string(at.make_args)
-    assert "--complex-flag=new-value" in new_make_args
+    assert "'--complex-flag=new-value'" in new_make_args

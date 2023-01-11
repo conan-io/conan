@@ -201,43 +201,48 @@ class AutotoolsToolchain:
                 triplets.append(f'{flag}{value}')
         return triplets
 
-    def update_configure_args(self, **updated_flags):
+    def update_configure_args(self, updated_flags):
         """
         Helper to update/prune flags from ``self.configure_args``.
 
         :param updated_flags: ``dict`` with arguments as keys and their argument values.
                               Notice that if argument value is ``None``, this one will be pruned.
         """
-        self._update_flags("configure_args", **updated_flags)
+        self._update_flags("configure_args", updated_flags)
 
-    def update_make_args(self, **updated_flags):
+    def update_make_args(self, updated_flags):
         """
         Helper to update/prune arguments from ``self.make_args``.
 
         :param updated_flags: ``dict`` with arguments as keys and their argument values.
                               Notice that if argument value is ``None``, this one will be pruned.
         """
-        self._update_flags("make_args", **updated_flags)
+        self._update_flags("make_args", updated_flags)
 
-    def update_autoreconf_args(self, **updated_flags):
+    def update_autoreconf_args(self, updated_flags):
         """
         Helper to update/prune arguments from ``self.autoreconf_args``.
 
         :param updated_flags: ``dict`` with arguments as keys and their argument values.
                               Notice that if argument value is ``None``, this one will be pruned.
         """
-        self._update_flags("autoreconf_args", **updated_flags)
+        self._update_flags("autoreconf_args", updated_flags)
 
-    def _update_flags(self, attr_name, **updated_flags):
+    # FIXME: Remove all these update_xxxx whenever xxxx_args are dicts or new ones replace them
+    def _update_flags(self, attr_name, updated_flags):
         _new_flags = []
         self_args = getattr(self, attr_name)
         for index, flag in enumerate(self_args):
-            flag_name = flag.split("=")[0].replace("--", "")
+            flag_name = flag.split("=")[0]
             if flag_name in updated_flags:
                 new_flag_value = updated_flags[flag_name]
                 # if {"build": None} is passed, then "--build=xxxx" will be pruned
-                if new_flag_value is not None:
-                    _new_flags.append(f"--{flag_name}={new_flag_value}")
+                if new_flag_value is None:
+                    continue
+                elif not new_flag_value:
+                    _new_flags.append(flag_name)
+                else:
+                    _new_flags.append(f"{flag_name}={new_flag_value}")
             else:
                 _new_flags.append(flag)
         # Update the current ones
