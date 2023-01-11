@@ -113,6 +113,8 @@ class AutotoolsToolchain:
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                    check_type=list))
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + apple_flags + conf_flags + self.build_type_link_flags + self.extra_ldflags
         return self._filter_list_empty_fields(ret)
 

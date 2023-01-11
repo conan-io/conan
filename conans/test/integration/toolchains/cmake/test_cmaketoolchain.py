@@ -902,6 +902,27 @@ def test_cmake_layout_toolchain_folder():
                                        "build/x86-debug/generators/conan_toolchain.cmake"))
 
 
+def test_set_linker_scripts():
+    profile = textwrap.dedent(r"""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=clang
+    compiler.version=15
+    compiler.libcxx=libstdc++11
+    [conf]
+    tools.build:linker_scripts=["/usr/local/src/flash.ld", "C:\\local\\extra_data.ld"]
+    """)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS -T"/usr/local/src/flash.ld" -T"C:/local/extra_data.ld")' in toolchain
+
+
 def test_test_package_layout():
     """
     test that the ``test_package`` folder also follows the cmake_layout and the

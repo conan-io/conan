@@ -215,6 +215,21 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag}
 
 
+class LinkerScriptsBlock(Block):
+    template = textwrap.dedent("""
+        string(APPEND CONAN_EXE_LINKER_FLAGS {{ linker_script_flags }})
+        """)
+
+    def context(self):
+        linker_scripts = self._conanfile.conf.get(
+            "tools.build:linker_scripts", check_type=list, default=[])
+        if not linker_scripts:
+            return
+        linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
+        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        return {"linker_script_flags": " ".join(linker_script_flags)}
+
+
 class CppStdBlock(Block):
     template = textwrap.dedent("""
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
