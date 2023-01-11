@@ -8,7 +8,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
-def check_min_vs(conanfile, version, throw = True):
+def check_min_vs(conanfile, version, raise_invalid=True):
     """ this is a helper method to allow the migration of 1.X->2.0 and VisualStudio->msvc settings
     withoug breaking recipes
     The legacy "Visual Studio" with different toolset is not managed, not worth the complexity
@@ -30,7 +30,7 @@ def check_min_vs(conanfile, version, throw = True):
             compiler_version += ".{}".format(compiler_update)
 
     if compiler_version and Version(compiler_version) < version:
-        if throw:
+        if raise_invalid:
             msg = f"This package doesn't work with VS compiler version '{compiler_version}'" \
                   f", it requires at least '{version}'"
             raise ConanInvalidConfiguration(msg)
