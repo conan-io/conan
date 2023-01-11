@@ -1115,3 +1115,103 @@ class TestResolveRemote:
         c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
         c.run("create pkg", assert_error=True)
         assert "Cannot resolve python_requires 'tool/0.1'" in c.out
+
+
+class TestTransitiveExtend:
+    # https://github.com/conan-io/conan/issues/10511
+    # https://github.com/conan-io/conan/issues/10565
+    def test_transitive_extend(self):
+        client = TestClient()
+        company = textwrap.dedent("""
+            from conan import ConanFile
+            class CompanyConanFile(ConanFile):
+                name = "company"
+                version = "1.0"
+
+                def msg1(self):
+                    return "company"
+                def msg2(self):
+                    return "company"
+            """)
+        project = textwrap.dedent("""
+            from conan import ConanFile
+            class ProjectBaseConanFile(ConanFile):
+                name = "project"
+                version = "1.0"
+
+                python_requires = "company/1.0"
+                python_requires_extend = "company.CompanyConanFile"
+
+                def msg1(self):
+                    return "project"
+            """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Base(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                python_requires = "project/1.0"
+                python_requires_extend = "project.ProjectBaseConanFile"
+                def generate(self):
+                    self.output.info("Msg1:{}!!!".format(self.msg1()))
+                    self.output.info("Msg2:{}!!!".format(self.msg2()))
+                """)
+        client.save({"company/conanfile.py": company,
+                     "project/conanfile.py": project,
+                     "consumer/conanfile.py": consumer})
+        client.run("export company")
+        client.run("export project")
+        client.run("install consumer")
+        assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
+        assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+
+    def test_transitive_extend2(self):
+        client = TestClient()
+        company = textwrap.dedent("""
+            from conan import ConanFile
+            class CompanyConanFile(ConanFile):
+                name = "company"
+                version = "1.0"
+
+            class CompanyBase:
+                def msg1(self):
+                    return "company"
+                def msg2(self):
+                    return "company"
+            """)
+        project = textwrap.dedent("""
+            from conan import ConanFile
+            class ProjectBase:
+                def msg1(self):
+                    return "project"
+
+            class ProjectBaseConanFile(ConanFile):
+                name = "project"
+                version = "1.0"
+                python_requires = "company/1.0"
+
+                def init(self):
+                    pkg_name, base_class_name = "company", "CompanyBase"
+                    base_class = getattr(self.python_requires[pkg_name].module, base_class_name)
+                    global ProjectBase
+                    ProjectBase = type('ProjectBase', (ProjectBase, base_class, object), {})
+            """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Base(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                python_requires = "project/1.0"
+                python_requires_extend = "project.ProjectBase"
+                def generate(self):
+                    self.output.info("Msg1:{}!!!".format(self.msg1()))
+                    self.output.info("Msg2:{}!!!".format(self.msg2()))
+                """)
+        client.save({"company/conanfile.py": company,
+                     "project/conanfile.py": project,
+                     "consumer/conanfile.py": consumer})
+        client.run("export company")
+        client.run("export project")
+        client.run("install consumer")
+        assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
+        assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out

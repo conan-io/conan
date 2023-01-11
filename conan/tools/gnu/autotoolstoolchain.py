@@ -28,10 +28,6 @@ class AutotoolsToolchain:
         self._namespace = namespace
         self._prefix = prefix
 
-        self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
-        self.autoreconf_args = self._default_autoreconf_flags()
-        self.make_args = []
-
         # Flags
         self.extra_cxxflags = []
         self.extra_cflags = []
@@ -73,11 +69,12 @@ class AutotoolsToolchain:
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
             arch_build = conanfile.settings_build.get_safe('arch')
+
             compiler = self._conanfile.settings.get_safe("compiler")
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
-
             # Apple Stuff
             if os_build == "Macos":
                 # SDK path is mandatory for cross-building
@@ -93,6 +90,12 @@ class AutotoolsToolchain:
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+
+        self.configure_args = self._default_configure_shared_flags() + \
+                              self._default_configure_install_flags() + \
+                              self._get_triplets()
+        self.autoreconf_args = self._default_autoreconf_flags()
+        self.make_args = []
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -131,6 +134,8 @@ class AutotoolsToolchain:
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                    check_type=list))
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + apple_flags + conf_flags + self.build_type_link_flags + self.extra_ldflags
         return self._filter_list_empty_fields(ret)
 
@@ -197,19 +202,67 @@ class AutotoolsToolchain:
                                        _get_argument("datarootdir", "resdirs")])
         return [el for el in configure_install_flags if el]
 
-    def _default_autoreconf_flags(self):
+    @staticmethod
+    def _default_autoreconf_flags():
         return ["--force", "--install"]
 
-    def generate_args(self):
-        configure_args = []
-        configure_args.extend(self.configure_args)
-        user_args_str = cmd_args_to_string(self.configure_args)
-        for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
-            if var and flag not in user_args_str:
-                configure_args.append('--{}={}'.format(flag, var))
+    def _get_triplets(self):
+        triplets = []
+        for flag, value in (("--host=", self._host), ("--build=", self._build),
+                            ("--target=", self._target)):
+            if value:
+                triplets.append(f'{flag}{value}')
+        return triplets
 
-        args = {"configure_args": cmd_args_to_string(configure_args),
+    def update_configure_args(self, updated_flags):
+        """
+        Helper to update/prune flags from ``self.configure_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("configure_args", updated_flags)
+
+    def update_make_args(self, updated_flags):
+        """
+        Helper to update/prune arguments from ``self.make_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("make_args", updated_flags)
+
+    def update_autoreconf_args(self, updated_flags):
+        """
+        Helper to update/prune arguments from ``self.autoreconf_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("autoreconf_args", updated_flags)
+
+    # FIXME: Remove all these update_xxxx whenever xxxx_args are dicts or new ones replace them
+    def _update_flags(self, attr_name, updated_flags):
+        _new_flags = []
+        self_args = getattr(self, attr_name)
+        for index, flag in enumerate(self_args):
+            flag_name = flag.split("=")[0]
+            if flag_name in updated_flags:
+                new_flag_value = updated_flags[flag_name]
+                # if {"build": None} is passed, then "--build=xxxx" will be pruned
+                if new_flag_value is None:
+                    continue
+                elif not new_flag_value:
+                    _new_flags.append(flag_name)
+                else:
+                    _new_flags.append(f"{flag_name}={new_flag_value}")
+            else:
+                _new_flags.append(flag)
+        # Update the current ones
+        setattr(self, attr_name, _new_flags)
+
+    def generate_args(self):
+        args = {"configure_args": cmd_args_to_string(self.configure_args),
                 "make_args":  cmd_args_to_string(self.make_args),
                 "autoreconf_args": cmd_args_to_string(self.autoreconf_args)}
-
         save_toolchain_args(args, namespace=self._namespace)
