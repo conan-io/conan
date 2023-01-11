@@ -229,7 +229,7 @@ class AutotoolsToolchain:
             ret = {}
             for flag in flags:
                 # Only splitting if "=" is there
-                option = flag.split("=")
+                option = flag.split("=", 1)
                 if len(option) == 2:
                     ret[option[0]] = option[1]
                 else:
