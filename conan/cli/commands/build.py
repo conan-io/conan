@@ -29,7 +29,7 @@ def build(conan_api, parser, *args):
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,

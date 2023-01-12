@@ -9,7 +9,6 @@ from conans import __version__
 
 
 class NewAPI:
-
     _NOT_TEMPLATES = "not_templates"  # Filename containing filenames of files not to be rendered
 
     def __init__(self, conan_api):
@@ -17,6 +16,7 @@ class NewAPI:
 
     @api_method
     def get_builtin_template(self, template_name):
+        from conan.internal.api.new.basic import basic_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
         from conan.internal.api.new.cmake_lib import cmake_lib_files
@@ -28,7 +28,8 @@ class NewAPI:
         from conan.internal.api.new.bazel_exe import bazel_exe_files
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
-        new_templates = {"cmake_lib": cmake_lib_files,
+        new_templates = {"basic": basic_file,
+                         "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
                          "meson_lib": meson_lib_files,
                          "meson_exe": meson_exe_files,
@@ -87,10 +88,24 @@ class NewAPI:
         result = {}
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
-        definitions["package_name"] = name.replace("-", "_").replace("+", "_").replace(".", "_")
+
+        def as_package_name(n):
+            return n.replace("-", "_").replace("+", "_").replace(".", "_")
+
+        def as_name(ref):
+            ref = as_package_name(ref)
+            if '/' in ref:
+                ref = ref[0:ref.index('/')]
+            return ref
+
+        definitions["package_name"] = as_package_name(name)
+        definitions["as_iterable"] = lambda x: [x] if isinstance(x, str) else x
+        definitions["as_name"] = as_name
         for k, v in template_files.items():
-            k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
-            v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
+            k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(
+                **definitions)
+            v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(
+                **definitions)
             if v:
                 result[k] = v
         return result

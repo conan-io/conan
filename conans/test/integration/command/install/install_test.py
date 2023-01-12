@@ -45,6 +45,7 @@ def test_four_subfolder_install(client):
     client.run(" install path/to/sub/folder")
 
 
+@pytest.mark.artifactory_ready
 def test_install_system_requirements(client):
     client.save({"conanfile.py": textwrap.dedent("""
         from conan import ConanFile
@@ -261,6 +262,7 @@ def test_install_anonymous(client):
     assert "pkg/0.1@lasote/testing: Package installed" in client2.out
 
 
+@pytest.mark.artifactory_ready
 def test_install_without_ref(client):
     client.save({"conanfile.py": GenConanfile("lib", "1.0")})
     client.run('create .')
@@ -281,6 +283,7 @@ def test_install_without_ref(client):
     client.run('upload lib/1.0 -c -r default')
 
 
+@pytest.mark.artifactory_ready
 def test_install_disabled_remote(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
@@ -293,6 +296,17 @@ def test_install_disabled_remote(client):
     client.run("remote disable default")
     client.run("install --requires=pkg/0.1@lasote/testing --update -r default", assert_error=True)
     assert "ERROR: Remote 'default' can't be found or is disabled" in client.out
+
+
+def test_install_no_remotes(client):
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    client.run("create .")
+    client.run("upload * --confirm -r default")
+    client.run("remove * -c")
+    client.run("install --requires=pkg/0.1 -nr", assert_error=True)
+    assert "ERROR: Package 'pkg/0.1' not resolved: No remote defined" in client.out
+    client.run("install --requires=pkg/0.1")  # this works without issue
+    client.run("install --requires=pkg/0.1 -nr")  # and now this too, pkg in cache
 
 
 def test_install_skip_disabled_remote():

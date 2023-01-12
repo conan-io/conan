@@ -179,7 +179,7 @@ void deployToPypiTest() {
                     def deployConan = "python -m pip install twine && " \
                                     + "python .ci/bump_dev_version.py && " \
                                     + "rm -rf dist/ && python setup.py sdist && " \
-                                    + "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*"
+                                    + "python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
                     sh(script: deployConan)
                 }
             }
@@ -187,7 +187,7 @@ void deployToPypiTest() {
                 withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'),
                                  string(credentialsId: 'TWINE_PASSWORD_SERVER', variable: 'TWINE_PASSWORD')]) {
                     def deployServer = "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
-                                     + "python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*"
+                                     + "python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
                     sh(script: deployServer)
                 }
             }

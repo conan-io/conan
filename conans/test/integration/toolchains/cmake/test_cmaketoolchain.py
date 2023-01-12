@@ -8,7 +8,6 @@ from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
@@ -373,7 +372,7 @@ def test_cmake_presets_binary_dir_available():
     else:
         build_dir = os.path.join(client.current_folder, "build")
 
-    presets = load_cmake_presets(os.path.join(client.current_folder, "build", "generators"))
+    presets = load_cmake_presets(os.path.join(build_dir, "generators"))
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
 
 
@@ -397,6 +396,8 @@ def test_cmake_presets_multiconfig():
     presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["buildPresets"]) == 1
     assert presets["buildPresets"][0]["configuration"] == "Release"
+    assert len(presets["testPresets"]) == 1
+    assert presets["testPresets"][0]["configuration"] == "Release"
 
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=Debug --profile:h=profile")
@@ -404,6 +405,9 @@ def test_cmake_presets_multiconfig():
     assert len(presets["buildPresets"]) == 2
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
+    assert len(presets["testPresets"]) == 2
+    assert presets["testPresets"][0]["configuration"] == "Release"
+    assert presets["testPresets"][1]["configuration"] == "Debug"
 
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=RelWithDebInfo --profile:h=profile")
@@ -416,17 +420,29 @@ def test_cmake_presets_multiconfig():
     assert presets["buildPresets"][1]["configuration"] == "Debug"
     assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
     assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+    assert len(presets["testPresets"]) == 4
+    assert presets["testPresets"][0]["configuration"] == "Release"
+    assert presets["testPresets"][1]["configuration"] == "Debug"
+    assert presets["testPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["testPresets"][3]["configuration"] == "MinSizeRel"
 
     # Repeat one
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=Debug --profile:h=profile")
     client.run("install --requires=mylib/1.0@ -g CMakeToolchain "
                "-s build_type=Debug --profile:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["buildPresets"]) == 4
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
     assert presets["buildPresets"][2]["configuration"] == "RelWithDebInfo"
     assert presets["buildPresets"][3]["configuration"] == "MinSizeRel"
+
+    assert len(presets["testPresets"]) == 4
+    assert presets["testPresets"][0]["configuration"] == "Release"
+    assert presets["testPresets"][1]["configuration"] == "Debug"
+    assert presets["testPresets"][2]["configuration"] == "RelWithDebInfo"
+    assert presets["testPresets"][3]["configuration"] == "MinSizeRel"
 
     assert len(presets["configurePresets"]) == 1
     assert presets["configurePresets"][0]["name"] == "default"
@@ -454,6 +470,9 @@ def test_cmake_presets_singleconfig():
     assert len(presets["buildPresets"]) == 1
     assert presets["buildPresets"][0]["configurePreset"] == "release"
 
+    assert len(presets["testPresets"]) == 1
+    assert presets["testPresets"][0]["configurePreset"] == "release"
+
     # Now two configurePreset, but named correctly
     client.run("install --requires=mylib/1.0@ "
                "-g CMakeToolchain -s build_type=Debug --profile:h=profile")
@@ -463,6 +482,9 @@ def test_cmake_presets_singleconfig():
 
     assert len(presets["buildPresets"]) == 2
     assert presets["buildPresets"][1]["configurePreset"] == "debug"
+
+    assert len(presets["testPresets"]) == 2
+    assert presets["testPresets"][1]["configurePreset"] == "debug"
 
     # Repeat configuration, it shouldn't add a new one
     client.run("install --requires=mylib/1.0@ "
@@ -521,6 +543,7 @@ def test_toolchain_cache_variables():
         assert f"-D{var}={_format_val(value)}" in client.out
     assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
     assert f"-G {_format_val('MinGW Makefiles')}" in client.out
+
 
 def test_android_c_library():
     client = TestClient()
@@ -852,3 +875,93 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
+
+
+def test_cmake_layout_toolchain_folder():
+    """ in single-config generators, the toolchain is a different file per configuration
+    https://github.com/conan-io/conan/issues/12827
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+            """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Release "
+          "-s compiler.libcxx=libstdc++11")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/Release/generators/conan_toolchain.cmake"))
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
+          "-s compiler.libcxx=libstdc++11")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/Debug/generators/conan_toolchain.cmake"))
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
+          "-s compiler.libcxx=libstdc++11 -s arch=x86 "
+          "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.arch\", \"settings.build_type\"]'")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/x86-debug/generators/conan_toolchain.cmake"))
+
+
+def test_set_linker_scripts():
+    profile = textwrap.dedent(r"""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=clang
+    compiler.version=15
+    compiler.libcxx=libstdc++11
+    [conf]
+    tools.build:linker_scripts=["/usr/local/src/flash.ld", "C:\\local\\extra_data.ld"]
+    """)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS -T"/usr/local/src/flash.ld" -T"C:/local/extra_data.ld")' in toolchain
+
+
+def test_test_package_layout():
+    """
+    test that the ``test_package`` folder also follows the cmake_layout and the
+    build_folder_vars
+    """
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
+            test_type = "explicit"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def layout(self):
+                cmake_layout(self)
+
+            def test(self):
+                pass
+    """)
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                 "test_package/conanfile.py": test_conanfile})
+    config = "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"
+    client.run(f"create . {config} -s compiler.cppstd=14")
+    assert os.path.exists(os.path.join(client.current_folder, "test_package/test_output/build/14"))
+    client.run(f"create . {config} -s compiler.cppstd=17")
+    assert os.path.exists(os.path.join(client.current_folder, "test_package/test_output/build/17"))
+    # FIXME: We need to review this, it is counter-intuitive that you define a layout and it is
+    #  simply erased at every conan create invocation
+    assert not os.path.exists(os.path.join(client.current_folder,
+                                           "test_package/test_output/build/14"))

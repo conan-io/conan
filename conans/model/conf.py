@@ -67,7 +67,7 @@ BUILT_IN_CONFS = {
     "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
-    "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community",
+    "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
     "tools.microsoft.bash:subsystem": "The subsystem to be used when conanfile.win_bash==True. Possible values: msys2, msys, cygwin, wsl, sfu",
@@ -92,6 +92,7 @@ BUILT_IN_CONFS = {
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain and AutotoolsToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by CMakeToolchain for CMAKE_SHARED_LINKER_FLAGS_INIT variable",
     "tools.build:exelinkflags": "List of extra flags used by CMakeToolchain for CMAKE_EXE_LINKER_FLAGS_INIT variable",
+    "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
@@ -119,6 +120,8 @@ class _ConfVarPlaceHolder:
 class _ConfValue(object):
 
     def __init__(self, name, value, path=False):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
         self._name = name
         self._value = value
         self._value_type = type(value)
@@ -246,33 +249,10 @@ class Conf:
         """
         return other._values == self._values
 
-    def __getitem__(self, name):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
-        """
-        # FIXME: Keeping backward compatibility
-        return self.get(name)
-
-    def __setitem__(self, name, value):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0.
-        """
-        # FIXME: Keeping backward compatibility
-        self.define(name, value)  # it's like a new definition
-
     def items(self):
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
             yield k, v.value
-
-    @staticmethod
-    def _get_boolean_value(value):
-        if type(value) is bool:
-            return value
-        elif str(value).lower() in Conf.boolean_false_expressions:
-            return False
-        else:
-            return True
 
     def get(self, conf_name, default=None, check_type=None):
         """
@@ -294,7 +274,7 @@ class Conf:
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
-                return self._get_boolean_value(v)
+                return str(v).lower() not in Conf.boolean_false_expressions
             elif check_type is str and not isinstance(v, str):
                 return str(v)
             elif v is None:  # value was unset
@@ -318,11 +298,6 @@ class Conf:
         value = self.get(conf_name, default=default)
         self._values.pop(conf_name, None)
         return value
-
-    @staticmethod
-    def _validate_lower_case(name):
-        if name != name.lower():
-            raise ConanException("Conf '{}' must be lowercase".format(name))
 
     def copy(self):
         c = Conf()
@@ -351,11 +326,9 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._validate_lower_case(name)
         self._values[name] = _ConfValue(name, value)
 
     def define_path(self, name, value):
-        self._validate_lower_case(name)
         self._values[name] = _ConfValue(name, value, path=True)
 
     def unset(self, name):
@@ -373,12 +346,10 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, {})
         self._values.setdefault(name, conf_value).update(value)
 
     def update_path(self, name, value):
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, {}, path=True)
         self._values.setdefault(name, conf_value).update(value)
 
@@ -389,12 +360,10 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to append.
         """
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).append(value)
 
     def append_path(self, name, value):
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).append(value)
 
@@ -405,12 +374,10 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to prepend.
         """
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
         self._values.setdefault(name, conf_value).prepend(value)
 
     def prepend_path(self, name, value):
-        self._validate_lower_case(name)
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
         self._values.setdefault(name, conf_value).prepend(value)
 
@@ -603,16 +570,6 @@ class ConfDefinition:
             getattr(conf, method)(name, value)
         # Update
         self._update_conf_definition(pattern, conf)
-
-    def as_list(self):
-        result = []
-        for pattern, conf in self._pattern_confs.items():
-            for name, value in sorted(conf.items()):
-                if pattern:
-                    result.append(("{}:{}".format(pattern, name), value))
-                else:
-                    result.append((name, value))
-        return result
 
     def dumps(self):
         result = []

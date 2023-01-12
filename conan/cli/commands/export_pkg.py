@@ -4,6 +4,7 @@ import os
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
+from conan.cli.commands import make_abs_path
 from conans.errors import ConanInvalidConfiguration
 
 
@@ -18,6 +19,9 @@ def export_pkg(conan_api, parser, *args):
     Export recipe to the Conan package cache, and create a package directly from pre-compiled binaries
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("-of", "--output-folder",
+                        help='The root output folder for generated and build files')
+
     add_reference_args(parser)
     add_lockfile_args(parser)
     add_profiles_args(parser)
@@ -29,7 +33,6 @@ def export_pkg(conan_api, parser, *args):
                                                conanfile_path=path,
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
-
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     ref, conanfile = conan_api.export.export(path=path,
@@ -68,7 +71,15 @@ def export_pkg(conan_api, parser, *args):
         msg = "{}: {}: {}".format(conanfile, binary, reason)
         raise ConanInvalidConfiguration(msg)
 
-    conan_api.export.export_pkg(deps_graph, path)
+    # It is necessary to install binaries, in case there are build_requires necessary to export
+    # But they should be local, if this was built here
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=None, update=False)
+    source_folder = os.path.dirname(path)
+    output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
+    conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
+                                       output_folder=output_folder)
+
+    conan_api.export.export_pkg(deps_graph, source_folder, output_folder)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)

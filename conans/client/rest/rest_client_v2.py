@@ -1,19 +1,20 @@
 import copy
 import os
 import time
+from threading import Thread
 
 from conan.api.output import ConanOutput
 
 from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
-from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.package_ref import PkgReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.dates import from_iso8601_to_timestamp
+from conans.util.thread import ExceptionThread
 
 
 class RestV2Methods(RestCommonMethods):
@@ -35,25 +36,16 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_snapshot(self, url):
-        try:
-            data = self._get_file_list_json(url)
-            files_list = [os.path.normpath(filename) for filename in data["files"]]
-        except NotFoundException:
-            files_list = []
-        return files_list
-
     def get_recipe(self, ref, dest_folder):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(EXPORT_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME in files:
             files.remove(EXPORT_SOURCES_TGZ_NAME)
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        self._download_and_save_files(urls, dest_folder, files, parallel=True)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -64,7 +56,6 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME not in files:
             return None
         files = [EXPORT_SOURCES_TGZ_NAME, ]
@@ -79,7 +70,6 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
@@ -145,7 +135,7 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
 
-    def _download_and_save_files(self, urls, dest_folder, files):
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
@@ -154,15 +144,24 @@ class RestV2Methods(RestCommonMethods):
         if download_cache and not os.path.isabs(download_cache):
             raise ConanException("core.download:download_cache must be an absolute path")
         downloader = CachingFileDownloader(self.requester, download_cache=download_cache)
+        threads = []
+
         for filename in sorted(files, reverse=True):
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
-                                verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
-
-    def _remove_recipe_files(self, ref, files):
-        # V2 === revisions, do not remove files, it will create a new revision if the files changed
-        return
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
+            if parallel:
+                kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
+                          "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
+                          "auth": self.auth}
+                thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
+                threads.append(thread)
+                thread.start()
+            else:
+                downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
+                                    verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
+        for t in threads:
+            t.join()
 
     def remove_all_packages(self, ref):
         """ Remove all packages from the specified reference"""

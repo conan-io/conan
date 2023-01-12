@@ -17,7 +17,7 @@ def folders():
         (os.path.join(tmp, "foo/var/file.txt"), "foo/var/other/absolute.txt"),  # Absolute link
         (os.path.join(tmp, "foo/var"), "foo/var/other/other/myfolder"),  # Absolute link folder
         (os.path.join(tmp, "foo/var/file.txt"), "foo/absolute.txt"),  # Absolute link
-        ("foo/var/file.txt", "foo/var/other/relative.txt"),  # Relative link
+        ("../file.txt", "foo/var/other/relative.txt"),  # Relative link
         ("missing.txt", "foo/var/other/broken.txt"),  # Broken link
         (outside_folder, "foo/var/other/absolute_outside"),  # Absolute folder outside the folder
         ("../../../../../outside", "foo/absolute_outside"),  # Relative folder outside the folder
@@ -54,7 +54,7 @@ def test_absolute_to_relative_symlinks(folders):
     assert linked_to == "var/file.txt"
 
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/relative.txt")).replace("\\", "/")
-    assert linked_to == "foo/var/file.txt"
+    assert linked_to == "../file.txt"
 
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/broken.txt"))
     assert linked_to == "missing.txt"
@@ -81,7 +81,7 @@ def test_remove_external_symlinks(folders):
     assert linked_to == os.path.join(folder, "foo/var/file.txt")
 
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/relative.txt"))
-    assert linked_to == "foo/var/file.txt"
+    assert linked_to == "../file.txt"
 
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/broken.txt"))
     assert linked_to == "missing.txt"
@@ -112,7 +112,7 @@ def test_remove_broken_symlinks(folders):
     assert linked_to == os.path.join(folder, "foo/var/file.txt")
 
     linked_to = os.readlink(os.path.join(folder, "foo/var/other/relative.txt"))
-    assert linked_to == "foo/var/file.txt"
+    assert linked_to == "../file.txt"
 
     # This one is removed
     assert not os.path.islink(os.path.join(folder, "foo/var/other/broken.txt"))

@@ -808,6 +808,7 @@ class TurboTestClient(TestClient):
         latest_prev = self.cache.get_latest_package_reference(tmp)
         return latest_prev.revision
 
+    # FIXME: 2.0: adapt this function to using the new "conan list xxxx" and recover the xfail tests
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""
         self.run("search {} --json {} {} {}".format(pattern, ".tmp.json", remote,

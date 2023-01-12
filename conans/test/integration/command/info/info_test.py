@@ -101,17 +101,31 @@ class TestFilters:
         assert "license" in c.out
         assert "author: myself" in c.out
 
+    def test_filter_fields_json(self):
+        # The --filter arg should work, specifying which fields to show only
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile()
+               .with_class_attribute("author = 'myself'")
+               .with_class_attribute("license = 'MIT'")
+               .with_class_attribute("url = 'http://url.com'")})
+        c.run("graph info . --filter=license --format=json")
+        assert "author" not in c.out
+        assert '"license": "MIT"' in c.out
+        c.run("graph info . --filter=license --format=html", assert_error=True)
+        assert "Formatted output 'html' cannot filter fields" in c.out
+
 
 class TestJsonOutput:
-    def test_json_not_filtered(self):
+    def test_json_package_filter(self):
         # Formatted output like json or html doesn't make sense to be filtered
         client = TestClient()
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"conanfile.py": conanfile})
-        client.run("graph info . --filter=license --format=json", assert_error=True)
-        assert "Formatted outputs cannot be filtered" in client.out
-        client.run("graph info . --package-filter=license --format=html", assert_error=True)
-        assert "Formatted outputs cannot be filtered" in client.out
+        client.run("graph info . --package-filter=nothing --format=json")
+        assert '"nodes": []' in client.out
+        client.run("graph info . --package-filter=pkg* --format=json")
+        graph = json.loads(client.stdout)
+        assert graph["nodes"][0]["ref"] == "pkg/0.1"
 
     def test_json_info_outputs(self):
         client = TestClient()
@@ -298,3 +312,31 @@ class TestErrorsInGraph:
         exit_code = c.run("graph info consumer", assert_error=True)
         assert "ERROR: Package 'dep/0.1' not resolved: dep/0.1: Cannot load" in c.out
         assert exit_code == ERROR_GENERAL
+
+
+def test_info_not_hit_server():
+    """
+    the command graph info shouldn't be hitting the server if packages are in the Conan cache
+    :return:
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "consumer/conanfile.py": GenConanfile("consumer", "0.1").with_require("pkg/0.1")})
+    c.run("create pkg")
+    c.run("create consumer")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    c.run("install --requires=consumer/0.1@")
+    assert "Downloaded" in c.out
+    # break the server to make sure it is not being contacted at all
+    c.servers["default"] = None
+    c.run("graph info --requires=consumer/0.1@")
+    assert "Downloaded" not in c.out
+    # Now we remove the local, so it will raise errors
+    c.run("remove pkg* -c")
+    c.run("graph info --requires=consumer/0.1@", assert_error=True)
+    assert "'NoneType' object " in c.out
+    c.run("remote disable *")
+    c.run("graph info --requires=consumer/0.1@", assert_error=True)
+    assert "'NoneType' object " not in c.out
+    assert "No remote defined" in c.out

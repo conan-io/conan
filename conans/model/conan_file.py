@@ -279,6 +279,7 @@ class ConanFile:
         result["build_folder"] = self.build_folder
         result["package_folder"] = self.package_folder
         result["cpp_info"] = self.cpp_info.serialize()
+        result["label"] = self.display_name
         return result
 
     @property

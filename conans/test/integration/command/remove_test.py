@@ -63,10 +63,10 @@ conaninfo = '''
 class RemoveWithoutUserChannel(unittest.TestCase):
 
     def setUp(self):
-        self.test_server = TestServer(users={"lasote": "password"},
-                                      write_permissions=[("lib/1.0@*/*", "lasote")])
+        self.test_server = TestServer(users={"admin": "password"},
+                                      write_permissions=[("lib/1.0@*/*", "admin")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, inputs=["lasote", "password"])
+        self.client = TestClient(servers=servers, inputs=["admin", "password"])
 
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
@@ -80,6 +80,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.assertFalse(os.path.exists(ref_layout.base_folder))
         self.assertFalse(os.path.exists(pkg_layout.base_folder))
 
+    @pytest.mark.artifactory_ready
     def test_remote(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=lib --version=1.0")
@@ -102,10 +103,10 @@ class RemovePackageRevisionsTest(unittest.TestCase):
     NO_SETTINGS_RREF = "4d670581ccb765839f2239cc8dff8fbd"
 
     def setUp(self):
-        self.test_server = TestServer(users={"user": "password"},
-                                      write_permissions=[("foobar/0.1@*/*", "user")])
+        self.test_server = TestServer(users={"admin": "password"},
+                                      write_permissions=[("foobar/0.1@*/*", "admin")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, inputs=["user", "password"])
+        self.client = TestClient(servers=servers, inputs=["admin", "password"])
         ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
         self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
 
@@ -135,6 +136,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
+    @pytest.mark.artifactory_ready
     def test_remove_remote_package_id_reference(self):
         """ Remove remote package ID based on recipe revision. The package must be deleted, but
             the recipe must be preserved.
@@ -150,6 +152,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
+    @pytest.mark.artifactory_ready
     def test_remove_all_packages_but_the_recipe_at_remote(self):
         """ Remove all the packages but not the recipe in a remote
         """
@@ -161,13 +164,13 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                RecipeReference.loads("foobar/0.1@user/testing"))
         self.client.run("list foobar/0.1@user/testing#{} -r default".format(ref.revision))
         default_arch = self.client.get_default_host_profile().settings['arch']
-        self.assertIn(f"arch={default_arch}", self.client.out)
-        self.assertIn("arch=x86", self.client.out)
+        self.assertIn(f"arch: {default_arch}", self.client.out)
+        self.assertIn("arch: x86", self.client.out)
 
         self.client.run("remove -c foobar/0.1@user/testing:* -r default")
         self.client.run("search foobar/0.1@user/testing -r default")
-        self.assertNotIn(f"arch={default_arch}", self.client.out)
-        self.assertNotIn("arch=x86", self.client.out)
+        self.assertNotIn(f"arch: {default_arch}", self.client.out)
+        self.assertNotIn("arch: x86", self.client.out)
 
 
 # populated packages of bar
