@@ -3,11 +3,10 @@ import json
 from conan.api.conan_api import ConanAPI
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
-from conan.cli.commands import ConanJSONEncoder
 from conan.cli.formatters.list import list_packages_html
-from conan.internal.api.select_pattern import ListPattern, ListPatternMode
-from conans.util.dates import timestamp_to_str
+from conan.internal.api.select_pattern import ListPattern
 
+# Keep them so we don't break other commands that import them, but TODO: Remove later
 remote_color = Color.BRIGHT_BLUE
 recipe_name_color = Color.GREEN
 recipe_color = Color.BRIGHT_WHITE
@@ -17,65 +16,71 @@ field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
 
 
+def print_serial(item, indent=None, color_index=None):
+    indent = "" if indent is None else (indent + "  ")
+    color_index = 0 if color_index is None else (color_index + 1)
+    color_array = [Color.BRIGHT_BLUE, Color.GREEN, Color.BRIGHT_WHITE,
+                   Color.BRIGHT_YELLOW, Color.CYAN, Color.WHITE]
+    color = color_array[color_index % len(color_array)]
+    if isinstance(item, dict):
+        for k, v in item.items():
+            if isinstance(v, str):
+                if k.lower() == "error":
+                    color = Color.BRIGHT_RED
+                    k = "ERROR"
+                elif k.lower() == "warning":
+                    color = Color.BRIGHT_YELLOW
+                    k = "WARN"
+                cli_out_write(f"{indent}{k}: {v}", fg=color)
+            else:
+                cli_out_write(f"{indent}{k}", fg=color)
+                print_serial(v, indent, color_index)
+    elif isinstance(item, type([])):
+        for elem in item:
+            cli_out_write(f"{indent}{elem}", fg=color)
+    elif item:
+        cli_out_write(f"{indent}{item}", fg=color)
+
+
 def print_list_text(results):
+    """ Do litte format modification to serialized
+    list bundle so it looks prettier on text output
+    """
     info = results["results"]
-    search_mode = results["search_mode"]
-    indentation = "  "
 
-    for remote, info_per_ref_name in info.items():
-        cli_out_write(f"{remote}:", fg=remote_color)
+    # Extract command single package name
+    new_info = {}
+    for remote, remote_info in info.items():
+        new_remote_info = {}
+        for ref, content in remote_info.items():
+            if ref == "error":
+                new_remote_info[ref] = content
+            else:
+                name, _ = ref.split("/", 1)
+                new_remote_info.setdefault(name, {})[ref] = content
+        new_info[remote] = new_remote_info
+    info = new_info
 
-        if info_per_ref_name.get("error"):
-            cli_out_write(f"  ERROR: {info_per_ref_name.get('error')}", fg=error_color)
-            continue
+    info = {remote: {"warning": "There are no matching recipe references"} if not values else values
+            for remote, values in info.items()}
 
-        if not info_per_ref_name:
-            cli_out_write(f"  There are no matching recipe references", fg=recipe_color)
-            continue
-
-        for ref_name, refs in info_per_ref_name.items():
-            cli_out_write(f"{indentation}{ref_name}", fg=recipe_name_color)
-            for ref, prefs in refs.items():
-                cli_out_write(f"{indentation * 2}{ref.repr_humantime() if ref.timestamp else ref}",
-                              fg=recipe_color)
-                if prefs:
-                    for pref, binary_info in prefs:
-                        pref_date = f" ({timestamp_to_str(pref.timestamp)})" if pref.timestamp \
-                                                                             else ""
-                        if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
-                            cli_out_write(f"{indentation * 3}PID: {pref.package_id}{pref_date}",
-                                          fg=reference_color)
-                            if not binary_info:
-                                cli_out_write(f"{indentation * 4}Empty package information",
-                                              fg=field_color)
-                                continue
-                        elif search_mode in (ListPatternMode.SHOW_ALL_PREVS,
-                                             ListPatternMode.SHOW_LATEST_PREV):
-                            cli_out_write(f"{indentation * 3}PID: {pref.package_id}",
-                                          fg=reference_color)
-                            cli_out_write(f"{indentation * 4}PREV: {pref.revision}{pref_date}",
-                                          fg=field_color)
-                            continue
-                        for item, contents in binary_info.items():
-                            if not contents:
-                                continue
-                            cli_out_write(f"{indentation * 4}{item}:", fg=field_color)
-                            if isinstance(contents, dict):
-                                for k, v in contents.items():
-                                    cli_out_write(f"{indentation * 5}{k}={v}", fg=value_color)
-                            else:
-                                for c in contents:
-                                    cli_out_write(f"{indentation * 5}{c}", fg=value_color)
-                elif search_mode in (ListPatternMode.SHOW_PACKAGE_IDS,
-                                     ListPatternMode.SHOW_ALL_PREVS,
-                                     ListPatternMode.SHOW_LATEST_PREV):
-                    cli_out_write(f"{indentation * 3}There are no packages for this revision.",
-                                  fg=field_color)
+    def format_timestamps(item):
+        if isinstance(item, dict):
+            result = {}
+            for k, v in item.items():
+                if isinstance(v, dict) and v.get("timestamp"):
+                    timestamp = v.pop("timestamp")
+                    k = f"{k} ({timestamp})"
+                result[k] = format_timestamps(v)
+            return result
+        return item
+    info = {remote: format_timestamps(values) for remote, values in info.items()}
+    print_serial(info)
 
 
 def print_list_json(data):
     results = data["results"]
-    myjson = json.dumps(results, indent=4, cls=ConanJSONEncoder)
+    myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
 
 
@@ -113,8 +118,7 @@ def list(conan_api: ConanAPI, parser, *args):
         except Exception as e:
             results[name] = {"error": str(e)}
         else:
-            results[name] = list_bundle.serialize() if args.format in ("json", "html") \
-                else list_bundle.ordered_recipes_by_name
+            results[name] = list_bundle.serialize()
     return {
         "results": results,
         "search_mode": ref_pattern.mode,
