@@ -115,7 +115,7 @@ def test_linker_scripts_via_conf():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
-    t.run("install . -pr=profile")
+    t.run("install . -pr:b=profile -pr=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
     assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
