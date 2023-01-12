@@ -155,9 +155,10 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_recipe_latest_revision(self, client, remote):
+    @pytest.mark.parametrize("pattern", ["zli/1.0.0", "zli/1.0.0#latest",
+                                         "zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360"])
+    def test_list_recipe_latest_revision(self, client, remote, pattern):
         # by default, when a reference is complete, we show latest recipe revision
-        pattern = "zli/1.0.0"
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0
