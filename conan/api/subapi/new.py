@@ -9,7 +9,6 @@ from conans import __version__
 
 
 class NewAPI:
-
     _NOT_TEMPLATES = "not_templates"  # Filename containing filenames of files not to be rendered
 
     def __init__(self, conan_api):
@@ -84,17 +83,29 @@ class NewAPI:
 
         return template_files, non_template_files
 
-
     @staticmethod
     def render(template_files, definitions):
         result = {}
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
-        definitions["package_name"] = name.replace("-", "_").replace("+", "_").replace(".", "_")
+
+        def as_package_name(n):
+            return n.replace("-", "_").replace("+", "_").replace(".", "_")
+
+        def as_name(ref):
+            ref = as_package_name(ref)
+            if '/' in ref:
+                ref = ref[0:ref.index('/')]
+            return ref
+
+        definitions["package_name"] = as_package_name(name)
         definitions["as_iterable"] = lambda x: [x] if isinstance(x, str) else x
+        definitions["as_name"] = as_name
         for k, v in template_files.items():
-            k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
-            v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(**definitions)
+            k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(
+                **definitions)
+            v = Template(v, keep_trailing_newline=True, undefined=StrictUndefined).render(
+                **definitions)
             if v:
                 result[k] = v
         return result
