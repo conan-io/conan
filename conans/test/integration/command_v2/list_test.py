@@ -86,7 +86,6 @@ class TestListRefs:
         r = "-r=default" if remote else ""
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r}")
-        print(client.out)
         expected = textwrap.indent(expected, "  ")
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
@@ -99,7 +98,6 @@ class TestListRefs:
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r} --format=json", redirect_stdout="file.json")
         list_json = client.load("file.json")
-        print(list_json)
         list_json = json.loads(list_json)
         assert remove_timestamps(list_json[r_msg]) == remove_timestamps(expected)
 
@@ -236,7 +234,6 @@ class TestListPrefs:
         r = "-r=default" if remote else ""
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r}")
-        print(client.out)
         expected = textwrap.indent(expected, "  ")
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
@@ -249,7 +246,6 @@ class TestListPrefs:
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r} --format=json", redirect_stdout="file.json")
         list_json = client.load("file.json")
-        print(list_json)
         list_json = json.loads(list_json)
         assert remove_timestamps(list_json[r_msg]) == remove_timestamps(expected)
 
@@ -401,7 +397,6 @@ class TestListPrefs:
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_latest_prevs(self, client, remote):
         pattern = "zli/1.0.0:*#latest"
-        # TODO: This is doing a package_id search, but not showing info
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0
@@ -409,9 +404,15 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:27:34 UTC)
                   packages
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      info
+                        settings
+                          os: Linux
                       revisions
                         9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      info
+                        settings
+                          os: Windows
                       revisions
                         d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
           """)
@@ -428,9 +429,15 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:41:09 UTC)
                   packages
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      info
+                        settings
+                          os: Linux
                       revisions
                         9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      info
+                        settings
+                          os: Windows
                       revisions
                         d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                         24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
@@ -478,7 +485,7 @@ class TestListPrefs:
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_package_id_latest_prev(self, client, remote):
+    def test_list_package_id_single(self, client, remote):
         pattern = "zli/1.0.0:ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
         expected = textwrap.dedent(f"""\
           zli
@@ -487,20 +494,16 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 23:13:12 UTC)
                   packages
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                      revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 23:13:12 UTC)
+                      info
+                        settings
+                          os: Windows
           """)
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_missing_package_id(self, client, remote):
         pattern = "zli/1.0.0:nonexists_id"
-        # TODO: The message is still different in the server
-        if remote:
-            expected = "ERROR: Binary package not found: 'zli/1.0.0@_/_#" \
-                       "b58eeddfe2fd25ac3a105f72836b3360:nonexists_id'. [Remote: default]\n"
-        else:
-            expected = "ERROR: Binary package not found: 'zli/1.0.0:nonexists_id\n"
+        expected = "ERROR: Package ID 'zli/1.0.0:nonexists_id' not found\n"
         self.check(client, pattern, remote, expected)
 
     def test_query(self):

@@ -103,7 +103,7 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference)
+    ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
     if args.cache or not args.remote:
@@ -121,6 +121,5 @@ def list(conan_api: ConanAPI, parser, *args):
             results[name] = list_bundle.serialize()
     return {
         "results": results,
-        "search_mode": ref_pattern.mode,
         "conan_api": conan_api
     }

@@ -95,7 +95,6 @@ class ListAPI:
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
-        search_mode = pattern.mode
         select_bundle = SelectBundle()
         refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
         pattern.check_refs(refs)
@@ -106,7 +105,7 @@ class ListAPI:
             return select_bundle
 
         for r in refs:
-            if pattern.is_latest_rrev:
+            if pattern.is_latest_rrev or pattern.rrev is None:
                 rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
@@ -117,9 +116,8 @@ class ListAPI:
                 continue
 
             for rrev in rrevs:
-                packages = None
                 prefs = []
-                if "*" not in pattern.package_id:
+                if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
                 else:
                     packages = self.conan_api.list.packages_configurations(rrev, remote)
@@ -128,19 +126,22 @@ class ListAPI:
                                                                                       package_query)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
+                    select_bundle.add_configurations(packages)
 
-                if pattern.show_prevs():
+                if pattern.prev is not None:
+                    new_prefs = []
                     for pref in prefs:
                         # Maybe the package_configurations returned timestamp
-                        if pattern.is_latest_prev:
-                            if not pref.timestamp:
-                                prev = self.conan_api.list.latest_package_revision(pref, remote)
-                                if prev is None:
-                                    raise NotFoundException(f"Binary package not found: '{pref}")
-                                pref.revision, pref.timestamp = prev.revision, prev.timestamp
+                        if pattern.is_latest_prev or pattern.prev is None:
+                            prev = self.conan_api.list.latest_package_revision(pref, remote)
+                            if prev is None:
+                                raise NotFoundException(f"Binary package not found: '{pref}")
+                            new_prefs.append(prev)
                         else:
                             prevs = self.conan_api.list.package_revisions(pref, remote)
                             prevs = pattern.filter_prevs(prevs)
+                            new_prefs.extend(prevs)
+                    prefs = new_prefs
 
-                select_bundle.add_prefs(prefs, packages)
+                select_bundle.add_prefs(prefs)
         return select_bundle

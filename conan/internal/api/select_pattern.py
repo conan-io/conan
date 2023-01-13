@@ -1,5 +1,4 @@
 import fnmatch
-from enum import Enum
 
 from conans.errors import ConanException
 
@@ -50,49 +49,20 @@ class SelectPattern:
         if not prefs:
             refs_str = f'{self.ref}#{self.rrev}:{self.package_id}'
             if "*" not in refs_str:
-                raise ConanException(f"Package ID '{refs_str}' not found")
+                raise ConanException(f"Package ID '{self.raw}' not found")
         return prefs
 
     def filter_prevs(self, prevs):
         prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, self.prev)]
         if not prevs:
-            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}#{self.prev}'
-            if "*" not in refs_str:
-                raise ConanException(f"Package revision '{refs_str}' not found")
+            if "*" not in self.raw:
+                raise ConanException(f"Package revision '{self.raw}' not found")
         return prevs
-
-
-class ListPatternMode(Enum):
-    SHOW_LATEST_PREV = 3
-    SHOW_PACKAGE_IDS = 4
-    SHOW_ALL_PREVS = 6
 
 
 class ListPattern(SelectPattern):
 
     def show_only_refs(self):
-        if self.package_id is None and self.is_latest_rrev and "#latest" not in self.raw:
+        if self.package_id is None and self.rrev is None:
             if "*" in self.raw or not self.version:
                 return True
-
-    @property
-    def mode(self):
-        no_regex = "*" not in self.raw
-        if no_regex:
-            # FIXME: now, the server is returning for "conan search zlib" all the zlib versions,
-            #        but "conan search zli" is raising and error. Inconsistency?
-            if self.name and self.version:
-                # zlib/1.2.11#RREV:PID | zlib/1.2.11#RREV:PID#PREV
-                if self.is_latest_prev or self.prev:
-                    return ListPatternMode.SHOW_LATEST_PREV
-        else:
-            if self.package_id is not None:
-                # zlib/1.2.11#latest:* | zlib/1.2.11#RREV:*
-                if self.is_latest_prev and "#latest" not in self.raw:
-                    return ListPatternMode.SHOW_PACKAGE_IDS
-                # zlib/1.2.11:*#latest
-                elif "#latest" in self.raw:
-                    return ListPatternMode.SHOW_LATEST_PREV
-                # zlib/1.2.11#latest:*#* | zlib/1.2.11#RREV:PID#*
-                elif "*" in self.prev:
-                    return ListPatternMode.SHOW_ALL_PREVS

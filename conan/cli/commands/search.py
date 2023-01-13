@@ -20,8 +20,8 @@ def search(conan_api: ConanAPI, parser, *args):
                         help="Remote names. Accepts wildcards. If not specified it searches "
                              "in all the remotes")
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference)
-    if ref_pattern.package_id is not None or "#" in ref_pattern.raw:
+    ref_pattern = ListPattern(args.reference, rrev=None)
+    if ref_pattern.package_id is not None or ref_pattern.rrev is not None:
         raise ConanException("Incorrect search pattern")
 
     remotes = conan_api.remotes.list(args.remote)
