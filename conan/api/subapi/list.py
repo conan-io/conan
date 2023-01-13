@@ -111,7 +111,10 @@ class ListAPI:
 
         for r in refs:
             if pattern.is_latest_rrev or pattern.rrev is None:
-                rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]
+                rrev = self.conan_api.list.latest_recipe_revision(r, remote)
+                if rrev is None:
+                    raise NotFoundException(f"Recipe '{r}' not found")
+                rrevs = [rrev]
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
