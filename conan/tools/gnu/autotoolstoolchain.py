@@ -9,6 +9,7 @@ from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
+from conans.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:
@@ -174,9 +175,8 @@ class AutotoolsToolchain:
     def _default_configure_shared_flags(self):
         args = []
         # Just add these flags if there's a shared option defined (never add to exe's)
-        # FIXME: For Conan 2.0 use the package_type to decide if adding these flags or not
         try:
-            if self._conanfile.options.shared:
+            if self._conanfile.package_type is PackageType.SHARED:
                 args.extend(["--enable-shared", "--disable-static"])
             else:
                 args.extend(["--disable-shared", "--enable-static"])
