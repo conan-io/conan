@@ -178,7 +178,7 @@ class AutotoolsToolchain:
         try:
             if self._conanfile.package_type is PackageType.SHARED:
                 args.extend(["--enable-shared", "--disable-static"])
-            else:
+            elif self._conanfile.package_type is PackageType.STATIC:
                 args.extend(["--disable-shared", "--enable-static"])
         except ConanException:
             pass
