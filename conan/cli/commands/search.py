@@ -3,7 +3,7 @@ from collections import OrderedDict
 from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command
 from conan.cli.commands.list import print_list_text, print_list_json
-from conan.internal.api.select_pattern import ListPattern
+from conan.internal.api.select_pattern import SelectPattern
 from conans.errors import ConanException
 
 
@@ -20,7 +20,7 @@ def search(conan_api: ConanAPI, parser, *args):
                         help="Remote names. Accepts wildcards. If not specified it searches "
                              "in all the remotes")
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference, rrev=None)
+    ref_pattern = SelectPattern(args.reference, rrev=None)
     if ref_pattern.package_id is not None or ref_pattern.rrev is not None:
         raise ConanException("Incorrect search pattern")
 

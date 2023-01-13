@@ -100,7 +100,7 @@ class ListAPI:
         pattern.check_refs(refs)
 
         # Show only the recipe references
-        if pattern.show_only_refs():
+        if pattern.package_id is None and pattern.rrev is None:
             select_bundle.add_refs(refs)
             return select_bundle
 

@@ -138,6 +138,20 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipe_versions_exact(self, client, remote):
+        pattern = "zli/1.0.0"
+        # by default, when a reference is complete, we show latest recipe revision
+        expected = textwrap.dedent(f"""\
+          zli
+            zli/1.0.0
+          """)
+        self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zli/1.0.0": {}
+        }
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
     @pytest.mark.parametrize("pattern", ["nomatch", "nomatch*", "nomatch/*"])
     def test_list_recipe_no_match(self, client, pattern, remote):
         if pattern == "nomatch":  # EXACT IS AN ERROR
@@ -153,7 +167,7 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
-    @pytest.mark.parametrize("pattern", ["zli/1.0.0", "zli/1.0.0#latest",
+    @pytest.mark.parametrize("pattern", ["zli/1.0.0#latest",
                                          "zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360"])
     def test_list_recipe_latest_revision(self, client, remote, pattern):
         # by default, when a reference is complete, we show latest recipe revision
@@ -506,8 +520,21 @@ class TestListPrefs:
         expected = "ERROR: Package ID 'zli/1.0.0:nonexists_id' not found\n"
         self.check(client, pattern, remote, expected)
 
-    def test_query(self):
-        pass
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_query(self, client, remote):
+        pattern = "zli/1.0.0:* -p os=Linux"
+        expected = textwrap.dedent(f"""\
+          zli
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (10-11-2023 10:13:13)
+                  packages
+                    9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      info
+                        settings
+                          os: Linux
+          """)
+        self.check(client, pattern, remote, expected)
 
 
 class TestListRemotes:

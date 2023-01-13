@@ -4,9 +4,10 @@ from conan.api.conan_api import ConanAPI
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
-from conan.internal.api.select_pattern import ListPattern
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
+from conan.internal.api.select_pattern import SelectPattern
+
 remote_color = Color.BRIGHT_BLUE
 recipe_name_color = Color.GREEN
 recipe_color = Color.BRIGHT_WHITE
@@ -103,7 +104,7 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
+    ref_pattern = SelectPattern(args.reference, rrev=None, prev=None)
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
     if args.cache or not args.remote:
