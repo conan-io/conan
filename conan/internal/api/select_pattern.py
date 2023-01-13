@@ -55,7 +55,7 @@ class SelectPattern:
     def filter_prevs(self, prevs):
         prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, self.prev)]
         if not prevs:
-            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}'
+            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}#{self.prev}'
             if "*" not in refs_str:
                 raise ConanException(f"Package revision '{self.raw}' not found")
         return prevs
