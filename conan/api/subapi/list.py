@@ -96,8 +96,13 @@ class ListAPI:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
         select_bundle = SelectBundle()
-        refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
-        pattern.check_refs(refs)
+        # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
+        if "*" in pattern.ref or not pattern.version or \
+                (pattern.package_id is None and pattern.rrev is None):
+            refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+            pattern.check_refs(refs)
+        else:
+            refs = [RecipeReference(pattern.name, pattern.version, pattern.user, pattern.channel)]
 
         # Show only the recipe references
         if pattern.package_id is None and pattern.rrev is None:
