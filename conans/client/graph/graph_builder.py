@@ -80,7 +80,8 @@ class DepsGraphBuilder(object):
         new_options = node.conanfile.build_requires_options._reqs_options
         # FIXME: Convert to pattern-based for build_requires, do not fail hard if some option
         #  was removed
-        new_options = {k+"*": v for k, v in new_options.items()}
+        if profile_build:  # Apply the fix only for the 2 profile scenario
+            new_options = {k+"*": v for k, v in new_options.items()}
         new_reqs = Requirements()
 
         conanfile = node.conanfile
