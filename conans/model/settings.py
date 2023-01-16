@@ -179,6 +179,7 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+        self._frozen = False
 
     def serialize(self):
         """
@@ -272,6 +273,8 @@ class Settings(object):
             return super(Settings, self).__setattr__(field, value)
 
         self._check_field(field)
+        if self._frozen:
+            raise ConanException(f"Tried to define '{field}' setting inside recipe")
         self._data[field].value = value
 
     @property
@@ -290,6 +293,7 @@ class Settings(object):
         """ receives a list of tuples (compiler.version, value)
         This is more an updated than a setter
         """
+        self._frozen = False  # Could be restored at the end, but not really necessary
         assert isinstance(vals, (list, tuple)), vals
         for (name, value) in vals:
             list_settings = name.split(".")
