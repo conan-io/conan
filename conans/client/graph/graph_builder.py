@@ -78,6 +78,9 @@ class DepsGraphBuilder(object):
         # an option conflict while expanding the build_requires is impossible
         node.conanfile.build_requires_options.clear_unscoped_options()
         new_options = node.conanfile.build_requires_options._reqs_options
+        # FIXME: Convert to pattern-based for build_requires, do not fail hard if some option
+        #  was removed
+        new_options = {k+"*": v for k, v in new_options.items()}
         new_reqs = Requirements()
 
         conanfile = node.conanfile
