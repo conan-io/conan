@@ -68,6 +68,5 @@ def test_reuse_buildenv(client_with_special_chars):
 def test_reuse_buildenv_powershell(client_with_special_chars):
     c = client_with_special_chars
     c.run("create . -s:b build_type=Release -c tools.env.virtualenv:powershell=True")
-    print(c.out)
     assert _path_chars in c.out
     assert "MYTOOL WORKS!!" in c.out
