@@ -334,7 +334,7 @@ class EnvVars:
 
         content = "\n".join(result)
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
-        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
         open(file_location, "w", encoding="utf-8").write(content)
 
     def save_ps1(self, file_location, generate_deactivate=True,):
@@ -379,7 +379,7 @@ class EnvVars:
         content = "\n".join(result)
         # It is very important to save it correctly with utf-16, the Conan util save() is broken
         # and powershell uses utf-16 files!!!
-        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
         open(file_location, "w", encoding="utf-16").write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
