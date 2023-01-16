@@ -324,6 +324,7 @@ class EnvVars:
             """).format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys()))
         capture = textwrap.dedent("""\
             @echo off
+            chcp 65001 > nul
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
@@ -332,7 +333,9 @@ class EnvVars:
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
-        save(file_location, content)
+        # It is very important to save it correctly with utf-8, the Conan util save() is broken
+        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        open(file_location, "w", encoding="utf-8").write(content)
 
     def save_ps1(self, file_location, generate_deactivate=True,):
         _, filename = os.path.split(file_location)
@@ -374,7 +377,10 @@ class EnvVars:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
-        save(file_location, content)
+        # It is very important to save it correctly with utf-16, the Conan util save() is broken
+        # and powershell uses utf-16 files!!!
+        os.makedirs(os.path.dirname(file_location), exist_ok=True)
+        open(file_location, "w", encoding="utf-16").write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
