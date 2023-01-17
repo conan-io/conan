@@ -160,7 +160,7 @@ class RemoteManager(object):
         return self._call_remote(remote, "remove_all_packages", ref)
 
     def authenticate(self, remote, name, password):
-        return self._call_remote(remote, 'authenticate', name, password, check_disabled=False)
+        return self._call_remote(remote, 'authenticate', name, password, enforce_disabled=False)
 
     def get_recipe_revisions_references(self, ref, remote):
         assert ref.revision is None, "get_recipe_revisions_references of a reference with revision"
@@ -197,7 +197,7 @@ class RemoteManager(object):
         assert pref.revision is not None, "get_package_revision_reference needs a revision"
         return self._call_remote(remote, "get_package_revision_reference", pref)
 
-    def _call_remote(self, remote, method, check_disabled=True, *args, **kwargs):
+    def _call_remote(self, remote, method, enforce_disabled=True, *args, **kwargs):
         assert (isinstance(remote, Remote))
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
