@@ -275,6 +275,7 @@ class ConanFile:
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result["options"] = self.options.serialize()
+        result["recipe_folder"] = self.recipe_folder
         result["source_folder"] = self.source_folder
         result["build_folder"] = self.build_folder
         result["package_folder"] = self.package_folder
