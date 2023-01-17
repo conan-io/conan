@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conans.model.package_ref import PkgReference
 from conans.util.dates import timestamp_to_str
 
 
@@ -68,6 +69,10 @@ class _PackageUploadData:
 class SelectBundle:
     def __init__(self):
         self.recipes = OrderedDict()
+        self.confs = {}
+
+    def add_configurations(self, confs):
+        self.confs = {PkgReference(k.ref, k.package_id): v for k, v in confs.items()}
 
     def add_refs(self, refs):
         for ref in refs:
@@ -82,9 +87,9 @@ class SelectBundle:
             prefs.extend(v)
         return prefs
 
-    def add_prefs(self, prefs, configurations=None):
+    def add_prefs(self, prefs):
         for pref in prefs:
-            binary_info = configurations.get(pref) if configurations is not None else None
+            binary_info = self.confs.get(PkgReference(pref.ref, pref.package_id))
             self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
 
     def serialize(self):
