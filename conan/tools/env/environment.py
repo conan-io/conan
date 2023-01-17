@@ -458,21 +458,17 @@ class EnvVars:
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
-           echo "echo Restoring environment" > "{deactivate_file}"
-           for v in {vars}
-           do
-               is_defined="true"
-               value=$(printenv $v) || is_defined="" || true
-               if [ -n "$value" ] || [ -n "$is_defined" ]
-               then
-                   echo export "$v='$value'" >> "{deactivate_file}"
-               else
-                   echo unset $v >> "{deactivate_file}"
-               fi
-           done
-           """.format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys())))
+            deactivate_conanrun () {{
+                echo "Restoring environment"
+                for v in {vars}
+                do
+                    export $v="$_CONAN_OLD_${{v}}"
+                    unset "_CONAN_OLD_${{v}}"
+                done
+                unset -f deactivate
+            }}
+            """.format(vars=" ".join(self._values.keys())))
         capture = textwrap.dedent("""\
               {deactivate}
               """).format(deactivate=deactivate if generate_deactivate else "")
@@ -480,8 +476,9 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
             value = value.replace('"', '\\"')
+            result.append(f'export _CONAN_OLD_{varname}=$(printenv ${varname})')
             if value:
-                result.append('export {}="{}"'.format(varname, value))
+                result.append(f'export {varname}="{value}"')
             else:
                 result.append('unset {}'.format(varname))
 
