@@ -1,3 +1,4 @@
+import json
 import platform
 import textwrap
 
@@ -149,3 +150,32 @@ def test_brew_install_install_mode():
         """)})
     client.run("create . test/1.0@ -c tools.system.package_manager:mode=install", assert_error=True)
     assert "Error: No formulae found in taps." in client.out
+
+
+def test_collect_system_requirements():
+    client = TestClient()
+    client.save({"conanfile.py": textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Brew, Apt
+
+        class MyPkg(ConanFile):
+            settings = "arch"
+            def system_requirements(self):
+                brew = Brew(self)
+                brew.install(["non-existing1", "non-existing2"])
+                apt = Apt(self)
+                apt.install(["pkg1", "pkg2"])
+        """)})
+    client.run("install . -c tools.system.package_manager:tool=apt-get "
+               "-c tools.system.package_manager:mode=collect --format=json",
+               redirect_stdout="graph.json")
+    graph = json.loads(client.load("graph.json"))
+    assert {"apt-get": ["pkg1", "pkg2"]} == graph["graph"]["nodes"][0]["system_requires"]
+
+    # How to do it without installing?
+    client.run("graph info . -c tools.system.package_manager:tool=apt-get "
+               "-c tools.system.package_manager:mode=collect --format=json",
+               redirect_stdout="graph2.json")
+    graph2 = json.loads(client.load("graph2.json"))
+    # TODO: Unify format of ``graph info`` and ``install``
+    assert {"apt-get": ["pkg1", "pkg2"]} == graph2["nodes"][0]["system_requires"]
