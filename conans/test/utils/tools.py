@@ -484,9 +484,13 @@ class TestClient(object):
         self.api = ConanAPI(cache_folder=self.cache_folder)
         command = Cli(self.api)
 
-        error = None
+        error_code = None
+        exception = None
         try:
-            error = command.run(args)
+            error_code = command.run(args, reraise_exceptions=True)
+        except Exception as e:
+            exception = e
+            error_code = True
         finally:
             try:
                 self.api.app.cache.closedb()
@@ -498,8 +502,8 @@ class TestClient(object):
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
-        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
-        return error
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error_code, exception=exception)
+        return error_code
 
     def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None):
         """ run a single command as in the command line.
@@ -550,18 +554,25 @@ class TestClient(object):
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
-    def _handle_cli_result(self, command, assert_error, error):
+    def _handle_cli_result(self, command, assert_error, error, exception=None):
         if (assert_error and not error) or (not assert_error and error):
             if assert_error:
                 msg = " Command succeeded (failure expected): "
             else:
                 msg = " Command failed (unexpectedly): "
-            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
+            if exception is not None:
+                from traceback import format_exception
+                trace = format_exception(Exception, exception, exception.__traceback__)
+                # The first 2 will be TestClient code, filter it out
+                trace.pop(1)
+                trace.pop(1)
+            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{traceback}\n{output_footer}\n".format(
                 header='{:-^80}'.format(msg),
                 output_header='{:-^80}'.format(" Output: "),
                 output_footer='-' * 80,
                 cmd=command,
-                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
+                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out),
+                traceback='{:-^80}'.format("Trace back") + "\n" + "".join(trace)
             )
             raise Exception(exc_message)
 
