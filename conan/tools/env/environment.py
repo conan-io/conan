@@ -459,7 +459,7 @@ class EnvVars:
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
         deactivate = textwrap.dedent("""\
-            deactivate_conanrun () {{
+            deactivate_{filename} () {{
                 echo "Restoring environment"
                 for v in {vars}
                 do
@@ -468,7 +468,7 @@ class EnvVars:
                 done
                 unset -f deactivate
             }}
-            """.format(vars=" ".join(self._values.keys())))
+            """.format(vars=" ".join(self._values.keys()), filename=filename))
         capture = textwrap.dedent("""\
               {deactivate}
               """).format(deactivate=deactivate if generate_deactivate else "")
