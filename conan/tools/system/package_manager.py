@@ -150,11 +150,12 @@ class _SystemPackageManagerTool(object):
     def _install(self, packages, update=False, check=True, **kwargs):
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, [])
         pkgs.extend(p for p in packages if p not in pkgs)
-        if check:
-            packages = self.check(packages)
-
         if self._mode == self.mode_collect:
             return
+
+        if check or self._mode == self.mode_check:
+            packages = self.check(packages)
+
         if self._mode == self.mode_check and packages:
             raise ConanException("System requirements: '{0}' are missing but can't install "
                                  "because tools.system.package_manager:mode is '{1}'."

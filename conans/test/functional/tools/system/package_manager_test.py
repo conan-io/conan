@@ -1,9 +1,11 @@
 import json
 import platform
 import textwrap
+from unittest.mock import patch, MagicMock
 
 import pytest
 
+from conan.tools.system.package_manager import _SystemPackageManagerTool
 from conans.test.utils.tools import TestClient
 
 
@@ -153,6 +155,10 @@ def test_brew_install_install_mode():
 
 
 def test_collect_system_requirements():
+    """ we can know the system_requires for every package because they are part of the graph,
+    this naturally execute at ``install``, but we can also prove that with ``graph info`` we can
+    for it to with the righ ``mode=collect`` mode.
+    """
     client = TestClient()
     client.save({"conanfile.py": textwrap.dedent("""
         from conan import ConanFile
@@ -162,17 +168,17 @@ def test_collect_system_requirements():
             settings = "arch"
             def system_requirements(self):
                 brew = Brew(self)
-                brew.install(["non-existing1", "non-existing2"])
+                brew.install(["brew1", "brew2"])
                 apt = Apt(self)
                 apt.install(["pkg1", "pkg2"])
         """)})
-    client.run("install . -c tools.system.package_manager:tool=apt-get "
-               "-c tools.system.package_manager:mode=collect --format=json",
-               redirect_stdout="graph.json")
+    with patch.object(_SystemPackageManagerTool, '_conanfile_run', MagicMock(return_value=False)):
+        client.run("install . -c tools.system.package_manager:tool=apt-get --format=json",
+                   redirect_stdout="graph.json")
     graph = json.loads(client.load("graph.json"))
     assert {"apt-get": ["pkg1", "pkg2"]} == graph["graph"]["nodes"][0]["system_requires"]
 
-    # How to do it without installing?
+    # How to do it without installing
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "
                "-c tools.system.package_manager:mode=collect --format=json",
                redirect_stdout="graph2.json")
