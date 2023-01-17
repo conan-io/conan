@@ -135,7 +135,7 @@ class Cli:
         cli_out_write("")
         cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
 
-    def run(self, *args):
+    def run(self, *args, **kwargs):
         """ Entry point for executing commands, dispatcher to class
         methods
         """
@@ -165,7 +165,7 @@ class Cli:
         except ConanException as exc:
             output.error(exc)
             return ERROR_GENERAL
-
+        reraise_exception = kwargs.get("reraise_exceptions", False)
         try:
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
             exit_error = SUCCESS
@@ -173,21 +173,31 @@ class Cli:
             if exc.code != 0:
                 output.error("Exiting with code: %d" % exc.code)
             exit_error = exc.code
+            if reraise_exception:
+                raise exc
         except ConanInvalidConfiguration as exc:
             exit_error = ERROR_INVALID_CONFIGURATION
             output.error(exc)
+            if reraise_exception:
+                raise exc
         except ConanInvalidSystemRequirements as exc:
             exit_error = ERROR_INVALID_SYSTEM_REQUIREMENTS
             output.error(exc)
+            if reraise_exception:
+                raise exc
         except ConanException as exc:
             exit_error = ERROR_GENERAL
             output.error(exc)
+            if reraise_exception:
+                raise exc
         except Exception as exc:
             import traceback
             print(traceback.format_exc())
             exit_error = ERROR_GENERAL
             msg = exception_message_safe(exc)
             output.error(msg)
+            if reraise_exception:
+                raise exc
 
         return exit_error
 
