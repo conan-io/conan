@@ -197,8 +197,9 @@ class RemoteManager(object):
         assert pref.revision is not None, "get_package_revision_reference needs a revision"
         return self._call_remote(remote, "get_package_revision_reference", pref)
 
-    def _call_remote(self, remote, method, enforce_disabled=True, *args, **kwargs):
+    def _call_remote(self, remote, method, *args, **kwargs):
         assert (isinstance(remote, Remote))
+        enforce_disabled = kwargs.pop("enforce_disabled", True)
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
         try:
