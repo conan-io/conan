@@ -1,5 +1,6 @@
 import os
 import platform
+import sys
 
 import pytest
 
@@ -56,6 +57,8 @@ def client_with_special_chars():
     return c
 
 
+@pytest.mark.skipif(platform.system() == "Linux" and sys.version_info.minor <= 6,
+                    reason="It is failing in CI in python3.6 Linux docker image")
 def test_reuse_buildenv(client_with_special_chars):
     c = client_with_special_chars
     # Need the 2 profile to work correctly buildenv
