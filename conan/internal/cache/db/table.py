@@ -1,3 +1,4 @@
+import sqlite3
 from collections import namedtuple
 from io import StringIO
 from typing import Tuple, List, Optional
@@ -10,12 +11,16 @@ class BaseDbTable:
     columns: namedtuple = None
     unique_together: tuple = None
 
-    def __init__(self, conn):
-        self._conn = conn
+    def __init__(self, filename):
+        self.filename = filename
         column_names: List[str] = [it[0] for it in self.columns_description]
         self.row_type = namedtuple('_', column_names)
         self.columns = self.row_type(*column_names)
         self.create_table()
+
+    def opendb(self):
+        return sqlite3.connect(self.filename, isolation_level=None,
+                               timeout=1, check_same_thread=False)
 
     def create_table(self):
         def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
@@ -45,11 +50,15 @@ class BaseDbTable:
         fields = ', '.join([field(*it) for it in self.columns_description])
         guard = 'IF NOT EXISTS'
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
-        self._conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
+        conn = self.opendb()
+        conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
+        conn.close()
 
     def dump(self):
         print(f"********* BEGINTABLE {self.table_name}*************")
-        r = self._conn.execute(f'SELECT rowid, * FROM {self.table_name}')
+        conn = self.opendb()
+        r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')
         for it in r.fetchall():
             print(str(it))
         print(f"********* ENDTABLE {self.table_name}*************")
+        conn.close()
