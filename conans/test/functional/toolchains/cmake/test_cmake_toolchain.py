@@ -687,8 +687,12 @@ def test_cmake_presets_duplicated_install(multiconfig):
         settings += '-c tools.cmake.cmaketoolchain:generator="Multi-Config"'
     client.run("install . {}".format(settings))
     client.run("install . {}".format(settings))
-    presets_path = os.path.join(client.current_folder, "build", "gcc-5", "Release", "generators",
-                                "CMakePresets.json")
+    if multiconfig:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+                                    "CMakePresets.json")
+    else:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "Release", "generators",
+                                    "CMakePresets.json")
     assert os.path.exists(presets_path)
     contents = json.loads(load(presets_path))
     assert len(contents["buildPresets"]) == 1
