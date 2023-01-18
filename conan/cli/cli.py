@@ -169,6 +169,9 @@ class Cli:
         output = ConanOutput()
         if exception is None:
             return SUCCESS
+        if isinstance(exception, ConanInvalidConfiguration):
+            output.error(exception)
+            return ERROR_INVALID_CONFIGURATION
         if isinstance(exception, ConanException):
             output.error(exception)
             return ERROR_GENERAL
@@ -176,9 +179,6 @@ class Cli:
             if exception.code != 0:
                 output.error("Exiting with code: %d" % exception.code)
             return exception.code
-        if isinstance(exception, ConanInvalidConfiguration):
-            output.error(exception)
-            return ERROR_INVALID_CONFIGURATION
 
         assert isinstance(exception, Exception)
         print(traceback.format_exc())
