@@ -11,13 +11,11 @@ CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database 
 class CacheDatabase:
 
     def __init__(self, filename):
-        self._conn = sqlite3.connect(filename, isolation_level=None,
-                                     timeout=CONNECTION_TIMEOUT_SECONDS, check_same_thread=False)
-        self._recipes = RecipesDBTable(self._conn)
-        self._packages = PackagesDBTable(self._conn)
+        self._recipes = RecipesDBTable(filename)
+        self._packages = PackagesDBTable(filename)
 
     def close(self):
-        self._conn.close()
+        pass
 
     def exists_rrev(self, ref):
         # TODO: This logic could be done directly against DB
