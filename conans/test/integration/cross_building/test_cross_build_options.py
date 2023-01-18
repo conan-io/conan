@@ -31,3 +31,6 @@ def test_cross_build_options():
     c.run("install consumer -s:b os=Windows -s:h os=Android -s:h os.api_level=22")
     # The above command used to crash, because options not there, so it works now without problems
     assert "Finalizing install" in c.out
+    c.assert_listed_binary({"dep/0.1": ("4333c2a38a8baf674c4e77fe475c146a4685f77a", "Cache")})
+    c.assert_listed_binary({"dep/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache")},
+                           build=True)
