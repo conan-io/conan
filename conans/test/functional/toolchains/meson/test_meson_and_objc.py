@@ -98,13 +98,8 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
     compiler = apple-clang
     compiler.version = 12.0
     compiler.libcxx = libc++
-
-    [conf]
-    tools.apple:sdk_path={sdk_path}
     """)
 
-    xcrun = XCRun(None, sdk)
-    sdk_path = xcrun.sdk_path
     app = textwrap.dedent("""
     #import <Foundation/Foundation.h>
 
@@ -120,8 +115,7 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
         os=os_,
         os_version=os_version,
         os_sdk=sdk,
-        arch=arch,
-        sdk_path=sdk_path)
+        arch=arch)
 
     t = TestClient()
     t.save({"conanfile.py": _conanfile_py,
@@ -136,6 +130,7 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
     demo = os.path.join(t.current_folder, "build", "demo")
     assert os.path.isfile(demo) is True
 
+    xcrun = XCRun(None, sdk)
     lipo = xcrun.find('lipo')
     t.run_command('"%s" -info "%s"' % (lipo, demo))
     assert "architecture: %s" % to_apple_arch(arch) in t.out
