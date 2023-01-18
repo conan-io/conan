@@ -484,7 +484,7 @@ class TestClient(object):
         trace = None
         try:
             command.run(args)
-        except Exception as e:
+        except BaseException as e:  # Capture all exceptions as argparse
             trace = traceback.format_exc()
             error = command.exception_exit_error(e)
         finally:

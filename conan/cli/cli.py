@@ -232,6 +232,6 @@ def main(args):
     error = SUCCESS
     try:
         cli.run(args)
-    except Exception as e:
+    except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)
