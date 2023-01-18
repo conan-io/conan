@@ -901,6 +901,18 @@ def test_cmake_layout_toolchain_folder():
     assert os.path.exists(os.path.join(c.current_folder,
                                        "build/x86-debug/generators/conan_toolchain.cmake"))
 
+    c.run("install . -s os=Windows -s compiler=msvc -s compiler.version=191 -s build_type=Debug "
+          "-s compiler.runtime=dynamic -s compiler.cppstd=17 -s arch=x86 "
+          "-c tools.cmake.cmaketoolchain:generator=Ninja "
+          "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/windows/Debug/generators/conan_toolchain.cmake"))
+    c.run("install . -s os=Windows -s compiler=msvc -s compiler.version=191 -s build_type=Debug "
+          "-s compiler.runtime=dynamic -s compiler.cppstd=17 -s arch=x86 "
+          "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\", \"settings.arch\"]'")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/windows-x86/generators/conan_toolchain.cmake"))
+
 
 def test_set_linker_scripts():
     profile = textwrap.dedent(r"""
