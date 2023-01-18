@@ -289,7 +289,7 @@ class CommandOutputer(object):
 
     def print_file_contents(self, contents, file_name, raw):
         if raw or not self._output.is_terminal:
-            self._output.writeln(contents)
+            self._output.write(contents)
             return
 
         from pygments import highlight

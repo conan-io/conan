@@ -22,6 +22,10 @@ class MSBuild(object):
 
     def __init__(self, conanfile):
         if isinstance(conanfile, ConanFile):
+            if getattr(conanfile, "must_use_new_helpers", None):
+                raise ConanException(
+                    "Using the wrong 'MSBuild' helper. To use MSBuildDeps, MSBuildToolchain "
+                    "you should use 'from conan.tools.microsoft import MSBuild'")
             self._conanfile = conanfile
             self._settings = self._conanfile.settings
             self._output = self._conanfile.output

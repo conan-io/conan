@@ -12,7 +12,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
-    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock
+    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -118,6 +118,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
+        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.generator = self._get_generator(generator)
         self.variables = Variables()
         # This doesn't support multi-config, they go to the same configPreset common in multi-config
@@ -132,6 +133,7 @@ class CMakeToolchain(object):
                                        ("apple_system", AppleSystemBlock),
                                        ("fpic", FPicBlock),
                                        ("arch_flags", ArchitectureBlock),
+                                       ("linker_scripts", LinkerScriptsBlock),
                                        ("libcxx", GLibCXXBlock),
                                        ("vs_runtime", VSRuntimeBlock),
                                        ("cppstd", CppStdBlock),

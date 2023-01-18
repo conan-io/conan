@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -225,9 +226,14 @@ def test_dependency_props_from_consumer():
 
     client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
 
-    module_file = os.path.join(client.current_folder, "build", "generators", "module-custom_bar_module_file_nameTargets.cmake")
-    components_module = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_name-Target-release.cmake")
-    config_file = os.path.join(client.current_folder, "build", "generators", "custom_bar_file_nameTargets.cmake")
+    if platform.system() != "Windows":
+        gen_folder = os.path.join(client.current_folder, "build", "Release", "generators")
+    else:
+        gen_folder = os.path.join(client.current_folder, "build", "generators")
+
+    module_file = os.path.join(gen_folder, "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(gen_folder, "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(gen_folder, "custom_bar_file_nameTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
     client.run("create bar.py bar/1.0@")
@@ -311,19 +317,20 @@ def test_props_from_consumer_build_context_activated():
 
     client.save({"foo.py": foo.format(set_find_mode=""), "bar.py": bar}, clean_first=True)
 
-    module_file = os.path.join(client.current_folder, "build", "generators",
-                               "module-custom_bar_module_file_nameTargets.cmake")
-    components_module = os.path.join(client.current_folder, "build", "generators",
-                                     "custom_bar_file_name-Target-release.cmake")
-    config_file = os.path.join(client.current_folder, "build", "generators",
-                               "custom_bar_file_nameTargets.cmake")
+    if platform.system() != "Windows":
+        gen_folder = os.path.join(client.current_folder, "build", "Release", "generators")
+    else:
+        gen_folder = os.path.join(client.current_folder, "build", "generators")
 
-    module_file_build = os.path.join(client.current_folder, "build", "generators",
+    module_file = os.path.join(gen_folder, "module-custom_bar_module_file_nameTargets.cmake")
+    components_module = os.path.join(gen_folder, "custom_bar_file_name-Target-release.cmake")
+    config_file = os.path.join(gen_folder, "custom_bar_file_nameTargets.cmake")
+
+    module_file_build = os.path.join(gen_folder,
                                      "module-custom_bar_build_module_file_name_BUILDTargets.cmake")
-    components_module_build = os.path.join(client.current_folder, "build", "generators",
+    components_module_build = os.path.join(gen_folder,
                                            "custom_bar_build_file_name_BUILD-Target-release.cmake")
-    config_file_build = os.path.join(client.current_folder, "build", "generators",
-                                     "custom_bar_build_file_name_BUILDTargets.cmake")
+    config_file_build = os.path.join(gen_folder, "custom_bar_build_file_name_BUILDTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
     client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
@@ -386,3 +393,48 @@ def test_props_from_consumer_build_context_activated():
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
     assert os.path.exists(config_file_build)
+
+
+def test_error_missing_config_build_context():
+    """
+    CMakeDeps was failing, not generating the zlib-config.cmake in the
+    build context, for a test_package that both requires(example/1.0) and
+    tool_requires(example/1.0), which depends on zlib
+    # https://github.com/conan-io/conan/issues/12664
+    """
+    c = TestClient()
+    example = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Example(ConanFile):
+            name = "example"
+            version = "1.0"
+            requires = "game/1.0"
+            generators = "CMakeDeps"
+            settings = "build_type"
+            def build(self):
+                assert os.path.exists("math-config.cmake")
+                assert os.path.exists("engine-config.cmake")
+                assert os.path.exists("game-config.cmake")
+            """)
+    c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
+                                                                .with_require("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
+                                                            .with_requires("engine/1.0"),
+            "example/conanfile.py": example,
+            "example/test_package/conanfile.py": GenConanfile().with_requires("example/1.0")
+                                                               .with_build_requires("example/1.0")
+                                                               .with_test("pass")})
+    c.run("create math")
+    c.run("create engine")
+    c.run("create game")
+    # This used to crash because of the assert inside the build() method
+    c.run("create example -pr:b=default -pr:h=default")
+    # Now make sure we can actually build with build!=host context
+    # The debug binaries are missing, so adding --build=missing
+    c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
+          "--build=example")
+
+    assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
+    assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out

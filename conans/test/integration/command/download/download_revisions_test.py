@@ -7,6 +7,7 @@ from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, Gen
 from conans.util.env_reader import get_env
 
 
+@pytest.mark.artifactory_ready
 class DownloadRevisionsTest(unittest.TestCase):
 
     @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")

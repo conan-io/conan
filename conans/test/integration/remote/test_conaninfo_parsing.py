@@ -8,6 +8,7 @@ import six
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.artifactory_ready
 @pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_conaninfo_special_chars():
 

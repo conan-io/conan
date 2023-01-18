@@ -130,6 +130,7 @@ class XcodeDeps(object):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
             return list(OrderedDict.fromkeys(merged).keys())
 
+        # TODO: Investigate if paths can be made relative to "root" folder
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
@@ -270,8 +271,10 @@ class XcodeDeps(object):
                     transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
                     transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
 
+                    # In case dep is editable and package_folder=None
+                    pkg_folder = dep.package_folder or dep.recipe_folder
                     component_content = self.get_content_for_component(dep_name, comp_name,
-                                                                       dep.package_folder,
+                                                                       pkg_folder,
                                                                        transitive_internal,
                                                                        transitive_external)
                     include_components_names.append((dep_name, comp_name))
@@ -289,7 +292,9 @@ class XcodeDeps(object):
                         public_deps.append((_format_name(d.ref.name),) * 2)
 
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                root_content = self.get_content_for_component(dep_name, dep_name, dep.package_folder, [dep.cpp_info],
+                # In case dep is editable and package_folder=None
+                pkg_folder = dep.package_folder or dep.recipe_folder
+                root_content = self.get_content_for_component(dep_name, dep_name, pkg_folder, [dep.cpp_info],
                                                               required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)

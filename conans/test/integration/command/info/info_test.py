@@ -747,3 +747,26 @@ class HelloConan(ConanFile):
             client.run("info . " + args)
             assert "AttributeError: 'HelloConan' object has no attribute 'tested_reference_str'"\
                    not in client.out
+
+
+def test_info_not_hit_server():
+    c = TestClient(default_server_user=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "consumer/conanfile.py": GenConanfile("consumer", "0.1").with_require("pkg/0.1")})
+    c.run("create pkg")
+    c.run("create consumer")
+    c.run("upload * -r=default --all -c")
+    c.run("remove * -f")
+    c.run("install consumer/0.1@")
+    assert "Downloaded" in c.out
+    # break the server to make sure it is not being contacted at all
+    c.servers["default"] = None
+    c.run("info consumer/0.1@")
+    assert "Downloaded" not in c.out
+    c.run("remove pkg* -f")
+    c.run("info consumer/0.1@", assert_error=True)
+    assert "ERROR: 'NoneType' object " in c.out
+    c.run("remote disable *")
+    c.run("info consumer/0.1@", assert_error=True)
+    assert "ERROR: 'NoneType' object " not in c.out
+    assert "ERROR: No remote defined" in c.out

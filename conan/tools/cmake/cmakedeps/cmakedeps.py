@@ -17,6 +17,7 @@ class CMakeDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 
@@ -74,7 +75,7 @@ class CMakeDeps(object):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated
-            if dep.is_build_context and dep.ref.name not in self.build_context_activated:
+            if require.build and dep.ref.name not in self.build_context_activated:
                 continue
 
             cmake_find_mode = self.get_property("cmake_find_mode", dep)

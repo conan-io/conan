@@ -291,10 +291,12 @@ class MesonToolchain(object):
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "ldflags": sharedlinkflags + exelinkflags
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
         }
 
     @staticmethod

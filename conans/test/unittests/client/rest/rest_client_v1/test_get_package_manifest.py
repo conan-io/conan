@@ -33,3 +33,15 @@ class GetPackageManifestTestCase(unittest.TestCase):
                           " from remote ({})".format(pref, remote_url),
                           str(exc.exception))
             self.assertIn("invalid literal for int() with base 10", str(exc.exception))
+
+    def test_unexpected_results_from_search(self):
+        remote_url = "http://some.url"
+        with patch.object(RestV1Methods, "get_json", return_value={"results": None}):
+            v1 = RestV1Methods(remote_url, token=None, custom_headers=None, output=None,
+                               requester=None, config=None, verify_ssl=None)
+            with self.assertRaises(ConanException) as exc:
+                v1.search()
+            
+            self.assertIn("Unexpected response from server.\n"
+                          "URL: `http://some.url/v1/conans/search`\n"
+                          "Expected an iterable, but got <class 'NoneType'>.", str(exc.exception))

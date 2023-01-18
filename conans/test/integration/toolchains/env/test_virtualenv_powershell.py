@@ -5,13 +5,18 @@ import textwrap
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.tools import save
 
 
 @pytest.fixture
 def client():
-    client = TestClient(path_with_spaces=False)
+    # We use special characters and spaces, to check everything works
+    # https://github.com/conan-io/conan/issues/12648
+    # FIXME: This path still fails the creation of the deactivation script
+    cache_folder = os.path.join(temp_folder(), "[sub] folder")
+    client = TestClient(cache_folder)
     conanfile = str(GenConanfile("pkg", "0.1"))
     conanfile += """
 
@@ -36,6 +41,7 @@ def test_virtualenv(client):
             name = "app"
             version = "0.1"
             requires = "pkg/0.1"
+            apply_env = False
 
             def build(self):
                 self.output.info("----------BUILD----------------")

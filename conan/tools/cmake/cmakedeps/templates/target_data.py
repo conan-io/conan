@@ -180,7 +180,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
     def _get_dependency_filenames(self):
-        if self.conanfile.is_build_context:
+        if self.require.build:
             return []
         ret = []
         direct_host = self.conanfile.dependencies.filter({"build": False, "visible": True,
@@ -197,7 +197,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     def _get_dependencies_find_modes(self):
         ret = {}
-        if self.conanfile.is_build_context:
+        if self.require.build:
             return ret
         deps = self.conanfile.dependencies.filter({"build": False, "visible": True, "direct": True})
         for dep in deps.values():
