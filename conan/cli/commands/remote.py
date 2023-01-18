@@ -177,7 +177,7 @@ def remote_login(conan_api, parser, subparser, *args):
                                 'requested interactively (not exposed)')
 
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(pattern=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote, only_enabled=False)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
