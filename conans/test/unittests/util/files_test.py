@@ -3,7 +3,7 @@ import unittest
 from time import sleep
 
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, to_file_bytes
+from conans.util.files import save
 
 
 class SaveTestCase(unittest.TestCase):

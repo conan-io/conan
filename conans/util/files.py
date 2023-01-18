@@ -6,7 +6,6 @@ import platform
 import shutil
 import stat
 import tarfile
-import tempfile
 import time
 
 from contextlib import contextmanager
@@ -92,19 +91,6 @@ def chdir(newdir):
         os.chdir(old_path)
 
 
-def touch(fname, times=None):
-    os.utime(fname, times)
-
-
-def touch_folder(folder):
-    for dirname, _, filenames in os.walk(folder):
-        for fname in filenames:
-            try:
-                os.utime(os.path.join(dirname, fname), None)
-            except Exception:
-                pass
-
-
 def md5(content):
     try:
         md5alg = hashlib.md5()
@@ -146,16 +132,6 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save_append(path, content, encoding="utf-8"):
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
-
-    with open(path, "ab") as handle:
-        handle.write(to_file_bytes(content, encoding=encoding))
-
-
 def save(path, content, only_if_modified=False, encoding="utf-8"):
     """
     Saves a file with given content
@@ -165,36 +141,18 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
-    dir_path = os.path.dirname(path)
-    if not os.path.isdir(dir_path):
-        try:
-            os.makedirs(dir_path)
-        except OSError as error:
-            if error.errno not in (errno.EEXIST, errno.ENOENT):
-                raise OSError("The folder {} does not exist and could not be created ({})."
-                              .format(dir_path, error.strerror))
-        except Exception:
-            raise
-
-    new_content = to_file_bytes(content, encoding)
-
+    # avoid re-wring it so the modified date doesn't change and does not affect build systems
     if only_if_modified and os.path.exists(path):
-        old_content = load(path, binary=True, encoding=encoding)
-        if old_content == new_content:
+        with open(path, "r", encoding=encoding) as f:
+            old_content = f.read()
+        if old_content == content:
             return
 
-    with open(path, "wb") as handle:
-        handle.write(new_content)
-
-
-def mkdir_tmp():
-    return tempfile.mkdtemp(suffix='tmp_conan')
-
-
-def to_file_bytes(content, encoding="utf-8"):
-    if not isinstance(content, bytes):
-        content = bytes(content, encoding)
-    return content
+    dir_path = os.path.dirname(path)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(path, "w", encoding=encoding) as handle:
+        handle.write(content)
 
 
 def save_files(path, files, only_if_modified=False, encoding="utf-8"):
@@ -202,11 +160,11 @@ def save_files(path, files, only_if_modified=False, encoding="utf-8"):
         save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
 
 
-def load(path, binary=False, encoding="utf-8"):
+def load(path, encoding="utf-8"):
     """ Loads a file content """
-    with open(path, 'rb') as handle:
+    with open(path, 'r', encoding=encoding) as handle:
         tmp = handle.read()
-        return tmp if binary else tmp.decode(encoding=encoding)
+    return tmp
 
 
 def load_user_encoded(path):
@@ -235,17 +193,9 @@ def load_user_encoded(path):
     for decoder in ["utf-8", "Windows-1252"]:
         try:
             return text.decode(decoder)
-        except UnicodeDecodeError as e:
+        except UnicodeDecodeError:
             continue
     raise Exception(f"Unknown encoding of file: {path}\nIt is recommended to use utf-8 encoding")
-
-
-def get_abs_path(folder, origin):
-    if folder:
-        if os.path.isabs(folder):
-            return folder
-        return os.path.join(origin, folder)
-    return origin
 
 
 def _change_permissions(func, path, exc_info):
@@ -382,15 +332,6 @@ def exception_message_safe(exc):
 def merge_directories(src, dst, excluded=None):
     from conan.tools.files import copy
     copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
-    return
-
-
-def discarded_file(filename):
-    """
-    # The __conan pattern is to be prepared for the future, in case we want to manage our
-    own files that shouldn't be uploaded
-    """
-    return filename == ".DS_Store" or filename.startswith("__conan")
 
 
 def gather_files(folder):
@@ -404,7 +345,7 @@ def gather_files(folder):
                 symlinked_folders[rel_path] = abs_path
                 continue
         for f in files:
-            if discarded_file(f):
+            if f == ".DS_Store":
                 continue
             abs_path = os.path.join(root, f)
             rel_path = abs_path[len(folder) + 1:].replace("\\", "/")

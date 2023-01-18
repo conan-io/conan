@@ -1,5 +1,4 @@
 import configparser
-import errno
 import gzip
 import os
 import platform
@@ -25,15 +24,14 @@ def load(conanfile, path, encoding="utf-8"):
     Utility function to load files in one line. It will manage the open and close of the file,
     and load binary encodings. Returns the content of the file.
 
-
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path to the file to read
     :param encoding: (Optional, Defaulted to ``utf-8``): Specifies the input file text encoding.
     :return: The contents of the file
     """
-    with open(path, 'rb') as handle:
+    with open(path, "r", encoding=encoding) as handle:
         tmp = handle.read()
-        return tmp.decode(encoding)
+        return tmp
 
 
 def save(conanfile, path, content, append=False, encoding="utf-8"):
@@ -48,28 +46,10 @@ def save(conanfile, path, content, append=False, encoding="utf-8"):
            existing one.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the output file text encoding.
     """
-    if append:
-        mode = "ab"
-        try:
-            os.makedirs(os.path.dirname(path))
-        except Exception:
-            pass
-    else:
-        mode = "wb"
-        dir_path = os.path.dirname(path)
-        if not os.path.isdir(dir_path):
-            try:
-                os.makedirs(dir_path)
-            except OSError as error:
-                if error.errno not in (errno.EEXIST, errno.ENOENT):
-                    raise OSError("The folder {} does not exist and could not be created ({})."
-                                  .format(dir_path, error.strerror))
-            except Exception:
-                raise
-
-    with open(path, mode) as handle:
-        if not isinstance(content, bytes):
-            content = bytes(content, encoding=encoding)
+    dir_path = os.path.dirname(path)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(path, "a" if append else "w", encoding=encoding) as handle:
         handle.write(content)
 
 
@@ -229,7 +209,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
         raise ConanException("core.download:download_cache must be an absolute path")
 
     filename = os.path.abspath(filename)
-    
+
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         if file_url.startswith("file:"):

@@ -20,7 +20,7 @@ def test_save_and_load_encoding():
     assert contents == "你很重，伙計"
 
     # But you can save bytes directly with an encoding
-    save(conanfile, file_path, bytes("你很重，伙計", "utf-16"))
+    save(conanfile, file_path, "你很重，伙計", "utf-16")
     contents = load(conanfile, file_path, encoding="utf-16")
     assert contents == "你很重，伙計"
 
