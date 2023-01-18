@@ -560,6 +560,7 @@ class TestClient(object):
                 msg = " Command succeeded (failure expected): "
             else:
                 msg = " Command failed (unexpectedly): "
+            trace = None
             if exception is not None:
                 from traceback import format_exception
                 trace = format_exception(Exception, exception, exception.__traceback__)
@@ -572,7 +573,7 @@ class TestClient(object):
                 output_footer='-' * 80,
                 cmd=command,
                 output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out),
-                traceback='{:-^80}'.format("Trace back") + "\n" + "".join(trace)
+                traceback='{:-^80}'.format("Trace back") + "\n" + "".join(trace) if trace is not None else ""
             )
             raise Exception(exc_message)
 
