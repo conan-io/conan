@@ -1,5 +1,4 @@
 import fnmatch
-from enum import Enum
 
 from conans.errors import ConanException
 
@@ -50,7 +49,7 @@ class SelectPattern:
         if not prefs:
             refs_str = f'{self.ref}#{self.rrev}:{self.package_id}'
             if "*" not in refs_str:
-                raise ConanException(f"Package ID '{refs_str}' not found")
+                raise ConanException(f"Package ID '{self.raw}' not found")
         return prefs
 
     def filter_prevs(self, prevs):
@@ -58,64 +57,5 @@ class SelectPattern:
         if not prevs:
             refs_str = f'{self.ref}#{self.rrev}:{self.package_id}#{self.prev}'
             if "*" not in refs_str:
-                raise ConanException(f"Package revision '{refs_str}' not found")
+                raise ConanException(f"Package revision '{self.raw}' not found")
         return prevs
-
-
-class ListPatternMode(Enum):
-    SHOW_REFS = 1
-    SHOW_LATEST_RREV = 2
-    SHOW_LATEST_PREV = 3
-    SHOW_PACKAGE_IDS = 4
-    SHOW_ALL_RREVS = 5
-    SHOW_ALL_PREVS = 6
-    UNDEFINED = 7
-
-
-class ListPattern(SelectPattern):
-
-    @property
-    def mode(self):
-        no_regex = "*" not in self.raw
-        if no_regex:
-            # FIXME: now, the server is returning for "conan search zlib" all the zlib versions,
-            #        but "conan search zli" is raising and error. Inconsistency?
-            if not (self.name and self.version):
-                # # zlib (server is going to get all the versions for zlib)
-                if self.package_id is None:
-                    return ListPatternMode.SHOW_REFS
-                # zlib:PID -> it will fail on server side! Nothing to do here
-            else:
-                if self.package_id is None:
-                    # zlib/1.2.11 | zlib/1.2.11#latest
-                    if self.is_latest_rrev:
-                        return ListPatternMode.SHOW_LATEST_RREV
-                    # zlib/1.2.11#RREV
-                    elif self.rrev:
-                        return ListPatternMode.SHOW_PACKAGE_IDS
-                else:
-                    # zlib/1.2.11#RREV:PID | zlib/1.2.11#RREV:PID#PREV
-                    if self.is_latest_prev or self.prev:
-                        return ListPatternMode.SHOW_LATEST_PREV
-        else:
-            if self.package_id is None:
-                # zlib/* | zlib*
-                if self.is_latest_rrev and "#latest" not in self.raw:
-                    return ListPatternMode.SHOW_REFS
-                # zlib/*#latest
-                elif "#latest" in self.raw:
-                    return ListPatternMode.SHOW_LATEST_RREV
-                # zlib/1.2.11#*
-                elif "*" in self.rrev:
-                    return ListPatternMode.SHOW_ALL_RREVS
-            else:
-                # zlib/1.2.11#latest:* | zlib/1.2.11#RREV:*
-                if self.is_latest_prev and "#latest" not in self.raw:
-                    return ListPatternMode.SHOW_PACKAGE_IDS
-                # zlib/1.2.11:*#latest
-                elif "#latest" in self.raw:
-                    return ListPatternMode.SHOW_LATEST_PREV
-                # zlib/1.2.11#latest:*#* | zlib/1.2.11#RREV:PID#*
-                elif "*" in self.prev:
-                    return ListPatternMode.SHOW_ALL_PREVS
-        return ListPatternMode.UNDEFINED

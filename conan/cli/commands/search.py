@@ -3,7 +3,7 @@ from collections import OrderedDict
 from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command
 from conan.cli.commands.list import print_list_text, print_list_json
-from conan.internal.api.select_pattern import ListPattern, ListPatternMode
+from conan.internal.api.select_pattern import SelectPattern
 from conans.errors import ConanException
 
 
@@ -20,8 +20,9 @@ def search(conan_api: ConanAPI, parser, *args):
                         help="Remote names. Accepts wildcards. If not specified it searches "
                              "in all the remotes")
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference)
-    search_mode = ListPatternMode.SHOW_REFS
+    ref_pattern = SelectPattern(args.reference, rrev=None)
+    if ref_pattern.package_id is not None or ref_pattern.rrev is not None:
+        raise ConanException("Incorrect search pattern")
 
     remotes = conan_api.remotes.list(args.remote)
     if not remotes:
@@ -30,14 +31,11 @@ def search(conan_api: ConanAPI, parser, *args):
     results = OrderedDict()
     for remote in remotes:
         try:
-            list_bundle = conan_api.list.select(ref_pattern, package_query=None,
-                                                remote=remote, search_mode=search_mode)
+            list_bundle = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
         except Exception as e:
             results[remote.name] = {"error": str(e)}
         else:
             results[remote.name] = list_bundle.serialize()
     return {
-        "results": results,
-        "search_mode": search_mode,
-        "conan_api": conan_api
+        "results": results
     }
