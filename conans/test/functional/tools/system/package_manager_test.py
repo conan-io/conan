@@ -172,6 +172,7 @@ def test_collect_system_requirements():
                 apt = Apt(self)
                 apt.install(["pkg1", "pkg2"])
         """)})
+
     with patch.object(_SystemPackageManagerTool, '_conanfile_run', MagicMock(return_value=False)):
         client.run("install . -c tools.system.package_manager:tool=apt-get --format=json",
                    redirect_stdout="graph.json")
@@ -180,8 +181,12 @@ def test_collect_system_requirements():
 
     # How to do it without installing
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "
-               "-c tools.system.package_manager:mode=collect --format=json",
+               "-c tools.system.package_manager:mode=report --format=json",
                redirect_stdout="graph2.json")
     graph2 = json.loads(client.load("graph2.json"))
     # TODO: Unify format of ``graph info`` and ``install``
     assert {"apt-get": ["pkg1", "pkg2"]} == graph2["nodes"][0]["system_requires"]
+
+    client.run("graph info . -c tools.system.package_manager:tool=apt-get "
+               "-c tools.system.package_manager:mode=check", assert_error=True)
+    assert "ERROR: conanfile.py: Error in system_requirements() method, line 11" in client.out

@@ -8,7 +8,7 @@ from conans.errors import ConanException
 class _SystemPackageManagerTool(object):
     mode_check = "check"
     mode_install = "install"
-    mode_collect = "collect"
+    mode_report = "report"
     tool_name = None
     install_command = ""
     update_command = ""
@@ -150,7 +150,7 @@ class _SystemPackageManagerTool(object):
     def _install(self, packages, update=False, check=True, **kwargs):
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, [])
         pkgs.extend(p for p in packages if p not in pkgs)
-        if self._mode == self.mode_collect:
+        if self._mode == self.mode_report:
             return
 
         if check or self._mode == self.mode_check:
@@ -191,7 +191,7 @@ class _SystemPackageManagerTool(object):
     def _check(self, packages):
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, [])
         pkgs.extend(p for p in packages if p not in pkgs)
-        if self._mode == self.mode_collect:
+        if self._mode == self.mode_report:
             return
         missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
         return missing

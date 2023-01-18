@@ -156,7 +156,7 @@ def graph_info(conan_api, parser, subparser, *args):
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
-        if profile_host.conf.get("tools.system.package_manager:mode") == "collect":
+        if profile_host.conf.get("tools.system.package_manager:mode") in ("check", "report"):
             conan_api.install.install_system_requires(deps_graph)
 
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
