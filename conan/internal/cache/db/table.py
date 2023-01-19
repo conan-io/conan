@@ -1,7 +1,6 @@
 import sqlite3
 from collections import namedtuple
 from contextlib import contextmanager
-from io import StringIO
 from typing import Tuple, List, Optional
 
 
