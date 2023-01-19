@@ -49,7 +49,7 @@ class RecipesDBTable(BaseDbTable):
         query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
 
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
 
@@ -61,7 +61,7 @@ class RecipesDBTable(BaseDbTable):
         assert ref is not None
         assert ref.revision is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
                                  f'VALUES ({placeholders})',
@@ -76,14 +76,14 @@ class RecipesDBTable(BaseDbTable):
         query = f"UPDATE {self.table_name} " \
                 f'SET {self.columns.timestamp} = "{ref.timestamp}" ' \
                 f"WHERE {where_clause};"
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             conn.execute(query)
 
     def remove(self, ref: RecipeReference):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             conn.execute(query)
 
     # returns all different conan references (name/version@user/channel)
@@ -94,7 +94,7 @@ class RecipesDBTable(BaseDbTable):
                     f'{self.columns.timestamp} ' \
                     f'FROM {self.table_name} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(query)
             result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
         return result
@@ -119,7 +119,7 @@ class RecipesDBTable(BaseDbTable):
                     f'{check_rrev} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
 
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(query)
             ret = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
         return ret

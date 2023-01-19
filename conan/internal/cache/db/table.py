@@ -20,7 +20,7 @@ class BaseDbTable:
         self.create_table()
 
     @contextmanager
-    def connect_db(self):
+    def db_connection(self):
         connection = sqlite3.connect(self.filename, isolation_level=None,
                                      timeout=1, check_same_thread=False)
         yield connection
@@ -54,12 +54,12 @@ class BaseDbTable:
         fields = ', '.join([field(*it) for it in self.columns_description])
         guard = 'IF NOT EXISTS'
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
 
     def dump(self):
         print(f"********* BEGINTABLE {self.table_name}*************")
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')
             for it in r.fetchall():
                 print(str(it))

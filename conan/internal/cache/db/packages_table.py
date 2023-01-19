@@ -58,7 +58,7 @@ class PackagesDBTable(BaseDbTable):
         query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
 
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
 
@@ -73,7 +73,7 @@ class PackagesDBTable(BaseDbTable):
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
                                    f'VALUES ({placeholders})',
@@ -90,7 +90,7 @@ class PackagesDBTable(BaseDbTable):
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
                 f"WHERE {where_clause};"
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             try:
                 conn.execute(query)
             except sqlite3.IntegrityError:
@@ -101,14 +101,14 @@ class PackagesDBTable(BaseDbTable):
         query = f"DELETE FROM {self.table_name} " \
                 f'WHERE {self.columns.reference} = "{str(ref)}" ' \
                 f'AND {self.columns.rrev} = "{ref.revision}" '
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             conn.execute(query)
 
     def remove(self, pref: PkgReference):
         where_clause = self._where_clause(pref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             conn.execute(query)
 
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
@@ -138,7 +138,7 @@ class PackagesDBTable(BaseDbTable):
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(query)
             for row in r.fetchall():
                 yield self._as_dict(self.row_type(*row))
@@ -165,7 +165,7 @@ class PackagesDBTable(BaseDbTable):
                     f'AND {self.columns.reference} = "{str(ref)}" ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        with self.connect_db() as conn:
+        with self.db_connection() as conn:
             r = conn.execute(query)
             for row in r.fetchall():
                 yield self._as_dict(self.row_type(*row))
