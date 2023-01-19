@@ -35,7 +35,7 @@ def _build_and_test_preset_name(conanfile):
 
     if custom_conf:
         if build_type:
-            return "{}-{}".format(custom_conf, build_type.lower())
+            return "{}_{}".format(custom_conf, build_type.lower())
         else:
             return custom_conf
     return build_type.lower() if build_type else "default"
@@ -52,7 +52,7 @@ def _configure_preset_name(conanfile, multiconfig):
         return "default" if not custom_conf else custom_conf
 
     if custom_conf:
-        return "{}-{}".format(custom_conf, str(build_type).lower())
+        return "{}_{}".format(custom_conf, str(build_type).lower())
     else:
         return str(build_type).lower()
 
@@ -204,10 +204,10 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
 
     data = json.dumps(data, indent=4)
     save(preset_path, data)
-    save_cmake_user_presets(conanfile, preset_path, user_presets_path)
+    _save_cmake_user_presets(conanfile, preset_path, user_presets_path)
 
 
-def save_cmake_user_presets(conanfile, preset_path, user_presets_path=None):
+def _save_cmake_user_presets(conanfile, preset_path, user_presets_path=None):
     if user_presets_path is False:
         return
 

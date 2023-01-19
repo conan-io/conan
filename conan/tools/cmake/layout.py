@@ -62,4 +62,5 @@ def get_build_folder_custom_vars(conanfile):
             ret.append(tmp.lower())
 
     user_defined_build = "settings.build_type" in build_vars
-    return "-".join(ret), user_defined_build
+    # the "-" is an invalid preset name, it was failing for CMake
+    return "_".join(ret), user_defined_build

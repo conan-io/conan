@@ -900,7 +900,7 @@ def test_cmake_layout_toolchain_folder():
           "-s compiler.libcxx=libstdc++11 -s arch=x86 "
           "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.arch\", \"settings.build_type\"]'")
     assert os.path.exists(os.path.join(c.current_folder,
-                                       "build/x86-debug/generators/conan_toolchain.cmake"))
+                                       "build/x86_debug/generators/conan_toolchain.cmake"))
     c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
           "-s compiler.libcxx=libstdc++11 -s arch=x86 "
           "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")

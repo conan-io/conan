@@ -586,7 +586,7 @@ def test_cmake_presets_multiple_settings_single_config():
     settings = "-s compiler=apple-clang -s compiler.libcxx=libc++ " \
                "-s compiler.version=12.0 -s compiler.cppstd=gnu17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
+    assert os.path.exists(os.path.join(client.current_folder, "build", "apple_clang_12.0_gnu17",
                                        "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
@@ -595,15 +595,15 @@ def test_cmake_presets_multiple_settings_single_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
+    assert presets["configurePresets"][0]["name"] == "apple_clang_12.0_gnu17_release"
+    assert presets["buildPresets"][0]["name"] == "apple_clang_12.0_gnu17_release"
+    assert presets["buildPresets"][0]["configurePreset"] == "apple_clang_12.0_gnu17_release"
+    assert presets["testPresets"][0]["name"] == "apple_clang_12.0_gnu17_release"
+    assert presets["testPresets"][0]["configurePreset"] == "apple_clang_12.0_gnu17_release"
 
     # If we create the "Debug" one, it will be appended
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
+    assert os.path.exists(os.path.join(client.current_folder, "build", "apple_clang_12.0_gnu17",
                                        "Release", "generators"))
     assert os.path.exists(user_presets_path)
     print(load(user_presets_path))
@@ -613,28 +613,28 @@ def test_cmake_presets_multiple_settings_single_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
+    assert presets["configurePresets"][0]["name"] == "apple_clang_12.0_gnu17_release"
+    assert presets["buildPresets"][0]["name"] == "apple_clang_12.0_gnu17_release"
+    assert presets["buildPresets"][0]["configurePreset"] == "apple_clang_12.0_gnu17_release"
+    assert presets["testPresets"][0]["name"] == "apple_clang_12.0_gnu17_release"
+    assert presets["testPresets"][0]["configurePreset"] == "apple_clang_12.0_gnu17_release"
 
     presets = json.loads(load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["configurePresets"][0]["name"] == "apple_clang_12.0_gnu17_debug"
+    assert presets["buildPresets"][0]["name"] == "apple_clang_12.0_gnu17_debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "apple_clang_12.0_gnu17_debug"
+    assert presets["testPresets"][0]["name"] == "apple_clang_12.0_gnu17_debug"
+    assert presets["testPresets"][0]["configurePreset"] == "apple_clang_12.0_gnu17_debug"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
     settings = "-s compiler=apple-clang -s compiler.libcxx=libc++ " \
                "-s compiler.version=13 -s compiler.cppstd=gnu20"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-13-gnu20",
+    assert os.path.exists(os.path.join(client.current_folder, "build", "apple_clang_13_gnu20",
                                        "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
@@ -644,32 +644,32 @@ def test_cmake_presets_multiple_settings_single_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-13-gnu20-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-13-gnu20-release"
+    assert presets["configurePresets"][0]["name"] == "apple_clang_13_gnu20_release"
+    assert presets["buildPresets"][0]["name"] == "apple_clang_13_gnu20_release"
+    assert presets["buildPresets"][0]["configurePreset"] == "apple_clang_13_gnu20_release"
+    assert presets["testPresets"][0]["name"] == "apple_clang_13_gnu20_release"
+    assert presets["testPresets"][0]["configurePreset"] == "apple_clang_13_gnu20_release"
 
     # We can build with cmake manually
     if platform.system() == "Darwin":
-        client.run_command("cmake . --preset apple-clang-12.0-gnu17-release")
-        client.run_command("cmake --build --preset apple-clang-12.0-gnu17-release")
-        client.run_command("ctest --preset apple-clang-12.0-gnu17-release")
-        client.run_command("./build/apple-clang-12.0-gnu17/Release/hello")
+        client.run_command("cmake . --preset apple_clang_12.0_gnu17_release")
+        client.run_command("cmake --build --preset apple_clang_12.0_gnu17_release")
+        client.run_command("ctest --preset apple_clang_12.0_gnu17_release")
+        client.run_command("./build/apple_clang_12.0_gnu17/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2017" in client.out
 
-        client.run_command("cmake . --preset apple-clang-12.0-gnu17-debug")
-        client.run_command("cmake --build --preset apple-clang-12.0-gnu17-debug")
-        client.run_command("ctest --preset apple-clang-12.0-gnu17-debug")
-        client.run_command("./build/apple-clang-12.0-gnu17/Debug/hello")
+        client.run_command("cmake . --preset apple_clang_12.0_gnu17_debug")
+        client.run_command("cmake --build --preset apple_clang_12.0_gnu17_debug")
+        client.run_command("ctest --preset apple_clang_12.0_gnu17_debug")
+        client.run_command("./build/apple_clang_12.0_gnu17/Debug/hello")
         assert "Hello World Debug!" in client.out
         assert "__cplusplus2017" in client.out
 
-        client.run_command("cmake . --preset apple-clang-13-gnu20-release")
-        client.run_command("cmake --build --preset apple-clang-13-gnu20-release")
-        client.run_command("ctest --preset apple-clang-13-gnu20-release")
-        client.run_command("./build/apple-clang-13-gnu20/Release/hello")
+        client.run_command("cmake . --preset apple_clang_13_gnu20_release")
+        client.run_command("cmake --build --preset apple_clang_13_gnu20_release")
+        client.run_command("ctest --preset apple_clang_13_gnu20_release")
+        client.run_command("./build/apple_clang_13_gnu20/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2020" in client.out
 
@@ -688,10 +688,10 @@ def test_cmake_presets_duplicated_install(multiconfig):
     client.run("install . {}".format(settings))
     client.run("install . {}".format(settings))
     if multiconfig:
-        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+        presets_path = os.path.join(client.current_folder, "build", "gcc_5", "generators",
                                     "CMakePresets.json")
     else:
-        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "Release", "generators",
+        presets_path = os.path.join(client.current_folder, "build", "gcc_5", "Release", "generators",
                                     "CMakePresets.json")
     assert os.path.exists(presets_path)
     contents = json.loads(load(presets_path))
@@ -709,10 +709,10 @@ def test_remove_missing_presets():
     client.run("install . {}".format(settings))
     client.run("install . {} -s compiler.version=6".format(settings))
 
-    presets_path_5 = os.path.join(client.current_folder, "build", "gcc-5")
+    presets_path_5 = os.path.join(client.current_folder, "build", "gcc_5")
     assert os.path.exists(presets_path_5)
 
-    presets_path_6 = os.path.join(client.current_folder, "build", "gcc-6")
+    presets_path_6 = os.path.join(client.current_folder, "build", "gcc_6")
     assert os.path.exists(presets_path_6)
 
     rmdir(presets_path_5)
@@ -725,8 +725,8 @@ def test_remove_missing_presets():
 
     contents = json.loads(load(user_presets_path))
     assert len(contents["include"]) == 2
-    assert "gcc-6" in contents["include"][0]
-    assert "gcc-11" in contents["include"][1]
+    assert "gcc_6" in contents["include"][0]
+    assert "gcc_11" in contents["include"][1]
 
 
 @pytest.mark.tool_cmake(version="3.23")
@@ -782,7 +782,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=dynamic " \
                "-s compiler.cppstd=14"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "dynamic-14", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "dynamic_14", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -790,16 +790,16 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["testPresets"][0]["configurePreset"] == "dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "dynamic_14"
+    assert presets["buildPresets"][0]["name"] == "dynamic_14_release"
+    assert presets["buildPresets"][0]["configurePreset"] == "dynamic_14"
+    assert presets["testPresets"][0]["name"] == "dynamic_14_release"
+    assert presets["testPresets"][0]["configurePreset"] == "dynamic_14"
 
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "dynamic-14", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "dynamic_14", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -807,22 +807,22 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
     assert len(presets["testPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["buildPresets"][1]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["testPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["testPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][1]["configurePreset"] == "dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "dynamic_14"
+    assert presets["buildPresets"][0]["name"] == "dynamic_14_release"
+    assert presets["buildPresets"][1]["name"] == "dynamic_14_debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "dynamic_14"
+    assert presets["buildPresets"][1]["configurePreset"] == "dynamic_14"
+    assert presets["testPresets"][0]["name"] == "dynamic_14_release"
+    assert presets["testPresets"][1]["name"] == "dynamic_14_debug"
+    assert presets["testPresets"][0]["configurePreset"] == "dynamic_14"
+    assert presets["testPresets"][1]["configurePreset"] == "dynamic_14"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
     settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
                "-s compiler.cppstd=17"
     client.run("install . {} {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "static-17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "static_17", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the msvc dynamic/14 the [1] is the static/17
@@ -831,32 +831,32 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "static-17"
-    assert presets["buildPresets"][0]["name"] == "static-17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "static-17"
-    assert presets["testPresets"][0]["name"] == "static-17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "static-17"
+    assert presets["configurePresets"][0]["name"] == "static_17"
+    assert presets["buildPresets"][0]["name"] == "static_17_release"
+    assert presets["buildPresets"][0]["configurePreset"] == "static_17"
+    assert presets["testPresets"][0]["name"] == "static_17_release"
+    assert presets["testPresets"][0]["configurePreset"] == "static_17"
 
     # We can build with cmake manually
-    client.run_command("cmake . --preset dynamic-14")
+    client.run_command("cmake . --preset dynamic_14")
 
-    client.run_command("cmake --build --preset dynamic-14-release")
-    client.run_command("ctest --preset dynamic-14-release")
-    client.run_command("build\\dynamic-14\\Release\\hello")
+    client.run_command("cmake --build --preset dynamic_14_release")
+    client.run_command("ctest --preset dynamic_14_release")
+    client.run_command("build\\dynamic_14\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake --build --preset dynamic-14-debug")
-    client.run_command("ctest --preset dynamic-14-debug")
-    client.run_command("build\\dynamic-14\\Debug\\hello")
+    client.run_command("cmake --build --preset dynamic_14_debug")
+    client.run_command("ctest --preset dynamic_14_debug")
+    client.run_command("build\\dynamic_14\\Debug\\hello")
     assert "Hello World Debug!" in client.out
     assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake . --preset static-17")
+    client.run_command("cmake . --preset static_17")
 
-    client.run_command("cmake --build --preset static-17-release")
-    client.run_command("ctest --preset static-17-release")
-    client.run_command("build\\static-17\\Release\\hello")
+    client.run_command("cmake --build --preset static_17_release")
+    client.run_command("ctest --preset static_17_release")
+    client.run_command("build\\static_17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
 
