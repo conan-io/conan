@@ -57,10 +57,11 @@ class PackagesDBTable(BaseDbTable):
         where_clause = self._where_clause(pref)
         query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
-        conn = self.opendb()
-        r = conn.execute(query)
-        row = r.fetchone()
-        conn.close()
+
+        with self.connect_db() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+
         if not row:
             raise ConanReferenceDoesNotExistInDB(f"No entry for package '{repr(pref)}'")
         return self._as_dict(self.row_type(*row))
@@ -72,16 +73,14 @@ class PackagesDBTable(BaseDbTable):
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        conn = self.opendb()
-        try:
-            conn.execute(f'INSERT INTO {self.table_name} '
-                               f'VALUES ({placeholders})',
-                               [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
-                                path, pref.timestamp, build_id])
-        except sqlite3.IntegrityError:
-            raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
-        finally:
-            conn.close()
+        with self.connect_db() as conn:
+            try:
+                conn.execute(f'INSERT INTO {self.table_name} '
+                                   f'VALUES ({placeholders})',
+                                   [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
+                                    path, pref.timestamp, build_id])
+            except sqlite3.IntegrityError:
+                raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
     def update_timestamp(self, pref: PkgReference):
         assert pref.revision
@@ -91,30 +90,26 @@ class PackagesDBTable(BaseDbTable):
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
                 f"WHERE {where_clause};"
-        conn = self.opendb()
-        try:
-            conn.execute(query)
-        except sqlite3.IntegrityError:
-            raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
-        finally:
-            conn.close()
+        with self.connect_db() as conn:
+            try:
+                conn.execute(query)
+            except sqlite3.IntegrityError:
+                raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
     def remove_recipe(self, ref: RecipeReference):
         # can't use the _where_clause, because that is an exact match on the package_id, etc
         query = f"DELETE FROM {self.table_name} " \
                 f'WHERE {self.columns.reference} = "{str(ref)}" ' \
                 f'AND {self.columns.rrev} = "{ref.revision}" '
-        conn = self.opendb()
-        conn.execute(query)
-        conn.close()
+        with self.connect_db() as conn:
+            conn.execute(query)
 
     def remove(self, pref: PkgReference):
         where_clause = self._where_clause(pref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        conn = self.opendb()
-        conn.execute(query)
-        conn.close()
+        with self.connect_db() as conn:
+            conn.execute(query)
 
     def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
         assert pref.ref.revision, "To search package revisions you must provide a recipe revision."
@@ -143,11 +138,10 @@ class PackagesDBTable(BaseDbTable):
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        conn = self.opendb()
-        r = conn.execute(query)
-        for row in r.fetchall():
-            yield self._as_dict(self.row_type(*row))
-        conn.close()
+        with self.connect_db() as conn:
+            r = conn.execute(query)
+            for row in r.fetchall():
+                yield self._as_dict(self.row_type(*row))
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         # Return the latest revisions
@@ -171,8 +165,7 @@ class PackagesDBTable(BaseDbTable):
                     f'AND {self.columns.reference} = "{str(ref)}" ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        conn = self.opendb()
-        r = conn.execute(query)
-        for row in r.fetchall():
-            yield self._as_dict(self.row_type(*row))
-        conn.close()
+        with self.connect_db() as conn:
+            r = conn.execute(query)
+            for row in r.fetchall():
+                yield self._as_dict(self.row_type(*row))

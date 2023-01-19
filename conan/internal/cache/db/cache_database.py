@@ -14,9 +14,6 @@ class CacheDatabase:
         self._recipes = RecipesDBTable(filename)
         self._packages = PackagesDBTable(filename)
 
-    def close(self):
-        pass
-
     def exists_rrev(self, ref):
         # TODO: This logic could be done directly against DB
         matching_rrevs = self.get_recipe_revisions_references(ref)

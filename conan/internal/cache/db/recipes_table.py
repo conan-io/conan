@@ -49,10 +49,10 @@ class RecipesDBTable(BaseDbTable):
         query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
 
-        conn = self.opendb()
-        r = conn.execute(query)
-        row = r.fetchone()
-        conn.close()
+        with self.connect_db() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+
         if not row:
             raise ConanReferenceDoesNotExistInDB(f"No entry for recipe '{repr(ref)}'")
         return self._as_dict(self.row_type(*row))
@@ -61,15 +61,13 @@ class RecipesDBTable(BaseDbTable):
         assert ref is not None
         assert ref.revision is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        conn = self.opendb()
-        try:
-            conn.execute(f'INSERT INTO {self.table_name} '
-                         f'VALUES ({placeholders})',
-                         [str(ref), ref.revision, path, ref.timestamp])
-        except sqlite3.IntegrityError as e:
-            raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
-        finally:
-            conn.close()
+        with self.connect_db() as conn:
+            try:
+                conn.execute(f'INSERT INTO {self.table_name} '
+                                 f'VALUES ({placeholders})',
+                                 [str(ref), ref.revision, path, ref.timestamp])
+            except sqlite3.IntegrityError as e:
+                raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
 
     def update_timestamp(self, ref: RecipeReference):
         assert ref.revision is not None
@@ -78,17 +76,15 @@ class RecipesDBTable(BaseDbTable):
         query = f"UPDATE {self.table_name} " \
                 f'SET {self.columns.timestamp} = "{ref.timestamp}" ' \
                 f"WHERE {where_clause};"
-        conn = self.opendb()
-        conn.execute(query)
-        conn.close()
+        with self.connect_db() as conn:
+            conn.execute(query)
 
     def remove(self, ref: RecipeReference):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        conn = self.opendb()
-        conn.execute(query)
-        conn.close()
+        with self.connect_db() as conn:
+            conn.execute(query)
 
     # returns all different conan references (name/version@user/channel)
     def all_references(self):
@@ -98,10 +94,9 @@ class RecipesDBTable(BaseDbTable):
                     f'{self.columns.timestamp} ' \
                     f'FROM {self.table_name} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        conn = self.opendb()
-        r = conn.execute(query)
-        result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
-        conn.close()
+        with self.connect_db() as conn:
+            r = conn.execute(query)
+            result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
         return result
 
     def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
@@ -124,8 +119,7 @@ class RecipesDBTable(BaseDbTable):
                     f'{check_rrev} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
 
-        conn = self.opendb()
-        r = conn.execute(query)
-        ret = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
-        conn.close()
+        with self.connect_db() as conn:
+            r = conn.execute(query)
+            ret = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
         return ret
