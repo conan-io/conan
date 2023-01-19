@@ -126,6 +126,7 @@ class ConanFileMock(ConanFile):
         self._conan_user = None
         self._conan_channel = None
         self.env_scripts = {}
+        self.system_requires = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
         self._conan_helpers = ConanFileHelpers(None, None)
