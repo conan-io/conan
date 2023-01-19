@@ -149,6 +149,7 @@ class CMakeToolchain(object):
 
         check_using_build_profile(self._conanfile)
         self.user_presets_path = None
+        self.presets_prefix = None
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -199,7 +200,7 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path)
+                            self.user_presets_path, self.presets_prefix)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
