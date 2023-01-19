@@ -8,7 +8,7 @@ class InstallParallelTest(unittest.TestCase):
 
     def test_basic_parallel_install(self):
         client = TestClient(default_server_user=True)
-        threads = 4  # At the moment, not really parallel until output implements mutex
+        threads = 4
         counter = 8
 
         client.save({"global.conf": f"core.download:parallel={threads}"},
