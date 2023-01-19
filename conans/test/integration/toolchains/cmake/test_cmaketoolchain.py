@@ -589,7 +589,8 @@ def test_user_presets_version2():
 
             """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
-    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
+    configs = ["-c tools.cmake.cmaketoolchain:generator=Ninja",
+               "-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
                "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
     client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
     client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
@@ -597,10 +598,10 @@ def test_user_presets_version2():
     presets = json.loads(client.load("CMakeUserPresets.json"))
     assert len(presets["configurePresets"]) == 2
     assert presets["version"] == 2
-    assert "build/14/generators/conan_toolchain.cmake" \
+    assert "build/14/Release/generators/conan_toolchain.cmake" \
            in presets["configurePresets"][0]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
                                                                                                "/")
-    assert "build/17/generators/conan_toolchain.cmake" \
+    assert "build/17/Release/generators/conan_toolchain.cmake" \
            in presets["configurePresets"][1]["cacheVariables"]["CMAKE_TOOLCHAIN_FILE"].replace("\\",
                                                                                                "/")
 
@@ -758,7 +759,7 @@ def test_presets_ninja_msvc(arch, arch_toolset):
            "-s compiler.runtime_type=Release"
     client.run("install . {} -s compiler.cppstd=14 {} -s arch={}".format(" ".join(configs), msvc, arch))
 
-    presets = json.loads(client.load("build/14/generators/CMakePresets.json"))
+    presets = json.loads(client.load("build/14/Release/generators/CMakePresets.json"))
 
     toolset_value = {"x86_64": "host=x86_64", "x86": "x86"}.get(arch_toolset)
     arch_value = {"x86_64": "x64", "x86": "x86"}.get(arch)
@@ -786,7 +787,7 @@ def test_presets_ninja_msvc(arch, arch_toolset):
 
     client.run(
         "install . {} -s compiler.cppstd=14 {} -s arch={}".format(" ".join(configs), msvc, arch))
-    presets = json.loads(client.load("build/14/generators/CMakePresets.json"))
+    presets = json.loads(client.load("build/14/Release/generators/CMakePresets.json"))
     assert "architecture" in presets["configurePresets"][0]
     assert "toolset" not in presets["configurePresets"][0]
 
@@ -907,6 +908,11 @@ def test_cmake_layout_toolchain_folder():
           "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.arch\", \"settings.build_type\"]'")
     assert os.path.exists(os.path.join(c.current_folder,
                                        "build/x86-debug/generators/conan_toolchain.cmake"))
+    c.run("install . -s os=Linux -s compiler=gcc -s compiler.version=7 -s build_type=Debug "
+          "-s compiler.libcxx=libstdc++11 -s arch=x86 "
+          "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "build/linux/Debug/generators/conan_toolchain.cmake"))
 
 
 def test_set_linker_scripts():

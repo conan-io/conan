@@ -589,7 +589,7 @@ def test_cmake_presets_multiple_settings_single_config():
                "-s compiler.version=12.0 -s compiler.cppstd=gnu17"
     client.run("install . {} {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
-                                       "generators"))
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -603,27 +603,33 @@ def test_cmake_presets_multiple_settings_single_config():
     assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
     assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
 
-    # If we create the "Debug" one, it has the same toolchain and preset file, that is
-    # always multiconfig
+    # If we create the "Debug" one, it will be appended
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
+    print(load(user_presets_path))
     user_presets = json.loads(load(user_presets_path))
-    assert len(user_presets["include"]) == 1
+    assert len(user_presets["include"]) == 2
     presets = json.loads(load(user_presets["include"][0]))
-    assert len(presets["configurePresets"]) == 2
-    assert len(presets["buildPresets"]) == 2
-    assert len(presets["testPresets"]) == 2
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert len(presets["testPresets"]) == 1
     assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["configurePresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
     assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
     assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][1]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
     assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
     assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][1]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+
+    presets = json.loads(load(user_presets["include"][1]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert len(presets["testPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -631,12 +637,12 @@ def test_cmake_presets_multiple_settings_single_config():
                "-s compiler.version=13 -s compiler.cppstd=gnu20"
     client.run("install . {} {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-13-gnu20",
-                                       "generators"))
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the apple-clang 12 the [1] is the apple-clang 13
-    assert len(user_presets["include"]) == 2
-    presets = json.loads(load(user_presets["include"][1]))
+    assert len(user_presets["include"]) == 3
+    presets = json.loads(load(user_presets["include"][2]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -683,8 +689,12 @@ def test_cmake_presets_duplicated_install(multiconfig):
         settings += '-c tools.cmake.cmaketoolchain:generator="Multi-Config"'
     client.run("install . {}".format(settings))
     client.run("install . {}".format(settings))
-    presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
-                                "CMakePresets.json")
+    if multiconfig:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+                                    "CMakePresets.json")
+    else:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "Release", "generators",
+                                    "CMakePresets.json")
     assert os.path.exists(presets_path)
     contents = json.loads(load(presets_path))
     assert len(contents["buildPresets"]) == 1
