@@ -177,16 +177,27 @@ def test_collect_system_requirements():
         client.run("install . -c tools.system.package_manager:tool=apt-get --format=json",
                    redirect_stdout="graph.json")
     graph = json.loads(client.load("graph.json"))
-    assert {"apt-get": ["pkg1", "pkg2"]} == graph["graph"]["nodes"][0]["system_requires"]
+    assert {"apt-get": {"install": ["pkg1", "pkg2"], "missing": []}} == \
+           graph["graph"]["nodes"][0]["system_requires"]
 
-    # How to do it without installing
+    # plain report, do not check
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "
                "-c tools.system.package_manager:mode=report --format=json",
                redirect_stdout="graph2.json")
     graph2 = json.loads(client.load("graph2.json"))
     # TODO: Unify format of ``graph info`` and ``install``
-    assert {"apt-get": ["pkg1", "pkg2"]} == graph2["nodes"][0]["system_requires"]
+    assert {"apt-get": {"install": ["pkg1", "pkg2"]}} == graph2["nodes"][0]["system_requires"]
 
+    # Check report-installed
+    with patch.object(_SystemPackageManagerTool, '_conanfile_run', MagicMock(return_value=True)):
+        client.run("graph info . -c tools.system.package_manager:tool=apt-get "
+                   "-c tools.system.package_manager:mode=report-installed --format=json",
+                   redirect_stdout="graph2.json")
+        graph2 = json.loads(client.load("graph2.json"))
+        assert {"apt-get": {"install": ["pkg1", "pkg2"],
+                            'missing': ['pkg1', 'pkg2']}} == graph2["nodes"][0]["system_requires"]
+
+    # Default "check" will fail, as dpkg-query not installed
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "
                "-c tools.system.package_manager:mode=check", assert_error=True)
     assert "ERROR: conanfile.py: Error in system_requirements() method, line 11" in client.out
