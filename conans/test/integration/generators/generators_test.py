@@ -8,4 +8,3 @@ class TestGenerators:
         client.save({"conanfile.txt": "[generators]\nunknown"})
         client.run("install . --build=*", assert_error=True)
         assert "ERROR: Invalid generator 'unknown'. Available types:" in client.out
-
