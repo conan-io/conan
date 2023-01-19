@@ -20,9 +20,9 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        connection = sqlite3.connect(self.filename, isolation_level=None,
-                                     timeout=1, check_same_thread=False)
         try:
+            connection = sqlite3.connect(self.filename, isolation_level=None,
+                                        timeout=1, check_same_thread=False)
             yield connection
         finally:
             connection.close()
