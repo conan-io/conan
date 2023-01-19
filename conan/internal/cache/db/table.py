@@ -23,8 +23,10 @@ class BaseDbTable:
     def db_connection(self):
         connection = sqlite3.connect(self.filename, isolation_level=None,
                                      timeout=1, check_same_thread=False)
-        yield connection
-        connection.close()
+        try:
+            yield connection
+        finally:
+            connection.close()
 
     def create_table(self):
         def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
