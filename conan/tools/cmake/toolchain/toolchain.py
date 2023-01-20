@@ -148,7 +148,7 @@ class CMakeToolchain(object):
                                        ("output_dirs", OutputDirsBlock)])
 
         check_using_build_profile(self._conanfile)
-        self.user_presets_path = None
+        self.user_presets_path = "CMakeUserPresets.json"
         self.presets_prefix = None
 
     def _context(self):

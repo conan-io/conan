@@ -399,6 +399,7 @@ def test_cmake_presets_multiconfig():
 
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Release --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert len(presets["testPresets"]) == 1
@@ -406,6 +407,7 @@ def test_cmake_presets_multiconfig():
 
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
@@ -417,6 +419,7 @@ def test_cmake_presets_multiconfig():
                "--profile:h=profile")
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=MinSizeRel --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 4
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
@@ -432,6 +435,7 @@ def test_cmake_presets_multiconfig():
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
+    assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 4
     assert presets["buildPresets"][0]["configuration"] == "Release"
     assert presets["buildPresets"][1]["configuration"] == "Debug"
@@ -449,6 +453,9 @@ def test_cmake_presets_multiconfig():
 
 
 def test_cmake_presets_singleconfig():
+    """ without defining a layout, single config always overwrites
+    the existing CMakePresets.json
+    """
     client = TestClient()
     profile = textwrap.dedent("""
         [settings]
@@ -472,22 +479,22 @@ def test_cmake_presets_singleconfig():
     assert len(presets["testPresets"]) == 1
     assert presets["testPresets"][0]["configurePreset"] == "release"
 
-    # Now two configurePreset, but named correctly
+    # This overwrites the existing profile, as there is no layout
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
-    assert len(presets["configurePresets"]) == 2
-    assert presets["configurePresets"][1]["name"] == "debug"
+    assert len(presets["configurePresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "debug"
 
-    assert len(presets["buildPresets"]) == 2
-    assert presets["buildPresets"][1]["configurePreset"] == "debug"
+    assert len(presets["buildPresets"]) == 1
+    assert presets["buildPresets"][0]["configurePreset"] == "debug"
 
-    assert len(presets["testPresets"]) == 2
-    assert presets["testPresets"][1]["configurePreset"] == "debug"
+    assert len(presets["testPresets"]) == 1
+    assert presets["testPresets"][0]["configurePreset"] == "debug"
 
     # Repeat configuration, it shouldn't add a new one
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
-    assert len(presets["configurePresets"]) == 2
+    assert len(presets["configurePresets"]) == 1
 
 
 def test_toolchain_cache_variables():
