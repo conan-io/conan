@@ -56,7 +56,7 @@ def remote_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List current remotes
     """
-    return conan_api.remotes.list()
+    return conan_api.remotes.list(only_enabled=False)
 
 
 @conan_subcommand()
