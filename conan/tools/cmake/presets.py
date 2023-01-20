@@ -198,12 +198,12 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
     else:
         data = _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix)
 
-    data = json.dumps(data, indent=4)
-    save(preset_path, data)
-    _save_cmake_user_presets(conanfile, preset_path, user_presets_path)
+    preset_content = json.dumps(data, indent=4)
+    save(preset_path, preset_content)
+    _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_prefix, data)
 
 
-def _save_cmake_user_presets(conanfile, preset_path, user_presets_path):
+def _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_prefix, preset_data):
     if not user_presets_path:
         return
 
@@ -213,26 +213,59 @@ def _save_cmake_user_presets(conanfile, preset_path, user_presets_path):
         return
 
     user_presets_path = os.path.join(conanfile.source_folder, user_presets_path)
-    output_dir = os.path.dirname(user_presets_path)
+    if os.path.isdir(user_presets_path):  # Allows user to specify only the folder
+        output_dir = user_presets_path
+        user_presets_path = os.path.join(user_presets_path, "CMakeUserPresets.json")
+    else:
+        output_dir = os.path.dirname(user_presets_path)
 
     if not os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
         return
 
-    """
-        Contents for the CMakeUserPresets.json
-        It uses schema version 4 unless it is forced to 2
-    """
+    # It uses schema version 4 unless it is forced to 2
     if not os.path.exists(user_presets_path):
         data = {"version": _schema_version(conanfile, default=4),
                 "vendor": {"conan": dict()}}
+        if preset_prefix:
+            inherited_user = _collect_user_inherits(output_dir, preset_prefix)
+            for preset, inherits in inherited_user.items():
+                for i in inherits:
+                    data.setdefault(preset, []).append({"name": i})
     else:
         data = json.loads(load(user_presets_path))
         if "conan" not in data.get("vendor", {}):
             # The file is not ours, we cannot overwrite it
             return
+    _clean_user_inherits(data, preset_data)
     data = _append_user_preset_path(conanfile, data, preset_path)
+
     data = json.dumps(data, indent=4)
     save(user_presets_path, data)
+
+
+def _collect_user_inherits(output_dir, preset_prefix):
+    # Collect all the existing targets in the user files, to create empty conan- presets
+    # so things doesn't break for multi-platform, when inherits don't exist
+    collected_targets = {"configurePresets": [], "buildPresets": [], "testPresets": []}
+    for file in ("CMakePresets.json", "CMakeUserPresests.json"):
+        user_file = os.path.join(output_dir, file)
+        if os.path.exists(user_file):
+            user_json = json.loads(load(user_file))
+            for preset_type, inherited in collected_targets.items():
+                for preset in user_json.get(preset_type, []):
+                    inherits = preset.get("inherits", [])
+                    if isinstance(inherits, str):
+                        inherits = [inherits]
+                    inherited.extend(i for i in inherits if i.startswith(preset_prefix))
+    return collected_targets
+
+
+def _clean_user_inherits(data, preset_data):
+    for preset_type in "configurePresets", "buildPresets", "testPresets":
+        presets = preset_data.get(preset_type, [])
+        presets_names = [p["name"] for p in presets]
+        other = data.get(preset_type, [])
+        other[:] = [p for p in other if p["name"] not in presets_names]
 
 
 def _get_already_existing_preset_index(name, presets):
