@@ -53,6 +53,15 @@ def test_comparison(v1, v2):
     assert v2 >= v1
 
 
+def test_comparison_with_integer():
+    v1 = Version("13.0")
+    # Issue: https://github.com/conan-io/conan/issues/12907
+    assert v1 > 5
+    assert not v1 > 20
+    assert v1 < 20
+    assert v1 == 13
+
+
 e = [("1", "1.0"),
      ("1", "1.0.0"),
      ("1.0", "1.0.0"),
