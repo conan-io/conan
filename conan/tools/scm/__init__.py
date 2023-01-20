@@ -165,7 +165,7 @@ class Version:
     def __eq__(self, other):
         if other is None:
             return False
-        if isinstance(other, str):
+        if not isinstance(other, Version):
             other = Version(other)
 
         return (self._nonzero_items, self._pre, self._build) ==\
