@@ -236,7 +236,8 @@ def _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_p
         if "conan" not in data.get("vendor", {}):
             # The file is not ours, we cannot overwrite it
             return
-    _clean_user_inherits(data, preset_data)
+    if preset_prefix:  # Only works for schema >=4
+        _clean_user_inherits(data, preset_data)
     data = _append_user_preset_path(conanfile, data, preset_path)
 
     data = json.dumps(data, indent=4)
