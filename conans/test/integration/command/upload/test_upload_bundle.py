@@ -39,10 +39,6 @@ def test_upload_bundle():
 
             # Check if the recipes/packages are in the remote
             conan_api.upload.check_upstream(upload_bundle, remote)
-
-            if not upload_bundle.any_upload:
-                return
-
             conan_api.upload.prepare(upload_bundle, enabled_remotes)
             cli_out_write(json.dumps(upload_bundle.serialize(), indent=4))
         """)
@@ -55,4 +51,4 @@ def test_upload_bundle():
     c.run('upload-bundle "*" -r=default', redirect_stdout="mybundle.json")
     bundle = c.load("mybundle.json")
     bundle = json.loads(bundle)
-    assert bundle["pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164"]["upload"] is True
+    assert bundle["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["upload"] is True

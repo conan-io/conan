@@ -127,6 +127,7 @@ class ListAPI:
                 prefs = []
                 if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
+                    packages = {}
                 else:
                     packages = self.conan_api.list.packages_configurations(rrev, remote)
                     if package_query is not None:
@@ -134,7 +135,7 @@ class ListAPI:
                                                                                       package_query)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
-                    select_bundle.add_configurations(packages)
+                    packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
 
                 if pattern.prev is not None:
                     new_prefs = []
@@ -152,4 +153,5 @@ class ListAPI:
                     prefs = new_prefs
 
                 select_bundle.add_prefs(prefs)
+                select_bundle.add_configurations(packages)
         return select_bundle

@@ -1,4 +1,3 @@
-from conan.api.model import UploadBundle
 from conan.api.output import ConanOutput
 from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
@@ -17,11 +16,10 @@ class UploadAPI:
     def get_bundle(self, expression, package_query=None, only_recipe=False):
         ref_pattern = SelectPattern(expression)
         select_bundle = self.conan_api.search.select(ref_pattern, only_recipe, package_query)
-        upload_bundle = UploadBundle(select_bundle)
 
         # This is necessary to upload_policy = "skip"
         app = ConanApp(self.conan_api.cache_folder)
-        for ref, bundle in upload_bundle.recipes.items():
+        for ref, bundle in select_bundle.refs():
             layout = app.cache.ref_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path)
@@ -30,7 +28,7 @@ class UploadAPI:
                                    "because upload_policy='skip'")
                 bundle.packages = []
 
-        return upload_bundle
+        return select_bundle
 
     @api_method
     def check_integrity(self, upload_data):
