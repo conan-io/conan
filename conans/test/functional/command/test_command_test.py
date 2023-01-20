@@ -1,11 +1,14 @@
 import os
 import platform
+import textwrap
 import time
 import unittest
 
 import pytest
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir
+from utils.test_files import temp_folder
 
 
 @pytest.mark.slow
@@ -30,3 +33,10 @@ class ConanTestTest(unittest.TestCase):
         subfolder = "Release" if platform.system() != "Windows" else ""
         assert os.path.exists(os.path.join(client.current_folder, "test_package",
                                            "build", subfolder, "generators", "conaninfo.txt"))
+
+    def test_whateverrr(self):
+        tc = TestClient()
+        tc.run("new hello/1.0 -m=cmake_lib")
+        test_root_folder_output = temp_folder()
+        tc.run(f"create . hello/1.0@ -c user.test_build_folder='{test_root_folder_output}'")
+        os.listdir(test_root_folder_output)

@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from conans.errors import ConanException
@@ -41,25 +42,44 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
         conanfile.cpp.build.bindirs = ["."]
 
 
-def get_build_folder_custom_vars(conanfile):
-
-    build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
-                                    default=[], check_type=list)
-    ret = []
-    for s in build_vars:
-        group, var = s.split(".", 1)
-        tmp = None
+def _calculate_build_vars(conanfile, build_vars):
+    configuration_discriminant = []
+    for config in build_vars:
+        group, var = config.split(".", 1)
         if group == "settings":
-            tmp = conanfile.settings.get_safe(var)
+            value = conanfile.settings.get_safe(var)
         elif group == "options":
             value = conanfile.options.get_safe(var)
-            if value is not None:
-                tmp = "{}_{}".format(var, value)
+            if value is None:
+                continue
         else:
-            raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
-                                 " to start with 'settings.' or 'options.': {}".format(s))
-        if tmp:
-            ret.append(tmp.lower())
+            raise ConanException("Invalid build_folder_vars value, it has to start with "
+                                 f"'settings.' or 'options.': {config}")
+        configuration_discriminant.append(f"{config}_{value}".lower())
+    return configuration_discriminant
 
-    user_defined_build = "settings.build_type" in build_vars
-    return "-".join(ret), user_defined_build
+
+def get_build_folder_custom_vars(conanfile):
+    if conanfile.tested_reference_str is None:
+        build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
+                                        default=[], check_type=list)
+        ret = _calculate_build_vars(conanfile, build_vars)
+        user_defined_build = "settings.build_type" in build_vars
+        return "-".join(ret), user_defined_build
+    # Check if maybe test_type is a better flag for this?
+    else:
+        # Get root build folder from global.conf
+        test_build_root_folder = conanfile.conf.get("user.test_build_folder", check_type=str,
+                                                    default=".")
+        # Start the folder path with something common, so it can get ignored programmatically
+        test_build_folder = os.path.join(test_build_root_folder, "test_output")
+        # Get each config and create a name based on their values
+
+        test_build_settings = [f"settings.{setting}" for setting in conanfile.settings.fields]
+        configuration_discriminant = _calculate_build_vars(conanfile, test_build_settings)
+        # Append a timestamp/counter
+        configuration_discriminant.append(datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S%f"))
+        return os.path.join(test_build_folder, "-".join(configuration_discriminant)), True
+
+
+
