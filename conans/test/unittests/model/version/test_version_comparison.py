@@ -57,9 +57,11 @@ def test_comparison_with_integer():
     v1 = Version("13.0")
     # Issue: https://github.com/conan-io/conan/issues/12907
     assert v1 > 5
-    assert not v1 > 20
+    assert v1 >= 5
     assert v1 < 20
+    assert v1 <= 20
     assert v1 == 13
+    assert v1 != 14
 
 
 e = [("1", "1.0"),
