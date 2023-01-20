@@ -1,6 +1,7 @@
 import textwrap
 
 from conans.test.utils.tools import TestClient
+from conan.tools.scm import Version
 
 
 def test_version():
@@ -30,3 +31,18 @@ def test_version():
     assert "The patch of 1.2.3 is 3" in c.out
 
     c.run("create . {} -s compiler.version=9".format(settings), assert_error=True)
+
+
+def test_version_comparison():
+    v = Version("1.2")
+    assert v == "1.2"
+    assert v > 1
+    assert v > "1.1"
+    assert v > "1.1.1"
+    assert v >= 1
+    assert v >= "1.1"
+    assert v < 2
+    assert v < "1.3"
+    assert v < "1.2.2"
+    assert v <= 2
+    assert v <= "1.7"
