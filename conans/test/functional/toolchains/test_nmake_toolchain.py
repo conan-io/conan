@@ -69,10 +69,10 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
         all: simple.exe
 
         .cpp.obj:
-          $(CPP) $(CPPFLAGS) $*.cpp
+          $(CPP) $*.cpp
 
         simple.exe: simple.obj
-          $(CPP) $(CPPFLAGS) simple.obj
+          $(CPP) simple.obj
         """)
     client.save({"conanfile.py": conanfile,
                  "makefile": makefile,
