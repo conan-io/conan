@@ -26,7 +26,7 @@ class UploadAPI:
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
-                bundle.packages = []
+                bundle["packages"] = {}
 
         return select_bundle
 
