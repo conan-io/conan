@@ -11,11 +11,11 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.parametrize(
     "compiler, version, runtime, cppstd, build_type, defines, cflags, cxxflags, sharedlinkflags, exelinkflags",
     [
-        ("msvc", "190", "dynamic", "14", "Release", [], [], [], [], []),
-        ("msvc", "190", "dynamic", "14", "Release",
+        ("msvc", "193", "dynamic", "14", "Release", [], [], [], [], []),
+        ("msvc", "193", "dynamic", "14", "Release",
          ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=", "TEST_DEFINITION4=TestPpdValue4"],
          ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
-        ("msvc", "191", "static", "17", "Debug", [], [], [], [], []),
+        ("msvc", "193", "static", "17", "Debug", [], [], [], [], []),
     ],
 )
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -82,7 +82,4 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
     client.run("build .")
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
-    assert f"main: {'Debug' if build_type == 'Debug' else 'Release'}!" in client.out
-    for preprocessor_name, preprocessor_value in conf_preprocessors.items():
-        assert f"{preprocessor_name}: {preprocessor_value}" in client.out
-    check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd)
+    check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd, conf_preprocessors)
