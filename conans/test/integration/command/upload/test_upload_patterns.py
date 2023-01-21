@@ -167,7 +167,7 @@ class TestUploadPatternErrors:
 
     def test_pid_not_found(self, client):
         rrev = "485dad6cb11e2fa99d9afbe44a57a164"
-        error = f"ERROR: Package ID 'pkg/0.1#{rrev}:pid1' not found"
+        error = "ERROR: Binary package not found: 'pkg/0.1:pid1"
         self.assert_error(f"pkg/0.1#{rrev}:pid1", error, client)
 
     def test_prev_not_found(self, client):

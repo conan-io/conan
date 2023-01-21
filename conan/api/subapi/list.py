@@ -137,7 +137,6 @@ class ListAPI:
                                                                                       package_query)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
-                    packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
 
                 if pattern.prev is not None:
                     new_prefs = []
@@ -155,6 +154,7 @@ class ListAPI:
                             new_prefs.extend(prevs)
                     prefs = new_prefs
 
+                packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
                 select_bundle.add_prefs(prefs)
                 select_bundle.add_configurations(packages)
         return select_bundle

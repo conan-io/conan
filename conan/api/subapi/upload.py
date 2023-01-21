@@ -5,6 +5,7 @@ from conan.internal.api.select_pattern import SelectPattern
 from conans.client.cmd.uploader import IntegrityChecker, PackagePreparator, UploadExecutor, \
     UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin
+from conans.errors import ConanException
 
 
 class UploadAPI:
@@ -15,7 +16,12 @@ class UploadAPI:
     @api_method
     def get_bundle(self, expression, package_query=None, only_recipe=False):
         ref_pattern = SelectPattern(expression)
-        select_bundle = self.conan_api.search.select(ref_pattern, only_recipe, package_query)
+        if only_recipe:
+            if ref_pattern.package_id:
+                raise ConanException("Do not specify 'package_id' with 'only-recipe'")
+        else:
+            ref_pattern.package_id = ref_pattern.package_id or "*"
+        select_bundle = self.conan_api.list.select(ref_pattern, package_query)
 
         # This is necessary to upload_policy = "skip"
         app = ConanApp(self.conan_api.cache_folder)

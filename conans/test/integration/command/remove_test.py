@@ -289,7 +289,7 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:*#*", "prefs": []},
     {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
     {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1#*:{}".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:{}*".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
     {"remove": "bar/1.1#*:*{}".format(pkg_id_release[-12:]), "prefs": [bar_rrev2_debug]},
     {"remove": "{}:*{}*".format(bar_rrev2, pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
     {"remove": "*/*#*:*{}*".format(pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
@@ -300,15 +300,13 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": '*/*#*:*#* -p', "error": True,
      "error_msg": "argument -p/--package-query: expected one argument"},
     {"remove": "bar/1.1#*:", "prefs": []},
-    {"remove": "bar/1.1#*:234234#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1:234234", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1 -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:234234*#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:234234*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:* -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
-    populated_client.run("remove f/* -c {}".format(r))
-
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
     assert pids == {bar_rrev2_debug, bar_rrev2_release}
 
