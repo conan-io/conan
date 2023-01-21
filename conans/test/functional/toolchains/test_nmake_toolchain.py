@@ -49,9 +49,8 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
     for define in defines:
         if "=" in define:
             key, value = define.split("=", 1)
-            if not value:
-                conf_preprocessors[key] = "1"
-            else:
+            # gen_function_cpp doesn't properly handle empty macros
+            if value:
                 conf_preprocessors[key] = value
         else:
             conf_preprocessors[define] = "1"

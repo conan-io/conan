@@ -51,15 +51,10 @@ class NMakeToolchain(object):
                 # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
                 # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
                 macro, value = define.split("=", 1)
-                if not value:
-                    sanitized_defines.append(f"/D{macro}")
-                elif value.isnumeric():
-                    sanitized_defines.append(f"/D{macro}#{value}")
-                else:
-                    # if value of macro is a string, it must be protected by protected quotes
-                    sanitized_defines.append(f"/D{macro}#\\\"{value}\\\"")
-            else:
-                sanitized_defines.append(f"/D{define}")
+                if value and not value.isnumeric():
+                    value = f'\\"{value}\\"'
+                define = f"{macro}#{value}"
+            sanitized_defines.append(f"/D{define}")
         return sanitized_defines
 
     @property
