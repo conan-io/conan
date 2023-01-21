@@ -58,10 +58,12 @@ class SelectBundle:
                     prev_dict["timestamp"] = pref.timestamp
 
     def add_configurations(self, confs):
-        # Listed confs must already exist in bundle
         for pref, conf in confs.items():
             rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
-            rev_dict["packages"][pref.package_id]["info"] = conf
+            try:
+                rev_dict["packages"][pref.package_id]["info"] = conf
+            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
+                pass
 
     def refs(self):
         result = {}

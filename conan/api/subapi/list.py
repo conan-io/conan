@@ -90,7 +90,6 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
-    # TODO: could it be possible to merge this with subapi.search.select?
     def select(self, pattern, package_query=None, remote=None):
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
@@ -137,6 +136,7 @@ class ListAPI:
                                                                                       package_query)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
+                    packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
 
                 if pattern.prev is not None:
                     new_prefs = []
@@ -154,7 +154,6 @@ class ListAPI:
                             new_prefs.extend(prevs)
                     prefs = new_prefs
 
-                packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
                 select_bundle.add_prefs(prefs)
                 select_bundle.add_configurations(packages)
         return select_bundle
