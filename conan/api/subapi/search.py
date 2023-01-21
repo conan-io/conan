@@ -44,6 +44,7 @@ class SearchAPI:
         select_bundle = SelectBundle()
         refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
         pattern.check_refs(refs)
+        refs = sorted(refs)
 
         for r in refs:
             if pattern.is_latest_rrev:
@@ -51,6 +52,7 @@ class SearchAPI:
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
+                rrevs = list(reversed(rrevs))
 
             select_bundle.add_refs(rrevs)
             # Add recipe revisions to bundle
@@ -70,5 +72,6 @@ class SearchAPI:
                     else:
                         prevs = self.conan_api.list.package_revisions(pref, remote)
                         prevs = pattern.filter_prevs(prevs)
+                        prevs = list(reversed(prevs))
                     select_bundle.add_prefs(prevs)
         return select_bundle
