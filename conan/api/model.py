@@ -35,7 +35,8 @@ class SelectBundle:
         self.recipes = {}
 
     def add_refs(self, refs):
-        for ref in sorted(refs):  # Make sure older recipe revisions go first
+        # RREVS alreday come in ASCENDING order, so upload does older revisions first
+        for ref in refs:
             ref_dict = self.recipes.setdefault(str(ref), {})
             if ref.revision:
                 revs_dict = ref_dict.setdefault("revisions", {})
@@ -44,9 +45,8 @@ class SelectBundle:
                     rev_dict["timestamp"] = ref.timestamp
 
     def add_prefs(self, prefs):
-        # FIXME: We need to guarantee the upload order is from older to newer
-        # The reversed does that, because Conan informs in the newer->older order
-        for pref in reversed(prefs):  # Older revisions go first
+        # Prevs already come in ASCENDING order, so upload does older revisions first
+        for pref in prefs:
             revs_dict = self.recipes[str(pref.ref)]["revisions"]
             rev_dict = revs_dict[pref.ref.revision]
             packages_dict = rev_dict.setdefault("packages", {})
