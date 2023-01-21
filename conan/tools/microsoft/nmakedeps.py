@@ -41,6 +41,7 @@ class NMakeDeps(object):
             ret.extend(cpp_info.exelinkflags or [])
             ret.extend(cpp_info.sharedlinkflags or [])
             ret.extend([format_lib(lib) for lib in cpp_info.libs or []])
+            ret.extend([format_lib(lib) for lib in cpp_info.system_libs or []])
             link_args = " ".join(ret)
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
