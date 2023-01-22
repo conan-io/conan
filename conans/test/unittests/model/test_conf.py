@@ -23,10 +23,10 @@ def test_conf_definition(conf_definition):
     # Round trip
     assert c.dumps() == text
     # access
-    assert c["tools.microsoft.msbuild:verbosity"] == "minimal"
-    assert c["user.company.toolchain:flags"] == "someflags"
-    assert c["user.microsoft.msbuild:nonexist"] is None
-    assert c["user:nonexist"] is None
+    assert c.get("tools.microsoft.msbuild:verbosity") == "minimal"
+    assert c.get("user.company.toolchain:flags") == "someflags"
+    assert c.get("user.microsoft.msbuild:nonexist") is None
+    assert c.get("user:nonexist") is None
     # bool
     assert bool(c)
     assert not bool(ConfDefinition())
@@ -41,7 +41,7 @@ def test_conf_definition(conf_definition):
 def test_conf_definition_error(conf_definition, conf_name):
     c, text = conf_definition
     with pytest.raises(ConanException):
-        a = c[conf_name]
+        c.get(conf_name)
 
 
 def test_conf_update(conf_definition):
@@ -101,7 +101,7 @@ def test_parse_spaces():
     text = "core:non_interactive = minimal"
     c = ConfDefinition()
     c.loads(text)
-    assert c["core:non_interactive"] == "minimal"
+    assert c.get("core:non_interactive") == "minimal"
 
 
 @pytest.mark.parametrize("text, expected", [

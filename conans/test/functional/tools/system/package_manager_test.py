@@ -1,8 +1,11 @@
+import json
 import platform
 import textwrap
+from unittest.mock import patch, MagicMock
 
 import pytest
 
+from conan.tools.system.package_manager import _SystemPackageManagerTool
 from conans.test.utils.tools import TestClient
 
 
@@ -149,3 +152,52 @@ def test_brew_install_install_mode():
         """)})
     client.run("create . test/1.0@ -c tools.system.package_manager:mode=install", assert_error=True)
     assert "Error: No formulae found in taps." in client.out
+
+
+def test_collect_system_requirements():
+    """ we can know the system_requires for every package because they are part of the graph,
+    this naturally execute at ``install``, but we can also prove that with ``graph info`` we can
+    for it to with the righ ``mode=collect`` mode.
+    """
+    client = TestClient()
+    client.save({"conanfile.py": textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.system.package_manager import Brew, Apt
+
+        class MyPkg(ConanFile):
+            settings = "arch"
+            def system_requirements(self):
+                brew = Brew(self)
+                brew.install(["brew1", "brew2"])
+                apt = Apt(self)
+                apt.install(["pkg1", "pkg2"])
+        """)})
+
+    with patch.object(_SystemPackageManagerTool, '_conanfile_run', MagicMock(return_value=False)):
+        client.run("install . -c tools.system.package_manager:tool=apt-get --format=json",
+                   redirect_stdout="graph.json")
+    graph = json.loads(client.load("graph.json"))
+    assert {"apt-get": {"install": ["pkg1", "pkg2"], "missing": []}} == \
+           graph["graph"]["nodes"][0]["system_requires"]
+
+    # plain report, do not check
+    client.run("graph info . -c tools.system.package_manager:tool=apt-get "
+               "-c tools.system.package_manager:mode=report --format=json",
+               redirect_stdout="graph2.json")
+    graph2 = json.loads(client.load("graph2.json"))
+    # TODO: Unify format of ``graph info`` and ``install``
+    assert {"apt-get": {"install": ["pkg1", "pkg2"]}} == graph2["nodes"][0]["system_requires"]
+
+    # Check report-installed
+    with patch.object(_SystemPackageManagerTool, '_conanfile_run', MagicMock(return_value=True)):
+        client.run("graph info . -c tools.system.package_manager:tool=apt-get "
+                   "-c tools.system.package_manager:mode=report-installed --format=json",
+                   redirect_stdout="graph2.json")
+        graph2 = json.loads(client.load("graph2.json"))
+        assert {"apt-get": {"install": ["pkg1", "pkg2"],
+                            'missing': ['pkg1', 'pkg2']}} == graph2["nodes"][0]["system_requires"]
+
+    # Default "check" will fail, as dpkg-query not installed
+    client.run("graph info . -c tools.system.package_manager:tool=apt-get "
+               "-c tools.system.package_manager:mode=check", assert_error=True)
+    assert "ERROR: conanfile.py: Error in system_requirements() method, line 11" in client.out

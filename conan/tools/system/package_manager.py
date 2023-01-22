@@ -6,8 +6,10 @@ from conans.errors import ConanException
 
 
 class _SystemPackageManagerTool(object):
-    mode_check = "check"
+    mode_check = "check"  # Check if installed, fail if not
     mode_install = "install"
+    mode_report = "report"  # Only report what would be installed, no check (can run in any system)
+    mode_report_installed = "report-installed"  # report installed and missing packages
     tool_name = None
     install_command = ""
     update_command = ""
@@ -147,8 +149,19 @@ class _SystemPackageManagerTool(object):
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, **kwargs):
-        if check:
+        pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
+        install_pkgs = pkgs.setdefault("install", [])
+        install_pkgs.extend(p for p in packages if p not in install_pkgs)
+        if self._mode == self.mode_report:
+            return
+
+        if check or self._mode in (self.mode_check, self.mode_report_installed):
             packages = self.check(packages)
+            missing_pkgs = pkgs.setdefault("missing", [])
+            missing_pkgs.extend(p for p in packages if p not in missing_pkgs)
+
+        if self._mode == self.mode_report_installed:
+            return
 
         if self._mode == self.mode_check and packages:
             raise ConanException("System requirements: '{0}' are missing but can't install "

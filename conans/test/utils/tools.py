@@ -10,6 +10,7 @@ import sys
 import textwrap
 import threading
 import time
+import traceback
 import uuid
 import zipfile
 from collections import OrderedDict
@@ -23,6 +24,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPI
@@ -467,13 +469,7 @@ class TestClient(object):
                 with mock.patch("getpass.getpass", mock_get_pass):
                     yield
 
-    def get_default_host_profile(self):
-        return self.cache.default_profile
-
-    def get_default_build_profile(self):
-        return self.cache.default_profile
-
-    def run_cli(self, command_line, assert_error=False):
+    def _run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
@@ -484,9 +480,13 @@ class TestClient(object):
         self.api = ConanAPI(cache_folder=self.cache_folder)
         command = Cli(self.api)
 
-        error = None
+        error = SUCCESS
+        trace = None
         try:
-            error = command.run(args)
+            command.run(args)
+        except BaseException as e:  # Capture all exceptions as argparse
+            trace = traceback.format_exc()
+            error = command.exception_exit_error(e)
         finally:
             try:
                 self.api.app.cache.closedb()
@@ -498,7 +498,7 @@ class TestClient(object):
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
-        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error, trace=trace)
         return error
 
     def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None):
@@ -523,9 +523,9 @@ class TestClient(object):
                 try:
                     if http_requester:
                         with self.mocked_servers(http_requester):
-                            return self.run_cli(command_line, assert_error=assert_error)
+                            return self._run_cli(command_line, assert_error=assert_error)
                     else:
-                        return self.run_cli(command_line, assert_error=assert_error)
+                        return self._run_cli(command_line, assert_error=assert_error)
                 finally:
                     self.stdout = str(self.stdout)
                     self.stderr = str(self.stderr)
@@ -550,19 +550,20 @@ class TestClient(object):
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
-    def _handle_cli_result(self, command, assert_error, error):
+    def _handle_cli_result(self, command, assert_error, error, trace=None):
         if (assert_error and not error) or (not assert_error and error):
             if assert_error:
                 msg = " Command succeeded (failure expected): "
             else:
                 msg = " Command failed (unexpectedly): "
-            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
-                header='{:-^80}'.format(msg),
-                output_header='{:-^80}'.format(" Output: "),
-                output_footer='-' * 80,
+            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n".format(
+                header='{:=^80}'.format(msg),
+                output_header='{:=^80}'.format(" Output: "),
                 cmd=command,
                 output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
             )
+            if trace:
+                exc_message += '{:=^80}'.format(" Traceback: ") + f"\n{trace}"
             raise Exception(exc_message)
 
     def save(self, files, path=None, clean_first=False):

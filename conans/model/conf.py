@@ -466,22 +466,6 @@ class ConfDefinition:
     def __bool__(self):
         return bool(self._pattern_confs)
 
-    def __getitem__(self, module_name):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
-        if a module name is requested for this, it goes to the None-Global config by default
-        """
-        pattern, name = self._split_pattern_name(module_name)
-        return self._pattern_confs.get(pattern, Conf()).get(name)
-
-    def __delitem__(self, module_name):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0.  Use self.pop() instead.
-        if a module name is requested for this, it goes to the None-Global config by default
-        """
-        pattern, name = self._split_pattern_name(module_name)
-        del self._pattern_confs.get(pattern, Conf())[name]
-
     def get(self, conf_name, default=None, check_type=None):
         """
         Get the value of the  conf name requested and convert it to the [type]-like passed.

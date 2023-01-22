@@ -63,7 +63,6 @@ class DepsGraphBuilder(object):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
-
         # TODO: allow bootstrapping, use references instead of names
         # print("  Expanding require ", node, "->", require)
         previous = node.check_downstream_exists(require)
