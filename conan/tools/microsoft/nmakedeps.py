@@ -41,11 +41,23 @@ class NMakeDeps(object):
             ret.extend(cpp_info.exelinkflags or [])
             ret.extend(cpp_info.sharedlinkflags or [])
             ret.extend([format_lib(lib) for lib in cpp_info.libs or []])
+            ret.extend([format_lib(lib) for lib in cpp_info.system_libs or []])
             link_args = " ".join(ret)
+
+            def format_define(define):
+                if "=" in define:
+                    # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
+                    # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+                    macro, value = define.split("=", 1)
+                    if value and not value.isnumeric():
+                        value = f'\\"{value}\\"'
+                    define = f"{macro}#{value}"
+                return f"/D{define}"
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
             cl_flags.extend(cpp_info.cxxflags or [])
+            cl_flags.extend([format_define(define) for define in cpp_info.defines or []])
 
             env = Environment()
             env.append("CL", " ".join(cl_flags))
