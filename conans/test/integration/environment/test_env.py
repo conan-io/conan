@@ -736,28 +736,32 @@ def test_runenv_info_propagated():
         class Lib(ConanFile):
             name = "lib"
             version = "0.1"
-            settings = "os"
+            settings = "build_type"
             def package_info(self):
-                self.runenv_info.define("MYLIBVAR", f"MYLIBVALUE:{self.settings.os}")
+                self.runenv_info.define("MYLIBVAR", f"MYLIBVALUE:{self.settings.build_type}")
         """)
     tool_test_package = textwrap.dedent("""
+        import platform
         from conan import ConanFile
         class TestTool(ConanFile):
-            settings = "os"
+            settings = "build_type"
             test_type = "explicit"
             generators = "VirtualBuildEnv"
             def build_requirements(self):
                 self.tool_requires(self.tested_reference_str)
             def build(self):
-                self.output.info(f"Building TEST_PACKAGE IN {self.settings.os}!!")
-                self.run("set MYLIBVAR")
+                self.output.info(f"Building TEST_PACKAGE IN {self.settings.build_type}!!")
+                if platform.system()!= "Windows":
+                    self.run("echo MYLIBVAR=$MYLIBVAR")
+                else:
+                    self.run("set MYLIBVAR")
             def test(self):
                 pass
         """)
     c.save({"lib/conanfile.py": lib,
             "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("lib/0.1"),
             "tool/test_package/conanfile.py": tool_test_package})
-    c.run("create lib -s os=Windows")
-    c.run("create tool --build-require -s:b os=Windows -s:h os=Linux")
-    assert "tool/0.1 (test package): Building TEST_PACKAGE IN Linux!!" in c.out
-    assert "MYLIBVAR=MYLIBVALUE:Windows" in c.out
+    c.run("create lib -s build_type=Release")
+    c.run("create tool --build-require -s:b build_type=Release -s:h build_type=Debug")
+    assert "tool/0.1 (test package): Building TEST_PACKAGE IN Debug!!" in c.out
+    assert "MYLIBVAR=MYLIBVALUE:Release" in c.out
