@@ -40,7 +40,7 @@ def test_nmakedeps():
         r"/DTEST_DEFINITION1", r"/DTEST_DEFINITION2#0",
         r"/DTEST_DEFINITION3#", r'/DTEST_DEFINITION4#\\"test-cmakedeps\\"',
     ):
-        assert re.search(fr'set "CL=%CL%.*\s{flag}[\s|"]', bat_file)
+        assert re.search(fr'set "CL=%CL%.*\s{flag}(?:\s|")', bat_file)
     # Checking that libs and system libs are added to _LINK_
     for flag in (r"pkg-1\.lib", r"pkg-2\.lib", r"pkg-3\.lib", r"pkg-4\.lib", r"ws2_32\.lib"):
-        assert re.search(fr'set "_LINK_=%_LINK_%.*\s{flag}(?:\s|"$)', bat_file)
+        assert re.search(fr'set "_LINK_=%_LINK_%.*\s{flag}(?:\s|")', bat_file)
