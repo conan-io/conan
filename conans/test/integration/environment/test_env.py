@@ -720,3 +720,48 @@ def test_error_with_dots_virtualenv():
     client.run("create dep -s arch=armv8.3")
     client.run("create consumer -s arch=armv8.3")
     assert "DUMMY=123456" in client.out
+
+
+def test_runenv_info_propagated():
+    """
+    A runenv_info in a recipe, which is required by an executable that is used
+    in another place as a tool_require (also its own test_package), should be
+    propagated
+    test_package --(tool_requires)->tools-(requires)->lib(defines runenv_info)
+    https://github.com/conan-io/conan/issues/12939
+    """
+    c = TestClient()
+    lib = textwrap.dedent("""
+        from conan import ConanFile
+        class Lib(ConanFile):
+            name = "lib"
+            version = "0.1"
+            settings = "build_type"
+            def package_info(self):
+                self.runenv_info.define("MYLIBVAR", f"MYLIBVALUE:{self.settings.build_type}")
+        """)
+    tool_test_package = textwrap.dedent("""
+        import platform
+        from conan import ConanFile
+        class TestTool(ConanFile):
+            settings = "build_type"
+            test_type = "explicit"
+            generators = "VirtualBuildEnv"
+            def build_requirements(self):
+                self.tool_requires(self.tested_reference_str)
+            def build(self):
+                self.output.info(f"Building TEST_PACKAGE IN {self.settings.build_type}!!")
+                if platform.system()!= "Windows":
+                    self.run("echo MYLIBVAR=$MYLIBVAR")
+                else:
+                    self.run("set MYLIBVAR")
+            def test(self):
+                pass
+        """)
+    c.save({"lib/conanfile.py": lib,
+            "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("lib/0.1"),
+            "tool/test_package/conanfile.py": tool_test_package})
+    c.run("create lib -s build_type=Release")
+    c.run("create tool --build-require -s:b build_type=Release -s:h build_type=Debug")
+    assert "tool/0.1 (test package): Building TEST_PACKAGE IN Debug!!" in c.out
+    assert "MYLIBVAR=MYLIBVALUE:Release" in c.out
