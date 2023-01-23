@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import _to_apple_arch, XCRun
+from conan.tools.apple.apple import _to_apple_arch
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -42,9 +42,6 @@ conanfile_py = textwrap.dedent("""
 def test_makefile_arch(config):
     arch, os_, os_version, os_sdk = config
 
-    xcrun = XCRun(None, os_sdk)
-    sdk_path = xcrun.sdk_path
-
     profile = textwrap.dedent("""
                 include(default)
                 [settings]
@@ -52,12 +49,8 @@ def test_makefile_arch(config):
                 {os_sdk}
                 os.version = {os_version}
                 arch = {arch}
-
-                [conf]
-                tools.apple:sdk_path={sdk_path}
                 """).format(os=os_, arch=arch,
-                            os_version=os_version, os_sdk="os.sdk = " + os_sdk if os_sdk else "",
-                            sdk_path=sdk_path)
+                            os_version=os_version, os_sdk="os.sdk = " + os_sdk if os_sdk else "")
 
     t = TestClient()
     hello_h = gen_function_h(name="hello")
@@ -91,9 +84,6 @@ def test_makefile_arch(config):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("arch", ["x86_64", "armv8"])
 def test_catalyst(arch):
-    xcrun = XCRun(None)
-    sdk_path = xcrun.sdk_path
-
     profile = textwrap.dedent("""
         include(default)
         [settings]
@@ -102,10 +92,7 @@ def test_catalyst(arch):
         os.subsystem = catalyst
         os.subsystem.ios_version = 13.1
         arch = {arch}
-
-        [conf]
-        tools.apple:sdk_path={sdk_path}
-        """).format(arch=arch, sdk_path=sdk_path)
+        """).format(arch=arch)
 
     t = TestClient()
     hello_h = gen_function_h(name="hello")
