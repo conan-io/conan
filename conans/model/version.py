@@ -79,10 +79,14 @@ class Version:
 
     def bump(self, index):
         """
-           Increments by 1 the version field at the specified index, setting to 0 the fields
+        :meta private:
+            Bump the version
+            Increments by 1 the version field at the specified index, setting to 0 the fields
             on the right.
-           2.5 => bump(1) => 2.6
-           1.5.7 => bump(0) => 2.0.0
+            2.5 => bump(1) => 2.6
+            1.5.7 => bump(0) => 2.0.0
+
+        :param index:
         """
         # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
         # TODO: at this moment it only works for digits, cannot increment pre-release or builds

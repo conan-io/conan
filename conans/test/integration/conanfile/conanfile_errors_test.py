@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
@@ -135,6 +137,27 @@ class ConanfileErrorsTest(unittest.TestCase):
         client.save(files)
         client.run("export .", assert_error=True)
         self.assertIn("Duplicated requirement", client.out)
+
+
+class TestWrongMethods:
+    # https://github.com/conan-io/conan/issues/12961
+    @pytest.mark.parametrize("requires", ["requires", "tool_requires",
+                                          "test_requires", "build_requires"])
+    def test_wrong_method_requires(self, requires):
+        """ this is expected to be a relatively frequent user error, and the trace was
+        very ugly and debugging complicated
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def {requires}(self):
+                    pass
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .", assert_error=True)
+        expected = "requirements" if requires == "requires" else "build_requirements"
+        assert f" Wrong '{requires}' definition, did you mean '{expected}()'?" in c.out
 
 
 def test_notduplicate_requires_py():
