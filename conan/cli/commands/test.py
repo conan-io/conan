@@ -70,7 +70,7 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
     print_graph_packages(deps_graph)
 
     out.title("test_package: Installing packages")
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     _check_tested_reference_matches(deps_graph, ref, out)
     test_package(conan_api, deps_graph, path, tested_python_requires)
     return deps_graph

@@ -48,7 +48,7 @@ def build(conan_api, parser, *args):
 
     out = ConanOutput()
     out.title("Installing packages")
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     source_folder = folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None

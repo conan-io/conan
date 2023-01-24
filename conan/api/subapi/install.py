@@ -13,15 +13,13 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, remotes=None, update=False):
+    def install_binaries(self, deps_graph, remotes=None):
         """ Install binaries for dependency graph
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
-        :param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
         installer = BinaryInstaller(app)
-        # TODO: Extract this from the GraphManager, reuse same object, check args earlier
         installer.install_system_requires(deps_graph)  # TODO: Optimize InstallGraph computation
         installer.install(deps_graph, remotes)
 

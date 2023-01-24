@@ -87,8 +87,7 @@ def create(conan_api, parser, *args):
         print_graph_packages(deps_graph)
 
         out.title("Installing packages")
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
-                                           update=args.update)
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
