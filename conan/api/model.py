@@ -1,7 +1,5 @@
-from collections import OrderedDict
-
 from conans.model.package_ref import PkgReference
-from conans.util.dates import timestamp_to_str
+from conans.model.recipe_ref import RecipeReference
 
 
 class Remote:
@@ -32,107 +30,58 @@ class Remote:
         return str(self)
 
 
-class _RecipeUploadData:
-    def __init__(self, prefs):
-        self.upload = True
-        self.force = None
-        self.dirty = None
-        self.files = None
-        self.packages = [_PackageUploadData(pref) for pref in prefs]
-
-    def serialize(self):
-        return {
-            "dirty": self.dirty,
-            "upload": self.upload,
-            "force": self.force,
-            "files": self.files,
-            "packages": [r.serialize() for r in self.packages]
-        }
-
-
-class _PackageUploadData:
-    def __init__(self, pref):
-        self.pref = pref
-        self.upload = True
-        self.files = None
-        self.force = None
-
-    def serialize(self):
-        return {
-            "pref": repr(self.pref),
-            "upload": self.upload,
-            "force": self.force,
-            "files": self.files
-        }
-
-
 class SelectBundle:
     def __init__(self):
-        self.recipes = OrderedDict()
-        self.confs = {}
-
-    def add_configurations(self, confs):
-        self.confs = {PkgReference(k.ref, k.package_id): v for k, v in confs.items()}
+        self.recipes = {}
 
     def add_refs(self, refs):
+        # RREVS alreday come in ASCENDING order, so upload does older revisions first
         for ref in refs:
-            self.recipes.setdefault(ref, [])
-
-    def refs(self):
-        return self.recipes.keys()
-
-    def prefs(self):
-        prefs = []
-        for v in self.recipes.values():
-            prefs.extend(v)
-        return prefs
+            ref_dict = self.recipes.setdefault(str(ref), {})
+            if ref.revision:
+                revs_dict = ref_dict.setdefault("revisions", {})
+                rev_dict = revs_dict.setdefault(ref.revision, {})
+                if ref.timestamp:
+                    rev_dict["timestamp"] = ref.timestamp
 
     def add_prefs(self, prefs):
+        # Prevs already come in ASCENDING order, so upload does older revisions first
         for pref in prefs:
-            binary_info = self.confs.get(PkgReference(pref.ref, pref.package_id))
-            self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
+            revs_dict = self.recipes[str(pref.ref)]["revisions"]
+            rev_dict = revs_dict[pref.ref.revision]
+            packages_dict = rev_dict.setdefault("packages", {})
+            package_dict = packages_dict.setdefault(pref.package_id, {})
+            if pref.revision:
+                prevs_dict = package_dict.setdefault("revisions", {})
+                prev_dict = prevs_dict.setdefault(pref.revision, {})
+                if pref.timestamp:
+                    prev_dict["timestamp"] = pref.timestamp
+
+    def add_configurations(self, confs):
+        # Listed confs must already exist in bundle
+        for pref, conf in confs.items():
+            rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict["packages"][pref.package_id]["info"] = conf
+
+    def refs(self):
+        result = {}
+        for ref, ref_dict in self.recipes.items():
+            for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
+                t = rrev_dict.get("timestamp")
+                recipe = RecipeReference.loads(f"{ref}#{rrev}%{t}")  # TODO: optimize this
+                result[recipe] = rrev_dict
+        return result.items()
+
+    @staticmethod
+    def prefs(ref, recipe_bundle):
+        result = {}
+        for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
+            prevs = pkg_bundle.get("revisions", {})
+            for prev, prev_bundle in prevs.items():
+                t = prev_bundle.get("timestamp")
+                pref = PkgReference(ref, package_id, prev, t)
+                result[pref] = prev_bundle
+        return result.items()
 
     def serialize(self):
-        ret = {}
-        for ref, prefs in sorted(self.recipes.items()):
-            ref_dict = ret.setdefault(str(ref), {})
-            if ref.revision:
-                revisions_dict = ref_dict.setdefault("revisions", {})
-                rev_dict = revisions_dict.setdefault(ref.revision, {})
-                if ref.timestamp:
-                    rev_dict["timestamp"] = timestamp_to_str(ref.timestamp)
-                if prefs:
-                    packages_dict = rev_dict.setdefault("packages", {})
-                    for pref_info in prefs:
-                        pref, info = pref_info
-                        pid_dict = packages_dict.setdefault(pref.package_id, {})
-                        if info is not None:
-                            pid_dict["info"] = info
-                        if pref.revision:
-                            prevs_dict = pid_dict.setdefault("revisions", {})
-                            prev_dict = prevs_dict.setdefault(pref.revision, {})
-                            if pref.timestamp:
-                                prev_dict["timestamp"] = timestamp_to_str(pref.timestamp)
-        return ret
-
-
-class UploadBundle:
-    def __init__(self, select_bundle):
-        self.recipes = OrderedDict()
-        # We reverse the bundle so older revisions are uploaded first
-        for ref, prefs in reversed(select_bundle.recipes.items()):
-            reversed_prefs = reversed([pref for pref, _ in prefs])
-            self.recipes[ref] = _RecipeUploadData(reversed_prefs)
-
-    def serialize(self):
-        return {r.repr_notime(): v.serialize() for r, v in self.recipes.items()}
-
-    @property
-    def any_upload(self):
-        for r in self.recipes.values():
-            if r.upload:
-                return True
-            for p in r.packages:
-                if p.upload:
-                    return True
-        return False
+        return self.recipes

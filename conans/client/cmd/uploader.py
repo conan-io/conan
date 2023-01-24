@@ -34,10 +34,10 @@ class IntegrityChecker:
 
     def check(self, upload_data):
         corrupted = False
-        for ref, recipe_bundle in upload_data.recipes.items():
+        for ref, recipe_bundle in upload_data.refs():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            for package in recipe_bundle.packages:
-                corrupted = self._package_corrupted(package.pref) or corrupted
+            for pref, prev_bundle in upload_data.prefs(ref, recipe_bundle):
+                corrupted = self._package_corrupted(pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")
 
@@ -81,14 +81,12 @@ class UploadUpstreamChecker:
         self._output = ConanOutput()
 
     def check(self, upload_bundle, remote, force):
-        for ref, bundle in upload_bundle.recipes.items():
-            if bundle.upload:  # TODO: Why check it if it is always initialized to True?
-                self._check_upstream_recipe(ref, bundle, remote, force)
-                for package in bundle.packages:
-                    if package.upload:  # TODO: Why check it if it is always initialized to True?
-                        self._check_upstream_package(package, remote, force)
+        for ref, recipe_bundle in upload_bundle.refs():
+            self._check_upstream_recipe(ref, recipe_bundle, remote, force)
+            for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle):
+                self._check_upstream_package(pref, prev_bundle, remote, force)
 
-    def _check_upstream_recipe(self, ref, recipe, remote, force):
+    def _check_upstream_recipe(self, ref, ref_bundle, remote, force):
         self._output.info("Checking which revisions exist in the remote server")
         try:
             assert ref.revision
@@ -96,18 +94,19 @@ class UploadUpstreamChecker:
             server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
             assert server_ref  # If successful (not raising NotFoundException), this will exist
         except NotFoundException:
-            recipe.force = False
+            ref_bundle["force_upload"] = False
+            ref_bundle["upload"] = True
         else:
             if force:
                 self._output.info("Recipe '{}' already in server, forcing upload".format(ref.repr_notime()))
-                recipe.force = True
+                ref_bundle["force_upload"] = True
+                ref_bundle["upload"] = True
             else:
                 self._output.info("Recipe '{}' already in server, skipping upload".format(ref.repr_notime()))
-                recipe.upload = False
-                recipe.force = False
+                ref_bundle["upload"] = False
+                ref_bundle["force_upload"] = False
 
-    def _check_upstream_package(self, package, remote, force):
-        pref = package.pref
+    def _check_upstream_package(self, pref, prev_bundle, remote, force):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
@@ -116,17 +115,17 @@ class UploadUpstreamChecker:
             server_revisions = self._app.remote_manager.get_package_revision_reference(pref, remote)
             assert server_revisions
         except NotFoundException:
-            if package.upload is not False:
-                package.upload = True
-            package.force = False
+            prev_bundle["force_upload"] = False
+            prev_bundle["upload"] = True
         else:
             if force:
                 self._output.info("Package '{}' already in server, forcing upload".format(pref.repr_notime()))
-                package.force = True
+                prev_bundle["force_upload"] = True
+                prev_bundle["upload"] = True
             else:
                 self._output.info("Package '{}' already in server, skipping upload".format(pref.repr_notime()))
-                package.upload = False
-                package.force = False
+                prev_bundle["force_upload"] = False
+                prev_bundle["upload"] = False
 
 
 class PackagePreparator:
@@ -136,18 +135,18 @@ class PackagePreparator:
 
     def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
-        for ref, bundle in upload_bundle.recipes.items():
+        for ref, bundle in upload_bundle.refs():
             layout = self._app.cache.ref_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
 
-            if bundle.upload:
+            if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for package in bundle.packages:
-                if package.upload:
-                    self._prepare_package(package)
+            for pref, prev_bundle in upload_bundle.prefs(ref, bundle):
+                if prev_bundle.get("upload"):
+                    self._prepare_package(pref, prev_bundle)
 
-    def _prepare_recipe(self, ref, recipe, conanfile, remotes):
+    def _prepare_recipe(self, ref, ref_bundle, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
@@ -157,7 +156,7 @@ class PackagePreparator:
             retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
-            recipe.files = cache_files
+            ref_bundle["files"] = cache_files
         except Exception as e:
             raise ConanException(f"{ref} Error while compressing: {e}")
 
@@ -211,15 +210,14 @@ class PackagePreparator:
         add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, "Compressing recipe sources...")
         return result
 
-    def _prepare_package(self, package):
-        pref = package.pref
+    def _prepare_package(self, pref, prev_bundle):
         pkg_layout = self._app.cache.pkg_layout(pref)
         if pkg_layout.package_is_dirty():
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
                                  % (pref, pref.ref, pref.package_id))
         cache_files = self._compress_package_files(pkg_layout, pref)
-        package.files = cache_files
+        prev_bundle["files"] = cache_files
 
     def _compress_package_files(self, layout, pref):
         download_pkg_folder = layout.download_package()
@@ -273,19 +271,18 @@ class UploadExecutor:
         self._output = ConanOutput()
 
     def upload(self, upload_data, remote):
-        if upload_data.any_upload:
-            self._output.info("Uploading artifacts")
-        for ref, bundle in upload_data.recipes.items():
-            if bundle.upload:
+        self._output.info("Uploading artifacts")
+        for ref, bundle in upload_data.refs():
+            if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
-            for package in bundle.packages:
-                if package.upload:
-                    self.upload_package(package, remote)
+            for pref, prev_bundle in upload_data.prefs(ref, bundle):
+                if prev_bundle.get("upload"):
+                    self.upload_package(pref, prev_bundle, remote)
 
     def upload_recipe(self, ref, bundle, remote):
         self._output.info(f"Uploading recipe '{ref.repr_notime()}'")
         t1 = time.time()
-        cache_files = bundle.files
+        cache_files = bundle["files"]
 
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
 
@@ -293,10 +290,9 @@ class UploadExecutor:
         log_recipe_upload(ref, duration, cache_files, remote.name)
         return ref
 
-    def upload_package(self, package, remote):
-        self._output.info(f"Uploading package '{package.pref.repr_notime()}'")
-        pref = package.pref
-        cache_files = package.files
+    def upload_package(self, pref, prev_bundle, remote):
+        self._output.info(f"Uploading package '{pref.repr_notime()}'")
+        cache_files = prev_bundle["files"]
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 

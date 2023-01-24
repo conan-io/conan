@@ -429,17 +429,17 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:27:34 UTC)
                   packages
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      revisions
+                        9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
                       info
                         settings
                           os: Linux
-                      revisions
-                        9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
                       info
                         settings
                           os: Windows
-                      revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -454,18 +454,18 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:41:09 UTC)
                   packages
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      revisions
+                        9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
                       info
                         settings
                           os: Linux
-                      revisions
-                        9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                       info
                         settings
                           os: Windows
-                      revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
-                        24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -504,8 +504,8 @@ class TestListPrefs:
                   packages
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                       revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                         24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
           """)
         self.check(client, pattern, remote, expected)
 

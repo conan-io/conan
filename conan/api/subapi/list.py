@@ -100,6 +100,7 @@ class ListAPI:
         if "*" in pattern.ref or not pattern.version or \
                 (pattern.package_id is None and pattern.rrev is None):
             refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+            refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
         else:
             refs = [RecipeReference(pattern.name, pattern.version, pattern.user, pattern.channel)]
@@ -109,7 +110,7 @@ class ListAPI:
             select_bundle.add_refs(refs)
             return select_bundle
 
-        for r in refs:
+        for r in refs:  # Older versions first
             if pattern.is_latest_rrev or pattern.rrev is None:
                 rrev = self.conan_api.list.latest_recipe_revision(r, remote)
                 if rrev is None:
@@ -118,6 +119,7 @@ class ListAPI:
             else:
                 rrevs = self.conan_api.list.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
+                rrevs = list(reversed(rrevs))  # Order older revisions first
             select_bundle.add_refs(rrevs)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
@@ -127,6 +129,7 @@ class ListAPI:
                 prefs = []
                 if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
+                    packages = {}
                 else:
                     packages = self.conan_api.list.packages_configurations(rrev, remote)
                     if package_query is not None:
@@ -134,7 +137,7 @@ class ListAPI:
                                                                                       package_query)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
-                    select_bundle.add_configurations(packages)
+                    packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
 
                 if pattern.prev is not None:
                     new_prefs = []
@@ -148,8 +151,10 @@ class ListAPI:
                         else:
                             prevs = self.conan_api.list.package_revisions(pref, remote)
                             prevs = pattern.filter_prevs(prevs)
+                            prevs = list(reversed(prevs))  # Older revisions first
                             new_prefs.extend(prevs)
                     prefs = new_prefs
 
                 select_bundle.add_prefs(prefs)
+                select_bundle.add_configurations(packages)
         return select_bundle
