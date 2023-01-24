@@ -466,7 +466,7 @@ class EnvVars:
                     export $v="$_CONAN_OLD_${{v}}"
                     unset "_CONAN_OLD_${{v}}"
                 done
-                unset -f deactivate
+                unset -f deactivate_{filename}
             }}
             """.format(vars=" ".join(self._values.keys()), filename=filename))
         capture = textwrap.dedent("""\
