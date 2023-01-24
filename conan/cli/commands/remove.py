@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
+from conan.api.model import ListPattern
 from conan.cli.command import conan_command, OnceArgument
-from conan.internal.api.select_pattern import SelectPattern
 from conans.client.userio import UserInput
 
 
@@ -31,7 +31,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     def confirmation(message):
         return args.confirm or ui.request_boolean(message)
 
-    ref_pattern = SelectPattern(args.reference, rrev="*", prev="*")
+    ref_pattern = ListPattern(args.reference, rrev="*", prev="*")
     select_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
 
     if ref_pattern.package_id is None:

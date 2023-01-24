@@ -15,6 +15,7 @@ def test_upload_bundle():
         import os
 
         from conan.cli.command import conan_command, OnceArgument
+        from conan.api.model import ListPattern
         from conan.api.output import cli_out_write
 
         @conan_command(group="custom commands")
@@ -33,14 +34,15 @@ def test_upload_bundle():
             remote = conan_api.remotes.get(args.remote)
             enabled_remotes = conan_api.remotes.list()
 
-            upload_bundle = conan_api.upload.get_bundle(args.reference)
-            if not upload_bundle.recipes:
+            ref_pattern = ListPattern(args.reference, package_id="*")
+            package_list = conan_api.list.select(ref_pattern)
+            if not package_list.recipes:
                 raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 
             # Check if the recipes/packages are in the remote
-            conan_api.upload.check_upstream(upload_bundle, remote)
-            conan_api.upload.prepare(upload_bundle, enabled_remotes)
-            cli_out_write(json.dumps(upload_bundle.serialize(), indent=4))
+            conan_api.upload.check_upstream(package_list, remote)
+            conan_api.upload.prepare(package_list, enabled_remotes)
+            cli_out_write(json.dumps(package_list.serialize(), indent=4))
         """)
 
     command_file_path = os.path.join(c.cache_folder, 'extensions',

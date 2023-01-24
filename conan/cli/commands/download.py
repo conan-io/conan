@@ -1,9 +1,9 @@
 from multiprocessing.pool import ThreadPool
 
 from conan.api.conan_api import ConanAPI
+from conan.api.model import ListPattern
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
-from conan.internal.api.select_pattern import SelectPattern
 from conans.errors import ConanException
 
 
@@ -30,12 +30,7 @@ def download(conan_api: ConanAPI, parser, *args):
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
     parallel = conan_api.config.get("core.download:parallel", default=1, check_type=int)
-    ref_pattern = SelectPattern(args.reference)
-    if args.only_recipe:
-        if ref_pattern.package_id:
-            raise ConanException("Do not specify 'package_id' with 'only-recipe'")
-    else:
-        ref_pattern.package_id = ref_pattern.package_id or "*"
+    ref_pattern = ListPattern(args.reference, package_id="*", only_recipe=args.only_recipe)
     select_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
     refs = []
     prefs = []

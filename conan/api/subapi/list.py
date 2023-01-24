@@ -1,6 +1,6 @@
 from typing import Dict
 
-from conan.api.model import SelectBundle
+from conan.api.model import PackagesList
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -95,7 +95,7 @@ class ListAPI:
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
-        select_bundle = SelectBundle()
+        select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         if "*" in pattern.ref or not pattern.version or \
                 (pattern.package_id is None and pattern.rrev is None):
@@ -154,6 +154,6 @@ class ListAPI:
                             new_prefs.extend(prevs)
                     prefs = new_prefs
 
-                select_bundle.add_prefs(prefs)
+                select_bundle.add_prefs(rrev, prefs)
                 select_bundle.add_configurations(packages)
         return select_bundle
