@@ -4,7 +4,8 @@ import textwrap
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
+    apple_sdk_path
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
@@ -280,9 +281,12 @@ class MesonToolchain(object):
         if not self._is_apple_system:
             return
         # SDK path is mandatory for cross-building
-        sdk_path = self._conanfile.conf.get("tools.apple:sdk_path")
+        sdk_path = apple_sdk_path(self._conanfile)
         if not sdk_path and self.cross_build:
-            raise ConanException("You must provide a valid SDK path for cross-compilation.")
+            raise ConanException(
+                "Apple SDK path not found. For cross-compilation, you must "
+                "provide a valid SDK path in 'tools.apple:sdk_path' config."
+            )
 
         # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
         os_sdk = self._conanfile.settings.get_safe('os.sdk')

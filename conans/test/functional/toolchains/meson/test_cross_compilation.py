@@ -71,13 +71,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     compiler = apple-clang
     compiler.version = 12.0
     compiler.libcxx = libc++
-
-    [conf]
-    tools.apple:sdk_path={sdk_path}
     """)
-
-    xcrun = XCRun(None, os_sdk)
-    sdk_path = xcrun.sdk_path
 
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
@@ -86,8 +80,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
         os=os_,
         os_version=f"os.version={os_version}" if os_version else "",
         os_sdk="os.sdk = " + os_sdk if os_sdk else "",
-        arch=arch,
-        sdk_path=sdk_path)
+        arch=arch)
 
     t = TestClient()
     t.save({"conanfile.py": _conanfile_py,
@@ -106,6 +99,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     demo = os.path.join(t.current_folder, "build", "demo")
     assert os.path.isfile(demo) is True
 
+    xcrun = XCRun(None, os_sdk)
     lipo = xcrun.find('lipo')
 
     t.run_command('"%s" -info "%s"' % (lipo, libhello))

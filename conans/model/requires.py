@@ -422,27 +422,47 @@ class Requirements:
         # Construct from the class definitions
         if declared is not None:
             if isinstance(declared, str):
-                declared = [declared, ]
-            for item in declared:
-                if not isinstance(item, str):
-                    # TODO (2.X): Remove protection after transition from 1.X
-                    raise ConanException(f"Incompatible 1.X requires declaration '{item}'")
-                self.__call__(item)
+                self.__call__(declared)
+            else:
+                try:
+                    for item in declared:
+                        if not isinstance(item, str):
+                            # TODO (2.X): Remove protection after transition from 1.X
+                            raise ConanException(f"Incompatible 1.X requires declaration '{item}'")
+                        self.__call__(item)
+                except TypeError:
+                    raise ConanException("Wrong 'requires' definition, "
+                                         "did you mean 'requirements()'?")
         if declared_build is not None:
             if isinstance(declared_build, str):
-                declared_build = [declared_build, ]
-            for item in declared_build:
-                self.build_require(item)
+                self.build_require(declared_build)
+            else:
+                try:
+                    for item in declared_build:
+                        self.build_require(item)
+                except TypeError:
+                    raise ConanException("Wrong 'build_requires' definition, "
+                                         "did you mean 'build_requirements()'?")
         if declared_test is not None:
             if isinstance(declared_test, str):
-                declared_test = [declared_test, ]
-            for item in declared_test:
-                self.test_require(item)
+                self.test_require(declared_test)
+            else:
+                try:
+                    for item in declared_test:
+                        self.test_require(item)
+                except TypeError:
+                    raise ConanException("Wrong 'test_requires' definition, "
+                                         "did you mean 'build_requirements()'?")
         if declared_build_tool is not None:
             if isinstance(declared_build_tool, str):
-                declared_build_tool = [declared_build_tool, ]
-            for item in declared_build_tool:
-                self.build_require(item, run=True)
+                self.build_require(declared_build_tool, run=True)
+            else:
+                try:
+                    for item in declared_build_tool:
+                        self.build_require(item, run=True)
+                except TypeError:
+                    raise ConanException("Wrong 'tool_requires' definition, "
+                                         "did you mean 'build_requirements()'?")
 
     def values(self):
         return self._requires.values()
