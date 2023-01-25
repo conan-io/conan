@@ -78,11 +78,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
         set(CMAKE_MODULE_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_MODULE_PATH})
-        if(NOT CMAKE_CROSSCOMPILING)
-            # Kept for compatibility in Conan 1.x when using a single profile, this should
-            # not be present in Conan 2.0
-            set(CMAKE_PREFIX_PATH {{ '${' }}{{ pkg_name }}_BUILD_DIRS{{ config_suffix }}} {{ '${' }}CMAKE_PREFIX_PATH})
-        endif()
         {% if not components_names %}
 
         ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
