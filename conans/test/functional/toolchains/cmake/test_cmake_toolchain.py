@@ -1188,7 +1188,8 @@ def test_cmake_toolchain_vars_when_option_declared():
 
 
 @pytest.mark.tool_cmake
-def test_find_program_for_tool_requires():
+@pytest.mark.parametrize("single_profile", [True, False])
+def test_find_program_for_tool_requires(single_profile):
     """Test that the same reference can be both a tool_requires and a regular requires,
     and that find_program (executables) and find_package (libraries) find the correct ones
     when cross building.
@@ -1240,8 +1241,11 @@ def test_find_program_for_tool_requires():
                 "build_profile": build_profile
                 })
 
-    client.run("create . -pr:b build_profile -pr:h build_profile")
-    client.run("create . -pr:b build_profile -pr:h host_profile")
+    if single_profile:
+        client.run("create . --profile host_profile")
+    else:
+        client.run("create . -pr:b build_profile -pr:h build_profile")
+        client.run("create . -pr:b build_profile -pr:h host_profile")
 
     conanfile_consumer = textwrap.dedent("""
         from conan import ConanFile
@@ -1256,7 +1260,7 @@ def test_find_program_for_tool_requires():
                 self.requires("foobar/1.0")
 
             def build_requirements(self):
-                self.tool_requires("foobar/1.0")
+               self.tool_requires("foobar/1.0")
     """)
 
     cmakelists_consumer = textwrap.dedent("""
@@ -1266,6 +1270,9 @@ def test_find_program_for_tool_requires():
         find_program(FOOBIN_EXECUTABLE foobin)
         message("foobin executable: ${FOOBIN_EXECUTABLE}")
         message("foobar include dir: ${foobar_INCLUDE_DIR}")
+        if(NOT FOOBIN_EXECUTABLE)
+          message(FATAL_ERROR "FOOBIN executable not found")
+        endif()
     """)
 
     client.save({
@@ -1273,17 +1280,24 @@ def test_find_program_for_tool_requires():
         "CMakeLists.txt": cmakelists_consumer,
         "host_profile": host_profile,
         "build_profile": build_profile}, clean_first=True)
-    client.run("install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
-
-    build_context_package_id = "581814504b2e960b35df487e5bdb32b1ecf02253"
-    host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
+    
+    if single_profile:
+        profiles = "-pr host_profile"
+    else:
+        profiles = "-pr:b build_profile -pr:h host_profile"
+    
+    client.run(f"install conanfile_consumer.py pkg/0.1@ -g CMakeToolchain -g CMakeDeps {profiles}")
 
     with client.chdir("build"):
         client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=Release/generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
         # Verify binary executable is found from build context package,
         # and library comes from host context package
-        assert f"package/{build_context_package_id}/bin/foobin" in client.out
-        assert f"package/{host_context_package_id}/include" in client.out
+
+        if not single_profile:
+            build_context_package_id = "581814504b2e960b35df487e5bdb32b1ecf02253"
+            host_context_package_id = "bf544cd3bc20b82121fd76b82eacbb36d75fa167"
+            assert f"package/{build_context_package_id}/bin/foobin" in client.out
+            assert f"package/{host_context_package_id}/include" in client.out
 
 
 @pytest.mark.tool_pkg_config
