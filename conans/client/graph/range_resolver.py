@@ -4,7 +4,7 @@ from conans.model.version_range import VersionRange
 from conans.search.search import search_recipes
 
 
-class RangeResolver(object):
+class RangeResolver:
 
     def __init__(self, conan_app):
         self._cache = conan_app.cache
@@ -23,24 +23,23 @@ class RangeResolver(object):
         return results
 
     def resolve(self, require, base_conanref, remotes, update):
-        self._update = update
         version_range = require.version_range
         if version_range is None:
-            return require.ref
+            return
 
         # Check if this ref with version range was already solved
-        prev = self.resolved_ranges.get(require.ref)
-        if prev is not None:
-            require.ref = prev
-            return prev
+        previous_ref = self.resolved_ranges.get(require.ref)
+        if previous_ref is not None:
+            require.ref = previous_ref
+            return
 
         ref = require.ref
         # The search pattern must be a string
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if resolved_ref is None or self._update:
-            remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes)
+        if resolved_ref is None or update:
+            remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
                 resolved_ref = remote_resolved_ref
@@ -51,7 +50,6 @@ class RangeResolver(object):
 
         self.resolved_ranges[require.ref] = resolved_ref
         require.ref = resolved_ref
-        return resolved_ref
 
     def _resolve_local(self, search_ref, version_range):
         local_found = self._cached_cache.get(search_ref)
@@ -64,7 +62,7 @@ class RangeResolver(object):
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_and_resolve_remotes(self, search_ref, version_range, remotes):
+    def _search_and_resolve_remotes(self, search_ref, version_range, remotes, update):
         results = []
         for remote in remotes:
             remote_results = self._search_remote_recipes(remote, search_ref)
@@ -72,7 +70,7 @@ class RangeResolver(object):
                               if ref.user == search_ref.user
                               and ref.channel == search_ref.channel]
             resolved_version = self._resolve_version(version_range, remote_results)
-            if resolved_version and not self._update:
+            if resolved_version and not update:
                 return resolved_version
             elif resolved_version:
                 results.append({"remote": remote.name,
@@ -86,9 +84,9 @@ class RangeResolver(object):
         else:
             return None
 
-    def _resolve_remote(self, search_ref, version_range, remotes):
+    def _resolve_remote(self, search_ref, version_range, remotes, update):
         # Searching for just the name is much faster in remotes like Artifactory
-        resolved_ref  = self._search_and_resolve_remotes(search_ref, version_range, remotes)
+        resolved_ref = self._search_and_resolve_remotes(search_ref, version_range, remotes, update)
         # We don't want here to resolve the revision that should be done in the proxy
         # as any other regular flow
         # FIXME: refactor all this and update for 2.0
