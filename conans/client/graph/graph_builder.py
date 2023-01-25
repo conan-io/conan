@@ -215,14 +215,10 @@ class DepsGraphBuilder(object):
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         try:
             # TODO: If it is locked not resolve range
-            #  if not require.locked_id:  # if it is locked, nothing to resolved
             # TODO: This range-resolve might resolve in a given remote or cache
             # Make sure next _resolve_recipe use it
-            resolved_ref = self._resolver.resolve(require, str(node.ref), self._remotes,
-                                                  self._update)
-
-            # This accounts for alias too
-            resolved = self._resolve_recipe(resolved_ref, graph_lock)
+            self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
+            resolved = self._resolve_recipe(require.ref, graph_lock)
         except ConanException as e:
             raise GraphError.missing(node, require, str(e))
 

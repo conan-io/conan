@@ -548,6 +548,26 @@ class TestListPrefs:
         self.check(client, pattern, remote, expected)
 
 
+class TestListNoUserChannel:
+    def test_no_user_channel(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib.py": GenConanfile("zlib"), })
+
+        c.run("create zlib.py --version=1.0.0")
+        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+        c.run("upload * -r=default -c")
+
+        c.run("list zlib/1.0.0#latest")
+        assert "user/channel" not in c.out
+        c.run("list zlib/1.0.0#latest -r=default")
+        assert "user/channel" not in c.out
+
+        c.run("list zlib/1.0.0:*")
+        assert "user/channel" not in c.out
+        c.run("list zlib/1.0.0:* -r=default")
+        assert "user/channel" not in c.out
+
+
 class TestListRemotes:
     """ advanced use case:
     - check multiple remotes output
