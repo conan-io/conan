@@ -26,8 +26,7 @@ class RangeResolver:
             return
 
         ref = require.ref
-        # The search pattern must be a string
-        search_ref = str(RecipeReference(ref.name, "*", ref.user, ref.channel))
+        search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
         if resolved_ref is None or update:
@@ -46,19 +45,27 @@ class RangeResolver:
         require.ref = resolved_ref
 
     def _resolve_local(self, search_ref, version_range):
-        local_found = self._cached_cache.get(search_ref)
+        pattern = str(search_ref)
+        local_found = self._cached_cache.get(pattern)
         if local_found is None:
             # This local_found is weird, it contains multiple revisions, not just latest
-            local_found = search_recipes(self._cache, search_ref)
-            self._cached_cache[search_ref] = local_found
+            local_found = search_recipes(self._cache, pattern)
+            # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
+            local_found = [ref for ref in local_found if ref.user == search_ref.user
+                           and ref.channel == search_ref.channel]
+            self._cached_cache[pattern] = local_found
         if local_found:
             return self._resolve_version(version_range, local_found)
 
     def _search_remote_recipes(self, remote, search_ref):
-        pattern_cached = self._cached_remote_found.setdefault(search_ref, {})
+        pattern = str(search_ref)
+        pattern_cached = self._cached_remote_found.setdefault(pattern, {})
         results = pattern_cached.get(remote.name)
         if results is None:
-            results = self._remote_manager.search_recipes(remote, search_ref)
+            results = self._remote_manager.search_recipes(remote, pattern)
+            # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
+            results = [ref for ref in results if ref.user == search_ref.user
+                       and ref.channel == search_ref.channel]
             pattern_cached.update({remote.name: results})
         return results
 
