@@ -10,6 +10,7 @@ class PackageType(Enum):
     HEADER = "header-library"
     BUILD_SCRIPTS = "build-scripts"
     APP = "application"
+    APP_LIB = "application-with-library"  # Support applications with libraries (e.g., GCC, Flex, etc.)
     PYTHON = "python-require"
     UNKNOWN = "unknown"
 
