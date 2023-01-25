@@ -400,14 +400,6 @@ class CppInfo(_CppInfo):
 
         def _check_components_requires_instersection(comp_requires):
             reqs = [it.split(COMPONENT_SCOPE)[0] for it in comp_requires if COMPONENT_SCOPE in it]
-            # Raise on components requires without package requires
-            for pkg_require in pkg_requires:
-                if package_requires[pkg_require].private or package_requires[pkg_require].override:
-                    # Not standard requires, skip
-                    continue
-                if pkg_require not in reqs:
-                    raise ConanException("Package require '%s' not used in components requires"
-                                         % pkg_require)
             # Raise on components requires requiring inexistent package requires
             for comp_require in reqs:
                 reason = None

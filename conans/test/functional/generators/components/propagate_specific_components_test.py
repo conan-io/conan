@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.utils.tools import TestClient
 
 
@@ -132,25 +130,6 @@ class WrongComponentsTestCase(unittest.TestCase):
             t.run('install wrong/version@ -g {}'.format(generator), assert_error=True)
             self.assertIn("ERROR: Component 'top::not-existing' not found in 'top'"
                           " package requirement", t.out)
-
-    def test_unused_requirement(self):
-        """ Requires should include all listed requirements
-            This error is known when creating the package if the requirement is consumed.
-        """
-        consumer = textwrap.dedent("""
-            from conans import ConanFile
-
-            class Recipe(ConanFile):
-                requires = "top/version"
-                def package_info(self):
-                    self.cpp_info.requires = ["other::other"]
-        """)
-        t = TestClient()
-        t.save({'top.py': self.top, 'consumer.py': consumer})
-        t.run('create top.py top/version@')
-        t.run('create consumer.py wrong/version@', assert_error=True)
-        self.assertIn("wrong/version package_info(): Package require 'top' not used"
-                      " in components requires", t.out)
 
     def test_wrong_requirement(self):
         """ If we require a wrong requirement, we get a meaninful error.
