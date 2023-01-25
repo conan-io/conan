@@ -13,19 +13,11 @@ class RangeResolver:
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
 
-    def _search_remote_recipes(self, remote, search_ref):
-        pattern = str(search_ref)
-        pattern_cached = self._cached_remote_found.setdefault(pattern, {})
-        results = pattern_cached.get(remote.name)
-        if results is None:
-            results = self._remote_manager.search_recipes(remote, pattern)
-            pattern_cached.update({remote.name: results})
-        return results
-
     def resolve(self, require, base_conanref, remotes, update):
         version_range = require.version_range
         if version_range is None:
             return
+        assert isinstance(version_range, VersionRange)
 
         # Check if this ref with version range was already solved
         previous_ref = self.resolved_ranges.get(require.ref)
@@ -35,7 +27,7 @@ class RangeResolver:
 
         ref = require.ref
         # The search pattern must be a string
-        search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
+        search_ref = str(RecipeReference(ref.name, "*", ref.user, ref.channel))
 
         resolved_ref = self._resolve_local(search_ref, version_range)
         if resolved_ref is None or update:
@@ -48,6 +40,8 @@ class RangeResolver:
             raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
                                  "could not be resolved" % (version_range, require, base_conanref))
 
+        # To fix Cache behavior, we remove the revision information
+        resolved_ref.revision = None  # FIXME: Wasting information already obtained from server?
         self.resolved_ranges[require.ref] = resolved_ref
         require.ref = resolved_ref
 
@@ -56,48 +50,34 @@ class RangeResolver:
         if local_found is None:
             # This local_found is weird, it contains multiple revisions, not just latest
             local_found = search_recipes(self._cache, search_ref)
-            local_found = [ref for ref in local_found
-                           if ref.user == search_ref.user and ref.channel == search_ref.channel]
             self._cached_cache[search_ref] = local_found
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_and_resolve_remotes(self, search_ref, version_range, remotes, update):
-        results = []
-        for remote in remotes:
-            remote_results = self._search_remote_recipes(remote, search_ref)
-            remote_results = [ref for ref in remote_results
-                              if ref.user == search_ref.user
-                              and ref.channel == search_ref.channel]
-            resolved_version = self._resolve_version(version_range, remote_results)
-            if resolved_version and not update:
-                return resolved_version
-            elif resolved_version:
-                results.append({"remote": remote.name,
-                                "version": resolved_version})
-        if len(results) > 0:
-            resolved_version = self._resolve_version(version_range,
-                                                     [result.get("version") for result in results])
-            for result in results:
-                if result.get("version") == resolved_version:
-                    return result.get("version")
-        else:
-            return None
+    def _search_remote_recipes(self, remote, search_ref):
+        pattern_cached = self._cached_remote_found.setdefault(search_ref, {})
+        results = pattern_cached.get(remote.name)
+        if results is None:
+            results = self._remote_manager.search_recipes(remote, search_ref)
+            pattern_cached.update({remote.name: results})
+        return results
 
     def _resolve_remote(self, search_ref, version_range, remotes, update):
-        # Searching for just the name is much faster in remotes like Artifactory
-        resolved_ref = self._search_and_resolve_remotes(search_ref, version_range, remotes, update)
-        # We don't want here to resolve the revision that should be done in the proxy
-        # as any other regular flow
-        # FIXME: refactor all this and update for 2.0
-        if not resolved_ref:
-            return None
-        resolved_ref.revision = None  # FIXME: Wasting information already obtained from server?
-        return resolved_ref
+        update_candidates = []
+        for remote in remotes:
+            remote_results = self._search_remote_recipes(remote, search_ref)
+            resolved_version = self._resolve_version(version_range, remote_results)
+            if resolved_version:
+                if not update:
+                    return resolved_version  # Return first valid occurence in first remote
+                else:
+                    update_candidates.append(resolved_version)
+        if len(update_candidates) > 0:  # pick latest from already resolved candidates
+            resolved_version = self._resolve_version(version_range, update_candidates)
+            return resolved_version
 
     @staticmethod
     def _resolve_version(version_range, refs_found):
-        assert isinstance(version_range, VersionRange)
-        for ref in reversed(sorted(r for r in refs_found if r is not None)):
+        for ref in reversed(sorted(refs_found)):
             if ref.version in version_range:
                 return ref
