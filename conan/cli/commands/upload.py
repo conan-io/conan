@@ -1,4 +1,5 @@
 from conan.api.conan_api import ConanAPI
+from conan.api.model import ListPattern
 from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
 from conans.errors import ConanException
@@ -37,21 +38,23 @@ def upload(conan_api: ConanAPI, parser, *args):
     remote = conan_api.remotes.get(args.remote)
     enabled_remotes = conan_api.remotes.list()
 
-    upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
-    if not upload_bundle.recipes:
+    ref_pattern = ListPattern(args.reference, package_id="*", only_recipe=args.only_recipe)
+    package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+
+    if not package_list.recipes:
         raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 
     if args.check:
-        conan_api.upload.check_integrity(upload_bundle)
+        conan_api.cache.check_integrity(package_list)
     # Check if the recipes/packages are in the remote
-    conan_api.upload.check_upstream(upload_bundle, remote, args.force)
+    conan_api.upload.check_upstream(package_list, remote, args.force)
 
     # If only if search with "*" we ask for confirmation
     if not args.confirm and "*" in args.reference:
-        _ask_confirm_upload(conan_api, upload_bundle)
+        _ask_confirm_upload(conan_api, package_list)
 
-    conan_api.upload.prepare(upload_bundle, enabled_remotes)
-    conan_api.upload.upload_bundle(upload_bundle, remote)
+    conan_api.upload.prepare(package_list, enabled_remotes)
+    conan_api.upload.upload(package_list, remote)
 
 
 def _ask_confirm_upload(conan_api, upload_data):

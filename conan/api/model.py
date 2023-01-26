@@ -1,3 +1,6 @@
+import fnmatch
+
+from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -30,7 +33,7 @@ class Remote:
         return str(self)
 
 
-class SelectBundle:
+class PackagesList:
     def __init__(self):
         self.recipes = {}
 
@@ -44,12 +47,13 @@ class SelectBundle:
                 if ref.timestamp:
                     rev_dict["timestamp"] = ref.timestamp
 
-    def add_prefs(self, prefs):
+    def add_prefs(self, rrev, prefs):
         # Prevs already come in ASCENDING order, so upload does older revisions first
+        revs_dict = self.recipes[str(rrev)]["revisions"]
+        rev_dict = revs_dict[rrev.revision]
+        packages_dict = rev_dict.setdefault("packages", {})
+
         for pref in prefs:
-            revs_dict = self.recipes[str(pref.ref)]["revisions"]
-            rev_dict = revs_dict[pref.ref.revision]
-            packages_dict = rev_dict.setdefault("packages", {})
             package_dict = packages_dict.setdefault(pref.package_id, {})
             if pref.revision:
                 prevs_dict = package_dict.setdefault("revisions", {})
@@ -58,10 +62,12 @@ class SelectBundle:
                     prev_dict["timestamp"] = pref.timestamp
 
     def add_configurations(self, confs):
-        # Listed confs must already exist in bundle
         for pref, conf in confs.items():
             rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
-            rev_dict["packages"][pref.package_id]["info"] = conf
+            try:
+                rev_dict["packages"][pref.package_id]["info"] = conf
+            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
+                pass
 
     def refs(self):
         result = {}
@@ -85,3 +91,66 @@ class SelectBundle:
 
     def serialize(self):
         return self.recipes
+
+
+class ListPattern:
+
+    def __init__(self, expression, rrev="latest", package_id=None, prev="latest", only_recipe=False):
+        def split(s, c, default=None):
+            if not s:
+                return None, default
+            tokens = s.split(c, 1)
+            if len(tokens) == 2:
+                return tokens[0], tokens[1] or default
+            return tokens[0], default
+
+        recipe, package = split(expression, ":")
+        self.raw = expression
+        self.ref, rrev = split(recipe, "#", rrev)
+        ref, user_channel = split(self.ref, "@")
+        self.name, self.version = split(ref, "/")
+        self.user, self.channel = split(user_channel, "/")
+        self.rrev, _ = split(rrev, "%")
+        self.package_id, prev = split(package, "#", prev)
+        self.prev, _ = split(prev, "%")
+        if only_recipe:
+            if self.package_id:
+                raise ConanException("Do not specify 'package_id' with 'only-recipe'")
+        else:
+            self.package_id = self.package_id or package_id
+
+    @property
+    def is_latest_rrev(self):
+        return self.rrev == "latest"
+
+    @property
+    def is_latest_prev(self):
+        return self.prev == "latest"
+
+    def check_refs(self, refs):
+        if not refs and self.ref and "*" not in self.ref:
+            raise ConanException(f"Recipe '{self.ref}' not found")
+
+    def filter_rrevs(self, rrevs):
+        rrevs = [r for r in rrevs if fnmatch.fnmatch(r.revision, self.rrev)]
+        if not rrevs:
+            refs_str = f'{self.ref}#{self.rrev}'
+            if "*" not in refs_str:
+                raise ConanException(f"Recipe revision '{refs_str}' not found")
+        return rrevs
+
+    def filter_prefs(self, prefs):
+        prefs = [p for p in prefs if fnmatch.fnmatch(p.package_id, self.package_id)]
+        if not prefs:
+            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}'
+            if "*" not in refs_str:
+                raise ConanException(f"Package ID '{self.raw}' not found")
+        return prefs
+
+    def filter_prevs(self, prevs):
+        prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, self.prev)]
+        if not prevs:
+            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}#{self.prev}'
+            if "*" not in refs_str:
+                raise ConanException(f"Package revision '{self.raw}' not found")
+        return prevs
