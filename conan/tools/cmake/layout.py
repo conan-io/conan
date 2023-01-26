@@ -1,7 +1,10 @@
-import datetime
 import os
+import shutil
+from pathlib import Path
 
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.util.sha import sha1
 
 
 def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"):
@@ -23,15 +26,16 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
     build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
+    test_root_build_folder = get_root_test_build_folder(conanfile)  # only for test_package's
     config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile)
+
     if config_build_folder:
-        build_folder = os.path.join(build_folder, config_build_folder)
+        build_folder = os.path.join(test_root_build_folder, build_folder, config_build_folder)
     if not multi and not user_defined_build:
-        build_folder = os.path.join(build_folder, build_type)
+        build_folder = os.path.join(test_root_build_folder, build_folder, build_type)
+
     conanfile.folders.build = build_folder
-
     conanfile.folders.generators = os.path.join(conanfile.folders.build, "generators")
-
     conanfile.cpp.source.includedirs = ["include"]
 
     if multi and not user_defined_build:
@@ -42,44 +46,70 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
         conanfile.cpp.build.bindirs = ["."]
 
 
-def _calculate_build_vars(conanfile, build_vars):
-    configuration_discriminant = []
-    for config in build_vars:
-        group, var = config.split(".", 1)
+def get_build_folder_custom_vars(conanfile):
+    build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
+                                    default=[], check_type=list)
+    ret = []
+    for s in build_vars:
+        group, var = s.split(".", 1)
+        tmp = None
         if group == "settings":
-            value = conanfile.settings.get_safe(var)
+            tmp = conanfile.settings.get_safe(var)
         elif group == "options":
             value = conanfile.options.get_safe(var)
-            if value is None:
-                continue
+            if value is not None:
+                tmp = "{}_{}".format(var, value)
         else:
-            raise ConanException("Invalid build_folder_vars value, it has to start with "
-                                 f"'settings.' or 'options.': {config}")
-        configuration_discriminant.append(f"{config}_{value}".lower())
-    return configuration_discriminant
+            raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
+                                 " to start with 'settings.' or 'options.': {}".format(s))
+        if tmp:
+            ret.append(tmp.lower())
+
+    user_defined_build = "settings.build_type" in build_vars
+    return "-".join(ret), user_defined_build
 
 
-def get_build_folder_custom_vars(conanfile):
-    if conanfile.tested_reference_str is None:
-        build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
-                                        default=[], check_type=list)
-        ret = _calculate_build_vars(conanfile, build_vars)
-        user_defined_build = "settings.build_type" in build_vars
-        return "-".join(ret), user_defined_build
-    # Check if maybe test_type is a better flag for this?
+def get_root_test_build_folder(conanfile):
+    """
+    Get a different root test build folder path (or the test_package/ one) if
+    tools.cmake.cmake_layout:test_build_folder is specified.
+
+    If specified the test output build folder could look like this:
+
+    >> [TEST_ROOT_PATH]/test_output-[BUILD_TYPE]_[COMPILER]_[COMPILER_VERSION]-[SHA1]
+
+    Several notes:
+
+        * tools.cmake.cmake_layout:test_build_folder=recipe_folder indicates that the root path
+          will be the test_package/ by default (as usual).
+        * tools.cmake.cmake_layout:test_build_folder=MY_FOLDER/ will add to the test build folder
+          name the [REF_NAME]_[REF_VERSION] as prefix, so it could look like:
+          >> [TEST_ROOT_PATH]/[REF_NAME]_[REF_VERSION]-test_output-[BUILD_TYPE]_[COMPILER]_[COMPILER_VERSION]-[SHA1]
+        * If tools.cmake.cmake_layout:test_build_folder is not specified, it will work as usual.
+    """
+    # Get root build folder from global.conf or profile
+    test_build_root_folder = conanfile.conf.get("tools.cmake.cmake_layout:test_build_folder",
+                                                check_type=str)
+    tested_reference = conanfile.tested_reference_str
+    # FIXME: Should we have a better way to check that?
+    if tested_reference is None or test_build_root_folder is None:
+        return ''
+
+    if test_build_root_folder.lower() != "recipe_folder":
+        ref = ConanFileReference.loads(tested_reference)
+        prefix = f"{ref.name}_{ref.version}-test_output"
     else:
-        # Get root build folder from global.conf
-        test_build_root_folder = conanfile.conf.get("user.test_build_folder", check_type=str,
-                                                    default=".")
-        # Start the folder path with something common, so it can get ignored programmatically
-        test_build_folder = os.path.join(test_build_root_folder, "test_output")
-        # Get each config and create a name based on their values
+        # Assuming that it's called under the test_package folder
+        test_build_root_folder = conanfile.recipe_folder
+        prefix = 'test_output'
 
-        test_build_settings = [f"settings.{setting}" for setting in conanfile.settings.fields]
-        configuration_discriminant = _calculate_build_vars(conanfile, test_build_settings)
-        # Append a timestamp/counter
-        configuration_discriminant.append(datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S%f"))
-        return os.path.join(test_build_folder, "-".join(configuration_discriminant)), True
-
-
-
+    settings = conanfile.settings.values.dumps()
+    # FIXME: Conan 1.x: they are changing in the first call so the SHA is changing... Check Conan 2.x
+    # options = conanfile.options.values.dumps()
+    conf = conanfile.conf.dumps()
+    suffix = sha1((settings + conf).encode())
+    # Hardcoded fields to add to the prefix
+    settings_fields = ["build_type", "compiler", "compiler.version"]
+    settings_values = "_".join([conanfile.settings.get_safe(f, '') for f in settings_fields])
+    test_build_folder = os.path.join(test_build_root_folder, f"{prefix}-{settings_values}-{suffix}")
+    return test_build_folder
