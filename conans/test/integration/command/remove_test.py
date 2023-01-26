@@ -238,7 +238,6 @@ def _populated_client_base():
 def populated_client(_populated_client_base):
     """ this is much faster than creating and uploading everythin
     """
-    return _populated_client_base.clone()
     client = TestClient(default_server_user=True)
     shutil.rmtree(client.cache_folder)
     shutil.copytree(_populated_client_base.cache_folder, client.cache_folder)
