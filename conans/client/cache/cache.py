@@ -208,7 +208,7 @@ class ClientCache(object):
         def _load_settings(path):
             try:
                 return yaml.safe_load(load(path)) or {}
-            except (yaml.YAMLError, AttributeError) as ye:
+            except yaml.YAMLError as ye:
                 raise ConanException("Invalid settings.yml format: {}".format(ye))
 
         settings = _load_settings(self.settings_path)
@@ -231,7 +231,10 @@ class ClientCache(object):
 
             appending_recursive_dict_update(settings, settings_user)
 
-        return Settings(settings)
+        try:
+            return Settings(settings)
+        except AttributeError as e:
+            raise ConanException("Invalid settings.yml format: {}".format(e))
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?
