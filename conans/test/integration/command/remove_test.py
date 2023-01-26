@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 
 import pytest
@@ -187,8 +188,8 @@ bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
 bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
-@pytest.fixture()
-def populated_client():
+@pytest.fixture(scope="module")
+def _populated_client_base():
     """
     foo/1.0@ (one revision) no packages
     foo/1.0@user/channel (one revision)  no packages
@@ -230,6 +231,21 @@ def populated_client():
     client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
     client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
 
+    return client
+
+
+@pytest.fixture()
+def populated_client(_populated_client_base):
+    """ this is much faster than creating and uploading everythin
+    """
+    return _populated_client_base.clone()
+    client = TestClient(default_server_user=True)
+    shutil.rmtree(client.cache_folder)
+    shutil.copytree(_populated_client_base.cache_folder, client.cache_folder)
+    shutil.rmtree(client.servers["default"].test_server._base_path)
+    shutil.copytree(_populated_client_base.servers["default"].test_server._base_path,
+                    client.servers["default"].test_server._base_path)
+    client.update_servers()
     return client
 
 

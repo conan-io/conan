@@ -360,8 +360,7 @@ class OpenSSLConan(ConanFile):
         self._create_packages_and_builds()
         # Export an update of the same conans
 
-        # Do not adjust cpu_count, it is reusing a cache
-        client2 = TestClient(self.client.cache_folder, cpu_count=False)
+        client2 = TestClient(self.client.cache_folder)
         files2 = {"conanfile.py": "# insert comment\n" +
                                   str(GenConanfile("hello0", "0.1").with_exports("*")),
                   "main.cpp": "MyMain",
