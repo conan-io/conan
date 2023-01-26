@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuild_lib_template():
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     client.run("new hello/0.1 --template=msbuild_lib")
     # Local flow works
     client.run("install . -if=install")
