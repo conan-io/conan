@@ -662,7 +662,7 @@ def test_map_imported_config():
     assert "main: Debug!" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_quiet():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
