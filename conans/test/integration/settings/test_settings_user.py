@@ -35,3 +35,20 @@ def test_settings_user():
     c.run("install . -s os=Macos -s new_global=42")
     assert "os=Macos" in c.out
     assert "new_global=42" in c.out
+
+
+def test_settings_user_subdict():
+    c = TestClient()
+    settings_user = textwrap.dedent("""\
+        other_new:
+            other1:
+            other2:
+                version: [1, 2, 3]
+        """)
+    save(os.path.join(c.cache_folder, "settings_user.yml"), settings_user)
+    c.save({"conanfile.py": GenConanfile().with_settings("other_new")})
+    c.run("install . -s other_new=other1")
+    assert "other_new=other1" in c.out
+    c.run("install . -s other_new=other2 -s other_new.version=2")
+    assert "other_new=other2" in c.out
+    assert "other_new.version=2" in c.out
