@@ -1,6 +1,4 @@
 import os
-import shutil
-from pathlib import Path
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -71,7 +69,7 @@ def get_build_folder_custom_vars(conanfile):
 
 def get_root_test_build_folder(conanfile):
     """
-    Get a different root test build folder path (or the test_package/ one) if
+    Gets a different root test build folder path (or the test_package/ one) if
     tools.cmake.cmake_layout:test_build_folder is specified.
 
     If specified the test output build folder could look like this:
