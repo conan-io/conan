@@ -931,8 +931,7 @@ def test_set_linker_scripts():
 
 def test_test_package_layout():
     """
-    test that the ``test_package`` folder also follows the cmake_layout and the
-    build_folder_vars
+    we no longer need build_folder_vars to avoid conflicting folders in test_package/build
     """
     client = TestClient()
     test_conanfile = textwrap.dedent("""
@@ -955,8 +954,6 @@ def test_test_package_layout():
     """)
     client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
                  "test_package/conanfile.py": test_conanfile})
-    config = "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"
-    client.run(f"create . {config} -s compiler.cppstd=14")
-    client.run(f"create . {config} -s compiler.cppstd=17")
-    assert os.path.exists(os.path.join(client.current_folder, "test_package/build/14"))
-    assert os.path.exists(os.path.join(client.current_folder, "test_package/build/17"))
+    client.run(f"create . -s compiler.cppstd=14")
+    client.run(f"create . -s compiler.cppstd=17")
+    assert len(os.listdir(os.path.join(client.current_folder, "test_package", "build"))) == 2
