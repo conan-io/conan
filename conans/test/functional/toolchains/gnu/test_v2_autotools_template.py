@@ -57,6 +57,7 @@ def test_autotools_lib_template():
     client.save({}, clean_first=True)
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True")
+    build_folder = client.created_test_build_folder("hello/0.1")
     assert "hello/0.1: Hello World Release!" in client.out
     if platform.system() == "Darwin":
         client.run_command("otool -l test_package/test_output/build-release/main")

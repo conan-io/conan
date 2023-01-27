@@ -90,7 +90,9 @@ def test_client_shared():
 
     # We can run the exe from the test package directory also, without environment
     # because there is an internal RPATH in the exe with an abs path to the "hello"
-    exe_folder = os.path.join("test_package", "test_output", "build", "release")
+    build_folder = client.created_test_build_folder("hello/0.1")
+    exe_folder = os.path.join("test_package", build_folder)
+    client.test_exe_folder = exe_folder
     assert os.path.exists(os.path.join(client.current_folder, exe_folder, "example"))
     client.run_command(os.path.join(exe_folder, "example"))
 
@@ -108,7 +110,7 @@ def test_shared_same_dir_using_tool(test_client_shared):
     If we build an executable in Mac and we want it to locate the shared libraries in the same
     directory, we have different alternatives, here we use the "install_name_tool"
     """
-    exe_folder = os.path.join("test_package", "test_output", "build", "release")
+    exe_folder = test_client_shared.test_exe_folder
     # Alternative 1, add the "." to the rpaths so the @rpath from the exe can be replaced with "."
     test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
     test_client_shared.run_command("install_name_tool -add_rpath '.' example")
@@ -182,7 +184,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     test_client_shared.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
     test_client_shared.run("create . -o hello*:shared=True")
     test_client_shared.run("remove '*' -c")
-    exe_folder = os.path.join("test_package", "test_output", "bin")
+    exe_folder = os.path.join(test_client_shared.test_exe_folder, "bin")
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 
@@ -196,7 +198,7 @@ def test_shared_same_dir_using_env_var_current_dir(test_client_shared):
     """
 
     # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
-    exe_folder = os.path.join("test_package", "test_output", "build", "release")
+    exe_folder = test_client_shared.test_exe_folder
     rmdir(os.path.join(test_client_shared.current_folder, exe_folder))
     test_client_shared.run("create . -o hello*:shared=True")
     test_client_shared.run("remove '*' -c")
