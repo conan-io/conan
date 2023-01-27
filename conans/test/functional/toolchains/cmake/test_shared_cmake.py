@@ -185,7 +185,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     test_client_shared.run("create . -o hello*:shared=True")
     build_folder = test_client_shared.created_test_build_folder("hello/0.1")
     test_client_shared.run("remove '*' -c")
-    exe_folder = os.path.join(build_folder, "bin")
+    exe_folder = os.path.join("test_package", build_folder, "bin")
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 

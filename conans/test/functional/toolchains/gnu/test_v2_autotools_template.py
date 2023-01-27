@@ -111,7 +111,7 @@ def test_autotools_relocatable_libs_darwin():
         assert package_folder in client.out
 
     # will work because rpath set
-    client.run_command("test_package/test_output/build-release/main")
+    client.run_command(f"test_package/{build_folder}/main")
     assert "hello/0.1: Hello World Release!" in client.out
 
     # move to another location so that the path set in the rpath does not exist
