@@ -532,6 +532,7 @@ class FindFiles(Block):
         host_build_paths_root = []
         host_build_paths_noroot = []
         host_lib_paths = []
+        host_bin_paths = [] # Only to be used when only one profile is present
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
@@ -547,6 +548,7 @@ class FindFiles(Block):
                 host_build_paths_root = []
                 host_build_paths_noroot.extend(p for p in cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
+            host_bin_paths.extend(cppinfo.bindirs)
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
             host_include_paths.extend(cppinfo.includedirs)
@@ -559,6 +561,8 @@ class FindFiles(Block):
             cppinfo = req.cpp_info.aggregated_components()
             build_build_paths.extend(cppinfo.builddirs)
             build_bin_paths.extend(cppinfo.bindirs)
+        has_build_context = hasattr(self._conanfile, "settings_build") # always true in Conan 2.0
+        bin_paths = build_bin_paths if has_build_context else host_bin_paths
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
@@ -566,7 +570,7 @@ class FindFiles(Block):
             "host_build_paths_root": self._join_paths(host_build_paths_root),
             "host_build_paths_noroot": self._join_paths(host_build_paths_noroot),
             "build_build_paths": self._join_paths(build_build_paths),
-            "cmake_program_path": self._join_paths(build_bin_paths),
+            "cmake_program_path": self._join_paths(bin_paths),
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
             "cmake_include_path": self._join_paths(host_include_paths),
