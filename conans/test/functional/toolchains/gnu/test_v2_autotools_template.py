@@ -60,10 +60,10 @@ def test_autotools_lib_template():
     build_folder = client.created_test_build_folder("hello/0.1")
     assert "hello/0.1: Hello World Release!" in client.out
     if platform.system() == "Darwin":
-        client.run_command("otool -l test_package/test_output/build-release/main")
+        client.run_command(f"otool -l test_package/{build_folder}/main")
         assert "@rpath/libhello.0.dylib" in client.out
     else:
-        client.run_command("ldd test_package/test_output/build-release/main")
+        client.run_command(f"ldd test_package/{build_folder}/main")
         assert "libhello.so.0" in client.out
 
 
@@ -96,6 +96,7 @@ def test_autotools_relocatable_libs_darwin():
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True")
 
+    build_folder = client.created_test_build_folder("hello/0.1")
     package_id = re.search(r"Package (\S+) created", str(client.out)).group(1)
     package_id = package_id.replace("'", "")
     ref = RecipeReference.loads("hello/0.1")
@@ -106,7 +107,7 @@ def test_autotools_relocatable_libs_darwin():
     if platform.system() == "Darwin":
         client.run_command("otool -l {}".format(dylib))
         assert "@rpath/libhello.0.dylib" in client.out
-        client.run_command("otool -l {}".format("test_package/test_output/build-release/main"))
+        client.run_command("otool -l {}".format(f"test_package/{build_folder}/main"))
         assert package_folder in client.out
 
     # will work because rpath set
@@ -117,11 +118,12 @@ def test_autotools_relocatable_libs_darwin():
     # then the execution should fail
     shutil.move(os.path.join(package_folder, "lib"), os.path.join(client.current_folder, "tempfolder"))
     # will fail because rpath does not exist
-    client.run_command("test_package/test_output/build-release/main", assert_error=True)
+    client.run_command(f"test_package/{build_folder}/main", assert_error=True)
     assert "Library not loaded: @rpath/libhello.0.dylib" in str(client.out).replace("'", "")
 
     # Use DYLD_LIBRARY_PATH and should run
-    client.run_command("DYLD_LIBRARY_PATH={} test_package/test_output/build-release/main".format(os.path.join(client.current_folder, "tempfolder")))
+    client.run_command("DYLD_LIBRARY_PATH={} test_package/{}/main".format(os.path.join(client.current_folder, "tempfolder"),
+                                                                          build_folder))
     assert "hello/0.1: Hello World Release!" in client.out
 
 
