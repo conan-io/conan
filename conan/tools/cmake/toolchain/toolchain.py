@@ -72,7 +72,7 @@ class CMakeToolchain(object):
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
                 {% endfor %}
                 {% if action=='set' %}
-                set({{ it }} {{ genexpr.str }} CACHE STRING
+                set({{ it }} {{ genexpr.str }} STRING
                     "Variable {{ it }} conan-toolchain defined")
                 {% elif action=='add_compile_definitions' -%}
                 add_compile_definitions({{ it }}={{ genexpr.str }})
@@ -100,9 +100,9 @@ class CMakeToolchain(object):
         # Variables
         {% for it, value in variables.items() %}
         {% if value is boolean %}
-        set({{ it }} {{ value|cmake_value }} CACHE BOOL "Variable {{ it }} conan-toolchain defined")
+        set({{ it }} {{ value|cmake_value }} BOOL "Variable {{ it }} conan-toolchain defined")
         {% else %}
-        set({{ it }} {{ value|cmake_value }} CACHE STRING "Variable {{ it }} conan-toolchain defined")
+        set({{ it }} {{ value|cmake_value }} STRING "Variable {{ it }} conan-toolchain defined")
         {% endif %}
         {% endfor %}
         # Variables  per configuration
