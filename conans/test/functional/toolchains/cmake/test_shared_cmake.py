@@ -158,7 +158,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
                     def generate(self):
                         # The exe is installed by cmake at test_package/bin
                         # FIXME: This is a bit weird folder management
-                        dest = os.path.join(self.folders.base_build, "bin")
+                        dest = os.path.join(self.build_folder, "bin")
                         for dep in self.dependencies.values():
                             copy(self, "*.dylib", dep.cpp_info.libdirs[0], dest)
 
