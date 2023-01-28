@@ -176,8 +176,6 @@ def test_shared_same_dir_using_cmake(test_client_shared):
 
                     def test(self):
                         cmd = os.path.join(self.cpp.build.bindirs[0], "test")
-                        self.output.info(f"CMD: {cmd}")
-                        self.output.info(f"CWD: {os.getcwd()}")
                         # This is working without runenv because CMake is puting an internal rpath
                         # to the executable pointing to the dylib of hello, internally is doing something
                         # like: install_name_tool -add_rpath /path/to/hello/lib/libhello.dylib test
@@ -185,10 +183,9 @@ def test_shared_same_dir_using_cmake(test_client_shared):
                 """)
     test_client_shared.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
     test_client_shared.run("create . -o hello*:shared=True")
-    print(test_client_shared.out)
     build_folder = test_client_shared.created_test_build_folder("hello/0.1")
     test_client_shared.run("remove '*' -c")
-    exe_folder = os.path.join("test_package", build_folder, "bin")
+    exe_folder = os.path.join("test_package", build_folder)
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 
