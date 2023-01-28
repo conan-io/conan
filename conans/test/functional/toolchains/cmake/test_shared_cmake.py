@@ -157,8 +157,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
 
                     def generate(self):
                         # The exe is installed by cmake at test_package/bin
-                        # FIXME: This is a bit weird folder management
-                        dest = os.path.join(self.build_folder, "bin")
+                        dest = os.path.join(self.recipe_folder, "bin")
                         for dep in self.dependencies.values():
                             copy(self, "*.dylib", dep.cpp_info.libdirs[0], dest)
 
@@ -183,9 +182,8 @@ def test_shared_same_dir_using_cmake(test_client_shared):
                 """)
     test_client_shared.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
     test_client_shared.run("create . -o hello*:shared=True")
-    build_folder = test_client_shared.created_test_build_folder("hello/0.1")
     test_client_shared.run("remove '*' -c")
-    exe_folder = os.path.join("test_package", build_folder, "bin")
+    exe_folder = os.path.join("test_package", "bin")
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 
