@@ -396,6 +396,13 @@ class GraphBinariesAnalyzer(object):
                                           default_python_requires_id_mode=
                                           default_python_requires_id_mode)
         conanfile.original_info = conanfile.info.clone()
+
+        # call package_id() to narrow and change possible values
+        with conanfile_exception_formatter(str(conanfile), "package_id"):
+            with conan_v2_property(conanfile, 'cpp_info',
+                                   "'self.cpp_info' access in package_id() method is deprecated"):
+                conanfile.package_id()
+
         if not self._cache.new_config["core.package_id:msvc_visual_incompatible"]:
             msvc_compatible = conanfile.info.msvc_compatible()
             if msvc_compatible:
@@ -404,12 +411,6 @@ class GraphBinariesAnalyzer(object):
         apple_clang_compatible = conanfile.info.apple_clang_compatible()
         if apple_clang_compatible:
             conanfile.compatible_packages.append(apple_clang_compatible)
-
-        # Once we are done, call package_id() to narrow and change possible values
-        with conanfile_exception_formatter(str(conanfile), "package_id"):
-            with conan_v2_property(conanfile, 'cpp_info',
-                                   "'self.cpp_info' access in package_id() method is deprecated"):
-                conanfile.package_id()
 
         if hasattr(conanfile, "validate") and callable(conanfile.validate):
             with conanfile_exception_formatter(str(conanfile), "validate"):
