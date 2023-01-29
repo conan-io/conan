@@ -258,7 +258,7 @@ def fix_apple_shared_install_name(conanfile):
                     command = f"install_name_tool {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
-    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile):
         substitutions = _fix_dylib_files(conanfile)
 
         # Only "fix" executables if dylib files were patched, otherwise

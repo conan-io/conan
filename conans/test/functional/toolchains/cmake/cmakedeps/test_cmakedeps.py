@@ -657,3 +657,42 @@ def test_map_imported_config():
     assert "hello/1.0: Hello World Release!" in client.out
     assert "talk: Release!" in client.out
     assert "main: Debug!" in client.out
+
+
+@pytest.mark.tool_cmake
+def test_quiet():
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Test(ConanFile):
+            name = "test"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.system_libs = ["lib1"]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        test/0.1
+
+        [generators]
+        CMakeDeps
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+        find_package(test QUIET)
+        """)
+
+    client.save({"conanfile.txt": conanfile,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install .")
+    client.run_command('cmake . -DCMAKE_BUILD_TYPE=Release')
+    # Because we used QUIET, not in output
+    assert "Target declared 'test::test'" not in client.out

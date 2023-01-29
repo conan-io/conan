@@ -45,6 +45,12 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
+        if({{ file_name }}_FIND_QUIETLY)
+            set({{ file_name }}_MESSAGE_MODE VERBOSE)
+        else()
+            set({{ file_name }}_MESSAGE_MODE STATUS)
+        endif()
+
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
         include(CMakeFindDependencyMacro)
@@ -66,7 +72,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
-            message(STATUS "Conan: Including build module from '${_BUILD_MODULE}'")
+            message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Including build module from '${_BUILD_MODULE}'")
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
 
@@ -76,7 +82,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         if({{ file_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+file_name+'_FIND_COMPONENTS}' }})
                 if (TARGET ${_FIND_COMPONENT})
-                    message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
+                    message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
                     message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 endif()
