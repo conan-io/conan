@@ -359,7 +359,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
-                 cpu_count=1, default_server_user=None):
+                 default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
