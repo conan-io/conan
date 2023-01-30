@@ -403,6 +403,11 @@ class GraphBinariesAnalyzer(object):
                                    "'self.cpp_info' access in package_id() method is deprecated"):
                 conanfile.package_id()
 
+        # compatible_packages.append() doesn't accept non-standard settings like build_type=any
+        # so we call it with the original settings (but with the modified options that should be ok) 
+        modified_info = conanfile.info.clone()
+        conanfile.info.settings = conanfile.original_info.settings
+
         if not self._cache.new_config["core.package_id:msvc_visual_incompatible"]:
             msvc_compatible = conanfile.info.msvc_compatible()
             if msvc_compatible:
@@ -411,6 +416,9 @@ class GraphBinariesAnalyzer(object):
         apple_clang_compatible = conanfile.info.apple_clang_compatible()
         if apple_clang_compatible:
             conanfile.compatible_packages.append(apple_clang_compatible)
+
+        # we're done with compatible packages, restore the modified settings 
+        conanfile.info.settings = modified_info.settings
 
         if hasattr(conanfile, "validate") and callable(conanfile.validate):
             with conanfile_exception_formatter(str(conanfile), "validate"):
