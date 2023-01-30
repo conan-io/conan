@@ -488,10 +488,6 @@ class TestClient(object):
             trace = traceback.format_exc()
             error = command.exception_exit_error(e)
         finally:
-            try:
-                self.api.app.cache.closedb()
-            except AttributeError:
-                pass
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
