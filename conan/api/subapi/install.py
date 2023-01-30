@@ -36,7 +36,7 @@ class InstallAPI:
     @api_method
     def install_sources(self, graph, remotes):
         """ Install sources for dependency graph
-        :param graph: Dependency graph to intall packages for
+        :param graph: Dependency graph to install packages for
         """
         app = ConanApp(self.conan_api.cache_folder)
         installer = BinaryInstaller(app)
