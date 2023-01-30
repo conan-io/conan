@@ -34,6 +34,25 @@ def test_shared_cmake_toolchain():
     assert "chat: Release!" in client.out
     assert "hello: Release!" in client.out
 
+    # https://github.com/conan-io/conan/issues/13000
+    # This failed, because of rpath link in Linux
+    client = TestClient(servers=client.servers, inputs=["admin", "password"])
+    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("upload * -c -r default")
+    client.run("remove * -c")
+
+    client = TestClient(servers=client.servers)
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
+    # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
+
+    client.run_command(command)
+    assert "main: Release!" in client.out
+    assert "chat: Release!" in client.out
+    assert "hello: Release!" in client.out
+
 
 @pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_test_package():
