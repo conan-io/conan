@@ -10,7 +10,6 @@ def vs_layout(conanfile):
 
     :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
     """
-    conanfile.folders.test_output = ""
     subproject = conanfile.folders.subproject
     conanfile.folders.source = subproject or "."
     conanfile.folders.generators = os.path.join(subproject, "conan") if subproject else "conan"

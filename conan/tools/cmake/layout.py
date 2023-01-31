@@ -41,7 +41,7 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
 
     conanfile.cpp.source.includedirs = ["include"]
 
-    if multi and not user_defined_build:
+    if multi:
         conanfile.cpp.build.libdirs = ["{}".format(build_type)]
         conanfile.cpp.build.bindirs = ["{}".format(build_type)]
     else:
@@ -51,8 +51,12 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
 
 def get_build_folder_custom_vars(conanfile):
 
-    build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
-                                    default=[], check_type=list)
+    if conanfile.tested_reference_str:
+        build_vars = ["settings.compiler", "settings.compiler.version", "settings.arch",
+                      "settings.compiler.cppstd", "settings.build_type", "options.shared"]
+    else:
+        build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars",
+                                        default=[], check_type=list)
     ret = []
     for s in build_vars:
         group, var = s.split(".", 1)

@@ -131,13 +131,14 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
     conanfile = deps_graph.root.conanfile
-    output_folder = os.path.join(conanfile_folder, conanfile.folders.test_output)
-    if conanfile.folders.test_output:
-        shutil.rmtree(output_folder, ignore_errors=True)
-        mkdir(output_folder)
+    if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:
+        # should be the same as build folder, but we can remove it
+        shutil.rmtree(conanfile.build_folder, ignore_errors=True)
+        mkdir(conanfile.build_folder)
+    conanfile.output.info(f"Test package build: {conanfile.folders.build}")
+    conanfile.output.info(f"Test package build folder: {conanfile.build_folder}")
     conan_api.install.install_consumer(deps_graph=deps_graph,
-                                       source_folder=conanfile_folder,
-                                       output_folder=output_folder)
+                                       source_folder=conanfile_folder)
 
     out.title("Testing the package: Building")
     app = ConanApp(conan_api.cache_folder)
