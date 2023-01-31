@@ -319,7 +319,8 @@ class _TargetDataContext(object):
         if require and not require.headers:
             self.include_paths = ""
         if require and not require.libs:
-            self.lib_paths = ""
+            # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
+            #                      NOT REALLY LINKING LIB
             self.libs = ""
             self.system_libs = ""
             self.frameworks = ""

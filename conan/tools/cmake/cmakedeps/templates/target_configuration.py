@@ -108,6 +108,10 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             set_property(TARGET {{root_target_name}}
                          PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                          $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
+            # Necessary to find LINK shared libraries in Linux
+            set_property(TARGET {{root_target_name}}
+                         PROPERTY INTERFACE_LINK_DIRECTORIES
+                         $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIB_DIRS{{config_suffix}}}> APPEND)
             set_property(TARGET {{root_target_name}}
                          PROPERTY INTERFACE_COMPILE_DEFINITIONS
                          $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
@@ -184,6 +188,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                              $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
                 set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                              $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
+                set_property(TARGET {{comp_target_name }} PROPERTY INTERFACE_LINK_DIRECTORIES
+                             $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix)}}> APPEND)
                 set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              $<$<CONFIG:{{ configuration }}>:{{tvalue(pkg_name, comp_variable_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
                 set_property(TARGET {{ comp_target_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
