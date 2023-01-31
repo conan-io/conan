@@ -149,7 +149,7 @@ class CMakeToolchain(object):
 
         check_using_build_profile(self._conanfile)
         self.user_presets_path = "CMakeUserPresets.json"
-        self.presets_prefix = None
+        self.presets_prefix = "conan"
 
     def _context(self):
         """ Returns dict, the context for the template
