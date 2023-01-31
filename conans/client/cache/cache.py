@@ -52,9 +52,6 @@ class ClientCache(object):
         # The cache is first thing instantiated, we can remove this from env now
         self._localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
 
-    def closedb(self):
-        self._data_cache.closedb()
-
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
 
