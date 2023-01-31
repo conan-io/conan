@@ -186,7 +186,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
-        pkg_deps = self.conanfile.dependencies.filter({"direct": True})
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
