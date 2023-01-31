@@ -63,7 +63,6 @@ class DepsGraphBuilder(object):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
-
         # TODO: allow bootstrapping, use references instead of names
         # print("  Expanding require ", node, "->", require)
         previous = node.check_downstream_exists(require)
@@ -216,14 +215,10 @@ class DepsGraphBuilder(object):
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         try:
             # TODO: If it is locked not resolve range
-            #  if not require.locked_id:  # if it is locked, nothing to resolved
             # TODO: This range-resolve might resolve in a given remote or cache
             # Make sure next _resolve_recipe use it
-            resolved_ref = self._resolver.resolve(require, str(node.ref), self._remotes,
-                                                  self._update)
-
-            # This accounts for alias too
-            resolved = self._resolve_recipe(resolved_ref, graph_lock)
+            self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
+            resolved = self._resolve_recipe(require.ref, graph_lock)
         except ConanException as e:
             raise GraphError.missing(node, require, str(e))
 

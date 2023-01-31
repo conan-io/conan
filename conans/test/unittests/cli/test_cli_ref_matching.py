@@ -1,6 +1,6 @@
 import pytest
 
-from conan.internal.api.select_pattern import SelectPattern
+from conan.api.model import ListPattern
 
 
 @pytest.mark.parametrize("pattern, result",
@@ -9,5 +9,5 @@ from conan.internal.api.select_pattern import SelectPattern
                           ("zlib/1.2.11#rev1",   ("zlib/1.2.11", "rev1", None, "latest")),
                           ("zlib/1.2.11:pid1",   ("zlib/1.2.11", "latest", "pid1", "latest"))])
 def test_cli_pattern_matching(pattern, result):
-    pattern = SelectPattern(pattern)
+    pattern = ListPattern(pattern)
     assert result == (pattern.ref, pattern.rrev, pattern.package_id, pattern.prev)

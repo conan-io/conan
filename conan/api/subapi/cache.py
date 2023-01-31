@@ -1,5 +1,6 @@
 from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
+from conan.internal.integrity_check import IntegrityChecker
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -44,6 +45,13 @@ class CacheAPI:
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.package()
+
+    @api_method
+    def check_integrity(self, package_list):
+        """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
+        app = ConanApp(self.conan_api.cache_folder)
+        checker = IntegrityChecker(app)
+        checker.check(package_list)
 
 
 def _resolve_latest_ref(app, ref):

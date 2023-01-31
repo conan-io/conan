@@ -2,7 +2,7 @@ from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
 from conans.client.generators import write_generators
-from conans.client.installer import BinaryInstaller, call_system_requirements
+from conans.client.installer import BinaryInstaller
 from conans.errors import ConanInvalidConfiguration
 from conans.util.files import mkdir
 
@@ -13,16 +13,34 @@ class InstallAPI:
         self.conan_api = conan_api
 
     @api_method
-    def install_binaries(self, deps_graph, remotes=None, update=False):
+    def install_binaries(self, deps_graph, remotes=None):
         """ Install binaries for dependency graph
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
-        :param update:
         """
         app = ConanApp(self.conan_api.cache_folder)
         installer = BinaryInstaller(app)
-        # TODO: Extract this from the GraphManager, reuse same object, check args earlier
+        installer.install_system_requires(deps_graph)  # TODO: Optimize InstallGraph computation
         installer.install(deps_graph, remotes)
+
+    @api_method
+    def install_system_requires(self, graph, only_info=False):
+        """ Install binaries for dependency graph
+        :param only_info: Only allow reporting and checking, but never install
+        :param graph: Dependency graph to intall packages for
+        """
+        app = ConanApp(self.conan_api.cache_folder)
+        installer = BinaryInstaller(app)
+        installer.install_system_requires(graph, only_info)
+
+    @api_method
+    def install_sources(self, graph, remotes):
+        """ Install sources for dependency graph
+        :param graph: Dependency graph to install packages for
+        """
+        app = ConanApp(self.conan_api.cache_folder)
+        installer = BinaryInstaller(app)
+        installer.install_sources(graph, remotes)
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
@@ -55,4 +73,3 @@ class InstallAPI:
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         app = ConanApp(self.conan_api.cache_folder)
         write_generators(conanfile, app.hook_manager)
-        call_system_requirements(conanfile)

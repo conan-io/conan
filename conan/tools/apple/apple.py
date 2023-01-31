@@ -29,6 +29,14 @@ def to_apple_arch(conanfile, default=None):
     return _to_apple_arch(arch_, default)
 
 
+def apple_sdk_path(conanfile):
+    sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+    if not sdk_path:
+        # XCRun already knows how to extract os.sdk from conanfile.settings
+        sdk_path = XCRun(conanfile).sdk_path
+    return sdk_path
+
+
 def get_apple_sdk_fullname(conanfile):
     """
     Returns the 'os.sdk' + 'os.sdk_version ' value. Every user should specify it because
@@ -271,7 +279,7 @@ def fix_apple_shared_install_name(conanfile):
                     command = f"install_name_tool {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
-    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile):
         substitutions = _fix_dylib_files(conanfile)
 
         # Only "fix" executables if dylib files were patched, otherwise

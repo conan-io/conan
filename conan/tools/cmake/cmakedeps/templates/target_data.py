@@ -186,7 +186,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
-        pkg_deps = self.conanfile.dependencies.filter({"direct": True})
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
@@ -320,7 +319,8 @@ class _TargetDataContext(object):
         if require and not require.headers:
             self.include_paths = ""
         if require and not require.libs:
-            self.lib_paths = ""
+            # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
+            #                      NOT REALLY LINKING LIB
             self.libs = ""
             self.system_libs = ""
             self.frameworks = ""

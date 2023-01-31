@@ -48,19 +48,15 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
 def config_source(export_source_folder, conanfile, hook_manager):
     """ Implements the sources configuration when a package is going to be built in the
     local cache:
-    - remove old sources if dirty or build_policy=always
-    - execute SCM logic
-    - do a copy of the export and exports_sources folders to the source folder in the cache
+    - remove old sources if dirty
+    - do a copy of the exports_sources folders to the source folder in the cache
     - run the source() recipe method
     """
 
-    def remove_source():
-        conanfile.output.warning("This can take a while for big packages")
-        rmdir(conanfile.folders.base_source)
-
     if is_dirty(conanfile.folders.base_source):
         conanfile.output.warning("Trying to remove corrupted source folder")
-        remove_source()
+        conanfile.output.warning("This can take a while for big packages")
+        rmdir(conanfile.folders.base_source)
         clean_dirty(conanfile.folders.base_source)
 
     if not os.path.exists(conanfile.folders.base_source):  # No source folder, need to get it

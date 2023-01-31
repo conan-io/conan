@@ -8,7 +8,7 @@ from conans.paths import EXPORT_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 class SynchronizeTest(unittest.TestCase):
@@ -74,7 +74,7 @@ class SynchronizeTest(unittest.TestCase):
         ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         pkg_ids = client.cache.get_package_references(ref_with_rev)
         pref = client.cache.get_latest_package_reference(pkg_ids[0])
-        client.run("upload %s#*:%s -r default -c" % (str(ref), str(pkg_ids[0].package_id)))
+        client.run("upload %s:%s -r default -c" % (str(ref), str(pkg_ids[0].package_id)))
 
         # Check that package exists on server
         package_server_path = remote_paths.package(pref)

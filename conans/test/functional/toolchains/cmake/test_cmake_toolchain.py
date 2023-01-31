@@ -557,21 +557,22 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
+
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
-                      '\'["options.missing"]\''
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["options.missing"]\' ' \
+                      '-c tools.cmake.cmaketoolchain:generator=Ninja'
     client.run("install . {}".format(settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "generators"))
 
 
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_setting():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
-                      '\'["settings.missing"]\''
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.missing"]\' ' \
+                      '-c tools.cmake.cmaketoolchain:generator=Ninja'
     client.run("install . {}".format(settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "generators"))
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -589,7 +590,7 @@ def test_cmake_presets_multiple_settings_single_config():
                "-s compiler.version=12.0 -s compiler.cppstd=gnu17"
     client.run("install . {} {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
-                                       "generators"))
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -603,27 +604,32 @@ def test_cmake_presets_multiple_settings_single_config():
     assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
     assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
 
-    # If we create the "Debug" one, it has the same toolchain and preset file, that is
-    # always multiconfig
+    # If we create the "Debug" one, it will be appended
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
-    assert len(user_presets["include"]) == 1
+    assert len(user_presets["include"]) == 2
     presets = json.loads(load(user_presets["include"][0]))
-    assert len(presets["configurePresets"]) == 2
-    assert len(presets["buildPresets"]) == 2
-    assert len(presets["testPresets"]) == 2
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert len(presets["testPresets"]) == 1
     assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["configurePresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
     assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
     assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][1]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
     assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
     assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][1]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+
+    presets = json.loads(load(user_presets["include"][1]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert len(presets["testPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -631,12 +637,12 @@ def test_cmake_presets_multiple_settings_single_config():
                "-s compiler.version=13 -s compiler.cppstd=gnu20"
     client.run("install . {} {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-13-gnu20",
-                                       "generators"))
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the apple-clang 12 the [1] is the apple-clang 13
-    assert len(user_presets["include"]) == 2
-    presets = json.loads(load(user_presets["include"][1]))
+    assert len(user_presets["include"]) == 3
+    presets = json.loads(load(user_presets["include"][2]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -683,8 +689,12 @@ def test_cmake_presets_duplicated_install(multiconfig):
         settings += '-c tools.cmake.cmaketoolchain:generator="Multi-Config"'
     client.run("install . {}".format(settings))
     client.run("install . {}".format(settings))
-    presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
-                                "CMakePresets.json")
+    if multiconfig:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+                                    "CMakePresets.json")
+    else:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "Release", "generators",
+                                    "CMakePresets.json")
     assert os.path.exists(presets_path)
     contents = json.loads(load(presets_path))
     assert len(contents["buildPresets"]) == 1
@@ -725,8 +735,8 @@ def test_remove_missing_presets():
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler", ' \
-                  '"options.shared"]\''
+    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler",' \
+                  '"settings.build_type", "options.shared"]\''
 
     default_compiler = {"Darwin": "apple-clang",
                         "Windows": "msvc",
@@ -736,12 +746,12 @@ def test_cmake_presets_options_single_config():
         client.run("install . {} -o shared={}".format(conf_layout, shared))
         shared_str = "shared_true" if shared else "shared_false"
         assert os.path.exists(os.path.join(client.current_folder,
-                                           "build", "{}-{}".format(default_compiler, shared_str),
+                                           "build", "{}-release-{}".format(default_compiler, shared_str),
                                            "generators"))
 
     client.run("install . {}".format(conf_layout))
     assert os.path.exists(os.path.join(client.current_folder,
-                                       "build", "{}-shared_false".format(default_compiler),
+                                       "build", "{}-release-shared_false".format(default_compiler),
                                        "generators"))
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
@@ -751,12 +761,12 @@ def test_cmake_presets_options_single_config():
     if platform.system() == "Darwin":
         for shared in (True, False):
             shared_str = "shared_true" if shared else "shared_false"
-            client.run_command("cmake . --preset apple-clang-{}-release".format(shared_str))
-            client.run_command("cmake --build --preset apple-clang-{}-release".format(shared_str))
-            client.run_command("ctest --preset apple-clang-{}-release".format(shared_str))
+            client.run_command("cmake . --preset apple-clang-release-{}".format(shared_str))
+            client.run_command("cmake --build --preset apple-clang-release-{}".format(shared_str))
+            client.run_command("ctest --preset apple-clang-release-{}".format(shared_str))
             the_lib = "libhello.a" if not shared else "libhello.dylib"
             path = os.path.join(client.current_folder,
-                                "build", "apple-clang-{}".format(shared_str), "release", the_lib)
+                                "build", "apple-clang-release-{}".format(shared_str), the_lib)
             assert os.path.exists(path)
 
 
@@ -977,9 +987,6 @@ def test_cmake_presets_with_conanfile_txt():
 
     c.run("install .")
     c.run("install . -s build_type=Debug")
-    assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
-    presets_path = os.path.join(c.current_folder, "build", "generators", "CMakePresets.json")
-    assert os.path.exists(presets_path)
 
     if platform.system() != "Windows":
         c.run_command("cmake --preset debug")
@@ -1178,7 +1185,8 @@ def test_cmake_toolchain_vars_when_option_declared():
 
 
 @pytest.mark.tool("cmake")
-def test_find_program_for_tool_requires():
+@pytest.mark.parametrize("single_profile", [True, False])
+def test_find_program_for_tool_requires(single_profile):
     """Test that the same reference can be both a tool_requires and a regular requires,
     and that find_program (executables) and find_package (libraries) find the correct ones
     when cross building.
@@ -1250,7 +1258,7 @@ def test_find_program_for_tool_requires():
                 self.requires("foobar/1.0")
 
             def build_requirements(self):
-                self.tool_requires("foobar/1.0")
+               self.tool_requires("foobar/1.0")
     """)
 
     cmakelists_consumer = textwrap.dedent("""
@@ -1260,6 +1268,9 @@ def test_find_program_for_tool_requires():
         find_program(FOOBIN_EXECUTABLE foobin)
         message("foobin executable: ${FOOBIN_EXECUTABLE}")
         message("foobar include dir: ${foobar_INCLUDE_DIR}")
+        if(NOT FOOBIN_EXECUTABLE)
+          message(FATAL_ERROR "FOOBIN executable not found")
+        endif()
     """)
 
     client.save({

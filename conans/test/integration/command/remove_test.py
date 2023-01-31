@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 
 import pytest
@@ -162,7 +163,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("upload foobar/0.1@user/testing -r default -c")
         ref = self.client.cache.get_latest_recipe_reference(
                RecipeReference.loads("foobar/0.1@user/testing"))
-        self.client.run("list foobar/0.1@user/testing#{} -r default".format(ref.revision))
+        self.client.run("list foobar/0.1@user/testing#{}:* -r default".format(ref.revision))
         default_arch = self.client.get_default_host_profile().settings['arch']
         self.assertIn(f"arch: {default_arch}", self.client.out)
         self.assertIn("arch: x86", self.client.out)
@@ -187,8 +188,8 @@ bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
 bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
-@pytest.fixture()
-def populated_client():
+@pytest.fixture(scope="module")
+def _populated_client_base():
     """
     foo/1.0@ (one revision) no packages
     foo/1.0@user/channel (one revision)  no packages
@@ -230,6 +231,20 @@ def populated_client():
     client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
     client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
 
+    return client
+
+
+@pytest.fixture()
+def populated_client(_populated_client_base):
+    """ this is much faster than creating and uploading everythin
+    """
+    client = TestClient(default_server_user=True)
+    shutil.rmtree(client.cache_folder)
+    shutil.copytree(_populated_client_base.cache_folder, client.cache_folder)
+    shutil.rmtree(client.servers["default"].test_server._base_path)
+    shutil.copytree(_populated_client_base.servers["default"].test_server._base_path,
+                    client.servers["default"].test_server._base_path)
+    client.update_servers()
     return client
 
 
@@ -289,7 +304,7 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:*#*", "prefs": []},
     {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
     {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1#*:{}".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:{}*".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
     {"remove": "bar/1.1#*:*{}".format(pkg_id_release[-12:]), "prefs": [bar_rrev2_debug]},
     {"remove": "{}:*{}*".format(bar_rrev2, pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
     {"remove": "*/*#*:*{}*".format(pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
@@ -300,15 +315,13 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": '*/*#*:*#* -p', "error": True,
      "error_msg": "argument -p/--package-query: expected one argument"},
     {"remove": "bar/1.1#*:", "prefs": []},
-    {"remove": "bar/1.1#*:234234#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1:234234", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1 -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:234234*#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:234234*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:* -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
-    populated_client.run("remove f/* -c {}".format(r))
-
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
     assert pids == {bar_rrev2_debug, bar_rrev2_release}
 

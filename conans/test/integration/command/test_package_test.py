@@ -298,4 +298,4 @@ def test_folder_output():
     # c.run("create .")
     c.run("test test_package hello/0.1@")
     assert os.path.exists(os.path.join(c.current_folder,
-                                       "test_package/test_output/hello-config.cmake"))
+                                       "test_package/hello-config.cmake"))

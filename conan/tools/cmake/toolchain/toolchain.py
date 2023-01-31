@@ -147,7 +147,7 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
-        self.user_presets_path = None
+        self.user_presets_path = "CMakeUserPresets.json"
 
     def _context(self):
         """ Returns dict, the context for the template

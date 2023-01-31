@@ -34,6 +34,90 @@ def test_shared_cmake_toolchain():
     assert "chat: Release!" in client.out
     assert "hello: Release!" in client.out
 
+    # https://github.com/conan-io/conan/issues/13000
+    # This failed, because of rpath link in Linux
+    client = TestClient(servers=client.servers, inputs=["admin", "password"])
+    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("upload * -c -r default")
+    client.run("remove * -c")
+
+    client = TestClient(servers=client.servers)
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
+    # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
+
+    client.run_command(command)
+    assert "main: Release!" in client.out
+    assert "chat: Release!" in client.out
+    assert "hello: Release!" in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_shared_cmake_toolchain_components():
+    """ the same as above, but with components.
+    """
+    client = TestClient(default_server_user=True)
+
+    client.save(pkg_cmake("hello", "0.1"))
+    conanfile = client.load("conanfile.py")
+    conanfile2 = conanfile.replace('self.cpp_info.libs = ["hello"]',
+                                   'self.cpp_info.components["hi"].libs = ["hello"]')
+    assert conanfile != conanfile2
+    client.save({"conanfile.py": conanfile2})
+    client.run("create . -o hello/*:shared=True")
+    # Chat
+    client.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)
+    conanfile = client.load("conanfile.py")
+    conanfile2 = conanfile.replace('self.cpp_info.libs = ["chat"]',
+                                   'self.cpp_info.components["talk"].libs = ["chat"]\n'
+                                   '        self.cpp_info.components["talk"].requires=["hello::hi"]')
+    assert conanfile != conanfile2
+    client.save({"conanfile.py": conanfile2})
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+
+    # App
+    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    cmakelist = client.load("CMakeLists.txt")
+    cmakelist2 = cmakelist.replace('target_link_libraries(app  chat::chat )',
+                                   'target_link_libraries(app  chat::talk )')
+    assert cmakelist != cmakelist2
+    client.save({"CMakeLists.txt": cmakelist2})
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("upload * -c -r default")
+    client.run("remove * -c")
+
+    client = TestClient(servers=client.servers)
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
+    # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
+
+    client.run_command(command)
+    assert "main: Release!" in client.out
+    assert "chat: Release!" in client.out
+    assert "hello: Release!" in client.out
+
+    # https://github.com/conan-io/conan/issues/13000
+    # This failed, because of rpath link in Linux
+    client = TestClient(servers=client.servers, inputs=["admin", "password"])
+    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    client.run("upload * -c -r default")
+    client.run("remove * -c")
+
+    client = TestClient(servers=client.servers)
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
+    # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
+
+    client.run_command(command)
+    assert "main: Release!" in client.out
+    assert "chat: Release!" in client.out
+    assert "hello: Release!" in client.out
+
 
 @pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_test_package():
@@ -90,7 +174,9 @@ def test_client_shared():
 
     # We can run the exe from the test package directory also, without environment
     # because there is an internal RPATH in the exe with an abs path to the "hello"
-    exe_folder = os.path.join("test_package", "test_output", "build", "release")
+    build_folder = client.created_test_build_folder("hello/0.1")
+    exe_folder = os.path.join("test_package", build_folder)
+    client.test_exe_folder = exe_folder
     assert os.path.exists(os.path.join(client.current_folder, exe_folder, "example"))
     client.run_command(os.path.join(exe_folder, "example"))
 
@@ -108,7 +194,7 @@ def test_shared_same_dir_using_tool(test_client_shared):
     If we build an executable in Mac and we want it to locate the shared libraries in the same
     directory, we have different alternatives, here we use the "install_name_tool"
     """
-    exe_folder = os.path.join("test_package", "test_output", "build", "release")
+    exe_folder = test_client_shared.test_exe_folder
     # Alternative 1, add the "." to the rpaths so the @rpath from the exe can be replaced with "."
     test_client_shared.current_folder = os.path.join(test_client_shared.current_folder, exe_folder)
     test_client_shared.run_command("install_name_tool -add_rpath '.' example")
@@ -155,8 +241,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
 
                     def generate(self):
                         # The exe is installed by cmake at test_package/bin
-                        # FIXME: This is a bit weird folder management
-                        dest = os.path.join(self.folders.base_build, "bin")
+                        dest = os.path.join(self.recipe_folder, "bin")
                         for dep in self.dependencies.values():
                             copy(self, "*.dylib", dep.cpp_info.libdirs[0], dest)
 
@@ -182,7 +267,7 @@ def test_shared_same_dir_using_cmake(test_client_shared):
     test_client_shared.save({"test_package/CMakeLists.txt": cmake, "test_package/conanfile.py": cf})
     test_client_shared.run("create . -o hello*:shared=True")
     test_client_shared.run("remove '*' -c")
-    exe_folder = os.path.join("test_package", "test_output", "bin")
+    exe_folder = os.path.join("test_package", "bin")
     test_client_shared.run_command(os.path.join(exe_folder, "test"))
 
 
@@ -196,7 +281,7 @@ def test_shared_same_dir_using_env_var_current_dir(test_client_shared):
     """
 
     # Alternative 3, FAILING IN CI, set DYLD_LIBRARY_PATH in the current dir
-    exe_folder = os.path.join("test_package", "test_output", "build", "release")
+    exe_folder = test_client_shared.test_exe_folder
     rmdir(os.path.join(test_client_shared.current_folder, exe_folder))
     test_client_shared.run("create . -o hello*:shared=True")
     test_client_shared.run("remove '*' -c")

@@ -9,7 +9,6 @@ import tarfile
 import tempfile
 import time
 
-from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
 
@@ -350,7 +349,8 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     try:
         # Format is forced because in Python3.8, it changed and it generates different tarfiles
         # with different checksums, which break hashes of tgzs
-        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.GNU_FORMAT, **kwargs)
+        # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
+        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.PAX_FORMAT, **kwargs)
     except IOError:
         fileobj.close()
         if mode == 'r':

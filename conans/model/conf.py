@@ -39,6 +39,7 @@ BUILT_IN_CONFS = {
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
+    "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
     "tools.build.cross_building:can_run": "Bool value that indicates whether is possible to run a non-native "
@@ -465,22 +466,6 @@ class ConfDefinition:
 
     def __bool__(self):
         return bool(self._pattern_confs)
-
-    def __getitem__(self, module_name):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0. Use self.get() instead.
-        if a module name is requested for this, it goes to the None-Global config by default
-        """
-        pattern, name = self._split_pattern_name(module_name)
-        return self._pattern_confs.get(pattern, Conf()).get(name)
-
-    def __delitem__(self, module_name):
-        """
-        DEPRECATED: it's going to disappear in Conan 2.0.  Use self.pop() instead.
-        if a module name is requested for this, it goes to the None-Global config by default
-        """
-        pattern, name = self._split_pattern_name(module_name)
-        del self._pattern_confs.get(pattern, Conf())[name]
 
     def get(self, conf_name, default=None, check_type=None):
         """

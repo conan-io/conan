@@ -1,5 +1,5 @@
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, apple_sdk_path
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string
 from conan.tools.build.cross_building import cross_building
@@ -9,6 +9,7 @@ from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
+from conans.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:
@@ -78,7 +79,7 @@ class AutotoolsToolchain:
             # Apple Stuff
             if os_build == "Macos":
                 # SDK path is mandatory for cross-building
-                sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+                sdk_path = apple_sdk_path(self._conanfile)
                 if not sdk_path:
                     raise ConanException("You must provide a valid SDK path for cross-compilation.")
                 apple_arch = to_apple_arch(self._conanfile)
@@ -174,11 +175,10 @@ class AutotoolsToolchain:
     def _default_configure_shared_flags(self):
         args = []
         # Just add these flags if there's a shared option defined (never add to exe's)
-        # FIXME: For Conan 2.0 use the package_type to decide if adding these flags or not
         try:
-            if self._conanfile.options.shared:
+            if self._conanfile.package_type is PackageType.SHARED:
                 args.extend(["--enable-shared", "--disable-static"])
-            else:
+            elif self._conanfile.package_type is PackageType.STATIC:
                 args.extend(["--disable-shared", "--enable-static"])
         except ConanException:
             pass

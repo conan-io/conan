@@ -20,7 +20,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
     tools.build:exelinkflags+=["--flag6"]
     tools.build:defines+=["DEF1", "DEF2"]
     """)
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     client.run("new msbuild_lib -d name=hello -d version=0.1")
     client.save({
         "myprofile": profile
