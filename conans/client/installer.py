@@ -177,7 +177,10 @@ class BinaryInstaller:
         self._hook_manager = app.hook_manager
 
     def _install_source(self, node, remotes):
-        if node.binary != BINARY_BUILD:
+        conanfile = node.conanfile
+        download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
+
+        if not download_source and node.binary != BINARY_BUILD:
             return
 
         conanfile = node.conanfile
@@ -192,16 +195,20 @@ class BinaryInstaller:
         config_source(export_source_folder, conanfile, self._hook_manager)
 
     @staticmethod
-    def install_system_requires(graph):
+    def install_system_requires(graph, only_info=False):
         install_graph = InstallGraph(graph)
         install_order = install_graph.install_order()
 
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
-                    if package.binary == BINARY_SKIP:
+                    if not only_info and package.binary == BINARY_SKIP:
                         continue
                     conanfile = package.nodes[0].conanfile
+                    # TODO: Refactor magic strings and use _SystemPackageManagerTool.mode_xxx ones
+                    mode = conanfile.conf.get("tools.system.package_manager:mode")
+                    if only_info and mode is None:
+                        continue
                     if hasattr(conanfile, "system_requirements"):
                         with conanfile_exception_formatter(conanfile, "system_requirements"):
                             conanfile.system_requirements()
@@ -209,9 +216,21 @@ class BinaryInstaller:
                         n.conanfile.system_requires = conanfile.system_requires
 
         conanfile = graph.root.conanfile
+        mode = conanfile.conf.get("tools.system.package_manager:mode")
+        if only_info and mode is None:
+            return
         if hasattr(conanfile, "system_requirements"):
             with conanfile_exception_formatter(conanfile, "system_requirements"):
                 conanfile.system_requirements()
+
+    def install_sources(self, graph, remotes):
+        install_graph = InstallGraph(graph)
+        install_order = install_graph.install_order()
+
+        for level in install_order:
+            for install_reference in level:
+                for package in install_reference.packages.values():
+                    self._install_source(package.nodes[0], remotes)
 
     def install(self, deps_graph, remotes):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
