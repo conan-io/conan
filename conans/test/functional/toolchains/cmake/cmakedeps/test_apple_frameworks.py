@@ -255,7 +255,7 @@ def test_apple_own_framework_cross_build(settings):
     # the UX could be improved, but the simplest could be:
     #  - Have users 2 test_packages, one for the host and other for the build, with some naming
     #    convention. CI launches one after the other if found
-    client.run("create . %s -tf=None --build-require" % settings)
+    client.run("create . %s -tf=\"\" --build-require" % settings)
     client.run("create . %s" % settings)
     if not len(settings):
         assert "Hello World Release!" in client.out
@@ -521,7 +521,7 @@ def test_iphoneos_crossbuild():
     client = TestClient(path_with_spaces=False)
     client.save({"ios-armv8": profile}, clean_first=True)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf None")
+    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf=\"\"")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the

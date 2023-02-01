@@ -134,7 +134,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
     client2 = TestClient(servers=client.servers, path_with_spaces=False)
     assert client2.cache_folder != client.cache_folder
     client.run("new autotools_lib -d name=hello -d version=0.1")
-    client.run("create . -o hello/*:shared=True -tf=None")
+    client.run("create . -o hello/*:shared=True -tf=\"\"")
     client.run("upload hello/0.1 -c -r default")
     client.run("remove * -c")
 
@@ -320,7 +320,7 @@ def test_autotools_fix_shared_libs():
         "conanfile.py": conanfile,
     })
 
-    client.run("create . -o hello/*:shared=True -tf=None")
+    client.run("create . -o hello/*:shared=True -tf=\"\"")
 
     ref = RecipeReference.loads("hello/0.1")
     pref = client.get_latest_package_reference(ref)

@@ -43,7 +43,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
 
     client.run("new cmake_lib -d name=dep -d version=1.0")
     conf = " ".join(f'-c {k}="{v}"' for k, v in conf.items() if v)
-    client.run(f'create . -tf=None {settings} {conf}'
+    client.run(f'create . -tf=\"\" {settings} {conf}'
                f' -c tools.cmake.cmaketoolchain:generator="Visual Studio 15"')
 
     # Rearrange defines to macro / value dict

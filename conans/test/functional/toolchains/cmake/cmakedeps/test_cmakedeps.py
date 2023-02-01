@@ -523,7 +523,7 @@ def test_error_missing_build_type():
     client = TestClient()
 
     client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -585,7 +585,7 @@ def test_map_imported_config():
 
     client = TestClient()
     client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create . -tf=None -s build_type=Release")
+    client.run("create . -tf=\"\" -s build_type=Release")
 
     # It is necessary a 2-level test to make the fixes evident
     talk_cpp = gen_function_cpp(name="talk", includes=["hello"], calls=["hello"])
@@ -622,7 +622,7 @@ def test_map_imported_config():
                                                   install=True, public_header="talk.h"),
                  "talk.cpp": talk_cpp,
                  "talk.h": talk_h}, clean_first=True)
-    client.run("create . -tf=None -s build_type=Release")
+    client.run("create . -tf=\"\" -s build_type=Release")
 
     conanfile = textwrap.dedent("""
         [requires]

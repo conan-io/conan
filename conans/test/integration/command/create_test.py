@@ -164,7 +164,7 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1"),
                      "test_package/conanfile.py":
                          GenConanfile().with_test('self.output.info("TESTING!!!")')})
-        client.run("create . --user=lasote --channel=testing --test-folder=None")
+        client.run("create . --user=lasote --channel=testing --test-folder=\"\"")
         self.assertIn("pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertNotIn("TESTING!!!", client.out)
 
