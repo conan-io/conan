@@ -271,5 +271,11 @@ def _append_user_preset_path(conanfile, data, preset_path):
 
 
 def load_cmake_presets(folder):
-    tmp = load(os.path.join(folder, "CMakePresets.json"))
+    try:
+        tmp = load(os.path.join(folder, "CMakePresets.json"))
+    except FileNotFoundError:
+        # Issue: https://github.com/conan-io/conan/issues/12896
+        raise ConanException(f"CMakePresets.json was not found in {folder} folder. Check that you "
+                             f"are using CMakeToolchain as generator to ensure its correct "
+                             f"initialization.")
     return json.loads(tmp)
