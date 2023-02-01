@@ -521,7 +521,7 @@ def test_iphoneos_crossbuild():
     client = TestClient(path_with_spaces=False)
     client.save({"ios-armv8": profile}, clean_first=True)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf None")
+    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf=\"\"")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the
