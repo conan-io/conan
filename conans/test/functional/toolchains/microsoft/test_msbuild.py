@@ -512,7 +512,7 @@ class WinTest(unittest.TestCase):
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new cmake_lib -d name=hello -d version=0.1")
-        client.run("create . %s -tf=None" % (settings,))
+        client.run("create . %s -tf=\"\"" % (settings,))
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,

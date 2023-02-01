@@ -13,7 +13,7 @@ def test_msbuild_deps_components():
     client = TestClient()
 
     client.run("new cmake_lib -d name=tcp -d version=1.0")
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     header = textwrap.dedent("""
         #pragma once

@@ -637,7 +637,7 @@ class TestCmakeTestMethod:
             """)
         c = TestClient()
         c.run("new cmake_lib -d name=test -d version=0.1")
-        c.run("create .  -tf=None -o test*:shared=True")
+        c.run("create .  -tf=\"\" -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": cmakelist,

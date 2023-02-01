@@ -1159,7 +1159,7 @@ def test_cmake_toolchain_vars_when_option_declared():
     #       takes precedence.
     fpic_option = "-o mylib/*:fPIC=True" if platform.system() != "Windows" else ""
     fpic_cmake_value = "ON" if platform.system() != "Windows" else "OFF"
-    t.run(f"create . -o mylib/*:shared=False {fpic_option} --test-folder=None")
+    t.run(f"create . -o mylib/*:shared=False {fpic_option} --test-folder=")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: {fpic_cmake_value}" in t.out
 

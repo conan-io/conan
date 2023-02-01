@@ -255,7 +255,7 @@ def test_apple_own_framework_cross_build(settings):
     # the UX could be improved, but the simplest could be:
     #  - Have users 2 test_packages, one for the host and other for the build, with some naming
     #    convention. CI launches one after the other if found
-    client.run("create . %s -tf=None --build-require" % settings)
+    client.run("create . %s -tf=\"\" --build-require" % settings)
     client.run("create . %s" % settings)
     if not len(settings):
         assert "Hello World Release!" in client.out

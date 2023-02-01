@@ -434,7 +434,7 @@ class TestLockTestPackage:
 
         # or to be more guaranteed
         with c.chdir("app"):
-            c.run("create . --lockfile=conan.lock -tf=None")
+            c.run("create . --lockfile=conan.lock -tf=\"\"")
             assert "cmake" not in c.out
             assert "dep/1.0" in c.out
             assert "dep/2.0" not in c.out

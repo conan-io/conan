@@ -31,14 +31,12 @@ def create(conan_api, parser, *args):
                         help='The provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
-                             'Use "None" to skip the test stage')
+                             'Use "" to skip the test stage')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
-    # Now if parameter --test-folder=None (string None) we have to skip tests
-    test_folder = False if args.test_folder == "None" else args.test_folder
-    test_conanfile_path = _get_test_conanfile_path(test_folder, path)
+    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
@@ -155,14 +153,12 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
 def _get_test_conanfile_path(tf, conanfile_path):
     """Searches in the declared test_folder or in the standard "test_package"
     """
-
-    if tf is False:
-        # Look up for testing conanfile can be disabled if tf (test folder) is False
+    if tf == "":  # Now if parameter --test-folder="" we have to skip tests
         return None
-
+    tf = tf or "test_package"  # default if not specificed
     base_folder = os.path.dirname(conanfile_path)
-    test_conanfile_path = os.path.join(base_folder, tf or "test_package", "conanfile.py")
+    test_conanfile_path = os.path.join(base_folder, tf, "conanfile.py")
     if os.path.exists(test_conanfile_path):
         return test_conanfile_path
-    if tf:
-        raise ConanException("test folder '{tf}' not available, or it doesn't have a conanfile.py")
+    else:
+        raise ConanException(f"test folder '{tf}' not available, or it doesn't have a conanfile.py")
