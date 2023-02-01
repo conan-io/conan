@@ -155,10 +155,9 @@ def _get_test_conanfile_path(tf, conanfile_path):
     """
     if tf == "":  # Now if parameter --test-folder="" we have to skip tests
         return None
-    tf = tf or "test_package"  # default if not specificed
     base_folder = os.path.dirname(conanfile_path)
-    test_conanfile_path = os.path.join(base_folder, tf, "conanfile.py")
+    test_conanfile_path = os.path.join(base_folder, tf or "test_package", "conanfile.py")
     if os.path.exists(test_conanfile_path):
         return test_conanfile_path
-    else:
+    elif tf:
         raise ConanException(f"test folder '{tf}' not available, or it doesn't have a conanfile.py")
