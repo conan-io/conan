@@ -27,7 +27,7 @@ class LockfileAPI:
         :param conanfile_path: The full path to the conanfile, if existing
         :param lockfile: the name of the lockfile file
         """
-        if lockfile == "None":
+        if lockfile == "":
             # Allow a way with ``--lockfile=None`` to optout automatic usage of conan.lock
             return
 
