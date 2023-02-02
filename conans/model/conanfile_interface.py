@@ -118,3 +118,7 @@ class ConanFileInterface:
     @property
     def url(self):
         return self._conanfile.url
+
+    @property
+    def output(self):
+        return self._conanfile.output
