@@ -28,7 +28,7 @@ class LockfileAPI:
         :param lockfile: the name of the lockfile file
         """
         if lockfile == "":
-            # Allow a way with ``--lockfile=None`` to optout automatic usage of conan.lock
+            # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
             return
 
         cwd = cwd or os.getcwd()

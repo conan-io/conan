@@ -24,7 +24,8 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 
 def add_lockfile_args(parser):
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                        help="Path to a lockfile.")
+                        help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                             "existing 'conan.lock' file")
     parser.add_argument("--lockfile-partial", action="store_true",
                         help="Do not raise an error if some dependency is not found in lockfile")
     parser.add_argument("--lockfile-out", action=OnceArgument,
