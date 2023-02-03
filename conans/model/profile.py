@@ -30,12 +30,12 @@ class Profile(object):
         return self.dumps()
 
     def serialize(self):
+        # TODO: Remove it seems dead
         return {
             "settings": self.settings,
             "package_settings": self.package_settings,
             "options": self.options.serialize(),
             "tool_requires": self.tool_requires,
-            "system_tool_requires": self.system_tool_requires,
             "conf": self.conf.serialize(),
             # FIXME: Perform a serialize method for ProfileEnvironment
             "build_env": self.buildenv.dumps()
