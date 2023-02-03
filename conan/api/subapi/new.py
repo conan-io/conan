@@ -101,6 +101,7 @@ class NewAPI:
         definitions["package_name"] = as_package_name(name)
         definitions["as_iterable"] = lambda x: [x] if isinstance(x, str) else x
         definitions["as_name"] = as_name
+        definitions["names"] = lambda requires: ", ".join(r.split("/", 1)[0] for r in requires)
         for k, v in template_files.items():
             k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(
                 **definitions)

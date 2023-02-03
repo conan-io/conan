@@ -19,6 +19,7 @@ class GnuDepsFlags(object):
         self.lib_paths = self._format_library_paths(cpp_info.libdirs)
         self.defines = self._format_defines(cpp_info.defines)
         self.libs = self._format_libraries(cpp_info.libs)
+        print("************+LIBS!!!!!!!!!", self.libs)
         self.frameworks = self._format_frameworks(cpp_info.frameworks)
         self.framework_paths = self._format_frameworks(cpp_info.frameworkdirs, is_path=True)
 
@@ -84,6 +85,7 @@ class GnuDepsFlags(object):
                 result.append(library)
             else:
                 result.append("-l%s" % library)
+        print("RESULT FORMATITNG LIBRAIES", libraries, "====>", result)
         return result
 
     def _adjust_path(self, path):
