@@ -48,7 +48,9 @@ class CMake(object):
         """
         if getattr(conanfile, "must_use_new_helpers", None):
             wrong_helper_msg = "Using the wrong 'CMake' helper. To use CMakeDeps, CMakeToolchain "\
-                               "you should use 'from conan.tools.cmake import CMake'"
+                               "you should use 'from conan.tools.cmake import CMake'. "\
+                               "Set environment variable CONAN_DISABLE_STRICT_MODE=1 to override "\
+                               "this check (should only be used to build old packages)."
             if get_env("CONAN_DISABLE_STRICT_MODE", False):
                 conanfile.output.warning(wrong_helper_msg)
             else:
