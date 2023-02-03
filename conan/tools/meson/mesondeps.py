@@ -46,7 +46,6 @@ class MesonDeps:
             # In case we have components, aggregate them, we do not support isolated
             # "targets" with autotools
             ret.merge(dep_cppinfo)
-        print(ret.serialize())
         return ret
 
     def _rpaths_flags(self):
@@ -57,7 +56,6 @@ class MesonDeps:
         return flags
 
     def get_gnu_flags(self):
-        print("CALLING GNU_FLAGS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 
         # cpp_flags
@@ -79,7 +77,6 @@ class MesonDeps:
         # libs
         libs = flags.libs
         libs.extend(flags.system_libs)
-        print("MESON DEPS LIBS!!!!!!!!!!", libs)
 
         # cflags
         cflags = flags.cflags

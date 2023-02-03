@@ -58,6 +58,7 @@ def test_other_client_can_link_cmake(transitive_shared_client):
     _check_install_run(transitive_shared_client)
 
 
+# FIXME: Move to the correct Meson space
 @pytest.mark.tool("meson")
 @pytest.mark.tool("pkg_config")
 def test_other_client_can_link_meson(transitive_shared_client):
@@ -67,6 +68,21 @@ def test_other_client_can_link_meson(transitive_shared_client):
     client = TestClient(servers=client.servers, inputs=["admin", "password"], path_with_spaces=False)
     client.run("new meson_exe -d name=app -d version=0.1 -d requires=chat/0.1")
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    # TODO Check that static builds too
+    # client.run("create . --build=missing")
+
+
+# FIXME: Move to the correct Meson space
+@pytest.mark.tool("autotools")
+def test_other_client_can_link_autotools(transitive_shared_client):
+    client = transitive_shared_client
+    # https://github.com/conan-io/conan/issues/13000
+    # This failed, because of rpath link in Linux
+    client = TestClient(servers=client.servers, inputs=["admin", "password"], path_with_spaces=False)
+    client.run("new autotools_exe -d name=app -d version=0.1 -d requires=chat/0.1")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    # TODO Check that static builds too
+    # client.run("create . --build=missing")
 
 
 @pytest.mark.tool("cmake")

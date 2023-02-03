@@ -16,7 +16,6 @@ def test_meson_lib_template():
     # Local flow works
     client.run("install .")
     client.run("build .")
-    print(client.out)
     client.run("export-pkg . --name=hello --version=0.1")
     ref = RecipeReference.loads("hello/0.1")
     pref = client.get_latest_package_reference(ref)
@@ -42,7 +41,6 @@ def test_meson_exe_template():
     # Local flow works
     client.run("install .")
     client.run("build .")
-    print(client.out)
 
     # Create works
     client.run("create .")

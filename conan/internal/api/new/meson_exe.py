@@ -1,7 +1,8 @@
 from conan.internal.api.new.cmake_lib import source_cpp, source_h, test_main
 
 conanfile_exe = """from conan import ConanFile
-from conan.tools.meson import MesonToolchain, MesonDeps, Meson
+from conan.tools.meson import MesonToolchain, Meson
+from conan.tools.gnu import PkgConfigDeps
 
 
 class {{package_name}}Conan(ConanFile):
@@ -17,7 +18,7 @@ class {{package_name}}Conan(ConanFile):
 
     {% if requires is defined -%}
     def requirements(self):
-        {% for require in as_iterable(requires) -%}
+        {% for require in requires -%}
         self.requires("{{ require }}")
         {% endfor %}
     {%- endif %}
@@ -26,10 +27,10 @@ class {{package_name}}Conan(ConanFile):
         self.folders.build = "build"
 
     def generate(self):
+        deps = PkgConfigDeps(self)
+        deps.generate()
         tc = MesonToolchain(self)
         tc.generate()
-        deps = MesonDeps(self)
-        deps.generate()
 
     def build(self):
         meson = Meson(self)
@@ -61,8 +62,8 @@ _meson_build_exe = """\
 project('{{name}} ', 'cpp')
 {% if requires is defined -%}
 cxx = meson.get_compiler('cpp')
-{% for require in as_iterable(requires) -%}
-{{as_name(require)}} = cxx.find_library('{{as_name(require)}}', required: true)
+{% for require in requires -%}
+{{as_name(require)}} = dependency('{{as_name(require)}}', required: true)
 {% endfor %}
 {%- endif %}
 {% if requires is defined -%}
