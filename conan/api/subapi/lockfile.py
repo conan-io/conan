@@ -15,8 +15,9 @@ class LockfileAPI:
     @api_method
     def get_lockfile(self, lockfile=None, conanfile_path=None, cwd=None, partial=False):
         """ obtain a lockfile, following this logic:
-        - If lockfile is explicitly defined, it would be either absolute or relative to cwd
-          the lockfile file must exist. If lockfile="None" (as string, no lockfile will be used)
+        - If lockfile is explicitly defined, it would be either absolute or relative to cwd and
+          the lockfile file must exist. If lockfile="" (empty string) the default "conan.lock"
+          lockfile will not be automatically used even if it is present.
         - If lockfile is not defined, it will still look for a default conan.lock:
            - if conanfile_path is defined, it will be besides it
            - if conanfile_path is not defined, the default conan.lock should be in cwd
@@ -27,8 +28,8 @@ class LockfileAPI:
         :param conanfile_path: The full path to the conanfile, if existing
         :param lockfile: the name of the lockfile file
         """
-        if lockfile == "None":
-            # Allow a way with ``--lockfile=None`` to optout automatic usage of conan.lock
+        if lockfile == "":
+            # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
             return
 
         cwd = cwd or os.getcwd()
