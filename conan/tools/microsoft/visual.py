@@ -279,6 +279,11 @@ def is_msvc_static_runtime(conanfile):
 
 
 def msvs_toolset(conanfile):
+    """ Returns the corresponding Visual Studio/msvc platform toolset based on the settings of the
+        given conanfile
+    :param conanfile: Conanfile instance
+    :return: Microsoft toolset when compiler is valid. Otherwise, an empty string.
+    """
     settings = conanfile.settings
     compiler = settings.get_safe("compiler")
     compiler_version = settings.get_safe("compiler.version")
