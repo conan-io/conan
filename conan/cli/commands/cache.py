@@ -1,5 +1,6 @@
 from conan.api.conan_api import ConanAPI
-from conan.cli.command import conan_command, conan_subcommand
+from conan.api.model import ListPattern
+from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands import default_text_formatter
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -48,3 +49,26 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
         else:
             raise ConanException(f"'--folder {args.folder}' requires a recipe reference")
     return path
+
+
+@conan_subcommand(formatters={"text": default_text_formatter})
+def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
+    """
+        Shows the path in the Conan cache af a given reference
+    """
+    subparser.add_argument("pattern", help="selection pattern for references to clean")
+    subparser.add_argument("-s", "--source", action='store_true', default=False,
+                           help="Clean source folders")
+    subparser.add_argument("-b", "--build", action='store_true', default=False,
+                           help="Clean source folders")
+    subparser.add_argument("-d", "--download", action='store_true', default=False,
+                           help="Clean download folders")
+    subparser.add_argument('-p', '--package-query', action=OnceArgument,
+                           help="Remove all packages (empty) or provide a query: "
+                                "os=Windows AND (arch=x86 OR compiler=gcc)")
+    args = parser.parse_args(*args)
+
+    ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+    package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    conan_api.cache.clean(package_list, source=args.source, build=args.build,
+                          download=args.download)
