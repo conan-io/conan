@@ -60,7 +60,7 @@ class CMake(object):
         self._toolchain_file = configure_preset.get("toolchainFile")
         self._cache_variables = configure_preset["cacheVariables"]
 
-        self._cmake_program = "cmake"  # Path to CMake should be handled by environment
+        self._cmake_program = conanfile.conf.get("tools.cmake:path", check_type=str, default="cmake")
 
     def configure(self, variables=None, build_script_folder=None, cli_args=None):
         cmakelist_folder = self._conanfile.source_folder
