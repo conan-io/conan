@@ -48,7 +48,7 @@ class {{package_name}}Recipe(ConanFile):
 
     {% if requires is defined -%}
     def requirements(self):
-        {% for require in as_iterable(requires) -%}
+        {% for require in requires -%}
         self.requires("{{ require }}")
         {% endfor %}
     {%- endif %}
@@ -58,7 +58,7 @@ cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 find_package({{as_name(require)}} CONFIG REQUIRED)
 {% endfor %}
 {%- endif %}
@@ -68,7 +68,7 @@ add_library({{name}} src/{{name}}.cpp)
 target_include_directories({{name}} PUBLIC include)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 target_link_libraries({{name}} PRIVATE {{as_name(require)}}::{{as_name(require)}})
 {% endfor %}
 {%- endif %}
@@ -92,7 +92,7 @@ source_h = """#pragma once
 source_cpp = r"""#include <iostream>
 #include "{{name}}.h"
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 #include "{{ as_name(require) }}.h"
 {% endfor %}
 {%- endif %}
@@ -100,7 +100,7 @@ source_cpp = r"""#include <iostream>
 
 void {{package_name}}(){
     {% if requires is defined -%}
-    {% for require in as_iterable(requires) -%}
+    {% for require in requires -%}
     {{ as_name(require) }}();
     {% endfor %}
     {%- endif %}
@@ -233,7 +233,7 @@ project(PackageTest CXX)
 find_package({{name}} CONFIG REQUIRED)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 find_package({{as_name(require)}} CONFIG REQUIRED)
 {% endfor %}
 {%- endif %}
