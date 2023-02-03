@@ -47,8 +47,12 @@ class CMake(object):
         :param generator_platform: Generator platform name or none to autodetect (-A cmake option)
         """
         if getattr(conanfile, "must_use_new_helpers", None):
-            raise ConanException("Using the wrong 'CMake' helper. To use CMakeDeps, CMakeToolchain "
-                                 "you should use 'from conan.tools.cmake import CMake'")
+            wrong_helper_msg = "Using the wrong 'CMake' helper. To use CMakeDeps, CMakeToolchain "\
+                               "you should use 'from conan.tools.cmake import CMake'"
+            if get_env("CONAN_DISABLE_STRICT_MODE", False):
+                conanfile.output.warning(wrong_helper_msg)
+            else:
+                raise ConanException(wrong_helper_msg)
         self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings
