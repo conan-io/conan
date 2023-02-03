@@ -88,6 +88,9 @@ class NewAPI:
         result = {}
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
+        requires = definitions.get("requires")  # Convert to list, and forget about it
+        if requires:
+            definitions["requires"] = [requires] if isinstance(requires, str) else requires
 
         def as_package_name(n):
             return n.replace("-", "_").replace("+", "_").replace(".", "_")
@@ -99,7 +102,6 @@ class NewAPI:
             return ref
 
         definitions["package_name"] = as_package_name(name)
-        definitions["as_iterable"] = lambda x: [x] if isinstance(x, str) else x
         definitions["as_name"] = as_name
         for k, v in template_files.items():
             k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(
