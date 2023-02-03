@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class DRLException(Exception):
     pass

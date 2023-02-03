@@ -9,18 +9,30 @@
 
 """
 from contextlib import contextmanager
-from subprocess import CalledProcessError
 
 from conans.util.env import get_env
-from conans.util.files import decode_text
 
 
-class CalledProcessErrorWithStderr(CalledProcessError):
-    def __str__(self):
-        ret = super(CalledProcessErrorWithStderr, self).__str__()
-        if self.output:
-            ret += "\n" + decode_text(self.output)
-        return ret
+@contextmanager
+def conanfile_remove_attr(conanfile, names, method):
+    """ remove some self.xxxx attribute from the class, so it raises an exception if used
+    within a given conanfile method
+    """
+    original_class = type(conanfile)
+
+    def _prop(attr_name):
+        def _m(_):
+            raise ConanException(f"'self.{attr_name}' access in '{method}()' method is forbidden")
+        return property(_m)
+
+    try:
+        new_class = type(original_class.__name__, (original_class, ), {})
+        conanfile.__class__ = new_class
+        for name in names:
+            setattr(new_class, name, _prop(name))
+        yield
+    finally:
+        conanfile.__class__ = original_class
 
 
 @contextmanager
@@ -35,10 +47,7 @@ def conanfile_exception_formatter(conanfile_name, func_name):
 
     try:
         yield
-    # TODO: Move ConanInvalidSystemRequirements, ConanInvalidConfiguration from here?
-    except ConanInvalidSystemRequirements as exc:
-        msg = "{}: Invalid system requirements: {}".format(str(conanfile_name), exc)
-        raise ConanInvalidSystemRequirements(msg)
+    # TODO: Move ConanInvalidConfiguration from here?
     except ConanInvalidConfiguration as exc:
         msg = "{}: Invalid configuration: {}".format(str(conanfile_name), exc)
         raise ConanInvalidConfiguration(msg)
@@ -149,20 +158,9 @@ class ConanExceptionInUserConanfileMethod(ConanException):
     pass
 
 
-class ConanInvalidSystemRequirements(ConanException):
-    pass
-
-
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     """
     This binary, for the requested configuration and package-id cannot be built
-    """
-    pass
-
-
-class ConanErrorConfiguration(ConanExceptionInUserConanfileMethod):
-    """
-    The binary might exist, and have a valid package-id, but can't be used with current config
     """
     pass
 
@@ -214,8 +212,7 @@ class RecipeNotFoundException(NotFoundException):
 
     def __init__(self, ref, remote=None):
         from conans.model.recipe_ref import RecipeReference
-        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a " \
-                                                    "RecipeReference"
+        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a RecipeReference"
         self.ref = ref
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
@@ -228,8 +225,7 @@ class PackageNotFoundException(NotFoundException):
 
     def __init__(self, pref, remote=None):
         from conans.model.package_ref import PkgReference
-        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a " \
-                                                   "PkgReference"
+        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a PkgReference"
         self.pref = pref
 
         super(PackageNotFoundException, self).__init__(remote=remote)

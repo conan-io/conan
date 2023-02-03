@@ -34,6 +34,16 @@ class PkgReference:
             result += "#{}".format(self.revision)
         return result
 
+    def repr_reduced(self):
+        if self.ref is None:
+            return ""
+        result = self.ref.repr_reduced()
+        if self.package_id:
+            result += ":{}".format(self.package_id[0:4])
+        if self.revision is not None:
+            result += "#{}".format(self.revision[0:4])
+        return result
+
     def repr_humantime(self):
         result = self.repr_notime()
         assert self.timestamp
@@ -61,7 +71,8 @@ class PkgReference:
         #    at "graph_binaries" to check: cache_latest_prev != pref
         #    at "installer" to check: if pkg_layout.reference != pref (probably just optimization?)
         #    at "revisions_test"
-        return self.ref == other.ref and self.revision == other.revision
+        return self.ref == other.ref and self.package_id == other.package_id and \
+               self.revision == other.revision
 
     def __hash__(self):
         # Used in dicts of PkgReferences as keys like the cached nodes in the graph binaries

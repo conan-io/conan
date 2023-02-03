@@ -30,16 +30,16 @@ class ConanServiceV2:
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list}}
 
-    def get_conanfile_file(self, reference, filename, auth_user):
+    def get_recipe_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        path = self._server_store.get_conanfile_file_path(reference, filename)
+        path = self._server_store.get_recipe_file_path(reference, filename)
         return static_file(os.path.basename(path), root=os.path.dirname(path),
                            mimetype=get_mime_type(path))
 
     def upload_recipe_file(self, body, headers, reference, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, reference)
         # FIXME: Check that reference contains revision (MANDATORY TO UPLOAD)
-        path = self._server_store.get_conanfile_file_path(reference, filename)
+        path = self._server_store.get_recipe_file_path(reference, filename)
         self._upload_to_path(body, headers, path)
 
         # If the upload was ok, update the pointer to the latest
@@ -96,7 +96,6 @@ class ConanServiceV2:
 
     def upload_package_file(self, body, headers, pref, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, pref.ref)
-        # FIXME: Check that reference contains revisions (MANDATORY TO UPLOAD)
 
         # Check if the recipe exists
         recipe_path = self._server_store.export(pref.ref)

@@ -15,7 +15,7 @@ class RemoveEmptyDirsTest(unittest.TestCase):
         rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote/stable"))
         ref_layout = client.cache.ref_layout(rrev)
         self.assertTrue(os.path.exists(ref_layout.base_folder))
-        client.run("remove hello* -f")
+        client.run("remove hello* -c")
         self.assertFalse(os.path.exists(ref_layout.base_folder))
 
     def test_shared_folder(self):
@@ -29,6 +29,6 @@ class RemoveEmptyDirsTest(unittest.TestCase):
         rrev2 = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote2/stable"))
         ref_layout2 = client.cache.ref_layout(rrev2)
         self.assertTrue(os.path.exists(ref_layout2.base_folder))
-        client.run("remove hello/0.1@lasote/stable -f")
+        client.run("remove hello/0.1@lasote/stable -c")
         self.assertFalse(os.path.exists(ref_layout.base_folder))
         self.assertTrue(os.path.exists(ref_layout2.base_folder))

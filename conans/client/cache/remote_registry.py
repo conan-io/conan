@@ -2,48 +2,12 @@ import json
 import os
 from urllib.parse import urlparse
 
-import stat
-
-from conans.cli.api.model import Remote
-from conans.cli.output import ConanOutput
+from conan.api.model import Remote
+from conan.api.output import ConanOutput
 from conans.errors import ConanException, NoRemoteAvailable
-from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"
-
-
-def load_registry_txt(contents):
-    """Remove in Conan 2.0"""
-    remotes = _Remotes()
-    refs = {}
-    end_remotes = False
-    # Parse the file
-    for line in contents.splitlines():
-        line = line.strip()
-
-        if not line:
-            if end_remotes:
-                raise ConanException("Bad file format, blank line")
-            end_remotes = True
-            continue
-        chunks = line.split()
-        if not end_remotes:
-            if len(chunks) == 2:  # Retro compatibility
-                remote_name, url = chunks
-                verify_ssl = "True"
-            elif len(chunks) == 3:
-                remote_name, url, verify_ssl = chunks
-            else:
-                raise ConanException("Bad file format, wrong item numbers in line '%s'" % line)
-
-            verify_ssl = get_bool_from_text_value(verify_ssl)
-            remotes.add(Remote(remote_name, url, verify_ssl, False))
-        else:
-            ref, remote_name = chunks
-            refs[ref] = remote_name
-
-    return remotes, refs
 
 
 class _Remotes(object):
@@ -142,12 +106,6 @@ class RemoteRegistry(object):
             remotes.add(remote)
             self.save_remotes(remotes)
 
-    def reset_remotes(self):
-        if os.path.exists(self._filename):
-            os.chmod(self._filename, stat.S_IWRITE)
-            os.remove(self._filename)
-        self.initialize_remotes()
-
     def _load_remotes(self):
         self.initialize_remotes()
         content = load(self._filename)
@@ -183,6 +141,12 @@ class RemoteRegistry(object):
             raise ConanException("Remote '%s' not found in remotes" % remote_name)
         return ret
 
+    def get_remote_index(self, remote: Remote):
+        try:
+            return self.list().index(remote)
+        except ValueError:
+            raise ConanException("No remote: '{}' found".format(remote.name))
+
     def add(self, remote: Remote):
         self._validate_url(remote.url)
         remotes = self._load_remotes()
@@ -192,9 +156,8 @@ class RemoteRegistry(object):
     def remove(self, remote_name):
         assert isinstance(remote_name, str)
         remotes = self._load_remotes()
-        remote = remotes.remove(remote_name)
+        remotes.remove(remote_name)
         self.save_remotes(remotes)
-        return remote
 
     def update(self, remote):
         self._validate_url(remote.url)

@@ -3,7 +3,8 @@ import os
 import shutil
 import time
 
-from conans import SERVER_CAPABILITIES, REVISIONS
+from conans import REVISIONS
+from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.migrate import migrate_and_get_server_config

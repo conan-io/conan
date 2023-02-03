@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -5,23 +6,16 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
-def test_transitive_headers_not_public():
-    c = TestClient()
-
-    c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create .")
+@pytest.mark.tool("cmake")
+def test_transitive_headers_not_public(transitive_libraries):
+    c = transitive_libraries
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
@@ -56,22 +50,17 @@ def test_transitive_headers_not_public():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
-def test_shared_requires_static():
-    c = TestClient()
-
-    c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb:shared=True")
+@pytest.mark.tool("cmake")
+def test_shared_requires_static(transitive_libraries):
+    c = transitive_libraries
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps", "VirtualBuildEnv", "VirtualRunEnv"
 
@@ -90,30 +79,25 @@ def test_shared_requires_static():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build .")
-    command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    command = environment_wrap_command("conanrun", c.current_folder, ".\\Release\\myapp.exe")
     c.run_command(command)
     assert "liba: Release!" in c.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-@pytest.mark.tool_cmake
-def test_transitive_binary_skipped():
-    c = TestClient()
-
-    c.save(pkg_cmake("liba", "0.1"))
-    c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create . -o libb:shared=True")
+@pytest.mark.tool("cmake")
+def test_transitive_binary_skipped(transitive_libraries):
+    c = transitive_libraries
     # IMPORTANT: liba binary can be removed, no longer necessary
-    c.run("remove liba* -p -f")
+    c.run("remove liba*:* -c")
 
     conanfile = textwrap.dedent("""\
-       from conans import ConanFile
+       from conan import ConanFile
        from conan.tools.cmake import CMake
        class Pkg(ConanFile):
            exports = "*"
            requires = "libb/0.1"
-           default_options = {"libb:shared": True}
+           default_options = {"libb/*:shared": True}
            settings = "os", "compiler", "arch", "build_type"
            generators = "CMakeToolchain", "CMakeDeps"
 
@@ -131,8 +115,8 @@ def test_transitive_binary_skipped():
             "src/CMakeLists.txt": cmake,
             "conanfile.py": conanfile}, clean_first=True)
 
-    c.run("build . -g VirtualRunEnv")
-    command = environment_wrap_command("conanrun", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    c.run("build . ")
+    command = environment_wrap_command("conanrun", c.current_folder, ".\\Release\\myapp.exe")
     c.run_command(command)
     assert "liba: Release!" in c.out
 
@@ -141,3 +125,31 @@ def test_transitive_binary_skipped():
     c.save({"src/main.cpp": main})
     c.run("build .", assert_error=True)
     assert "Cannot open include file: 'liba.h'" in c.out
+
+
+@pytest.mark.tool("cmake")
+def test_shared_requires_static_build_all(transitive_libraries):
+    c = transitive_libraries
+
+    conanfile = textwrap.dedent("""\
+       from conan import ConanFile
+
+       class Pkg(ConanFile):
+           requires = "libb/0.1"
+           settings = "os", "compiler", "arch", "build_type"
+           generators = "CMakeDeps"
+        """)
+
+    c.save({"conanfile.py": conanfile}, clean_first=True)
+
+    arch = c.get_default_host_profile().settings['arch']
+
+    c.run("install . -o libb*:shared=True")
+    assert not os.path.exists(os.path.join(c.current_folder, f"liba-release-{arch}-data.cmake"))
+    cmake = c.load(f"libb-release-{arch}-data.cmake")
+    assert 'set(libb_FIND_DEPENDENCY_NAMES "")' in cmake
+
+    c.run("install . -o libb*:shared=True --build=libb*")
+    assert not os.path.exists(os.path.join(c.current_folder, f"liba-release-{arch}-data.cmake"))
+    cmake = c.load(f"libb-release-{arch}-data.cmake")
+    assert 'set(libb_FIND_DEPENDENCY_NAMES "")' in cmake

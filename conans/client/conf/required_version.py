@@ -27,6 +27,6 @@ def check_required_conan_version(cache_folder):
         :return: None
     """
     cache = ClientCache(cache_folder)
-    required_range_new = cache.new_config["core:required_conan_version"]
+    required_range_new = cache.new_config.get("core:required_conan_version")
     if required_range_new:
         validate_conan_version(required_range_new)

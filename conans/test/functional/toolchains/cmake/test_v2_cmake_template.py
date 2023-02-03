@@ -1,17 +1,19 @@
 import os
 import re
 
+import pytest
+
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_lib_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     # Local flow works
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
 
     client.run("export-pkg .")
     package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
@@ -30,16 +32,16 @@ def test_cmake_lib_template():
     assert "hello/0.1: Hello World Debug!" in client.out
 
     # Create + shared works
-    client.run("create . -o hello:shared=True")
+    client.run("create . -o hello/*:shared=True")
     assert "hello/0.1: Hello World Release!" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_exe_template():
     client = TestClient(path_with_spaces=False)
-    client.run("new greet/0.1 --template=cmake_exe")
+    client.run("new cmake_exe -d name=greet -d version=0.1")
     # Local flow works
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("build .")
 
     # Create works
     client.run("create .")

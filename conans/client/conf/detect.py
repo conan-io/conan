@@ -4,27 +4,11 @@ import re
 import tempfile
 import textwrap
 
-from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
-from conans.cli.output import Color, ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.model.version import Version
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env import get_env
 from conans.util.files import save
 from conans.util.runners import detect_runner, check_output_runner
-
-
-def _get_compiler_and_version(compiler_exe):
-    output = ConanOutput()
-    compiler_id = detect_compiler_id(compiler_exe)
-    if compiler_id.name == LLVM_GCC:
-        output.error("%s detected as a frontend using apple-clang. "
-                     "Compiler not supported" % compiler_exe)
-        return None
-    if compiler_id != UNKNOWN_COMPILER:
-        output.success("Found %s %s" % (compiler_id.name, compiler_id.major_minor))
-        return compiler_id.name, compiler_id.major_minor
-    return None
 
 
 def _gcc_compiler(compiler_exe="gcc"):
@@ -97,27 +81,21 @@ def _get_default_compiler():
     6. clang executable
     """
     output = ConanOutput()
-    v2_mode = get_env(CONAN_V2_MODE_ENVVAR, False)
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
-        if v2_mode:
-            compiler = _get_compiler_and_version(command)
-            if compiler:
-                return compiler
-        else:
-            if "clang" in command.lower():
-                return _clang_compiler(command)
-            if "gcc" in command:
-                gcc = _gcc_compiler(command)
-                if platform.system() == "Darwin" and gcc is None:
-                    output.error("%s detected as a frontend using apple-clang. "
-                                 "Compiler not supported" % command)
-                return gcc
-            if platform.system() == "SunOS" and command.lower() == "cc":
-                return _sun_cc_compiler(command)
+        if "clang" in command.lower():
+            return _clang_compiler(command)
+        if "gcc" in command or "g++" in command or "c++" in command:
+            gcc = _gcc_compiler(command)
+            if platform.system() == "Darwin" and gcc is None:
+                output.error("%s detected as a frontend using apple-clang. "
+                             "Compiler not supported" % command)
+            return gcc
+        if platform.system() == "SunOS" and command.lower() == "cc":
+            return _sun_cc_compiler(command)
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
@@ -125,17 +103,12 @@ def _get_default_compiler():
     vs = cc = sun_cc = None
     if platform.system() == "Windows":
         version = latest_visual_studio_version_installed()
-        vs = ('Visual Studio', version) if version else None
+        vs = ('msvc', version) if version else None
 
-    if v2_mode:
-        cc = _get_compiler_and_version("cc")
-        gcc = _get_compiler_and_version("gcc")
-        clang = _get_compiler_and_version("clang")
-    else:
-        gcc = _gcc_compiler()
-        clang = _clang_compiler()
-        if platform.system() == "SunOS":
-            sun_cc = _sun_cc_compiler()
+    gcc = _gcc_compiler()
+    clang = _clang_compiler()
+    if platform.system() == "SunOS":
+        sun_cc = _sun_cc_compiler()
 
     if platform.system() == "Windows":
         return vs or cc or gcc or clang
@@ -158,6 +131,9 @@ def _get_profile_compiler_version(compiler, version):
     elif compiler == "gcc" and major >= 5:
         output.info("gcc>=5, using the major as version")
         return major
+    elif compiler == "apple-clang" and major >= 13:
+        output.info("apple-clang>=13, using the major as version")
+        return major
     elif compiler == "Visual Studio":
         return major
     elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
@@ -168,12 +144,13 @@ def _get_profile_compiler_version(compiler, version):
     return version
 
 
-def _detect_gcc_libcxx(version):
+def _detect_gcc_libcxx(version, executable):
     output = ConanOutput()
     # Assumes a working g++ executable
-    new_abi_available = version >= "5.1"
-    if not new_abi_available:
-        return "libstdc++"
+    if executable == "g++":  # we can rule out old gcc versions
+        new_abi_available = version >= "5.1"
+        if not new_abi_available:
+            return "libstdc++"
 
     main = textwrap.dedent("""
         #include <string>
@@ -188,7 +165,6 @@ def _detect_gcc_libcxx(version):
     old_path = os.getcwd()
     os.chdir(t)
     try:
-        executable = "g++"
         error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
         if error:
             if "using libstdc++" in out_str:
@@ -214,11 +190,6 @@ def _detect_compiler_version(result):
         return
 
     version = Version(version)
-    # Visual Studio 2022 onwards, detect as a new compiler "msvc"
-    if compiler == "Visual Studio":
-        if version == "17":
-            compiler = "msvc"
-            version = Version("193")
 
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
@@ -227,7 +198,7 @@ def _detect_compiler_version(result):
     if compiler == "apple-clang":
         result.append(("compiler.libcxx", "libc++"))
     elif compiler == "gcc":
-        libcxx = _detect_gcc_libcxx(version)
+        libcxx = _detect_gcc_libcxx(version, "g++")
         result.append(("compiler.libcxx", libcxx))
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -236,23 +207,30 @@ def _detect_compiler_version(result):
         if platform.system() == "FreeBSD":
             result.append(("compiler.libcxx", "libc++"))
         else:
-            result.append(("compiler.libcxx", "libstdc++"))
+            if platform.system() == "Windows":
+                # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
+                result.append(("compiler.runtime", "dynamic"))
+                result.append(("compiler.runtime_type", "Release"))
+                result.append(("compiler.runtime_version", "v143"))
+                ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
+                ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
+                                      "define compiler.libcxx")
+            else:
+                libcxx = _detect_gcc_libcxx(version, "clang++")
+                result.append(("compiler.libcxx", libcxx))
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":
-        result.append(("compiler.base", "gcc"))  # do the same for Intel?
-        result.append(("compiler.base.libcxx", "libstdc++"))
-        if version >= "1.24":
-            result.append(("compiler.base.version", "7.3"))
-        elif version >= "1.23":
-            result.append(("compiler.base.version", "5.5"))
-        elif version >= "1.21":
-            result.append(("compiler.base.version", "4.8"))
-        else:
-            result.append(("compiler.base.version", "4.4"))
+        result.append(("compiler.libcxx", "libstdc++"))
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        result.append(("compiler.cppstd", "14"))
+        result.append(("compiler.runtime", "dynamic"))
+        result.append(("compiler.runtime_type", "Release"))
 
-    cppstd = _cppstd_default(compiler, version)
-    result.append(("compiler.cppstd", cppstd))
+    if compiler != "msvc":
+        cppstd = _cppstd_default(compiler, version)
+        result.append(("compiler.cppstd", cppstd))
 
 
 def _get_solaris_architecture():
@@ -400,12 +378,14 @@ def _cppstd_default(compiler, compiler_version):
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
                "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
-               "Visual Studio": _visual_cppstd_default(compiler_version),
+               "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
 
 def _clang_cppstd_default(compiler_version):
+    if compiler_version >= "16":
+        return "gnu17"
     # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
     return "gnu98" if compiler_version < "6" else "gnu14"
 
@@ -417,7 +397,7 @@ def _gcc_cppstd_default(compiler_version):
 
 
 def _visual_cppstd_default(compiler_version):
-    if compiler_version >= "14":  # VS 2015 update 3 only
+    if compiler_version >= "190":  # VS 2015 update 3 only
         return "14"
     return None
 

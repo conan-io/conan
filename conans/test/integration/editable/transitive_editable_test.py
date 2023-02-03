@@ -28,7 +28,7 @@ class TransitiveEditableTest(unittest.TestCase):
         conanfileB = GenConanfile().with_name("LibB").with_version("0.1").with_require(libc_ref)
 
         client2.save({"conanfile.py": str(conanfileB)})
-        client2.run("create . user/testing")
+        client2.run("create . --user=user --channel=testing")
 
         conanfileA = GenConanfile().with_name("LibA").with_version("0.1")\
                                    .with_require(libb_ref)\

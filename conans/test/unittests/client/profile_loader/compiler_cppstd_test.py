@@ -17,6 +17,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def setUp(self):
         self.tmp_folder = temp_folder()
         self.cache = ClientCache(self.tmp_folder)
+        save(os.path.join(self.cache.plugins_path, "profile.py"), "")
 
     def _save_profile(self, compiler_cppstd=None, filename="default"):
         fullpath = os.path.join(self.cache.profiles_path, filename)
@@ -62,9 +63,9 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_none(self):
         self._save_profile(compiler_cppstd="None")
         profile_loader = ProfileLoader(self.cache)
-        r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
-        self.assertEqual(r.settings["compiler.cppstd"], "None")
-        self.assertNotIn("cppstd", r.settings)
+        # It is incorrect to assign compiler.cppstd=None in the profile
+        with self.assertRaisesRegex(ConanException, "Invalid setting"):
+            r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
 
     def test_value_valid(self):
         self._save_profile(compiler_cppstd="11")

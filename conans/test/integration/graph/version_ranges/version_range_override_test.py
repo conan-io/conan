@@ -3,7 +3,6 @@
 import unittest
 
 import pytest
-from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -66,15 +65,15 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/7864
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . gtest/1.8.0@PORT/stable")
-        t.run("create . gtest/1.8.1@bloomberg/stable")
+        t.run("create . --name=gtest --version=1.8.0 --user=PORT --channel=stable")
+        t.run("create . --name=gtest --version=1.8.1 --user=bloomberg --channel=stable")
 
         t.save({"conanfile.py": GenConanfile().with_require("gtest/1.8.0@PORT/stable")})
-        t.run("create . intermediate/1.0@PORT/stable")
+        t.run("create . --name=intermediate --version=1.0 --user=PORT --channel=stable")
 
         t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
                .with_tool_requires("gtest/1.8.0@PORT/stable")})
-        t.run("create . scubaclient/1.6@PORT/stable")
+        t.run("create . --name=scubaclient --version=1.6 --user=PORT --channel=stable")
 
         # IMPORTANT: We need to override the private build-require in the profile too,
         # otherwise it will conflict, as it will not be overriden by regular requires
@@ -86,3 +85,45 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         lock = t.load("conan.lock")
         self.assertIn("gtest/1.8.1@bloomberg/stable", lock)
         self.assertNotIn("gtest/1.8.0@PORT/stable", lock)
+
+    def test_override(self):
+        """
+        pkga -> ros_perception  -> ros_core
+           \\-----> pkgb  -----------/
+        """
+        # https://github.com/conan-io/conan/issues/8071
+        t = TestClient()
+        t.save({"conanfile.py": GenConanfile()})
+        t.run("create . --name=ros_core --version=1.1.4 --user=3rdparty --channel=unstable")
+        t.run("create . --name=ros_core --version=pr-53 --user=3rdparty --channel=snapshot")
+        t.save({"conanfile.py": GenConanfile().with_requires("ros_core/1.1.4@3rdparty/unstable")})
+        t.run("create . --name=ros_perception --version=1.1.4 --user=3rdparty --channel=unstable")
+        t.run("create . --name=ros_perception --version=pr-53 --user=3rdparty --channel=snapshot")
+        t.save({"conanfile.py": GenConanfile().with_requires("ros_core/[~1.1]@3rdparty/unstable")})
+        t.run("create . --name=pkgb --version=0.1 --user=common --channel=unstable")
+        t.save({"conanfile.py": GenConanfile("pkga", "0.1").with_requires(
+            "ros_perception/[~1.1]@3rdparty/unstable",
+            "pkgb/[~0]@common/unstable")})
+        t.run("create . ")
+        self.assertIn("ros_core/1.1.4@3rdparty/unstable", t.out)
+        self.assertIn("ros_perception/1.1.4@3rdparty/unstable", t.out)
+        self.assertNotIn("snapshot", t.out)
+
+        t.save({"conanfile.py": GenConanfile("pkga", "0.1")
+               .with_require("pkgb/[~0]@common/unstable")
+               .with_require("ros_perception/pr-53@3rdparty/snapshot")
+               .with_requirement("ros_core/pr-53@3rdparty/snapshot", override=True)})
+
+        t.run("create .  --build=missing --build=pkga")
+        self.assertIn("ros_core/pr-53@3rdparty/snapshot", t.out)
+        self.assertIn("ros_perception/pr-53@3rdparty/snapshot", t.out)
+
+        # Override only the upstream without overriding the direct one
+        t.save({"conanfile.py": GenConanfile("pkga", "0.1")
+               .with_require("pkgb/[~0]@common/unstable")
+               .with_require("ros_perception/[~1.1]@3rdparty/unstable")
+               .with_requirement("ros_core/pr-53@3rdparty/snapshot", force=True)})
+
+        t.run("create .  --build=missing --build=pkga")
+        self.assertIn("ros_core/pr-53@3rdparty/snapshot", t.out)
+        self.assertIn("ros_perception/1.1.4@3rdparty/unstable", t.out)

@@ -1,4 +1,5 @@
-from conan.tools.files import save_toolchain_args
+from conan.internal import check_duplicated_generator
+from conan.tools.files.files import save_toolchain_args
 
 
 class BazelToolchain(object):
@@ -8,7 +9,16 @@ class BazelToolchain(object):
         self._namespace = namespace
 
     def generate(self):
-        save_toolchain_args({
-            "bazel_config": self._conanfile.conf["tools.google.bazel:config"],
-            "bazelrc_path": self._conanfile.conf["tools.google.bazel:bazelrc_path"]
-        }, namespace=self._namespace)
+        check_duplicated_generator(self, self._conanfile)
+        content = {}
+        configs = ",".join(self._conanfile.conf.get("tools.google.bazel:configs",
+                                                    default=[],
+                                                    check_type=list))
+        if configs:
+            content["bazel_configs"] = configs
+
+        bazelrc = self._conanfile.conf.get("tools.google.bazel:bazelrc_path")
+        if bazelrc:
+            content["bazelrc_path"] = bazelrc
+
+        save_toolchain_args(content, namespace=self._namespace)

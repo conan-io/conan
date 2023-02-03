@@ -100,7 +100,7 @@ class DiamondTest(unittest.TestCase):
         check_run_output(self.client)
 
         # Try to upload and reuse the binaries
-        self.client.run("upload Hello* --all --confirm")
+        self.client.run("upload Hello* --confirm")
         self.assertEqual(str(self.client.out).count("Uploading package"), 4)
 
         # Reuse in another client

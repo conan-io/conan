@@ -79,8 +79,7 @@ class TestTokenRefresh(unittest.TestCase):
     def setUp(self):
         requester = RequesterWithTokenMock()
         config = ConfDefinition()
-        self.rest_client_factory = RestApiClientFactory(requester, config=config,
-                                                        artifacts_properties=None)
+        self.rest_client_factory = RestApiClientFactory(requester, config=config)
         self.localdb = LocalDBMock()
         cache = Mock()
         cache.localdb = self.localdb

@@ -21,7 +21,7 @@ def test_called_before_digest(self):
 
     ref = RecipeReference.loads("name/version@user/channel")
     conanfile = textwrap.dedent("""\
-        from conans import ConanFile
+        from conan import ConanFile
 
         class MyLib(ConanFile):
             pass

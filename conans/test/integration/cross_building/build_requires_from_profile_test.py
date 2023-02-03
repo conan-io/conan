@@ -11,8 +11,9 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=16
+         compiler=msvc
+        compiler.version=192
+        compiler.runtime=dynamic
 
         [tool_requires]
         br2/version
@@ -32,7 +33,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
     """)
 
     library_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "library"
@@ -52,12 +53,13 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         t.run("export br1.py --name=br1 --version=version")
         t.run("export br2.py --name=br2 --version=version")
         t.run("export br3.py --name=br3 --version=version")
-        t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
+        t.run("create library.py --profile:host=profile_host --profile:build=profile_build "
+              "--build='*'")
 
 
 class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
     toolchain = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "mytoolchain"
@@ -68,7 +70,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     gtest = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -82,7 +84,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     library_conanfile = textwrap.dedent("""
-         from conans import ConanFile
+         from conan import ConanFile
          import os
 
          class Recipe(ConanFile):
@@ -147,7 +149,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
 
 class BuildRequiresBothContextsTest(unittest.TestCase):
     toolchain_creator = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "creator"
@@ -158,7 +160,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     toolchain = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -172,7 +174,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     gtest = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -186,7 +188,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     library_conanfile = textwrap.dedent("""
-         from conans import ConanFile
+         from conan import ConanFile
          import os
 
          class Recipe(ConanFile):
@@ -239,7 +241,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
         # Declaring the build_requires in the recipe works, it is just the profile that is
         # not transitive
         toolchain = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             import os
 
             class Recipe(ConanFile):

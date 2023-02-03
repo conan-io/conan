@@ -7,9 +7,8 @@ import unittest
 
 import pytest
 
-from conans.client.tools.files import chdir
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import tar_extract, gzopen_without_timestamps, save, gather_files
+from conans.util.files import tar_extract, gzopen_without_timestamps, save, gather_files, chdir
 
 
 class TarExtractTest(unittest.TestCase):

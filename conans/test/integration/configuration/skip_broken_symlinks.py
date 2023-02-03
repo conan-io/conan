@@ -20,7 +20,7 @@ class TestSkipBrokenSymlinks(unittest.TestCase):
 
         conanfile = """
 import os
-from conans import ConanFile, tools
+from conan import ConanFile, tools
 
 class HelloConan(ConanFile):
 
@@ -38,13 +38,6 @@ class HelloConan(ConanFile):
         self.assertIn("The file is a broken symlink", client.out)
 
         # Until we deactivate the checks
-        conan_conf = textwrap.dedent("""
-                [storage]
-                path = ./data
-                [general]
-                skip_broken_symlinks_check=True'
-        """.format())
-        client.save({"conan.conf": conan_conf}, path=client.cache.cache_folder)
         pref = client.create(ref, conanfile=conanfile)
         self.assertIn("Created package", client.out)
         p_folder = client.get_latest_pkg_layout(pref).package()
@@ -60,12 +53,12 @@ class HelloConan(ConanFile):
         # We can upload the package and reuse it
         client.upload_all(ref)
 
-        client2.run("install --reference={}".format(ref))
+        client2.run("install --requires={}".format(ref))
         self.assertIn("Downloaded package", client2.out)
 
     def test_broken_in_local_sources(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class SymlinksConan(ConanFile):
                 name = "symlinks"

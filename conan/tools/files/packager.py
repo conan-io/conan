@@ -1,6 +1,5 @@
 import os
 
-from conans.client.file_copier import FileCopier
 from conans.errors import ConanException
 
 
@@ -26,6 +25,9 @@ class _Patterns(object):
 class AutoPackager(object):
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self.patterns = _Patterns()
 
@@ -59,7 +61,6 @@ class AutoPackager(object):
            self._package_cppinfo("source", cf.cpp.source, cf.cpp.package)
            self._package_cppinfo("build", cf.cpp.build, cf.cpp.package)
 
-
     def _package_cppinfo(self, origin_name, origin_cppinfo, dest_cppinfo):
         """
         @param origin_name: one from ["source", "build"]
@@ -87,9 +88,9 @@ class AutoPackager(object):
                 err_msg = "The package has more than 1 cpp_info.{}, cannot package automatically"
                 raise ConanException(err_msg.format(dirs_var_name))
 
+            dst_folder = os.path.join(self._conanfile.folders.base_package, destinations[0])
+            from conan.tools.files import copy
             for d in origin_paths:
-                copier = FileCopier([os.path.join(base_folder, d)],
-                                    self._conanfile.folders.base_package)
+                src_folder = os.path.join(base_folder, d)
                 for pattern in patterns:
-                    copier(pattern, dst=destinations[0])
-
+                    copy(self._conanfile, pattern, src_folder, dst_folder)

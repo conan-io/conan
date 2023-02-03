@@ -35,7 +35,7 @@ class TestTxtCommandLine(unittest.TestCase):
         self._check(client)
 
 
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class TestTxtCommandLineMSBuild(unittest.TestCase):
 

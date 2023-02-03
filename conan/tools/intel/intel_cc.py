@@ -21,6 +21,7 @@ import os
 import platform
 import textwrap
 
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 
 
@@ -72,6 +73,7 @@ class IntelCC:
 
     def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
+        check_duplicated_generator(self, self._conanfile)
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
                 @echo off
@@ -87,7 +89,7 @@ class IntelCC:
     @property
     def installation_path(self):
         """Get the Intel oneAPI installation root path"""
-        installation_path = self._conanfile.conf["tools.intel:installation_path"]
+        installation_path = self._conanfile.conf.get("tools.intel:installation_path")
         if not installation_path:
             raise ConanException("To use Intel oneAPI, specify a [conf] entry "
                                  "'tools.intel:installation_path' containing the path to the "
@@ -126,7 +128,7 @@ class IntelCC:
         :return: `str` setvars.sh|bat command to be run
         """
         # Let's check if user wants to use some custom arguments to run the setvars script
-        command_args = self._conanfile.conf["tools.intel:setvars_args"] or ""
+        command_args = self._conanfile.conf.get("tools.intel:setvars_args", default="")
         system = platform.system()
         svars = "setvars.bat" if system == "Windows" else "setvars.sh"
         command = '"%s"' % os.path.join(self.installation_path, svars)

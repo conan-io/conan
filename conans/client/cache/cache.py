@@ -1,34 +1,34 @@
-import copy
 import os
+import platform
 from typing import List
 
-from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
+import yaml
+from jinja2 import Template
 
-from conan.cache.cache import DataCache
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.assets.templates import dict_loader
-from conans.cli.output import ConanOutput
+
+from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
+from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
-from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
-from conans.util.files import load, normalize, save, remove, mkdir
+from conans.paths import DEFAULT_PROFILE_NAME
+from conans.util.files import load, save, mkdir
 
 
-CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REMOTES = "remotes.json"
 PROFILES_FOLDER = "profiles"
-HOOKS_FOLDER = "hooks"
-TEMPLATES_FOLDER = "templates"
-GENERATORS_FOLDER = "generators"
+EXTENSIONS_FOLDER = "extensions"
+HOOKS_EXTENSION_FOLDER = "hooks"
+PLUGINS_FOLDER = "plugins"
+DEPLOYERS_EXTENSION_FOLDER = "deploy"
+CUSTOM_COMMANDS_FOLDER = "commands"
 
 
 # TODO: Rename this to ClientHome
@@ -39,21 +39,20 @@ class ClientCache(object):
 
     def __init__(self, cache_folder):
         self.cache_folder = cache_folder
-        self._output = ConanOutput()
 
         # Caching
         self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = os.path.join(self.cache_folder, "p")
+        self._store_folder = self.new_config.get("core.cache:storage_path") or \
+                             os.path.join(self.cache_folder, "p")
 
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
-
-    def closedb(self):
-        self._data_cache.closedb()
+        # The cache is first thing instantiated, we can remove this from env now
+        self._localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
@@ -96,9 +95,6 @@ class ClientCache(object):
         that would affect its order in our cache """
         return self._data_cache.update_recipe_timestamp(ref)
 
-    def set_package_timestamp(self, pref):
-        return self._data_cache.update_package_timestamp(pref)
-
     def all_refs(self):
         return self._data_cache.list_references()
 
@@ -110,11 +106,13 @@ class ClientCache(object):
         # Used just by download to skip downloads if prev already exists in cache
         return self._data_cache.exists_prev(pref)
 
-    def get_package_revisions_references(self, ref, only_latest_prev=False):
-        return self._data_cache.get_package_revisions_references(ref, only_latest_prev)
+    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+        return self._data_cache.get_package_revisions_references(pref, only_latest_prev)
 
-    def get_package_references(self, ref: RecipeReference) -> List[PkgReference]:
-        return self._data_cache.get_package_references(ref)
+    def get_package_references(self, ref: RecipeReference,
+                               only_latest_prev=True) -> List[PkgReference]:
+        """Get the latest package references"""
+        return self._data_cache.get_package_references(ref, only_latest_prev)
 
     def get_matching_build_id(self, ref, build_id):
         return self._data_cache.get_matching_build_id(ref, build_id)
@@ -132,24 +130,6 @@ class ClientCache(object):
     def store(self):
         return self._store_folder
 
-    def editable_path(self, ref):
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        edited_ref = self.editable_packages.get(_tmp)
-        if edited_ref:
-            conanfile_path = edited_ref["path"]
-            return conanfile_path
-
-    def installed_as_editable(self, ref):
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        edited_ref = self.editable_packages.get(_tmp)
-        return bool(edited_ref)
-
-    @property
-    def config_install_file(self):
-        return os.path.join(self.cache_folder, "config_install.json")
-
     @property
     def remotes_path(self):
         return os.path.join(self.cache_folder, REMOTES)
@@ -157,36 +137,6 @@ class ClientCache(object):
     @property
     def remotes_registry(self) -> RemoteRegistry:
         return RemoteRegistry(self)
-
-    @property
-    def artifacts_properties_path(self):
-        return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
-
-    def read_artifacts_properties(self):
-        ret = {}
-        if not os.path.exists(self.artifacts_properties_path):
-            save(self.artifacts_properties_path, "")
-            return ret
-        try:
-            contents = load(self.artifacts_properties_path)
-            for line in contents.splitlines():
-                if line and not line.strip().startswith("#"):
-                    tmp = line.split("=", 1)
-                    if len(tmp) != 2:
-                        raise Exception()
-                    name = tmp[0].strip()
-                    value = tmp[1].strip()
-                    ret[str(name)] = str(value)
-            return ret
-        except Exception:
-            raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
-
-    @property
-    def config(self):
-        if not self._config:
-            self.initialize_config()
-            self._config = ConanClientConfigParser(self.conan_conf_path)
-        return self._config
 
     @property
     def new_config_path(self):
@@ -201,18 +151,18 @@ class ClientCache(object):
         if self._new_config is None:
             self._new_config = ConfDefinition()
             if os.path.exists(self.new_config_path):
-                self._new_config.loads(load(self.new_config_path))
+                text = load(self.new_config_path)
+                distro = None
+                if platform.system() in ["Linux", "FreeBSD"]:
+                    import distro
+                content = Template(text).render({"platform": platform, "os": os, "distro": distro})
+                self._new_config.loads(content)
         return self._new_config
 
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
-        return LocalDB.create(localdb_filename, encryption_key=encryption_key)
-
-    @property
-    def conan_conf_path(self):
-        return os.path.join(self.cache_folder, CONAN_CONF)
+        return LocalDB.create(localdb_filename, encryption_key=self._localdb_encryption_key)
 
     @property
     def profiles_path(self):
@@ -223,8 +173,12 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
-    def generators_path(self):
-        return os.path.join(self.cache_folder, GENERATORS_FOLDER)
+    def custom_commands_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
+
+    @property
+    def plugins_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, PLUGINS_FOLDER)
 
     @property
     def default_profile_path(self):
@@ -236,65 +190,52 @@ class ClientCache(object):
         """
         :return: Hooks folder in client cache
         """
-        return os.path.join(self.cache_folder, HOOKS_FOLDER)
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
+
+    @property
+    def deployers_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, DEPLOYERS_EXTENSION_FOLDER)
 
     @property
     def settings(self):
         """Returns {setting: [value, ...]} defining all the possible
            settings without values"""
         self.initialize_settings()
-        content = load(self.settings_path)
-        return Settings.loads(content)
 
-    @property
-    def hooks(self):
-        """Returns a list of hooks inside the hooks folder"""
-        hooks = []
-        for hook_name in os.listdir(self.hooks_path):
-            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
-                hooks.append(hook_name[:-3])
-        return hooks
+        def _load_settings(path):
+            try:
+                return yaml.safe_load(load(path)) or {}
+            except yaml.YAMLError as ye:
+                raise ConanException("Invalid settings.yml format: {}".format(ye))
 
-    @property
-    def generators(self):
-        """Returns a list of generator paths inside the generators folder"""
-        generators = []
-        if os.path.exists(self.generators_path):
-            for path in os.listdir(self.generators_path):
-                generator = os.path.join(self.generators_path, path)
-                if os.path.isfile(generator) and generator.endswith(".py"):
-                    generators.append(generator)
-        return generators
+        settings = _load_settings(self.settings_path)
+        user_settings_file = os.path.join(self.cache_folder, "settings_user.yml")
+        if os.path.exists(user_settings_file):
+            settings_user = _load_settings(user_settings_file)
 
-    def get_template(self, template_name, user_overrides=False):
-        # TODO: It can be initialized only once together with the Conan app
-        loaders = [dict_loader]
-        if user_overrides:
-            loaders.insert(0, FileSystemLoader(os.path.join(self.cache_folder, 'templates')))
-        env = Environment(loader=ChoiceLoader(loaders),
-                          autoescape=select_autoescape(['html', 'xml']))
-        return env.get_template(template_name)
+            def appending_recursive_dict_update(d, u):
+                # Not the same behavior as conandata_update, because this append lists
+                for k, v in u.items():
+                    if isinstance(v, list):
+                        current = d.get(k) or []
+                        d[k] = current + [value for value in v if value not in current]
+                    elif isinstance(v, dict):
+                        current = d.get(k) or {}
+                        d[k] = appending_recursive_dict_update(current, v)
+                    else:
+                        d[k] = v
+                return d
 
-    def initialize_config(self):
-        if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, normalize(get_default_client_conf()))
+            appending_recursive_dict_update(settings, settings_user)
 
-    def reset_config(self):
-        if os.path.exists(self.conan_conf_path):
-            remove(self.conan_conf_path)
-        self.initialize_config()
-
-    def reset_default_profile(self):
-        if os.path.exists(self.default_profile_path):
-            remove(self.default_profile_path)
+        try:
+            return Settings(settings)
+        except AttributeError as e:
+            raise ConanException("Invalid settings.yml format: {}".format(e))
 
     def initialize_settings(self):
+        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
         if not os.path.exists(self.settings_path):
             settings_yml = default_settings_yml
             save(self.settings_path, settings_yml)
             save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations
-
-    def reset_settings(self):
-        if os.path.exists(self.settings_path):
-            remove(self.settings_path)
-        self.initialize_settings()

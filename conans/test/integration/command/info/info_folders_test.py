@@ -8,7 +8,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 conanfile_py = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "MyPackage"
@@ -17,7 +17,7 @@ class AConan(ConanFile):
 """
 
 with_deps_path_file = """
-from conans import ConanFile
+from conan import ConanFile
 
 class BConan(ConanFile):
     name = "MyPackage2"
@@ -61,7 +61,7 @@ class InfoFoldersTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6915
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Pkg(ConanFile):
                 options = {"myOption": [True, False]}
@@ -70,14 +70,14 @@ class InfoFoldersTest(unittest.TestCase):
             """)
         client.save({CONANFILE: conanfile})
         client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
-        client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=True")
+        client.run("info pkg/0.1@user/testing --paths -o pkg/*:myOption=True")
         out = str(client.out).replace("\\", "/")
         self.assertIn("ID: 75f77640a42abb05cd36235484f164c96ace0952", out)
         self.assertIn("BuildID: c74f42995b9d1452f1534f88b6c56ed7102212d0", out)
         self.assertIn("pkg/0.1/user/testing/build/c74f42995b9d1452f1534f88b6c56ed7102212d0", out)
         self.assertIn("pkg/0.1/user/testing/package/75f77640a42abb05cd36235484f164c96ace0952", out)
 
-        client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=False")
+        client.run("info pkg/0.1@user/testing --paths -o pkg/*:myOption=False")
         out = str(client.out).replace("\\", "/")
         self.assertIn("ID: 357add7d387f11a959f3ee7d4fc9c2487dbaa604", out)
         self.assertIn("BuildID: c74f42995b9d1452f1534f88b6c56ed7102212d0", out)

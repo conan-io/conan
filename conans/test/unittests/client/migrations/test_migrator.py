@@ -6,7 +6,6 @@ import unittest
 
 import pytest
 
-from conans.cli.output import ConanOutput
 from conans.errors import ConanMigrationError
 from conans.migrations import Migrator
 from conans.test.utils.test_files import temp_folder

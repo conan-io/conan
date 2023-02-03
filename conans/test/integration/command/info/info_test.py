@@ -1,578 +1,342 @@
 import json
-import os
 import textwrap
-import unittest
-from datetime import datetime
 
-import pytest
-
-from conans import __version__ as client_version
-from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save, load
+from conan.cli.exit_codes import ERROR_GENERAL
+from conans.model.recipe_ref import RecipeReference
+from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
-class InfoTest(unittest.TestCase):
-
-    def _create(self, name, version, deps=None, export=True):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class pkg(ConanFile):
-                name = "{name}"
-                version = "{version}"
-                license = {license}
-                description = "blah"
-                url = "myurl"
-                {requires}
-            """)
-        requires = ""
-        if deps:
-            requires = "requires = {}".format(", ".join('"{}"'.format(d) for d in deps))
-
-        conanfile = conanfile.format(name=name, version=version, requires=requires,
-                                     license='"MIT"')
-
-        self.client.save({"conanfile.py": conanfile}, clean_first=True)
-        if export:
-            self.client.run("export . --user=lasote --channel=stable")
-
-    def test_graph(self):
-        self.client = TestClient()
-
-        test_deps = {
-            "hello0": ["hello1", "hello2", "hello3"],
-            "hello1": ["hello4"],
-            "hello2": [],
-            "hello3": ["hello7"],
-            "hello4": ["hello5", "hello6"],
-            "hello5": [],
-            "hello6": [],
-            "hello7": ["hello8"],
-            "hello8": ["hello9", "hello10"],
-            "hello9": [],
-            "hello10": [],
-        }
-
-        def create_export(testdeps, name):
-            deps = testdeps[name]
-            for dep in deps:
-                create_export(testdeps, dep)
-
-            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
-            export = False if name == "hello0" else True
-            self._create(name, "0.1", expanded_deps, export=export)
-
-        create_export(test_deps, "hello0")
-
-        self.client.run("info . --graph", assert_error=True)
-
-        # arbitrary case - file will be named according to argument
-        arg_filename = "test.dot"
-        self.client.run("info . --graph=%s" % arg_filename)
-        dot_file = os.path.join(self.client.current_folder, arg_filename)
-        contents = load(dot_file)
-        expected = textwrap.dedent("""
-            "hello8/0.1@lasote/stable" -> "hello9/0.1@lasote/stable"
-            "hello8/0.1@lasote/stable" -> "hello10/0.1@lasote/stable"
-            "hello4/0.1@lasote/stable" -> "hello5/0.1@lasote/stable"
-            "hello4/0.1@lasote/stable" -> "hello6/0.1@lasote/stable"
-            "hello3/0.1@lasote/stable" -> "hello7/0.1@lasote/stable"
-            "hello7/0.1@lasote/stable" -> "hello8/0.1@lasote/stable"
-            "conanfile.py (hello0/0.1)" -> "hello1/0.1@lasote/stable"
-            "conanfile.py (hello0/0.1)" -> "hello2/0.1@lasote/stable"
-            "conanfile.py (hello0/0.1)" -> "hello3/0.1@lasote/stable"
-            "hello1/0.1@lasote/stable" -> "hello4/0.1@lasote/stable"
-            """)
-        for line in expected.splitlines():
-            assert line in contents
-
-    def test_graph_html(self):
-        self.client = TestClient()
-
-        test_deps = {
-            "hello0": ["hello1"],
-            "hello1": [],
-        }
-
-        def create_export(testdeps, name):
-            deps = testdeps[name]
-            for dep in deps:
-                create_export(testdeps, dep)
-
-            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
-            export = False if name == "hello0" else True
-            self._create(name, "0.1", expanded_deps, export=export)
-
-        create_export(test_deps, "hello0")
-
-        # arbitrary case - file will be named according to argument
-        arg_filename = "test.html"
-        self.client.run("info . --graph=%s" % arg_filename)
-        html = self.client.load(arg_filename)
-        self.assertIn("<body>", html)
-        self.assertIn("{ from: 0, to: 1 }", html)
-        self.assertIn("id: 0,\n                        label: 'hello0/0.1',", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script>"
-                      " JFrog LTD. <a>https://conan.io</a>"
-                      .format(client_version, datetime.today().year), html)
-
-    @pytest.mark.xfail(reason="Info command output changed")
-    def test_only_names(self):
-        self.client = TestClient()
-        self._create("hello0", "0.1")
-        self._create("hello1", "0.1", ["hello0/0.1@lasote/stable"])
-        self._create("hello2", "0.1", ["hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info . --only None")
-        self.assertEqual(["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable",
-                          "conanfile.py (hello2/0.1)"],
-                         str(self.client.out).splitlines()[-3:])
-        self.client.run("info . --only=date")
-        lines = [(line if "date" not in line else "Date")
-                 for line in str(self.client.out).splitlines()]
-        self.assertEqual(["hello0/0.1@lasote/stable", "Date",
-                          "hello1/0.1@lasote/stable", "Date",
-                          "conanfile.py (hello2/0.1)"], lines)
-
-        self.client.run("info . --only=invalid", assert_error=True)
-        self.assertIn("Invalid --only value", self.client.out)
-        self.assertNotIn("with --path specified, allowed values:", self.client.out)
-
-        self.client.run("info . --paths --only=bad", assert_error=True)
-        self.assertIn("Invalid --only value", self.client.out)
-        self.assertIn("with --path specified, allowed values:", self.client.out)
-
-    @pytest.mark.xfail(reason="Info command output changed")
-    def test_info_virtual(self):
-        # Checking that "Required by: virtual" doesnt appear in the output
-        self.client = TestClient()
-        self._create("hello", "0.1")
-        self.client.run("info hello/0.1@lasote/stable")
-        self.assertNotIn("virtual", self.client.out)
-        self.assertNotIn("Required", self.client.out)
-
-    @pytest.mark.xfail(reason="cache2.0 revisit")
-    def test_reuse(self):
-        self.client = TestClient()
-        self._create("hello0", "0.1")
-        self._create("hello1", "0.1", ["hello0/0.1@lasote/stable"])
-        self._create("hello2", "0.1", ["hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info . -u")
-
-        self.assertIn("Creation date: ", self.client.out)
-        self.assertIn("ID: ", self.client.out)
-        self.assertIn("BuildID: ", self.client.out)
-
-        expected_output = textwrap.dedent("""\
-            hello0/0.1@lasote/stable
-                Remote: None
-                URL: myurl
-                License: MIT
-                Description: blah
-                Provides: hello0
-                Recipe: No remote%s
-                Binary: Missing
-                Binary remote: None
-                Required by:
-                    hello1/0.1@lasote/stable
-            hello1/0.1@lasote/stable
-                Remote: None
-                URL: myurl
-                License: MIT
-                Description: blah
-                Provides: hello1
-                Recipe: No remote%s
-                Binary: Missing
-                Binary remote: None
-                Required by:
-                    conanfile.py (hello2/0.1)
-                Requires:
-                    hello0/0.1@lasote/stable
-            conanfile.py (hello2/0.1)
-                URL: myurl
-                License: MIT
-                Description: blah
-                Provides: hello2
-                Requires:
-                    hello1/0.1@lasote/stable""")
-
-        expected_output = expected_output % (
-            "\n    Revision: d6727bc577b5c6bd8ac7261eff98be93"
-            "\n    Package revision: None",
-            "\n    Revision: 7c5e142433a3ee0acaeffb4454a6d42f"
-            "\n    Package revision: None",)
-
-        def clean_output(output):
-            return "\n".join([line for line in str(output).splitlines()
-                              if not line.strip().startswith("Creation date") and
-                              not line.strip().startswith("ID") and
-                              not line.strip().startswith("Context") and
-                              not line.strip().startswith("BuildID") and
-                              not line.strip().startswith("export_folder") and
-                              not line.strip().startswith("build_folder") and
-                              not line.strip().startswith("source_folder") and
-                              not line.strip().startswith("package_folder")])
-
-        # The timestamp is variable so we can't check the equality
-        self.assertIn(expected_output, clean_output(self.client.out))
-
-        self.client.run("info . -u --only=url")
-        expected_output = textwrap.dedent("""\
-            hello0/0.1@lasote/stable
-                URL: myurl
-            hello1/0.1@lasote/stable
-                URL: myurl
-            conanfile.py (hello2/0.1)
-                URL: myurl""")
-
-        self.assertIn(expected_output, clean_output(self.client.out))
-        self.client.run("info . -u --only=url --only=license")
-        expected_output = textwrap.dedent("""\
-            hello0/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-            hello1/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-            conanfile.py (hello2/0.1)
-                URL: myurl
-                License: MIT""")
-
-        self.assertIn(expected_output, clean_output(self.client.out))
-
-        self.client.run("info . -u --only=url --only=license --only=description")
-        expected_output = textwrap.dedent("""\
-            hello0/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-                Description: blah
-            hello1/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-                Description: blah
-            conanfile.py (hello2/0.1)
-                URL: myurl
-                License: MIT
-                Description: blah""")
-        self.assertIn(expected_output, clean_output(self.client.out))
-
-    def test_json_info_outputs(self):
-        self.client = TestClient()
-        self._create("liba", "0.1")
-        self._create("libe", "0.1")
-        self._create("libf", "0.1")
-
-        self._create("libb", "0.1", ["liba/0.1@lasote/stable", "libe/0.1@lasote/stable"])
-        self._create("libc", "0.1", ["liba/0.1@lasote/stable", "libf/0.1@lasote/stable"])
-
-        self._create("libd", "0.1", ["libb/0.1@lasote/stable", "libc/0.1@lasote/stable"],
-                     export=False)
-
-        self.client.run("info . -u --json=output.json")
-
-        # Check a couple of values in the generated JSON
-        content = json.loads(self.client.load("output.json"))
-        self.assertEqual(content[0]["reference"], "liba/0.1@lasote/stable")
-        self.assertEqual(content[0]["license"][0], "MIT")
-        self.assertEqual(content[0]["description"], "blah")
-        self.assertEqual(content[0]["revision"], "6a53a80661c5369e15f23d918f5d2e95")
-        self.assertEqual(content[0]["package_revision"], None)
-        self.assertEqual(content[1]["url"], "myurl")
-        self.assertEqual(content[1]["required_by"][0], "conanfile.py (libd/0.1)")
-
-
-class InfoTest2(unittest.TestCase):
-
-    @pytest.mark.xfail(reason="cache2.0 revisit")
-    def test_not_found_package_dirty_cache(self):
-        # Conan does a lock on the cache, and even if the package doesn't exist
-        # left a trailing folder with the filelocks. This test checks
-        # it will be cleared
-        client = TestClient()
-        client.run("info nothing/0.1@user/testing", assert_error=True)
-        self.assertEqual(os.listdir(client.cache.store), [])
-        # This used to fail in Windows, because of the different case
-        client.save({"conanfile.py": GenConanfile().with_name("Nothing").with_version("0.1")})
-        client.run("export . --user=user --channel=testing")
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_failed_info(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_require("pkg/1.0.x@user/testing")})
-        client.run("info .", assert_error=True)
-        self.assertIn("pkg/1.0.x@user/testing: Not found in local cache", client.out)
-        client.run("search")
-        self.assertIn("There are no packages", client.out)
-        self.assertNotIn("pkg/1.0.x@user/testing", client.out)
+class TestBasicCliOutput:
 
     def test_info_settings(self):
-        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("info . -s build_type=Debug")
-        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
-        self.assertIn("ID: 040ce2bd0189e377b2d15eb7246a4274d1c63317", client.out)
-
-        client.run("info . -s build_type=Release")
-        self.assertIn("ID: e53d55fd33066c49eb97a4ede6cb50cd8036fe8b", client.out)
-        self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.out)
-
-    def test_graph_html_embedded_visj(self):
-        client = TestClient()
-        visjs_path = os.path.join(client.cache_folder, "vis.min.js")
-        viscss_path = os.path.join(client.cache_folder, "vis.min.css")
-        save(visjs_path, "")
-        save(viscss_path, "")
-        client.save({"conanfile.txt": ""})
-        client.run("info . --graph=file.html")
-        html = client.load("file.html")
-        self.assertIn("<body>", html)
-        self.assertNotIn("cloudflare", html)
-        self.assertIn(visjs_path, html)
-        self.assertIn(viscss_path, html)
-
-    def test_info_build_requires(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . tool/0.1@user/channel")
-        client.run("create . dep/0.1@user/channel")
-        conanfile = GenConanfile().with_require("dep/0.1@user/channel")
-        client.save({"conanfile.py": conanfile})
-        client.run("export . --name=pkg --version=0.1 --user=user --channel=channel")
-        client.run("export . --name=pkg2 --version=0.1 --user=user --channel=channel")
-        client.save({"conanfile.txt": "[requires]\npkg/0.1@user/channel\npkg2/0.1@user/channel",
-                     "myprofile": "[tool_requires]\ntool/0.1@user/channel"}, clean_first=True)
-        client.run("info . -pr=myprofile --build=missing")
-        # Check that there is only 1 output for tool, not repeated many times
-        pkgs = [line for line in str(client.out).splitlines() if line.startswith("tool")]
-        self.assertEqual(len(pkgs), 1)
-
-        client.run("info . -pr=myprofile --build=missing --graph=file.html")
-        html = client.load("file.html")
-        self.assertIn("html", html)
-        # To check that this node is not duplicated
-        self.assertEqual(1, html.count("label: 'dep/0.1'"))
-        self.assertIn("label: 'pkg2/0.1',\n                        "
-                      "shape: 'box',\n                        "
-                      "color: { background: 'Khaki'},", html)
-        self.assertIn("label: 'pkg/0.1',\n                        "
-                      "shape: 'box',\n                        "
-                      "color: { background: 'Khaki'},", html)
-        self.assertIn("label: 'tool/0.1',\n                        "
-                      "shape: 'ellipse',\n                        "
-                      "color: { background: 'SkyBlue'},", html)
-
-    def test_cwd(self):
-        client = TestClient()
-        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
-        client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder --user=lasote --channel=testing")
-
-        client.run("info ./subfolder")
-        self.assertIn("conanfile.py (pkg/0.1)", client.out)
-
-    def test_wrong_path_parameter(self):
-        client = TestClient()
-
-        client.run("info", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", client.out)
-
-        client.run("info not_real_path", assert_error=True)
-        self.assertIn("ERROR: Conanfile not found", client.out)
-
-        client.run("info conanfile.txt", assert_error=True)
-        self.assertIn("ERROR: Conanfile not found", client.out)
-
-    def test_common_attributes(self):
-        client = TestClient()
-
-        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
-        client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder --user=lasote --channel=testing")
-
-        client.run("info ./subfolder")
-
-        self.assertIn("conanfile.py (pkg/0.1)", client.out)
-        self.assertNotIn("License:", client.out)
-        self.assertNotIn("Author:", client.out)
-        self.assertNotIn("Topics:", client.out)
-        self.assertNotIn("Homepage:", client.out)
-        self.assertNotIn("URL:", client.out)
-
-    def test_full_attributes(self):
-        client = TestClient()
-
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"
                 version = "0.2"
-                settings = "build_type"
+                settings = "build_type", "compiler"
                 author = "John Doe"
                 license = "MIT"
                 url = "https://foo.bar.baz"
                 homepage = "https://foo.bar.site"
-                topics = ("foo", "bar", "qux")
-                provides = ("libjpeg", "libjpg")
+                topics = "foo", "bar", "qux"
+                provides = "libjpeg", "libjpg"
                 deprecated = "other-pkg"
-        """)
-
-        client.save({"subfolder/conanfile.py": conanfile})
-        client.run("export ./subfolder --user=lasote --channel=testing")
-        client.run("info ./subfolder")
-
-        self.assertIn("conanfile.py (pkg/0.2)", client.out)
-        self.assertIn("License: MIT", client.out)
-        self.assertIn("Author: John Doe", client.out)
-        self.assertIn("Topics: foo, bar, qux", client.out)
-        self.assertIn("URL: https://foo.bar.baz", client.out)
-        self.assertIn("Homepage: https://foo.bar.site", client.out)
-        self.assertIn("Provides: libjpeg, libjpg", client.out)
-        self.assertIn("Deprecated: other-pkg", client.out)
-
-        client.run("info ./subfolder --json=output.json")
-        output = json.loads(client.load('output.json'))[0]
-        self.assertEqual(output['reference'], 'conanfile.py (pkg/0.2)')
-        self.assertListEqual(output['license'], ['MIT', ])
-        self.assertEqual(output['author'], 'John Doe')
-        self.assertListEqual(output['topics'], ['foo', 'bar', 'qux'])
-        self.assertEqual(output['url'], 'https://foo.bar.baz')
-        self.assertEqual(output['homepage'], 'https://foo.bar.site')
-        self.assertListEqual(output['provides'], ['libjpeg', 'libjpg'])
-        self.assertEqual(output['deprecated'], 'other-pkg')
-
-    def test_topics_graph(self):
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class MyTest(ConanFile):
-                name = "pkg"
-                version = "0.2"
-                topics = ("foo", "bar", "qux")
-        """)
-
-        client = TestClient()
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+            """)
         client.save({"conanfile.py": conanfile})
-        client.run("export . --user=lasote --channel=testing")
+        client.run("graph info . -s build_type=Debug -s compiler=gcc -s compiler.version=11")
+        assert "build_type: Debug" in client.out
+        assert "context: host" in client.out
+        assert "license: MIT" in client.out
+        assert "homepage: https://foo.bar.site" in client.out
+        assert "compiler: gcc" in client.out
+        assert "compiler.version: 11" in client.out
+        assert "prev: None" in client.out
+        assert "fPIC: True" in client.out
+        assert "shared: False" in client.out
+        # Create the package
+        client.run("create .")
+        pref = client.get_latest_package_reference("pkg/0.2")
+        client.run("graph info .")
+        # It's a consumer so we can not get the prev because it's not even a package yet
+        assert "prev: None" in client.out
+        # Now, let's create another consumer requiring the previous package
+        client.save({"conanfile.txt": "[requires]\npkg/0.2"}, clean_first=True)
+        client.run("graph info .")
+        assert textwrap.dedent(f"""
+            {repr(pref.ref)}:
+              ref: {repr(pref.ref)}
+              id: 1
+              recipe: Cache
+              package_id: {pref.package_id}
+              prev: {pref.revision}""") in client.out
 
-        # Topics as tuple
-        client.run("info pkg/0.2@lasote/testing --graph file.html")
-        html_content = client.load("file.html")
-        self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
-        self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
 
-        # Topics as a string
-        conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
-        client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("export . --user=lasote --channel=testing")
-        client.run("info pkg/0.2@lasote/testing --graph file.html")
-        html_content = client.load("file.html")
-        self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
-        self.assertIn("<li><b>topics</b>: foo", html_content)
-
-    def test_previous_lockfile_error(self):
-        # https://github.com/conan-io/conan/issues/5479
+class TestConanfilePath:
+    def test_cwd(self):
+        # Check the first positional argument is a relative path
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("create . user/testing")
-        client.save({"conanfile.py": GenConanfile().with_name("other").with_version("0.1")
-                    .with_option("shared", [True, False])
-                    .with_default_option("shared", False)})
-        client.run("install . -o shared=True")
-        client.run("info pkg/0.1@user/testing")
-        self.assertIn("pkg/0.1@user/testing", client.out)
-        self.assertNotIn("shared", client.out)
+        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
+        client.save({"subfolder/conanfile.py": conanfile})
+        client.run("graph info ./subfolder -s build_type=Debug")
+        assert "build_type: Debug" in client.out
 
-
-def test_scm_info():
-    # https://github.com/conan-io/conan/issues/8377
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        class pkg(ConanFile):
-            scm = {"type": "git",
-                   "url": "some-url/path",
-                   "revision": "some commit hash"}
-        """)
-    client = TestClient()
-    client.save({"conanfile.py": conanfile})
-    client.run("export . --name=pkg --version=0.1")
-
-    client.run("info .")
-    assert "'revision': 'some commit hash'" in client.out
-    assert "'url': 'some-url/path'" in client.out
-
-    client.run("info pkg/0.1@")
-    assert "'revision': 'some commit hash'" in client.out
-    assert "'url': 'some-url/path'" in client.out
-
-    client.run("info . --json=file.json")
-    file_json = client.load("file.json")
-    info_json = json.loads(file_json)
-    node = info_json[0]
-    assert node["scm"] == {"type": "git", "url": "some-url/path", "revision": "some commit hash"}
-
-
-class TestInfoContext:
-    # https://github.com/conan-io/conan/issues/9121
-
-    def test_context_info(self):
+    def test_wrong_path_parameter(self):
+        # check that the positional parameter must exist and file must be found
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
 
-        client.run("info .")
-        assert "Context: host" in client.out
+        client.run("graph info", assert_error=True)
+        assert "ERROR: Please specify at least a path" in client.out
 
-        client.run("info . --json=file.json")
-        info = json.loads(client.load("file.json"))
-        assert info[0]["context"] == "host"
+        client.run("graph info not_real_path", assert_error=True)
+        assert "ERROR: Conanfile not found" in client.out
 
-    def test_context_build(self):
+        client.run("graph info conanfile.txt", assert_error=True)
+        assert "ERROR: Conanfile not found" in client.out
+
+
+class TestFilters:
+
+    def test_filter_fields(self):
+        # The --filter arg should work, specifying which fields to show only
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile()
+               .with_class_attribute("author = 'myself'")
+               .with_class_attribute("license = 'MIT'")
+               .with_class_attribute("url = 'http://url.com'")})
+        c.run("graph info . ")
+        assert "license: MIT" in c.out
+        assert "author: myself" in c.out
+        c.run("graph info . --filter=license")
+        assert "license: MIT" in c.out
+        assert "author" not in c.out
+        c.run("graph info . --filter=author")
+        assert "license" not in c.out
+        assert "author: myself" in c.out
+        c.run("graph info . --filter=author --filter=license")
+        assert "license" in c.out
+        assert "author: myself" in c.out
+
+    def test_filter_fields_json(self):
+        # The --filter arg should work, specifying which fields to show only
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile()
+               .with_class_attribute("author = 'myself'")
+               .with_class_attribute("license = 'MIT'")
+               .with_class_attribute("url = 'http://url.com'")})
+        c.run("graph info . --filter=license --format=json")
+        assert "author" not in c.out
+        assert '"license": "MIT"' in c.out
+        c.run("graph info . --filter=license --format=html", assert_error=True)
+        assert "Formatted output 'html' cannot filter fields" in c.out
+
+
+class TestJsonOutput:
+    def test_json_package_filter(self):
+        # Formatted output like json or html doesn't make sense to be filtered
         client = TestClient()
-        client.save({"cmake/conanfile.py": GenConanfile(),
-                     "pkg/conanfile.py": GenConanfile().with_tool_requires("cmake/1.0")})
+        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
+        client.save({"conanfile.py": conanfile})
+        client.run("graph info . --package-filter=nothing --format=json")
+        assert '"nodes": []' in client.out
+        client.run("graph info . --package-filter=pkg* --format=json")
+        graph = json.loads(client.stdout)
+        assert graph["nodes"][0]["ref"] == "pkg/0.1"
 
-        client.run("create cmake cmake/1.0@")
-        client.run("export pkg --name=pkg --version=1.0")
-
-        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --build")
-        assert "cmake/1.0\n"\
-               "    ID: {}\n"\
-               "    BuildID: None\n"\
-               "    Context: build".format(NO_SETTINGS_PACKAGE_ID) in client.out
-
-        assert "pkg/1.0\n" \
-               "    ID: {}\n" \
-               "    BuildID: None\n" \
-               "    Context: host".format(NO_SETTINGS_PACKAGE_ID) in client.out
-
-        client.run("info pkg/1.0@ -pr:b=default -pr:h=default --build --json=file.json")
-        info = json.loads(client.load("file.json"))
-        assert info[0]["reference"] == "cmake/1.0"
-        assert info[0]["context"] == "build"
-        assert info[1]["reference"] == "pkg/1.0"
-        assert info[1]["context"] == "host"
+    def test_json_info_outputs(self):
+        client = TestClient()
+        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
+        client.save({"conanfile.py": conanfile})
+        client.run("graph info . -s build_type=Debug --format=json")
+        graph = json.loads(client.stdout)
+        assert graph["nodes"][0]["settings"]["build_type"] == "Debug"
 
 
-class TestInfoPythonRequires:
-    # https://github.com/conan-io/conan/issues/9277
+class TestAdvancedCliOutput:
+    """ Testing more advanced fields output, like SCM or PYTHON-REQUIRES
+    """
 
     def test_python_requires(self):
+        # https://github.com/conan-io/conan/issues/9277
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=tool --version=0.1")
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
+
             class pkg(ConanFile):
                 python_requires = "tool/0.1"
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run("info .")
-        assert "Python-requires:" in client.out
-        assert "tool/0.1#f3367e0e7d170aa12abccb175fee5f97" in client.out
+        client.run("graph info .")
+        assert "python_requires: ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']" in client.out
 
-        client.run("info . --json=file.json")
-        info = json.loads(client.load("file.json"))
-        assert info[0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']
+        client.run("graph info . --format=json")
+        info = json.loads(client.stdout)
+        assert info["nodes"][0]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
+
+    def test_build_id_info(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "build_type"
+
+                def build_id(self):
+                    self.info_build.settings.build_type = "Any"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export .")
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")}, clean_first=True)
+        client.run("graph info . -s build_type=Release")
+        assert "build_id: ec0cd314abe055f7de86cd6493e31977d2b87884" in client.out
+        assert "package_id: efa83b160a55b033c4ea706ddb980cd708e3ba1b" in client.out
+
+        client.run("graph info . -s build_type=Debug")
+        assert "build_id: ec0cd314abe055f7de86cd6493e31977d2b87884" in client.out
+        assert "package_id: 9e186f6d94c008b544af1569d1a6368d8339efc5" in client.out
+
+
+class TestEditables:
+    def test_info_paths(self):
+        # https://github.com/conan-io/conan/issues/7054
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def layout(self):
+                    self.folders.source = "."
+                    self.folders.build = "."
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        c.run("editable add pkg pkg/0.1@")
+        # TODO: Check this --package-filter with *
+        c.run("graph info consumer --package-filter=pkg*")
+        # FIXME: Paths are not diplayed yet
+        assert "source_folder: None" in c.out
+
+
+class TestInfoRevisions:
+
+    def test_info_command_showing_revision(self):
+        """If I run 'conan info ref' I get information about the revision only in a v2 client"""
+        client = TurboTestClient()
+        ref = RecipeReference.loads("lib/1.0@conan/testing")
+
+        client.create(ref)
+        client.run("graph info --requires={}".format(ref))
+        revision = client.recipe_revision(ref)
+        assert f"ref: lib/1.0@conan/testing#{revision}" in client.out
+
+
+class TestInfoTestPackage:
+    # https://github.com/conan-io/conan/issues/10714
+
+    def test_tested_reference_str(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("tool", "0.1")})
+        client.run("export .")
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class HelloConan(ConanFile):
+
+                def requirements(self):
+                    self.requires(self.tested_reference_str)
+
+                def build_requirements(self):
+                    self.build_requires(self.tested_reference_str)
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        for args in ["", " --build=*"]:
+            client.run("graph info . " + args)
+            assert "AttributeError: 'HelloConan' object has no attribute 'tested_reference_str'"\
+                   not in client.out
+
+
+class TestDeployers:
+
+    def test_custom_deploy(self):
+        c = TestClient()
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute("license = 'MIT'")
+        c.save({"conanfile.py": conanfile})
+        c.run("create .")
+        collectlicenses = textwrap.dedent(r"""
+            from conan.tools.files import save
+
+            def deploy(graph, output_folder, **kwargs):
+                contents = []
+                conanfile = graph.root.conanfile
+                for pkg in graph.nodes:
+                    d = pkg.conanfile
+                    contents.append("LICENSE {}: {}!".format(d.ref, d.license))
+                contents = "\n".join(contents)
+                conanfile.output.info(contents)
+                save(conanfile, "licenses.txt", contents)
+            """)
+        c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                              .with_class_attribute("license='GPL'"),
+                "collectlicenses.py": collectlicenses})
+        c.run("graph info . --deploy=collectlicenses")
+        assert "conanfile.py: LICENSE : GPL!" in c.out
+        assert "LICENSE pkg/0.1: MIT!" in c.out
+        contents = c.load("licenses.txt")
+        assert "LICENSE pkg/0.1: MIT!" in contents
+        assert "LICENSE : GPL!" in contents
+
+
+class TestErrorsInGraph:
+    # https://github.com/conan-io/conan/issues/12735
+
+    def test_error_in_recipe(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_id(self):
+                    a = b
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+        c.run("export dep")
+        exit_code = c.run("graph info consumer", assert_error=True)
+        assert "name 'b' is not defined" in c.out
+        assert exit_code == ERROR_GENERAL
+
+    def test_error_exports(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import replace_in_file
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def export(self):
+                    replace_in_file(self, "conanfile.py", "from conan", "from conans")
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+        c.run("export dep")
+        exit_code = c.run("graph info consumer", assert_error=True)
+        assert "ERROR: Package 'dep/0.1' not resolved: dep/0.1: Cannot load" in c.out
+        assert exit_code == ERROR_GENERAL
+
+
+def test_info_not_hit_server():
+    """
+    the command graph info shouldn't be hitting the server if packages are in the Conan cache
+    :return:
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "consumer/conanfile.py": GenConanfile("consumer", "0.1").with_require("pkg/0.1")})
+    c.run("create pkg")
+    c.run("create consumer")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    c.run("install --requires=consumer/0.1@")
+    assert "Downloaded" in c.out
+    # break the server to make sure it is not being contacted at all
+    c.servers["default"] = None
+    c.run("graph info --requires=consumer/0.1@")
+    assert "Downloaded" not in c.out
+    # Now we remove the local, so it will raise errors
+    c.run("remove pkg* -c")
+    c.run("graph info --requires=consumer/0.1@", assert_error=True)
+    assert "'NoneType' object " in c.out
+    c.run("remote disable *")
+    c.run("graph info --requires=consumer/0.1@", assert_error=True)
+    assert "'NoneType' object " not in c.out
+    assert "No remote defined" in c.out

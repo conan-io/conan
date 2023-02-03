@@ -13,6 +13,13 @@ class PackageType(Enum):
     PYTHON = "python-require"
     UNKNOWN = "unknown"
 
+    def __str__(self):
+        return self.value
+
+    def __eq__(self, other):
+        # This is useful for comparing with string type at user code, like ``package_type == "xxx"``
+        return super().__eq__(PackageType(other))
+
     @staticmethod
     def compute_package_type(conanfile):
         # This doesnt implement the header_only option without shared one. Users should define

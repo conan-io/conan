@@ -12,42 +12,44 @@ def test_info_build_order():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --json=bo.json --build=missing")
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
 
     result = [
         [
             {
-                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ],
         [
             {
-                "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ]
     ]
@@ -62,41 +64,43 @@ def test_info_build_order_build_require():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order  consumer --json=bo.json --build=missing")
-    bo_json = json.loads(c.load("bo.json"))
+    c.run("graph build-order  consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
     result = [
         [
             {
-                "ref": 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97',
+                "ref": 'dep/0.1#4d670581ccb765839f2239cc8dff8fbd',
                 "depends": [],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "build",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ],
         [
             {
-                "ref": "pkg/0.1#f487531dfe46620d4f64303baf2211fc",
+                "ref": "pkg/0.1#b5a40d7314ce57ebdcf8fa31257f3de1",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': [],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ]
     ]
@@ -118,77 +122,39 @@ def test_info_build_order_options():
     c.run("export dep1 --name=dep1 --version=0.1")
     c.run("export dep2 --name=dep2 --version=0.1")
 
-    c.run("graph build-order  consumer --json=bo.json --build=missing")
-
-    bo_json = json.loads(c.load("bo.json"))
-
+    c.run("graph build-order  consumer --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
     result = [
         [
-            {
-                "ref": "tool/0.1#b6299fc637530d547c7eaa047d1da91d",
-                "depends": [],
-                "packages": [
-                    {
-                        "package_id": "3da64a6c9584c99ed46ddf3a929787da9075a475",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "build",
-                        "binary": "Build",
-                        "options": [
-                                "tool:myopt=1"
-                        ]
-                    },
-                    {
-                        "package_id": "656515670a0b81a38777e89d7984090eadc9919d",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "build",
-                        "binary": "Build",
-                        "options": [
-                                "tool:myopt=2"
-                        ]
-                    }
-                ]
-            }
+            {'ref': 'tool/0.1#b4c19a1357b43877a2019dd2804336a9',
+             'depends': [],
+             'packages': [[
+                 {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
+                  'context': 'build', 'depends': [],
+                  'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': []},
+                 {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
+                  'context': 'build', 'depends': [],
+                  'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
+                  'filenames': []}
+             ]]}
         ],
         [
-            {
-                "ref": "dep1/0.1#eeabd1fa65a6f7ccc227816a507bb966",
-                "depends": [
-                    "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
-                ],
-                "packages": [
-                    {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "host",
-                        "binary": "Build",
-                        "options": [
-                        ]
-                    }
-                ]
-            },
-            {
-                "ref": "dep2/0.1#d878e5a90ac7bd8fbb14ce899456cc74",
-                "depends": [
-                    "tool/0.1#b6299fc637530d547c7eaa047d1da91d"
-                ],
-                "packages": [
-                    {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "host",
-                        "binary": "Build",
-                        "options": [
-                        ]
-                    }
-                ]
-            }
+            {'ref': 'dep1/0.1#7f0d80f9cb8c6bab06def7f6fb8f3b86',
+             'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
+             'packages': [[
+                 {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
+                  'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
+                  'filenames': []}
+             ]]},
+            {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
+             'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
+             'packages': [[
+                 {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
+                  'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
+                  'filenames': []}
+             ]]}
         ]
     ]
-
     assert bo_json == result
 
 
@@ -201,61 +167,65 @@ def test_info_build_order_merge_multi_product():
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
     c.run("export pkg --name=pkg --version=0.2")
-    c.run("graph build-order consumer1 --json=bo1.json --build=missing")
-    c.run("graph build-order consumer2 --json=bo2.json --build=missing")
-    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --json=bo3.json")
+    c.run("graph build-order consumer1  --build=missing --format=json", redirect_stdout="bo1.json")
+    c.run("graph build-order consumer2  --build=missing --format=json", redirect_stdout="bo2.json")
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=json",
+          redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
 
     result = [
         [
             {
-                "ref": "dep/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo1", "bo2"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ],
         [
             {
-                "ref": "pkg/0.1#447b56f0334b7e2a28aa86e218c8b3bd",
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo1"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             },
             {
-                "ref": "pkg/0.2#447b56f0334b7e2a28aa86e218c8b3bd",
+                "ref": "pkg/0.2#1ac8dd17c0f9f420935abd3b6a8fa032",
                 "depends": [
-                    "dep/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "486166899301ccd88a8b71715c97eeea5cc3ff2b",
+                        "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
                         'prev': None,
                         'filenames': ["bo2"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ]
     ]
@@ -266,7 +236,7 @@ def test_info_build_order_merge_multi_product():
 def test_info_build_order_merge_conditionals():
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os"
             def requirements(self):
@@ -281,68 +251,75 @@ def test_info_build_order_merge_conditionals():
     c.run("export dep --name=depwin --version=0.1")
     c.run("export dep --name=depnix --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --json=bo_win.json --build=missing -s os=Windows")
-    c.run("graph build-order consumer --json=bo_nix.json --build=missing -s os=Linux")
-    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --json=bo3.json")
+    c.run("graph build-order consumer --format=json --build=missing -s os=Windows",
+          redirect_stdout="bo_win.json")
+    c.run("graph build-order consumer --format=json --build=missing -s os=Linux",
+          redirect_stdout="bo_nix.json")
+    c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --format=json",
+          redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
 
     result = [
         [
             {
-                "ref": "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "depwin/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_win"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             },
             {
-                "ref": "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97",
+                "ref": "depnix/0.1#4d670581ccb765839f2239cc8dff8fbd",
                 "depends": [],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "357add7d387f11a959f3ee7d4fc9c2487dbaa604",
+                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
                         'prev': None,
                         'filenames': ["bo_nix"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ],
         [
             {
-                "ref": "pkg/0.1#df708aff3c643ce78d6ea456cab80671",
+                "ref": "pkg/0.1#b615ac4c7cd16631cd9e924b68596fce",
                 "depends": [
-                    "depwin/0.1#f3367e0e7d170aa12abccb175fee5f97",
-                    "depnix/0.1#f3367e0e7d170aa12abccb175fee5f97"
+                    "depwin/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                    "depnix/0.1#4d670581ccb765839f2239cc8dff8fbd"
                 ],
-                "packages": [
+                "packages": [[
                     {
-                        "package_id": "fe0818ee6bf52c8906f551e114ea476081219a57",
+                        "package_id": "b23846b9b10455081d89a9dfacd01f7712d04b95",
                         'prev': None,
                         'filenames': ["bo_win"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     },
                     {
-                        "package_id": "089e881a859748afac9c03e5badf9163f62a6cf9",
+                        "package_id": "dc29fa55ec82fab6bd820398c7a152ae5f7d4e28",
                         'prev': None,
                         'filenames': ["bo_nix"],
                         "context": "host",
+                        'depends': [],
                         "binary": "Build",
                         "options": []
                     }
-                ]
+                ]]
             }
         ]
     ]

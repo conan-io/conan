@@ -11,29 +11,36 @@ def is_terminal(stream):
 
 def color_enabled(stream):
     """
-    NO_COLOR: No colors and no colorama
-    CLICOLOR: When 1, colors if is_terminal
-    CLICOLOR_FORCE: When 1, always colors (except if NO_COLOR)
+    NO_COLOR: No colors
+
+    https://no-color.org/
+
+    Command-line software which adds ANSI color to its output by default should check for the
+    presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
+    prevents the addition of ANSI color.
+
+    CLICOLOR_FORCE: Force color
+
+    https://bixense.com/clicolors/
     """
-    if os.getenv("NO_COLOR") == "1":
+
+    from conan.api.output import conan_output_logger_format
+    if conan_output_logger_format:
         return False
-    elif os.getenv("CLICOLOR_FORCE") == "1" or (os.getenv("CLICOLOR", "1") != "0"
-                                                and is_terminal(stream)):
+
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
         return True
-    else:
+
+    if os.getenv("NO_COLOR") is not None:
         return False
+    return is_terminal(stream)
 
 
 def init_colorama(stream):
     import colorama
-
-    if not color_enabled(stream):
-        if os.getenv("NO_COLOR") != "1":
-            colorama.init(strip=True)
-        return False
-    else:
-        colorama.init(convert=False, strip=False)
-        return True
+    if color_enabled(stream):
+        colorama.init()
 
 
 class UserInput(object):
@@ -47,7 +54,7 @@ class UserInput(object):
         """
         self._ins = sys.stdin
         # FIXME: circular include, move "color_enabled" function to better location
-        from conans.cli.output import ConanOutput
+        from conan.api.output import ConanOutput
         self._out = ConanOutput()
         self._interactive = not non_interactive
 
@@ -58,10 +65,6 @@ class UserInput(object):
     def raw_input(self):
         self._raise_if_non_interactive()
         return input()
-
-    def get_pass(self, remote_name):
-        self._raise_if_non_interactive()
-        return getpass.getpass("")
 
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
@@ -94,7 +97,8 @@ class UserInput(object):
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
-        return self.get_pass(remote_name)
+        self._raise_if_non_interactive()
+        return getpass.getpass("")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg

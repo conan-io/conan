@@ -1,3 +1,5 @@
+import os
+import platform
 import textwrap
 
 import pytest
@@ -12,7 +14,7 @@ from conans.test.utils.tools import TestClient
 def client():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             def generate(self):
@@ -151,3 +153,76 @@ def test_composition_conan_conf_overwritten_by_cli_arg(client):
     assert "tools.microsoft.msbuild:performance$Slow" in client.out
     assert "tools.microsoft.msbuild:robustness$High" in client.out
     assert "tools.meson.meson:verbosity$Super" in client.out
+
+
+def test_composition_conan_conf_different_data_types_by_cli_arg(client):
+    """
+    Testing if you want to introduce a list/dict via cli
+
+    >> conan install . -c "tools.build.flags:ccflags+=['-Werror']"
+    >> conan install . -c "tools.microsoft.msbuildtoolchain:compile_options={'ExceptionHandling': 'Async'}"
+
+    """
+    conf = textwrap.dedent("""\
+        tools.build.flags:ccflags=["-Wall"]
+        """)
+    save(client.cache.new_config_path, conf)
+    client.run('install . -c "tools.build.flags:ccflags+=[\'-Werror\']" '
+               '-c "tools.microsoft.msbuildtoolchain:compile_options={\'ExceptionHandling\': \'Async\'}"')
+
+    assert "tools.build.flags:ccflags$['-Wall', '-Werror']" in client.out
+    assert "tools.microsoft.msbuildtoolchain:compile_options${'ExceptionHandling': 'Async'}" in client.out
+
+
+def test_jinja_global_conf(client):
+    save(client.cache.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
+                                       "user.mycompany:other = {{platform.system()}}\n"
+                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n")
+    client.run("install .")
+    assert "user.mycompany:parallel={}".format(os.cpu_count()/2) in client.out
+    assert "user.mycompany:other={}".format(platform.system()) in client.out
+    if platform.system() == "Linux":
+        import distro
+        assert "user.mycompany:dist={}".format(distro.id()) in client.out
+    else:
+        assert "user.mycompany:dist=42" in client.out
+
+
+def test_empty_conf_valid():
+    tc = TestClient()
+    profile = textwrap.dedent(r"""
+    [conf]
+    user.unset=
+    """)
+    conanfile = textwrap.dedent(r"""
+    from conan import ConanFile
+
+    class BasicConanfile(ConanFile):
+        name = "pkg"
+        version = "1.0"
+
+        def generate(self):
+            self.output.warning(f'My unset conf variable is: "{self.conf.get("user.unset")}"')
+            self.output.warning(f'My unset conf is {"NOT" if self.conf.get("user.unset") == None else ""} set')
+    """)
+    tc.save({"conanfile.py": conanfile, "profile": profile})
+
+    tc.run("create .")
+    assert 'pkg/1.0: WARN: My unset conf is NOT set' in tc.out
+
+    tc.run("create . -pr=profile")
+    assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
+    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+
+    tc.run("create . -c user.unset=")
+    assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
+    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+
+    tc.run('create . -c user.unset=""')
+    assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
+    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+
+    # And ensure this actually works for the normal case, just in case
+    tc.run("create . -c user.unset=Hello")
+    assert 'pkg/1.0: WARN: My unset conf variable is: "Hello"' in tc.out
+    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out

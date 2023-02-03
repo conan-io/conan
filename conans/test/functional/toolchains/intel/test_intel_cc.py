@@ -6,8 +6,8 @@ from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_intel_oneapi
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("intel_oneapi")
 @pytest.mark.xfail(reason="Intel oneAPI Toolkit is not installed on CI yet")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class TestIntelCC:

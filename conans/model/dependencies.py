@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import BINARY_SKIP, BINARY_DEFERRED
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
@@ -26,6 +25,9 @@ class UserRequirementsDict(object):
         return bool(self._data)
 
     def get(self, ref, build=None, **kwargs):
+        return self._get(ref, build, **kwargs)[1]
+
+    def _get(self, ref, build=None, **kwargs):
         if build is None:
             current_filters = self._require_filter or {}
             if "build" not in current_filters:
@@ -54,14 +56,14 @@ class UserRequirementsDict(object):
         if not ret:
             raise KeyError("'{}' not found in the dependency set".format(ref))
 
-        _, value = ret[0]
-        return value
+        key, value = ret[0]
+        return key, value
 
     def __getitem__(self, name):
         return self.get(name)
 
     def __delitem__(self, name):
-        r = self.get(name)
+        r, _ = self._get(name)
         del self._data[r]
 
     def items(self):
@@ -75,11 +77,8 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        # TODO: Probably the BINARY_SKIP should be filtered later at the user level, not forced here
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
-                        for require, transitive in node.transitive_deps.items()
-                        if transitive.node.binary != BINARY_SKIP and
-                        transitive.node.binary != BINARY_DEFERRED)
+                        for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
 
     def filter(self, require_filter):
@@ -92,6 +91,14 @@ class ConanFileDependencies(UserRequirementsDict):
 
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
         return ConanFileDependencies(data, require_filter)
+
+    def transitive_requires(self, other):
+        data = OrderedDict()
+        for k, v in self._data.items():
+            for otherk, otherv in other._data.items():
+                if v == otherv:
+                    data[k] = v
+        return ConanFileDependencies(data)
 
     @property
     def topological_sort(self):
@@ -114,7 +121,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True, "test": False})
+        return self.filter({"build": False, "direct": True, "test": False, "skip": False})
 
     @property
     def direct_build(self):
@@ -122,14 +129,24 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def host(self):
-        return self.filter({"build": False, "test": False})
+        return self.filter({"build": False, "test": False, "skip": False})
 
     @property
     def test(self):
         # Not needed a direct_test because they are visible=False so only the direct consumer
         # will have them in the graph
-        return self.filter({"build": False, "test": True})
+        return self.filter({"build": False, "test": True, "skip": False})
 
     @property
     def build(self):
         return self.filter({"build": True})
+
+
+def get_transitive_requires(consumer, dependency):
+    """ the transitive requires that we need are the consumer ones, not the current dependencey
+    ones, so we get the current ones, then look for them in the consumer, and return those
+    """
+    pkg_deps = dependency.dependencies.filter({"direct": True})
+    result = consumer.dependencies.transitive_requires(pkg_deps)
+    result = result.filter({"skip": False})
+    return result

@@ -14,8 +14,8 @@ class ConditionalRequirementsIdTest(unittest.TestCase):
         # Default might be improved 2.0 in https://github.com/conan-io/conan/issues/3762
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . optional/0.1@user/testing")
-        conanfile = '''from conans import ConanFile
+        client.run("create . --name=optional --version=0.1 --user=user --channel=testing")
+        conanfile = '''from conan import ConanFile
 class ConanLib(ConanFile):
     options = {"use_lib": [True, False]}
     default_options= {"use_lib": False}
@@ -27,18 +27,18 @@ class ConanLib(ConanFile):
             self.info.requires.remove("optional")
 '''
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkgA/0.1@user/testing")
+        client.run("create . --name=pkgA --version=0.1 --user=user --channel=testing")
         self.assertIn(NO_SETTINGS_PACKAGE_ID, client.out)
-        client.run("create . pkgA/0.1@user/testing -o pkgA:use_lib=True")
+        client.run("create . --name=pkgA --version=0.1 --user=user --channel=testing -o pkgA/*:use_lib=True")
         self.assertIn("9824b101f894df7e2b106af5055272fc083f3008", client.out)
 
         client.save({"conanfile.py": GenConanfile().with_requires("pkgA/0.1@user/testing")})
-        client.run("create . pkgB/0.1@user/testing")
+        client.run("create . --name=pkgB --version=0.1 --user=user --channel=testing")
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
 
         client.save({"conanfile.py": conanfile.replace("pkgA", "pkgB")})
-        client.run("create . pkgC/0.1@user/testing")
+        client.run("create . --name=pkgC --version=0.1 --user=user --channel=testing")
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
         self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
         self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)

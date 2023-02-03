@@ -45,7 +45,7 @@ class _ConfigMock:
     def __getitem__(self, item):
         return 0
 
-    def get(self, conf_name, conf_type=None, conf_default=None):
+    def get(self, conf_name, default=None, check_type=None):
         return 0
 
 

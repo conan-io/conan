@@ -1,6 +1,6 @@
 import textwrap
 
-from conan.tools.files import load_toolchain_args
+from conan.tools.files.files import load_toolchain_args
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -24,7 +24,7 @@ def test_toolchain_loads_config_from_profile():
     profile = textwrap.dedent("""
     include(default)
     [conf]
-    tools.google.bazel:config=test_config
+    tools.google.bazel:configs=["test_config", "test_config2"]
     tools.google.bazel:bazelrc_path=/path/to/bazelrc
     """)
 
@@ -38,5 +38,5 @@ def test_toolchain_loads_config_from_profile():
     client.run("install . -pr=test_profile")
 
     config = load_toolchain_args(client.current_folder)
-    assert config['bazel_config'] == "test_config"
+    assert config['bazel_configs'] == "test_config,test_config2"
     assert config['bazelrc_path'] == "/path/to/bazelrc"

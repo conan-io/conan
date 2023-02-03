@@ -14,7 +14,7 @@ class OptimizeConanFileLoadTest(unittest.TestCase):
         conanfile.py and the test_package/conanfile.py
         """
         client = TestClient()
-        conanfile = """from conans import ConanFile
+        conanfile = """from conan import ConanFile
 mycounter = 0
 class Pkg(ConanFile):
     mycounter2 = 0
@@ -26,7 +26,7 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
 
-        client.run("create . build/0.1@user/testing")
+        client.run("create . --name=build --version=0.1 --user=user --channel=testing")
 
         test_conanfile = conanfile + """
     def requirements(self):
@@ -39,5 +39,5 @@ class Pkg(ConanFile):
                      "test_package/conanfile.py": test_conanfile,
                      "myprofile": "[tool_requires]\nbuild/0.1@user/testing"})
 
-        client.run("create . pkg/0.1@user/testing -pr=myprofile")
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -pr=myprofile")
         self.assertIn("build/0.1@user/testing: MyCounter1 2, MyCounter2 1", client.out)

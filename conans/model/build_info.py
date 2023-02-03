@@ -2,6 +2,9 @@ import copy
 import os
 from collections import OrderedDict
 
+from conan.api.output import ConanOutput
+from conans.errors import ConanException
+
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
@@ -28,9 +31,37 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+class MockInfoProperty(object):
+    """
+    # TODO: Remove in 2.X
+    to mock user_info and env_info
+    """
+    def __init__(self, name):
+        self._message = f"The use of '{name}' is deprecated in Conan 2.0 and will be removed in " \
+                        f"Conan 2.X. Please, update your recipes unless you are maintaining " \
+                        f"compatibility with Conan 1.X"
+
+    def __getitem__(self, key):
+        ConanOutput().warning(self._message)
+        return []
+
+    def __setitem__(self, key, value):
+        ConanOutput().warning(self._message)
+
+    def __getattr__(self, attr):
+        if attr != "_message":
+            ConanOutput().warning(self._message)
+        return []
+
+    def __setattr__(self, attr, value):
+        if attr != "_message":
+            ConanOutput().warning(self._message)
+        return super(MockInfoProperty, self).__setattr__(attr, value)
+
+
 class _Component(object):
 
-    def __init__(self):
+    def __init__(self, set_defaults=False):
         # ###### PROPERTIES
         self._generator_properties = None
 
@@ -56,6 +87,39 @@ class _Component(object):
 
         self._sysroot = None
         self._requires = None
+
+        # LEGACY 1.X fields, can be removed in 2.X
+        self.names = MockInfoProperty("cpp_info.names")
+        self.filenames = MockInfoProperty("cpp_info.filenames")
+        self.build_modules = MockInfoProperty("cpp_info.build_modules")
+
+        if set_defaults:
+            self.includedirs = ["include"]
+            self.libdirs = ["lib"]
+            self.bindirs = ["bin"]
+
+    def serialize(self):
+        return {
+            "includedirs": self._includedirs,
+            "srcdirs": self._srcdirs,
+            "libdirs": self._libdirs,
+            "resdirs": self._resdirs,
+            "bindirs": self._bindirs,
+            "builddirs": self._builddirs,
+            "frameworkdirs": self._frameworkdirs,
+            "system_libs": self._system_libs,
+            "frameworks": self._frameworks,
+            "libs": self._libs,
+            "defines": self._defines,
+            "cflags": self._cflags,
+            "cxxflags": self._cxxflags,
+            "sharedlinkflags": self._sharedlinkflags,
+            "exelinkflags": self._exelinkflags,
+            "objects": self._objects,
+            "sysroot": self._sysroot,
+            "requires": self._requires,
+            "properties": self._generator_properties
+        }
 
     @property
     def includedirs(self):
@@ -126,6 +190,27 @@ class _Component(object):
     @frameworkdirs.setter
     def frameworkdirs(self, value):
         self._frameworkdirs = value
+
+    @property
+    def bindir(self):
+        bindirs = self.bindirs
+        assert bindirs
+        assert len(bindirs) == 1
+        return bindirs[0]
+
+    @property
+    def libdir(self):
+        libdirs = self.libdirs
+        assert libdirs
+        assert len(libdirs) == 1
+        return libdirs[0]
+
+    @property
+    def includedir(self):
+        includedirs = self.includedirs
+        assert includedirs
+        assert len(includedirs) == 1
+        return includedirs[0]
 
     @property
     def system_libs(self):
@@ -268,17 +353,9 @@ class _Component(object):
 class CppInfo(object):
 
     def __init__(self, set_defaults=False):
-        self.components = DefaultOrderedDict(lambda: _Component())
+        self.components = DefaultOrderedDict(lambda: _Component(set_defaults))
         # Main package is a component with None key
-        self.components[None] = _Component()
-        if set_defaults:
-            self.includedirs = ["include"]
-            self.libdirs = ["lib"]
-            self.resdirs = ["res"]
-            self.bindirs = ["bin"]
-            self.builddirs = [""]
-            self.frameworkdirs = ["Frameworks"]
-
+        self.components[None] = _Component(set_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):
@@ -289,6 +366,13 @@ class CppInfo(object):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self.components[None], attr, value)
+
+    def serialize(self):
+        ret = {}
+        for component_name, info in self.components.items():
+            _name = "root" if component_name is None else component_name
+            ret[_name] = info.serialize()
+        return ret
 
     @property
     def has_components(self):
@@ -348,26 +432,69 @@ class CppInfo(object):
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
-        for cname, c in self.components.items():
+        for component in self.components.values():
             for varname in _DIRS_VAR_NAMES:
-                origin = getattr(self.components[cname], varname)
+                origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
+            if component._generator_properties is not None:
+                updates = {}
+                for prop_name, value in component._generator_properties.items():
+                    if prop_name == "cmake_build_modules":
+                        if isinstance(value, list):
+                            updates[prop_name] = [os.path.join(folder, v) for v in value]
+                        else:
+                            updates[prop_name] = os.path.join(folder, value)
+                component._generator_properties.update(updates)
+
+    def deploy_base_folder(self, package_folder, deploy_folder):
+        """Prepend the folder to all the directories"""
+        for component in self.components.values():
+            for varname in _DIRS_VAR_NAMES:
+                origin = getattr(component, varname)
+                if origin is not None:
+                    new_ = []
+                    for el in origin:
+                        rel_path = os.path.relpath(el, package_folder)
+                        new_.append(os.path.join(deploy_folder, rel_path))
+                    origin[:] = new_
+                # TODO: Missing properties
+
+    def _raise_circle_components_requires_error(self):
+        """
+        Raise an exception because of a requirements loop detection in components.
+        The exception message gives some information about the involved components.
+        """
+        deps_set = set()
+        for comp_name, comp in self.components.items():
+            for dep_name, dep in self.components.items():
+                for require in dep.required_component_names:
+                    if require == comp_name:
+                        deps_set.add("   {} requires {}".format(dep_name, comp_name))
+        dep_mesg = "\n".join(deps_set)
+        raise ConanException(f"There is a dependency loop in "
+                             f"'self.cpp_info.components' requires:\n{dep_mesg}")
 
     def get_sorted_components(self):
-        """Order the components taking into account if they depend on another component in the
-        same package (not scoped with ::). First less dependant
-        return:  {component_name: component}
+        """
+        Order the components taking into account if they depend on another component in the
+        same package (not scoped with ::). First less dependant.
+
+        :return: ``OrderedDict`` {component_name: component}
         """
         processed = []  # Names of the components ordered
         # FIXME: Cache the sort
         while (len(self.components) - 1) > len(processed):
+            cached_processed = processed[:]
             for name, c in self.components.items():
                 if name is None:
                     continue
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
+            # If cached_processed did not change then detected cycle components requirements!
+            if cached_processed == processed:
+                self._raise_circle_components_requires_error()
 
         return OrderedDict([(cname, self.components[cname]) for cname in processed])
 
@@ -393,11 +520,48 @@ class CppInfo(object):
                         current_values.extend(component.requires)
 
                 # FIXME: What to do about sysroot?
+                result._generator_properties = copy.copy(self._generator_properties)
             else:
                 result = copy.copy(self.components[None])
             self._aggregated = CppInfo()
             self._aggregated.components[None] = result
         return self._aggregated
+
+    def check_component_requires(self, conanfile):
+        """ quality check for component requires:
+        - Check that all recipe ``requires`` are used if consumer recipe explicit opt-in to use
+          component requires
+        - Check that component external dep::comp dependency "dep" is a recipe "requires"
+        - Check that every internal component require actually exist
+        It doesn't check that external components do exist
+        """
+        if not self.has_components and not self.requires:
+            return
+        # Accumulate all external requires
+        external = set()
+        internal = set()
+        # TODO: Cache this, this is computed in different places
+        for key, comp in self.components.items():
+            external.update(r.split("::")[0] for r in comp.requires if "::" in r)
+            internal.update(r for r in comp.requires if "::" not in r)
+
+        missing_internal = list(internal.difference(self.components))
+        if missing_internal:
+            raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
+        if not external:
+            return
+        # Only direct host dependencies can be used with components
+        direct_dependencies = [d.ref.name
+                               for d, _ in conanfile.dependencies.filter({"direct": True,
+                                                                          "build": False}).items()]
+        for e in external:
+            if e not in direct_dependencies:
+                raise ConanException(
+                    f"{conanfile}: required component package '{e}::' not in dependencies")
+        for e in direct_dependencies:
+            if e not in external:
+                raise ConanException(
+                    f"{conanfile}: Required package '{e}' not in component 'requires'")
 
     def copy(self):
         # Only used at the moment by layout() editable merging build+source .cpp data
@@ -413,10 +577,14 @@ class CppInfo(object):
         """Returns a list of tuples with (require, component_name) required by the package
         If the require is internal (to another component), the require will be None"""
         # FIXME: Cache the value
+        # First aggregate without repetition, respecting the order
         ret = []
-        for key, comp in self.components.items():
-            ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
-            ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
+        for comp in self.components.values():
+            for r in comp.requires:
+                if r not in ret:
+                    ret.append(r)
+        # Then split the names
+        ret = [r.split("::") if "::" in r else (None, r) for r in ret]
         return ret
 
     def __str__(self):

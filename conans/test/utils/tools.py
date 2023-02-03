@@ -10,6 +10,7 @@ import sys
 import textwrap
 import threading
 import time
+import traceback
 import uuid
 import zipfile
 from collections import OrderedDict
@@ -23,17 +24,14 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
-from conans import load, REVISIONS
-from conans.cli.api.conan_api import ConanAPIV2
-from conans.cli.api.model import Remote
-from conans.cli.cli import Cli, CLI_V1_COMMANDS
+from conan.cli.exit_codes import SUCCESS
+from conan.internal.cache.cache import PackageLayout, RecipeLayout
+from conans import REVISIONS
+from conan.api.conan_api import ConanAPI
+from conan.api.model import Remote
+from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
-from conans.client.command import Command
-from conans.client.conan_api import ConanAPIV1
-from conans.client.runner import ConanRunner
 from conans.util.env import environment_update
-from conans.client.tools.files import replace_in_file
 from conans.errors import NotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
@@ -46,14 +44,13 @@ from conans.test.conftest import default_profiles
 from conans.test.utils.artifactory import ArtifactoryServer
 from conans.test.utils.mocks import RedirectedInputStream
 from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
-    create_remote_svn_repo
+from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.server_launcher import (TestServerLauncher)
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import get_env
-from conans.util.files import mkdir, save_files, save
+from conans.util.files import mkdir, save_files, save, load
 
-NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
+NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
@@ -330,14 +327,14 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
 
 
 @contextmanager
-def redirect_output(target):
+def redirect_output(stderr, stdout=None):
     original_stdout = sys.stdout
     original_stderr = sys.stderr
     # TODO: change in 2.0
     # redirecting both of them to the same target for the moment
     # to assign to Testclient out
-    sys.stdout = target
-    sys.stderr = target
+    sys.stdout = stdout or stderr
+    sys.stderr = stderr
     try:
         yield
     finally:
@@ -362,7 +359,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
-                 cpu_count=1, default_server_user=None):
+                 default_server_user=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -384,7 +381,8 @@ class TestClient(object):
             server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
 
-        self.cache_folder = cache_folder or temp_folder(path_with_spaces)
+        # Adding the .conan2, so we know clearly while debugging this is a cache folder
+        self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
 
         self.requester_class = requester_class
 
@@ -403,9 +401,10 @@ class TestClient(object):
 
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
-        self.tune_conan_conf(cache_folder, cpu_count)
 
-        self.out = RedirectedTestOutput()
+        self.out = ""
+        self.stdout = RedirectedTestOutput()
+        self.stderr = RedirectedTestOutput()
         self.user_inputs = RedirectedInputStream(inputs)
 
         # create default profile
@@ -429,24 +428,8 @@ class TestClient(object):
     def storage_folder(self):
         return self.cache.store
 
-    @property
-    def proxy(self):
-        api = self.get_conan_api()
-        api.create_app()
-        return api.app.proxy
-
-    def tune_conan_conf(self, cache_folder, cpu_count):
-        # Create the default
-        cache = self.cache
-        _ = cache.config
-
-        if cpu_count:
-            replace_in_file(cache.conan_conf_path,
-                            "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            strict=not bool(cache_folder))
-
     def update_servers(self):
-        api = self.get_conan_api()
+        api = ConanAPI(cache_folder=self.cache_folder)
         for r in api.remotes.list():
             api.remotes.remove(r.name)
 
@@ -476,24 +459,17 @@ class TestClient(object):
         with mock.patch("conans.client.rest.conan_requester.requests", _req):
             yield
 
-    def get_conan_api(self, args=None):
-        if self.is_conan_cli_v2_command(args):
-            return ConanAPIV2(cache_folder=self.cache_folder)
-        else:
-            return ConanAPIV1(cache_folder=self.cache_folder)
+    @contextmanager
+    def mocked_io(self):
+        def mock_get_pass(*args, **kwargs):
+            return self.user_inputs.readline()
 
-    def get_conan_command(self, args=None):
-        if self.is_conan_cli_v2_command(args):
-            return Cli(self.api)
-        else:
-            return Command(self.api)
+        with redirect_output(self.stderr, self.stdout):
+            with redirect_input(self.user_inputs):
+                with mock.patch("getpass.getpass", mock_get_pass):
+                    yield
 
-    @staticmethod
-    def is_conan_cli_v2_command(args):
-        conan_command = args[0] if args else None
-        return conan_command not in CLI_V1_COMMANDS
-
-    def run_cli(self, command_line, assert_error=False):
+    def _run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
@@ -501,72 +477,89 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = self.get_conan_api(args)
-        command = self.get_conan_command(args)
+        self.api = ConanAPI(cache_folder=self.cache_folder)
+        command = Cli(self.api)
 
+        error = SUCCESS
+        trace = None
         try:
-            error = command.run(args)
+            command.run(args)
+        except BaseException as e:  # Capture all exceptions as argparse
+            trace = traceback.format_exc()
+            error = command.exception_exit_error(e)
         finally:
-            try:
-                self.api.app.cache.closedb()
-            except AttributeError:
-                pass
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 sys.modules.pop(added, None)
-        self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+        self._handle_cli_result(command_line, assert_error=assert_error, error=error, trace=trace)
         return error
 
-    def run(self, command_line, assert_error=False):
+    def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
-            self.out = RedirectedTestOutput()  # Initialize each command
-            with redirect_output(self.out):
-                with redirect_input(self.user_inputs):
-                    real_servers = any(isinstance(s, (str, ArtifactoryServer))
-                                       for s in self.servers.values())
-                    http_requester = None
-                    if not real_servers:
-                        if self.requester_class:
-                            http_requester = self.requester_class(self.servers)
-                        else:
-                            http_requester = TestRequester(self.servers)
-
+            self.stdout = RedirectedTestOutput()  # Initialize each command
+            self.stderr = RedirectedTestOutput()
+            self.out = ""
+            with self.mocked_io():
+                real_servers = any(isinstance(s, (str, ArtifactoryServer))
+                                   for s in self.servers.values())
+                http_requester = None
+                if not real_servers:
+                    if self.requester_class:
+                        http_requester = self.requester_class(self.servers)
+                    else:
+                        http_requester = TestRequester(self.servers)
+                try:
                     if http_requester:
                         with self.mocked_servers(http_requester):
-                            return self.run_cli(command_line, assert_error=assert_error)
+                            return self._run_cli(command_line, assert_error=assert_error)
                     else:
-                        return self.run_cli(command_line, assert_error=assert_error)
+                        return self._run_cli(command_line, assert_error=assert_error)
+                finally:
+                    self.stdout = str(self.stdout)
+                    self.stderr = str(self.stderr)
+                    self.out = self.stderr + self.stdout
+                    if redirect_stdout:
+                        save(os.path.join(self.current_folder, redirect_stdout), self.stdout)
+                    if redirect_stderr:
+                        save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
-        runner = ConanRunner()
         from conans.test.utils.mocks import RedirectedTestOutput
-        self.out = RedirectedTestOutput()  # Initialize each command
-        with redirect_output(self.out):
-            ret = runner(command, cwd=cwd or self.current_folder)
+        self.stdout = RedirectedTestOutput()  # Initialize each command
+        self.stderr = RedirectedTestOutput()
+        try:
+            with redirect_output(self.stderr, self.stdout):
+                from conans.util.runners import conan_run
+                ret = conan_run(command, cwd=cwd or self.current_folder)
+        finally:
+            self.stdout = str(self.stdout)
+            self.stderr = str(self.stderr)
+            self.out = self.stderr + self.stdout
         self._handle_cli_result(command, assert_error=assert_error, error=ret)
         return ret
 
-    def _handle_cli_result(self, command, assert_error, error):
+    def _handle_cli_result(self, command, assert_error, error, trace=None):
         if (assert_error and not error) or (not assert_error and error):
             if assert_error:
                 msg = " Command succeeded (failure expected): "
             else:
                 msg = " Command failed (unexpectedly): "
-            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n{output_footer}\n".format(
-                header='{:-^80}'.format(msg),
-                output_header='{:-^80}'.format(" Output: "),
-                output_footer='-' * 80,
+            exc_message = "\n{header}\n{cmd}\n{output_header}\n{output}\n".format(
+                header='{:=^80}'.format(msg),
+                output_header='{:=^80}'.format(" Output: "),
                 cmd=command,
-                output=self.out
+                output=str(self.stderr) + str(self.stdout) + "\n" + str(self.out)
             )
+            if trace:
+                exc_message += '{:=^80}'.format(" Traceback: ") + f"\n{trace}"
             raise Exception(exc_message)
 
     def save(self, files, path=None, clean_first=False):
@@ -581,12 +574,15 @@ class TestClient(object):
         if not files:
             mkdir(self.current_folder)
 
+    def save_home(self, files):
+        self.save(files, path=self.cache_folder)
+
     def copy_assets(self, origin_folder, assets=None):
         copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):
-        self.run("remove '*' -f")
+        self.run("remove '*' -c")
 
     def export(self, ref, conanfile=GenConanfile(), args=None):
         """ export a ConanFile with as "ref" and return the reference with recipe revision
@@ -604,56 +600,30 @@ class TestClient(object):
         tmp.revision = rrev
         return tmp
 
-    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
+    def alias(self, source, target):
+        """
+        creates a new recipe with "conan new alias" template, "conan export" it, and remove it
+        @param source: the reference of the current recipe
+        @param target: the target reference that this recipe is pointing (aliasing to)
+        """
+        source = RecipeReference.loads(source)
+        target = target.split("/", 1)[1]
+        self.run(f"new alias -d name={source.name} -d version={source.version} "
+                 f"-d target={target} -f")
+        user = f"--user={source.user}" if source.user else ""
+        channel = f"--channel={source.channel}" if source.channel else ""
+        self.run(f"export . {user} {channel}")
+        os.remove(os.path.join(self.current_folder, "conanfile.py"))
+
+    def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None,
+                      main_branch="master"):
         if folder is not None:
             folder = os.path.join(self.current_folder, folder)
         else:
             folder = self.current_folder
         _, commit = create_local_git_repo(files, branch, submodules, folder=folder,
-                                          origin_url=origin_url)
+                                          origin_url=origin_url, main_branch=main_branch)
         return commit
-
-    @staticmethod
-    def _create_scm_info(data):
-        from collections import namedtuple
-
-        revision = None
-        scm_type = None
-        url = None
-        shallow = None
-        verify_ssl = None
-        if "scm" in data:
-            if "revision" in data["scm"]:
-                revision = data["scm"]["revision"]
-            if "type" in data["scm"]:
-                scm_type = data["scm"]["type"]
-            if "url" in data["scm"]:
-                url = data["scm"]["url"]
-            if "shallow" in data["scm"]:
-                shallow = data["scm"]["shallow"]
-            if "verify_ssl" in data["scm"]:
-                verify_ssl = data["scm"]["verify_ssl"]
-        SCMInfo = namedtuple('SCMInfo', ['revision', 'type', 'url', 'shallow', 'verify_ssl'])
-        return SCMInfo(revision, scm_type, url, shallow, verify_ssl)
-
-    def scm_info(self, reference):
-        self.run("inspect %s -a=scm --json=scm.json" % reference)
-        data = json.loads(self.load("scm.json"))
-        os.unlink(os.path.join(self.current_folder, "scm.json"))
-        return self._create_scm_info(data)
-
-    def scm_info_cache(self, reference):
-        import yaml
-
-        if not isinstance(reference, RecipeReference):
-            reference = RecipeReference.loads(reference)
-        layout = self.get_latest_ref_layout(reference)
-        content = load(layout.conandata())
-        data = yaml.safe_load(content)
-        if ".conan" in data:
-            return self._create_scm_info(data[".conan"])
-        else:
-            return self._create_scm_info(dict())
 
     def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
@@ -665,7 +635,8 @@ class TestClient(object):
             package_ids = self.cache.get_package_references(latest_rrev)
             # Let's check if there are several packages because we don't want random behaviours
             assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
-                                          f"provide a single package_id instead"
+                                          f"provide a single package_id instead" \
+                                          if len(package_ids) > 0 else "No binary packages found"
             pref = package_ids[0]
         return self.cache.get_latest_package_reference(pref)
 
@@ -682,6 +653,91 @@ class TestClient(object):
         ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
 
+    def get_default_host_profile(self):
+        api = ConanAPI(cache_folder=self.cache_folder)
+        return api.profiles.get_profile([api.profiles.get_default_host()])
+
+    def get_default_build_profile(self):
+        api = ConanAPI(cache_folder=self.cache_folder)
+        return api.profiles.get_profile([api.profiles.get_default_build()])
+
+    def recipe_exists(self, ref):
+        rrev = self.cache.get_recipe_revisions_references(ref)
+        return True if rrev else False
+
+    def package_exists(self, pref):
+        prev = self.cache.get_package_revisions_references(pref)
+        return True if prev else False
+
+    def assert_listed_require(self, requires, build=False, python=False, test=False):
+        """ parses the current command output, and extract the first "Requirements" section
+        """
+        lines = self.out.splitlines()
+        header = "Requirements" if not build else "Build requirements"
+        if python:
+            header = "Python requires"
+        if test:
+            header = "Test requirements"
+        line_req = lines.index(header)
+        reqs = []
+        for line in lines[line_req+1:]:
+            if not line.startswith("    "):
+                break
+            reqs.append(line.strip())
+        for r, kind in requires.items():
+            for req in reqs:
+                if req.startswith(r) and req.endswith(kind):
+                    break
+            else:
+                raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
+
+    def assert_listed_binary(self, requires, build=False, test=False):
+        """ parses the current command output, and extract the second "Requirements" section
+        belonging to the computed package binaries
+        """
+        lines = self.out.splitlines()
+        line_req = lines.index("-------- Computing necessary packages --------")
+        header = "Requirements" if not build else "Build requirements"
+        if test:
+            header = "Test requirements"
+        line_req = lines.index(header, line_req)
+
+        reqs = []
+        for line in lines[line_req+1:]:
+            if not line.startswith("    "):
+                break
+            reqs.append(line.strip())
+        for r, kind in requires.items():
+            package_id, binary = kind
+            for req in reqs:
+                if req.startswith(r) and package_id in req and req.endswith(binary):
+                    break
+            else:
+                raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
+
+    def created_test_build_folder(self, ref):
+        build_folder = re.search(r"{} \(test package\): Test package build: (.*)".format(str(ref)),
+                                 str(self.out)).group(1)
+        return build_folder.replace("\\", "/")
+
+    def created_package_id(self, ref):
+        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+                               str(self.out)).group(1)
+        return package_id
+
+    def created_package_revision(self, ref):
+        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
+        return package_id
+
+    def created_package_reference(self, ref):
+        pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
+                               str(self.out)).group(1)
+        return PkgReference.loads(pref)
+
+    def exported_recipe_revision(self):
+        return re.search(r"Exported revision: (\S+)", str(self.out)).group(1)
+
 
 class TurboTestClient(TestClient):
 
@@ -691,7 +747,11 @@ class TurboTestClient(TestClient):
     def create(self, ref, conanfile=GenConanfile(), args=None, assert_error=False):
         if conanfile:
             self.save({"conanfile.py": conanfile})
-        full_str = "{}@".format(repr(ref)) if not ref.user else repr(ref)
+        full_str = f"--name={ref.name} --version={ref.version}"
+        if ref.user:
+            full_str += f" --user={ref.user}"
+        if ref.channel:
+            full_str += f" --channel={ref.channel}"
         self.run("create . {} {}".format(full_str, args or ""),
                  assert_error=assert_error)
 
@@ -702,7 +762,7 @@ class TurboTestClient(TestClient):
         if assert_error:
             return None
 
-        package_id = re.search(r"{}:(\S+)".format(str(ref)), str(self.out)).group(1)
+        package_id = self.created_package_id(ref)
         package_ref = PkgReference(ref, package_id)
         tmp = copy.copy(package_ref)
         tmp.revision = None
@@ -713,7 +773,7 @@ class TurboTestClient(TestClient):
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
-        self.run("upload {} -c --all -r {} {}".format(ref.repr_notime(), remote, args or ""),
+        self.run("upload {} -c -r {} {}".format(ref.repr_notime(), remote, args or ""),
                  assert_error=assert_error)
         if not assert_error:
             remote_rrev, _ = self.servers[remote].server_store.get_last_revision(ref)
@@ -738,14 +798,6 @@ class TurboTestClient(TestClient):
         _tmp.revision = prev
         return _tmp
 
-    def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions_references(ref)
-        return True if rrev else False
-
-    def package_exists(self, pref):
-        prev = self.cache.get_package_revisions_references(pref)
-        return True if prev else False
-
     def recipe_revision(self, ref):
         tmp = copy.copy(ref)
         tmp.revision = None
@@ -758,6 +810,7 @@ class TurboTestClient(TestClient):
         latest_prev = self.cache.get_latest_package_reference(tmp)
         return latest_prev.revision
 
+    # FIXME: 2.0: adapt this function to using the new "conan list xxxx" and recover the xfail tests
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""
         self.run("search {} --json {} {} {}".format(pattern, ".tmp.json", remote,
@@ -793,13 +846,6 @@ class TurboTestClient(TestClient):
                         tmp.append(pref)
                 ret.append(tmp)
         return ret
-
-    def init_svn_repo(self, subpath, files=None, repo_url=None):
-        if not repo_url:
-            repo_url = create_remote_svn_repo(temp_folder())
-        _, rev = create_local_svn_checkout(files, repo_url, folder=self.current_folder,
-                                           rel_project_path=subpath, delete_checkout=False)
-        return rev
 
 
 def get_free_port():
