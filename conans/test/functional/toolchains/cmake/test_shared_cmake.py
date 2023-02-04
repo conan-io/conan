@@ -74,6 +74,7 @@ def test_other_client_can_link_meson(transitive_shared_client):
 
 # FIXME: Move to the correct Meson space
 @pytest.mark.tool("autotools")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Autotools needed")
 def test_other_client_can_link_autotools(transitive_shared_client):
     client = transitive_shared_client
     # https://github.com/conan-io/conan/issues/13000
