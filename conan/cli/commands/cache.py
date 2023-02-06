@@ -51,7 +51,7 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     return path
 
 
-@conan_subcommand(formatters={"text": default_text_formatter})
+@conan_subcommand()
 def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     """
         Shows the path in the Conan cache af a given reference
@@ -67,6 +67,9 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                            help="Remove all packages (empty) or provide a query: "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
     args = parser.parse_args(*args)
+
+    if not args.source and not args.build and not args.download:
+        raise ConanException("Define at least one argument from --source, --build, --download")
 
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)

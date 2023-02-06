@@ -27,3 +27,9 @@ def test_cache_clean():
     c.run('cache clean "*" -d')
     assert not os.path.exists(ref_layout.download_export())
     assert not os.path.exists(pkg_layout.download_package())
+
+
+def test_cache_clean_noargs_error():
+    c = TestClient()
+    c.run('cache clean "*"', assert_error=True)
+    assert "Define at least one argument from --source, --build, --download" in c.out
