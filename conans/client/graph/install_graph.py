@@ -247,7 +247,7 @@ class InstallGraph:
                     invalid.append(package)
 
         if invalid:
-            msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
+            msg = ["There are invalid packages:"]
             for package in invalid:
                 node = package.nodes[0]
                 if node.cant_build and node.should_build:
