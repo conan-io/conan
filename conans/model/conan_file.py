@@ -223,7 +223,6 @@ class ConanFile:
         self.display_name = display_name
         # something that can run commands, as os.sytem
 
-        self.compatible_packages = []
         self._conan_helpers = None
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
