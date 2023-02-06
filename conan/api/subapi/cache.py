@@ -4,6 +4,7 @@ from conan.internal.integrity_check import IntegrityChecker
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.files import rmdir
 
 
 class CacheAPI:
@@ -52,6 +53,31 @@ class CacheAPI:
         app = ConanApp(self.conan_api.cache_folder)
         checker = IntegrityChecker(app)
         checker.check(package_list)
+
+    @api_method
+    def clean(self, package_list, source=None, build=None, download=None):
+        """
+        Remove non critical folders from the cache, like source, build and download (.tgz store)
+        folders.
+        :param package_list: the package lists that should be cleaned
+        :param source: boolean, remove the "source" folder if True
+        :param build: boolean, remove the "build" folder if True
+        :param download: boolena, remove the "download (.tgz)" folder if True
+        :return:
+        """
+        app = ConanApp(self.conan_api.cache_folder)
+        for ref, ref_bundle in package_list.refs():
+            ref_layout = app.cache.ref_layout(ref)
+            if source:
+                rmdir(ref_layout.source())
+            if download:
+                rmdir(ref_layout.download_export())
+            for pref, _ in package_list.prefs(ref, ref_bundle):
+                pref_layout = app.cache.pkg_layout(pref)
+                if build:
+                    rmdir(pref_layout.build())
+                if download:
+                    rmdir(pref_layout.download_package())
 
 
 def _resolve_latest_ref(app, ref):
