@@ -571,7 +571,14 @@ def test_list_prefs_query_custom_settings():
     c.run("list pkg/1.0:* -p newsetting=value1")
     assert "newsetting: value1" in c.out
     assert "newsetting: value2" not in c.out
+    c.run("list pkg/1.0:* -p newsetting=value1 -r=default")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
     c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1"')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1" -r=default')
     assert "newsetting: value2" in c.out
     assert "newsetting.subsetting: 1" in c.out
     assert "newsetting.subsetting: 2" not in c.out
