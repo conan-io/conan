@@ -327,10 +327,6 @@ def test_autotools_arguments_override():
                 if self.settings.os == "Windows":
                     self.options.rm_safe("fPIC")
 
-            def configure(self):
-                if self.options.shared:
-                    self.options.rm_safe("fPIC")
-
             def layout(self):
                 basic_layout(self)
 
