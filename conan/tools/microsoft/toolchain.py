@@ -7,7 +7,7 @@ from jinja2 import Template
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
-from conan.tools.microsoft.visual import VCVars, msvc_version_to_toolset_version
+from conan.tools.microsoft.visual import VCVars, msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -54,7 +54,7 @@ class MSBuildToolchain(object):
         self.configuration = conanfile.settings.build_type
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
-        self.toolset = self._msvs_toolset(conanfile)
+        self.toolset = msvs_toolset(conanfile)
         self.properties = {}
         check_using_build_profile(self._conanfile)
 
@@ -81,37 +81,6 @@ class MSBuildToolchain(object):
             IntelCC(self._conanfile).generate()
         else:
             VCVars(self._conanfile).generate()
-
-    @staticmethod
-    def _msvs_toolset(conanfile):
-        settings = conanfile.settings
-        compiler = settings.get_safe("compiler")
-        compiler_version = settings.get_safe("compiler.version")
-        if compiler == "msvc":
-            subs_toolset = settings.get_safe("compiler.toolset")
-            if subs_toolset:
-                return subs_toolset
-            return msvc_version_to_toolset_version(compiler_version)
-        if compiler == "intel":
-            compiler_version = compiler_version if "." in compiler_version else \
-                "%s.0" % compiler_version
-            return "Intel C++ Compiler " + compiler_version
-        if compiler == "intel-cc":
-            return IntelCC(conanfile).ms_toolset
-        if compiler == "Visual Studio":
-            toolset = settings.get_safe("compiler.toolset")
-            if not toolset:
-                toolsets = {"17": "v143",
-                            "16": "v142",
-                            "15": "v141",
-                            "14": "v140",
-                            "12": "v120",
-                            "11": "v110",
-                            "10": "v100",
-                            "9": "v90",
-                            "8": "v80"}
-                toolset = toolsets.get(compiler_version)
-            return toolset or ""
 
     @staticmethod
     def _runtime_library(settings):
@@ -148,7 +117,7 @@ class MSBuildToolchain(object):
 
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
-        toolset = self.toolset
+        toolset = self.toolset or ""
         compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
                                                    default={}, check_type=dict)
         self.compile_options.update(compile_options)
