@@ -1,18 +1,15 @@
 import unittest
 
 from bottle import request
-from parameterized.parameterized import parameterized
-import pytest
 
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.env_reader import get_env
-from conans.util.files import save
+
 
 conanfile = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
-    name = "Hello"
+    name = "hello"
     version = "0.1"
 """
 
@@ -53,24 +50,19 @@ class ReturnHandlerPlugin(object):
 
 class AuthorizeBearerTest(unittest.TestCase):
 
-    @parameterized.expand([(False, ), (True, )])
-    def test_basic(self, artifacts_properties):
+    def test_basic(self):
         auth = AuthorizationHeaderSpy()
         server = TestServer(plugins=[auth])
         servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        if artifacts_properties:
-            save(client.cache.artifacts_properties_path, "key=value")
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
-        errors = client.run("upload Hello/0.1@lasote/stable")
+        client.run("export . --user=lasote --channel=stable")
+        errors = client.run("upload hello/0.1@lasote/stable -r default --only-recipe")
         self.assertFalse(errors)
 
-        expected_calls = [('ping', None),
-                          ('get_recipe_file', None),
+        expected_calls = [('get_recipe_revisions_references', None),
                           ('check_credentials', None),
                           ('authenticate', 'Basic'),
-                          ('get_recipe_file_list', 'Bearer'),
                           ('upload_recipe_file', 'Bearer')]
 
         self.assertEqual(len(expected_calls), len(auth.auths))

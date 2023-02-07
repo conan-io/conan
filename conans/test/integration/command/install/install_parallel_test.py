@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 
 from conans.test.utils.tools import GenConanfile, TestClient
@@ -7,15 +8,17 @@ class InstallParallelTest(unittest.TestCase):
 
     def test_basic_parallel_install(self):
         client = TestClient(default_server_user=True)
-        threads = 1  # At the moment, not really parallel until output implements mutex
-        counter = 4
-        client.run("config set general.parallel_download=%s" % threads)
+        threads = 4
+        counter = 8
+
+        client.save({"global.conf": f"core.download:parallel={threads}"},
+                    path=client.cache.cache_folder)
         client.save({"conanfile.py": GenConanfile()})
 
         for i in range(counter):
-            client.run("create . pkg%s/0.1@user/testing" % i)
-        client.run("upload * --all --confirm")
-        client.run("remove * -f")
+            client.run("create . --name=pkg%s --version=0.1 --user=user --channel=testing" % i)
+        client.run("upload * --confirm -r default")
+        client.run("remove * -c")
 
         # Lets consume the packages
         conanfile_txt = ["[requires]"]

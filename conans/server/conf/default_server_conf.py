@@ -27,6 +27,12 @@ updown_secret: {updown_secret}
 #
 # custom_authenticator: my_authenticator
 
+# Check docs.conan.io to implement a different authorizer plugin for conan_server
+# if custom_authorizer is not specified, the [read_permissions] and [write_permissions]
+# sections will be used to grant/reject access.
+#
+# custom_authorizer: my_authorizer
+
 # name/version@user/channel: user1, user2, user3
 #
 # The rules are applied in order. 

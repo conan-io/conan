@@ -1,21 +1,16 @@
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
-@pytest.mark.toolchain
-@pytest.mark.tool_meson
-@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
+
 def test_env_vars_from_build_require():
     br = str(GenConanfile().with_name("hello_compiler").with_version("1.0").with_import("import os"))
     br += """
     def package_info(self):
         {}
     """
-    vars = ["CC", "CC_LD", "CXX", "CXX_LD", "AR", "STRIP", "AS", "WINDRES", "PKG_CONFIG", "LD"]
+    vs = ["CC", "CC_LD", "CXX", "CXX_LD", "AR", "STRIP", "AS", "WINDRES", "PKG_CONFIG", "LD"]
     lines = "\n        ".join(['self.buildenv_info.define("{var}", "{var}_VALUE")'.format(var=var)
-                               for var in vars])
+                               for var in vs])
     cf = br.format(lines)
 
     client = TestClient()
@@ -24,7 +19,7 @@ def test_env_vars_from_build_require():
 
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
         .with_name("consumer").with_version("1.0").with_generator("MesonToolchain")\
-        .with_build_requirement("hello_compiler/1.0")
+        .with_tool_requirement("hello_compiler/1.0")
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr:h=default -pr:b=default")
     content = client.load("conan_meson_native.ini")

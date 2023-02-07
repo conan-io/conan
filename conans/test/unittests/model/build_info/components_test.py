@@ -2,12 +2,14 @@
 import os
 import unittest
 
+import pytest
+
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="DepsCppInfo removed")
 class CppInfoComponentsTest(unittest.TestCase):
 
     def test_components_set(self):

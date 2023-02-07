@@ -11,10 +11,7 @@ from conans.test.utils.mocks import ConanFileMock
 def conanfile():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
-        tools.gnu.make:jobs=40
-        tools.ninja:jobs=30
-        tools.microsoft.msbuild:max_cpu_count=20
-        tools.build:processes=10
+        tools.build:jobs=10
     """))
 
     conanfile = ConanFileMock()
@@ -23,32 +20,26 @@ def conanfile():
 
 
 def test_no_generator(conanfile):
-    args = _cmake_cmd_line_args(conanfile, None, parallel=True)
+    args = _cmake_cmd_line_args(conanfile, None)
     assert not len(args)
 
 
 def test_makefiles(conanfile):
-    args = _cmake_cmd_line_args(conanfile, 'Unix Makefiles', parallel=True)
-    assert args == ['-j40']
+    args = _cmake_cmd_line_args(conanfile, 'Unix Makefiles')
+    assert args == ['-j10']
 
-    args = _cmake_cmd_line_args(conanfile, 'Unix Makefiles', parallel=False)
-    assert not len(args)
-
-    args = _cmake_cmd_line_args(conanfile, 'NMake Makefiles', parallel=True)
+    args = _cmake_cmd_line_args(conanfile, 'NMake Makefiles')
     assert not len(args)
 
 
 def test_ninja(conanfile):
-    args = _cmake_cmd_line_args(conanfile, 'Ninja', parallel=True)
-    assert ['-j30'] == args
-
-    args = _cmake_cmd_line_args(conanfile, 'Ninja', parallel=False)
-    assert not len(args)
+    args = _cmake_cmd_line_args(conanfile, 'Ninja')
+    assert ['-j10'] == args
 
 
 def test_visual_studio(conanfile):
-    args = _cmake_cmd_line_args(conanfile, 'Visual Studio 16 2019', parallel=True)
-    assert ['/m:20'] == args
+    args = _cmake_cmd_line_args(conanfile, 'Visual Studio 16 2019')
+    assert [] == args
 
-    args = _cmake_cmd_line_args(conanfile, 'Ninja', parallel=False)
-    assert not len(args)
+    args = _cmake_cmd_line_args(conanfile, 'Ninja')
+    assert args == ['-j10']

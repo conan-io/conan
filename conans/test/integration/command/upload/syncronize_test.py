@@ -1,35 +1,31 @@
 import os
-import shutil
 import unittest
 
-
-from conans.client.tools.files import untargz
+from conan.tools.files.files import untargz  # FIXME: DO not import from tools
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 class SynchronizeTest(unittest.TestCase):
 
     def test_upload(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
-        save(client.cache.default_profile_path, "")
-        ref = ConanFileReference.loads("hello/0.1@lasote/stable")
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
+        ref = RecipeReference.loads("hello/0.1@lasote/stable")
         files = {"conanfile.py": GenConanfile("hello", "0.1").with_exports("*"),
                  "to_be_deleted.txt": "delete me",
                  "to_be_deleted2.txt": "delete me2"}
         remote_paths = client.servers["default"].server_store
 
         client.save(files)
-        client.run("export . lasote/stable")
-        ref_with_rev = client.cache.get_latest_rrev(ref)
+        client.run("export . --user=lasote --channel=stable")
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
         # Upload conan file
-        client.run("upload %s" % str(ref))
+        client.run("upload %s -r default" % str(ref))
 
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
@@ -40,9 +36,9 @@ class SynchronizeTest(unittest.TestCase):
 
         # Now delete local files export and upload and check that they are not in server
         os.remove(os.path.join(client.current_folder, "to_be_deleted.txt"))
-        client.run("export . lasote/stable")
-        ref_with_rev = client.cache.get_latest_rrev(ref)
-        client.run("upload %s" % str(ref))
+        client.run("export . --user=lasote --channel=stable")
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
+        client.run("upload %s -r default" % str(ref))
         server_conan_path = remote_paths.export(ref_with_rev)
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
@@ -55,9 +51,9 @@ class SynchronizeTest(unittest.TestCase):
         files["new_file.lib"] = "new file"
         del files["to_be_deleted.txt"]
         client.save(files)
-        client.run("export . lasote/stable")
-        ref_with_rev = client.cache.get_latest_rrev(ref)
-        client.run("upload %s" % str(ref))
+        client.run("export . --user=lasote --channel=stable")
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
+        client.run("upload %s -r default" % str(ref))
 
         server_conan_path = remote_paths.export(ref_with_rev)
 
@@ -73,12 +69,12 @@ class SynchronizeTest(unittest.TestCase):
         # Now try with the package
         ##########################
 
-        client.run("install %s --build missing" % str(ref))
+        client.run("install --requires=%s --build missing" % str(ref))
         # Upload package
-        ref_with_rev = client.cache.get_latest_rrev(ref)
-        pkg_ids = client.cache.get_package_ids(ref_with_rev)
-        pref = client.cache.get_latest_prev(pkg_ids[0])
-        client.run("upload %s -p %s" % (str(ref), str(pkg_ids[0].id)))
+        ref_with_rev = client.cache.get_latest_recipe_reference(ref)
+        pkg_ids = client.cache.get_package_references(ref_with_rev)
+        pref = client.cache.get_latest_package_reference(pkg_ids[0])
+        client.run("upload %s:%s -r default -c" % (str(ref), str(pkg_ids[0].package_id)))
 
         # Check that package exists on server
         package_server_path = remote_paths.package(pref)
@@ -119,6 +115,6 @@ class SynchronizeTest(unittest.TestCase):
     @staticmethod
     def _create_manifest(client, pref):
         # Create the manifest to be able to upload the package
-        pack_path = client.cache.package_layout(pref.ref).package(pref)
+        pack_path = client.get_latest_pkg_layout(pref).package()
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

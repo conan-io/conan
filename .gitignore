@@ -90,9 +90,10 @@ conan.conf
 #Generated certificate file
 cacert.pem
 
-#linux backup files
+#linux backup and vim files
 *~
-.*.swp
+.*.sw?
+Session.vim
 
 #Pyinstaller generated binaries
 /pyinstaller
@@ -105,4 +106,6 @@ cacert.pem
 
 # add excluded
 !conans/client/build
+!conan/tools/build
 !conans/test/unittests/client/build
+!conans/test/unittests/tools/build

@@ -1,19 +1,24 @@
-import json
-
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conans.util.files import save
+from conan.internal import check_duplicated_generator
+from conan.tools.files.files import save_toolchain_args
 
 
 class BazelToolchain(object):
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
+        self._namespace = namespace
 
     def generate(self):
-        bazel_config = self._conanfile.conf["tools.google.bazel:config"]
-        bazelrc_path = self._conanfile.conf["tools.google.bazel:bazelrc_path"]
+        check_duplicated_generator(self, self._conanfile)
+        content = {}
+        configs = ",".join(self._conanfile.conf.get("tools.google.bazel:configs",
+                                                    default=[],
+                                                    check_type=list))
+        if configs:
+            content["bazel_configs"] = configs
 
-        save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps({
-            "bazel_config": bazel_config,
-            "bazelrc_path": bazelrc_path
-        }))
+        bazelrc = self._conanfile.conf.get("tools.google.bazel:bazelrc_path")
+        if bazelrc:
+            content["bazelrc_path"] = bazelrc
+
+        save_toolchain_args(content, namespace=self._namespace)

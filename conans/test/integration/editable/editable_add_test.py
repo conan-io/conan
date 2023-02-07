@@ -1,83 +1,35 @@
-# coding=utf-8
-import textwrap
-import unittest
-
-import pytest
-
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-class CreateEditablePackageTest(unittest.TestCase):
-
-    conanfile_base = textwrap.dedent("""\
-        from conans import ConanFile
-
-        class APck(ConanFile):
-            {body}
-        """)
-    conanfile = conanfile_base.format(body="pass")
-
-    conan_package_layout = textwrap.dedent("""\
-        [includedirs]
-        src/include
-        """)
-
-    def test_link_wrong_layout(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
-        t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile, "mylayout": ""})
-        t.run('editable add . {} --layout=missing'.format(ref), assert_error=True)
-        self.assertIn("ERROR: Couldn't find layout file: missing", t.out)
+class TestEditablePackageTest:
 
     def test_install_ok(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
+        ref = RecipeReference.loads('lib/version@user/name')
         t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile})
+        t.save({'conanfile.py': GenConanfile()})
         t.run('editable add . {}'.format(ref))
-        self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
+        assert "Reference 'lib/version@user/name' in editable mode" in t.out
 
     def test_editable_list_search(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
+        ref = RecipeReference.loads('lib/version@user/name')
         t = TestClient()
-        t.save(files={'conanfile.py': self.conanfile})
+        t.save({'conanfile.py': GenConanfile()})
         t.run('editable add . {}'.format(ref))
         t.run("editable list")
-        self.assertIn("lib/version@user/name", t.out)
-        self.assertIn("    Layout: None", t.out)
-        self.assertIn("    Path:", t.out)
-
-        t.run("search")
-        self.assertIn("lib/version@user/name", t.out)
-
-    def test_install_wrong_reference(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
-
-        t = TestClient()
-        t.save(files={'conanfile.py': textwrap.dedent("""\
-            from conans import ConanFile
-
-            class Pck(ConanFile):
-                name = "lib"
-                version = "version"
-            """)})
-        t.run('export  . {}'.format(ref))
-        t.run('editable add . wrong/version@user/channel', assert_error=True)
-        self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
-                      "target conanfile.py (lib/version) must match", t.out)
+        assert "lib/version@user/name" in t.out
+        assert "    Path:" in t.out
 
     def test_missing_subarguments(self):
         t = TestClient()
         t.run("editable", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", t.out)
+        assert "ERROR: Exiting with code: 2" in t.out
 
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
     def test_conanfile_name(self):
-        ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
-        t.save(files={'othername.py': self.conanfile})
-        t.run('editable add ./othername.py {}'.format(ref))
-        self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
-        t.run('install {}'.format(ref))
-        self.assertIn("Installing package: {}".format(ref), t.out)
+        t.save({'othername.py': GenConanfile("lib", "version")})
+        t.run('editable add ./othername.py lib/version@user/name')
+        assert "Reference 'lib/version@user/name' in editable mode" in t.out
+        t.run('install --requires=lib/version@user/name')
+        t.assert_listed_require({"lib/version@user/name": "Editable"})

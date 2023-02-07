@@ -2,7 +2,6 @@ import unittest
 
 import conan.tools.qbs.qbs as qbs
 
-from conans.client import tools
 from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings
 from conans.test.utils.test_files import temp_folder
@@ -49,9 +48,8 @@ class QbsTest(unittest.TestCase):
     def test_construct_build_helper_without_project_file(self):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
-        conanfile.source_folder = '.'
+        conanfile.folders.set_base_source('.')
         build_helper = qbs.Qbs(conanfile)
-        self.assertEqual(build_helper.jobs, tools.cpu_count())
         self.assertEqual(build_helper._project_file, conanfile.source_folder)
 
     def test_construct_build_helper_with_project_file(self):
@@ -71,7 +69,7 @@ class QbsTest(unittest.TestCase):
     def test_add_configuration(self):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
-        conanfile.source_folder = '.'
+        conanfile.folders.set_base_source('.')
         build_helper = qbs.Qbs(conanfile)
         configurations = {
             'debug':  {'products.MyLib.specialFlags': ['-frtti',
@@ -87,8 +85,8 @@ class QbsTest(unittest.TestCase):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
-        conanfile.source_folder = '.'
-        conanfile.build_folder = '.'
+        conanfile.folders.set_base_source('.')
+        conanfile.folders.set_base_build('.')
         build_helper = qbs.Qbs(conanfile)
 
         build_helper.build()
@@ -111,8 +109,8 @@ class QbsTest(unittest.TestCase):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
-        conanfile.source_folder = '.'
-        conanfile.build_folder = '.'
+        conanfile.folders.set_base_source('.')
+        conanfile.folders.set_base_build('.')
         build_helper = qbs.Qbs(conanfile)
 
         build_helper.build_all()
@@ -127,8 +125,8 @@ class QbsTest(unittest.TestCase):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
-        conanfile.source_folder = '.'
-        conanfile.build_folder = '.'
+        conanfile.folders.set_base_source('.')
+        conanfile.folders.set_base_build('.')
         build_helper = qbs.Qbs(conanfile)
         config_name = 'debug'
         config_values = {
@@ -160,8 +158,8 @@ class QbsTest(unittest.TestCase):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
-        conanfile.source_folder = '.'
-        conanfile.package_folder = 'pkg'
+        conanfile.folders.set_base_source('.')
+        conanfile.folders.set_base_package("pkg")
         build_helper = qbs.Qbs(conanfile)
 
         build_helper.install()
@@ -175,8 +173,8 @@ class QbsTest(unittest.TestCase):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
-        conanfile.source_folder = '.'
-        conanfile.package_folder = 'pkg'
+        conanfile.folders.set_base_source('.')
+        conanfile.folders.set_base_package("pkg")
         build_helper = qbs.Qbs(conanfile)
         config_name = 'debug'
         config_values = {

@@ -55,20 +55,18 @@ var=walker
 """
 
         self.assertRaises(ConanException, ConfigParser, text, ["one", "two", "three"])
-        conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)
+        conf = ConfigParser(text)
         self.assertEqual(conf.one, "text=value")
         self.assertEqual(conf.two, "other=var")
         self.assertEqual(conf.three, "var")
         self.assertEqual(conf.moon, "var=walker")
-        with self.assertRaisesRegex(ConanException, "Unrecognized field 'NOEXIST'"):
-            conf.NOEXIST
 
         # IF an old config file is readed but the section is in the list, just return it empty
         text = """
 [one]
 text=value
         """
-        conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)
+        conf = ConfigParser(text)
         self.assertEqual(conf.two, "")
 
     def test_values(self):
@@ -84,7 +82,7 @@ text=value
         self.assertEqual(config.users, {"lasote": "defaultpass", "pepe": "pepepass"})
         self.assertEqual(config.host_name, "localhost")
         self.assertEqual(config.public_port, 12345)
-        self.assertEqual(config.public_url, "https://localhost:12345/v1")
+        self.assertEqual(config.public_url, "https://localhost:12345/v2")
 
         # Now check with environments
         tmp_storage = temp_folder()
@@ -109,4 +107,4 @@ text=value
         self.assertEqual(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
         self.assertEqual(config.host_name, "remotehost")
         self.assertEqual(config.public_port, 33333)
-        self.assertEqual(config.public_url, "http://remotehost:33333/v1")
+        self.assertEqual(config.public_url, "http://remotehost:33333/v2")

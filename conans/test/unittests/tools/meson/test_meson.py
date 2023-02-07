@@ -8,8 +8,7 @@ from conans.test.utils.mocks import ConanFileMock, MockSettings
 def test_meson_build():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
-        tools.ninja:jobs=23
-        tools.build:processes=10
+        tools.build:jobs=10
     """))
 
     settings = MockSettings({"build_type": "Release",
@@ -24,5 +23,5 @@ def test_meson_build():
 
     meson = Meson(conanfile)
     meson.build()
-    
-    assert '-j23' in str(conanfile.command)
+
+    assert '-j10' in str(conanfile.command)

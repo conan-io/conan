@@ -7,13 +7,14 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Move this test to CMakeToolchain")
 class LibcxxSettingTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_declared_stdlib_and_passed(self):
         file_content = textwrap.dedent('''
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class ConanFileToolsTest(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
@@ -21,7 +22,7 @@ class LibcxxSettingTest(unittest.TestCase):
 
                 def build(self):
                     cmake = CMake(self)
-                    self.output.warn(cmake.command_line)
+                    self.output.warning(cmake.command_line)
                     self.run('cmake . %s' % cmake.command_line)
                     self.run("cmake --build . %s" %  cmake.build_config)
                 ''')
@@ -40,7 +41,7 @@ class LibcxxSettingTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("export . pkg/0.1@lasote/testing")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
 
         if platform.system() == "SunOS":
             client.run('build . -s compiler=sun-cc -s compiler.libcxx=libCstd')

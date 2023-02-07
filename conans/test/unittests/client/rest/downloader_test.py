@@ -1,3 +1,4 @@
+import os
 import re
 import tempfile
 import unittest
@@ -6,14 +7,7 @@ import pytest
 
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
-
-
-class _ConfigMock:
-    def __init__(self):
-        self.retry = 0
-        self.retry_wait = 0
 
 
 class MockResponse(object):
@@ -69,56 +63,37 @@ class MockRequester(object):
 
 class DownloaderUnitTest(unittest.TestCase):
     def setUp(self):
-        self.target = tempfile.mktemp()
-        self.out = TestBufferConanOutput()
+        d = tempfile.mkdtemp()
+        self.target = os.path.join(d, "target")
 
     def test_succeed_download_to_file_if_not_interrupted(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
+        downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = load(self.target, binary=True)
-        self.assertEqual(expected_content, actual_content)
-
-    def test_succeed_download_to_memory_if_not_interrupted(self):
-        expected_content = b"some data"
-        requester = MockRequester(expected_content)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
-        actual_content = downloader.download("fake_url", file_path=None)
         self.assertEqual(expected_content, actual_content)
 
     def test_resume_download_to_file_if_interrupted(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content, chunk_size=4)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
-        downloader.download("fake_url", file_path=self.target)
+        downloader = FileDownloader(requester=requester)
+        downloader.download("fake_url", file_path=self.target, verify_ssl=None,
+                            retry=0, retry_wait=0)
         actual_content = load(self.target, binary=True)
         self.assertEqual(expected_content, actual_content)
-
-    def test_fail_download_to_memory_if_interrupted(self):
-        expected_content = b"some data"
-        requester = MockRequester(expected_content, chunk_size=4)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
-        with pytest.raises(ConanException, match=r"Transfer interrupted before complete"):
-            downloader.download("fake_url", file_path=None)
 
     def test_fail_interrupted_download_to_file_if_no_progress(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content, chunk_size=0)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
+        downloader = FileDownloader(requester=requester)
         with pytest.raises(ConanException, match=r"Download failed"):
             downloader.download("fake_url", file_path=self.target)
 
     def test_fail_interrupted_download_if_server_not_accepting_ranges(self):
         expected_content = b"some data"
         requester = MockRequester(expected_content, chunk_size=4, accept_ranges=False)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
+        downloader = FileDownloader(requester=requester)
         with pytest.raises(ConanException, match=r"Incorrect Content-Range header"):
             downloader.download("fake_url", file_path=self.target)
 
@@ -126,8 +101,7 @@ class DownloaderUnitTest(unittest.TestCase):
         expected_content = b"some data"
         echo_header = {"Content-Encoding": "gzip", "Content-Length": len(expected_content) + 1}
         requester = MockRequester(expected_content, echo_header=echo_header)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
+        downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = load(self.target, binary=True)
         self.assertEqual(expected_content, actual_content)
@@ -136,8 +110,7 @@ class DownloaderUnitTest(unittest.TestCase):
         expected_content = b"some data"
         echo_header = {"Content-Encoding": "gzip", "Content-Length": len(expected_content) - 1}
         requester = MockRequester(expected_content, echo_header=echo_header)
-        downloader = FileDownloader(requester=requester, output=self.out, verify=None,
-                                    config=_ConfigMock())
+        downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = load(self.target, binary=True)
         self.assertEqual(expected_content, actual_content)

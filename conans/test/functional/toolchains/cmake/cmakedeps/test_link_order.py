@@ -1,11 +1,12 @@
 import os
 import platform
+import re
 import textwrap
 
 import pytest
 from jinja2 import Template
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 """
@@ -16,7 +17,9 @@ Check that the link order of libraries is preserved when using CMake generators
 
 
 conanfile = Template(textwrap.dedent("""
-    from conans import ConanFile
+    import os
+    from conan import ConanFile
+    from conan.tools.files import copy
 
     class Recipe(ConanFile):
         name = "{{ref.name}}"
@@ -43,8 +46,8 @@ conanfile = Template(textwrap.dedent("""
             {% endfor %}
 
         def package(self):
-            self.copy("*.a", dst="lib")
-            self.copy("*.lib", dst="lib")
+            copy(self, "*.a", self.build_folder, os.path.join(self.package_folder, "lib"))
+            copy(self, "*.lib", self.build_folder, os.path.join(self.package_folder, "lib"))
 
         def package_info(self):
             self.cpp_info.includedirs = []
@@ -73,7 +76,7 @@ conanfile = Template(textwrap.dedent("""
 """))
 
 conanfile_headeronly = Template(textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
 
     class HeaderOnly(ConanFile):
         name = "{{ref.name}}"
@@ -87,7 +90,7 @@ conanfile_headeronly = Template(textwrap.dedent("""
         {% endif %}
 
         def package_id(self):
-            self.info.header_only()
+            self.info.clear()
 
         def package_info(self):
             self.cpp_info.includedirs = []
@@ -118,64 +121,64 @@ main_cpp = textwrap.dedent("""
 
 @pytest.fixture(scope="module")
 def client():
-    libZ_ref = ConanFileReference.loads("libZ/version")
-    libH2_ref = ConanFileReference.loads("header2/version")
-    libH_ref = ConanFileReference.loads("header/version")
-    libA_ref = ConanFileReference.loads("libA/version")
-    libB_ref = ConanFileReference.loads("libB/version")
-    libC_ref = ConanFileReference.loads("libC/version")
-    libD_ref = ConanFileReference.loads("libD/version")
+    libz_ref = RecipeReference.loads("libz/version")
+    libh2_ref = RecipeReference.loads("header2/version")
+    libh_ref = RecipeReference.loads("header/version")
+    liba_ref = RecipeReference.loads("liba/version")
+    libb_ref = RecipeReference.loads("libb/version")
+    libc_ref = RecipeReference.loads("libc/version")
+    libd_ref = RecipeReference.loads("libd/version")
 
     t = TestClient(path_with_spaces=False)
     t.save({
-        'libZ/conanfile.py': conanfile.render(
-            ref=libZ_ref,
+        'libz/conanfile.py': conanfile.render(
+            ref=libz_ref,
             libs_extra=["Z2"],
             system_libs=["system_lib"],
             frameworks=["Carbon"]),
-        'libH2/conanfile.py': conanfile_headeronly.render(
-            ref=libH2_ref,
+        'libh2/conanfile.py': conanfile_headeronly.render(
+            ref=libh2_ref,
             system_libs=["header2_system_lib"],
             frameworks=["Security"]),
-        'libH/conanfile.py': conanfile_headeronly.render(
-            ref=libH_ref,
-            requires=[libH2_ref, libZ_ref],
+        'libh/conanfile.py': conanfile_headeronly.render(
+            ref=libh_ref,
+            requires=[libh2_ref, libz_ref],
             system_libs=["header_system_lib"],
             frameworks=["CoreAudio"]),
-        'libA/conanfile.py': conanfile.render(
-            ref=libA_ref,
-            requires=[libH_ref],
+        'liba/conanfile.py': conanfile.render(
+            ref=liba_ref,
+            requires=[libh_ref],
             libs_extra=["A2"],
             system_libs=["system_lib"],
             frameworks=["Carbon"]),
-        'libB/conanfile.py': conanfile.render(
-            ref=libB_ref,
-            requires=[libA_ref],
+        'libb/conanfile.py': conanfile.render(
+            ref=libb_ref,
+            requires=[liba_ref],
             libs_extra=["B2"],
             system_libs=["system_lib"],
             frameworks=["Carbon"]),
-        'libC/conanfile.py': conanfile.render(
-            ref=libC_ref,
-            requires=[libA_ref],
+        'libc/conanfile.py': conanfile.render(
+            ref=libc_ref,
+            requires=[liba_ref],
             libs_extra=["C2"],
             system_libs=["system_lib"],
             frameworks=["Carbon"]),
-        'libD/conanfile.py': conanfile.render(
-            ref=libD_ref,
-            requires=[libB_ref, libC_ref],
+        'libd/conanfile.py': conanfile.render(
+            ref=libd_ref,
+            requires=[libb_ref, libc_ref],
             libs_extra=["D2"],
             system_libs=["system_lib"],
             frameworks=["Carbon"]),
     })
 
     # Create all of them
-    t.run("create libZ")
-    t.run("create libH2")
-    t.run("create libH")
-    t.run("create libA")
-    t.run("create libB")
-    t.run("create libC")
-    t.run("create libD")
+    t.run("create libz")
+    t.run("create libh2")
+    t.run("create libh")
+    t.run("create liba")
+    t.run("create libb")
+    t.run("create libc")
+    t.run("create libd")
     return t
 
 
@@ -186,8 +189,8 @@ def _validate_link_order(libs):
     # - Regular libs
     ext = ".lib" if platform.system() == "Windows" else ".a"
     prefix = "" if platform.system() == "Windows" else "lib"
-    expected_libs = {prefix + it + ext for it in ['libD', 'D2', 'libB', 'B2', 'libC', 'C2',
-                                                  'libA', 'A2', 'libZ', 'Z2']}
+    expected_libs = {prefix + it + ext for it in ['libd', 'D2', 'libb', 'B2', 'libc', 'C2',
+                                                  'liba', 'A2', 'libz', 'Z2']}
     # - System libs
     ext_system = ".lib" if platform.system() == "Windows" else ""
     expected_libs.update([it + ext_system for it in ['header_system_lib',
@@ -204,16 +207,16 @@ def _validate_link_order(libs):
     assert set(libs) == expected_libs
 
     # These are the first libraries and order is mandatory
-    mandatory_1 = [prefix + it + ext for it in ['libD', 'D2', 'libB', 'B2', 'libC',
-                                                'C2', 'libA', 'A2', ]]
+    mandatory_1 = [prefix + it + ext for it in ['libd', 'D2', 'libb', 'B2', 'libc',
+                                                'C2', 'liba', 'A2', ]]
     assert mandatory_1 == libs[:len(mandatory_1)]
 
-    # Then, libZ ones must be before system libraries that are consuming
-    assert libs.index(prefix + 'libZ' + ext) < libs.index('system_lib' + ext_system)
+    # Then, libz ones must be before system libraries that are consuming
+    assert libs.index(prefix + 'libz' + ext) < libs.index('system_lib' + ext_system)
     assert libs.index(prefix + 'Z2' + ext) < libs.index('system_lib' + ext_system)
 
     if platform.system() == "Darwin":
-       assert libs.index('liblibZ.a') < libs.index('Carbon')
+       assert libs.index('liblibz.a') < libs.index('Carbon')
        assert libs.index('libZ2.a') < libs.index('Carbon')
 
 
@@ -226,7 +229,9 @@ def _get_link_order_from_cmake(content):
         if 'main.cpp.o -o example' in line:
             _, links = line.split("main.cpp.o -o example")
             for it_lib in links.split():
-                if it_lib.startswith("-l"):
+                if it_lib.startswith("-L") or it_lib.startswith("-Wl,-rpath"):
+                    continue
+                elif it_lib.startswith("-l"):
                     libs.append(it_lib[2:])
                 elif it_lib == "-framework":
                     continue
@@ -255,9 +260,19 @@ def _get_link_order_from_cmake(content):
 
 def _get_link_order_from_xcode(content):
     libs = []
-    start_key = '-headerpad_max_install_names",'
+
+    # Find the right Release block in the XCode file
+    results = re.finditer('/\* Release \*/ = {', content)
+    for r in results:
+        release_section = content[r.start():].split("name = Release;", 1)[0]
+        if "-headerpad_max_install_names" in release_section:
+            break
+    else:
+        raise Exception("Cannot find the Release block linking the expected libraries")
+
+    start_key = '-Wl,-headerpad_max_install_names'
     end_key = ');'
-    libs_content = content.split(start_key, 1)[1].split(end_key, 1)[0]
+    libs_content = release_section.split(start_key, 1)[1].split(end_key, 1)[0]
     libs_unstripped = libs_content.split(",")
     for lib in libs_unstripped:
         if ".a" in lib:
@@ -274,18 +289,18 @@ def _create_find_package_project(client):
     t.save({
         'conanfile.txt': textwrap.dedent("""
             [requires]
-            libD/version
+            libd/version
             [generators]
             CMakeDeps
             CMakeToolchain
             """),
         'CMakeLists.txt': textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8.12)
+            cmake_minimum_required(VERSION 3.15)
             project(executable CXX)
 
-            find_package(libD)
+            find_package(libd)
             add_executable(example main.cpp)
-            target_link_libraries(example libD::libD)
+            target_link_libraries(example libd::libd)
             """),
         'main.cpp': main_cpp
     })
@@ -298,7 +313,10 @@ def _run_and_get_lib_order(t, generator):
     if generator == "Xcode":
         t.run_command("cmake . -G Xcode -DCMAKE_VERBOSE_MAKEFILE:BOOL=True"
                       " -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+        # This is building by default the Debug configuration that contains nothing, so it works
         t.run_command("cmake --build .")
+        # This is building the release and fails because invented system libraries are missing
+        t.run_command("cmake --build . --config Release", assert_error=True)
         # Get the actual link order from the CMake call
         libs = _get_link_order_from_xcode(t.load(os.path.join('executable.xcodeproj',
                                                               'project.pbxproj')))
@@ -314,7 +332,7 @@ def _run_and_get_lib_order(t, generator):
 
 
 @pytest.mark.parametrize("generator", [None, "Xcode"])
-@pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.tool("cmake", "3.19")
 def test_cmake_deps(client, generator):
     if generator == "Xcode" and platform.system() != "Darwin":
         pytest.skip("Xcode is needed")

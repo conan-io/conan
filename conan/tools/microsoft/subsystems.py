@@ -1,0 +1,14 @@
+from conans.client.subsystems import deduce_subsystem, subsystem_path
+
+
+def unix_path(conanfile, path, scope="build"):
+    subsystem = deduce_subsystem(conanfile, scope=scope)
+    return subsystem_path(subsystem, path)
+
+
+def unix_path_package_info_legacy(conanfile, path, path_flavor=None):
+    message = f"The use of 'unix_path_legacy_compat' is deprecated in Conan 2.0 and does not " \
+              f"perform path conversions. This is retained for compatibility with Conan 1.x " \
+              f"and will be removed in a future version."
+    conanfile.output.warning(message)
+    return path

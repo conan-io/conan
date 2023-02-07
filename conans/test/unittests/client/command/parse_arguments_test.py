@@ -5,11 +5,10 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conans.client.command import _add_profile_arguments
+from conan.cli.args import add_profiles_args
 
 
-@parameterized_class([{"argument": ["env", "-e", "--env"]},
-                      {"argument": ["options", "-o", "--options"]},
+@parameterized_class([{"argument": ["options", "-o", "--options"]},
                       {"argument": ["profile", "-pr", "--profile"]},
                       {"argument": ["settings", "-s", "--settings"]},
                       {"argument": ["conf", "-c", "--conf"]}]
@@ -24,7 +23,7 @@ class ArgsParseProfileTest(unittest.TestCase):
 
     def _run_parse(self, *args):
         parser = argparse.ArgumentParser()
-        _add_profile_arguments(parser)
+        add_profiles_args(parser)
         parsed_args = parser.parse_args(*args)
         build = getattr(parsed_args, self.args_dest_build)
         host = getattr(parsed_args, self.args_dest_host)

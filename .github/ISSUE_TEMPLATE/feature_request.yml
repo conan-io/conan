@@ -1,0 +1,26 @@
+name: Feature Request
+description: Request a new feature or suggest a change
+title: '[feature] SHORT DESCRIPTION'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to submit a request. 
+        **Please don't forget to update the issue title.**
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: What is your suggestion?
+      description: Please be as specific as possible!
+      placeholder: Hi! I would like for conan to be able to ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: contributing
+    attributes:
+      label: Have you read the CONTRIBUTING guide?
+      description: It can be found in [CONTRIBUTING.md](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md)
+      options:
+        - label: I've read the CONTRIBUTING guide
+    validations:
+      required: true

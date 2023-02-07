@@ -1,0 +1,26 @@
+name: Question
+description: If something needs clarification
+title: '[question] SHORT DESCRIPTION'
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill your question. 
+        **Please don't forget to update the issue title.**
+  - type: textarea
+    id: question
+    attributes:
+      label: What is your question?
+      description: Please be as specific as possible!
+      placeholder: Hi! I have a question regarding ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: contributing
+    attributes:
+      label: Have you read the CONTRIBUTING guide?
+      description: It can be found in [CONTRIBUTING.md](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md)
+      options:
+        - label: I've read the CONTRIBUTING guide
+    validations:
+      required: true

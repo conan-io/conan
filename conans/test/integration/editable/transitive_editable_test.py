@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import mkdir
 
@@ -16,8 +16,8 @@ class TransitiveEditableTest(unittest.TestCase):
                               "TODO: cache2.0 fix with editables")
     def test_transitive_editables(self):
         # https://github.com/conan-io/conan/issues/4445
-        libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
-        libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
+        libc_ref = RecipeReference.loads("LibC/0.1@user/testing")
+        libb_ref = RecipeReference.loads("LibB/0.1@user/testing")
 
         client = TestClient()
         conanfileC = GenConanfile()
@@ -28,7 +28,7 @@ class TransitiveEditableTest(unittest.TestCase):
         conanfileB = GenConanfile().with_name("LibB").with_version("0.1").with_require(libc_ref)
 
         client2.save({"conanfile.py": str(conanfileB)})
-        client2.run("create . user/testing")
+        client2.run("create . --user=user --channel=testing")
 
         conanfileA = GenConanfile().with_name("LibA").with_version("0.1")\
                                    .with_require(libb_ref)\

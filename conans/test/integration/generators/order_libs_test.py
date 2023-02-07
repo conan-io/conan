@@ -1,6 +1,7 @@
-import os
 import textwrap
 import unittest
+
+import pytest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
@@ -20,9 +21,9 @@ class OrderLibsTest(unittest.TestCase):
             else:
                 libs = ""
             return libs
-        deps = ", ".join(['"%s/1.0@lasote/stable"' % d for d in deps or []]) or '""'
+        deps = ", ".join(['"%s/1.0@lasote/stable"' % d for d in deps or []]) or 'None'
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conan import ConanFile, CMake
 
             class HelloReuseConan(ConanFile):
                 name = "%s"
@@ -37,8 +38,9 @@ class OrderLibsTest(unittest.TestCase):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export . lasote/stable")
+            self.client.run("export . --user=lasote --channel=stable")
 
+    @pytest.mark.xfail(reason="Generator cmake to be removed")
     def test_reuse(self):
         self._export("ZLib")
         self._export("BZip2")

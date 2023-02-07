@@ -4,9 +4,10 @@ import unittest
 
 from parameterized.parameterized import parameterized_class
 
-from conans.client.tools import environment_append, save
+from conans.util.env import environment_update
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @parameterized_class([{"recipe_cppstd": True}, {"recipe_cppstd": False}, ])
@@ -26,7 +27,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
     def run(self, *args, **kwargs):
         default_profile_path = os.path.join(temp_folder(), "default.profile")
         save(default_profile_path, self.default_profile)
-        with environment_append({"CONAN_DEFAULT_PROFILE_PATH": default_profile_path}):
+        with environment_update({"CONAN_DEFAULT_PROFILE_PATH": default_profile_path}):
             unittest.TestCase.run(self, *args, **kwargs)
 
     def setUp(self):
@@ -37,7 +38,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
             settings += ["cppstd"]
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Lib(ConanFile):
                 settings = "{}"
@@ -45,7 +46,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         self.t.save({"conanfile.py": conanfile})
 
     def test_value_invalid(self):
-        self.t.run("create . hh/0.1@user/channel -shh:compiler=apple-clang "
-                   "-shh:compiler.cppstd=144", assert_error=True)
+        self.t.run("create . --name=hh --version=0.1 --user=user --channel=channel -shh*:compiler=apple-clang "
+                   "-shh*:compiler.cppstd=144", assert_error=True)
         self.assertIn("Invalid setting '144' is not a valid 'settings.compiler.cppstd' value",
                       self.t.out)

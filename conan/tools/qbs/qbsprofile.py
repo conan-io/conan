@@ -4,7 +4,8 @@ import textwrap
 
 from io import StringIO
 from jinja2 import Template
-from conans import tools
+
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -102,7 +103,7 @@ def _check_for_compiler(conanfile):
     if not compiler:
         raise ConanException('Qbs: need compiler to be set in settings')
 
-    if compiler not in ['Visual Studio', 'gcc', 'clang']:
+    if compiler not in ['msvc', 'gcc', 'clang']:
         raise ConanException('Qbs: compiler {} not supported'.format(compiler))
 
 
@@ -114,7 +115,7 @@ def _default_compiler_name(conanfile):
         if compiler == 'gcc':
             return 'mingw'
         if compiler == 'Visual Studio':
-            if tools.msvs_toolset(conanfile) == 'ClangCL':
+            if msvs_toolset(conanfile) == 'ClangCL':
                 return 'clang-cl'
             return 'cl'
         if compiler == 'msvc':
@@ -285,6 +286,7 @@ class QbsProfile(object):
             conanfile.options.get_safe('fPIC'))
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         save(self.old_filename, self.content)
         save(self.filename, self.content)
 

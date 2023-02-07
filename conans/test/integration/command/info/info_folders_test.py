@@ -8,7 +8,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 conanfile_py = """
-from conans import ConanFile
+from conan import ConanFile
 
 class AConan(ConanFile):
     name = "MyPackage"
@@ -17,7 +17,7 @@ class AConan(ConanFile):
 """
 
 with_deps_path_file = """
-from conans import ConanFile
+from conan import ConanFile
 
 class BConan(ConanFile):
     name = "MyPackage2"
@@ -61,7 +61,7 @@ class InfoFoldersTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6915
         client = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class Pkg(ConanFile):
                 options = {"myOption": [True, False]}
@@ -69,20 +69,20 @@ class InfoFoldersTest(unittest.TestCase):
                     self.info_build.options.myOption = "Any"
             """)
         client.save({CONANFILE: conanfile})
-        client.run("export . pkg/0.1@user/testing")
-        client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=True")
+        client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
+        client.run("info pkg/0.1@user/testing --paths -o pkg/*:myOption=True")
         out = str(client.out).replace("\\", "/")
-        self.assertIn("ID: e8618d1abf841d16789cf55a0978a47d83fb859f", out)
-        self.assertIn("BuildID: 5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
-        self.assertIn("pkg/0.1/user/testing/build/5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
-        self.assertIn("pkg/0.1/user/testing/package/e8618d1abf841d16789cf55a0978a47d83fb859f", out)
+        self.assertIn("ID: 75f77640a42abb05cd36235484f164c96ace0952", out)
+        self.assertIn("BuildID: c74f42995b9d1452f1534f88b6c56ed7102212d0", out)
+        self.assertIn("pkg/0.1/user/testing/build/c74f42995b9d1452f1534f88b6c56ed7102212d0", out)
+        self.assertIn("pkg/0.1/user/testing/package/75f77640a42abb05cd36235484f164c96ace0952", out)
 
-        client.run("info pkg/0.1@user/testing --paths -o pkg:myOption=False")
+        client.run("info pkg/0.1@user/testing --paths -o pkg/*:myOption=False")
         out = str(client.out).replace("\\", "/")
-        self.assertIn("ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", out)
-        self.assertIn("BuildID: 5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
-        self.assertIn("pkg/0.1/user/testing/build/5c5eb4795e3cae1cbe06f4592b1bbd864ac68131", out)
-        self.assertIn("pkg/0.1/user/testing/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", out)
+        self.assertIn("ID: 357add7d387f11a959f3ee7d4fc9c2487dbaa604", out)
+        self.assertIn("BuildID: c74f42995b9d1452f1534f88b6c56ed7102212d0", out)
+        self.assertIn("pkg/0.1/user/testing/build/c74f42995b9d1452f1534f88b6c56ed7102212d0", out)
+        self.assertIn("pkg/0.1/user/testing/package/357add7d387f11a959f3ee7d4fc9c2487dbaa604", out)
 
     def test_deps_basic(self):
         client = TestClient()
@@ -100,6 +100,7 @@ class InfoFoldersTest(unittest.TestCase):
             self.assertIn(os.path.join(base_path, "export"), output)
             self.assertIn(os.path.join(base_path, "source"), output)
 
+    @pytest.mark.xfail(reason="Info command output changed")
     def test_deps_specific_information(self):
         client = TestClient()
         self._prepare_deps(client)
@@ -121,6 +122,7 @@ class InfoFoldersTest(unittest.TestCase):
         base_path = os.path.join("MyPackage2", "0.2.0", "myUser", "testing")
         self.assertIn(os.path.join(base_path, "package"), output)
 
+    @pytest.mark.xfail(reason="Info command output changed")
     def test_single_field(self):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})

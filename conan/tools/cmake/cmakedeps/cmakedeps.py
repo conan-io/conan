@@ -1,5 +1,8 @@
 import os
 
+from conan.internal import check_duplicated_generator
+from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
+    FIND_MODE_MODULE
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
@@ -17,7 +20,6 @@ class CMakeDeps(object):
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 
-        self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # Activate the build config files for the specified libraries
         self.build_context_activated = []
         # By default, the build modules are generated for host context only
@@ -26,7 +28,16 @@ class CMakeDeps(object):
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
+        # Enable/Disable checking if a component target exists or not
+        self.check_components_exist = False
+        self._properties = {}
+
     def generate(self):
+        """
+        This method will save the generated files to the conanfile.generators_folder
+        """
+        check_duplicated_generator(self, self._conanfile)
+
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
@@ -58,29 +69,93 @@ class CMakeDeps(object):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated
-            if dep.is_build_context and dep.ref.name not in self.build_context_activated:
+            if require.build and dep.ref.name not in self.build_context_activated:
                 continue
 
-            if dep.new_cpp_info.get_property("skip_deps_file", "CMakeDeps"):
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
+            cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
+            cmake_find_mode = cmake_find_mode.lower()
+            # Skip from the requirement
+            if cmake_find_mode == FIND_MODE_NONE:
                 # Skip the generation of config files for this node, it will be located externally
                 continue
 
+            if cmake_find_mode in (FIND_MODE_CONFIG, FIND_MODE_BOTH):
+                self._generate_files(require, dep, ret, find_module_mode=False)
+
+            if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
+                self._generate_files(require, dep, ret, find_module_mode=True)
+
+        return ret
+
+    def _generate_files(self, require, dep, ret, find_module_mode):
+        if not find_module_mode:
             config_version = ConfigVersionTemplate(self, require, dep)
             ret[config_version.filename] = config_version.render()
 
-            data_target = ConfigDataTemplate(self, require, dep)
-            ret[data_target.filename] = data_target.render()
+        data_target = ConfigDataTemplate(self, require, dep, find_module_mode)
+        ret[data_target.filename] = data_target.render()
 
-            target_configuration = TargetConfigurationTemplate(self, require, dep)
-            ret[target_configuration.filename] = target_configuration.render()
+        target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
+        ret[target_configuration.filename] = target_configuration.render()
 
-            targets = TargetsTemplate(self, require, dep)
-            ret[targets.filename] = targets.render()
+        targets = TargetsTemplate(self, require, dep, find_module_mode)
+        ret[targets.filename] = targets.render()
 
-            config = ConfigTemplate(self, require, dep)
-            # Check if the XXConfig.cmake exists to keep the first generated configuration
-            # to only include the build_modules from the first conan install. The rest of the
-            # file is common for the different configurations.
-            if not os.path.exists(config.filename):
-                ret[config.filename] = config.render()
-        return ret
+        config = ConfigTemplate(self, require, dep, find_module_mode)
+        # Check if the XXConfig.cmake exists to keep the first generated configuration
+        # to only include the build_modules from the first conan install. The rest of the
+        # file is common for the different configurations.
+        if not os.path.exists(config.filename):
+            ret[config.filename] = config.render()
+
+    def set_property(self, dep, prop, value, build_context=False):
+        """
+        Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
+        the Conan recipes from the consumer. This can be done for `cmake_file_name`, `cmake_target_name`,
+        `cmake_find_mode`, `cmake_module_file_name` and `cmake_module_target_name` properties.
+
+        :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
+         components use the syntax: ``dep_name::component_name``.
+        :param prop: Name of the :ref:`property<CMakeDeps Properties>`.
+        :param value: Value of the property. Use ``None`` to invalidate any value set by the
+         upstream recipe.
+        :param build_context: Set to ``True`` if you want to set the property for a dependency that
+         belongs to the build context (``False`` by default).
+        """
+        build_suffix = "&build" if build_context else ""
+        self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
+
+    def get_property(self, prop, dep, comp_name=None):
+        dep_name = dep.ref.name
+        build_suffix = "&build" if str(
+            dep_name) in self.build_context_activated and dep.context == "build" else ""
+        dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
+        try:
+            return self._properties[f"{dep_comp}{build_suffix}"][prop]
+        except KeyError:
+            return dep.cpp_info.get_property(prop) if not comp_name else dep.cpp_info.components[
+                comp_name].get_property(prop)
+
+    def get_cmake_package_name(self, dep, module_mode=None):
+        """Get the name of the file for the find_package(XXX)"""
+        # This is used by CMakeDeps to determine:
+        # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
+        # - The name of the defined XXX_DIR variables
+        # - The name of transitive dependencies for calls to find_dependency
+        if module_mode and self.get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
+            ret = self.get_property("cmake_module_file_name", dep)
+            if ret:
+                return ret
+        ret = self.get_property("cmake_file_name", dep)
+        return ret or dep.ref.name
+
+    def get_find_mode(self, dep):
+        """
+        :param dep: requirement
+        :return: "none" or "config" or "module" or "both" or "config" when not set
+        """
+        tmp = self.get_property("cmake_find_mode", dep)
+        if tmp is None:
+            return "config"
+        return tmp.lower()
