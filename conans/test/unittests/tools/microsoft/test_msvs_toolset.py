@@ -23,20 +23,20 @@ def test_visual_studio_default(compiler_version, expected_toolset):
     assert msvs_toolset(conanfile) == expected_toolset
 
 
-@pytest.mark.parametrize("compiler_version,default_toolset,expected_toolset", [
-    ("16", "v142", "v142_xp"),
-    ("15", "v141", "v141_xp"),
-    ("14", "v140", "v140_xp"),
-    ("12", "v120", "v120_xp"),
-    ("11", "v110", "v110_xp")])
-def test_visual_studio_custom(compiler_version, default_toolset, expected_toolset):
+@pytest.mark.parametrize("compiler_version,toolset,expected_toolset", [
+    ("16", "v142_xp", "v142_xp"),
+    ("15", "v141_xp", "v141_xp"),
+    ("14", "v140_xp", "v140_xp"),
+    ("12", "v120_xp", "v120_xp"),
+    ("11", "v110_xp", "v110_xp")])
+def test_visual_studio_custom(compiler_version, toolset, expected_toolset):
     """ When running Visual Studio as compiler, and there is a toolset configured,
         msvs_toolset must return the specified toolset from profile
     """
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"compiler": "Visual Studio",
                              "compiler.version": compiler_version,
-                             "compiler.toolset": expected_toolset})
+                             "compiler.toolset": toolset})
     assert msvs_toolset(conanfile) == expected_toolset
 
 
@@ -66,21 +66,21 @@ def test_msvc_default(compiler_version, expected_toolset):
     assert msvs_toolset(conanfile) == expected_toolset
 
 
-@pytest.mark.parametrize("compiler_version,default_toolset,expected_toolset", [
-    ("193", "v143", "v143_xp"),
-    ("192", "v142", "v142_xp"),
-    ("191", "v141", "v141_xp"),
-    ("190", "v140", "v140_xp"),
-    ("180", "v120", "v120_xp"),
-    ("170", "v110", "v110_xp")])
-def test_msvc_custom(compiler_version, default_toolset, expected_toolset):
+@pytest.mark.parametrize("compiler_version,toolset,expected_toolset", [
+    ("193", "v143_xp", "v143_xp"),
+    ("192", "v142_xp", "v142_xp"),
+    ("191", "v141_xp", "v141_xp"),
+    ("190", "v140_xp", "v140_xp"),
+    ("180", "v120_xp", "v120_xp"),
+    ("170", "v110_xp", "v110_xp")])
+def test_msvc_custom(compiler_version, toolset, expected_toolset):
     """ When running msvc as compiler, and there is a toolset configured,
         msvs_toolset must return the specified toolset from profile
     """
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"compiler": "msvc",
                              "compiler.version": compiler_version,
-                             "compiler.toolset": expected_toolset})
+                             "compiler.toolset": toolset})
     assert msvs_toolset(conanfile) == expected_toolset
 
 
