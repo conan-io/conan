@@ -117,7 +117,7 @@ class MSBuildToolchain(object):
 
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
-        toolset = self.toolset
+        toolset = self.toolset or ""
         compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
                                                    default={}, check_type=dict)
         self.compile_options.update(compile_options)

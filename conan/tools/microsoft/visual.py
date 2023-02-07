@@ -57,7 +57,20 @@ def msvc_version_to_toolset_version(version):
                 '191': 'v141',
                 '192': 'v142',
                 "193": 'v143'}
-    return toolsets[str(version)]
+    return toolsets.get(str(version))
+
+
+def visual_version_to_toolset_version(version):
+    toolsets = {"17": "v143",
+                "16": "v142",
+                "15": "v141",
+                "14": "v140",
+                "12": "v120",
+                "11": "v110",
+                "10": "v100",
+                "9": "v90",
+                "8": "v80"}
+    return toolsets.get(str(version))
 
 
 class VCVars:
@@ -282,7 +295,7 @@ def msvs_toolset(conanfile):
     """ Returns the corresponding Visual Studio/msvc platform toolset based on the settings of the
         given conanfile
     :param conanfile: Conanfile instance
-    :return: Microsoft toolset when compiler is valid. Otherwise, an empty string.
+    :return: Microsoft toolset when compiler is valid. Otherwise, None.
     """
     settings = conanfile.settings
     compiler = settings.get_safe("compiler")
@@ -292,23 +305,14 @@ def msvs_toolset(conanfile):
         if subs_toolset:
             return subs_toolset
         return msvc_version_to_toolset_version(compiler_version)
-    if compiler == "intel":
+    if compiler == "intel" and compiler_version:
         compiler_version = compiler_version if "." in compiler_version else \
-            "%s.0" % compiler_version
+            f"{compiler_version}.0"
         return "Intel C++ Compiler " + compiler_version
     if compiler == "intel-cc":
         return IntelCC(conanfile).ms_toolset
     if compiler == "Visual Studio":
         toolset = settings.get_safe("compiler.toolset")
         if not toolset:
-            toolsets = {"17": "v143",
-                        "16": "v142",
-                        "15": "v141",
-                        "14": "v140",
-                        "12": "v120",
-                        "11": "v110",
-                        "10": "v100",
-                        "9": "v90",
-                        "8": "v80"}
-            toolset = toolsets.get(compiler_version)
-        return toolset or ""
+            toolset = visual_version_to_toolset_version(compiler_version)
+        return toolset

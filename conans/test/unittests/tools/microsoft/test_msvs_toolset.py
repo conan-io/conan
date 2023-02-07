@@ -37,7 +37,7 @@ def test_invalid_compiler():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"compiler": "Visual Studio",
                                        "compiler.version": "20220203"})
-    assert msvs_toolset(conanfile) == ""
+    assert msvs_toolset(conanfile) is None
 
 
 @pytest.mark.parametrize("compiler_version,expected_toolset", [
