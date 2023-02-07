@@ -1639,3 +1639,10 @@ class TestMixConan1and2:
         c.run("search pkg/0.1@ -r=default")
         assert "Package_ID: package_id_1X" in c.out
         assert "package_id_20" not in c.out
+
+
+def test_error_revision_search():
+    c = TestClient(default_server_user=True)
+    c.run("config set general.revisions_enabled=1")
+    c.run("search mozilla/1.0.0@ -r=default", assert_error=True)
+    assert "ERROR: Recipe not found: 'mozilla/1.0.0'. [Remote: default]" in c.out
