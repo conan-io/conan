@@ -654,3 +654,30 @@ class TestGitIncluded:
         c.init_git_repo()
         c.run("create .")
         assert "pkg/0.1: SOURCES: ['myfile.other']!!" in c.out
+
+
+def test_capture_git_tag():
+    """
+    A local repo, without remote, will have commit, but no URL
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.scm import Git
+
+        class Pkg(ConanFile):
+            name = "pkg"
+
+            def set_version(self):
+                git = Git(self, self.recipe_folder)
+                self.version = git.run("describe --tags")
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.init_git_repo()
+    c.run_command("git tag 1.2")
+    c.run("install .")
+    assert "pkg/1.2" in c.out
+    c.run("create .")
+    assert "pkg/1.2" in c.out
+    c.run("install --requires=pkg/1.2")
+    assert "pkg/1.2" in c.out
