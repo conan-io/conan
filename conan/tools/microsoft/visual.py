@@ -60,19 +60,6 @@ def msvc_version_to_toolset_version(version):
     return toolsets.get(str(version))
 
 
-def visual_version_to_toolset_version(version):
-    toolsets = {"17": "v143",
-                "16": "v142",
-                "15": "v141",
-                "14": "v140",
-                "12": "v120",
-                "11": "v110",
-                "10": "v100",
-                "9": "v90",
-                "8": "v80"}
-    return toolsets.get(str(version))
-
-
 class VCVars:
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -292,10 +279,13 @@ def is_msvc_static_runtime(conanfile):
 
 
 def msvs_toolset(conanfile):
-    """ Returns the corresponding Visual Studio/msvc platform toolset based on the settings of the
-        given conanfile
-    :param conanfile: Conanfile instance
-    :return: Microsoft toolset when compiler is valid. Otherwise, None.
+    """ Returns the corresponding platform toolset based on the compiler of the given conanfile.
+        In case no toolset is configured in the profile, it will return a toolset based on the
+        compiler version, otherwise, it will return the toolset from the profile.
+        When there is no compiler version neither toolset configured, it will return None
+        It supports Visual Studio, msvc and Intel.
+    :param conanfile: Conanfile instance to access settings.compiler
+    :return: A toolset when compiler.version is valid or compiler.toolset is configured. Otherwise, None.
     """
     settings = conanfile.settings
     compiler = settings.get_safe("compiler")
@@ -314,5 +304,14 @@ def msvs_toolset(conanfile):
     if compiler == "Visual Studio":
         toolset = settings.get_safe("compiler.toolset")
         if not toolset:
-            toolset = visual_version_to_toolset_version(compiler_version)
+            toolsets = {"17": "v143",
+                        "16": "v142",
+                        "15": "v141",
+                        "14": "v140",
+                        "12": "v120",
+                        "11": "v110",
+                        "10": "v100",
+                        "9": "v90",
+                        "8": "v80"}
+            toolset = toolsets.get(str(compiler_version))
         return toolset
