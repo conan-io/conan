@@ -19,7 +19,6 @@ class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
-        self.aliased = {}  # To store the aliases of py_requires, necessary for lockfiles too
 
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
@@ -93,9 +92,6 @@ class PyRequireLoader(object):
                 conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
                 py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
                 self._cached_py_requires[resolved_ref] = py_require
-                if requirement.alias:
-                    # Remove the recipe_revision, to do the same in alias as normal requires
-                    result.aliased[requirement.alias] = RecipeReference.loads(str(new_ref))
             result.add_pyrequire(py_require)
         return result
 
@@ -105,14 +101,9 @@ class PyRequireLoader(object):
                                  "Please use version ranges instead")
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
-            ref = requirement.ref
         else:
-            alias = requirement.alias
-            if alias is not None:
-                ref = alias
-            else:
-                self._range_resolver.resolve(requirement, "py_require", remotes, update)
-                ref = requirement.ref
+            self._range_resolver.resolve(requirement, "py_require", remotes, update)
+        ref = requirement.ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes, update, check_update):
