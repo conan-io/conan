@@ -61,7 +61,10 @@ def search_packages(server_store, ref, query, look_in_all_rrevs):
     param ref: ConanFileReference object
     """
     if not look_in_all_rrevs and ref.revision is None:
-        latest_rev = server_store.get_last_revision(ref).revision
+        found_ref = server_store.get_last_revision(ref)
+        if found_ref is None:
+            raise RecipeNotFoundException(ref)
+        latest_rev = found_ref.revision
         ref = ref.copy_with_rev(latest_rev)
 
     if not os.path.exists(server_store.conan_revisions_root(ref.copy_clear_rev())):
