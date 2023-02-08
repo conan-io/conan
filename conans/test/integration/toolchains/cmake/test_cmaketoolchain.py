@@ -449,7 +449,7 @@ def test_cmake_presets_multiconfig():
     assert presets["testPresets"][3]["configuration"] == "MinSizeRel"
 
     assert len(presets["configurePresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "default"
+    assert presets["configurePresets"][0]["name"] == "conan-default"
 
 
 def test_cmake_presets_singleconfig():
@@ -471,25 +471,25 @@ def test_cmake_presets_singleconfig():
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Release --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["configurePresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "release"
+    assert presets["configurePresets"][0]["name"] == "conan-release"
 
     assert len(presets["buildPresets"]) == 1
-    assert presets["buildPresets"][0]["configurePreset"] == "release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-release"
 
     assert len(presets["testPresets"]) == 1
-    assert presets["testPresets"][0]["configurePreset"] == "release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-release"
 
     # This overwrites the existing profile, as there is no layout
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")
     presets = json.loads(client.load("CMakePresets.json"))
     assert len(presets["configurePresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "debug"
+    assert presets["configurePresets"][0]["name"] == "conan-debug"
 
     assert len(presets["buildPresets"]) == 1
-    assert presets["buildPresets"][0]["configurePreset"] == "debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-debug"
 
     assert len(presets["testPresets"]) == 1
-    assert presets["testPresets"][0]["configurePreset"] == "debug"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-debug"
 
     # Repeat configuration, it shouldn't add a new one
     client.run("install mylib/1.0@ -g CMakeToolchain -s build_type=Debug --profile:h=profile")

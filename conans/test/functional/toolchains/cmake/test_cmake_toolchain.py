@@ -595,39 +595,38 @@ def test_cmake_presets_multiple_settings_single_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
 
     # If we create the "Debug" one, it will be appended
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
                                        "Release", "generators"))
     assert os.path.exists(user_presets_path)
-    print(load(user_presets_path))
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 2
     presets = json.loads(load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
 
     presets = json.loads(load(user_presets["include"][1]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-debug"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -644,11 +643,11 @@ def test_cmake_presets_multiple_settings_single_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-13-gnu20-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-13-gnu20-release"
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-13-gnu20-release"
 
     # We can build with cmake manually
     if platform.system() == "Darwin":
@@ -790,11 +789,11 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["testPresets"][0]["configurePreset"] == "dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "conan-dynamic-14"
+    assert presets["buildPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-dynamic-14"
+    assert presets["testPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-dynamic-14"
 
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
@@ -807,15 +806,15 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
     assert len(presets["testPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["buildPresets"][1]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["testPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["testPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][1]["configurePreset"] == "dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "conan-dynamic-14"
+    assert presets["buildPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["buildPresets"][1]["name"] == "conan-dynamic-14-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-dynamic-14"
+    assert presets["buildPresets"][1]["configurePreset"] == "conan-dynamic-14"
+    assert presets["testPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["testPresets"][1]["name"] == "conan-dynamic-14-debug"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-dynamic-14"
+    assert presets["testPresets"][1]["configurePreset"] == "conan-dynamic-14"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -831,11 +830,11 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "static-17"
-    assert presets["buildPresets"][0]["name"] == "static-17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "static-17"
-    assert presets["testPresets"][0]["name"] == "static-17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "static-17"
+    assert presets["configurePresets"][0]["name"] == "conan-static-17"
+    assert presets["buildPresets"][0]["name"] == "conan-static-17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-static-17"
+    assert presets["testPresets"][0]["name"] == "conan-static-17-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-static-17"
 
     # We can build with cmake manually
     client.run_command("cmake . --preset conan-dynamic-14")
