@@ -1,5 +1,6 @@
 import textwrap
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -36,3 +37,39 @@ def test_legacy_names_filenames():
 
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
         assert message.format(name) in c.out
+
+
+class TestLegacy1XRecipes:
+    def test_legacy_imports(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0")})
+        # With EDITABLE, we can emulate errors without exporting
+        c.run("editable add pkg pkg/1.0")
+        c.run("install app", assert_error=True)
+        assert "Recipe 'pkg/1.0' seems broken." in c.out
+        assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
+
+    def test_legacy_build(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+
+                def build(self):
+                    raise Exception("Build broken")
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0")})
+        c.run("export pkg")
+        c.run("install app --build=missing", assert_error=True)
+        assert "Recipe 'pkg/1.0' cannot build its binary" in c.out
+        assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
