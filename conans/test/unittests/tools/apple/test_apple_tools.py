@@ -1,8 +1,11 @@
+import mock
 import pytest
+import textwrap
 
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun
+from conan.tools.apple.apple import _get_dylib_install_name # testing private function
 
 def test_tools_apple_is_apple_os():
     conanfile = ConanFileMock()
@@ -48,3 +51,23 @@ def test_xcrun_public_settings():
     settings = xcrun.settings
 
     assert settings.os == "watchOS"
+
+def test_get_dylib_install_name():
+    # https://github.com/conan-io/conan/issues/13014
+    single_arch = textwrap.dedent("""
+    /path/to/libwebp.7.dylib:
+    /absolute/path/lib/libwebp.7.dylib
+    """)
+
+    universal_binary = textwrap.dedent("""
+    /.conan/data/package/lib/libwebp.7.dylib (architecture x86_64):
+    /absolute/path/lib/libwebp.7.dylib
+    /.conan/data/package/lib/libwebp.7.dylib (architecture arm64):
+    /absolute/path/lib/libwebp.7.dylib
+    """)
+
+    for mock_output in (single_arch, universal_binary):
+        with mock.patch("conan.tools.apple.apple.check_output_runner") as mock_output_runner:
+            mock_output_runner.return_value = mock_output
+            install_name = _get_dylib_install_name("/path/to/libwebp.7.dylib")
+            assert "/absolute/path/lib/libwebp.7.dylib" == install_name
