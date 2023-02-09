@@ -3,7 +3,6 @@ import traceback
 from bottle import HTTPResponse
 
 from conans.errors import ConanException
-from conans.util.log import logger
 
 
 class ReturnHandlerPlugin(object):
@@ -37,8 +36,8 @@ class ReturnHandlerPlugin(object):
             except ConanException as excep:
                 return get_response_from_exception(excep, self.exception_mapping)
             except Exception as e:
-                logger.error(e)
-                logger.error(traceback.print_exc())
+                # logger.error(e)
+                # logger.error(traceback.print_exc())
                 return get_response_from_exception(e, self.exception_mapping)
 
         return wrapper

@@ -14,7 +14,7 @@ def test_package_from_system():
     https://github.com/conan-io/conan/issues/8919"""
     client = TestClient()
     dep2 = str(GenConanfile().with_name("dep2").with_version("1.0")
-               .with_settings("os", "arch", "build_type", "compiler"))
+               .with_settings("os", "arch", "build_type"))
     dep2 += """
     def package_info(self):
         self.cpp_info.set_property("cmake_find_mode", "None")
@@ -25,13 +25,13 @@ def test_package_from_system():
     client.run("create .")
 
     dep1 = GenConanfile().with_name("dep1").with_version("1.0").with_require("dep2/1.0")\
-                         .with_settings("os", "arch", "build_type", "compiler")
+                         .with_settings("os", "arch", "build_type")
     client.save({"conanfile.py": dep1})
     client.run("create .")
 
     consumer = GenConanfile().with_name("consumer").with_version("1.0").\
         with_require("dep1/1.0").with_generator("CMakeDeps").\
-        with_settings("os", "arch", "build_type", "compiler")
+        with_settings("os", "arch", "build_type")
     client.save({"conanfile.py": consumer})
     client.run("install .")
 
@@ -47,23 +47,24 @@ def test_package_from_system():
 def test_test_package():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . gtest/1.0@")
-    client.run("create . cmake/1.0@")
+    client.run("create . --name=gtest --version=1.0")
+    client.run("create . --name=cmake --version=1.0")
 
-    client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0").
-                with_build_requirement("gtest/1.0", force_host_context=True)})
+    client.save({"conanfile.py": GenConanfile().with_tool_requires("cmake/1.0").
+                with_test_requires("gtest/1.0")})
 
-    client.run("export . pkg/1.0@")
+    client.run("export . --name=pkg --version=1.0")
 
     consumer = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps"
             requires = "pkg/1.0"
         """)
     client.save({"conanfile.py": consumer})
-    client.run("install . -s:b os=Windows -s:h os=Linux -s:h arch=x86_64 --build=missing")
+    client.run("install . -s:b os=Windows -s:h os=Linux -s:h compiler=gcc -s:h compiler.version=7 "
+               "-s:h compiler.libcxx=libstdc++11 -s:h arch=x86_64 --build=missing")
     cmake_data = client.load("pkg-release-x86_64-data.cmake")
     assert "gtest" not in cmake_data
 
@@ -74,11 +75,11 @@ def test_components_error():
 
     conan_hello = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
 
         from conan.tools.files import save
         class Pkg(ConanFile):
-            settings = "os", "arch", "compiler", "build_type"
+            settings = "os"
 
             def layout(self):
                 pass
@@ -88,13 +89,13 @@ def test_components_error():
             """)
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
+    client.run("create . --name=hello --version=1.0")
 
 
 def test_cpp_info_component_objects():
     client = TestClient()
     conan_hello = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "arch", "build_type"
             def package_info(self):
@@ -102,8 +103,8 @@ def test_cpp_info_component_objects():
             """)
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@ -s arch=x86_64 -s build_type=Release")
-    client.run("install hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
+    client.run("create . --name=hello --version=1.0 -s arch=x86_64 -s build_type=Release")
+    client.run("install --requires=hello/1.0@ -g CMakeDeps -s arch=x86_64 -s build_type=Release")
     with open(os.path.join(client.current_folder, "hello-Target-release.cmake")) as f:
         content = f.read()
         assert """set_property(TARGET hello::say
@@ -141,7 +142,7 @@ def test_cpp_info_component_error_aggregate():
                 self.cpp_info.components["say"].includedirs = ["include"]
             """)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             requires = "hello/1.0"
@@ -150,10 +151,13 @@ def test_cpp_info_component_error_aggregate():
                 self.cpp_info.components["chat"].requires = ["hello::say"]
         """)
     test_package = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             generators = "VirtualRunEnv", "CMakeDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def test(self):
                 pass
@@ -162,15 +166,15 @@ def test_cpp_info_component_error_aggregate():
     client.save({"hello/conanfile.py": conan_hello,
                  "consumer/conanfile.py": consumer,
                  "consumer/test_package/conanfile.py": test_package})
-    client.run("create hello hello/1.0@")
-    client.run("create consumer consumer/1.0@")
+    client.run("create hello --name=hello --version=1.0")
+    client.run("create consumer --name=consumer --version=1.0")
     assert "consumer/1.0 (test package): Running test()" in client.out
 
 
 def test_cmakedeps_cppinfo_complex_strings():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent(r'''
-        from conans import ConanFile
+        from conan import ConanFile
         class HelloLib(ConanFile):
             def package_info(self):
                 self.cpp_info.defines.append("escape=partially \"escaped\"")
@@ -179,7 +183,7 @@ def test_cmakedeps_cppinfo_complex_strings():
                 self.cpp_info.defines.append("answer=42")
         ''')
     client.save({"conanfile.py": conanfile})
-    client.run("export . hello/1.0@")
+    client.run("export . --name=hello --version=1.0")
     client.save({"conanfile.txt": "[requires]\nhello/1.0\n"}, clean_first=True)
     client.run("install . --build=missing -g CMakeDeps")
     arch = client.get_default_host_profile().settings['arch']
@@ -236,8 +240,8 @@ def test_dependency_props_from_consumer():
     config_file = os.path.join(gen_folder, "custom_bar_file_nameTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert os.path.exists(module_file)
     assert os.path.exists(config_file)
     module_content = client.load(module_file)
@@ -249,22 +253,22 @@ def test_dependency_props_from_consumer():
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert not os.path.exists(module_file)
     assert not os.path.exists(config_file)
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert os.path.exists(module_file)
     assert not os.path.exists(config_file)
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@")
-    client.run("install foo.py foo/1.0@")
+    client.run("create bar.py --name=bar --version=1.0")
+    client.run("install foo.py")
     assert not os.path.exists(module_file)
     assert os.path.exists(config_file)
 
@@ -333,8 +337,8 @@ def test_props_from_consumer_build_context_activated():
     config_file_build = os.path.join(gen_folder, "custom_bar_build_file_name_BUILDTargets.cmake")
 
     # uses cmake_find_mode set in bar: both
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert os.path.exists(module_file)
     assert os.path.exists(config_file)
     assert os.path.exists(module_file_build)
@@ -359,8 +363,8 @@ def test_props_from_consumer_build_context_activated():
     client.save(
         {"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'none'")), "bar.py": bar},
         clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
     assert not os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
@@ -368,8 +372,8 @@ def test_props_from_consumer_build_context_activated():
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'module'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert os.path.exists(module_file)
     assert not os.path.exists(config_file)
     assert os.path.exists(module_file_build)
@@ -377,8 +381,8 @@ def test_props_from_consumer_build_context_activated():
 
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="'config'")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
@@ -387,12 +391,41 @@ def test_props_from_consumer_build_context_activated():
     # invalidate upstream property setting a None, will use config that's the default
     client.save({"foo.py": foo.format(set_find_mode=set_find_mode.format(find_mode="None")),
                  "bar.py": bar}, clean_first=True)
-    client.run("create bar.py bar/1.0@ -pr:h=default -pr:b=default")
-    client.run("install foo.py foo/1.0@ -pr:h=default -pr:b=default")
+    client.run("create bar.py --name=bar --version=1.0 -pr:h=default -pr:b=default")
+    client.run("install foo.py --name=foo --version=1.0 -pr:h=default -pr:b=default")
     assert not os.path.exists(module_file)
     assert os.path.exists(config_file)
     assert not os.path.exists(module_file_build)
     assert os.path.exists(config_file_build)
+
+
+def test_skip_transitive_components():
+    """ when a transitive depenency is skipped, because its binary is not necessary
+    (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
+    was erroring with KeyError, as the dependency info was not there
+    """
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            package_type = "shared-library"
+            requires = "dep/0.1"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].requires = ["dep::dep"]
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": pkg,
+            "consumer/conanfile.py": GenConanfile().with_settings("build_type")
+                                                   .with_requires("pkg/0.1")})
+    c.run("create dep")
+    c.run("create pkg")
+    c.run("install consumer -g CMakeDeps")
+    c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
+    # This used to error, as CMakeDeps was raising a KeyError
+    assert "'CMakeDeps' calling 'generate()'" in c.out
 
 
 def test_error_missing_config_build_context():
@@ -423,8 +456,8 @@ def test_error_missing_config_build_context():
             "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
                                                             .with_requires("engine/1.0"),
             "example/conanfile.py": example,
-            "example/test_package/conanfile.py": GenConanfile().with_requires("example/1.0")
-                                                               .with_build_requires("example/1.0")
+            # The example test_package contains already requires(self.tested_reference_str)
+            "example/test_package/conanfile.py": GenConanfile().with_build_requires("example/1.0")
                                                                .with_test("pass")})
     c.run("create math")
     c.run("create engine")
@@ -435,6 +468,6 @@ def test_error_missing_config_build_context():
     # The debug binaries are missing, so adding --build=missing
     c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
           "--build=example")
-
-    assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
-    assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out
+    # listed as both requires and build_requires
+    c.assert_listed_require({"example/1.0": "Cache"})
+    c.assert_listed_require({"example/1.0": "Cache"}, build=True)

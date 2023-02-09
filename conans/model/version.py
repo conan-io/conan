@@ -1,193 +1,197 @@
-import re
+from functools import total_ordering
+
+from conans.errors import ConanException
 
 
-class Version(str):
+@total_ordering
+class _VersionItem:
+    """ a single "digit" in a version, like X.Y.Z all X and Y and Z are VersionItems
+    They can be int or strings
+    """
+    def __init__(self, item):
+        try:
+            self._v = int(item)
+        except ValueError:
+            self._v = item
+
+    @property
+    def value(self):
+        return self._v
+
+    def __str__(self):
+        return str(self._v)
+
+    def __add__(self, other):
+        # necessary for the "bump()" functionality. Other aritmetic operations are missing
+        return self._v + other
+
+    def __eq__(self, other):
+        if not isinstance(other, _VersionItem):
+            other = _VersionItem(other)
+        return self._v == other._v
+
+    def __hash__(self):
+        return hash(self._v)
+
+    def __lt__(self, other):
+        """
+        @type other: _VersionItem
+        """
+        if not isinstance(other, _VersionItem):
+            other = _VersionItem(other)
+        try:
+            return self._v < other._v
+        except TypeError:
+            return str(self._v) < str(other._v)
+
+
+@total_ordering
+class Version:
     """
     This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
-    version_pattern = re.compile('[.-]')
+    def __init__(self, value):
+        value = str(value)
+        self._value = value
 
-    def __new__(cls, content):
-        return str.__new__(cls, str(content).strip())
+        items = value.rsplit("+", 1)  # split for build
+        if len(items) == 2:
+            value, build = items
+            self._build = Version(build)  # This is a nested version by itself
+        else:
+            value = items[0]
+            self._build = None
+
+        items = value.rsplit("-", 1)  # split for pre-release
+        if len(items) == 2:
+            value, pre = items
+            self._pre = Version(pre)  # This is a nested version by itself
+        else:
+            value = items[0]
+            self._pre = None
+        items = value.split(".")
+        items = [_VersionItem(item) for item in items]
+        self._items = tuple(items)
+        while items and items[-1].value == 0:
+            del items[-1]
+        self._nonzero_items = tuple(items)
+
+    def bump(self, index):
+        """
+        :meta private:
+            Bump the version
+            Increments by 1 the version field at the specified index, setting to 0 the fields
+            on the right.
+            2.5 => bump(1) => 2.6
+            1.5.7 => bump(0) => 2.0.0
+
+        :param index:
+        """
+        # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
+        # TODO: at this moment it only works for digits, cannot increment pre-release or builds
+        # better not make it public yet, keep it internal
+        items = list(self._items[:index])
+        try:
+            items.append(self._items[index]+1)
+        except TypeError:
+            raise ConanException(f"Cannot bump '{self._value} version index {index}, not an int")
+        items.extend([0] * (len(items) - index - 1))
+        v = ".".join(str(i) for i in items)
+        # prerelease and build are dropped while bumping digits
+        result = Version(v)
+        return result
+
+    def upper_bound(self, index):
+        items = list(self._items[:index])
+        try:
+            items.append(self._items[index] + 1)
+        except TypeError:
+            raise ConanException(f"Cannot bump '{self._value} version index {index}, not an int")
+        items.extend([0] * (len(items) - index - 1))
+        v = ".".join(str(i) for i in items)
+        v += "-"  # Exclude prereleases
+        result = Version(v)
+        return result
 
     @property
-    def as_list(self):
-        """
-        Return version as a list of items
-        :return: list with version items
-        """
-        if not hasattr(self, "_cached_list"):
-            tokens = self.rsplit('+', 1)
-            self._base = tokens[0]
-            if len(tokens) == 2:
-                self._build = tokens[1]
-            self._cached_list = []
-            tokens = Version.version_pattern.split(tokens[0])
-            for item in tokens:
-                self._cached_list.append(int(item) if item.isdigit() else item)
-        return self._cached_list
-
-    def major(self, fill=True):
-        """
-        Get the major item from the version string
-        :param fill: Fill full version format with major.Y.Z
-        :return: version class
-        """
-        self_list = self.as_list
-        if not isinstance(self_list[0], int):
-            return self._base
-        v = str(self_list[0]) if self_list else "0"
-        if fill:
-            return Version(".".join([v, 'Y', 'Z']))
-        return Version(v)
-
-    def stable(self):
-        """
-        Get the stable version in a <major>.Y.Z format, otherwise return the version (semver 0.Y.Z
-        is not considered stable)
-        :return: version class with .Y.Z as ending
-        """
-        if self.as_list[0] == 0:
-            return self
-        return self.major()
-
-    def minor(self, fill=True):
-        """
-        Get the minor item from the version string
-        :param fill: Fill full version format with major.minor.Z
-        :return: version class
-        """
-        self_list = self.as_list
-        if not isinstance(self_list[0], int):
-            return self._base
-        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
-        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
-        if fill:
-            return Version(".".join([v0, v1, 'Z']))
-        return Version(".".join([v0, v1]))
-
-    def patch(self):
-        """
-        Get the patch item from the version string
-        :return: version class
-        """
-        self_list = self.as_list
-        if not isinstance(self_list[0], int):
-            return self._base
-        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
-        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
-        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
-        return Version(".".join([v0, v1, v2]))
-
     def pre(self):
-        self_list = self.as_list
-        if not isinstance(self_list[0], int):
-            return self._base
-        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
-        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
-        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
-        v = ".".join([v0, v1, v2])
-        if len(self_list) > 3:
-            v += "-%s" % self_list[3]
-        return Version(v)
+        return self._pre
 
     @property
     def build(self):
-        """
-        Return the build item from version string if any
-        :return: build item string if present, otherwise return an empty string
-        """
-        self.as_list
-        if hasattr(self, "_build"):
-            return self._build
-        return ""
+        return self._build
 
     @property
-    def base(self):
-        """
-        Return the base item from the version string
-        :return: version class
-        """
-        self.as_list
-        return Version(self._base)
+    def main(self):
+        return self._items
 
-    def compatible(self, other):
-        """
-        Determine if one version is compatible to other regarding to semver.
-        Useful to check compatibility with major/minor versions with `<major>.Y.Z` format.
-        :param other: version to compare to (string or version class)
-        :return: compatible true or false
-        """
-        if not isinstance(other, Version):
-            other = Version(other)
-        for v1, v2 in zip(self.as_list, other.as_list):
-            if v1 in ["X", "Y", "Z"] or v2 in ["X", "Y", "Z"]:
-                return True
-            if v1 != v2:
-                return False
-        return True
+    @property
+    def major(self):
+        try:
+            return self.main[0]
+        except IndexError:
+            return None
 
-    def __cmp__(self, other):
-        if other is None:
-            return 1
-        if not isinstance(other, Version):
-            other = Version(other)
+    @property
+    def minor(self):
+        try:
+            return self.main[1]
+        except IndexError:
+            return None
 
-        # Check equals
-        def get_el(a_list, index):
-            if len(a_list) - 1 < index:
-                return 0  # out of range, 4 == 4.0 == 4.0.0
-            return a_list[index]
+    @property
+    def patch(self):
+        try:
+            return self.main[2]
+        except IndexError:
+            return None
 
-        equals = all(get_el(other.as_list, ind) == get_el(self.as_list, ind)
-                     for ind in range(0, max(len(other.as_list), len(self.as_list))))
-        if equals:
-            if self.build == other.build:
-                return 0
-            if self.build > other.build:
-                return -1
-            else:
-                return 1
+    @property
+    def micro(self):
+        try:
+            return self.main[3]
+        except IndexError:
+            return None
 
-        # Check greater than or less than
-        other_list = other.as_list
-        for ind, el in enumerate(self.as_list):
-            if ind + 1 > len(other_list):
-                if isinstance(el, int):
-                    return 1
-                return -1
-            if not isinstance(el, int) and isinstance(other_list[ind], int):
-                # Version compare with 1.4.rc2
-                return -1
-            elif not isinstance(other_list[ind], int) and isinstance(el, int):
-                return 1
-            elif el == other_list[ind]:
-                continue
-            elif el > other_list[ind]:
-                return 1
-            else:
-                return -1
-        if len(other_list) > len(self.as_list):
-            return -1
+    def __str__(self):
+        return self._value
 
-    def __gt__(self, other):
-        return self.__cmp__(other) == 1
-
-    def __lt__(self, other):
-        return self.__cmp__(other) == -1
-
-    def __le__(self, other):
-        return self.__cmp__(other) in [0, -1]
-
-    def __ge__(self, other):
-        return self.__cmp__(other) in [0, 1]
+    def __repr__(self):
+        return self._value
 
     def __eq__(self, other):
-        return self.__cmp__(other) == 0
+        if other is None:
+            return False
+        if not isinstance(other, Version):
+            other = Version(other)
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        return (self._nonzero_items, self._pre, self._build) ==\
+               (other._nonzero_items, other._pre, other._build)
 
     def __hash__(self):
-        return str.__hash__(self)
+        return hash((self._nonzero_items, self._pre, self._build))
+
+    def __lt__(self, other):
+        if other is None:
+            return False
+        if not isinstance(other, Version):
+            other = Version(other)
+
+        if self._pre:
+            if other._pre:  # both are pre-releases
+                return (self._nonzero_items, self._pre, self._build) < \
+                       (other._nonzero_items, other._pre, other._build)
+            else:  # Left hand is pre-release, right side is regular
+                if self._nonzero_items == other._nonzero_items:  # Problem only happens if both equal
+                    return True
+                else:
+                    return self._nonzero_items < other._nonzero_items
+        else:
+            if other._pre:  # Left hand is regular, right side is pre-release
+                if self._nonzero_items == other._nonzero_items:  # Problem only happens if both equal
+                    return False
+                else:
+                    return self._nonzero_items < other._nonzero_items
+            else:  # None of them is pre-release
+                return (self._nonzero_items, self._build) < (other._nonzero_items, other._build)

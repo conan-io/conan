@@ -1,188 +1,294 @@
 import os
-import platform
-from contextlib import contextmanager
 from pathlib import Path
 
-import six
-from six import string_types
-
-
-from conans.client import tools
-from conans.client.output import ScopedOutput
+from conan.api.output import ConanOutput
 from conans.client.subsystems import command_env_wrapper
-from conans.client.tools.env import environment_append, no_op, pythonpath
-from conans.client.tools.oss import OSInfo
-from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.model.build_info import DepsCppInfo
+from conans.errors import ConanException
+from conans.model.build_info import MockInfoProperty
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Infos, Layouts
-from conans.model.new_build_info import from_old_cppinfo
-from conans.model.options import Options, OptionsValues, PackageOptions
+from conans.model.options import Options
+
 from conans.model.requires import Requirements
-from conans.model.user_info import DepsUserInfo
-from conans.paths import RUN_LOG_NAME
-from conans.util.conan_v2_mode import conan_v2_error
 
 
-def create_options(conanfile):
-    try:
-        package_options = PackageOptions(getattr(conanfile, "options", None))
-        options = Options(package_options)
-
-        default_options = getattr(conanfile, "default_options", None)
-        if default_options:
-            if isinstance(default_options, dict):
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, (list, tuple)):
-                conan_v2_error("Declare 'default_options' as a dictionary")
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, six.string_types):
-                conan_v2_error("Declare 'default_options' as a dictionary")
-                default_values = OptionsValues.loads(default_options)
-            else:
-                raise ConanException("Please define your default_options as list, "
-                                     "multiline string or dictionary")
-            options.values = default_values
-        return options
-    except Exception as e:
-        raise ConanException("Error while initializing options. %s" % str(e))
-
-
-def create_requirements(conanfile):
-    try:
-        # Actual requirements of this package
-        if not hasattr(conanfile, "requires"):
-            return Requirements()
-        else:
-            if not conanfile.requires:
-                return Requirements()
-            if isinstance(conanfile.requires, (tuple, list)):
-                return Requirements(*conanfile.requires)
-            else:
-                return Requirements(conanfile.requires, )
-    except Exception as e:
-        raise ConanException("Error while initializing requirements. %s" % str(e))
-
-
-def create_settings(conanfile, settings):
-    try:
-        defined_settings = getattr(conanfile, "settings", None)
-        if isinstance(defined_settings, str):
-            defined_settings = [defined_settings]
-        current = defined_settings or {}
-        settings.constraint(current)
-        return settings
-    except Exception as e:
-        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
-                                        conanfile.display_name, str(e)))
-
-
-@contextmanager
-def _env_and_python(conanfile):
-    with environment_append(conanfile.env):
-        # FIXME Conan 2.0, Remove old ways of reusing python code
-        with pythonpath(conanfile):
-            yield
-
-
-def get_env_context_manager(conanfile, without_python=False):
-    if not conanfile.apply_env:
-        return no_op()
-    if without_python:
-        return environment_append(conanfile.env)
-    return _env_and_python(conanfile)
-
-
-class ConanFile(object):
-    """ The base class for all package recipes
+class ConanFile:
+    """
+    The base class for all package recipes
     """
 
+    #: String corresponding to the ``<name>`` at the recipe reference ``<name>/version@user/channel``
     name = None
+
+    #: String corresponding to the ``<version>`` at the recipe reference
+    #: ``name/<version>@user/channel``
     version = None  # Any str, can be "1.1" or whatever
+
+    #: String corresponding to the ``<user>`` at the recipe reference ``name/version@<user>/channel``
+    user = None
+
+    #: String corresponding to the ``<channel>`` at the recipe reference
+    #: ``name/version@user/<channel>``.
+    channel = None
+
+    #: URL of the package repository, i.e. not necessarily of the original source code.
+    #: Recommended, but not mandatory attribute.
     url = None  # The URL where this File is located, as github, to collaborate in package
-    # The license of the PACKAGE, just a shortcut, does not replace or
-    # change the actual license of the source code
+
+    #: License of the **target** source code and binaries, i.e. the code
+    #: that is being packaged, not the ``conanfile.py`` itself.
+    #: Can contain several, comma separated licenses. It is a text string, so it can
+    #: contain any text, but it is strongly recommended that recipes of Open Source projects use
+    #: `SPDX <https://spdx.dev>`_ identifiers from the `SPDX license list
+    #: <https://spdx.dev/licenses/>`_
     license = None
-    author = None  # Main maintainer/responsible for the package, any format
+
+    #: Main maintainer/responsible for the package, any format. This is an optional attribute.
+    author = None
+
+    #: Description of the package and any information that might be useful for the consumers.
+    #: The first line might be used as a short description of the package.
     description = None
+
+    #: Tags to group related packages together and describe what the code is about.
+    #: Used as a search filter in conan-center. Optional attribute. It should be a tuple of strings.
     topics = None
+
+    #: The home web page of the library being packaged.
     homepage = None
+
+    #: Controls when the current package is built during a ``conan install``.
+    #: The allowed values are:
+    #:
+    #: - ``"missing"``: Conan builds it from source if there is no binary available.
+    #: - ``"never"``: This package cannot be built from sources, it is always created with
+    #:   ``conan export-pkg``
+    #: - ``None`` (default value): This package won't be build unless the policy is specified
+    #:   in the command line (e.g ``--build=foo*``)
     build_policy = None
+
+    #: Controls when the current package built binaries are uploaded or not
+    #:
+    #: - ``"skip"``: The precompiled binaries are not uploaded. This is useful for "installer"
+    #:   packages that just download and unzip something heavy (e.g. android-ndk), and is useful
+    #:   together with the ``build_policy = "missing"``
     upload_policy = None
-    short_paths = False
-    apply_env = True  # Apply environment variables from requires deps_env_info and profiles
+
+    #: List or tuple of strings with `file names` or
+    #: `fnmatch <https://docs.python.org/3/library/fnmatch.html>`_ patterns that should be exported
+    #: and stored side by side with the *conanfile.py* file to make the recipe work:
+    #: other python files that the recipe will import, some text file with data to read,...
     exports = None
+
+    #: List or tuple of strings with file names or
+    #: `fnmatch <https://docs.python.org/3/library/fnmatch.html>`_ patterns that should be exported
+    #: and will be available to generate the package. Unlike the ``exports`` attribute, these files
+    #: shouldn’t be used by the ``conanfile.py`` Python code, but to compile the library or generate
+    #: the final package. And, due to its purpose, these files will only be retrieved if requested
+    #: binaries are not available or the user forces Conan to compile from sources.
     exports_sources = None
-    generators = ["txt"]
+
+    #: List or tuple of strings with names of generators.
+    generators = []
     revision_mode = "hash"
 
-    # Vars to control the build steps (build(), package())
-    should_configure = True
-    should_build = True
-    should_install = True
-    should_test = True
-    in_local_cache = True
-    develop = False
-
-    # Defaulting the reference fields
-    default_channel = None
-    default_user = None
-
     # Settings and Options
+
+    #: List of strings with the first level settings (from ``settings.yml``) that the recipe
+    #: need, because:
+    #:
+    #:  - They are read for building (e.g: `if self.settings.compiler == "gcc"`)
+    #:  - They affect the ``package_id``. If a value of the declared setting changes, the
+    #:    ``package_id`` has to be different.
     settings = None
+
+    #: Dictionary with traits that affects only the current recipe, where the key is the
+    #: option name and the value is a list of different values that the option can take.
+    #: By default any value change in an option, changes the ``package_id``. Check the
+    #: ``default_options`` field to define default values for the options.
     options = None
+
+    #: The attribute ``default_options`` defines the default values for the options, both for the
+    #: current recipe and for any requirement.
+    #: This attribute should be defined as a python dictionary.
     default_options = None
 
+    #: This attribute declares that the recipe provides the same functionality as other recipe(s).
+    #: The attribute is usually needed if two or more libraries implement the same API to prevent
+    #: link-time and run-time conflicts (ODR violations). One typical situation is forked libraries.
+    #: Some examples are:
+    #:
+    #: - `LibreSSL <https://www.libressl.org/>`__, `BoringSSL <https://boringssl.googlesource.com/boringssl/>`__ and `OpenSSL <https://www.openssl.org/>`__
+    #: - `libav <https://en.wikipedia.org/wiki/Libav>`__ and `ffmpeg <https://ffmpeg.org/>`__
+    #: - `MariaDB client <https://downloads.mariadb.org/client-native>`__ and `MySQL client <https://dev.mysql.com/downloads/c-api/>`__
     provides = None
+
+    #: This attribute declares that the recipe is deprecated, causing a user-friendly warning
+    #: message to be emitted whenever it is used
     deprecated = None
 
-    # Folders
-    folders = None
-    patterns = None
+    #: Optional.
+    #: Declaring the ``package_type`` will help Conan:
+    #:
+    #:  - To choose better the default ``package_id_mode`` for each dependency, that is, how a change
+    #:    in a dependency should affect the ``package_id`` to the current package.
+    #:  - Which information from the dependencies should be propagated to the consumers, like
+    #:    headers, libraries, runtime information...
+    #:
+    #: The valid values are:
+    #:
+    #:     - **application**: The package is an application.
+    #:     - **library**: The package is a generic library. It will try to determine
+    #:       the type of library (from ``shared-library``, ``static-library``, ``header-library``)
+    #:       reading the ``self.options.shared`` (if declared) and the ``self.options.header_only``
+    #:     - **shared-library**: The package is a shared library.
+    #:     - **static-library**: The package is a static library.
+    #:     - **header-library**: The package is a header only library.
+    #:     - **build-scripts**: The package only contains build scripts.
+    #:     - **python-require**: The package is a python require.
+    #:     - **unknown**: The type of the package is unknown.
+    package_type = None
 
-    # Run in windows bash
+    #: When ``True`` it enables the new run in a subsystem bash in Windows mechanism.
     win_bash = None
+
+    #: When ``True`` it enables running commands in the ``"run"`` scope, to run them inside a bash shell.
     win_bash_run = None  # For run scope
+
     tested_reference_str = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None):
-        # an output stream (writeln, info, warn error)
-        self.output = ScopedOutput(display_name, output)
+    _conan_is_consumer = False
+
+    # #### Requirements
+
+    #: List or tuple of strings for regular dependencies in the host context, like a library.
+    requires = None
+
+    #: List or tuple of strings for dependencies. Represents a build tool like "cmake". If there is
+    #: an existing pre-compiled binary for the current package, the binaries for the tool_require
+    #: won't be retrieved. They cannot conflict.
+    tool_requires = None
+
+    #: List or tuple of strings for dependencies. Generic type of build dependencies that are not
+    #: applications (nothing runs), like build scripts. If there is
+    #: an existing pre-compiled binary for the current package, the binaries for the build_require
+    #: won't be retrieved. They cannot conflict.
+    build_requires = None
+
+    #: List or tuple of strings for dependencies in the host context only. Represents a test tool
+    #: like "gtest". Used when the current package is built from sources.
+    #: They don't propagate information to the downstream consumers. If there is
+    #: an existing pre-compiled binary for the current package, the binaries for the test_require
+    #: won't be retrieved. They cannot conflict.
+    test_requires = None
+
+    #: The attribute ``no_copy_source`` tells the recipe that the source code will not be copied from
+    #: the ``source_folder`` to the ``build_folder``. This is mostly an optimization for packages
+    #: with large source codebases or header-only, to avoid extra copies.
+    no_copy_source = False
+
+    #: The folder where the recipe *conanfile.py* is stored, either in the local folder or in
+    #: the cache. This is useful in order to access files that are exported along with the recipe,
+    #: or the origin folder when exporting files in ``export(self)`` and ``export_sources(self)``
+    #: methods.
+    recipe_folder = None
+
+    #: Object storing all the information needed by the consumers
+    #: of a package: include directories, library names, library paths... Both for editable
+    #: and regular packages in the cache. It is only available at the ``layout()`` method.
+    #:
+    #:  - ``self.cpp.package``: For a regular package being used from the Conan cache. Same as
+    #:    declaring ``self.cpp_info`` at the ``package_info()`` method.
+    #:  - ``self.cpp.source``: For "editable" packages, to describe the artifacts under
+    #:    ``self.source_folder``
+    #:  - ``self.cpp.build``: For "editable" packages, to describe the artifacts under
+    #:    ``self.build_folder``.
+    #:
+    cpp = None
+
+    #: For the dependant recipes, the declared environment variables will be present during the
+    #: build process. Should be only filled in the ``package_info()`` method.
+    buildenv_info = None
+
+    #: For the dependant recipes, the declared environment variables will be present at runtime.
+    #: Should be only filled in the ``package_info()`` method.
+    runenv_info = None
+
+    #: Configuration variables to be passed to the dependant recipes.
+    #: Should be only filled in the ``package_info()`` method.
+    conf_info = None
+
+    def __init__(self, display_name=""):
         self.display_name = display_name
         # something that can run commands, as os.sytem
-        self._conan_runner = runner
-        self._conan_user = user
-        self._conan_channel = channel
 
-        self.compatible_packages = []
-        self._conan_using_build_profile = False
-        self._conan_requester = None
+        self._conan_helpers = None
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
+        self.info = None
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_runenv = None
         self._conan_node = None  # access to container Node object, to access info, context, deps...
-        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+
+        if isinstance(self.generators, str):
+            self.generators = [self.generators]
+        if isinstance(self.settings, str):
+            self.settings = [self.settings]
+        self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
+                                     self.tool_requires)
+
+        self.options = Options(self.options or {}, self.default_options)
+
+        # user declared variables
+        self.user_info = MockInfoProperty("user_info")
+        self.env_info = MockInfoProperty("env_info")
         self._conan_dependencies = None
 
+        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
+            self.virtualbuildenv = True
+        if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
+            self.virtualrunenv = True
+
         self.env_scripts = {}  # Accumulate the env scripts generated in order
+        self.system_requires = {}  # Read only, internal {"apt": []}
 
         # layout() method related variables:
         self.folders = Folders()
         self.cpp = Infos()
         self.layouts = Layouts()
 
-        self.cpp.package.includedirs = ["include"]
-        self.cpp.package.libdirs = ["lib"]
-        self.cpp.package.bindirs = ["bin"]
-        self.cpp.package.resdirs = []
-        self.cpp.package.builddirs = [""]
-        self.cpp.package.frameworkdirs = []
+    def serialize(self):
+        result = {}
+        for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
+                  "revision_mode", "provides", "deprecated", "win_bash"):
+            v = getattr(self, a)
+            if v is not None:
+                result[a] = v
+        result["package_type"] = str(self.package_type)
+        result["settings"] = self.settings.serialize()
+        if hasattr(self, "python_requires"):
+            result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
+        result["system_requires"] = self.system_requires
+        result["options"] = self.options.serialize()
+        result["recipe_folder"] = self.recipe_folder
+        result["source_folder"] = self.source_folder
+        result["build_folder"] = self.build_folder
+        result["package_folder"] = self.package_folder
+        result["cpp_info"] = self.cpp_info.serialize()
+        result["label"] = self.display_name
+        return result
+
+    @property
+    def output(self):
+        # an output stream (writeln, info, warn error)
+        scope = self.display_name
+        if not scope:
+            scope = self.ref if self._conan_node else ""
+        return ConanOutput(scope=scope)
 
     @property
     def context(self):
@@ -208,9 +314,8 @@ class ConanFile(object):
         # Lazy computation of the package buildenv based on the profileone
         from conan.tools.env import Environment
         if not isinstance(self._conan_buildenv, Environment):
-            # TODO: missing user/channel
-            ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_profile_env(ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_profile_env(self.ref,
+                                                                        self._conan_is_consumer)
         return self._conan_buildenv
 
     @property
@@ -218,60 +323,31 @@ class ConanFile(object):
         # Lazy computation of the package runenv based on the profile one
         from conan.tools.env import Environment
         if not isinstance(self._conan_runenv, Environment):
-            # TODO: missing user/channel
-            ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_runenv = self._conan_runenv.get_profile_env(ref_str)
+            self._conan_runenv = self._conan_runenv.get_profile_env(self.ref,
+                                                                    self._conan_is_consumer)
         return self._conan_runenv
 
-    def initialize(self, settings, env, buildenv=None, runenv=None):
-        self._conan_buildenv = buildenv
-        self._conan_runenv = runenv
-        if isinstance(self.generators, str):
-            self.generators = [self.generators]
-        # User defined options
-        self.options = create_options(self)
-        self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings)
-
-        conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                       " please update your recipe.", 'cppstd' in self.settings.fields)
-
-        # needed variables to pack the project
-        self.cpp_info = None  # Will be initialized at processing time
-        self._conan_dep_cpp_info = None  # Will be initialized at processing time
-        self.deps_cpp_info = DepsCppInfo()
-
-        # environment variables declared in the package_info
-        self.env_info = None  # Will be initialized at processing time
-        self.deps_env_info = DepsEnvInfo()
-
-        # user declared variables
-        self.user_info = None
-        # Keys are the package names (only 'host' if different contexts)
-        self.deps_user_info = DepsUserInfo()
-
-        # user specified env variables
-        self._conan_env_values = env.copy()  # user specified -e
-
-        if self.description is not None and not isinstance(self.description, six.string_types):
-            raise ConanException("Recipe 'description' must be a string.")
-
-        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
-            self.virtualbuildenv = True
-        if not hasattr(self, "virtualrunenv"):  # Allow the user to override it with True or False
-            self.virtualrunenv = True
-
     @property
-    def new_cpp_info(self):
-        if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
-            # The new_cpp_info will be already absolute paths if layout() is defined
-            if self.package_folder is not None:  # to not crash when editable and layout()
-                self._conan_new_cpp_info.set_relative_base_folder(self.package_folder)
-        return self._conan_new_cpp_info
+    def cpp_info(self):
+        """
+        Same as using ``self.cpp.package`` in the ``layout()`` method. Use it if you need to read
+        the ``package_folder`` to locate the already located artifacts.
+        """
+        return self.cpp.package
+
+    @cpp_info.setter
+    def cpp_info(self, value):
+        self.cpp.package = value
 
     @property
     def source_folder(self):
+        """
+        The folder in which the source code lives. The path is built joining the base directory
+        (a cache directory when running in the cache or the ``output folder`` when running locally)
+        with the value of ``folders.source`` if declared in the ``layout()`` method.
+
+        :return: A string with the path to the source folder.
+        """
         return self.folders.source_folder
 
     @property
@@ -281,9 +357,17 @@ class ConanFile(object):
 
     @property
     def export_sources_folder(self):
-        """points to the base source folder when calling source() and to the cache export sources
-        folder while calling the exports_sources() method. Prepared in case we want to introduce a
-        'no_copy_export_sources' and point to the right location always."""
+        """
+        The value depends on the method you access it:
+
+            - At ``source(self)``: Points to the base source folder (that means self.source_folder but
+              without taking into account the ``folders.source`` declared in the ``layout()`` method).
+              The declared `exports_sources` are copied to that base source folder always.
+            - At ``exports_sources(self)``: Points to the folder in the cache where the export sources
+              have to be copied.
+
+        :return: A string with the mentioned path.
+        """
         return self.folders.base_export_sources
 
     @property
@@ -302,6 +386,13 @@ class ConanFile(object):
 
     @property
     def build_folder(self):
+        """
+        The folder used to build the source code. The path is built joining the base directory (a cache
+        directory when running in the cache or the ``output folder`` when running locally) with
+        the value of ``folders.build`` if declared in the ``layout()`` method.
+
+        :return: A string with the path to the build folder.
+        """
         return self.folders.build_folder
 
     @property
@@ -311,7 +402,17 @@ class ConanFile(object):
 
     @property
     def package_folder(self):
+        """
+        The folder to copy the final artifacts for the binary package. In the local cache a package
+        folder is created for every different package ID.
+
+        :return: A string with the path to the package folder.
+        """
         return self.folders.base_package
+
+    @property
+    def generators_folder(self):
+        return self.folders.generators_folder
 
     @property
     def package_path(self) -> Path:
@@ -319,162 +420,36 @@ class ConanFile(object):
         return Path(self.package_folder)
 
     @property
-    def install_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.base_install
-
-    @property
-    def generators_folder(self):
-        # FIXME: Remove in 2.0, no self.install_folder
-        return self.folders.generators_folder if self.folders.generators else self.install_folder
-
-    @property
     def generators_path(self) -> Path:
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
-    @property
-    def imports_folder(self):
-        return self.folders.imports_folder
-
-    @property
-    def env(self):
-        """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
-        self._conan_env_values, user specified from profiles or -e first, then inherited)"""
-        # Cannot be lazy cached, because it's called in configure node, and we still don't have
-        # the deps_env_info objects available
-        tmp_env_values = self._conan_env_values.copy()
-        tmp_env_values.update(self.deps_env_info)
-        ret, multiple = tmp_env_values.env_dicts(self.name, self.version, self._conan_user,
-                                                 self._conan_channel)
-        ret.update(multiple)
-        return ret
-
-    @property
-    def channel(self):
-        if not self._conan_channel:
-            _env_channel = os.getenv("CONAN_CHANNEL")
-            conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated", _env_channel)
-            self._conan_channel = _env_channel or self.default_channel
-            if not self._conan_channel:
-                raise ConanException("channel not defined, but self.channel is used in conanfile")
-        return self._conan_channel
-
-    @property
-    def user(self):
-        if not self._conan_user:
-            _env_username = os.getenv("CONAN_USERNAME")
-            conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated", _env_username)
-            self._conan_user = _env_username or self.default_user
-            if not self._conan_user:
-                raise ConanException("user not defined, but self.user is used in conanfile")
-        return self._conan_user
-
-    def collect_libs(self, folder=None):
-        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead")
-        return tools.collect_libs(self, folder=folder)
-
-    @property
-    def build_policy_missing(self):
-        return self.build_policy == "missing"
-
-    @property
-    def build_policy_always(self):
-        return self.build_policy == "always"
-
-    def source(self):
-        pass
-
-    def system_requirements(self):
-        """ this method can be overwritten to implement logic for system package
-        managers, as apt-get
-
-        You can define self.global_system_requirements = True, if you want the installation
-        to be for all packages (not depending on settings/options/requirements)
-        """
-
-    def config_options(self):
-        """ modify options, probably conditioned to some settings. This call is executed
-        before config_settings. E.g.
-        if self.settings.os == "Windows":
-            del self.options.shared  # shared/static not supported in win
-        """
-
-    def configure(self):
-        """ modify settings, probably conditioned to some options. This call is executed
-        after config_options. E.g.
-        if self.options.header_only:
-            self.settings.clear()
-        This is also the place for conditional requirements
-        """
-
-    def build(self):
-        """ build your project calling the desired build tools as done in the command line.
-        E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
-        """
-        self.output.warn("This conanfile has no build step")
-
-    def package(self):
-        """ package the needed files from source and build folders.
-        E.g. self.copy("*.h", src="src/includes", dst="includes")
-        """
-        self.output.warn("This conanfile has no package step")
-
-    def package_info(self):
-        """ define cpp_build_info, flags, etc
-        """
-
-    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="", scope="build"):
+    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
+            shell=True, scope="build"):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
-
+        command = self._conan_helpers.cmd_wrapper.wrap(command)
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
             # they don't want any env-file applied
             env = "conanbuild" if scope == "build" else "conanrun"
 
-        def _run(cmd, _env):
-            # FIXME: run in windows bash is not using output
-            if platform.system() == "Windows":
-                if win_bash:
-                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
-                                                     msys_mingw=msys_mingw, with_login=with_login)
-            envfiles_folder = self.generators_folder or os.getcwd()
-            _env = [_env] if _env and isinstance(_env, str) else (_env or [])
-            assert isinstance(_env, list)
-            wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder,
-                                              scope=scope)
-            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
-
-        if run_environment:
-            # When using_build_profile the required environment is already applied through
-            # 'conanfile.env' in the contextmanager 'get_env_context_manager'
-            with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
-                if OSInfo().is_macos and isinstance(command, string_types):
-                    # Security policy on macOS clears this variable when executing /bin/sh. To
-                    # keep its value, set it again inside the shell when running the command.
-                    command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
-                              (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                               os.environ.get("DYLD_FRAMEWORK_PATH", ''),
-                               command)
-                retcode = _run(command, env)
-        else:
-            retcode = _run(command, env)
+        env = [env] if env and isinstance(env, str) else (env or [])
+        assert isinstance(env, list), "env argument to ConanFile.run() should be a list"
+        envfiles_folder = self.generators_folder or os.getcwd()
+        wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
+        from conans.util.runners import conan_run
+        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}")
+        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
 
         if not ignore_errors and retcode != 0:
-            raise ConanException("Error %d while executing %s" % (retcode, command))
+            raise ConanException("Error %d while executing" % retcode)
 
         return retcode
 
-    def package_id(self):
-        """ modify the binary info, typically to narrow values
-        e.g.: self.info.settings.compiler = "Any" => All compilers will generate same ID
-        """
-
-    def test(self):
-        """ test the generated executable.
-        E.g.  self.run("./example")
-        """
-        raise ConanException("You need to create a method 'test' in your test/conanfile.py")
-
     def __repr__(self):
         return self.display_name
+
+    def set_deploy_folder(self, deploy_folder):
+        self.cpp_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.buildenv_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.runenv_info.deploy_base_folder(self.package_folder, deploy_folder)
+        self.folders.set_base_package(deploy_folder)

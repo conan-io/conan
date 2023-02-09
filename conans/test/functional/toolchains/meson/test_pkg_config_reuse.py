@@ -7,7 +7,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
-@pytest.mark.tool_pkg_config
+@pytest.mark.tool("pkg_config")
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
     from conan import ConanFile
@@ -16,7 +16,7 @@ class MesonPkgConfigTest(TestMesonBase):
 
     class App(ConanFile):
         settings = "os", "arch", "compiler", "build_type"
-        generators = "pkg_config"
+        generators = "PkgConfigDeps"
         requires = "hello/0.1"
 
         def layout(self):
@@ -39,8 +39,9 @@ class MesonPkgConfigTest(TestMesonBase):
     """)
 
     def test_reuse(self):
-        self.t.run("new hello/0.1 -s")
-        self.t.run("create . hello/0.1@ %s" % self._settings_str)
+        self.t.run("new cmake_lib -d name=hello -d version=0.1")
+        self.t.run("create . -tf=\"\"")
+
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
         # Prepare the actual consumer package
         self.t.save({"conanfile.py": self._conanfile_py,
@@ -49,8 +50,6 @@ class MesonPkgConfigTest(TestMesonBase):
                     clean_first=True)
 
         # Build in the cache
-        self.t.run("install . %s" % self._settings_str)
-        self.assertIn("conanfile.py: Generator pkg_config created hello.pc", self.t.out)
         self.t.run("build .")
         self.t.run_command(os.path.join("build", "demo"))
 

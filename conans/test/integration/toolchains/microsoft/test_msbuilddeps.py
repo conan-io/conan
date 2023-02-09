@@ -18,8 +18,8 @@ from conans.test.utils.tools import TestClient
 )
 def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
     client = TestClient()
-    client.run("new hello/0.1 --template=msbuild_lib")
-    client.run(f"install . -g MSBuildDeps -s arch={arch} -pr:b=default -if=install")
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
+    client.run(f"install . -g MSBuildDeps -s arch={arch} -pr:b=default")
     toolchain = client.load(os.path.join("conan", "conantoolchain.props"))
     expected_import = f"""<Import Condition="'$(Configuration)' == 'Release' And '$(Platform)' == '{exp_platform}'" Project="conantoolchain_release_{exp_platform.lower()}.props"/>"""
     assert expected_import in toolchain
@@ -42,7 +42,7 @@ def test_msbuilddeps_format_names():
     c.save({"conanfile.py": conanfile})
     c.run("create . -s arch=x86_64")
     # Issue: https://github.com/conan-io/conan/issues/11822
-    c.run("install pkg.name-more+/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
+    c.run("install --require=pkg.name-more+/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
     # Checking that MSBuildDeps builds correctly the XML file
     # loading all .props and xml parse them to check no errors
     pkg_more = c.load("conan_pkg_name-more_.props")

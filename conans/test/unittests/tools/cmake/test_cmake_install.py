@@ -1,6 +1,3 @@
-import platform
-import pytest
-
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
 from conans.client.conf import get_default_settings_yml
@@ -20,9 +17,9 @@ def test_run_install_component():
     settings.os = "Windows"
     settings.arch = "x86"
     settings.build_type = "Release"
-    settings.compiler = "Visual Studio"
-    settings.compiler.runtime = "MDd"
-    settings.compiler.version = "14"
+    settings.compiler = "msvc"
+    settings.compiler.runtime = "dynamic"
+    settings.compiler.version = "190"
 
     conanfile = ConanFileMock()
     conanfile.conf = Conf()

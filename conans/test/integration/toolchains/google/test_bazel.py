@@ -73,7 +73,7 @@ def test_bazel_exclude_folders():
     c = TestClient()
     c.save({"dep/conanfile.py": dep})
     c.run("create dep")
-    c.run("install dep/0.1@ -g BazelDeps")
+    c.run("install --require dep/0.1 -g BazelDeps")
     build_file = c.load("dep/BUILD")
     assert 'static_library = "lib/libmymath.a"' in build_file
 
@@ -118,6 +118,6 @@ def test_bazeldeps_and_build_requires():
         """)
     c.save({"dep/conanfile.py": dep})
     c.run("export dep")
-    c.run("install dep/0.1@ -g BazelDeps --build=missing")
+    c.run("install --requires=dep/0.1@ -g BazelDeps --build=missing")
     build_file = c.load("dep/BUILD")
     assert '@tool' not in build_file

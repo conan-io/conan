@@ -1,9 +1,12 @@
+import os
 import unittest
 import mock
 
 from conans import __version__
 from conans.errors import ConanException
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class RequiredVersionTest(unittest.TestCase):
@@ -12,7 +15,8 @@ class RequiredVersionTest(unittest.TestCase):
     def test_wrong_version(self):
         required_version = "1.23.0"
         client = TestClient()
-        client.run("config set general.required_conan_version={}".format(required_version))
+        client.save({"global.conf": f"core:required_conan_version={required_version}"},
+                    path=client.cache.cache_folder)
         with self.assertRaises(ConanException) as error:
             client.run("help")
         self.assertIn("Current Conan version (1.26.0) does not satisfy the defined "
@@ -20,30 +24,34 @@ class RequiredVersionTest(unittest.TestCase):
 
     @mock.patch("conans.client.conf.required_version.client_version", "1.22.0")
     def test_exact_version(self):
+        required_version = "1.22.0"
         client = TestClient()
-        client.run("config set general.required_conan_version=1.22.0")
-        client.run("help")
-        self.assertNotIn("ERROR", client.out)
+        client.save({"global.conf": f"core:required_conan_version={required_version}"},
+                    path=client.cache.cache_folder)
+        client.run("--help")
 
     @mock.patch("conans.client.conf.required_version.client_version", "2.1.0")
     def test_lesser_version(self):
+        required_version = "<3.0"
         client = TestClient()
-        client.run("config set general.required_conan_version=<3")
-        client.run("help")
-        self.assertNotIn("ERROR", client.out)
+        client.save({"global.conf": f"core:required_conan_version={required_version}"},
+                    path=client.cache.cache_folder)
+        client.run("--help")
 
     @mock.patch("conans.client.conf.required_version.client_version", "1.0.0")
     def test_greater_version(self):
+        required_version = ">0.1.0"
         client = TestClient()
-        client.run("config set general.required_conan_version=>0.1.0")
-        client.run("help")
-        self.assertNotIn("ERROR", client.out)
+        client.save({"global.conf": f"core:required_conan_version={required_version}"},
+                    path=client.cache.cache_folder)
+        client.run("--help")
 
     def test_bad_format(self):
-        client = TestClient()
         required_version = "1.0.0.0-foobar"
-        client.run("config set general.required_conan_version={}".format(required_version))
+        cache_folder = temp_folder()
+        save(os.path.join(cache_folder, "global.conf"),
+             f"core:required_conan_version={required_version}")
         with self.assertRaises(ConanException) as error:
-            client.run("help", assert_error=True)
+            TestClient(cache_folder)
         self.assertIn("Current Conan version ({}) does not satisfy the defined one ({})"
                       .format(__version__, required_version), str(error.exception))

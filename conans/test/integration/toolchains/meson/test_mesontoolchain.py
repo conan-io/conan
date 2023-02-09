@@ -84,7 +84,7 @@ def test_extra_flags_via_conf():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
-    t.run("install . -pr=profile")
+    t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_args = ['-flag0', '-other=val', '-flag1', '-flag2', '-D_GLIBCXX_USE_CXX11_ABI=0']" in content
     assert "c_args = ['-flag0', '-other=val', '-flag3', '-flag4']" in content
@@ -115,7 +115,7 @@ def test_linker_scripts_via_conf():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
-    t.run("install . -pr=profile")
+    t.run("install . -pr:b=profile -pr=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "c_link_args = ['-flag0', '-other=val', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
     assert "cpp_link_args = ['-flag0', '-other=val', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
@@ -136,7 +136,7 @@ def test_correct_quotes():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain",
             "profile": profile})
 
-    t.run("install . -pr=profile")
+    t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_std = 'c++17'" in content
     assert "backend = 'ninja'" in content

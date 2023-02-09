@@ -1,19 +1,30 @@
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
-    build_type_link_flags, libcxx_flags
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
-    apple_sdk_path
-from conan.tools.build.cross_building import cross_building, get_cross_building_settings
+from conan.internal import check_duplicated_generator
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, apple_sdk_path
+from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.tools.build import cmd_args_to_string
+from conan.tools.build.cross_building import cross_building
+from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
-from conans.tools import args_to_string
+from conans.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:
     def __init__(self, conanfile, namespace=None, prefix="/"):
+        """
+
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param namespace: This argument avoids collisions when you have multiple toolchain calls in
+               the same recipe. By setting this argument, the *conanbuild.conf* file used to pass
+               information to the build helper will be named as *<namespace>_conanbuild.conf*. The default
+               value is ``None`` meaning that the name of the generated file is *conanbuild.conf*. This
+               namespace must be also set with the same value in the constructor of the Autotools build
+               helper so that it reads the information from the proper file.
+        :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
+        """
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix
@@ -46,13 +57,20 @@ class AutotoolsToolchain:
         self._target = None
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
-        self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+
+        os_sdk = get_apple_sdk_fullname(conanfile)
+        os_version = conanfile.settings.get_safe("os.version")
+        subsystem = conanfile.settings.get_safe("os.subsystem")
+        self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
 
         self.sysroot_flag = None
 
         if cross_building(self._conanfile):
-            # Host triplet
-            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+            os_host = conanfile.settings.get_safe("os")
+            arch_host = conanfile.settings.get_safe("arch")
+            os_build = conanfile.settings_build.get_safe('os')
+            arch_build = conanfile.settings_build.get_safe('arch')
+
             compiler = self._conanfile.settings.get_safe("compiler")
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
@@ -60,7 +78,10 @@ class AutotoolsToolchain:
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos":
-                sdk_path = apple_sdk_path(conanfile)
+                # SDK path is mandatory for cross-building
+                sdk_path = apple_sdk_path(self._conanfile)
+                if not sdk_path:
+                    raise ConanException("You must provide a valid SDK path for cross-compilation.")
                 apple_arch = to_apple_arch(self._conanfile)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
@@ -76,8 +97,6 @@ class AutotoolsToolchain:
                               self._get_triplets()
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
-
-        check_using_build_profile(self._conanfile)
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -146,6 +165,7 @@ class AutotoolsToolchain:
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env = env.vars(self._conanfile, scope=scope)
         env.save_script("conanautotoolstoolchain")
@@ -155,11 +175,10 @@ class AutotoolsToolchain:
     def _default_configure_shared_flags(self):
         args = []
         # Just add these flags if there's a shared option defined (never add to exe's)
-        # FIXME: For Conan 2.0 use the package_type to decide if adding these flags or not
         try:
-            if self._conanfile.options.shared:
+            if self._conanfile.package_type is PackageType.SHARED:
                 args.extend(["--enable-shared", "--disable-static"])
-            else:
+            elif self._conanfile.package_type is PackageType.STATIC:
                 args.extend(["--disable-shared", "--enable-static"])
         except ConanException:
             pass
@@ -248,7 +267,7 @@ class AutotoolsToolchain:
         setattr(self, attr_name, _dict_to_list(options))
 
     def generate_args(self):
-        args = {"configure_args": args_to_string(self.configure_args),
-                "make_args":  args_to_string(self.make_args),
-                "autoreconf_args": args_to_string(self.autoreconf_args)}
+        args = {"configure_args": cmd_args_to_string(self.configure_args),
+                "make_args":  cmd_args_to_string(self.make_args),
+                "autoreconf_args": cmd_args_to_string(self.autoreconf_args)}
         save_toolchain_args(args, namespace=self._namespace)

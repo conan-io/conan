@@ -6,7 +6,6 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.tools import save
 
 
 @pytest.fixture
@@ -19,8 +18,7 @@ def client():
         self.runenv_info.define("Foo", "MyRunVar!")
     """
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@")
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
+    client.run("create . --name=foo --version=1.0")
     return client
 
 
@@ -30,7 +28,7 @@ def test_virtualenv_deactivated(client, default_virtualenv):
                   False: "virtualbuildenv = False",
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     import platform
 
     class ConanFileToolsTest(ConanFile):
@@ -53,7 +51,7 @@ def test_virtualrunenv_not_applied(client):
     """By default the VirtualRunEnv is not added to the list, otherwise when declaring
        generators = "VirtualBuildEnv", "VirtualRunEnv" will be always added"""
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     import platform
 
     class ConanFileToolsTest(ConanFile):
@@ -78,7 +76,7 @@ def test_virtualrunenv_explicit_declare(client, explicit_declare):
     """By default the VirtualRunEnv is not added to the list, otherwise when declaring
        generators = "VirtualBuildEnv", "VirtualRunEnv" will be always added"""
     conanfile = textwrap.dedent("""
-    from conans import ConanFile
+    from conan import ConanFile
     from conan.tools.env import VirtualRunEnv
     import platform
 

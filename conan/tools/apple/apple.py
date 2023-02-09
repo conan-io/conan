@@ -1,9 +1,7 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 import os
 
 from conans.util.runners import check_output_runner
-from conans.client.tools.apple import to_apple_arch as _to_apple_arch
+from conan.tools.build import cmd_args_to_string
 from conans.errors import ConanException
 
 
@@ -13,91 +11,109 @@ def is_apple_os(conanfile):
     return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
 
 
-def to_apple_arch(conanfile):
+def _to_apple_arch(arch, default=None):
+    """converts conan-style architecture into Apple-style arch"""
+    return {'x86': 'i386',
+            'x86_64': 'x86_64',
+            'armv7': 'armv7',
+            'armv8': 'arm64',
+            'armv8_32': 'arm64_32',
+            'armv8.3': 'arm64e',
+            'armv7s': 'armv7s',
+            'armv7k': 'armv7k'}.get(str(arch), default)
+
+
+def to_apple_arch(conanfile, default=None):
     """converts conan-style architecture into Apple-style arch"""
     arch_ = conanfile.settings.get_safe("arch")
-    return _to_apple_arch(arch_)
-
-
-def _guess_apple_sdk_name(os_, arch):
-    if str(arch).startswith('x86'):
-        return {'Macos': 'macosx',
-                'iOS': 'iphonesimulator',
-                'watchOS': 'watchsimulator',
-                'tvOS': 'appletvsimulator'}.get(str(os_))
-    else:
-        return {'Macos': 'macosx',
-                'iOS': 'iphoneos',
-                'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(os_), None)
-
-
-def apple_sdk_name(settings):
-    """returns proper SDK name suitable for OS and architecture
-    we're building for (considering simulators)"""
-    arch = settings.get_safe('arch')
-    os_ = settings.get_safe('os')
-    os_sdk = settings.get_safe('os.sdk')
-    os_sdk_version = settings.get_safe('os.sdk_version') or ""
-    return "{}{}".format(os_sdk, os_sdk_version) if os_sdk else _guess_apple_sdk_name(os_, arch)
-
-
-def apple_min_version_flag(conanfile):
-    """compiler flag name which controls deployment target"""
-    os_version = conanfile.settings.get_safe("os.version")
-    if not os_version:
-        return ''
-
-    os_ = conanfile.settings.get_safe("os")
-    os_sdk = conanfile.settings.get_safe("os.sdk")
-    os_subsystem = conanfile.settings.get_safe("os.subsystem")
-    arch = conanfile.settings.get_safe("arch")
-
-    if not os_version:
-        return ''
-    os_sdk = os_sdk if os_sdk else _guess_apple_sdk_name(os_, arch)
-    flag = {'macosx': '-mmacosx-version-min',
-            'iphoneos': '-mios-version-min',
-            'iphonesimulator': '-mios-simulator-version-min',
-            'watchos': '-mwatchos-version-min',
-            'watchsimulator': '-mwatchos-simulator-version-min',
-            'appletvos': '-mtvos-version-min',
-            'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
-    if os_subsystem == 'catalyst':
-        # especial case, despite Catalyst is macOS, it requires an iOS version argument
-        flag = '-mios-version-min'
-    if not flag:
-        return ''
-    return "%s=%s" % (flag, os_version)
+    return _to_apple_arch(arch_, default)
 
 
 def apple_sdk_path(conanfile):
     sdk_path = conanfile.conf.get("tools.apple:sdk_path")
     if not sdk_path:
+        # XCRun already knows how to extract os.sdk from conanfile.settings
         sdk_path = XCRun(conanfile).sdk_path
     return sdk_path
 
 
+def get_apple_sdk_fullname(conanfile):
+    """
+    Returns the 'os.sdk' + 'os.sdk_version ' value. Every user should specify it because
+    there could be several ones depending on the OS architecture.
+
+    Note: In case of MacOS it'll be the same for all the architectures.
+    """
+    os_ = conanfile.settings.get_safe('os')
+    os_sdk = conanfile.settings.get_safe('os.sdk')
+    os_sdk_version = conanfile.settings.get_safe('os.sdk_version') or ""
+
+    if os_sdk:
+        return "{}{}".format(os_sdk, os_sdk_version)
+    elif os_ == "Macos":  # it has only a single value for all the architectures
+        return "{}{}".format("macosx", os_sdk_version)
+    elif is_apple_os(conanfile):
+        raise ConanException("Please, specify a suitable value for os.sdk.")
+
+
+def apple_min_version_flag(os_version, os_sdk, subsystem):
+    """compiler flag name which controls deployment target"""
+    if not os_version or not os_sdk:
+        return ''
+
+    # FIXME: This guess seems wrong, nothing has to be guessed, but explicit
+    flag = ''
+    if 'macosx' in os_sdk:
+        flag = '-mmacosx-version-min'
+    elif 'iphoneos' in os_sdk:
+        flag = '-mios-version-min'
+    elif 'iphonesimulator' in os_sdk:
+        flag = '-mios-simulator-version-min'
+    elif 'watchos' in os_sdk:
+        flag = '-mwatchos-version-min'
+    elif 'watchsimulator' in os_sdk:
+        flag = '-mwatchos-simulator-version-min'
+    elif 'appletvos' in os_sdk:
+        flag = '-mtvos-version-min'
+    elif 'appletvsimulator' in os_sdk:
+        flag = '-mtvos-simulator-version-min'
+
+    if subsystem == 'catalyst':
+        # especial case, despite Catalyst is macOS, it requires an iOS version argument
+        flag = '-mios-version-min'
+
+    return f"{flag}={os_version}" if flag else ''
+
+
 class XCRun(object):
+    """
+    XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.
+    """
 
     def __init__(self, conanfile, sdk=None, use_settings_target=False):
-        """sdk=False will skip the flag
-           sdk=None will try to adjust it automatically
-           target_settings=True try to use settings_target in case they exist"""
+        """
+        :param conanfile: Conanfile instance.
+        :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the
+            sdk it automatically if ``None`` is passed.
+        :param target_settings: Try to use ``settings_target`` in case they exist (``False`` by default)
+        """
+        settings = None
+        if conanfile:
+            settings = conanfile.settings
+            if use_settings_target and conanfile.settings_target is not None:
+                settings = conanfile.settings_target
 
-        # FIXME: 2.0: remove "hasattr()" condition
-        settings = conanfile.settings
-        if use_settings_target and hasattr(conanfile, "settings_target") and conanfile.settings_target is not None:
-            settings = conanfile.settings_target
+            if sdk is None and settings:
+                sdk = settings.get_safe('os.sdk')
+
         self.settings = settings
-
-        if sdk is None and settings:
-            sdk = apple_sdk_name(settings)
         self.sdk = sdk
 
     def _invoke(self, args):
         def cmd_output(cmd):
-            return check_output_runner(cmd).strip()
+            from conans.util.runners import check_output_runner
+            cmd_str = cmd_args_to_string(cmd)
+            return check_output_runner(cmd_str).strip()
 
         command = ['xcrun']
         if self.sdk:
@@ -159,6 +175,7 @@ class XCRun(object):
         """path to libtool"""
         return self.find('libtool')
 
+
 def _get_dylib_install_name(path_to_dylib):
     command = "otool -D {}".format(path_to_dylib)
     output =  iter(check_output_runner(command).splitlines())
@@ -169,7 +186,13 @@ def _get_dylib_install_name(path_to_dylib):
             return next(output)
     raise ConanException(f"Unable to extract install_name for {path_to_dylib}")
 
+
 def fix_apple_shared_install_name(conanfile):
+    """
+    Search for all the *dylib* files in the conanfile's *package_folder* and fix
+    both the ``LC_ID_DYLIB`` and ``LC_LOAD_DYLIB`` fields on those files using the
+    *install_name_tool* utility available in macOS to set ``@rpath``.
+    """
 
     def _darwin_is_binary(file, binary_type):
         if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):

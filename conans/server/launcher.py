@@ -2,12 +2,12 @@
 import os
 import sys
 
-from conans import SERVER_CAPABILITIES, REVISIONS
+from conans import REVISIONS
 from conans.paths import conan_expand_user
+from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
-from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.migrate import migrate_and_get_server_config
 from conans.server.plugin_loader import load_authentication_plugin, load_authorization_plugin
 from conans.server.rest.server import ConanServer
@@ -45,17 +45,12 @@ class ServerLauncher(object):
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
 
-        updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
-                                                   server_config.authorize_timeout)
-
-        server_store = get_server_store(server_config.disk_storage_path,
-                                        server_config.public_url,
-                                        updown_auth_manager=updown_auth_manager)
+        server_store = get_server_store(server_config.disk_storage_path, server_config.public_url)
 
         server_capabilities = SERVER_CAPABILITIES
         server_capabilities.append(REVISIONS)
 
-        self.server = ConanServer(server_config.port, credentials_manager, updown_auth_manager,
+        self.server = ConanServer(server_config.port, credentials_manager,
                                   authorizer, authenticator, server_store,
                                   server_capabilities)
         if not self.force_migration:

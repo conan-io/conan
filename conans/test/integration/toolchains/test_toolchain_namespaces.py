@@ -10,7 +10,7 @@ def test_bazel_namespace():
     client = TestClient()
     namespace = "somename"
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.google import BazelToolchain, Bazel
 
             class Conan(ConanFile):
@@ -40,7 +40,7 @@ def test_bazel_namespace():
     content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
     bazel_config = content.get("bazel_configs")
     bazelrc_path = content.get("bazelrc_path")
-    client.run("build .")
+    client.run("build . -pr test_profile")
     assert bazel_config in client.out
     assert bazelrc_path in client.out
 
@@ -49,7 +49,7 @@ def test_autotools_namespace():
     client = TestClient()
     namespace = "somename"
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.gnu import AutotoolsToolchain, Autotools
 
             class Conan(ConanFile):
@@ -82,7 +82,7 @@ def test_multiple_toolchains_one_recipe():
     client = TestClient()
     namespaces = ["autotools", "bazel"]
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.gnu import AutotoolsToolchain, Autotools
             from conan.tools.google import BazelToolchain, Bazel
 
@@ -128,6 +128,6 @@ def test_multiple_toolchains_one_recipe():
         content = load_toolchain_args(generators_folder=client.current_folder, namespace=namespace)
         for arg in check_args.get(namespace):
             checks.append(content.get(arg))
-    client.run("build .")
+    client.run("build . -pr test_profile")
     for check in checks:
         assert check in client.out

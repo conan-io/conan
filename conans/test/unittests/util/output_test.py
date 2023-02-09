@@ -1,34 +1,25 @@
-# -*- coding: utf-8 -*-
 import os
 import platform
 import unittest
 import zipfile
 
-import six
+import pytest
 
-from conans.client import tools
-from conans.client.output import ConanOutput
+from conan.tools.files import unzip
+from conans.test.utils.mocks import RedirectedTestOutput, ConanFileMock
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.files import load, save
 
 
 class OutputTest(unittest.TestCase):
-
-    def test_simple_output(self):
-        stream = six.StringIO()
-        output = ConanOutput(stream)
-        output.rewrite_line("This is a very long line that has to be truncated somewhere, "
-                            "because it is so long it doesn't fit in the output terminal")
-        self.assertIn("This is a very long line that ha ... esn't fit in the output terminal",
-                      stream.getvalue())
 
     def test_error(self):
         client = TestClient()
         conanfile = """
 # -*- coding: utf-8 -*-
 
-from conans import ConanFile
+from conan import ConanFile
 from conan.errors import ConanException
 
 class PkgConan(ConanFile):
@@ -54,17 +45,17 @@ class PkgConan(ConanFile):
         zipf.close()
 
         output_dir = os.path.join(tmp_dir, "output_dir")
-        new_out = six.StringIO()
-        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
+        captured_output = RedirectedTestOutput()
+        with redirect_output(captured_output):
+            unzip(ConanFileMock(), zip_path, output_dir)
 
-        output = new_out.getvalue()
-        six.assertRegex(self, output, "Unzipping [\d]+B")
+        output = captured_output.getvalue()
+        self.assertRegex(output, r"Unzipping [\d]+B")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires windows")
     def test_short_paths_unzip_output(self):
-        if platform.system() != "Windows":
-            return
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "src/"*40, "example.txt")
         save(file_path, "Hello world!")
@@ -77,8 +68,9 @@ class PkgConan(ConanFile):
         zipf.close()
 
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
-        new_out = six.StringIO()
-        tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
+        captured_output = RedirectedTestOutput()
+        with redirect_output(captured_output):
+            unzip(ConanFileMock(), zip_path, output_dir)
 
-        output = new_out.getvalue()
+        output = captured_output.getvalue()
         self.assertIn("ERROR: Error extract src/src", output)

@@ -1,7 +1,8 @@
 import os
 
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
-from conans.model.new_build_info import NewCppInfo
+from conans.model.build_info import CppInfo
 
 
 class NMakeDeps(object):
@@ -15,7 +16,7 @@ class NMakeDeps(object):
 
     # TODO: This is similar from AutotoolsDeps: Refactor and make common
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo()
         deps = self._conanfile.dependencies.host.topological_sort
         deps = [dep for dep in reversed(deps.values())]
         for dep in deps:
@@ -70,4 +71,5 @@ class NMakeDeps(object):
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conannmakedeps")

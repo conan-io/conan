@@ -6,9 +6,7 @@ from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
                            PackageNotFoundException)
-from conans.model.ref import ConanFileReference
-from conans.util.files import decode_text
-from conans.util.log import logger
+from conans.model.recipe_ref import RecipeReference
 
 
 class JWTAuth(AuthBase):
@@ -27,22 +25,23 @@ def get_exception_from_error(error_code):
     tmp = {v: k for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
            if k not in (RecipeNotFoundException, PackageNotFoundException)}
     if error_code in tmp:
-        logger.debug("REST ERROR: %s" % str(tmp[error_code]))
+        # logger.debug("REST ERROR: %s" % str(tmp[error_code]))
         return tmp[error_code]
     else:
         base_error = int(str(error_code)[0] + "00")
-        logger.debug("REST ERROR: %s" % str(base_error))
+        # logger.debug("REST ERROR: %s" % str(base_error))
         try:
             return tmp[base_error]
         except KeyError:
             return None
 
 
-def handle_return_deserializer(deserializer=None):
+def handle_return_deserializer():
     """Decorator for rest api methods.
     Map exceptions and http return codes and deserialize if needed.
 
-    deserializer: Function for deserialize values"""
+    at this moment only used by check_credentials() endpoint
+    """
 
     def handle_return(method):
         def inner(*argc, **argv):
@@ -51,7 +50,7 @@ def handle_return_deserializer(deserializer=None):
                 ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
                 text = ret.text if ret.status_code != 404 else "404 Not found"
                 raise get_exception_from_error(ret.status_code)(text)
-            return deserializer(ret.content) if deserializer else decode_text(ret.content)
+            return ret.content.decode()
 
         return inner
 
@@ -60,17 +59,13 @@ def handle_return_deserializer(deserializer=None):
 
 class RestCommonMethods(object):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
-                 artifacts_properties=None, matrix_params=False):
+    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl):
         self.token = token
         self.remote_url = remote_url
         self.custom_headers = custom_headers
-        self._output = output
         self.requester = requester
         self._config = config
         self.verify_ssl = verify_ssl
-        self._artifacts_properties = artifacts_properties
-        self._matrix_params = matrix_params
 
     @property
     def auth(self):
@@ -91,12 +86,12 @@ class RestCommonMethods(object):
         """
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
-        logger.debug("REST: Authenticate to get access_token: %s" % url)
+        # logger.debug("REST: Authenticate to get access_token: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
 
         self._check_error_response(ret)
-        return decode_text(ret.content)
+        return ret.content.decode()
 
     def authenticate_oauth(self, user, password):
         """Sends user + password to get:
@@ -108,14 +103,14 @@ class RestCommonMethods(object):
         headers = {}
         headers.update(self.custom_headers)
         headers["Content-type"] = "application/x-www-form-urlencoded"
-        logger.debug("REST: Authenticating with OAUTH: %s" % url)
+        # logger.debug("REST: Authenticating with OAUTH: %s" % url)
         ret = self.requester.post(url, auth=auth, headers=headers, verify=self.verify_ssl)
         self._check_error_response(ret)
 
         data = ret.json()
         access_token = data["access_token"]
         refresh_token = data["refresh_token"]
-        logger.debug("REST: Obtained refresh and access tokens")
+        # logger.debug("REST: Obtained refresh and access tokens")
         return access_token, refresh_token
 
     def refresh_token(self, token, refresh_token):
@@ -125,7 +120,7 @@ class RestCommonMethods(object):
         Artifactory >= 6.13.X
         """
         url = self.router.oauth_authenticate()
-        logger.debug("REST: Refreshing Token: %s" % url)
+        # logger.debug("REST: Refreshing Token: %s" % url)
         headers = {}
         headers.update(self.custom_headers)
         headers["Content-type"] = "application/x-www-form-urlencoded"
@@ -136,12 +131,12 @@ class RestCommonMethods(object):
 
         data = ret.json()
         if "access_token" not in data:
-            logger.debug("REST: unexpected data from server: {}".format(data))
+            # logger.debug("REST: unexpected data from server: {}".format(data))
             raise ConanException("Error refreshing the token")
 
         new_access_token = data["access_token"]
         new_refresh_token = data["refresh_token"]
-        logger.debug("REST: Obtained new refresh and access tokens")
+        # logger.debug("REST: Obtained new refresh and access tokens")
         return new_access_token, new_refresh_token
 
     @handle_return_deserializer()
@@ -149,7 +144,7 @@ class RestCommonMethods(object):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = self.router.common_check_credentials()
-        logger.debug("REST: Check credentials: %s" % url)
+        # logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
         return ret
@@ -157,7 +152,7 @@ class RestCommonMethods(object):
     def server_capabilities(self, user=None, password=None):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
-        logger.debug("REST: ping: %s" % url)
+        # logger.debug("REST: ping: %s" % url)
         if user and password:
             # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
             auth = HTTPBasicAuth(user, password)
@@ -179,13 +174,13 @@ class RestCommonMethods(object):
         if data:  # POST request
             req_headers.update({'Content-type': 'application/json',
                                 'Accept': 'application/json'})
-            logger.debug("REST: post: %s" % url)
+            # logger.debug("REST: post: %s" % url)
             response = self.requester.post(url, auth=self.auth, headers=req_headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
-            logger.debug("REST: get: %s" % url)
+            # logger.debug("REST: get: %s" % url)
             response = self.requester.get(url, auth=self.auth, headers=req_headers,
                                           verify=self.verify_ssl,
                                           stream=True)
@@ -194,7 +189,7 @@ class RestCommonMethods(object):
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response_to_str(response))
 
-        content = decode_text(response.content)
+        content = response.content.decode()
         content_type = response.headers.get("Content-Type")
         if content_type != 'application/json' and content_type != 'application/json; charset=utf-8':
             raise ConanException("%s\n\nResponse from remote is not json, but '%s'"
@@ -208,33 +203,12 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
+    def upload_recipe(self, ref, files_to_upload):
         if files_to_upload:
-            self._upload_recipe(ref, files_to_upload, retry, retry_wait)
-        if deleted:
-            self._remove_conanfile_files(ref, deleted)
+            self._upload_recipe(ref, files_to_upload)
 
-    def get_recipe_snapshot(self, ref):
-        # this method is used only for UPLOADING, then it requires the credentials
-        # Check of credentials is done in the uploader
-        url = self.router.recipe_snapshot(ref)
-        snap = self._get_snapshot(url)
-        return snap
-
-    def get_package_snapshot(self, pref):
-        # this method is also used to check the integrity of the package upstream
-        # while installing, so check_credentials is done in uploader.
-        url = self.router.package_snapshot(pref)
-        snap = self._get_snapshot(url)
-        return snap
-
-    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        if files_to_upload:
-            self._upload_package(pref, files_to_upload, retry, retry_wait)
-        if deleted:
-            raise Exception("This shouldn't be happening, deleted files "
-                            "in local package present in remote: %s.\n Please, report it at "
-                            "https://github.com/conan-io/conan/issues " % str(deleted))
+    def upload_package(self, pref, files_to_upload):
+        self._upload_package(pref, files_to_upload)
 
     def search(self, pattern=None, ignorecase=True):
         """
@@ -242,12 +216,21 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
-        try:
-            return [ConanFileReference.loads(reference) for reference in response]
-        except TypeError as te:
-            raise ConanException("Unexpected response from server.\n"
-                                 "URL: `{}`\n"
-                                 "Expected an iterable, but got {}.".format(url, type(response)))
+        # We need to filter the "_/_" user and channel from Artifactory
+        ret = []
+        for reference in response:
+            try:
+                ref = RecipeReference.loads(reference)
+            except TypeError as te:
+                raise ConanException("Unexpected response from server.\n"
+                                     "URL: `{}`\n"
+                                     "Expected an iterable, but got {}.".format(url, type(response)))
+            if ref.user == "_":
+                ref.user = None
+            if ref.channel == "_":
+                ref.channel = None
+            ret.append(ref)
+        return ret
 
     def search_packages(self, ref):
         """Client is filtering by the query"""

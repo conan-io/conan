@@ -4,18 +4,15 @@ import pytest
 import textwrap
 
 from conan.tools.microsoft.visual import vcvars_command
-from ._base import BaseIntelTestCase
-
 from conans.test.assets.sources import gen_function_cpp
 from ..microsoft.test_msbuild import sln_file, myapp_vcxproj
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, MSBuild, MSBuildToolchain
+    from conan import ConanFile, MSBuild, MSBuildToolchain
 
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'
         exports_sources = "MyProject.sln", "MyApp/MyApp.vcxproj", "MyApp/MyApp.cpp"
-        generators = "msbuild"
         requires = "hello/0.1"
 
         def generate(self):
@@ -28,16 +25,16 @@ conanfile_py = textwrap.dedent("""
 """)
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_msbuild
-@pytest.mark.tool_icc
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("msbuild")
+@pytest.mark.tool("icc")
 @pytest.mark.xfail(reason="Intel compiler not installed yet on CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
-class MSBuildIntelTestCase(BaseIntelTestCase):
+class MSBuildIntelTestCase:
     def test_use_msbuild_toolchain(self):
         self.t.save({'profile': self.profile})
         self.t.run("new hello/0.1 -s")
-        self.t.run("create . hello/0.1@ -pr:h=profile")
+        self.t.run("create . --name=hello --version=0.1 -pr:h=profile")
 
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
@@ -50,12 +47,12 @@ class MSBuildIntelTestCase(BaseIntelTestCase):
                     clean_first=True)
 
         # Build in the cache
-        self.t.run("install . -pr:h=profile -if=conan")
+        self.t.run("install . -pr:h=profile -of=conan")
 
         self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_release_x64.props",
                       self.t.out)
 
-        self.t.run("build . -if=conan")
+        self.t.run("build . -bf=conan")
         self.assertIn("Visual Studio 2017", self.t.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", self.t.out)
 

@@ -16,7 +16,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """
 
     top = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "top"
@@ -27,7 +27,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     middle = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "middle"
@@ -37,7 +37,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     """)
 
     app = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -52,8 +52,8 @@ class PropagateSpecificComponents(unittest.TestCase):
             'middle.py': self.middle,
             'app.py': self.app
         })
-        client.run('create top.py top/version@')
-        client.run('create middle.py middle/version@')
+        client.run('create top.py --name=top --version=version')
+        client.run('create middle.py --name=middle --version=version')
         self.cache_folder = client.cache_folder
 
     def test_cmakedeps_app(self):
@@ -66,9 +66,10 @@ class PropagateSpecificComponents(unittest.TestCase):
 
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
-        t.run('install middle/version@ -g CMakeDeps')
-        arch = t.get_default_host_profile().settings['arch']
-        content = t.load(f'middle-release-{arch}-data.cmake')
+        t.run('install --requires=middle/version@ -g CMakeDeps')
+        host_arch = t.get_default_host_profile().settings['arch']
+
+        content = t.load(f'middle-release-{host_arch}-data.cmake')
         self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
 
         content = t.load('middle-Target-release.cmake')
@@ -80,10 +81,9 @@ class PropagateSpecificComponents(unittest.TestCase):
 @pytest.fixture
 def top_conanfile():
     return textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
-            name = "top"
 
             def package_info(self):
                 self.cpp_info.components["cmp1"].libs = ["top_cmp1"]
@@ -97,9 +97,9 @@ def test_wrong_component(top_conanfile, from_component):
         We can only raise this error after the graph is fully resolved, it is when we
         know the actual components that the requirement is going to provide.
     """
-
+    # TODO: This test is specific of CMakeDeps, could be made general?
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -109,19 +109,64 @@ def test_wrong_component(top_conanfile, from_component):
 
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@')
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version')
 
-    t.run('install wrong/version@ -g CMakeDeps', assert_error=True)
+    t.run('install --requires=wrong/version@ -g CMakeDeps', assert_error=True)
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
+# TODO: This is CMakeDeps Independent, move it out of here
+def test_unused_requirement(top_conanfile):
+    """ Requires should include all listed requirements
+        This error is known when creating the package if the requirement is consumed.
+    """
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            requires = "top/version", "top2/version"
+            def package_info(self):
+                self.cpp_info.requires = ["top::other"]
+    """)
+    t = TestClient()
+    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
+    t.run('create top.py --name=top --version=version')
+    t.run('create top.py --name=top2 --version=version')
+    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
+    assert "ERROR: wrong/version: Required package 'top2' not in component 'requires" in t.out
+
+
+
+# TODO: This is CMakeDeps Independent, move it out of here
+def test_unused_tool_requirement(top_conanfile):
+    """ Requires should include all listed requirements
+        This error is known when creating the package if the requirement is consumed.
+    """
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            requires = "top/version"
+            tool_requires = "top2/version"
+            def package_info(self):
+                self.cpp_info.requires = ["top::other"]
+    """)
+    t = TestClient()
+    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
+    t.run('create top.py --name=top --version=version')
+    t.run('create top.py --name=top2 --version=version')
+    t.run('create consumer.py --name=wrong --version=version')
+    # This runs without crashing, because it is not chcking that top::other doesn't exist
+
+
+# TODO: This is CMakeDeps Independent, move it out of here
 def test_wrong_requirement(top_conanfile):
     """ If we require a wrong requirement, we get a meaninful error.
         This error is known when creating the package if the requirement is not there.
     """
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             requires = "top/version"
@@ -130,16 +175,30 @@ def test_wrong_requirement(top_conanfile):
     """)
     t = TestClient()
     t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@', assert_error=True)
-    assert "wrong/version package_info(): Package require 'other' declared in " \
-           "components requires but not defined as a recipe requirement" in t.out
+    t.run('create top.py --name=top --version=version')
+    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
+    assert "ERROR: wrong/version: required component package 'other::' not in dependencies" in t.out
 
 
-@pytest.mark.tool_cmake
+# TODO: This is CMakeDeps Independent, move it out of here
+def test_missing_internal():
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["cmp1"].requires = ["other"]
+    """)
+    t = TestClient()
+    t.save({'conanfile.py': consumer})
+    t.run('create . --name=wrong --version=version', assert_error=True)
+    assert "ERROR: wrong/version: Internal components not found: ['other']" in t.out
+
+
+@pytest.mark.tool("cmake")
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -155,7 +214,7 @@ def test_components_system_libs():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -197,10 +256,10 @@ def test_components_system_libs():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_exelinkflags():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -216,7 +275,7 @@ def test_components_exelinkflags():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -251,10 +310,10 @@ def test_components_exelinkflags():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_components_sharedlinkflags():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Requirement(ConanFile):
             name = "requirement"
@@ -270,7 +329,7 @@ def test_components_sharedlinkflags():
     t.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
 
         class Consumer(ConanFile):
@@ -305,7 +364,7 @@ def test_components_sharedlinkflags():
     #       <CONFIG:Debug>
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cmake_add_subdirectory():
     """https://github.com/conan-io/conan/issues/11743
        https://github.com/conan-io/conan/issues/11755"""
@@ -326,7 +385,7 @@ def test_cmake_add_subdirectory():
     t.save({"conanfile.py": boost})
     t.run("create .")
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, cmake_layout
 
             class Consumer(ConanFile):

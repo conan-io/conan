@@ -12,7 +12,6 @@ test = textwrap.dedent("""
     from conan.tools.build import can_run
     class TestApp(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        generators = "VirtualRunEnv"
         def requirements(self):
             self.requires(self.tested_reference_str)
         def test(self):
@@ -22,7 +21,7 @@ test = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
+@pytest.mark.tool("xcodebuild")
 @pytest.mark.parametrize("cppstd, cppstd_output, min_version", [
     ("gnu14", "__cplusplus201402", "11.0"),
     ("gnu17", "__cplusplus201703", "11.0"),
@@ -31,7 +30,7 @@ test = textwrap.dedent("""
 def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
 
     client = TestClient()
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("export .")
 
     conanfile = textwrap.dedent("""
@@ -82,9 +81,11 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
     client.run_command("xcodegen generate")
 
     sdk_version = "11.3"
-    settings = "-s arch=x86_64 -s os.sdk=macosx -s os.sdk_version={} -s compiler.cppstd={} " \
+    settings = "-s arch=x86_64 -s os.sdk_version={} -s compiler.cppstd={} " \
                "-s compiler.libcxx=libc++ -s os.version={} " \
-               "-c 'tools.build:cflags=[\"-fstack-protector-strong\"]'".format(sdk_version, cppstd, min_version)
+               "-c tools.build.cross_building:can_run=True " \
+               "-c 'tools.build:cflags=[\"-fstack-protector-strong\"]'".format(sdk_version, cppstd,
+                                                                               min_version)
 
     client.run("create . -s build_type=Release {} --build=missing".format(settings))
     assert "main __x86_64__ defined" in client.out

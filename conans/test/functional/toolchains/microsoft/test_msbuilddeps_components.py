@@ -12,8 +12,8 @@ def test_msbuild_deps_components():
     # TODO: Duplicated from xcodedeps_components
     client = TestClient()
 
-    client.run("new tcp/1.0 -m=cmake_lib")
-    client.run("create . -tf=None")
+    client.run("new cmake_lib -d name=tcp -d version=1.0")
+    client.run("create . -tf=\"\"")
 
     header = textwrap.dedent("""
         #pragma once
@@ -117,7 +117,7 @@ def test_msbuild_deps_components():
         "CMakeLists.txt": cmakelists,
     }, clean_first=True)
 
-    client.run("create . network/1.0@")
+    client.run("create . --name=network --version=1.0")
 
     chat_pi = """
     def package_info(self):
@@ -146,17 +146,17 @@ def test_msbuild_deps_components():
         "CMakeLists.txt": cmakelists_chat,
     }, clean_first=True)
 
-    client.run("create . chat/1.0@")
+    client.run("create . --name=chat --version=1.0")
 
-    client.run("new greet/0.1 --template=msbuild_exe")
+    client.run("new msbuild_exe -d name=greet -d version=0.1 -f")
     conanfile = client.load("conanfile.py").replace("settings = ",
                                                     'requires="chat/1.0"\n'
                                                     '    generators = "MSBuildDeps"\n'
                                                     '    settings = ')
     vcproj = client.load("greet.vcxproj")
-    vcproj2 = vcproj.replace(r'<Import Project="conan\\conantoolchain.props" />',
-                             r"""<Import Project="conan\\conantoolchain.props" />
-                               <Import Project="conan\\conandeps.props" />
+    vcproj2 = vcproj.replace(r'<Import Project="conan\conantoolchain.props" />',
+                             r"""<Import Project="conan\conantoolchain.props" />
+                               <Import Project="conan\conandeps.props" />
                              """)
     assert vcproj2 != vcproj
     client.save({"conanfile.py": conanfile,

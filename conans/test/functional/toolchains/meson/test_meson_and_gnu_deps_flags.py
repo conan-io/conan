@@ -2,7 +2,6 @@ import os
 import platform
 import textwrap
 
-from conan.tools.files import load
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 from conans.test.utils.tools import TestClient
@@ -12,8 +11,8 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
 
     def test_mesondeps(self):
         client = TestClient(path_with_spaces=False)
-        client.run("new hello/0.1 -s")
-        client.run("create . hello/0.1@ %s" % self._settings_str)
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        client.run("create .")
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
         conanfile_py = textwrap.dedent("""
@@ -46,7 +45,6 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                      "main.cpp": app},
                     clean_first=True)
 
-        client.run("install . %s" % self._settings_str)
         client.run("build .")
         assert "[2/2] Linking target demo" in client.out
 
@@ -76,7 +74,7 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                 self.cpp_info.defines = ['DEF1=one_string', 'DEF2=other_string']
         """.format(deps_flags))
         client.save({"conanfile.py": conanfile_py})
-        client.run("create . %s" % self._settings_str)
+        client.run("create .")
         # Dependency - other/0.1
         conanfile_py = textwrap.dedent("""
         from conan import ConanFile
@@ -90,7 +88,7 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                 self.cpp_info.defines = ['DEF3=simple_string']
         """)
         client.save({"conanfile.py": conanfile_py}, clean_first=True)
-        client.run("create . %s" % self._settings_str)
+        client.run("create .")
 
         # Consumer using MesonDeps and MesonToolchain
         conanfile_py = textwrap.dedent("""
@@ -144,8 +142,7 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                      "main.cpp": main},
                     clean_first=True)
 
-        client.run("install . %s -c 'tools.build:cxxflags=[%s]'" % (self._settings_str, flags))
-        client.run("build .")
+        client.run("build . -c 'tools.build:cxxflags=[%s]'" % flags)
 
         app_name = "demo.exe" if platform.system() == "Windows" else "demo"
         client.run_command(os.path.join("build", app_name))

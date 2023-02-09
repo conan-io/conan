@@ -44,15 +44,15 @@ def test_basic_validate_build_test():
     assert "foo/1.0: Cannot build for this configuration: This doesn't build in GCC" in t.out
 
     # What happens with a conan info?
-    t.run(f"info foo/1.0@ {settings_gcc} --json=myjson")
-    myjson = json.loads(t.load("myjson"))
-    assert myjson[0]["invalid_build"] is True
-    assert myjson[0]["invalid_build_reason"] == "This doesn't build in GCC"
+    t.run(f"graph info --requires=foo/1.0 {settings_gcc} --format=json", redirect_stdout="myjson")
+    myjson = json.loads(t.load("myjson"))["nodes"]
+    assert myjson[1]["invalid_build"] is True
+    assert myjson[1]["invalid_build_reason"] == "This doesn't build in GCC"
 
-    t.run(f"info foo/1.0@ {settings_clang} --json=myjson")
-    myjson = json.loads(t.load("myjson"))
-    assert myjson[0]["invalid_build"] is False
-    assert "invalid_build_reason" not in myjson[0]
+    t.run(f"graph info --requires=foo/1.0 {settings_clang} --format=json", redirect_stdout="myjson")
+    myjson = json.loads(t.load("myjson"))["nodes"]
+    assert myjson[1]["invalid_build"] is False
+    assert "invalid_build_reason" not in myjson[1]
 
 
 def test_with_options_validate_build_test():
@@ -81,3 +81,28 @@ def test_with_options_validate_build_test():
            "with False option" in t.out
 
     t.run("create consumer.py --build missing -o foo/*:my_option=True")
+
+
+def test_basic_validate_build_command_build():
+    """ the "conan build" command should fail for a validate_build() too
+    https://github.com/conan-io/conan/issues/12571
+    """
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.errors import ConanInvalidConfiguration
+
+        class myConan(ConanFile):
+            settings = "os"
+
+            def validate_build(self):
+                if self.settings.os == "Windows":
+                    raise ConanInvalidConfiguration("This doesn't build in Windows")
+        """)
+
+    t.save({"conanfile.py": conanfile})
+    t.run(f"build . -s os=Windows", assert_error=True)
+    assert "ERROR: conanfile.py: Cannot build for this configuration: " \
+           "This doesn't build in Windows" in t.out
+    t.run("build . -s os=Linux")
+    # It doesn't fail

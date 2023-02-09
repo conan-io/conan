@@ -19,7 +19,7 @@ def test_env_vars_from_build_require():
 
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
         .with_name("consumer").with_version("1.0").with_generator("MesonToolchain")\
-        .with_build_requirement("hello_compiler/1.0")
+        .with_tool_requirement("hello_compiler/1.0")
     client.save({"conanfile.py": conanfile})
     client.run("install . -pr:h=default -pr:b=default")
     content = client.load("conan_meson_native.ini")

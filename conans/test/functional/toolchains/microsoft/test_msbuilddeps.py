@@ -11,7 +11,7 @@ from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.test.conftest import tools_locations
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -116,7 +116,7 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello3.props" />
+    <Import Project="..\conan_hello3.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -287,7 +287,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <ImportGroup Label="Shared">
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan_Hello1.props" />
+    <Import Project="..\conan_hello1.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
@@ -398,42 +398,43 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "191", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "17", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "193", "msvc_version": "19.3", "ide_year": "2022", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @pytest.mark.slow
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_msbuild_generator(self):
         client = TestClient()
-        client.save(pkg_cmake("Hello0", "1.0"))
+        client.save(pkg_cmake("hello0", "1.0"))
         client.run("create . ")
-        client.save(pkg_cmake("Hello3", "1.0"), clean_first=True)
+        client.save(pkg_cmake("hello3", "1.0"), clean_first=True)
         client.run("create . ")
-        client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
+        client.save(pkg_cmake("hello1", "1.0", ["hello0/1.0"]), clean_first=True)
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MSBuild
+            from conan import ConanFile
+            from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
-                requires = "Hello1/1.0", "Hello3/1.0"
-                generators = "MSBuildDeps"
+                requires = "hello1/1.0", "hello3/1.0"
+                generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
             """)
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp",
-                                     includes=["Hello1"], calls=["Hello1"])
-        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["Hello3"],
-                                         calls=["Hello3"])
+                                     includes=["hello1"], calls=["hello1"])
+        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["hello3"],
+                                         calls=["hello3"])
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj": myproject_vcxproj,
                  "MyProject/MyProject.cpp": myproject_cpp,
@@ -447,17 +448,17 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertNotIn("warning MSB4011", client.out)
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("MyProject: Release!", client.out)
-        self.assertIn("Hello3: Release!", client.out)
+        self.assertIn("hello3: Release!", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
-        self.assertIn("Hello0: Release!", client.out)
-        self.assertIn("Hello1: Release!", client.out)
+        self.assertIn("hello0: Release!", client.out)
+        self.assertIn("hello1: Release!", client.out)
 
     def test_install_reference(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . mypkg/0.1@")
-        client.run("install mypkg/0.1@ -g MSBuildDeps")
+        client.run("create . --name=mypkg --version=0.1")
+        client.run("install --requires=mypkg/0.1@ -g MSBuildDeps")
         self.assertIn("Generator 'MSBuildDeps' calling 'generate()'", client.out)
         # https://github.com/conan-io/conan/issues/8163
         props = client.load("conan_mypkg_vars_release_x64.props")  # default Release/x64
@@ -468,10 +469,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
     def test_install_reference_gcc(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 generators = "MSBuildDeps"
@@ -479,9 +480,9 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
         props = client.load("conan_pkg_release_x64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -494,18 +495,19 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
     def test_no_build_type_error(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . mypkg/0.1@")
-        client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
+        client.save({"conanfile.py": GenConanfile(),
+                     "profile": "[settings]\nos=Windows\ncompiler=msvc\narch=x86_64"})
+        client.run("create . --name=mypkg --version=0.1")
+        client.run("install --requires=mypkg/0.1@ -g MSBuildDeps -pr=profile", assert_error=True)
         self.assertIn("The 'msbuild' generator requires a 'build_type' setting value", client.out)
 
     def test_custom_configuration(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuildDeps
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
@@ -518,14 +520,14 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version))
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_myrelease_myx86_64.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
-        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+        client.run('install . -s os=Windows -s compiler=msvc '
                    '-s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD -s arch=x86 '
+                   ' -s compiler.runtime=dynamic -s arch=x86 '
                    '-s build_type=Debug'.format(vs_version=self.vs_version))
         props = client.load("conan_pkg_mydebug_myx86.props")
         self.assertIn('<?xml version="1.0" encoding="utf-8"?>', props)
@@ -536,10 +538,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
     def test_custom_configuration_errors(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.microsoft import MSBuildDeps
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
@@ -551,31 +553,32 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+        client.run('install . -s os=Windows -s compiler=msvc'
                    ' -s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.configuration is None, it should have a value", client.out)
         client.save({"conanfile.py": conanfile.replace("configuration", "platform")})
 
-        client.run('install . -s os=Windows -s compiler="Visual Studio"'
+        client.run('install . -s os=Windows -s compiler=msvc'
                    ' -s compiler.version={vs_version}'
-                   ' -s compiler.runtime=MD'.format(vs_version=self.vs_version), assert_error=True)
+                   ' -s compiler.runtime=dynamic'.format(vs_version=self.vs_version), assert_error=True)
         self.assertIn("MSBuildDeps.platform is None, it should have a value", client.out)
 
     def test_install_transitive(self):
         # https://github.com/conan-io/conan/issues/8065
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkga/1.0@")
+        client.run("create . --name=pkga --version=1.0")
         client.save({"conanfile.py": GenConanfile().with_requires("pkga/1.0")})
-        client.run("create . pkgb/1.0@")
+        client.run("create . --name=pkgb --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MSBuild
+            from conan import ConanFile
+            from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "pkgb/1.0@", "pkga/1.0"
-                generators = "msbuild"
+                generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
@@ -583,17 +586,16 @@ class MSBuildGeneratorTest(unittest.TestCase):
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp")
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
         files = {"MyProject.sln": sln_file,
-                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_Hello3.props",
+                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_hello3.props",
                                                                           "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
-                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_hello1.props",
                                                               "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
 
         client.save(files, clean_first=True)
         client.run("install .")
-        self.assertIn("'msbuild' has been deprecated and moved.", client.out)
         client.run("build .")
         self.assertNotIn("warning MSB4011", client.out)
 
@@ -601,16 +603,18 @@ class MSBuildGeneratorTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/8170
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . tool/1.0@")
+        client.run("create . --name=tool --version=1.0")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, load
+            from conan import ConanFile
+            from conan.tools.files import load
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 build_requires = "tool/1.0"
                 generators = "MSBuildDeps"
+
                 def build(self):
-                    deps = load("conandeps.props")
+                    deps = load(self, "conandeps.props")
                     assert "conan_tool.props" not in deps
                     self.output.info("Conan_tools.props not in deps")
             """)
@@ -618,25 +622,26 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install .")
         deps = client.load("conandeps.props")
         self.assertNotIn("conan_tool.props", deps)
-        client.run("create . pkg/0.1@")
+        client.run("create . --name=pkg --version=0.1")
         self.assertIn("Conan_tools.props not in deps", client.out)
 
     def test_install_transitive_build_requires(self):
         # https://github.com/conan-io/conan/issues/8170
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep/1.0@")
-        client.run("export . tool_build/1.0@")
-        client.run("export . tool_test/1.0@")
-        conanfile = GenConanfile().with_requires("dep/1.0").with_build_requires("tool_build/1.0").\
-            with_build_requirement("tool_test/1.0", force_host_context=True)
+        client.run("create . --name=dep --version=1.0")
+        client.run("create . --name=tool_build --version=1.0")
+        client.run("create . --name=tool_test --version=1.0")
+        conanfile = GenConanfile().with_requires("dep/1.0").\
+            with_tool_requires("tool_build/1.0").\
+            with_test_requires("tool_test/1.0")
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/1.0@")
+        client.run("create . --name=pkg --version=1.0")
 
         client.save({"conanfile.py": GenConanfile().
                     with_settings("os", "compiler", "arch", "build_type").
                     with_requires("pkg/1.0")}, clean_first=True)
-        client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default --build=missing")
+        client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default")
         pkg = client.load("conan_pkg_release_x64.props")
         assert "conan_dep.props" in pkg
         assert "tool_test" not in pkg  # test requires are not there
@@ -655,17 +660,17 @@ class MSBuildGeneratorTest(unittest.TestCase):
 def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . pkga/1.0@")
-    client.run("create . pkgb/1.0@")
+    client.run("create . --name=pkga --version=1.0")
+    client.run("create . --name=pkgb --version=1.0")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             requires = "pkgb/1.0@", "pkga/1.0"
-            generators = "msbuild"
+            generators = "MSBuildDeps"
             def build(self):
                 msbuild = MSBuild(self)
                 msbuild.build("MyProject.sln")
@@ -700,30 +705,34 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         assert "CAExcludePath" not in depb
 
 
-@pytest.mark.tool_visual_studio(version="15")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "15")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2017():
-    check_build_vs_project_with_a("15")
+    check_build_vs_project_with_a("191")
 
 
-@pytest.mark.tool_visual_studio(version="17")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
-    check_build_vs_project_with_a("17")
+    check_build_vs_project_with_a("193")
 
 
 def check_build_vs_project_with_a(vs_version):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . updep.pkg.team/0.1@")
+    client.run("create . --name=updep.pkg.team --version=0.1")
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        from conan.tools.files import copy
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
-            exports = '*'
+            exports_sources = '*'
             requires = "updep.pkg.team/0.1@"
+            generators = "CMakeToolchain"
 
             def build(self):
                 cmake = CMake(self)
@@ -731,8 +740,9 @@ def check_build_vs_project_with_a(vs_version):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                copy(self, "*.a", self.build_folder, os.path.join(self.package_folder, "lib"),
+                     keep_path=False)
 
             def package_info(self):
                 self.cpp_info.libs = ["hello.a"]
@@ -753,11 +763,11 @@ def check_build_vs_project_with_a(vs_version):
                  "CMakeLists.txt": cmake,
                  "hello.cpp": hello_cpp,
                  "hello.h": hello_h})
-    client.run('create . mydep.pkg.team/0.1@ -s compiler="Visual Studio"'
+    client.run('create . --name=mydep.pkg.team --version=0.1 -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class HelloConan(ConanFile):
@@ -777,27 +787,26 @@ def check_build_vs_project_with_a(vs_version):
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('install . -s compiler="Visual Studio"'
+    client.run('build . -s compiler=msvc'
                ' -s compiler.version={vs_version}'.format(vs_version=vs_version))
-    client.run("build .")
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
     # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly
     # assert "main: Release!" in client.out
 
 
-@pytest.mark.tool_visual_studio(version="15")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "15")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2017():
-    check_build_vs_project_with_test_requires("15")
+    check_build_vs_project_with_test_requires("191")
 
 
-@pytest.mark.tool_visual_studio(version="17")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
-    check_build_vs_project_with_test_requires("17")
+    check_build_vs_project_with_test_requires("193")
 
 
 def check_build_vs_project_with_test_requires(vs_version):
@@ -810,15 +819,15 @@ def check_build_vs_project_with_test_requires(vs_version):
     client.run("create .  -s compiler.version={vs_version}".format(vs_version=vs_version))
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
 
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             generators = "MSBuildDeps", "MSBuildToolchain"
 
-            def build_requirements(self):
-                self.build_requires("mydep.pkg.team/0.1", force_host_context=True)
+            def requirements(self):
+                self.test_requires("mydep.pkg.team/0.1")
 
             def build(self):
                 msbuild = MSBuild(self)
@@ -833,8 +842,7 @@ def check_build_vs_project_with_test_requires(vs_version):
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('install .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
-    client.run("build .")
+    client.run('build .  -s compiler.version={vs_version}'.format(vs_version=vs_version))
     client.run_command(r"x64\Release\MyProject.exe")
     assert "mydep_pkg_team: Release!" in client.out
     assert "updep_pkg_team: Release!" in client.out
@@ -845,18 +853,18 @@ def test_private_transitive():
     # https://github.com/conan-io/conan/issues/9514
     client = TestClient()
     client.save({"dep/conanfile.py": GenConanfile(),
-                 "pkg/conanfile.py": GenConanfile().with_require("dep/0.1", private=True),
+                 "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1", visible=False),
                  "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                                         .with_settings("os", "build_type", "arch")})
-    client.run("create dep dep/0.1@")
-    client.run("create pkg pkg/0.1@")
+    client.run("create dep --name=dep --version=0.1")
+    client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g MSBuildDeps -s arch=x86_64 -s build_type=Release")
-    assert "dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip" in client.out
-    deps_props = client.load("conandeps.props")
+    client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
+    deps_props = client.load("consumer/conandeps.props")
     assert "conan_pkg.props" in deps_props
     assert "dep" not in deps_props
 
-    pkg_data_props = client.load("conan_pkg_release_x64.props")
+    pkg_data_props = client.load("consumer/conan_pkg_release_x64.props")
     assert "conan_dep.props" not in pkg_data_props
 
 
@@ -864,10 +872,12 @@ def test_private_transitive():
 def test_build_requires():
     # https://github.com/conan-io/conan/issues/9545
     client = TestClient()
-    package = "self.copy('*', src=str(self.settings.arch), dst='bin')"
-    dep = GenConanfile().with_exports("*").with_settings("arch").with_package(package)
+    package = "copy(self, '*', os.path.join(self.build_folder, str(self.settings.arch))," \
+              " os.path.join(self.package_folder, 'bin'))"
+    dep = GenConanfile().with_exports_sources("*").with_settings("arch").with_package(package)\
+        .with_import("import os").with_import("from conan.tools.files import copy")
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import MSBuild
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -966,24 +976,23 @@ def test_build_requires():
                  "consumer/hello.sln": hello_sln,
                  "consumer/MyProject/MyProject.vcxproj": hello_vcxproj,
                  "consumer/MyProject/data.proto": "dataproto"})
-    client.run("create dep dep/0.1@ -s arch=x86")
-    client.run("create dep dep/0.1@ -s arch=x86_64")
+    client.run("create dep --name=dep --version=0.1 -s arch=x86")
+    client.run("create dep --name=dep --version=0.1 -s arch=x86_64")
     with client.chdir("consumer"):
-        client.run('install . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('build . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release")
-        assert "dep/0.1:c0519e2d9702ec12d057bb15adb7a02baaf18107 - Cache" in client.out
+        client.assert_listed_binary({"dep/0.1": ("62e589af96a19807968167026d906e63ed4de1f5",
+                                                 "Cache")}, build=True)
         deps_props = client.load("conandeps.props")
         assert "conan_dep_build.props" in deps_props
-        client.run("build .")
         assert "Invoking 64bit dep_1 build tool" in client.out
 
-        client.run('install . -s compiler="Visual Studio" -s compiler.version=15 '
-                   " -s arch=x86 -s build_type=Release")
-        client.run("build .")
+        client.run('build . -s compiler=msvc -s compiler.version=191 '
+                   " -s:b arch=x86 -s build_type=Release")
         assert "Invoking 32bit dep_1 build tool" in client.out
 
         # Make sure it works with 2 profiles too
-        client.run('install . -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('install . -s compiler=msvc -s compiler.version=191 '
                    " -s arch=x86_64 -s build_type=Release -s:b os=Windows -s:h os=Windows")
         client.run("build .")
         assert "Invoking 64bit dep_1 build tool" in client.out
@@ -996,14 +1005,14 @@ def test_build_requires_transitives():
     """
     # https://github.com/conan-io/conan/issues/10222
     c = TestClient()
-    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
             "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("dep/0.1"),
             "consumer/conanfile.py":
                 GenConanfile().with_settings("os", "compiler", "build_type", "arch")
                               .with_build_requires("tool/0.1")})
     c.run("create dep")
     c.run("create tool")
-    c.run("install consumer -g MSBuildDeps")
+    c.run("install consumer -g MSBuildDeps -of=.")
     tool = c.load("conan_tool_build_release_x64.props")
     assert "conan_dep_build.props" in tool
     assert "conan_dep.props" not in tool

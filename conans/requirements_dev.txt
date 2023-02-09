@@ -1,5 +1,4 @@
-pytest>=6.1.1, <7.0.0; python_version > '3.0'
-pytest>=4.6.11; python_version < '3.0'
+pytest>=6.1.1, <7.0.0
 pytest-xdist  # To launch in N cores with pytest -n
 parameterized>=0.6.3
 mock>=1.3.0, <1.4.0

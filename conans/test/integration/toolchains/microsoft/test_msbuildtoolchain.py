@@ -21,12 +21,12 @@ def test_msbuildtoolchain_props_with_extra_flags():
     tools.build:defines+=["DEF1", "DEF2"]
     """)
     client = TestClient()
-    client.run("new hello/0.1 --template=msbuild_lib")
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
     client.save({
         "myprofile": profile
     })
     # Local flow works
-    client.run("install . -pr myprofile -if=install")
+    client.run("install . -pr myprofile")
     toolchain = client.load(os.path.join("conan", "conantoolchain_release_x64.props"))
     expected_cl_compile = """
     <ClCompile>

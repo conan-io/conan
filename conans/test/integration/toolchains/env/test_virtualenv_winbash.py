@@ -7,7 +7,7 @@ import pytest
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.conftest import tools_locations
 from conans.test.utils.tools import TestClient
-from conans.tools import save
+from conans.util.files import save
 
 """
 When we use the VirtualRunEnv and VirtualBuildEnd generators, we take information from the
@@ -30,11 +30,12 @@ def client():
         self.runenv_info.define_path("RUNTIME_VAR", "c:/path/to/exe")
     """
     client.save({"conanfile.py": conanfile})
-    client.run("create . foo/1.0@")
+    client.run("create . --name=foo --version=1.0")
     save(client.cache.new_config_path, "tools.microsoft.bash:subsystem=cygwin")
     return client
 
 
+@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.parametrize("win_bash", [True, False, None])
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_virtualenv_deactivated(client, win_bash):
@@ -113,7 +114,7 @@ def test_nowinbash(client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool_msys2
+@pytest.mark.tool("msys2")
 def test_conf_inherited_in_test_package():
     client = TestClient()
     bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"

@@ -10,33 +10,33 @@ from conans.test.utils.tools import TestClient
 
 class TestToolsCustomVersions:
 
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_default_cmake(self):
         client = TestClient()
         client.run_command('cmake --version')
         default_cmake_version = tools_locations["cmake"]["default"]
         assert "cmake version {}".format(default_cmake_version) in client.out
 
-    @pytest.mark.tool_cmake(version="3.16")
+    @pytest.mark.tool("cmake", "3.16")
     def test_custom_cmake_3_16(self):
         client = TestClient()
         client.run_command('cmake --version')
         assert "cmake version 3.16" in client.out
 
-    @pytest.mark.tool_cmake(version="3.17")
+    @pytest.mark.tool("cmake", "3.17")
     def test_custom_cmake_3_17(self):
         client = TestClient()
         client.run_command('cmake --version')
         assert "cmake version 3.17" in client.out
 
-    @pytest.mark.tool_cmake(version="3.19")
+    @pytest.mark.tool("cmake", "3.19")
     def test_custom_cmake_3_19(self):
         client = TestClient()
         client.run_command('cmake --version')
         assert "cmake version 3.19" in client.out
 
-    @pytest.mark.tool_mingw64
-    @pytest.mark.tool_cmake(version="3.16")
+    @pytest.mark.tool("mingw64")
+    @pytest.mark.tool("cmake", "3.16")
     @pytest.mark.skipif(platform.system() != "Windows",
                         reason="Mingw test")
     def test_custom_cmake_mingw64(self):

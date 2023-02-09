@@ -2,13 +2,14 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conan.tools.meson.helpers import to_meson_value
-from conans.model.new_build_info import NewCppInfo
+from conans.model.build_info import CppInfo
 from conans.util.files import save
 
 
-class MesonDeps(object):
+class MesonDeps:
     """Generator that manages all the GNU flags from all the dependencies"""
 
     filename = "conan_meson_deps_flags.ini"
@@ -39,7 +40,7 @@ class MesonDeps(object):
         return self._ordered_deps
 
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo()
         for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
@@ -102,4 +103,5 @@ class MesonDeps(object):
         return content
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         save(self.filename, self._content())

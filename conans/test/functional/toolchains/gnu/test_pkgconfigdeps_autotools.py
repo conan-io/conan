@@ -6,8 +6,8 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_pkg_config
-@pytest.mark.tool_autotools
+@pytest.mark.tool("pkg_config")
+@pytest.mark.tool("autotools")
 @pytest.mark.skipif(platform.system() == "Windows", reason="Needs pkg-config")
 def test_pkgconfigdeps_and_autotools():
     """
@@ -31,6 +31,8 @@ def test_pkgconfigdeps_and_autotools():
         name = "pkg"
         version = "1.0"
         settings = "os", "compiler", "build_type", "arch"
+        options = {"shared": [True, False], "fPIC": [True, False]}
+        default_options = {"shared": False, "fPIC": True}
         exports_sources = "configure.ac", "Makefile.am", "src/*"
         generators = "AutotoolsToolchain"
 
@@ -61,9 +63,7 @@ def test_pkgconfigdeps_and_autotools():
     from conan.tools.build import cross_building
     class PkgTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        generators = "PkgConfigDeps", "AutotoolsToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-        apply_env = False
-        test_type = "explicit"
+        generators = "PkgConfigDeps", "AutotoolsToolchain"
 
         def requirements(self):
             self.requires(self.tested_reference_str)
@@ -97,7 +97,7 @@ def test_pkgconfigdeps_and_autotools():
     AM_CXXFLAGS = $(pkg_CFLAGS)
     main_LDADD = $(pkg_LIBS)
     """)
-    client.run("new pkg/1.0 -m autotools_lib")
+    client.run("new autotools_lib -d name=pkg -d version=1.0")
     client.save({"conanfile.py": conanfile_pkg,
                  "test_package/conanfile.py": conanfile_test,
                  "test_package/configure.ac": configure_test,

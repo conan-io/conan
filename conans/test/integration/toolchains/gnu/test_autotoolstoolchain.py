@@ -4,6 +4,7 @@ import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 
 def test_extra_flags_via_conf():
@@ -45,6 +46,27 @@ def test_extra_flags_via_conf():
         assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
 
 
+def test_autotools_custom_environment():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.gnu import AutotoolsToolchain
+
+            class Conan(ConanFile):
+                settings = "os"
+                def generate(self):
+                    at = AutotoolsToolchain(self)
+                    env = at.environment()
+                    env.define("FOO", "BAR")
+                    at.generate(env)
+            """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s:b os=Linux -s:h os=Linux")
+    content = load(os.path.join(client.current_folder,  "conanautotoolstoolchain.sh"))
+    assert 'export FOO="BAR"' in content
+
+
 def test_linker_scripts_via_conf():
     os_ = platform.system()
     os_ = "Macos" if os_ == "Darwin" else os_
@@ -74,6 +96,7 @@ def test_linker_scripts_via_conf():
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
     else:
         assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
+
 
 def test_not_none_values():
 

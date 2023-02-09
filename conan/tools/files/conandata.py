@@ -8,9 +8,17 @@ from conans.util.files import load, save
 
 def update_conandata(conanfile, data):
     """
-    this only works for updating the conandata on the export() method, it seems it would
-    be plain wrong to try to change it anywhere else
+    Tool to modify the ``conandata.yml`` once it is exported. It can be used, for example:
+
+       - To add additional data like the "commit" and "url" for the scm.
+       - To modify the contents cleaning the data that belong to other versions (different
+         from the exported) to avoid changing the recipe revision when the changed data doesn't
+         belong to the current version.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param data: (Required) A dictionary (can be nested), of values to update
     """
+
     if not hasattr(conanfile, "export_folder") or conanfile.export_folder is None:
         raise ConanException("The 'update_conandata()' can only be used in the 'export()' method")
     path = os.path.join(conanfile.export_folder, "conandata.yml")

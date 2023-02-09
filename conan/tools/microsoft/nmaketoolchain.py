@@ -1,4 +1,6 @@
-from conan.tools._compilers import cppstd_flag, build_type_flags, build_type_link_flags
+
+from conan.internal import check_duplicated_generator
+from conan.tools.build.flags import build_type_flags, cppstd_flag, build_type_link_flags
 from conan.tools.env import Environment
 from conan.tools.microsoft.visual import msvc_runtime_flag, VCVars
 
@@ -110,6 +112,7 @@ class NMakeToolchain(object):
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env.vars(self._conanfile, scope=scope).save_script("conannmaketoolchain")
         VCVars(self._conanfile).generate(scope=scope)

@@ -4,7 +4,7 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
+from conan.internal import check_duplicated_generator
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars, msvs_toolset
@@ -13,6 +13,9 @@ from conans.util.files import save, load
 
 
 class MSBuildToolchain(object):
+    """
+    MSBuildToolchain class generator
+    """
 
     filename = "conantoolchain.props"
 
@@ -44,19 +47,30 @@ class MSBuildToolchain(object):
     """)
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
-        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
+        #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}
+        #: Dict-like that defines the preprocessor definitions
         self.compile_options = {}
+        #: List of all the CXX flags
         self.cxxflags = []
+        #: List of all the C flags
         self.cflags = []
+        #: List of all the LD linker flags
         self.ldflags = []
+        #: The build type. By default, the ``conanfile.settings.build_type`` value
         self.configuration = conanfile.settings.build_type
+        #: The runtime flag. By default, it'll be based on the `compiler.runtime` setting.
         self.runtime_library = self._runtime_library(conanfile.settings)
+        #: cppstd value. By default, ``compiler.cppstd`` one.
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
+        #: VS IDE Toolset, e.g., ``"v140"``. If ``compiler=msvc``, you can use ``compiler.toolset``
+        #: setting, else, it'll be based on ``msvc`` version.
         self.toolset = msvs_toolset(conanfile)
         self.properties = {}
-        check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
@@ -72,6 +86,13 @@ class MSBuildToolchain(object):
         return name.lower(), condition
 
     def generate(self):
+        """
+        Generates a ``conantoolchain.props``, a ``conantoolchain_<config>.props``, and,
+        if ``compiler=msvc``, a ``conanvcvars.bat`` files. In the first two cases, they'll have the
+        valid XML format with all the good settings like any other VS project ``*.props`` file. The
+        last one emulates the ``vcvarsall.bat`` env script. See also :class:`VCVars`.
+        """
+        check_duplicated_generator(self, self._conanfile)
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
         # Writing the props files

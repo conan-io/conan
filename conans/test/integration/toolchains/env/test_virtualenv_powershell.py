@@ -7,7 +7,7 @@ import pytest
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.tools import save
+from conans.util.files import save
 
 
 @pytest.fixture
@@ -56,12 +56,14 @@ def test_virtualenv(client):
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
-    buildenv = client.load("conanbuildenv.ps1")
+    with open(os.path.join(client.current_folder, "conanbuildenv.ps1"), "r", encoding="utf-16") as f:
+        buildenv = f.read()
     assert '$env:MYPATH1="c:/path/to/ar"' in buildenv
     build = client.load("conanbuild.ps1")
     assert "conanbuildenv.ps1" in build
 
-    run_contents = client.load("conanrunenv.ps1")
+    with open(os.path.join(client.current_folder, "conanrunenv.ps1"), "r", encoding="utf-16") as f:
+        run_contents = f.read()
     assert '$env:MYVAR1="some nice content`" with quotes"' in run_contents
 
     client.run("create .")

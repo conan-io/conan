@@ -6,8 +6,8 @@ from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_intel_oneapi
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("intel_oneapi")
 @pytest.mark.xfail(reason="Intel oneAPI Toolkit is not installed on CI yet")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class TestIntelCC:
@@ -41,3 +41,6 @@ class TestIntelCC:
                "/linux/bin/dpcpp -- works" in self.client.out
         assert "hello/0.1: Package " \
                "'5d42bcd2e9be3378ed0c2f2928fe6dc9ea1b0922' created" in self.client.out
+        # TODO:
+        #  self.t.run_command(exe)
+        #  self.assertIn("main __INTEL_COMPILER1910", self.t.out)

@@ -2,9 +2,6 @@ import os
 import unittest
 import uuid
 
-import six
-import pytest
-
 from conans.client.store.localdb import LocalDB
 from conans.test.utils.test_files import temp_folder
 
@@ -53,7 +50,6 @@ class LocalStoreTest(unittest.TestCase):
         self.assertEqual("token", token)
         self.assertEqual(None, access_token)
 
-    @pytest.mark.skipif(six.PY2, reason="Python2 sqlite3 converts to str")
     def test_token_encryption_unicode(self):
         tmp_dir = temp_folder()
         db_file = os.path.join(tmp_dir, "dbfile")

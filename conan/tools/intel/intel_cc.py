@@ -21,6 +21,7 @@ import os
 import platform
 import textwrap
 
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 
 
@@ -72,6 +73,7 @@ class IntelCC:
 
     def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
+        check_duplicated_generator(self, self._conanfile)
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
                 @echo off

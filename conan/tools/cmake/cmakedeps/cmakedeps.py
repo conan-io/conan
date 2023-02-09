@@ -1,6 +1,6 @@
 import os
 
-from conan.tools._check_build_profile import check_using_build_profile
+from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
     FIND_MODE_MODULE
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
@@ -17,7 +17,6 @@ class CMakeDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
 
@@ -29,20 +28,15 @@ class CMakeDeps(object):
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
-        check_using_build_profile(self._conanfile)
-
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
         self._properties = {}
 
     def generate(self):
-        # FIXME: Remove this in 2.0
-        if not hasattr(self._conanfile, "settings_build") and \
-                      (self.build_context_activated or self.build_context_build_modules or
-                       self.build_context_suffix):
-            raise ConanException("The 'build_context_activated' and 'build_context_build_modules' of"
-                                 " the CMakeDeps generator cannot be used without specifying a build"
-                                 " profile. e.g: -pr:b=default")
+        """
+        This method will save the generated files to the conanfile.generators_folder
+        """
+        check_duplicated_generator(self, self._conanfile)
 
         # Current directory is the generators_folder
         generator_files = self.content
@@ -116,6 +110,19 @@ class CMakeDeps(object):
             ret[config.filename] = config.render()
 
     def set_property(self, dep, prop, value, build_context=False):
+        """
+        Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
+        the Conan recipes from the consumer. This can be done for `cmake_file_name`, `cmake_target_name`,
+        `cmake_find_mode`, `cmake_module_file_name` and `cmake_module_target_name` properties.
+
+        :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
+         components use the syntax: ``dep_name::component_name``.
+        :param prop: Name of the :ref:`property<CMakeDeps Properties>`.
+        :param value: Value of the property. Use ``None`` to invalidate any value set by the
+         upstream recipe.
+        :param build_context: Set to ``True`` if you want to set the property for a dependency that
+         belongs to the build context (``False`` by default).
+        """
         build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 

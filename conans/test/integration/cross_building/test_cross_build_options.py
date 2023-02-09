@@ -29,5 +29,8 @@ def test_cross_build_options():
     c.run("create dep -s os=Android -s os.api_level=22")
     c.run("create dep -s os=Windows")
     c.run("install consumer -s:b os=Windows -s:h os=Android -s:h os.api_level=22")
-    assert "dep/0.1:0e4b89e69f340b0e6f4b08523b5215bacf5eae3e - Cache" in c.out
-    assert "dep/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Cache" in c.out
+    # The above command used to crash, because options not there, so it works now without problems
+    assert "Finalizing install" in c.out
+    c.assert_listed_binary({"dep/0.1": ("4333c2a38a8baf674c4e77fe475c146a4685f77a", "Cache")})
+    c.assert_listed_binary({"dep/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache")},
+                           build=True)
