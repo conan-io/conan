@@ -4,6 +4,7 @@ import textwrap
 from conans.client.tools import vs_installation_path
 from conans.client.tools.version import Version
 from conans.errors import ConanException, ConanInvalidConfiguration
+from conan.tools.intel.intel_cc import IntelCC
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
@@ -56,7 +57,7 @@ def msvc_version_to_toolset_version(version):
                 '191': 'v141',
                 '192': 'v142',
                 "193": 'v143'}
-    return toolsets[str(version)]
+    return toolsets.get(str(version))
 
 
 class VCVars:
@@ -275,3 +276,42 @@ def is_msvc_static_runtime(conanfile):
     :return: True, if msvc + runtime MT. Otherwise, False
     """
     return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
+
+
+def msvs_toolset(conanfile):
+    """ Returns the corresponding platform toolset based on the compiler of the given conanfile.
+        In case no toolset is configured in the profile, it will return a toolset based on the
+        compiler version, otherwise, it will return the toolset from the profile.
+        When there is no compiler version neither toolset configured, it will return None
+        It supports Visual Studio, msvc and Intel.
+    :param conanfile: Conanfile instance to access settings.compiler
+    :return: A toolset when compiler.version is valid or compiler.toolset is configured. Otherwise, None.
+    """
+    settings = conanfile.settings
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    if compiler == "msvc":
+        subs_toolset = settings.get_safe("compiler.toolset")
+        if subs_toolset:
+            return subs_toolset
+        return msvc_version_to_toolset_version(compiler_version)
+    if compiler == "intel" and compiler_version:
+        compiler_version = compiler_version if "." in compiler_version else \
+            f"{compiler_version}.0"
+        return "Intel C++ Compiler " + compiler_version
+    if compiler == "intel-cc":
+        return IntelCC(conanfile).ms_toolset
+    if compiler == "Visual Studio":
+        toolset = settings.get_safe("compiler.toolset")
+        if not toolset:
+            toolsets = {"17": "v143",
+                        "16": "v142",
+                        "15": "v141",
+                        "14": "v140",
+                        "12": "v120",
+                        "11": "v110",
+                        "10": "v100",
+                        "9": "v90",
+                        "8": "v80"}
+            toolset = toolsets.get(str(compiler_version))
+        return toolset

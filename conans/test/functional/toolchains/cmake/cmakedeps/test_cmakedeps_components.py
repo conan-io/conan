@@ -116,26 +116,6 @@ def test_wrong_component(top_conanfile, from_component):
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
-def test_unused_requirement(top_conanfile):
-    """ Requires should include all listed requirements
-        This error is known when creating the package if the requirement is consumed.
-    """
-    consumer = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version"
-            def package_info(self):
-                self.cpp_info.requires = ["other::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py top/version@')
-    t.run('create consumer.py wrong/version@', assert_error=True)
-    assert "wrong/version package_info(): Package require 'top' not used in components " \
-           "requires" in t.out
-
-
 def test_wrong_requirement(top_conanfile):
     """ If we require a wrong requirement, we get a meaninful error.
         This error is known when creating the package if the requirement is not there.

@@ -967,3 +967,31 @@ def test_test_package_layout():
     client.run(f"create . {config} -s compiler.cppstd=17")
     assert os.path.exists(os.path.join(client.current_folder, "test_package/build/14"))
     assert os.path.exists(os.path.join(client.current_folder, "test_package/build/17"))
+
+
+def test_presets_not_found_error_msg():
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout, CMake
+
+        class Conan(ConanFile):
+            settings = "build_type"
+            generators = "CMakeDeps"
+            test_type = "explicit"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def build(self):
+                CMake(self).configure()
+
+            def test(self):
+                pass
+    """)
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                 "test_package/conanfile.py": test_conanfile})
+    client.run("create .", assert_error=True)
+    assert "CMakePresets.json was not found" in client.out
+    assert "Check that you are using CMakeToolchain as generator " \
+           "to ensure its correct initialization." in client.out
