@@ -181,8 +181,12 @@ class Requirement:
             set_if_none("_run", True)
         elif pkg_type is PackageType.SHARED:
             set_if_none("_run", True)
+            set_if_none("_libs", True)
+            set_if_none("_run", True)
         elif pkg_type is PackageType.STATIC:
             set_if_none("_run", False)
+            set_if_none("_libs", True)
+            set_if_none("_run", True)
         elif pkg_type is PackageType.HEADER:
             set_if_none("_run", False)
             set_if_none("_libs", False)
@@ -195,8 +199,8 @@ class Requirement:
 
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
-            set_if_none("_transitive_headers", self.headers)
-            set_if_none("_transitive_libs", self.libs)
+            set_if_none("_transitive_headers", True)
+            set_if_none("_transitive_libs", True)
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
@@ -306,15 +310,14 @@ class Requirement:
         assert require.visible, "at this point require should be visible"
 
         if require.transitive_headers is not None:
-            downstream_require.headers = require.transitive_headers
-
-        if self.transitive_headers is not None and require.transitive_headers:
-            downstream_require.transitive_headers = self.transitive_headers
+            downstream_require.headers = require.headers and require.transitive_headers
+            if self.transitive_headers is not None and require.transitive_headers:
+                downstream_require.transitive_headers = self.transitive_headers
 
         if require.transitive_libs is not None:
-            downstream_require.libs = require.transitive_libs
-            if require.transitive_libs is False:
-                downstream_require.transitive_libs = False
+            downstream_require.libs = require.libs and require.transitive_libs
+            if self.transitive_libs is not None and require.transitive_libs:
+                downstream_require.transitive_libs = self.transitive_libs
 
         if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
             # If non-default, then the consumer requires has priority
