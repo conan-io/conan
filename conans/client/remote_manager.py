@@ -27,7 +27,7 @@ from conans.util.tracer import (log_package_download,
 class RemoteManager(object):
     """ Will handle the remotes to get recipes, packages etc """
 
-    def __init__(self, cache, auth_manager, hook_manager):
+    def __init__(self, cache, auth_manager):
         self._cache = cache
         self._auth_manager = auth_manager
         self._signer = PkgSignaturesPlugin(cache)
