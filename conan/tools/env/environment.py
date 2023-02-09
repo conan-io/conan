@@ -18,8 +18,8 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
-    win, shs = [], []
-    ps1_exist = False
+    bats, shs, ps1s = [], [], []
+
     accept = accepted_extensions or ("ps1", "bat", "sh")
     # TODO: This implemantation is dirty, improve it
     for f in filenames:
@@ -30,40 +30,42 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
                 shs.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f) and "bat" in accept:
-                win.append(f)
+                bats.append(f)
         elif f.lower().endswith(".ps1") and "ps1" in accept:
             if os.path.isfile(f):
-                win.append(f)
-                ps1_exist = True
+                ps1s.append(f)
         else:  # Simple name like "conanrunenv"
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
             path_ps1 = "{}.ps1".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
-                win.append(path_bat)
+                bats.append(path_bat)
             if os.path.isfile(path_ps1) and "ps1" in accept:
-                win.append(path_ps1)
-                ps1_exist = True
+                ps1s.append(path_ps1)
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
-    if bool(win) + bool(shs) > 1:
-        raise ConanException("Cannot wrap command with different envs, {} - {}".format(win, shs))
+    if bool(bats + ps1s) + bool(shs) > 1:
+        raise ConanException("Cannot wrap command with different envs,"
+                             "{} - {}".format(bats+ps1s, shs))
 
-    if win:
-        if not ps1_exist:
-            launchers = " && ".join('"{}"'.format(b) for b in win)
-            return '{} && {}'.format(launchers, cmd)
-        else:
-            # TODO: at the moment it only works with path without spaces
-            launchers = " ; ".join('"&\'{}\'"'.format(f) for f in win)
-            # Powershell uses single quotes instead of quotes
+    if bats:
+        launchers = " && ".join('"{}"'.format(b) for b in bats)
+        if ps1s:
+            ps1_launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
             cmd = cmd.replace('"', "'")
-            return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
+            return '{} && powershell.exe {} ; cmd /c {}'.format(launchers, ps1_launchers, cmd)
+        else:
+            return '{} && {}'.format(launchers, cmd)
     elif shs:
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
+    elif ps1s:
+        # TODO: at the moment it only works with path without spaces
+        launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
+        cmd = cmd.replace('"', "'")
+        return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
     else:
         return cmd
 

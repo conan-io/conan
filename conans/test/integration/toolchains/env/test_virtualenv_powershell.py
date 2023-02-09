@@ -78,7 +78,7 @@ def test_virtualenv_test_package():
     https://github.com/conan-io/conan/issues/12764
     """
     client = TestClient()
-    test_package = textwrap.dedent("""
+    test_package = textwrap.dedent(r"""
         from conan import ConanFile
         from conan.tools.files import save
         class Test(ConanFile):
@@ -86,9 +86,9 @@ def test_virtualenv_test_package():
                 self.requires(self.tested_reference_str)
             def generate(self):
                 # Emulates vcvars.bat behavior
-                save(self, "myenv.bat", "echo MYENV!!!")
+                save(self, "myenv.bat", "echo MYENV!!!\nset MYVC_CUSTOMVAR1=PATATA1")
                 self.env_scripts.setdefault("build", []).append("myenv.bat")
-                save(self, "myps.ps1", "echo MYPS1!!!!")
+                save(self, "myps.ps1", "echo MYPS1!!!!\n$env:MYVC_CUSTOMVAR2=\"PATATA2\"")
                 self.env_scripts.setdefault("build", []).append("myps.ps1")
             def layout(self):
                 self.folders.build = "mybuild"
@@ -97,16 +97,21 @@ def test_virtualenv_test_package():
                 self.run('mkdir "hello world"')
                 self.run("dir")
                 self.run('cd "hello world"')
+                self.run("set MYVC_CUSTOMVAR1")
+                self.run("set MYVC_CUSTOMVAR2")
             """)
     client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
                  "test_package/conanfile.py": test_package})
-    client.run("create . -c tools.env.virtualenv:powershell=True")
-    print(client.out)
+    client.run("create .")
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
     assert "MYPS1!!!!" in client.out
+    assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
+    assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
     # This was crashing because the .ps1 of test_package was not being cleaned
-    client.run("create . -c tools.env.virtualenv:powershell=False")
+    client.run("create . -c tools.env.virtualenv:powershell=True")
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
     assert "MYPS1!!!!" in client.out
+    assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
+    assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
