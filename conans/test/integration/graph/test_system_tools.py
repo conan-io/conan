@@ -11,7 +11,6 @@ class TestToolRequires:
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
                      "profile": "[system_tool_requires]\ntool/1.0"})
         client.run("create . -pr=profile")
-        print(client.out)
         assert "tool/1.0 - System tool" in client.out
 
     def test_deferred_non_matching(self):

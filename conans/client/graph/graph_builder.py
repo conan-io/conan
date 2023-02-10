@@ -213,7 +213,7 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _resolved_system_tool(node, require, profile_build, profile_host):
-        if node.context == CONTEXT_HOST and not require.build:
+        if node.context == CONTEXT_HOST and not require.build:  # Only for tool_requires
             return
         system_tool = profile_build.system_tool_requires if node.context == CONTEXT_BUILD \
             else profile_host.system_tool_requires
