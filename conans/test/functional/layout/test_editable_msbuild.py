@@ -59,7 +59,7 @@ def test_editable_msbuild():
         build_pkg("SUPERDEP/0.1")
 
     # Check that create is still possible
-    c.run("editable remove dep/0.1@")
+    c.run("editable remove dep")
     c.run("create dep")
     c.run("create pkg")
     # print(c.out)
