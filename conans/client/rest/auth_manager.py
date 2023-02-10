@@ -54,7 +54,7 @@ class ConanApiAuthManager(object):
                 # If we have a refresh token try to refresh the access token
                 try:
                     self._authenticate(remote, user, None)
-                except AuthenticationException as exc:
+                except AuthenticationException:
                     # logger.info("Cannot refresh the token, cleaning and retrying: {}".format(exc))
                     self._clear_user_tokens_in_db(user, remote)
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)

@@ -1,5 +1,4 @@
 from conan.api.output import ConanOutput
-from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
 from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
@@ -13,13 +12,11 @@ class ExportAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
         app = ConanApp(self.conan_api.cache_folder)
         return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
                           remotes=remotes)
 
-    @api_method
     def export_pkg(self, deps_graph, source_folder, output_folder):
         app = ConanApp(self.conan_api.cache_folder)
         cache, hook_manager = app.cache, app.hook_manager

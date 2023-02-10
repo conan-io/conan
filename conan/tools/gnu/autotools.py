@@ -112,10 +112,7 @@ class Autotools(object):
             self._conanfile.run(command)
 
     def _use_win_mingw(self):
-        if hasattr(self._conanfile, 'settings_build'):
-            os_build = self._conanfile.settings_build.get_safe('os')
-        else:
-            os_build = self._conanfile.settings.get_safe("os")
+        os_build = self._conanfile.settings_build.get_safe('os')
 
         if os_build == "Windows":
             compiler = self._conanfile.settings.get_safe("compiler")
