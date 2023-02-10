@@ -1,5 +1,4 @@
 from conan.api.model import Remote
-from conan.api.subapi import api_method
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.client.source import retrieve_exports_sources
@@ -13,7 +12,6 @@ class DownloadAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def recipe(self, ref: RecipeReference, remote: Remote):
         output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)
@@ -34,7 +32,6 @@ class DownloadAPI:
         retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, [remote])
         return True
 
-    @api_method
     def package(self, pref: PkgReference, remote: Remote):
         output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)

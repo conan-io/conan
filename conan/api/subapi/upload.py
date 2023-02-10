@@ -1,5 +1,4 @@
 from conan.api.output import ConanOutput
-from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin
@@ -10,7 +9,6 @@ class UploadAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def check_upstream(self, package_list, remote, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
@@ -26,7 +24,6 @@ class UploadAPI:
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 
-    @api_method
     def prepare(self, package_list, enabled_remotes):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
@@ -38,7 +35,6 @@ class UploadAPI:
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
 
-    @api_method
     def upload(self, package_list, remote):
         app = ConanApp(self.conan_api.cache_folder)
         app.remote_manager.check_credentials(remote)
