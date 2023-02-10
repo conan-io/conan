@@ -129,8 +129,11 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
     conanfile = deps_graph.root.conanfile
+    conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
     if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:
         # should be the same as build folder, but we can remove it
+        out.info("Removing previously existing 'test_package' build folder: "
+                 f"{conanfile.build_folder}")
         shutil.rmtree(conanfile.build_folder, ignore_errors=True)
         mkdir(conanfile.build_folder)
     conanfile.output.info(f"Test package build: {conanfile.folders.build}")
