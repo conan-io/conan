@@ -56,7 +56,7 @@ def editable_cmake(generator, build_folder=None):
         build_pkg("SUPERDEP")
 
     # Check that create is still possible
-    c.run("editable remove dep/0.1@")
+    c.run("editable remove dep")
     c.run("create dep")
     c.run("create pkg")
     # print(c.out)
