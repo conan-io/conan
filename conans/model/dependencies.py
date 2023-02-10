@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
@@ -81,7 +82,7 @@ class ConanFileDependencies(UserRequirementsDict):
                         for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
 
-    def filter(self, require_filter):
+    def filter(self, require_filter, system_tools=False):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object
         def filter_fn(require):
             for k, v in require_filter.items():
@@ -90,6 +91,9 @@ class ConanFileDependencies(UserRequirementsDict):
             return True
 
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
+        if system_tools:
+            data = OrderedDict((k, v) for k, v in data.items()
+                               if v._conanfile._conan_node.recipe != RECIPE_SYSTEM_TOOL)
         return ConanFileDependencies(data, require_filter)
 
     def transitive_requires(self, other):
@@ -125,7 +129,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True})
+        return self.filter({"build": True, "direct": True}, system_tools=True)
 
     @property
     def host(self):
@@ -139,7 +143,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def build(self):
-        return self.filter({"build": True})
+        return self.filter({"build": True}, system_tools=True)
 
 
 def get_transitive_requires(consumer, dependency):

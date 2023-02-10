@@ -9,6 +9,7 @@ from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
+from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference, ref_matches
@@ -220,11 +221,12 @@ class DepsGraphBuilder(object):
         if system_tool:
             version_range = require.version_range
             for d in system_tool:
-                if version_range:
-                    if require.ref.name == d.name and d.version in version_range:
+                if require.ref.name == d.name:
+                    if version_range:
+                        if d.version in version_range:
+                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                    elif require.ref.version == d.version:
                         return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
-                elif require.ref.name == d.name and require.ref.version == d.version:
-                    return d, ConanFile( str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system_tool(node, require, profile_build, profile_host)

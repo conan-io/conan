@@ -1,3 +1,6 @@
+import os
+import textwrap
+
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -6,16 +9,16 @@ from conans.util.files import save
 
 
 class TestToolRequires:
-    def test_deferred(self):
+    def test_system_tool_require(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
                      "profile": "[system_tool_requires]\ntool/1.0"})
         client.run("create . -pr=profile")
         assert "tool/1.0 - System tool" in client.out
 
-    def test_deferred_non_matching(self):
-        """ if what is specified in [deferred] doesn't match what the recipe requires, then
-        the deferred will not be used, and the recipe will use its declared version
+    def test_system_tool_require_non_matching(self):
+        """ if what is specified in [system_tool_require] doesn't match what the recipe requires, then
+        the system_tool_require will not be used, and the recipe will use its declared version
         """
         client = TestClient()
         client.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
@@ -25,16 +28,16 @@ class TestToolRequires:
         client.run("create . -pr=profile")
         assert "tool/1.0#60ed6e65eae112df86da7f6d790887fd - Cache" in client.out
 
-    def test_deferred_range(self):
+    def test_system_tool_require_range(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/[>=1.0]"),
                      "profile": "[system_tool_requires]\ntool/1.1"})
         client.run("create . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
 
-    def test_deferred_range_non_matching(self):
-        """ if what is specified in [deferred] doesn't match what the recipe requires, then
-        the deferred will not be used, and the recipe will use its declared version
+    def test_system_tool_require_range_non_matching(self):
+        """ if what is specified in [system_tool_require] doesn't match what the recipe requires, then
+        the system_tool_require will not be used, and the recipe will use its declared version
         """
         client = TestClient()
         client.save({"tool/conanfile.py": GenConanfile("tool", "1.1"),
@@ -44,16 +47,52 @@ class TestToolRequires:
         client.run("create . -pr=profile")
         assert "tool/1.1#888bda2348dd2ddcf5960d0af63b08f7 - Cache" in client.out
 
-
-class TestRequires:
-    """ it works exactly the same for require requires
-    """
-    def test_deferred(self):
+    def test_system_tool_require_no_host(self):
+        """
+        system_tool_requires must not affect host context
+        """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("tool/1.0"),
                      "profile": "[system_tool_requires]\ntool/1.0"})
         client.run("create . -pr=profile", assert_error=True)
         assert "ERROR: Package 'tool/1.0' not resolved: No remote defined" in client.out
+
+    def test_graph_info_system_tool_require_range(self):
+        """
+        graph info doesn't crash
+        """
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/[>=1.0]"),
+                     "profile": "[system_tool_requires]\ntool/1.1"})
+        client.run("graph info . -pr=profile")
+        assert "tool/1.1 - System tool" in client.out
+
+
+class TestGenerators:
+    def test_system_tool_require_range(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Pkg(ConanFile):
+                settings = "build_type"
+                tool_requires = "tool/[>=1.0]"
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.build_context_activated = ["tool"]
+                    deps.generate()
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["tool"]
+                    deps.generate()
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[system_tool_requires]\ntool/1.1"})
+        client.run("install . -pr=profile")
+        assert "tool/1.1 - System tool" in client.out
+        assert not os.path.exists(os.path.join(client.current_folder, "tool-config.cmake"))
+        assert not os.path.exists(os.path.join(client.current_folder, "tool.pc"))
 
 
 class TestPackageID:
@@ -63,7 +102,7 @@ class TestPackageID:
     @pytest.mark.parametrize("package_id_mode", ["recipe_revision_mode", "full_package_mode"])
     def test_package_id_modes(self, package_id_mode):
         """ this test validates that the computation of the downstream consumers package_id
-        doesnt break even if it depends on fields not existing in upstream deferred, like revision
+        doesnt break even if it depends on fields not existing in upstream system_tool_require, like revision
         or package_id
         """
         client = TestClient()
@@ -75,7 +114,7 @@ class TestPackageID:
 
     def test_package_id_explicit_revision(self):
         """
-        Changing the deferred revision affects consumers if package_revision_mode=recipe_revision
+        Changing the system_tool_require revision affects consumers if package_revision_mode=recipe_revision
         """
         client = TestClient()
         save(client.cache.new_config_path, "core.package_id:default_build_mode=recipe_revision_mode")
