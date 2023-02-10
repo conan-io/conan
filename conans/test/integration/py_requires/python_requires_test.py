@@ -685,7 +685,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "file.h": "myheader",
                      "folder/other.h": "otherheader"})
-        client.run("editable add . tool/0.1")
+        client.run("editable add . --name=tool --version=0.1")
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile

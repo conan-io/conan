@@ -1,29 +1,34 @@
-# coding=utf-8
-
-import unittest
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-class RemoveEditablePackageTest(unittest.TestCase):
+class TestRemoveEditablePackageTest:
 
-    def setUp(self):
-        self.t = TestClient()
-        self.t.save(files={'conanfile.py': GenConanfile()})
-        self.t.run('editable add . lib/version@user/name')
-        self.t.run("editable list")
-        assert "lib" in self.t.out
+    @pytest.fixture()
+    def client(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --name=lib --version=version --user=user --channel=name')
+        t.run("editable list")
+        assert "lib" in t.out
+        return t
 
-    def test_unlink(self):
-        self.t.run('editable remove lib/version@user/name')
-        self.assertIn("Removed editable mode for reference 'lib/version@user/name'", self.t.out)
-        self.t.run("editable list")
-        assert "lib" not in self.t.out
+    def test_unlink(self, client):
+        client.run('editable remove --requires=lib/version@user/name')
+        assert "Removed editable 'lib/version@user/name':" in client.out
+        client.run("editable list")
+        assert "lib" not in client.out
 
-    def test_unlink_not_linked(self):
-        self.t.run('editable remove otherlib/version@user/name')
-        self.assertIn("Reference 'otherlib/version@user/name' was not installed as editable",
-                      self.t.out)
-        self.t.run("editable list")
-        assert "lib" in self.t.out
+    def test_remove_path(self, client):
+        client.run("editable remove .")
+        assert "Removed editable 'lib/version@user/name':" in client.out
+        client.run("editable list")
+        assert "lib" not in client.out
+
+    def test_unlink_not_linked(self, client):
+        client.run('editable remove --requires=otherlib/version@user/name')
+        assert "WARN: No editables were removed" in client.out
+        client.run("editable list")
+        assert "lib" in client.out

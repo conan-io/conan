@@ -28,7 +28,7 @@ def test_editable_msbuild():
         c.run("build . -s build_type=Debug {}".format(build_folder))
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@ {}".format(output_folder))
+        c.run("editable add . {}".format(output_folder))
         build_dep()
 
     def build_pkg(msg):
@@ -82,7 +82,7 @@ def test_editable_msbuilddeps():
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_settings("build_type", "arch")
                                                           .with_requires("dep/0.1")
                                                           .with_generator("MSBuildDeps")})
-    c.run("editable add dep dep/0.1")
+    c.run("editable add dep")
     c.run("install pkg")
     # It doesn't crash anymore
     assert "dep/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709 - Editable" in c.out

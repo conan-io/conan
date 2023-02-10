@@ -26,7 +26,7 @@ def editable_cmake(generator, build_folder=None):
         c.run("build . -s build_type=Debug {}".format(output_folder))
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@ {}".format(output_folder))
+        c.run("editable add . {}".format(output_folder))
 
         build_dep()
 
@@ -104,7 +104,7 @@ def editable_cmake_exe(generator):
         c.run("build . -s build_type=Debug -o dep/*:shared=True")
 
     with c.chdir("dep"):
-        c.run("editable add . dep/0.1@")
+        c.run("editable add .")
         build_dep()
 
     def run_pkg(msg):
