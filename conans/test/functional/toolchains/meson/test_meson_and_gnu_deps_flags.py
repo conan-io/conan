@@ -2,7 +2,6 @@ import os
 import platform
 import textwrap
 
-from conan.tools.files import load
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 from conans.test.utils.tools import TestClient

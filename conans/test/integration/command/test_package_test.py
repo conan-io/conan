@@ -299,3 +299,32 @@ def test_folder_output():
     c.run("test test_package hello/0.1@")
     assert os.path.exists(os.path.join(c.current_folder,
                                        "test_package/hello-config.cmake"))
+
+
+def test_removing_test_package_build_folder():
+    """ The test_package could crash if not cleaning correctly the test_package
+    output folder. This will still crassh if the layout is not creating different build folders
+    """
+    client = TestClient()
+    test_package = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Test(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def generate(self):
+                assert not os.path.exists("myfile.txt")
+                save(self, "myfile.txt", "")
+            def layout(self):
+                self.folders.build = "mybuild"
+                self.folders.generators = "mybuild"
+            def test(self):
+                pass
+            """)
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                 "test_package/conanfile.py": test_package})
+    client.run("create .")
+    # This was crashing because not cleaned
+    client.run("create .")
+    assert "Removing previously existing 'test_package' build folder" in client.out

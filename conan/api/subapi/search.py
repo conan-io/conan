@@ -1,4 +1,3 @@
-from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
 from conans.search.search import search_recipes
 
@@ -8,7 +7,6 @@ class SearchAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def recipes(self, query: str, remote=None):
         only_none_user_channel = False
         if query and query.endswith("@"):

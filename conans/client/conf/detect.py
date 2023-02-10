@@ -134,8 +134,6 @@ def _get_profile_compiler_version(compiler, version):
     elif compiler == "apple-clang" and major >= 13:
         output.info("apple-clang>=13, using the major as version")
         return major
-    elif compiler == "Visual Studio":
-        return major
     elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major
     elif compiler == "msvc":

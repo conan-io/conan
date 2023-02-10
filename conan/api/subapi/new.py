@@ -3,7 +3,6 @@ import os
 
 from jinja2 import Template, StrictUndefined
 
-from conan.api.subapi import api_method
 from conans.util.files import load
 from conans import __version__
 
@@ -14,7 +13,6 @@ class NewAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def get_builtin_template(self, template_name):
         from conan.internal.api.new.basic import basic_file
         from conan.internal.api.new.alias_new import alias_file
@@ -43,14 +41,12 @@ class NewAPI:
         template_files = new_templates.get(template_name)
         return template_files
 
-    @api_method
     def get_template(self, template_folder):
         """ Load a template from a user absolute folder
         """
         if os.path.isdir(template_folder):
             return self._read_files(template_folder)
 
-    @api_method
     def get_home_template(self, template_name):
         """ Load a template from the Conan home templates/command/new folder
         """
@@ -88,6 +84,9 @@ class NewAPI:
         result = {}
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
+        requires = definitions.get("requires")  # Convert to list, and forget about it
+        if requires:
+            definitions["requires"] = [requires] if isinstance(requires, str) else requires
 
         def as_package_name(n):
             return n.replace("-", "_").replace("+", "_").replace(".", "_")
@@ -99,8 +98,8 @@ class NewAPI:
             return ref
 
         definitions["package_name"] = as_package_name(name)
-        definitions["as_iterable"] = lambda x: [x] if isinstance(x, str) else x
         definitions["as_name"] = as_name
+        definitions["names"] = lambda x: ", ".join(r.split("/", 1)[0] for r in x)
         for k, v in template_files.items():
             k = Template(k, keep_trailing_newline=True, undefined=StrictUndefined).render(
                 **definitions)

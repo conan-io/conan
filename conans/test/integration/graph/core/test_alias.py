@@ -184,27 +184,6 @@ class AliasBuildRequiresTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libb, liba_build])
 
 
-class AliasPythonRequiresTest(GraphManagerTest):
-
-    def test_python_requires(self):
-        # app ----(python-requires)---> tool/(latest) -> tool/0.1
-        self.recipe_cache("tool/0.1")
-        self.recipe_cache("tool/0.2")
-        self.alias_cache("tool/latest", "tool/0.1")
-        consumer = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                name = "app"
-                version = "0.1"
-                python_requires = "tool/(latest)"
-            """)
-        deps_graph = self.build_graph(consumer)
-
-        self.assertEqual(1, len(deps_graph.nodes))
-        app = deps_graph.root
-        self._check_node(app, "app/0.1", deps=[])
-
-
 def test_mixing_aliases_and_fix_versions():
     # cd/1.0 -----------------------------> cb/latest -(alias)-> cb/1.0 -> ca/1.0
     #   \-----> cc/latest -(alias)-> cc/1.0 ->/                             /

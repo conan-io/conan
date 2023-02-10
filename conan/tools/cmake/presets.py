@@ -9,10 +9,13 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
-def _build_and_test_preset_fields(conanfile, multiconfig):
+def _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix):
     build_type = conanfile.settings.get_safe("build_type")
     configure_preset_name = _configure_preset_name(conanfile, multiconfig)
     build_preset_name = _build_and_test_preset_name(conanfile)
+    if preset_prefix:
+        configure_preset_name = f"{preset_prefix}-{configure_preset_name}"
+        build_preset_name = f"{preset_prefix}-{build_preset_name}"
     ret = {"name": build_preset_name,
            "configurePreset": configure_preset_name}
     if multiconfig:
@@ -50,9 +53,12 @@ def _configure_preset_name(conanfile, multiconfig):
         return str(build_type).lower()
 
 
-def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
+def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
+                      preset_prefix):
     build_type = conanfile.settings.get_safe("build_type")
     name = _configure_preset_name(conanfile, multiconfig)
+    if preset_prefix:
+        name = f"{preset_prefix}-{name}"
     if not multiconfig and build_type:
         cache_variables["CMAKE_BUILD_TYPE"] = build_type
     ret = {
@@ -139,14 +145,15 @@ def _schema_version(conanfile, default):
     return default
 
 
-def _contents(conanfile, toolchain_file, cache_variables, generator):
+def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix):
     """
     Contents for the CMakePresets.json
     It uses schema version 3 unless it is forced to 2
     """
     multiconfig = is_multi_configuration(generator)
-    conf = _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig)
-    build = _build_and_test_preset_fields(conanfile, multiconfig)
+    conf = _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
+                             preset_prefix)
+    build = _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix)
     ret = {"version": _schema_version(conanfile, default=3),
            "vendor": {"conan": {}},
            "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
@@ -158,7 +165,7 @@ def _contents(conanfile, toolchain_file, cache_variables, generator):
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
-                        user_presets_path=None):
+                        user_presets_path=None, preset_prefix=None):
     cache_variables = cache_variables or {}
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
         if "CMAKE_SH" not in cache_variables:
@@ -181,15 +188,15 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
     multiconfig = is_multi_configuration(generator)
     if os.path.exists(preset_path) and multiconfig:
         data = json.loads(load(preset_path))
-        build_preset = _build_and_test_preset_fields(conanfile, multiconfig)
+        build_preset = _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix)
         _insert_preset(data, "buildPresets", build_preset)
         _insert_preset(data, "testPresets", build_preset)
         configure_preset = _configure_preset(conanfile, generator, cache_variables, toolchain_file,
-                                             multiconfig)
+                                             multiconfig, preset_prefix)
         # Conan generated presets should have only 1 configurePreset, no more, overwrite it
         data["configurePresets"] = [configure_preset]
     else:
-        data = _contents(conanfile, toolchain_file, cache_variables, generator)
+        data = _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix)
 
     preset_content = json.dumps(data, indent=4)
     save(preset_path, preset_content)

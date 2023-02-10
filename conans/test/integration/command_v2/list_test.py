@@ -12,6 +12,7 @@ from conans.errors import ConanException, ConanConnectionError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env import environment_update
+from conans.util.files import load, save
 
 
 class TestParamErrors:
@@ -546,6 +547,41 @@ class TestListPrefs:
                           os: Linux
           """)
         self.check(client, pattern, remote, expected)
+
+
+def test_list_prefs_query_custom_settings():
+    """
+    Make sure query works for custom settings
+    # https://github.com/conan-io/conan/issues/13071
+    """
+    c = TestClient(default_server_user=True)
+    settings = load(c.cache.settings_path)
+    settings += textwrap.dedent("""\
+        newsetting:
+            value1:
+            value2:
+                subsetting: [1, 2, 3]
+        """)
+    save(c.cache.settings_path, settings)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("newsetting")})
+    c.run("create . -s newsetting=value1")
+    c.run("create . -s newsetting=value2 -s newsetting.subsetting=1")
+    c.run("create . -s newsetting=value2 -s newsetting.subsetting=2")
+    c.run("upload * -r=default -c")
+    c.run("list pkg/1.0:* -p newsetting=value1")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
+    c.run("list pkg/1.0:* -p newsetting=value1 -r=default")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1"')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1" -r=default')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
 
 
 class TestListNoUserChannel:

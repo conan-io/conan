@@ -20,7 +20,7 @@ class BasicConanfile(ConanFile):
         # Each call to self.requires() will add the corresponding requirement
         # to the current list of requirements
         {% if requires is defined -%}
-        {% for require in as_iterable(requires) -%}
+        {% for require in requires -%}
         self.requires("{{ require }}")
         {% endfor %}
         {% else -%}

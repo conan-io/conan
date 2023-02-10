@@ -58,12 +58,8 @@ def _evaluate(prop_name, prop_value, binary_info):
     # TODO: Necessary to generalize this query evaluation to include all possible fields
     info_settings = binary_info.get("settings")
     info_options = binary_info.get("options")
-    properties = ["os", "compiler", "arch", "build_type"]
 
-    def starts_with_common_settings(_prop_name):
-        return any(_prop_name.startswith(setting + '.') for setting in properties)
-
-    if prop_name in properties or starts_with_common_settings(prop_name):
+    if not prop_name.startswith("options."):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
         return compatible_prop(info_options.get(prop_name, None), prop_value)
