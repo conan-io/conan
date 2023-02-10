@@ -25,7 +25,11 @@ class MesonToolchainTest(TestMesonBase):
 
         def config_options(self):
             if self.settings.os == "Windows":
-                del self.options.fPIC
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
 
         def layout(self):
             self.folders.generators = 'build/gen_folder'

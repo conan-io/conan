@@ -1,4 +1,3 @@
-from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
 from conans.errors import ConanException
@@ -12,49 +11,42 @@ class CacheAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def export_path(self, ref: RecipeReference):
         app = ConanApp(self.conan_api.cache_folder)
         ref = _resolve_latest_ref(app, ref)
         ref_layout = app.cache.ref_layout(ref)
         return ref_layout.export()
 
-    @api_method
     def export_source_path(self, ref: RecipeReference):
         app = ConanApp(self.conan_api.cache_folder)
         ref = _resolve_latest_ref(app, ref)
         ref_layout = app.cache.ref_layout(ref)
         return ref_layout.export_sources()
 
-    @api_method
     def source_path(self, ref: RecipeReference):
         app = ConanApp(self.conan_api.cache_folder)
         ref = _resolve_latest_ref(app, ref)
         ref_layout = app.cache.ref_layout(ref)
         return ref_layout.source()
 
-    @api_method
     def build_path(self, pref: PkgReference):
         app = ConanApp(self.conan_api.cache_folder)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.build()
 
-    @api_method
     def package_path(self, pref: PkgReference):
         app = ConanApp(self.conan_api.cache_folder)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.package()
 
-    @api_method
     def check_integrity(self, package_list):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
         app = ConanApp(self.conan_api.cache_folder)
         checker = IntegrityChecker(app)
         checker.check(package_list)
 
-    @api_method
     def clean(self, package_list, source=None, build=None, download=None):
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
