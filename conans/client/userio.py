@@ -68,6 +68,7 @@ class UserInput(object):
 
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
+        :param remote_name:
         :param username If username is specified it only request password"""
 
         if not username:
@@ -76,7 +77,7 @@ class UserInput(object):
             username = self._get_env_username(remote_name)
             if not username:
                 self._raise_if_non_interactive()
-                username = self.get_username(remote_name)
+                username = self.get_username()
 
         if self._interactive:
             self._out.write('Please enter a password for "%s" account: ' % username)
@@ -84,24 +85,25 @@ class UserInput(object):
             pwd = self._get_env_password(remote_name)
             if not pwd:
                 self._raise_if_non_interactive()
-                pwd = self.get_password(remote_name)
+                pwd = self.get_password()
         except ConanException:
             raise
         except Exception as e:
             raise ConanException('Cancelled pass %s' % e)
         return username, pwd
 
-    def get_username(self, remote_name):
+    def get_username(self):
         """Overridable for testing purpose"""
         return self.raw_input()
 
-    def get_password(self, remote_name):
+    def get_password(self):
         """Overridable for testing purpose"""
         self._raise_if_non_interactive()
         return getpass.getpass("")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg
+        :param default_value:
         :param msg Name of the msg
         """
         self._raise_if_non_interactive()

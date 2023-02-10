@@ -41,7 +41,6 @@ class ClientCache(object):
         self.cache_folder = cache_folder
 
         # Caching
-        self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
@@ -51,8 +50,6 @@ class ClientCache(object):
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
-        # The cache is first thing instantiated, we can remove this from env now
-        self._localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
@@ -162,7 +159,7 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB.create(localdb_filename, encryption_key=self._localdb_encryption_key)
+        return LocalDB.create(localdb_filename)
 
     @property
     def profiles_path(self):
