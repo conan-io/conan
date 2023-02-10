@@ -84,6 +84,19 @@ class Git(object):
         self._conanfile.output.info("Cloning git repo")
         self.run('clone "{}" {} {}'.format(url, " ".join(args), target))
 
+    def fetch_commit(self, url, commit):
+        """
+        Experimental: does a 1 commit fetch and checkout, instead of a full clone,
+        should be faster.
+        """
+        if os.path.exists(url):
+            url = url.replace("\\", "/")  # Windows local directory
+        self._conanfile.output.info("Shallow fetch of git repo")
+        self.run('init')
+        self.run(f'remote add origin "{url}"')
+        self.run(f'fetch --depth 1 origin {commit}')
+        self.run(f'checkout FETCH_HEAD')
+
     def checkout(self, commit):
         self._conanfile.output.info("Checkout: {}".format(commit))
         self.run('checkout {}'.format(commit))
