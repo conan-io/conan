@@ -58,4 +58,3 @@ class LocalAPI:
     def editable_list(self):
         app = ConanApp(self._conan_api.cache_folder)
         return app.cache.editable_packages.edited_refs
-

@@ -56,7 +56,7 @@ class EditablePackages:
                 to_remove = True
             else:
                 for r in requires or []:
-                    if fnmatch.fnmatch(r, str(ref)):
+                    if fnmatch.fnmatch(str(ref), r):
                         to_remove = True
             if to_remove:
                 removed[ref] = info

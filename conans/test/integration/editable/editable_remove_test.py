@@ -16,7 +16,13 @@ class TestRemoveEditablePackageTest:
         return t
 
     def test_unlink(self, client):
-        client.run('editable remove --requires=lib/version@user/name')
+        client.run('editable remove -r=lib/version@user/name')
+        assert "Removed editable 'lib/version@user/name':" in client.out
+        client.run("editable list")
+        assert "lib" not in client.out
+
+    def test_unlink_pattern(self, client):
+        client.run('editable remove -r=*')
         assert "Removed editable 'lib/version@user/name':" in client.out
         client.run("editable list")
         assert "lib" not in client.out
@@ -28,7 +34,7 @@ class TestRemoveEditablePackageTest:
         assert "lib" not in client.out
 
     def test_unlink_not_linked(self, client):
-        client.run('editable remove --requires=otherlib/version@user/name')
+        client.run('editable remove -r=otherlib/version@user/name')
         assert "WARN: No editables were removed" in client.out
         client.run("editable list")
         assert "lib" in client.out

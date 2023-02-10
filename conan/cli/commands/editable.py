@@ -40,10 +40,10 @@ def editable_remove(conan_api, parser, subparser, *args):
                            help="Path to a folder containing a recipe (conanfile.py "
                                 "or conanfile.txt) or to a recipe file. e.g., "
                                 "./my_project/conanfile.txt.")
-    subparser.add_argument("--requires", action="append",
-                           help='Directly provide require patterns')
+    subparser.add_argument("-r", "--refs", action="append",
+                           help='Directly provide reference patterns')
     args = parser.parse_args(*args)
-    editables = conan_api.local.editable_remove(args.path, args.requires)
+    editables = conan_api.local.editable_remove(args.path, args.refs)
     out = ConanOutput()
     if editables:
         for ref, info in editables.items():
