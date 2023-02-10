@@ -70,7 +70,6 @@ def test_cmake_presets_with_user_presets_file():
 
     c.run(f"install . ")
     c.run(f"install . -s build_type=Debug")
-    print(c.current_folder)
 
     if platform.system() != "Windows":
         c.run_command("cmake --preset debug")
