@@ -14,5 +14,4 @@ def test_disable_settings_assignment():
             """)
     c.save({"conanfile.py": conanfile})
     c.run("install .", assert_error=True)
-    print(c.out)
     assert "Tried to define 'os' setting inside recipe" in c.out
