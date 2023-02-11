@@ -247,7 +247,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
 
     def test_duplicated_error(self):
-        """ check remote name and URL are not duplicated
+        """ check remote name are not duplicated
         """
         self.client.run("remote add remote1 http://otherurl", assert_error=True)
         self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
@@ -278,3 +278,16 @@ class RemoteTest(unittest.TestCase):
                       self.client.out)
         self.client.run("remote list")
         self.assertIn("pepe.org", self.client.out)
+
+
+def test_duplicated_url():
+    """ allow duplicated URL with --force
+    """
+    c = TestClient()
+    c.run("remote add remote1 http://url")
+    c.run("remote add remote2 http://url")
+    assert "WARN: Remote url already existing in remote 'remote1'. " \
+           "Adding duplicated remote URL" in c.out
+    c.run("remote list")
+    assert "remote1" in c.out
+    assert "remote2" in c.out
