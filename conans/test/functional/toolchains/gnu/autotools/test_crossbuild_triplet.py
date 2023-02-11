@@ -47,7 +47,7 @@ def test_crossbuild_triplet_from_conf():
     client.save({"build_profile": build_profile})
 
     client.run("new autotools_lib -d name=hello -d version=0.1")
-    client.run("create . --profile:build=build_profile --profile:host=host_profile -tf None")
+    client.run("create . --profile:build=build_profile --profile:host=host_profile -tf=\"\"")
 
     assert "--host=hexagon-acme-linux-gnu" in client.out
     assert "checking host system type... hexagon-acme-linux-gnu" in client.out

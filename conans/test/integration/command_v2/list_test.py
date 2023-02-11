@@ -12,6 +12,7 @@ from conans.errors import ConanException, ConanConnectionError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env import environment_update
+from conans.util.files import load, save
 
 
 class TestParamErrors:
@@ -86,7 +87,6 @@ class TestListRefs:
         r = "-r=default" if remote else ""
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r}")
-        print(client.out)
         expected = textwrap.indent(expected, "  ")
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
@@ -99,7 +99,6 @@ class TestListRefs:
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r} --format=json", redirect_stdout="file.json")
         list_json = client.load("file.json")
-        print(list_json)
         list_json = json.loads(list_json)
         assert remove_timestamps(list_json[r_msg]) == remove_timestamps(expected)
 
@@ -125,6 +124,17 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipes_without_user_channel(self, client, remote):
+        pattern = "z*@"
+        expected = textwrap.dedent(f"""\
+              zli
+                zli/1.0.0
+              zlix
+                zlix/1.0.0
+            """)
+        self.check(client, pattern, remote, expected)
+
+    @pytest.mark.parametrize("remote", [True, False])
     @pytest.mark.parametrize("pattern", ["zlib", "zlib/*", "*@user/channel"])
     def test_list_recipe_versions(self, client, pattern, remote):
         expected = textwrap.dedent(f"""\
@@ -136,6 +146,20 @@ class TestListRefs:
         expected_json = {
             "zlib/1.0.0@user/channel": {},
             "zlib/2.0.0@user/channel": {}
+        }
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipe_versions_exact(self, client, remote):
+        pattern = "zli/1.0.0"
+        # by default, when a reference is complete, we show latest recipe revision
+        expected = textwrap.dedent(f"""\
+          zli
+            zli/1.0.0
+          """)
+        self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zli/1.0.0": {}
         }
         self.check_json(client, pattern, remote, expected_json)
 
@@ -155,9 +179,10 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_recipe_latest_revision(self, client, remote):
+    @pytest.mark.parametrize("pattern", ["zli/1.0.0#latest",
+                                         "zli/1.0.0#b58eeddfe2fd25ac3a105f72836b3360"])
+    def test_list_recipe_latest_revision(self, client, remote, pattern):
         # by default, when a reference is complete, we show latest recipe revision
-        pattern = "zli/1.0.0"
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0
@@ -235,7 +260,6 @@ class TestListPrefs:
         r = "-r=default" if remote else ""
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r}")
-        print(client.out)
         expected = textwrap.indent(expected, "  ")
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
@@ -248,7 +272,6 @@ class TestListPrefs:
         r_msg = "default" if remote else "Local Cache"
         client.run(f"list {pattern} {r} --format=json", redirect_stdout="file.json")
         list_json = client.load("file.json")
-        print(list_json)
         list_json = json.loads(list_json)
         assert remove_timestamps(list_json[r_msg]) == remove_timestamps(expected)
 
@@ -400,7 +423,6 @@ class TestListPrefs:
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_latest_prevs(self, client, remote):
         pattern = "zli/1.0.0:*#latest"
-        # TODO: This is doing a package_id search, but not showing info
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0
@@ -410,9 +432,15 @@ class TestListPrefs:
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
                       revisions
                         9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
+                      info
+                        settings
+                          os: Linux
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                       revisions
                         d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
+                      info
+                        settings
+                          os: Windows
           """)
         self.check(client, pattern, remote, expected)
 
@@ -429,10 +457,16 @@ class TestListPrefs:
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
                       revisions
                         9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
+                      info
+                        settings
+                          os: Linux
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                       revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                         24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
+                      info
+                        settings
+                          os: Windows
           """)
         self.check(client, pattern, remote, expected)
 
@@ -471,13 +505,13 @@ class TestListPrefs:
                   packages
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                       revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                         24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_package_id_latest_prev(self, client, remote):
+    def test_list_package_id_single(self, client, remote):
         pattern = "zli/1.0.0:ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
         expected = textwrap.dedent(f"""\
           zli
@@ -486,24 +520,88 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 23:13:12 UTC)
                   packages
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
-                      revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 23:13:12 UTC)
+                      info
+                        settings
+                          os: Windows
           """)
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_missing_package_id(self, client, remote):
         pattern = "zli/1.0.0:nonexists_id"
-        # TODO: The message is still different in the server
-        if remote:
-            expected = "ERROR: Binary package not found: 'zli/1.0.0@_/_#" \
-                       "b58eeddfe2fd25ac3a105f72836b3360:nonexists_id'. [Remote: default]\n"
-        else:
-            expected = "ERROR: Binary package not found: 'zli/1.0.0:nonexists_id\n"
+        expected = "ERROR: Package ID 'zli/1.0.0:nonexists_id' not found\n"
         self.check(client, pattern, remote, expected)
 
-    def test_query(self):
-        pass
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_query(self, client, remote):
+        pattern = "zli/1.0.0:* -p os=Linux"
+        expected = textwrap.dedent(f"""\
+          zli
+            zli/1.0.0
+              revisions
+                b58eeddfe2fd25ac3a105f72836b3360 (10-11-2023 10:13:13)
+                  packages
+                    9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      info
+                        settings
+                          os: Linux
+          """)
+        self.check(client, pattern, remote, expected)
+
+
+def test_list_prefs_query_custom_settings():
+    """
+    Make sure query works for custom settings
+    # https://github.com/conan-io/conan/issues/13071
+    """
+    c = TestClient(default_server_user=True)
+    settings = load(c.cache.settings_path)
+    settings += textwrap.dedent("""\
+        newsetting:
+            value1:
+            value2:
+                subsetting: [1, 2, 3]
+        """)
+    save(c.cache.settings_path, settings)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("newsetting")})
+    c.run("create . -s newsetting=value1")
+    c.run("create . -s newsetting=value2 -s newsetting.subsetting=1")
+    c.run("create . -s newsetting=value2 -s newsetting.subsetting=2")
+    c.run("upload * -r=default -c")
+    c.run("list pkg/1.0:* -p newsetting=value1")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
+    c.run("list pkg/1.0:* -p newsetting=value1 -r=default")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1"')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1" -r=default')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
+
+
+class TestListNoUserChannel:
+    def test_no_user_channel(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib.py": GenConanfile("zlib"), })
+
+        c.run("create zlib.py --version=1.0.0")
+        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+        c.run("upload * -r=default -c")
+
+        c.run("list zlib/1.0.0#latest")
+        assert "user/channel" not in c.out
+        c.run("list zlib/1.0.0#latest -r=default")
+        assert "user/channel" not in c.out
+
+        c.run("list zlib/1.0.0:*")
+        assert "user/channel" not in c.out
+        c.run("list zlib/1.0.0:* -r=default")
+        assert "user/channel" not in c.out
 
 
 class TestListRemotes:

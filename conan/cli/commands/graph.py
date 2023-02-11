@@ -157,6 +157,9 @@ def graph_info(conan_api, parser, subparser, *args):
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
 
+        conan_api.install.install_system_requires(deps_graph, only_info=True)
+        conan_api.install.install_sources(deps_graph, remotes=remotes)
+
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())

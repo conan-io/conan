@@ -1,6 +1,8 @@
-from collections import OrderedDict
+import fnmatch
 
-from conans.util.dates import timestamp_to_str
+from conans.errors import ConanException
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 
 
 class Remote:
@@ -31,103 +33,124 @@ class Remote:
         return str(self)
 
 
-class _RecipeUploadData:
-    def __init__(self, prefs):
-        self.upload = True
-        self.force = None
-        self.dirty = None
-        self.files = None
-        self.packages = [_PackageUploadData(pref) for pref in prefs]
-
-    def serialize(self):
-        return {
-            "dirty": self.dirty,
-            "upload": self.upload,
-            "force": self.force,
-            "files": self.files,
-            "packages": [r.serialize() for r in self.packages]
-        }
-
-
-class _PackageUploadData:
-    def __init__(self, pref):
-        self.pref = pref
-        self.upload = True
-        self.files = None
-        self.force = None
-
-    def serialize(self):
-        return {
-            "pref": repr(self.pref),
-            "upload": self.upload,
-            "force": self.force,
-            "files": self.files
-        }
-
-
-class SelectBundle:
+class PackagesList:
     def __init__(self):
-        self.recipes = OrderedDict()
+        self.recipes = {}
 
     def add_refs(self, refs):
+        # RREVS alreday come in ASCENDING order, so upload does older revisions first
         for ref in refs:
-            self.recipes.setdefault(ref, [])
+            ref_dict = self.recipes.setdefault(str(ref), {})
+            if ref.revision:
+                revs_dict = ref_dict.setdefault("revisions", {})
+                rev_dict = revs_dict.setdefault(ref.revision, {})
+                if ref.timestamp:
+                    rev_dict["timestamp"] = ref.timestamp
+
+    def add_prefs(self, rrev, prefs):
+        # Prevs already come in ASCENDING order, so upload does older revisions first
+        revs_dict = self.recipes[str(rrev)]["revisions"]
+        rev_dict = revs_dict[rrev.revision]
+        packages_dict = rev_dict.setdefault("packages", {})
+
+        for pref in prefs:
+            package_dict = packages_dict.setdefault(pref.package_id, {})
+            if pref.revision:
+                prevs_dict = package_dict.setdefault("revisions", {})
+                prev_dict = prevs_dict.setdefault(pref.revision, {})
+                if pref.timestamp:
+                    prev_dict["timestamp"] = pref.timestamp
+
+    def add_configurations(self, confs):
+        for pref, conf in confs.items():
+            rev_dict = self.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            try:
+                rev_dict["packages"][pref.package_id]["info"] = conf
+            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
+                pass
 
     def refs(self):
-        return self.recipes.keys()
+        result = {}
+        for ref, ref_dict in self.recipes.items():
+            for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
+                t = rrev_dict.get("timestamp")
+                recipe = RecipeReference.loads(f"{ref}#{rrev}%{t}")  # TODO: optimize this
+                result[recipe] = rrev_dict
+        return result.items()
 
-    def prefs(self):
-        prefs = []
-        for v in self.recipes.values():
-            prefs.extend(v)
-        return prefs
-
-    def add_prefs(self, prefs, configurations=None):
-        for pref in prefs:
-            binary_info = configurations.get(pref) if configurations is not None else None
-            self.recipes.setdefault(pref.ref, []).append((pref, binary_info))
-
-    def serialize(self):
-        ret = {}
-        for ref, prefs in sorted(self.recipes.items()):
-            ref_dict = ret.setdefault(str(ref), {})
-            if ref.revision:
-                revisions_dict = ref_dict.setdefault("revisions", {})
-                rev_dict = revisions_dict.setdefault(ref.revision, {})
-                if ref.timestamp:
-                    rev_dict["timestamp"] = timestamp_to_str(ref.timestamp)
-                if prefs:
-                    packages_dict = rev_dict.setdefault("packages", {})
-                    for pref_info in prefs:
-                        pref, info = pref_info
-                        pid_dict = packages_dict.setdefault(pref.package_id, {})
-                        if info is not None:
-                            pid_dict["info"] = info
-                        if pref.revision:
-                            prevs_dict = pid_dict.setdefault("revisions", {})
-                            prev_dict = prevs_dict.setdefault(pref.revision, {})
-                            if pref.timestamp:
-                                prev_dict["timestamp"] = timestamp_to_str(pref.timestamp)
-        return ret
-
-
-class UploadBundle:
-    def __init__(self, select_bundle):
-        self.recipes = OrderedDict()
-        # We reverse the bundle so older revisions are uploaded first
-        for ref, prefs in reversed(select_bundle.recipes.items()):
-            reversed_prefs = reversed([pref for pref, _ in prefs])
-            self.recipes[ref] = _RecipeUploadData(reversed_prefs)
+    @staticmethod
+    def prefs(ref, recipe_bundle):
+        result = {}
+        for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
+            prevs = pkg_bundle.get("revisions", {})
+            for prev, prev_bundle in prevs.items():
+                t = prev_bundle.get("timestamp")
+                pref = PkgReference(ref, package_id, prev, t)
+                result[pref] = prev_bundle
+        return result.items()
 
     def serialize(self):
-        return {r.repr_notime(): v.serialize() for r, v in self.recipes.items()}
+        return self.recipes
+
+
+class ListPattern:
+
+    def __init__(self, expression, rrev="latest", package_id=None, prev="latest", only_recipe=False):
+        def split(s, c, default=None):
+            if not s:
+                return None, default
+            tokens = s.split(c, 1)
+            if len(tokens) == 2:
+                return tokens[0], tokens[1] or default
+            return tokens[0], default
+
+        recipe, package = split(expression, ":")
+        self.raw = expression
+        self.ref, rrev = split(recipe, "#", rrev)
+        ref, user_channel = split(self.ref, "@")
+        self.name, self.version = split(ref, "/")
+        self.user, self.channel = split(user_channel, "/")
+        self.rrev, _ = split(rrev, "%")
+        self.package_id, prev = split(package, "#", prev)
+        self.prev, _ = split(prev, "%")
+        if only_recipe:
+            if self.package_id:
+                raise ConanException("Do not specify 'package_id' with 'only-recipe'")
+        else:
+            self.package_id = self.package_id or package_id
 
     @property
-    def any_upload(self):
-        for r in self.recipes.values():
-            if r.upload:
-                return True
-            for p in r.packages:
-                if p.upload:
-                    return True
-        return False
+    def is_latest_rrev(self):
+        return self.rrev == "latest"
+
+    @property
+    def is_latest_prev(self):
+        return self.prev == "latest"
+
+    def check_refs(self, refs):
+        if not refs and self.ref and "*" not in self.ref:
+            raise ConanException(f"Recipe '{self.ref}' not found")
+
+    def filter_rrevs(self, rrevs):
+        rrevs = [r for r in rrevs if fnmatch.fnmatch(r.revision, self.rrev)]
+        if not rrevs:
+            refs_str = f'{self.ref}#{self.rrev}'
+            if "*" not in refs_str:
+                raise ConanException(f"Recipe revision '{refs_str}' not found")
+        return rrevs
+
+    def filter_prefs(self, prefs):
+        prefs = [p for p in prefs if fnmatch.fnmatch(p.package_id, self.package_id)]
+        if not prefs:
+            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}'
+            if "*" not in refs_str:
+                raise ConanException(f"Package ID '{self.raw}' not found")
+        return prefs
+
+    def filter_prevs(self, prevs):
+        prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, self.prev)]
+        if not prevs:
+            refs_str = f'{self.ref}#{self.rrev}:{self.package_id}#{self.prev}'
+            if "*" not in refs_str:
+                raise ConanException(f"Package revision '{self.raw}' not found")
+        return prevs

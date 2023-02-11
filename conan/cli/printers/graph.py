@@ -56,6 +56,10 @@ def print_graph_basic(graph):
             output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
 
     _format_resolved("Resolved alias", graph.aliased)
+    if graph.aliased:
+        output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
+                       "it might be removed in 3.0.")
+        output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
 
     if deprecated:

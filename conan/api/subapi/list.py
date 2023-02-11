@@ -1,7 +1,6 @@
 from typing import Dict
 
-from conan.api.model import Remote, SelectBundle
-from conan.internal.api.select_pattern import ListPatternMode
+from conan.api.model import PackagesList
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
@@ -50,7 +49,7 @@ class ListAPI:
             ret = app.cache.get_latest_package_reference(pref)
         return ret
 
-    def package_revisions(self, pref: PkgReference, remote: Remote=None):
+    def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
         app = ConanApp(self.conan_api.cache_folder)
@@ -83,7 +82,8 @@ class ListAPI:
             packages = app.remote_manager.search_packages(remote, ref)
         return packages
 
-    def filter_packages_configurations(self, pkg_configurations, query):
+    @staticmethod
+    def filter_packages_configurations(pkg_configurations, query):
         """
         :param pkg_configurations: Dict[PkgReference, PkgConfiguration]
         :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
@@ -91,67 +91,69 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
-    # TODO: could it be possible to merge this with subapi.search.select?
-    def select(self, pattern, package_query=None, remote=None, search_mode=None):
+    def select(self, pattern, package_query=None, remote=None):
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
-        search_mode = search_mode or pattern.mode
-        select_bundle = SelectBundle()
-        refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
-        pattern.check_refs(refs)
+        select_bundle = PackagesList()
+        # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
+        if "*" in pattern.ref or not pattern.version or \
+                (pattern.package_id is None and pattern.rrev is None):
+            refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+            refs = sorted(refs)  # Order alphabetical and older versions first
+            pattern.check_refs(refs)
+        else:
+            refs = [RecipeReference(pattern.name, pattern.version, pattern.user, pattern.channel)]
 
         # Show only the recipe references
-        if search_mode == ListPatternMode.SHOW_REFS:
+        if pattern.package_id is None and pattern.rrev is None:
             select_bundle.add_refs(refs)
             return select_bundle
 
-        for r in refs:
-            if pattern.is_latest_rrev:
-                rrevs = [self.conan_api.list.latest_recipe_revision(r, remote)]
+        for r in refs:  # Older versions first
+            if pattern.is_latest_rrev or pattern.rrev is None:
+                rrev = self.latest_recipe_revision(r, remote)
+                if rrev is None:
+                    raise NotFoundException(f"Recipe '{r}' not found")
+                rrevs = [rrev]
             else:
-                rrevs = self.conan_api.list.recipe_revisions(r, remote)
+                rrevs = self.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
+                rrevs = list(reversed(rrevs))  # Order older revisions first
             select_bundle.add_refs(rrevs)
 
-            # Show only the latest recipe revision or all of them
-            if search_mode in (ListPatternMode.SHOW_ALL_RREVS, ListPatternMode.SHOW_LATEST_RREV):
+            if pattern.package_id is None:  # Stop if not displaying binaries
                 continue
 
             for rrev in rrevs:
-                packages = None
                 prefs = []
-                if pattern.package_id and "*" not in pattern.package_id:
+                if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
+                    packages = {}
                 else:
-                    packages = self.conan_api.list.packages_configurations(rrev, remote)
+                    packages = self.packages_configurations(rrev, remote)
                     if package_query is not None:
-                        packages = self.conan_api.list.filter_packages_configurations(packages,
-                                                                                      package_query)
+                        packages = self.filter_packages_configurations(packages, package_query)
                     prefs = packages.keys()
-                    if pattern.package_id is not None:
-                        prefs = pattern.filter_prefs(prefs)
+                    prefs = pattern.filter_prefs(prefs)
+                    packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
 
-                # Show all the package IDs and their configurations
-                if search_mode == ListPatternMode.SHOW_PACKAGE_IDS:
-                    # add pref and its package configuration
-                    # remove timestamp, as server does not provide it
-                    for p in prefs:
-                        p.timestamp = None
-                    select_bundle.add_prefs(prefs, configurations=packages)
-                    continue
-
-                for pref in prefs:
-                    if search_mode in (ListPatternMode.SHOW_LATEST_PREV,
-                                       ListPatternMode.SHOW_ALL_PREVS):
-                        if pattern.is_latest_prev:
-                            prev = self.conan_api.list.latest_package_revision(pref, remote)
+                if pattern.prev is not None:
+                    new_prefs = []
+                    for pref in prefs:
+                        # Maybe the package_configurations returned timestamp
+                        if pattern.is_latest_prev or pattern.prev is None:
+                            prev = self.latest_package_revision(pref, remote)
                             if prev is None:
                                 raise NotFoundException(f"Binary package not found: '{pref}")
-                            prevs = [prev]
+                            new_prefs.append(prev)
                         else:
-                            prevs = self.conan_api.list.package_revisions(pref, remote)
+                            prevs = self.package_revisions(pref, remote)
                             prevs = pattern.filter_prevs(prevs)
-                            # add the prev
-                        select_bundle.add_prefs(prevs)
+                            prevs = list(reversed(prevs))  # Older revisions first
+                            new_prefs.extend(prevs)
+                    prefs = new_prefs
+
+                select_bundle.add_prefs(rrev, prefs)
+                select_bundle.add_configurations(packages)
         return select_bundle

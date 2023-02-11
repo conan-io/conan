@@ -9,7 +9,6 @@ import tarfile
 import tempfile
 import time
 
-from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
 
@@ -53,34 +52,6 @@ def set_dirty_context_manager(folder):
     set_dirty(folder)
     yield
     clean_dirty(folder)
-
-
-def _detect_encoding(text):
-    import codecs
-    encodings = {codecs.BOM_UTF8: "utf_8_sig",
-                 codecs.BOM_UTF16_BE: "utf_16_be",
-                 codecs.BOM_UTF16_LE: "utf_16_le",
-                 codecs.BOM_UTF32_BE: "utf_32_be",
-                 codecs.BOM_UTF32_LE: "utf_32_le",
-                 b'\x2b\x2f\x76\x38': "utf_7",
-                 b'\x2b\x2f\x76\x39': "utf_7",
-                 b'\x2b\x2f\x76\x2b': "utf_7",
-                 b'\x2b\x2f\x76\x2f': "utf_7",
-                 b'\x2b\x2f\x76\x38\x2d': "utf_7"}
-    for bom in sorted(encodings, key=len, reverse=True):
-        if text.startswith(bom):
-            try:
-                return encodings[bom], len(bom)
-            except UnicodeDecodeError:
-                continue
-    decoders = ["utf-8", "Windows-1252"]
-    for decoder in decoders:
-        try:
-            text.decode(decoder)
-            return decoder, 0
-        except UnicodeDecodeError:
-            continue
-    return None, 0
 
 
 @contextmanager
@@ -350,7 +321,8 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     try:
         # Format is forced because in Python3.8, it changed and it generates different tarfiles
         # with different checksums, which break hashes of tgzs
-        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.GNU_FORMAT, **kwargs)
+        # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
+        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.PAX_FORMAT, **kwargs)
     except IOError:
         fileobj.close()
         if mode == 'r':

@@ -89,10 +89,8 @@ tools_locations = {
         },
         "3.23": {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin'
-                               if not MacOS_arm else "skip-tests",
-                     # Not available in Linux
-                     'Linux': "skip-tests"}
+                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
+                     'Linux': "/usr/share/cmake-3.23.5/bin"}
         }
     },
     'ninja': {

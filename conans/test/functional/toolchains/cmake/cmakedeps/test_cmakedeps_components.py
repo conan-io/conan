@@ -137,6 +137,7 @@ def test_unused_requirement(top_conanfile):
     assert "ERROR: wrong/version: Required package 'top2' not in component 'requires" in t.out
 
 
+
 # TODO: This is CMakeDeps Independent, move it out of here
 def test_unused_tool_requirement(top_conanfile):
     """ Requires should include all listed requirements

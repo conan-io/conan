@@ -1,15 +1,7 @@
 import json
 
-from conan.api.conan_api import ConanAPI
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.tools import TestClient, redirect_output
-
-
-def set_conan_output_level(level, activate_logger=False):
-    from conan.api import output
-    output.conan_output_level = level
-    output.conan_output_logger_format = activate_logger
+from conans.test.utils.tools import TestClient
 
 
 def test_invalid_output_level():
@@ -167,34 +159,3 @@ def test_logger_output_format():
         assert "data" in data["json"]
         if data["json"]["level"] == "TRACE":
             assert "_action" in data["json"]["data"]
-
-
-def test_python_api_log_change():
-    t = TestClient()
-    t.save({"conanfile.py": GenConanfile()})
-    t.run("create . --name foo --version 1.0")
-
-    stderr = RedirectedTestOutput()
-    stdout = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        set_conan_output_level(10)
-        api = ConanAPI(cache_folder=t.cache_folder)
-        api.remotes.list()
-        assert "_action: CONAN_API, name: remotes.list, parameters" in stderr
-
-    stderr = RedirectedTestOutput()
-    stdout = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        set_conan_output_level(20)
-        api = ConanAPI(cache_folder=t.cache_folder)
-        api.remotes.list()
-        assert "_action: CONAN_API, name: remotes.list, parameters" not in stderr
-
-    stderr = RedirectedTestOutput()
-    stdout = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        set_conan_output_level(10, activate_logger=True)
-        api = ConanAPI(cache_folder=t.cache_folder)
-        api.remotes.list()
-        assert "_action: CONAN_API, name: remotes.list, parameters" not in stderr
-        assert '{"json": ' in stderr

@@ -45,7 +45,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
     # Let's import manually the created conantoolchain_release_x64.props
     replace_in_file(MagicMock(), os.path.join(client.current_folder, "hello.vcxproj"),
                     r'  <ImportGroup Label="PropertySheets">', toolchain_props)
-    client.run("create . -pr myprofile -tf None")
+    client.run("create . -pr myprofile -tf=\"\"")
     assert "/analyze:quiet /doc src/hello.cpp" in client.out
     assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile x64\Release\hello.obj" in client.out
     assert "/D DEF1 /D DEF2" in client.out

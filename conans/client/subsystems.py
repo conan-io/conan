@@ -31,7 +31,6 @@ MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
 WSL = 'wsl'  # Windows Subsystem for Linux
-SFU = 'sfu'  # Windows Services for UNIX
 
 
 def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="build"):
@@ -185,9 +184,6 @@ def subsystem_path(subsystem, path):
             return '/cygdrive' + path.lower()
         elif subsystem == WSL:
             return '/mnt' + path[0:2].lower() + path[2:]
-        elif subsystem == SFU:
-            path = path.lower()
-            return '/dev/fs' + path[0] + path[1:].capitalize()
     else:
         return path if subsystem == WSL else path.lower()
     return None

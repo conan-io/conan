@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
+from conan.api.model import ListPattern
 from conan.cli.command import conan_command, OnceArgument
-from conan.internal.api.select_pattern import SelectPattern
 from conans.client.userio import UserInput
 
 
@@ -31,16 +31,16 @@ def remove(conan_api: ConanAPI, parser, *args):
     def confirmation(message):
         return args.confirm or ui.request_boolean(message)
 
-    only_recipe = ":" not in args.reference and not args.package_query
-    ref_pattern = SelectPattern(args.reference, rrev="*", prev="*")
-    select_bundle = conan_api.search.select(ref_pattern, only_recipe, args.package_query, remote)
+    ref_pattern = ListPattern(args.reference, rrev="*", prev="*")
+    select_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
 
-    if only_recipe:
-        for ref in select_bundle.refs():
+    if ref_pattern.package_id is None:
+        for ref, _ in select_bundle.refs():
             if confirmation("Remove the recipe and all the packages of '{}'?"
                             "".format(ref.repr_notime())):
                 conan_api.remove.recipe(ref, remote=remote)
     else:
-        for pref, _ in select_bundle.prefs():
-            if confirmation("Remove the package '{}'?".format(pref.repr_notime())):
-                conan_api.remove.package(pref, remote=remote)
+        for ref, ref_bundle in select_bundle.refs():
+            for pref, _ in select_bundle.prefs(ref, ref_bundle):
+                if confirmation("Remove the package '{}'?".format(pref.repr_notime())):
+                    conan_api.remove.package(pref, remote=remote)

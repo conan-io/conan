@@ -37,13 +37,6 @@ class CMakeDeps(object):
         This method will save the generated files to the conanfile.generators_folder
         """
         check_duplicated_generator(self, self._conanfile)
-        # FIXME: Remove this in 2.0
-        if not hasattr(self._conanfile, "settings_build") and \
-                      (self.build_context_activated or self.build_context_build_modules or
-                       self.build_context_suffix):
-            raise ConanException("The 'build_context_activated' and 'build_context_build_modules' of"
-                                 " the CMakeDeps generator cannot be used without specifying a build"
-                                 " profile. e.g: -pr:b=default")
 
         # Current directory is the generators_folder
         generator_files = self.content

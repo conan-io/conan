@@ -94,13 +94,13 @@ sources:
         if sys.version_info.major == 3 and sys.version_info.minor >= 9:
             # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
             # https://github.com/conan-io/conan/issues/8020
-            md5_value = "7ebdc5ed79b7b72f3a6010da3671ae05"
-            sha1_value = "862c1b58de1dfadaad3206b453b4de731c1751af"
-            sha256_value = "25200fc2bd7f430358cd7a7c5ce4a84396e8ec68a1e9d8880994b1236f214972"
+            md5_value = "f1d0dee6f0bf5b7747c013dd26183cdb"
+            sha1_value = "d45ca9ad171ca9baa93f4da99904036aa71b0ddb"
+            sha256_value = "b6880ef494974b8413a107429bde8d6b81a85c45a600040f5334a1d300c203b5"
         else:
-            md5_value = "2ef49b5a102db1abb775eaf1922d5662"
-            sha1_value = "18dbea2d9a97bb9e9948604a41976bba5b5940bf"
-            sha256_value = "9619013c1f7b83cca4bf3f336f8b4525a23d5463e0768599fe5339e02dd0a338"
+            md5_value = "babc50837f9aaf46e134455966230e3e"
+            sha1_value = "1e5b8ff7ae58b40d698fe3d4da6ad2a47ec6f4f3"
+            sha256_value = "3ff04581cb0e2f9e976a9baad036f4ca9d884907c3d9382bb42a8616d3c20e42"
         self.assertEqual(md5_value, md5sum(tgz_path))
         self.assertEqual(sha1_value, sha1sum(tgz_path))
         self.assertEqual(sha256_value, sha256sum(tgz_path))

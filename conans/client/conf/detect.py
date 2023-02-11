@@ -88,7 +88,7 @@ def _get_default_compiler():
         command = cc or cxx
         if "clang" in command.lower():
             return _clang_compiler(command)
-        if "gcc" in command:
+        if "gcc" in command or "g++" in command or "c++" in command:
             gcc = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
@@ -133,8 +133,6 @@ def _get_profile_compiler_version(compiler, version):
         return major
     elif compiler == "apple-clang" and major >= 13:
         output.info("apple-clang>=13, using the major as version")
-        return major
-    elif compiler == "Visual Studio":
         return major
     elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major

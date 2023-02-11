@@ -21,7 +21,6 @@ def update_file(file_path, new_content):
 
     if not os.path.exists(file_path):
         save(file_path, new_content)
-        out.success(f"Initialized file: '{file_path}'")
     else:
         content = load(file_path)
 

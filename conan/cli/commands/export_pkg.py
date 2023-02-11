@@ -73,7 +73,7 @@ def export_pkg(conan_api, parser, *args):
 
     # It is necessary to install binaries, in case there are build_requires necessary to export
     # But they should be local, if this was built here
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=None, update=False)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=None)
     source_folder = os.path.dirname(path)
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,

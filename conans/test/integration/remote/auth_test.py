@@ -129,6 +129,15 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
         self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
 
+    def test_authorize_disabled_remote(self):
+        tc = TestClient(servers=self.servers)
+        # Sanity check, this should not fail
+        tc.run("remote login default pepe -p pepepass")
+        tc.run("remote logout default")
+        # This used to fail when the authentication was not possible for disabled remotes
+        tc.run("remote disable default")
+        tc.run("remote login default pepe -p pepepass")
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
 
 class AuthenticationTest(unittest.TestCase):
 

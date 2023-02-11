@@ -31,14 +31,12 @@ def create(conan_api, parser, *args):
                         help='The provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
-                             'Use "None" to skip the test stage')
+                             'Use "" to skip the test stage')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
-    # Now if parameter --test-folder=None (string None) we have to skip tests
-    test_folder = False if args.test_folder == "None" else args.test_folder
-    test_conanfile_path = _get_test_conanfile_path(test_folder, path)
+    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
@@ -87,8 +85,7 @@ def create(conan_api, parser, *args):
         print_graph_packages(deps_graph)
 
         out.title("Installing packages")
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
-                                           update=args.update)
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
@@ -132,13 +129,18 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
     conanfile = deps_graph.root.conanfile
-    output_folder = os.path.join(conanfile_folder, conanfile.folders.test_output)
-    if conanfile.folders.test_output:
-        shutil.rmtree(output_folder, ignore_errors=True)
-        mkdir(output_folder)
+    # To make sure the folders are correct
+    conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
+    if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:
+        # should be the same as build folder, but we can remove it
+        out.info("Removing previously existing 'test_package' build folder: "
+                 f"{conanfile.build_folder}")
+        shutil.rmtree(conanfile.build_folder, ignore_errors=True)
+        mkdir(conanfile.build_folder)
+    conanfile.output.info(f"Test package build: {conanfile.folders.build}")
+    conanfile.output.info(f"Test package build folder: {conanfile.build_folder}")
     conan_api.install.install_consumer(deps_graph=deps_graph,
-                                       source_folder=conanfile_folder,
-                                       output_folder=output_folder)
+                                       source_folder=conanfile_folder)
 
     out.title("Testing the package: Building")
     app = ConanApp(conan_api.cache_folder)
@@ -155,14 +157,11 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
 def _get_test_conanfile_path(tf, conanfile_path):
     """Searches in the declared test_folder or in the standard "test_package"
     """
-
-    if tf is False:
-        # Look up for testing conanfile can be disabled if tf (test folder) is False
+    if tf == "":  # Now if parameter --test-folder="" we have to skip tests
         return None
-
     base_folder = os.path.dirname(conanfile_path)
     test_conanfile_path = os.path.join(base_folder, tf or "test_package", "conanfile.py")
     if os.path.exists(test_conanfile_path):
         return test_conanfile_path
-    if tf:
-        raise ConanException("test folder '{tf}' not available, or it doesn't have a conanfile.py")
+    elif tf:
+        raise ConanException(f"test folder '{tf}' not available, or it doesn't have a conanfile.py")

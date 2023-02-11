@@ -1,12 +1,14 @@
 import json
 
 from conan.api.conan_api import ConanAPI
+from conan.api.model import ListPattern
 from conan.api.output import Color, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
-from conan.internal.api.select_pattern import ListPattern
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
+from conans.util.dates import timestamp_to_str
+
 remote_color = Color.BRIGHT_BLUE
 recipe_name_color = Color.GREEN
 recipe_color = Color.BRIGHT_WHITE
@@ -19,8 +21,8 @@ value_color = Color.CYAN
 def print_serial(item, indent=None, color_index=None):
     indent = "" if indent is None else (indent + "  ")
     color_index = 0 if color_index is None else (color_index + 1)
-    color_array = [Color.BRIGHT_BLUE, Color.GREEN, Color.BRIGHT_WHITE,
-                   Color.BRIGHT_YELLOW, Color.CYAN, Color.WHITE]
+    color_array = [Color.BRIGHT_BLUE, Color.BRIGHT_GREEN, Color.BRIGHT_WHITE,
+                   Color.BRIGHT_YELLOW, Color.BRIGHT_CYAN, Color.BRIGHT_MAGENTA, Color.WHITE]
     color = color_array[color_index % len(color_array)]
     if isinstance(item, dict):
         for k, v in item.items():
@@ -70,7 +72,7 @@ def print_list_text(results):
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
-                    k = f"{k} ({timestamp})"
+                    k = f"{k} ({timestamp_to_str(timestamp)})"
                 result[k] = format_timestamps(v)
             return result
         return item
@@ -103,7 +105,7 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference)
+    ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
     if args.cache or not args.remote:
@@ -121,6 +123,5 @@ def list(conan_api: ConanAPI, parser, *args):
             results[name] = list_bundle.serialize()
     return {
         "results": results,
-        "search_mode": ref_pattern.mode,
         "conan_api": conan_api
     }
