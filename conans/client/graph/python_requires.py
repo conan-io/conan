@@ -19,7 +19,6 @@ class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
-        self.aliased = {}  # To store the aliases of py_requires, necessary for lockfiles too
 
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
@@ -93,22 +92,18 @@ class PyRequireLoader(object):
                 conanfile, module, new_ref, path, recipe_status, remote = pyreq_conanfile
                 py_require = PyRequire(module, conanfile, new_ref, path, recipe_status, remote)
                 self._cached_py_requires[resolved_ref] = py_require
-                if requirement.alias:
-                    # Remove the recipe_revision, to do the same in alias as normal requires
-                    result.aliased[requirement.alias] = RecipeReference.loads(str(new_ref))
             result.add_pyrequire(py_require)
         return result
 
     def _resolve_ref(self, requirement, graph_lock, remotes, update):
+        if requirement.alias:
+            raise ConanException("python-requires 'alias' are not supported in Conan 2.0. "
+                                 "Please use version ranges instead")
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
-            ref = requirement.ref
         else:
-            alias = requirement.alias
-            if alias is not None:
-                ref = alias
-            else:
-                ref = self._range_resolver.resolve(requirement, "py_require", remotes, update)
+            self._range_resolver.resolve(requirement, "py_require", remotes, update)
+        ref = requirement.ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, graph_lock, ref, remotes, update, check_update):
@@ -125,12 +120,6 @@ class PyRequireLoader(object):
         conanfile.channel = new_ref.channel
 
         if getattr(conanfile, "alias", None):
-            ref = RecipeReference.loads(conanfile.alias)
-            requirement = Requirement(ref)
-            alias = requirement.alias
-            if alias is not None:
-                ref = alias
-            alias_result = self._load_pyreq_conanfile(loader, graph_lock, ref, remotes,
-                                                      update, check_update)
-            conanfile, module, new_ref, path, recipe_status, remote = alias_result
+            raise ConanException("python-requires 'alias' are not supported in Conan 2.0. "
+                                 "Please use version ranges instead")
         return conanfile, module, new_ref, os.path.dirname(path), recipe_status, remote

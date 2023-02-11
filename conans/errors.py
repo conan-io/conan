@@ -47,10 +47,7 @@ def conanfile_exception_formatter(conanfile_name, func_name):
 
     try:
         yield
-    # TODO: Move ConanInvalidSystemRequirements, ConanInvalidConfiguration from here?
-    except ConanInvalidSystemRequirements as exc:
-        msg = "{}: Invalid system requirements: {}".format(str(conanfile_name), exc)
-        raise ConanInvalidSystemRequirements(msg)
+    # TODO: Move ConanInvalidConfiguration from here?
     except ConanInvalidConfiguration as exc:
         msg = "{}: Invalid configuration: {}".format(str(conanfile_name), exc)
         raise ConanInvalidConfiguration(msg)
@@ -158,10 +155,6 @@ class ConanOutdatedClient(ConanException):
 
 
 class ConanExceptionInUserConanfileMethod(ConanException):
-    pass
-
-
-class ConanInvalidSystemRequirements(ConanException):
     pass
 
 

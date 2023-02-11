@@ -82,7 +82,3 @@ class UnixPathTest(unittest.TestCase):
 
     def test_wsl_path(self):
         self.assertEqual('/mnt/c/Windows/System32', subsystem_path("wsl", 'C:\\Windows\\System32'))
-
-    def test_sfu_path(self):
-        self.assertEqual('/dev/fs/C/windows/system32', subsystem_path("sfu",
-                                                                      'C:\\Windows\\System32'))

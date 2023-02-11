@@ -189,6 +189,11 @@ class RemoteTest(unittest.TestCase):
         self.assertEqual(data["remotes"][3]["url"], "http://someurl3")
         self.assertEqual(data["remotes"][3]["disabled"], True)
 
+        # check that they are still listed, as disabled
+        client.run("remote list *")
+        assert "my-remote0: http://someurl0 [Verify SSL: True, Enabled: False]" in client.out
+        assert "my-remote3: http://someurl3 [Verify SSL: True, Enabled: False]" in client.out
+
         client.run("remote disable *")
         registry = load(client.cache.remotes_path)
         data = json.loads(registry)
@@ -242,7 +247,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
 
     def test_duplicated_error(self):
-        """ check remote name and URL are not duplicated
+        """ check remote name are not duplicated
         """
         self.client.run("remote add remote1 http://otherurl", assert_error=True)
         self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
@@ -273,3 +278,16 @@ class RemoteTest(unittest.TestCase):
                       self.client.out)
         self.client.run("remote list")
         self.assertIn("pepe.org", self.client.out)
+
+
+def test_duplicated_url():
+    """ allow duplicated URL with --force
+    """
+    c = TestClient()
+    c.run("remote add remote1 http://url")
+    c.run("remote add remote2 http://url")
+    assert "WARN: Remote url already existing in remote 'remote1'. " \
+           "Adding duplicated remote URL" in c.out
+    c.run("remote list")
+    assert "remote1" in c.out
+    assert "remote2" in c.out

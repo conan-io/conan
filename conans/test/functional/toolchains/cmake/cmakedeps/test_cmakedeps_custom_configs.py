@@ -64,9 +64,9 @@ class CustomConfigurationTest(unittest.TestCase):
         self.client = TestClient(path_with_spaces=False)
         self.client.run("new cmake_lib -d name=hello -d version=0.1")
         self.client.run("create . -s compiler.version=191 "
-                        "-s build_type=Release -o hello/*:shared=True -tf=None")
+                        "-s build_type=Release -o hello/*:shared=True -tf=\"\"")
         self.client.run("create . --name=hello --version=0.1 -s compiler.version=191 "
-                        "-s build_type=Release -tf=None")
+                        "-s build_type=Release -tf=\"\"")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -164,7 +164,7 @@ class CustomSettingsTest(unittest.TestCase):
         cmake = cmake.replace("PUBLIC_HEADER", "CONFIGURATIONS MyRelease\nPUBLIC_HEADER")
         self.client.save({"CMakeLists.txt": cmake})
         self.client.run("create . --name=hello --version=0.1 -s compiler.version=191 -s build_type=MyRelease "
-                        "-s:b build_type=MyRelease -tf=None")
+                        "-s:b build_type=MyRelease -tf=\"\"")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,

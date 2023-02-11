@@ -19,9 +19,6 @@ class DataCache:
         self._base_folder = os.path.realpath(base_folder)
         self._db = CacheDatabase(filename=db_filename)
 
-    def closedb(self):
-        self._db.close()
-
     def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
         if os.path.exists(path) and remove_contents:
@@ -47,17 +44,28 @@ class DataCache:
         md.update(h)
         sha_bytes = md.hexdigest()
         # len based on: https://github.com/conan-io/conan/pull/9595#issuecomment-918976451
-        return sha_bytes[0:16]
+        # Reduce length in 3 characters 16 - 3 = 13
+        return sha_bytes[0:13]
 
     @staticmethod
-    def _get_tmp_path(ref):
+    def _get_tmp_path(ref: RecipeReference):
         # The reference will not have revision, but it will be always constant
-        h = DataCache._short_hash_path(ref.repr_notime())
-        return os.path.join("tmp", h)
+        h = ref.name[:5] + DataCache._short_hash_path(ref.repr_notime())
+        return os.path.join("t", h)
 
     @staticmethod
-    def _get_path(ref):
-        return DataCache._short_hash_path(ref.repr_notime())
+    def _get_tmp_path_pref(pref):
+        # The reference will not have revision, but it will be always constant
+        h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime())
+        return os.path.join("t", h)
+
+    @staticmethod
+    def _get_path(ref: RecipeReference):
+        return ref.name[:5] + DataCache._short_hash_path(ref.repr_notime())
+
+    @staticmethod
+    def _get_path_pref(pref):
+        return pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime())
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         # This is a temporary layout while exporting a new recipe, because the revision is not
@@ -74,7 +82,7 @@ class DataCache:
         assert pref.package_id, "Package id must be known to get or create the package layout"
         assert pref.revision is None, "Package revision should be None"
         assert pref.timestamp is None
-        package_path = self._get_tmp_path(pref)
+        package_path = self._get_tmp_path_pref(pref)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
@@ -117,7 +125,7 @@ class DataCache:
             assert pref.ref.revision, "Recipe revision must be known to create the package layout"
             assert pref.package_id, "Package id must be known to create the package layout"
             assert pref.revision, "Package revision should be known to create the package layout"
-            package_path = self._get_path(pref)
+            package_path = self._get_path_pref(pref)
             self._db.create_package(package_path, pref, None)
             self._create_path(package_path, remove_contents=False)
             return PackageLayout(pref, os.path.join(self.base_folder, package_path))
@@ -171,7 +179,7 @@ class DataCache:
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
 
-        new_path = self._get_path(pref)
+        new_path = self._get_path_pref(pref)
 
         full_path = self._full_path(new_path)
         rmdir(full_path)

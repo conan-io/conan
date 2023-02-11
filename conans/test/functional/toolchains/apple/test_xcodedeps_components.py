@@ -26,7 +26,7 @@ def test_xcodedeps_components():
     client = TestClient(path_with_spaces=False)
 
     client.run("new cmake_lib -d name=tcp -d version=1.0")
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     header = textwrap.dedent("""
         #pragma once
@@ -281,7 +281,7 @@ def test_cpp_info_require_whole_package():
 def test_xcodedeps_test_require():
     client = TestClient()
     client.run("new cmake_lib -d name=gtest -d version=1.0")
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''

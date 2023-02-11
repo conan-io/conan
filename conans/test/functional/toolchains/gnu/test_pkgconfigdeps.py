@@ -38,10 +38,10 @@ def test_pkgconfigdeps_with_test_requires():
     client = TestClient()
     with client.chdir("app"):
         client.run("new cmake_lib -d name=app -d version=1.0")
-        client.run("create . -tf None")
+        client.run("create . -tf=\"\"")
     with client.chdir("test"):
         client.run("new cmake_lib -d name=test -d version=1.0")
-        client.run("create . -tf None")
+        client.run("create . -tf=\"\"")
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''
         from conan import ConanFile

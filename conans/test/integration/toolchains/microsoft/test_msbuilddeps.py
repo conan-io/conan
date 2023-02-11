@@ -17,7 +17,7 @@ from conans.test.utils.tools import TestClient
     ],
 )
 def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     client.run("new msbuild_lib -d name=hello -d version=0.1")
     client.run(f"install . -g MSBuildDeps -s arch={arch} -pr:b=default")
     toolchain = client.load(os.path.join("conan", "conantoolchain.props"))

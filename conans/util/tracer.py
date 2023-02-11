@@ -94,12 +94,6 @@ def log_client_rest_api_call(url, method, duration, headers):
     ConanOutput().trace(data)
 
 
-def log_conan_api_call(name, kwargs):
-    parameters = copy.copy(kwargs)  # Ensure we don't alter any app object like args
-    data = {"_action": "CONAN_API", "name": name, "parameters": parameters}
-    ConanOutput().trace(data)
-
-
 def log_download(url, duration):
     data = {"_action": "DOWNLOAD", "url": url, "duration": duration}
     ConanOutput().trace(data)

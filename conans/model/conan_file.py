@@ -223,7 +223,6 @@ class ConanFile:
         self.display_name = display_name
         # something that can run commands, as os.sytem
 
-        self.compatible_packages = []
         self._conan_helpers = None
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
@@ -239,10 +238,8 @@ class ConanFile:
             self.generators = [self.generators]
         if isinstance(self.settings, str):
             self.settings = [self.settings]
-        self.requires = Requirements(getattr(self, "requires", None),
-                                     getattr(self, "build_requires", None),
-                                     getattr(self, "test_requires", None),
-                                     getattr(self, "tool_requires", None))
+        self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
+                                     self.tool_requires)
 
         self.options = Options(self.options or {}, self.default_options)
 
@@ -257,6 +254,7 @@ class ConanFile:
             self.virtualrunenv = True
 
         self.env_scripts = {}  # Accumulate the env scripts generated in order
+        self.system_requires = {}  # Read only, internal {"apt": []}
 
         # layout() method related variables:
         self.folders = Folders()
@@ -274,7 +272,9 @@ class ConanFile:
         result["settings"] = self.settings.serialize()
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
+        result["system_requires"] = self.system_requires
         result["options"] = self.options.serialize()
+        result["recipe_folder"] = self.recipe_folder
         result["source_folder"] = self.source_folder
         result["build_folder"] = self.build_folder
         result["package_folder"] = self.package_folder

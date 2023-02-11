@@ -6,4 +6,4 @@ USER_CTRL_C = 3                         # 3: Ctrl+C
 USER_CTRL_BREAK = 4                     # 4: Ctrl+Break
 ERROR_SIGTERM = 5                       # 5: SIGTERM
 ERROR_INVALID_CONFIGURATION = 6         # 6: Invalid configuration (done)
-ERROR_INVALID_SYSTEM_REQUIREMENTS = 7   # 7: Invalid system requirements
+ERROR_UNEXPECTED = 7

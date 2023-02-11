@@ -34,11 +34,12 @@ def test_simple_cmake_mingw():
         compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
+    build_folder = client.created_test_build_folder("hello/1.0")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
     check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
                   subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
-    check_vs_runtime("test_package/test_output/build/Release/example.exe", client, "15",
+    check_vs_runtime(f"test_package/{build_folder}/example.exe", client, "15",
                      build_type="Release", static_runtime=False, subsystem="mingw64")
 
 # TODO: How to link with mingw statically?
@@ -636,7 +637,7 @@ class TestCmakeTestMethod:
             """)
         c = TestClient()
         c.run("new cmake_lib -d name=test -d version=0.1")
-        c.run("create .  -tf=None -o test*:shared=True")
+        c.run("create .  -tf=\"\" -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": cmakelist,

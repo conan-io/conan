@@ -29,6 +29,14 @@ def to_apple_arch(conanfile, default=None):
     return _to_apple_arch(arch_, default)
 
 
+def apple_sdk_path(conanfile):
+    sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+    if not sdk_path:
+        # XCRun already knows how to extract os.sdk from conanfile.settings
+        sdk_path = XCRun(conanfile).sdk_path
+    return sdk_path
+
+
 def get_apple_sdk_fullname(conanfile):
     """
     Returns the 'os.sdk' + 'os.sdk_version ' value. Every user should specify it because
@@ -168,17 +176,23 @@ class XCRun(object):
         return self.find('libtool')
 
 
+def _get_dylib_install_name(path_to_dylib):
+    command = "otool -D {}".format(path_to_dylib)
+    output =  iter(check_output_runner(command).splitlines())
+    # Note: if otool return multiple entries for different architectures
+    # assume they are the same and pick the first one.
+    for line in output:
+        if ":" in line:
+            return next(output)
+    raise ConanException(f"Unable to extract install_name for {path_to_dylib}")
+
+
 def fix_apple_shared_install_name(conanfile):
     """
     Search for all the *dylib* files in the conanfile's *package_folder* and fix
     both the ``LC_ID_DYLIB`` and ``LC_LOAD_DYLIB`` fields on those files using the
     *install_name_tool* utility available in macOS to set ``@rpath``.
     """
-
-    def _get_install_name(path_to_dylib):
-        command = "otool -D {}".format(path_to_dylib)
-        installname = check_output_runner(command).strip().split(":")[1].strip()
-        return installname
 
     def _darwin_is_binary(file, binary_type):
         if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):
@@ -225,7 +239,7 @@ def fix_apple_shared_install_name(conanfile):
             shared_libs = _darwin_collect_binaries(full_folder, "DYLIB")
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
-                install_name = _get_install_name(shared_lib)
+                install_name = _get_dylib_install_name(shared_lib)
                 #TODO: we probably only want to fix the install the name if
                 # it starts with `/`.
                 rpath_name = f"@rpath/{os.path.basename(install_name)}"
@@ -271,7 +285,7 @@ def fix_apple_shared_install_name(conanfile):
                     command = f"install_name_tool {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
-    if is_apple_os(conanfile) and conanfile.options.get_safe("shared", False):
+    if is_apple_os(conanfile):
         substitutions = _fix_dylib_files(conanfile)
 
         # Only "fix" executables if dylib files were patched, otherwise

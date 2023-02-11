@@ -48,6 +48,10 @@ class _Remotes(object):
         if current:
             raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
                                  % new_remote.name)
+        for r in self._remotes:
+            if r.url == new_remote.url:
+                ConanOutput().warning(f"Remote url already existing in remote '{r.name}'."
+                                      " Adding duplicated remote URL.")
         if index:
             self._remotes.insert(index, new_remote)
         else:
