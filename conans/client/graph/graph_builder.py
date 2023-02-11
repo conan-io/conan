@@ -216,8 +216,8 @@ class DepsGraphBuilder(object):
     def _resolved_system_tool(node, require, profile_build, profile_host):
         if node.context == CONTEXT_HOST and not require.build:  # Only for tool_requires
             return
-        system_tool = profile_build.system_tool_requires if node.context == CONTEXT_BUILD \
-            else profile_host.system_tool_requires
+        system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
+            else profile_host.system_tools
         if system_tool:
             version_range = require.version_range
             for d in system_tool:

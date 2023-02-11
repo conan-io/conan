@@ -12,7 +12,7 @@ class TestToolRequires:
     def test_system_tool_require(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
-                     "profile": "[system_tool_requires]\ntool/1.0"})
+                     "profile": "[system_tools]\ntool/1.0"})
         client.run("create . -pr=profile")
         assert "tool/1.0 - System tool" in client.out
 
@@ -23,7 +23,7 @@ class TestToolRequires:
         client = TestClient()
         client.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
-                     "profile": "[system_tool_requires]\ntool/1.1"})
+                     "profile": "[system_tools]\ntool/1.1"})
         client.run("create tool")
         client.run("create . -pr=profile")
         assert "tool/1.0#60ed6e65eae112df86da7f6d790887fd - Cache" in client.out
@@ -31,7 +31,7 @@ class TestToolRequires:
     def test_system_tool_require_range(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/[>=1.0]"),
-                     "profile": "[system_tool_requires]\ntool/1.1"})
+                     "profile": "[system_tools]\ntool/1.1"})
         client.run("create . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
 
@@ -42,18 +42,18 @@ class TestToolRequires:
         client = TestClient()
         client.save({"tool/conanfile.py": GenConanfile("tool", "1.1"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/[>=1.0]"),
-                     "profile": "[system_tool_requires]\ntool/0.1"})
+                     "profile": "[system_tools]\ntool/0.1"})
         client.run("create tool")
         client.run("create . -pr=profile")
         assert "tool/1.1#888bda2348dd2ddcf5960d0af63b08f7 - Cache" in client.out
 
     def test_system_tool_require_no_host(self):
         """
-        system_tool_requires must not affect host context
+        system_tools must not affect host context
         """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("tool/1.0"),
-                     "profile": "[system_tool_requires]\ntool/1.0"})
+                     "profile": "[system_tools]\ntool/1.0"})
         client.run("create . -pr=profile", assert_error=True)
         assert "ERROR: Package 'tool/1.0' not resolved: No remote defined" in client.out
 
@@ -63,7 +63,7 @@ class TestToolRequires:
         """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/[>=1.0]"),
-                     "profile": "[system_tool_requires]\ntool/1.1"})
+                     "profile": "[system_tools]\ntool/1.1"})
         client.run("graph info . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
 
@@ -88,7 +88,7 @@ class TestGenerators:
                     deps.generate()
             """)
         client.save({"conanfile.py": conanfile,
-                     "profile": "[system_tool_requires]\ntool/1.1"})
+                     "profile": "[system_tools]\ntool/1.1"})
         client.run("install . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
         assert not os.path.exists(os.path.join(client.current_folder, "tool-config.cmake"))
@@ -108,7 +108,7 @@ class TestPackageID:
         client = TestClient()
         save(client.cache.new_config_path, f"core.package_id:default_build_mode={package_id_mode}")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
-                     "profile": "[system_tool_requires]\ndep/1.0"})
+                     "profile": "[system_tools]\ndep/1.0"})
         client.run("create . -pr=profile")
         assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 - System tool" in client.out
 
@@ -119,8 +119,8 @@ class TestPackageID:
         client = TestClient()
         save(client.cache.new_config_path, "core.package_id:default_build_mode=recipe_revision_mode")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
-                     "profile": "[system_tool_requires]\ndep/1.0#r1",
-                     "profile2": "[system_tool_requires]\ndep/1.0#r2"})
+                     "profile": "[system_tools]\ndep/1.0#r1",
+                     "profile2": "[system_tools]\ndep/1.0#r2"})
         client.run("create . -pr=profile")
         assert "dep/1.0#r1:da39a3ee5e6b4b0d3255bfef95601890afd80709 - System tool" in client.out
         assert "pkg/1.0#27a56f09310cf1237629bae4104fe5bd:" \

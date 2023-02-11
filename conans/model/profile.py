@@ -17,7 +17,7 @@ class Profile(object):
         self.package_settings = defaultdict(OrderedDict)
         self.options = Options()
         self.tool_requires = OrderedDict()  # ref pattern: list of ref
-        self.system_tool_requires = []
+        self.system_tools = []
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
         self.runenv = ProfileEnvironment()
@@ -72,9 +72,9 @@ class Profile(object):
             for pattern, req_list in self.tool_requires.items():
                 result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
 
-        if self.system_tool_requires:
-            result.append("[system_tool_requires]")
-            result.extend(str(t) for t in self.system_tool_requires)
+        if self.system_tools:
+            result.append("[system_tools]")
+            result.extend(str(t) for t in self.system_tools)
 
         if self.conf:
             result.append("[conf]")
@@ -113,7 +113,9 @@ class Profile(object):
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
 
-        self.system_tool_requires = self.system_tool_requires + other.system_tool_requires # FIXME repetitions
+        current_system_tools = {r.name: r for r in self.system_tools}
+        current_system_tools.update({r.name: r for r in other.system_tools})
+        self.system_tools = list(current_system_tools.values())
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
         self.runenv.update_profile_env(other.runenv)
