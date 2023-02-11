@@ -5,10 +5,9 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import mkdir, rmdir, save
+from conans.util.files import mkdir, save
 
 
 @pytest.fixture()
@@ -195,24 +194,6 @@ def test_install_with_path_errors(client):
     # Path with wrong conanfile.txt path
     client.run("install not_real_dir/conanfile.txt", assert_error=True)
     assert "Conanfile not found" in client.out
-
-
-@pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
-def test_install_broken_reference(client):
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
-    client.run("remote add_ref hello/0.1@lasote/stable default")
-    ref = RecipeReference.loads("hello/0.1@lasote/stable")
-    # Because the folder is removed, the metadata is removed and the
-    # origin remote is lost
-    rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
-    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
-
-    # If it was associated, it has to be desasociated
-    client.run("remote remove_ref hello/0.1@lasote/stable")
-    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
 
 
 @pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
