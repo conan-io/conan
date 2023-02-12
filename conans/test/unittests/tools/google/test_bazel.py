@@ -1,6 +1,6 @@
 import textwrap
 import os
-from conan.tools import CONAN_TOOLCHAIN_ARGS_SECTION, CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools.build import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.util.files import save, remove
 
 from conan.tools.google import Bazel

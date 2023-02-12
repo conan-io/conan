@@ -1,4 +1,0 @@
-CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
-CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"
-
-
