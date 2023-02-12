@@ -198,8 +198,8 @@ def test_profile_buildenv():
 
 
 @pytest.mark.parametrize("conf_name", [
-    "core.doesnotexist:never",
-    "core:doesnotexist"
+    "core.gzip:compresslevel=5",
+    "core.gzip:compresslevel"
 ])
 def test_profile_core_confs_error(conf_name):
     tmp = temp_folder()
