@@ -115,7 +115,7 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
     """
     # avoid re-wring it so the modified date doesn't change and does not affect build systems
     if only_if_modified and os.path.exists(path):
-        with open(path, "r", encoding=encoding) as f:
+        with open(path, "r", encoding=encoding, newline="") as f:
             old_content = f.read()
         if old_content == content:
             return
@@ -123,7 +123,7 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
     dir_path = os.path.dirname(path)
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
-    with open(path, "w", encoding=encoding) as handle:
+    with open(path, "w", encoding=encoding, newline="") as handle:
         handle.write(content)
 
 
@@ -134,7 +134,7 @@ def save_files(path, files, only_if_modified=False, encoding="utf-8"):
 
 def load(path, encoding="utf-8"):
     """ Loads a file content """
-    with open(path, 'r', encoding=encoding) as handle:
+    with open(path, 'r', encoding=encoding, newline="") as handle:
         tmp = handle.read()
     return tmp
 

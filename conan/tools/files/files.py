@@ -29,7 +29,7 @@ def load(conanfile, path, encoding="utf-8"):
     :param encoding: (Optional, Defaulted to ``utf-8``): Specifies the input file text encoding.
     :return: The contents of the file
     """
-    with open(path, "r", encoding=encoding) as handle:
+    with open(path, "r", encoding=encoding, newline="") as handle:
         tmp = handle.read()
         return tmp
 
@@ -49,7 +49,7 @@ def save(conanfile, path, content, append=False, encoding="utf-8"):
     dir_path = os.path.dirname(path)
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
-    with open(path, "a" if append else "w", encoding=encoding) as handle:
+    with open(path, "a" if append else "w", encoding=encoding, newline="") as handle:
         handle.write(content)
 
 
@@ -374,10 +374,13 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern, strip_root)
     if filename.endswith(".gz"):
-        with gzip.open(filename, 'rb') as f:
-            file_content = f.read()
         target_name = filename[:-3] if destination == "." else destination
-        save(conanfile, target_name, file_content)
+        target_dir = os.path.dirname(target_name)
+        if target_dir:
+            os.makedirs(target_dir, exist_ok=True)
+        with gzip.open(filename, 'rb') as fin:
+            with open(target_name, "wb") as fout:
+                shutil.copyfileobj(fin, fout)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         return untargz(filename, destination, pattern, strip_root)
