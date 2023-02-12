@@ -1,4 +1,3 @@
-import configparser
 import gzip
 import os
 import platform
@@ -12,7 +11,6 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
@@ -288,51 +286,6 @@ def rename(conanfile, src, dst):
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
-def load_toolchain_args(generators_folder=None, namespace=None):
-    """
-    Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
-
-    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
-    :param namespace: `str` namespace to be prepended to the filename.
-    :return: <class 'configparser.SectionProxy'>
-    """
-    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
-        else CONAN_TOOLCHAIN_ARGS_FILE
-    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
-        else namespace_name
-    toolchain_config = configparser.ConfigParser()
-    toolchain_file = toolchain_config.read(args_file)
-    if not toolchain_file:
-        raise ConanException("The file %s does not exist. Please, make sure that it was not"
-                             " generated in another folder." % args_file)
-    try:
-        return toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION]
-    except KeyError:
-        raise ConanException("The primary section [%s] does not exist in the file %s. Please, add it"
-                             " as the default one of all your configuration variables." %
-                             (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
-
-
-def save_toolchain_args(content, generators_folder=None, namespace=None):
-    """
-    Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
-
-    :param content: `dict` all the information to be saved into the toolchain file.
-    :param namespace: `str` namespace to be prepended to the filename.
-    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
-    """
-    # Let's prune None values
-    content_ = {k: v for k, v in content.items() if v is not None}
-    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
-        else CONAN_TOOLCHAIN_ARGS_FILE
-    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
-        else namespace_name
-    toolchain_config = configparser.ConfigParser()
-    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
-    with open(args_file, "w") as f:
-        toolchain_config.write(f)
-
-
 @contextmanager
 def chdir(conanfile, newdir):
     """
@@ -585,7 +538,7 @@ def collect_libs(conanfile, folder=None):
     name **math**.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param folder (Optional, Defaulted to ``None``): String indicating the subfolder name inside
+    :param folder: (Optional, Defaulted to ``None``): String indicating the subfolder name inside
            ``conanfile.package_folder`` where the library files are.
     :return: A list with the library names
     """
