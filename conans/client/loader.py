@@ -1,5 +1,6 @@
 import fnmatch
-import imp
+from importlib.machinery import SourceFileLoader
+from importlib.util import spec_from_loader, module_from_spec
 import inspect
 import os
 import re
@@ -439,8 +440,10 @@ def _parse_conanfile(conan_file_path):
             old_dont_write_bytecode = sys.dont_write_bytecode
             try:
                 sys.dont_write_bytecode = True
-                # FIXME: imp is deprecated in favour of implib
-                loaded = imp.load_source(module_id, conan_file_path)
+                loader = SourceFileLoader(module_id, conan_file_path)
+                spec = spec_from_loader(loader.name, loader)
+                loaded = module_from_spec(spec)
+                loader.exec_module(loaded)
                 sys.dont_write_bytecode = old_dont_write_bytecode
             except ImportError:
                 version_txt = _get_required_conan_version_without_loading(conan_file_path)
