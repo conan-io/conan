@@ -1,5 +1,4 @@
 import os
-import pytest
 
 from conan.tools.scm import Git
 from conans.tools import chdir
@@ -7,7 +6,6 @@ from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="This test is failing if the environment has other than master as default branch", strict=True)
 def test_change_branch_in_root_commit():
     """
     https://github.com/conan-io/conan/issues/10971#issuecomment-1089316912
@@ -16,6 +14,7 @@ def test_change_branch_in_root_commit():
     conanfile = MockConanfile({})
     c.save({"root.txt": "", "subfolder/subfolder.txt": ""})
     c.run_command("git init .")
+    c.run_command("git checkout -B master")
     c.run_command('git config user.name myname')
     c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
