@@ -12,7 +12,7 @@ from conans.util.files import save
 @conan_command(group="Creator")
 def new(conan_api, parser, *args):
     """
-    Create a new recipe (with conanfile.py and other files) from either a predefined or a user-defined template
+    Create a new example recipe and source files from a template.
     """
     parser.add_argument("template", help="Template name, "
                         "either a predefined built-in or a user-provided one. "

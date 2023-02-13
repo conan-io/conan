@@ -13,7 +13,7 @@ from conans.client.conanfile.build import run_build_method
 @conan_command(group='Creator')
 def build(conan_api, parser, *args):
     """
-    Install + calls the build() method
+    Install dependencies and calls the build() method
     """
     parser.add_argument("path", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py "
