@@ -199,7 +199,8 @@ class RestApiTest(unittest.TestCase):
     def _upload_package(self, package_reference, base_files=None):
 
         files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
-                 "hello.cpp": "hello"}
+                 "hello.cpp": "hello",
+                 "conanmanifest.txt": ""}
         if base_files:
             files.update(base_files)
 
