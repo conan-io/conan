@@ -254,13 +254,7 @@ class RemoteTest(unittest.TestCase):
                       self.client.out)
 
         self.client.run("remote list")
-        url = str(self.client.out).split()[1]
-        self.client.run("remote add newname %s" % url)
-        # If you write the same URL, up to you
-        self.client.run("remote update remote1 --url %s" % url)
-
-        remote1 = self.client.api.remotes.get("remote1")
-        assert remote1.url == url
+        assert "otherurl" not in self.client.out
 
     def test_missing_subarguments(self):
         self.client.run("remote", assert_error=True)
@@ -285,9 +279,12 @@ def test_duplicated_url():
     """
     c = TestClient()
     c.run("remote add remote1 http://url")
-    c.run("remote add remote2 http://url")
-    assert "WARN: Remote url already existing in remote 'remote1'. " \
-           "Adding duplicated remote URL" in c.out
+    c.run("remote add remote2 http://url", assert_error=True)
+    assert "ERROR: Remote url already existing in remote 'remote1'" in c.out
     c.run("remote list")
     assert "remote1" in c.out
-    assert "remote2" in c.out
+    assert "remote2" not in c.out
+    c.run("remote add remote2 http://url --force")
+    assert "WARN: Remote url already existing in remote 'remote1'." in c.out
+    assert "remote1" in c.out
+    assert "remote2" not in c.out

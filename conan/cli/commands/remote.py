@@ -70,10 +70,12 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Allow insecure server connections when using SSL")
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
+    subparser.add_argument("-f", "--force", action='store_true',
+                           help="Force the definition of the remote even if duplicated")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
     r = Remote(args.name, args.url, args.secure, disabled=False)
-    conan_api.remotes.add(r)
+    conan_api.remotes.add(r, force=args.force)
     if args.index is not None:
         conan_api.remotes.move(r, args.index)
 
