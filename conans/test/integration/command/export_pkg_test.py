@@ -566,5 +566,9 @@ def test_export_pkg_test_package():
             "test_package/conanfile.py": test_conanfile})
 
     c.run("export-pkg . ")
-    print(c.out)
+    assert "test_package" in c.out
     assert "RUN TEST PACKAGE!!!!" in c.out
+
+    c.run('export-pkg . -tf=""')
+    assert "test_package" not in c.out
+    assert "RUN TEST" not in c.out
