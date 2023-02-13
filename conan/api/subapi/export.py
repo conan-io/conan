@@ -2,8 +2,6 @@ from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.graph import BINARY_INVALID
-from conans.errors import ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 
 
@@ -29,10 +27,6 @@ class ExportAPI:
         ref = pkg_node.ref
         out = ConanOutput(scope=pkg_node.conanfile.display_name)
         out.info("Exporting binary from user folder to Conan cache")
-        if pkg_node.binary == BINARY_INVALID:
-            binary, reason = "Invalid", pkg_node.conanfile.info.invalid
-            msg = "{}: Invalid ID: {}: {}".format(ref, binary, reason)
-            raise ConanInvalidConfiguration(msg)
         conanfile = pkg_node.conanfile
 
         package_id = pkg_node.package_id
