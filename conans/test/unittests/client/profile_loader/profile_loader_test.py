@@ -209,5 +209,5 @@ def test_profile_core_confs_error(conf_name):
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
 
     with pytest.raises(ConanException) as exc:
-        profile_loader.from_cli_args([], [], [], [], [conf_name], None)
+        profile_loader.from_cli_args([], [], [], [conf_name], None)
     assert "[conf] 'core.*' configurations are not allowed in profiles" in str(exc.value)
