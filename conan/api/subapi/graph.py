@@ -198,11 +198,13 @@ class GraphAPI:
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 
-    def analyze_binaries(self, graph, build_mode=None, remotes=None, update=None, lockfile=None):
+    def analyze_binaries(self, graph, build_mode=None, test_build_mode=None,
+                         remotes=None, update=None, lockfile=None):
         """ Given a dependency graph, will compute the package_ids of all recipes in the graph, and
         evaluate if they should be built from sources, downloaded from a remote server, of if the
         packages are already in the local Conan cache
 
+        :param test_build_mode:
         :param lockfile:
         :param graph: a Conan dependency graph, as returned by "load_graph()"
         :param build_mode: TODO: Discuss if this should be a BuildMode object or list of arguments
@@ -213,7 +215,8 @@ class GraphAPI:
         ConanOutput().title("Computing necessary packages")
         conan_app = ConanApp(self.conan_api.cache_folder)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
-        binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update)
+        binaries_analyzer.evaluate_graph(graph, build_mode, test_build_mode, lockfile, remotes,
+                                         update)
 
     def load_conanfile_class(self, path):
         """ Given a path to a conanfile.py file, it loads its class (not instance) to allow

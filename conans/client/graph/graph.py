@@ -55,6 +55,7 @@ class Node(object):
         self.binary_remote = None
         self.context = context
         self.test = test
+        self.test_package = False  # True if it is a test_package only package
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
