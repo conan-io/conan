@@ -295,13 +295,17 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, test_build_mode, lockfile, remotes, update):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
         self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
-        main_build_mode = BuildMode(build_mode)
-        test_build_mode = BuildMode(test_build_mode)
+        test_package = deps_graph.root.conanfile.tested_reference_str is not None
+        if test_package:
+            main_mode = BuildMode(["never"])
+            test_mode = BuildMode(build_mode)
+        else:
+            main_mode = test_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
-            build_mode = test_build_mode if node.test_package else main_build_mode
+            build_mode = test_mode if node.test_package else main_mode
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc

@@ -32,8 +32,6 @@ def create(conan_api, parser, *args):
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
-    parser.add_argument("-tb", "--test-build", action="append",
-                        help="--build argument for test_package")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -65,9 +63,6 @@ def create(conan_api, parser, *args):
     out.info("Profile build:")
     out.info(profile_build.dumps())
 
-    # Not specified, force build the tested library
-    build_modes = [ref.repr_notime()] if args.build is None else args.build
-
     deps_graph = None
     if not is_python_require:
         # TODO: This section might be overlapping with ``graph_compute()``
@@ -83,6 +78,8 @@ def create(conan_api, parser, *args):
         deps_graph.report_graph_error()
 
         out.title("Computing necessary packages")
+        # Not specified, force build the tested library
+        build_modes = [ref.repr_notime()] if args.build is None else args.build
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)
@@ -95,13 +92,11 @@ def create(conan_api, parser, *args):
 
     if test_conanfile_path:
         # TODO: We need arguments for:
-        #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
         tested_python_requires = ref.repr_notime() if is_python_require else None
         from conan.cli.commands.test import run_test
         deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
-                              remotes, lockfile, update=False, build_modes=build_modes,
-                              test_build_modes=args.test_build,
+                              remotes, lockfile, update=False, build_modes=args.build,
                               tested_python_requires=tested_python_requires)
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)

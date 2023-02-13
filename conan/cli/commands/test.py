@@ -18,8 +18,6 @@ def test(conan_api, parser, *args):
     parser.add_argument("reference", action=OnceArgument,
                         help='Provide a package reference to test')
     add_common_install_arguments(parser)
-    parser.add_argument("-tb", "--test-build", action="append",
-                        help="--build argument for test_package")
     add_lockfile_args(parser)
     args = parser.parse_args(*args)
 
@@ -41,14 +39,14 @@ def test(conan_api, parser, *args):
     out.info(profile_build.dumps())
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
-                          args.update, build_modes=args.build, test_build_modes=args.test_build)
+                          args.update, build_modes=args.build)
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.path.dirname(path))
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,
-             build_modes, test_build_modes, tested_python_requires=None):
+             build_modes, tested_python_requires=None):
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
                                                          profile_host, profile_build,
                                                          remotes=remotes,
@@ -67,8 +65,8 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
     print_graph_basic(deps_graph)
     out.title("test_package: Computing necessary packages")
     deps_graph.report_graph_error()
-    conan_api.graph.analyze_binaries(deps_graph, build_modes, test_build_modes, remotes=remotes,
-                                     update=update, lockfile=lockfile)
+    conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=update,
+                                     lockfile=lockfile)
     print_graph_packages(deps_graph)
 
     out.title("test_package: Installing packages")
