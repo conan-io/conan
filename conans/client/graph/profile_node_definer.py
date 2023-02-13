@@ -59,6 +59,7 @@ def _initialize_conanfile(conanfile, profile, ref):
         raise ConanException("The recipe %s is constraining settings. %s" % (
             conanfile.display_name, str(e)))
     conanfile.settings = tmp_settings
+    conanfile.settings._frozen = True
     conanfile._conan_buildenv = profile.buildenv
     conanfile._conan_runenv = profile.runenv
     conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
@@ -76,6 +77,7 @@ def consumer_definer(conanfile, profile_host):
             tmp_settings.update_values(settings)
 
     conanfile.settings = tmp_settings
+    conanfile.settings._frozen = True
     conanfile._conan_buildenv = profile_host.buildenv
     conanfile._conan_runenv = profile_host.runenv
     conanfile.conf = profile_host.conf.get_conanfile_conf(None, is_consumer=True)
