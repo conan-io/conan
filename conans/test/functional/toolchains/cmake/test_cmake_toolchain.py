@@ -744,14 +744,14 @@ def test_cmake_presets_options_single_config():
 
     for shared in (True, False):
         client.run("install . {} -o shared={}".format(conf_layout, shared))
-        shared_str = "shared_true" if shared else "shared_false"
+        shared_str = "shared" if shared else "static"
         assert os.path.exists(os.path.join(client.current_folder,
                                            "build", "{}-release-{}".format(default_compiler, shared_str),
                                            "generators"))
 
     client.run("install . {}".format(conf_layout))
     assert os.path.exists(os.path.join(client.current_folder,
-                                       "build", "{}-release-shared_false".format(default_compiler),
+                                       "build", "{}-release-static".format(default_compiler),
                                        "generators"))
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
@@ -760,7 +760,7 @@ def test_cmake_presets_options_single_config():
     # We can build with cmake manually
     if platform.system() == "Darwin":
         for shared in (True, False):
-            shared_str = "shared_true" if shared else "shared_false"
+            shared_str = "shared" if shared else "static"
             client.run_command("cmake . --preset conan-apple-clang-release-{}".format(shared_str))
             client.run_command("cmake --build --preset conan-apple-clang-release-{}".format(shared_str))
             client.run_command("ctest --preset conan-apple-clang-release-{}".format(shared_str))
