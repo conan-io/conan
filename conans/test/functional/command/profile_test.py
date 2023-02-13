@@ -60,8 +60,7 @@ class TestProfile(unittest.TestCase):
             [options]
             MyOption=32
             [conf]
-            tools.ninja:jobs=10
-            tools.gnu.make:jobs=20
+            tools.build:jobs=20
             """)
         save(os.path.join(client.cache.profiles_path, "profile1"), profile1)
 
@@ -71,8 +70,7 @@ class TestProfile(unittest.TestCase):
         # self.assertIn("CC=/path/tomy/gcc_build", client.out)
         # self.assertIn("CXX=/path/tomy/g++_build", client.out)
         # self.assertIn("package:VAR=value", client.out)
-        self.assertIn("tools.ninja:jobs=10", client.out)
-        self.assertIn("tools.gnu.make:jobs=20", client.out)
+        self.assertIn("tools.build:jobs=20", client.out)
 
     def test_missing_subarguments(self):
         client = TestClient()
