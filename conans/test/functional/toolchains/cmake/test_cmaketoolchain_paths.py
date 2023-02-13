@@ -147,7 +147,7 @@ def test_cmaketoolchain_path_find_package_editable():
                  "consumer/CMakeLists.txt": consumer})
     with client.chdir("dep"):
         client.run("install .")
-        client.run("editable add . hello/0.1@")
+        client.run("editable add . --name=hello --version=0.1")
 
     with client.chdir("consumer"):
         client.run("install .")

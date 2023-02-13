@@ -564,7 +564,7 @@ def test_with_editable_layout():
                  "dep/include/header.h": "",
                  "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
     client.run("create dep")
-    client.run("editable add dep dep/0.1")
+    client.run("editable add dep")
     with client.chdir("pkg"):
         client.run("install . -g PkgConfigDeps")
         pc = client.load("dep.pc")

@@ -191,7 +191,7 @@ class RecipeFolderTest(unittest.TestCase):
                      "pkg/file.txt": "MYFILE!",
                      "consumer/conanfile.py":
                          GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("editable add pkg pkg/0.1@user/stable")
+        client.run("editable add pkg --name=pkg --version=0.1 --user=user --channel=stable")
 
         client.run("install consumer")
         client.assert_listed_require({"pkg/0.1@user/stable": "Editable"})

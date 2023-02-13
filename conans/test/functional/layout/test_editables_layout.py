@@ -95,7 +95,7 @@ def test_cpp_info_editable():
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . --name=lib --version=1.0")
@@ -236,7 +236,7 @@ def test_cpp_info_components_editable():
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . --name=lib --version=1.0")
@@ -284,6 +284,6 @@ def test_editable_package_folder():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-    c.run("editable add . pkg/0.1")
+    c.run("editable add .")
     c.run("install --requires=pkg/0.1@")
     assert "pkg/0.1: PKG FOLDER=None!!!"

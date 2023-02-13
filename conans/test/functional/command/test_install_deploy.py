@@ -191,7 +191,7 @@ def test_deploy_editable():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
             "src/include/hi.h": "hi"})
-    c.run("editable add . pkg/1.0")
+    c.run("editable add .")
 
     # If we don't change to another folder, the full_deploy will be recursive and fail
     with c.chdir(temp_folder()):
