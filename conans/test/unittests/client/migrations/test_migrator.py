@@ -25,4 +25,4 @@ class TestMigratorPermissionTest:
         migrator = FakeMigrator(conf_path, "latest")
         with pytest.raises(ConanMigrationError) as error:
             migrator.migrate()
-        assert f"Can't write version file in '{conf_path}/version.txt'" in str(error)
+        assert f"Can't write version file in '{conf_path}/version.txt'" in str(error.value)
