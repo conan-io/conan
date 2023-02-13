@@ -54,6 +54,7 @@ class Folders(object):
         # conanfile.py, that makes most of the output folders defined in layouts (cmake_layout, etc)
         # start from the subproject again
         self.subproject = None
+        self.build_folder_vars = None
 
     def __repr__(self):
         return str(self.__dict__)
