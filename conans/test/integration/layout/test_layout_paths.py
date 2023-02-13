@@ -25,7 +25,7 @@ def test_editable_layout_paths():
                                                           .with_generator("CMakeDeps")
                                                           .with_generator("PkgConfigDeps")
                                                           .with_generator("XcodeDeps")})
-    c.run("editable add dep dep/0.1")
+    c.run("editable add dep")
     c.run("install pkg -s arch=x86_64")
     # It doesn't crash anymore
 

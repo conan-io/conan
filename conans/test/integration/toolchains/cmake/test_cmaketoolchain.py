@@ -9,7 +9,7 @@ from mock import mock
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conans.util.files import rmdir, load
 
 
 def test_cross_build():
@@ -957,7 +957,6 @@ def test_test_package_layout():
         class Conan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeToolchain"
-            test_type = "explicit"
 
             def requirements(self):
                 self.requires(self.tested_reference_str)
@@ -982,27 +981,69 @@ def test_test_package_layout():
 
 def test_presets_not_found_error_msg():
     client = TestClient()
-    test_conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import cmake_layout, CMake
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
             settings = "build_type"
-            generators = "CMakeDeps"
-            test_type = "explicit"
-
-            def requirements(self):
-                self.requires(self.tested_reference_str)
 
             def build(self):
                 CMake(self).configure()
-
-            def test(self):
-                pass
     """)
-    client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
-                 "test_package/conanfile.py": test_conanfile})
-    client.run("create .", assert_error=True)
+    client.save({"conanfile.py": conanfile})
+    client.run("build .", assert_error=True)
     assert "CMakePresets.json was not found" in client.out
     assert "Check that you are using CMakeToolchain as generator " \
            "to ensure its correct initialization." in client.out
+
+
+def test_recipe_build_folders_vars():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            options = {"shared": [True, False]}
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.build_folder_vars = ["settings.os", "options.shared"]
+                cmake_layout(self)
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True")
+    presets = client.load("build/windows-shared/Debug/generators/CMakePresets.json")
+    assert "conan-windows-shared-debug" in presets
+    client.run("install . -s os=Linux -s arch=x86 -s build_type=Release -o shared=False")
+    presets = client.load("build/linux-static/Release/generators/CMakePresets.json")
+    assert "linux-static-release" in presets
+
+    # CLI override has priority
+    client.run("install . -s os=Linux -s arch=x86 -s build_type=Release -o shared=False "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    presets = client.load("build/linux/Release/generators/CMakePresets.json")
+    assert "conan-linux-release" in presets
+
+    # Now we do the build in the cache, the recipe folders are still used
+    client.run("create . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True")
+    ref = client.created_package_reference("pkg/0.1")
+    layout = client.get_latest_pkg_layout(ref)
+    build_folder = layout.build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-shared/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-shared-debug" in presets
+
+    # If we change the conf ``build_folder_vars``, it doesn't affect the cache build
+    client.run("create . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    ref = client.created_package_reference("pkg/0.1")
+    layout = client.get_latest_pkg_layout(ref)
+    build_folder = layout.build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-shared/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-shared-debug" in presets

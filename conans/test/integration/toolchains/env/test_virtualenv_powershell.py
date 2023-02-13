@@ -26,8 +26,7 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    save(client.cache.new_config_path, "tools.env.virtualenv:powershell=True\n"
-                                       "tools.env.virtualenv:auto_use=True\n")
+    save(client.cache.new_config_path, "tools.env.virtualenv:powershell=True\n")
     return client
 
 
