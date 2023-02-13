@@ -6,10 +6,7 @@ import textwrap
 import unittest
 from textwrap import dedent
 
-import pytest
-
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load
@@ -25,18 +22,6 @@ class ExportPkgTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("install .")
         client.run("export-pkg . --user=lasote --channel=stable ")
-
-    @pytest.mark.xfail(reason="Build-requires are expanded now, so this is expected to fail atm")
-    def test_dont_touch_server_build_require(self):
-        client = TestClient(servers={"default": None},
-                            requester_class=None, inputs=["admin", "password"])
-        profile = dedent("""
-            [tool_requires]
-            some/other@pkg/notexists
-            """)
-        client.save({"conanfile.py": GenConanfile(),
-                     "myprofile": profile})
-        client.run("export-pkg . --name=pkg --version=0.1 --user=user --channel=testing -pr=myprofile")
 
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
@@ -72,29 +57,30 @@ class PkgA(ConanFile):
         self.assertIn("conanfile.py (hello/0.1@lasote/stable) package(): "
                       "WARN: No files in this package!", client.out)
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
-        conanfile = """from conan import ConanFile
-class helloPythonConan(ConanFile):
-    name = "hello"
-    options = { "optionOne": [True, False, 123] }
-    default_options = "optionOne=True"
-"""
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Hello(ConanFile):
+                name = "hello"
+                version = "0.1"
+                options = { "optionOne": [True, False, 123] }
+                default_options =  {"optionOne": True}
+            """)
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
-        client.run("search hello/0.1@lasote/stable")
+        client.run("export-pkg .")
+        client.run("list hello/0.1:*")
         self.assertIn("optionOne: True", client.out)
         self.assertNotIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o optionOne=False")
-        client.run("search hello/0.1@lasote/stable")
+        client.run("export-pkg . -o optionOne=False")
+        client.run("list hello/0.1:*")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertNotIn("optionOne: 123", client.out)
-        client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable -o hello/*:optionOne=123")
-        client.run("search hello/0.1@lasote/stable")
+        client.run("export-pkg . -o hello/*:optionOne=123")
+        client.run("list hello/0.1:*")
         self.assertIn("optionOne: True", client.out)
         self.assertIn("optionOne: False", client.out)
         self.assertIn("optionOne: 123", client.out)
@@ -122,17 +108,6 @@ class helloPythonConan(ConanFile):
                    " -pr=myprofile")
         self.assertIn("conanfile.py (hello/0.1@lasote/stable): ENV-VALUE: MYCUSTOMVALUE!!!",
                       client.out)
-
-    def _consume(self, client, install_args):
-        consumer = """
-from conan import ConanFile
-class TestConan(ConanFile):
-    requires = "hello/0.1@lasote/stable"
-    settings = "os", "build_type"
-"""
-        client.save({CONANFILE: consumer}, clean_first=True)
-        client.run("install %s" % install_args)
-        self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
 
     def test_build_folders(self):
         client = TestClient()
@@ -320,107 +295,14 @@ class TestConan(ConanFile):
         cmakeinfo = client.load("hello1-release-data.cmake")
         self.assertIn("set(hello1_LIBS_RELEASE mycoollib)", cmakeinfo)
 
-    @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
     def test_export_pkg_json(self):
-
-        def _check_json_output_no_folder():
-            json_path = os.path.join(self.client.current_folder, "output.json")
-            self.assertTrue(os.path.exists(json_path))
-            json_content = load(json_path)
-            output = json.loads(json_content)
-            self.assertEqual(True, output["error"])
-            self.assertEqual([], output["installed"])
-            self.assertEqual(2, len(output))
-
-        def _check_json_output(with_error=False):
-            json_path = os.path.join(self.client.current_folder, "output.json")
-            self.assertTrue(os.path.exists(json_path))
-            json_content = load(json_path)
-            output = json.loads(json_content)
-            self.assertEqual(output["error"], with_error)
-            tmp = RecipeReference.loads(output["installed"][0]["recipe"]["id"])
-            self.assertIsNotNone(tmp.revision)
-            self.assertEqual(str(tmp), "mypackage/0.1.0@danimtb/testing")
-            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
-            self.assertTrue(output["installed"][0]["recipe"]["exported"])
-            if with_error:
-                self.assertEqual(output["installed"][0]["packages"], [])
-            else:
-                self.assertEqual(output["installed"][0]["packages"][0]["id"],
-                                 NO_SETTINGS_PACKAGE_ID)
-                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
-
-        conanfile = """from conan import ConanFile
-class MyConan(ConanFile):
-    name = "mypackage"
-    version = "0.1.0"
-"""
-        self.client = TestClient()
-        self.client.save({"conanfile.py": conanfile})
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
 
         # Wrong folders
-        self.client.run("export-pkg . danimtb/testing -bf build -sf sources "
-                        "--json output.json", assert_error=True)
-
-        _check_json_output_no_folder()
-
-        # Deafult folders
-        self.client.run("export-pkg . danimtb/testing --json output.json --force")
-        _check_json_output()
-
-        # Without package_folder
-        self.client.save({"sources/kk.cpp": "", "build/kk.lib": ""})
-        self.client.run("export-pkg . danimtb/testing -bf build -sf sources --json output.json "
-                        "--force")
-        _check_json_output()
-
-        # With package_folder
-        self.client.save({"package/kk.lib": ""})
-        self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
-        _check_json_output()
-
-    @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
-    def test_json_with_dependencies(self):
-
-        def _check_json_output(with_error=False):
-            json_path = os.path.join(self.client.current_folder, "output.json")
-            self.assertTrue(os.path.exists(json_path))
-            json_content = load(json_path)
-            output = json.loads(json_content)
-            self.assertEqual(output["error"], with_error)
-            tmp = RecipeReference.loads(output["installed"][0]["recipe"]["id"])
-            self.assertIsNotNone(tmp.revision)
-            self.assertEqual(str(tmp), "pkg2/1.0@danimtb/testing")
-            self.assertFalse(output["installed"][0]["recipe"]["dependency"])
-            self.assertTrue(output["installed"][0]["recipe"]["exported"])
-            if with_error:
-                self.assertEqual(output["installed"][0]["packages"], [])
-            else:
-                self.assertEqual(output["installed"][0]["packages"][0]["id"],
-                                 "41e2f19ba15c770149de4cefcf9dd1d1f6ee19ce")
-                self.assertTrue(output["installed"][0]["packages"][0]["exported"])
-                tmp = RecipeReference.loads(output["installed"][1]["recipe"]["id"])
-                self.assertIsNotNone(tmp.revision)
-                self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
-                self.assertTrue(output["installed"][1]["recipe"]["dependency"])
-
-        conanfile = """from conan import ConanFile
-class MyConan(ConanFile):
-    pass
-"""
-        self.client = TestClient()
-        self.client.save({"conanfile_dep.py": conanfile,
-                          "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
-        self.client.run("export conanfile_dep.py --name=pkg1 --version=1.0 --user=danimtb --channel=testing")
-        self.client.run("export-pkg conanfile.py --name=pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json")
-        _check_json_output()
-
-        # Error on missing dependency
-        self.client.run("remove pkg1/1.0@danimtb/testing --confirm")
-        self.client.run("remove pkg2/1.0@danimtb/testing --confirm")
-        self.client.run("export-pkg conanfile.py --name=pkg2 --version=1.0 --user=danimtb --channel=testing --json output.json",
-                        assert_error=True)
-        _check_json_output(with_error=True)
+        client.run("export-pkg . --format=json", redirect_stdout="file.json")
+        graph = json.loads(client.load("file.json"))
+        assert "pkg/0.1" in graph["graph"]["nodes"][0]["ref"]
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
@@ -666,3 +548,23 @@ def test_export_pkg_output_folder():
     c.run("export-pkg . -of=mytmp")
     assert "Copied 1 '.txt' file: myfile.txt" in c.out
     assert os.path.exists(os.path.join(c.current_folder, "mytmp", "myfile.txt"))
+
+
+def test_export_pkg_test_package():
+    """ If tthere is a test_package, run it
+    """
+    c = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Test(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                self.output.info("RUN TEST PACKAGE!!!!")
+            """)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+            "test_package/conanfile.py": test_conanfile})
+
+    c.run("export-pkg . ")
+    print(c.out)
+    assert "RUN TEST PACKAGE!!!!" in c.out
