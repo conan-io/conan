@@ -669,10 +669,14 @@ class TestClient(object):
         prev = self.cache.get_package_revisions_references(pref)
         return True if prev else False
 
-    def assert_listed_require(self, requires, build=False, python=False, test=False):
+    def assert_listed_require(self, requires, build=False, python=False, test=False,
+                              test_package=False):
         """ parses the current command output, and extract the first "Requirements" section
         """
         lines = self.out.splitlines()
+        if test_package:
+            line_req = lines.index("-------- test_package: Computing dependency graph --------")
+            lines = lines[line_req:]
         header = "Requirements" if not build else "Build requirements"
         if python:
             header = "Python requires"
@@ -691,11 +695,14 @@ class TestClient(object):
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
-    def assert_listed_binary(self, requires, build=False, test=False):
+    def assert_listed_binary(self, requires, build=False, test=False, test_package=False):
         """ parses the current command output, and extract the second "Requirements" section
         belonging to the computed package binaries
         """
         lines = self.out.splitlines()
+        if test_package:
+            line_req = lines.index("-------- test_package: Computing dependency graph --------")
+            lines = lines[line_req:]
         line_req = lines.index("-------- Computing necessary packages --------")
         header = "Requirements" if not build else "Build requirements"
         if test:

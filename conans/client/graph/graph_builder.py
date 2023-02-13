@@ -274,6 +274,9 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _compute_test_package_deps(graph):
+        """ compute and tag the graph nodes that belong exclusively to test_package
+        dependencies but not the main graph
+        """
         root_node = graph.root
         tested_ref = root_node.conanfile.tested_reference_str
         if tested_ref is None:
@@ -282,12 +285,12 @@ class DepsGraphBuilder(object):
         tested_ref = str(tested_ref)
         # We classify direct dependencies in the "tested" main ones and the "test_package" specific
         direct_nodes = [n.node for n in root_node.transitive_deps.values() if n.require.direct]
-        tested_nodes = [n for n in direct_nodes if tested_ref == str(n.ref)]
+        main_nodes = [n for n in direct_nodes if tested_ref == str(n.ref)]
         test_package_nodes = [n for n in direct_nodes if tested_ref != str(n.ref)]
 
         # Accumulate the transitive dependencies of the 2 subgraphs ("main", and "test_package")
-        main_graph_nodes = set(tested_nodes)
-        for n in tested_nodes:
+        main_graph_nodes = set(main_nodes)
+        for n in main_nodes:
             main_graph_nodes.update(t.node for t in n.transitive_deps.values())
         test_graph_nodes = set(test_package_nodes)
         for n in test_package_nodes:
