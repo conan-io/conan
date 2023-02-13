@@ -285,9 +285,12 @@ def test_duplicated_url():
     """
     c = TestClient()
     c.run("remote add remote1 http://url")
-    c.run("remote add remote2 http://url")
-    assert "WARN: Remote url already existing in remote 'remote1'. " \
-           "Adding duplicated remote URL" in c.out
+    c.run("remote add remote2 http://url", assert_error=True)
+    assert "ERROR: Remote url already existing in remote 'remote1'" in c.out
     c.run("remote list")
     assert "remote1" in c.out
-    assert "remote2" in c.out
+    assert "remote2" not in c.out
+    c.run("remote add remote2 http://url --force")
+    assert "WARN: Remote url already existing in remote 'remote1'." in c.out
+    assert "remote1" in c.out
+    assert "remote2" not in c.out
