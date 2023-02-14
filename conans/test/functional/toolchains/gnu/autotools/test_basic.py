@@ -12,7 +12,6 @@ from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run, check_vs_runtime
 from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import touch
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
@@ -112,7 +111,7 @@ def build_windows_subsystem(profile, make_program, subsystem):
                                              includes=["hello"], calls=["hello"])})
     # Make sure it is newer
     t = time.time() + 1
-    touch(os.path.join(client.current_folder, "app.cpp"), (t, t))
+    os.utime(os.path.join(client.current_folder, "app.cpp"), (t, t))
 
     client.run("build . --profile=profile")
     client.run_command("app")

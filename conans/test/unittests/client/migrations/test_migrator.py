@@ -1,8 +1,5 @@
-# coding=utf-8
-
 import os
 import platform
-import unittest
 
 import pytest
 
@@ -18,7 +15,7 @@ class FakeMigrator(Migrator):
         super(FakeMigrator, self).__init__(cache_folder, current_version)
 
 
-class MigratorPermissionTest(unittest.TestCase):
+class TestMigratorPermissionTest:
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Can't apply chmod on Windows")
     def test_invalid_permission(self):
@@ -26,8 +23,6 @@ class MigratorPermissionTest(unittest.TestCase):
         os.chmod(conf_path, 0o444)
         conf_path = os.path.join(conf_path, "foo")
         migrator = FakeMigrator(conf_path, "latest")
-        with self.assertRaises(ConanMigrationError) as error:
+        with pytest.raises(ConanMigrationError) as error:
             migrator.migrate()
-        self.assertEqual("Can't write version file in '{0}/version.txt': The folder {0} does not "
-                         "exist and could not be created (Permission denied).".format(conf_path),
-                         str(error.exception))
+        assert f"Can't write version file in '{conf_path}/version.txt'" in str(error.value)

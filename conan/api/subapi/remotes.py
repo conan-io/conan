@@ -59,9 +59,9 @@ class RemotesAPI:
         app = ConanApp(self.conan_api.cache_folder)
         return app.cache.remotes_registry.read(remote_name)
 
-    def add(self, remote: Remote):
+    def add(self, remote: Remote, force=False):
         app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.add(remote)
+        app.cache.remotes_registry.add(remote, force=force)
 
     def remove(self, remote_name):
         app = ConanApp(self.conan_api.cache_folder)

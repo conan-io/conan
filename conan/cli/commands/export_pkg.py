@@ -5,7 +5,6 @@ from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 from conan.cli.commands import make_abs_path
-from conans.errors import ConanInvalidConfiguration
 
 
 def json_export_pkg(info):
@@ -16,7 +15,7 @@ def json_export_pkg(info):
 @conan_command(group="Creator", formatters={"json": json_export_pkg})
 def export_pkg(conan_api, parser, *args):
     """
-    Export recipe to the Conan package cache, and create a package directly from pre-compiled binaries
+    Create a package directly from pre-compiled binaries
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
     parser.add_argument("-of", "--output-folder",
@@ -56,20 +55,8 @@ def export_pkg(conan_api, parser, *args):
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
     deps_graph.report_graph_error()
 
-    # FIXME: This code is duplicated from install_consumer() from InstallAPI
     root_node = deps_graph.root
     root_node.ref = ref
-    conanfile = root_node.conanfile
-
-    if conanfile.info is not None and conanfile.info.invalid:
-        binary, reason = "Invalid", conanfile.info.invalid
-        msg = "{}: Invalid ID: {}: {}".format(conanfile, binary, reason)
-        raise ConanInvalidConfiguration(msg)
-
-    if root_node.cant_build:
-        binary, reason = "Cannot build for this configuration", root_node.cant_build
-        msg = "{}: {}: {}".format(conanfile, binary, reason)
-        raise ConanInvalidConfiguration(msg)
 
     # It is necessary to install binaries, in case there are build_requires necessary to export
     # But they should be local, if this was built here

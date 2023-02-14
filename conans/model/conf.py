@@ -250,6 +250,13 @@ class Conf:
         """
         return other._values == self._values
 
+    def validate(self):
+        for conf in self._values:
+            if conf.startswith("tools") or conf.startswith("core"):
+                if conf not in BUILT_IN_CONFS:
+                    raise ConanException(f"Unknown conf '{conf}'. Use 'conan config list' to "
+                                         "display existing configurations")
+
     def items(self):
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
@@ -611,3 +618,7 @@ class ConfDefinition:
                 break
             else:
                 raise ConanException("Bad conf definition: {}".format(line))
+
+    def validate(self):
+        for conf in self._pattern_confs.values():
+            conf.validate()

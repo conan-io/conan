@@ -198,7 +198,7 @@ class TestEditables:
             """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": GenConanfile().with_require("pkg/0.1")})
-        c.run("editable add pkg pkg/0.1@")
+        c.run("editable add pkg --name=pkg --version=0.1")
         # TODO: Check this --package-filter with *
         c.run("graph info consumer --package-filter=pkg*")
         # FIXME: Paths are not diplayed yet

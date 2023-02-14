@@ -91,6 +91,8 @@ class DepsGraphBuilder(object):
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
+            # Keep previous "test" status only if current is also test
+            prev_node.test = prev_node.test and (node.test or require.test)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
@@ -250,7 +252,7 @@ class DepsGraphBuilder(object):
                                      require.build, new_ref)
 
         context = CONTEXT_BUILD if require.build else node.context
-        new_node = Node(new_ref, dep_conanfile, context=context, test=require.test)
+        new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
 

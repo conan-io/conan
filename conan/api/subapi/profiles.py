@@ -42,8 +42,9 @@ class ProfilesAPI:
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
         loader = ProfileLoader(self._cache)
-        env = None  # TODO: Not handling environment
-        profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
+        profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
+        profile.conf.validate()
+        self._cache.new_config.validate()
         # Apply the new_config to the profiles the global one, so recipes get it too
         profile.conf.rebase_conf_definition(self._cache.new_config)
         return profile
@@ -80,7 +81,8 @@ class ProfilesAPI:
         profiles.sort()
         return profiles
 
-    def detect(self):
+    @staticmethod
+    def detect():
         """
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """
