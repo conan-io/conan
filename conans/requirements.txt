@@ -6,7 +6,7 @@ patch-ng>=1.17.4, <1.18
 fasteners>=0.14.1
 six>=1.10.0,<=1.16.0
 node-semver==0.6.1
-distro>=1.0.2, <=1.7.0; sys_platform == 'linux' or sys_platform == 'linux2'
+distro>=1.0.2, <=1.8.0; sys_platform == 'linux' or sys_platform == 'linux2'
 pygments>=2.0, <3.0
 tqdm>=4.28.1, <5
 Jinja2>=2.9, <3.0.0;python_version<='2.7'
