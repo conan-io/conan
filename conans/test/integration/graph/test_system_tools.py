@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 
@@ -66,6 +67,28 @@ class TestToolRequires:
                      "profile": "[system_tools]\ntool/1.1"})
         client.run("graph info . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
+
+
+class TestToolRequiresLock:
+
+    def test_system_tool_require_range(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/[>=1.0]"),
+                "profile": "[system_tools]\ntool/1.1"})
+        c.run("lock create . -pr=profile")
+        assert "tool/1.1 - System tool" in c.out
+        lock = json.loads(c.load("conan.lock"))
+        assert lock["build_requires"] == ["tool/1.1"]
+
+        c.run("install .", assert_error=True)
+        assert "Package 'tool/1.1' not resolved: No remote defined" in c.out
+        c.run("install . -pr=profile")
+        assert "tool/1.1 - System tool" in c.out
+
+        # even if the profile points to another version the locked one will prevail
+        c.save({"profile": "[system_tools]\ntool/1.2"})
+        c.run("install . -pr=profile", assert_error=True)
+        assert "Package 'tool/1.1' not resolved: No remote defined" in c.out
 
 
 class TestGenerators:

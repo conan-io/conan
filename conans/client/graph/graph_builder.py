@@ -9,7 +9,6 @@ from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference, ref_matches
