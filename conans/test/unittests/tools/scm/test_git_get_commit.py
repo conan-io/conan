@@ -14,6 +14,7 @@ def test_change_branch_in_root_commit():
     conanfile = MockConanfile({})
     c.save({"root.txt": "", "subfolder/subfolder.txt": ""})
     c.run_command("git init .")
+    c.run_command("git checkout -B master")
     c.run_command('git config user.name myname')
     c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
