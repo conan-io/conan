@@ -35,28 +35,24 @@ def export_pkg(conan_api, parser, *args):
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
-    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
-                                               conanfile_path=path,
-                                               cwd=cwd,
-                                               partial=args.lockfile_partial)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
+                                               cwd=cwd, partial=args.lockfile_partial)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    ref, conanfile = conan_api.export.export(path=path,
-                                             name=args.name, version=args.version,
-                                             user=args.user, channel=args.channel,
-                                             lockfile=lockfile)
+    ref, conanfile = conan_api.export.export(path=path, name=args.name, version=args.version,
+                                             user=args.user, channel=args.channel, lockfile=lockfile)
     # The package_type is not fully processed at export
     assert conanfile.package_type != "python-require", "A python-require cannot be export-pkg"
-    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref)
+    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
+                                                         args.build_require)
 
     # TODO: Maybe we want to be able to export-pkg it as --build-require
     deps_graph = conan_api.graph.load_graph_consumer(path,
                                                      ref.name, ref.version, ref.user, ref.channel,
                                                      profile_host=profile_host,
                                                      profile_build=profile_build,
-                                                     lockfile=lockfile,
-                                                     remotes=None,
-                                                     update=None)
+                                                     lockfile=lockfile, remotes=None, update=None,
+                                                     is_build_require=args.build_require)
 
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)

@@ -551,7 +551,7 @@ def test_export_pkg_output_folder():
 
 
 def test_export_pkg_test_package():
-    """ If tthere is a test_package, run it
+    """ If there is a test_package, run it
     """
     c = TestClient()
     test_conanfile = textwrap.dedent("""
@@ -572,3 +572,25 @@ def test_export_pkg_test_package():
     c.run('export-pkg . -tf=""')
     assert "test_package" not in c.out
     assert "RUN TEST" not in c.out
+
+
+def test_export_pkg_test_package_build_require():
+    """ Test --build-require
+    """
+    c = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Test(ConanFile):
+            def build_requirements(self):
+                self.tool_requires(self.tested_reference_str)
+            def test(self):
+                self.output.info(f"RUN TEST PACKAGE!!!!")
+            """)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_setting("os"),
+            "test_package/conanfile.py": test_conanfile})
+
+    c.run("export-pkg . -s:b os=Windows -s:h os=Linux --build-require --lockfile-out=conan.lock")
+    assert "test_package" in c.out
+    assert "RUN TEST PACKAGE!!!!" in c.out
+    lock = json.loads(c.load("conan.lock"))
+    assert "pkg/1.0" in lock["build_requires"][0]
