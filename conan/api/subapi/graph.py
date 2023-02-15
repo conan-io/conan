@@ -21,7 +21,8 @@ class GraphAPI:
 
     def _load_root_consumer_conanfile(self, path, profile_host, profile_build,
                                       name=None, version=None, user=None, channel=None,
-                                      update=None, remotes=None, lockfile=None):
+                                      update=None, remotes=None, lockfile=None,
+                                      is_build_require=False):
         app = ConanApp(self.conan_api.cache_folder)
 
         if path.endswith(".py"):
@@ -36,7 +37,7 @@ class GraphAPI:
             ref = RecipeReference(conanfile.name, conanfile.version,
                                   conanfile.user, conanfile.channel)
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
-                                         False, ref)
+                                         is_build_require, ref)
             if ref.name:
                 profile_host.options.scope(ref)
             root_node = Node(ref, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER, path=path)
@@ -144,7 +145,7 @@ class GraphAPI:
 
     def load_graph_consumer(self, path, name, version, user, channel,
                             profile_host, profile_build, lockfile, remotes, update,
-                            allow_error=False, check_updates=False):
+                            allow_error=False, check_updates=False, is_build_require=False):
         out = ConanOutput()
         out.title("Input profiles")
         out.info("Profile host:")
@@ -155,7 +156,8 @@ class GraphAPI:
         root_node = self._load_root_consumer_conanfile(path, profile_host, profile_build,
                                                        name=name, version=version, user=user,
                                                        channel=channel, lockfile=lockfile,
-                                                       remotes=remotes, update=update)
+                                                       remotes=remotes, update=update,
+                                                       is_build_require=is_build_require)
 
         out.title("Computing dependency graph")
         deps_graph = self.load_graph(root_node, profile_host=profile_host,

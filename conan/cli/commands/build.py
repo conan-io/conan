@@ -20,6 +20,7 @@ def build(conan_api, parser, *args):
                              "or conanfile.txt) or to a recipe file. e.g., "
                              "./my_project/conanfile.txt.")
     add_reference_args(parser)
+    # TODO: Missing --build-require argument and management
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
