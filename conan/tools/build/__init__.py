@@ -1,3 +1,5 @@
+import configparser
+import os
 import sys
 from shlex import quote
 
@@ -6,6 +8,10 @@ from conan.tools.build.cppstd import check_max_cppstd, check_min_cppstd, \
 from conan.tools.build.cpu import build_jobs
 from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.stdcpp_library import stdcpp_library
+from conans.errors import ConanException
+
+CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
+CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"
 
 
 def use_win_mingw(conanfile):
@@ -52,3 +58,48 @@ def _windows_cmd_args_to_string(args):
         else:
             ret.append(arg)
     return " ".join(ret)
+
+
+def load_toolchain_args(generators_folder=None, namespace=None):
+    """
+    Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
+
+    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
+    :param namespace: `str` namespace to be prepended to the filename.
+    :return: <class 'configparser.SectionProxy'>
+    """
+    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
+        else CONAN_TOOLCHAIN_ARGS_FILE
+    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
+        else namespace_name
+    toolchain_config = configparser.ConfigParser()
+    toolchain_file = toolchain_config.read(args_file)
+    if not toolchain_file:
+        raise ConanException("The file %s does not exist. Please, make sure that it was not"
+                             " generated in another folder." % args_file)
+    try:
+        return toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION]
+    except KeyError:
+        raise ConanException("The primary section [%s] does not exist in the file %s. Please, add it"
+                             " as the default one of all your configuration variables." %
+                             (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
+
+
+def save_toolchain_args(content, generators_folder=None, namespace=None):
+    """
+    Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
+
+    :param content: `dict` all the information to be saved into the toolchain file.
+    :param namespace: `str` namespace to be prepended to the filename.
+    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
+    """
+    # Let's prune None values
+    content_ = {k: v for k, v in content.items() if v is not None}
+    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
+        else CONAN_TOOLCHAIN_ARGS_FILE
+    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
+        else namespace_name
+    toolchain_config = configparser.ConfigParser()
+    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
+    with open(args_file, "w") as f:
+        toolchain_config.write(f)

@@ -1,8 +1,7 @@
 import os
 import re
 
-from conan.tools.build import build_jobs, cmd_args_to_string
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import build_jobs, cmd_args_to_string, load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
 from conan.tools.microsoft import unix_path
@@ -112,10 +111,7 @@ class Autotools(object):
             self._conanfile.run(command)
 
     def _use_win_mingw(self):
-        if hasattr(self._conanfile, 'settings_build'):
-            os_build = self._conanfile.settings_build.get_safe('os')
-        else:
-            os_build = self._conanfile.settings.get_safe("os")
+        os_build = self._conanfile.settings_build.get_safe('os')
 
         if os_build == "Windows":
             compiler = self._conanfile.settings.get_safe("compiler")

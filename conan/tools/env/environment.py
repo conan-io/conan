@@ -46,19 +46,25 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
-    if bool(bats) + bool(shs) + bool(ps1s) > 1:
+    if bool(bats + ps1s) + bool(shs) > 1:
         raise ConanException("Cannot wrap command with different envs,"
-                             " {} - {} - {}".format(bats, shs, ps1s))
+                             "{} - {}".format(bats+ps1s, shs))
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
-        return '{} && {}'.format(launchers, cmd)
+        if ps1s:
+            ps1_launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
+            cmd = cmd.replace('"', "'")
+            return '{} && powershell.exe {} ; cmd /c {}'.format(launchers, ps1_launchers, cmd)
+        else:
+            return '{} && {}'.format(launchers, cmd)
     elif shs:
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
         launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
+        cmd = cmd.replace('"', "'")
         return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
     else:
         return cmd

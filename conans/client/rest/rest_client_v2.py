@@ -1,7 +1,6 @@
 import copy
 import os
 import time
-from threading import Thread
 
 from conan.api.output import ConanOutput
 
@@ -116,6 +115,7 @@ class RestV2Methods(RestCommonMethods):
         # or conanamanifest.txt with missing files due to a network failure
         output = ConanOutput()
         for filename in sorted(files):
+            # As the filenames are sorted, the last one is always "conanmanifest.txt"
             if output and not output.is_terminal:
                 msg ="-> %s" % filename
                 output.info(msg)

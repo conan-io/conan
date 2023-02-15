@@ -4,10 +4,12 @@ from collections import deque
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
+from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
 from conans.client.graph.graph_error import GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
+from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
@@ -88,6 +90,8 @@ class DepsGraphBuilder(object):
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
+            # Keep previous "test" status only if current is also test
+            prev_node.test = prev_node.test and (node.test or require.test)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
@@ -155,9 +159,6 @@ class DepsGraphBuilder(object):
     def _initialize_requires(self, node, graph, graph_lock):
         # Introduce the current requires to define overrides
         # This is the first pass over one recipe requires
-        if hasattr(node.conanfile, "python_requires"):
-            graph.aliased.update(node.conanfile.python_requires.aliased)
-
         if graph_lock is not None:
             for require in node.conanfile.requires.values():
                 graph_lock.resolve_locked(node, require)
@@ -212,15 +213,34 @@ class DepsGraphBuilder(object):
                                                     check_update=self._check_update)
         return new_ref, dep_conanfile, recipe_status, remote
 
+    @staticmethod
+    def _resolved_system_tool(node, require, profile_build, profile_host):
+        if node.context == CONTEXT_HOST and not require.build:  # Only for tool_requires
+            return
+        system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
+            else profile_host.system_tools
+        if system_tool:
+            version_range = require.version_range
+            for d in system_tool:
+                if require.ref.name == d.name:
+                    if version_range:
+                        if d.version in version_range:
+                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                    elif require.ref.version == d.version:
+                        return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        try:
-            # TODO: If it is locked not resolve range
-            # TODO: This range-resolve might resolve in a given remote or cache
-            # Make sure next _resolve_recipe use it
-            self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
-            resolved = self._resolve_recipe(require.ref, graph_lock)
-        except ConanException as e:
-            raise GraphError.missing(node, require, str(e))
+        resolved = self._resolved_system_tool(node, require, profile_build, profile_host)
+
+        if resolved is None:
+            try:
+                # TODO: If it is locked not resolve range
+                # TODO: This range-resolve might resolve in a given remote or cache
+                # Make sure next _resolve_recipe use it
+                self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
+                resolved = self._resolve_recipe(require.ref, graph_lock)
+            except ConanException as e:
+                raise GraphError.missing(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
         # If the node is virtual or a test package, the require is also "root"
@@ -231,7 +251,7 @@ class DepsGraphBuilder(object):
                                      require.build, new_ref)
 
         context = CONTEXT_BUILD if require.build else node.context
-        new_node = Node(new_ref, dep_conanfile, context=context, test=require.test)
+        new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
 

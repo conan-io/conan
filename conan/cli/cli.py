@@ -112,7 +112,7 @@ class Cli:
         line_format = '{{: <{}}}'.format(max_len)
 
         for group_name, comm_names in sorted(self._groups.items()):
-            cli_out_write(group_name + " commands", Color.BRIGHT_MAGENTA)
+            cli_out_write("\n" + group_name + " commands", Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 cli_out_write(line_format.format(name), Color.GREEN, endline="")
@@ -134,7 +134,7 @@ class Cli:
                 cli_out_write(txt)
 
         cli_out_write("")
-        cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+        cli_out_write('Type "conan <command> -h" for help', Color.BRIGHT_MAGENTA)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class

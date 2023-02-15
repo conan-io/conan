@@ -114,7 +114,7 @@ class ProfileLoader:
         if hasattr(mod, "profile_plugin"):
             return mod.profile_plugin
 
-    def from_cli_args(self, profiles, settings, options, env, conf, cwd):
+    def from_cli_args(self, profiles, settings, options, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
@@ -126,7 +126,7 @@ class ProfileLoader:
             tmp = self.load_profile(p, cwd)
             result.compose_profile(tmp)
 
-        args_profile = _profile_parse_args(settings, options, env, conf)
+        args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
         # Only after everything has been aggregated, try to complete missing settings
         profile_plugin = self._load_profile_plugin()
@@ -252,7 +252,7 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
                                                          "settings",
                                                          "options", "conf", "buildenv", "runenv"])
 
@@ -260,6 +260,12 @@ class _ProfileValueParser(object):
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
+
+        if doc.system_tools:
+            system_tools = [RecipeReference.loads(r.strip())
+                            for r in doc.system_tools.splitlines() if r.strip()]
+        else:
+            system_tools = []
 
         if doc.conf:
             conf = ConfDefinition()
@@ -271,6 +277,7 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
+        base_profile.system_tools = system_tools
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
@@ -331,7 +338,7 @@ class _ProfileValueParser(object):
         return settings, package_settings
 
 
-def _profile_parse_args(settings, options, envs, conf):
+def _profile_parse_args(settings, options, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
