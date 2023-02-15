@@ -67,7 +67,7 @@ def full_deploy(graph, output_folder):
             folder_name = os.path.join(folder_name, arch)
         new_folder = os.path.join(output_folder, folder_name)
         rmdir(new_folder)
-        shutil.copytree(dep.package_folder, new_folder)
+        shutil.copytree(dep.package_folder, new_folder, symlinks=True)
         dep.set_deploy_folder(new_folder)
 
 
@@ -88,5 +88,5 @@ def direct_deploy(graph, output_folder):
     for dep in conanfile.dependencies.filter({"direct": True}).values():
         new_folder = os.path.join(output_folder, dep.ref.name)
         rmdir(new_folder)
-        shutil.copytree(dep.package_folder, new_folder)
+        shutil.copytree(dep.package_folder, new_folder, symlinks=True)
         dep.set_deploy_folder(new_folder)
