@@ -2,7 +2,6 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
-from conan.tools.meson.mesondeps import MesonDeps
 
 
 class Meson(object):
@@ -31,7 +30,6 @@ class Meson(object):
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
-        deps_flags = os.path.join(generators_folder, MesonDeps.filename)  # extra machine files layer
         meson_filenames = []
         if os.path.exists(cross):
             cmd_param = " --cross-file"
@@ -39,9 +37,6 @@ class Meson(object):
         else:
             cmd_param = " --native-file"
             meson_filenames.append(native)
-
-        if os.path.exists(deps_flags):
-            meson_filenames.append(deps_flags)
 
         machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
                                                  default=[], check_type=list)
