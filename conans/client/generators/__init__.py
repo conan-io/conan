@@ -7,7 +7,7 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake", "CMakeDeps": "conan.tools.cmake",
-               "MesonToolchain": "conan.tools.meson", "MesonDeps": "conan.tools.meson",
+               "MesonToolchain": "conan.tools.meson",
                "MSBuildDeps": "conan.tools.microsoft", "MSBuildToolchain": "conan.tools.microsoft",
                "NMakeToolchain": "conan.tools.microsoft", "NMakeDeps": "conan.tools.microsoft",
                "VCVars": "conan.tools.microsoft",
