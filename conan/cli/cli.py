@@ -179,7 +179,8 @@ class Cli:
             error = "*********************************************************\n" \
                     f"Recipe '{pkg}' seems broken.\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n"\
-                    "If the recipe comes from ConanCenter check: {GITHUB_URL}\n" \
+                    "If the recipe comes from ConanCenter check: \n" \
+                    "https://github.com/conan-io/conan-center-index/blob/master/docs/v2_migration.md\n" \
                     "If it is your recipe, check it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
@@ -189,7 +190,8 @@ class Cli:
             error = "*********************************************************\n" \
                     f"Recipe '{pkg}' cannot build its binary\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n" \
-                    "If the recipe comes from ConanCenter check: {GITHUB_URL}\n" \
+                    "If the recipe comes from ConanCenter check: \n" \
+                    "https://github.com/conan-io/conan-center-index/blob/master/docs/v2_migration.md\n" \
                     "If it is your recipe, check it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)

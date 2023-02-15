@@ -1,7 +1,9 @@
 import textwrap
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import load, save
 
 
 def test_legacy_names_filenames():
@@ -43,7 +45,7 @@ class TestLegacy1XRecipes:
     def test_legacy_imports(self):
         c = TestClient()
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, tools
+            from conan import ConanFile
             class Pkg(ConanFile):
                 name = "pkg"
                 version = "1.0"
@@ -51,7 +53,12 @@ class TestLegacy1XRecipes:
         c.save({"pkg/conanfile.py": conanfile,
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0")})
         # With EDITABLE, we can emulate errors without exporting
-        c.run("editable add pkg pkg/1.0")
+        c.run("export pkg")
+        layout = c.get_latest_ref_layout(RecipeReference.loads("pkg/1.0"))
+        conanfile = layout.conanfile()
+        content = load(conanfile)
+        content = content.replace("from conan", "from conans")
+        save(conanfile, content)
         c.run("install app", assert_error=True)
         assert "Recipe 'pkg/1.0' seems broken." in c.out
         assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
