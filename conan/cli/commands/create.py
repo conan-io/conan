@@ -5,7 +5,7 @@ import shutil
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
-from conan.cli.args import add_lockfile_args, _add_common_install_arguments, _help_build_policies
+from conan.cli.args import add_lockfile_args, add_common_install_arguments
 from conan.internal.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_packages
 from conans.client.conanfile.build import run_build_method
@@ -26,7 +26,7 @@ def create(conan_api, parser, *args):
     """
     common_args_export(parser)
     add_lockfile_args(parser)
-    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+    add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='The provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -92,12 +92,11 @@ def create(conan_api, parser, *args):
 
     if test_conanfile_path:
         # TODO: We need arguments for:
-        #  - decide build policy for test_package deps "--test_package_build=missing"
         #  - decide update policy "--test_package_update"
         tested_python_requires = ref.repr_notime() if is_python_require else None
         from conan.cli.commands.test import run_test
         deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
-                              remotes, lockfile, update=False, build_modes=None,
+                              remotes, lockfile, update=False, build_modes=args.build,
                               tested_python_requires=tested_python_requires)
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)

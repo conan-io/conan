@@ -56,6 +56,7 @@ class DepsGraphBuilder(object):
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
+            self._compute_test_package_deps(dep_graph)
         except GraphError as e:
             dep_graph.error = e
         dep_graph.resolved_ranges = self._resolver.resolved_ranges
@@ -291,3 +292,31 @@ class DepsGraphBuilder(object):
             to_remove = [r for r in node.transitive_deps if r.override]
             for r in to_remove:
                 node.transitive_deps.pop(r)
+
+    @staticmethod
+    def _compute_test_package_deps(graph):
+        """ compute and tag the graph nodes that belong exclusively to test_package
+        dependencies but not the main graph
+        """
+        root_node = graph.root
+        tested_ref = root_node.conanfile.tested_reference_str
+        if tested_ref is None:
+            return
+        tested_ref = RecipeReference.loads(root_node.conanfile.tested_reference_str)
+        tested_ref = str(tested_ref)
+        # We classify direct dependencies in the "tested" main ones and the "test_package" specific
+        direct_nodes = [n.node for n in root_node.transitive_deps.values() if n.require.direct]
+        main_nodes = [n for n in direct_nodes if tested_ref == str(n.ref)]
+        test_package_nodes = [n for n in direct_nodes if tested_ref != str(n.ref)]
+
+        # Accumulate the transitive dependencies of the 2 subgraphs ("main", and "test_package")
+        main_graph_nodes = set(main_nodes)
+        for n in main_nodes:
+            main_graph_nodes.update(t.node for t in n.transitive_deps.values())
+        test_graph_nodes = set(test_package_nodes)
+        for n in test_package_nodes:
+            test_graph_nodes.update(t.node for t in n.transitive_deps.values())
+        # Some dependencies in "test_package" might be "main" graph too, "main" prevails
+        test_package_only = test_graph_nodes.difference(main_graph_nodes)
+        for t in test_package_only:
+            t.test_package = True
