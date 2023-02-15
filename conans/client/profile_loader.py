@@ -252,7 +252,7 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
                                                          "settings",
                                                          "options", "conf", "buildenv", "runenv"])
 
@@ -260,6 +260,12 @@ class _ProfileValueParser(object):
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
+
+        if doc.system_tools:
+            system_tools = [RecipeReference.loads(r.strip())
+                            for r in doc.system_tools.splitlines() if r.strip()]
+        else:
+            system_tools = []
 
         if doc.conf:
             conf = ConfDefinition()
@@ -271,6 +277,7 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
+        base_profile.system_tools = system_tools
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
