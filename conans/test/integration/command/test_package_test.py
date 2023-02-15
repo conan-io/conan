@@ -57,7 +57,6 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --user=user --channel=channel")
-        print(client.out)
         self.assertIn("hello/0.1@user/channel: Generated conaninfo.txt", client.out)
 
         # explicit override of user/channel works
