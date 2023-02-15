@@ -211,9 +211,6 @@ class MesonToolchain(object):
             elements = getattr(self._conanfile.cpp.package, name)
             return elements[0] if elements else None
 
-        if not self._conanfile.package_folder:
-            return {}
-
         ret = {}
         bindir = _get_cpp_info_value("bindirs")
         datadir = _get_cpp_info_value("resdirs")
