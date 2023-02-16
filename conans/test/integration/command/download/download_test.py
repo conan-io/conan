@@ -27,7 +27,7 @@ class Pkg(ConanFile):
         client.run("remove pkg/0.1@lasote/stable -c")
 
         client.run("download pkg/0.1@lasote/stable -r default")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
+        self.assertIn("pkg/0.1@lasote/stable: Sources downloaded from 'default'", client.out)
         source = client.get_latest_ref_layout(ref).export_sources()
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))

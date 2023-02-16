@@ -3,8 +3,6 @@ import platform
 import textwrap
 import unittest
 
-import pytest
-
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -209,8 +207,9 @@ def test_consumer_patterns_loop_error():
 
     client.run("export tool1 --name=tool1 --version=1.0")
     client.run("export tool2 --name=tool2 --version=1.0")
-    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt", assert_error=True)
-    assert "graph loop" in client.out
+    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt",
+               assert_error=True)
+    assert "There is a cycle/loop in the graph" in client.out
 
     # we can fix it with the negation
     profile_patterns = textwrap.dedent("""

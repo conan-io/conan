@@ -54,7 +54,7 @@ class PkgA(ConanFile):
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable")
-        self.assertIn("conanfile.py (hello/0.1@lasote/stable) package(): "
+        self.assertIn("conanfile.py (hello/0.1@lasote/stable): package(): "
                       "WARN: No files in this package!", client.out)
 
     def test_options(self):
@@ -232,7 +232,7 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --user=conan --channel=stable")
-        self.assertIn("conanfile.py (hello/0.1@conan/stable) package(): "
+        self.assertIn("conanfile.py (hello/0.1@conan/stable): package(): "
                       "Packaged 1 '.txt' file: file.txt", client.out)
 
         # Specify different name or version is not working
@@ -254,7 +254,7 @@ class TestConan(ConanFile):
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --name=anyname --version=1.222 --user=conan --channel=stable")
-        self.assertIn("conanfile.py (anyname/1.222@conan/stable) package(): "
+        self.assertIn("conanfile.py (anyname/1.222@conan/stable): package(): "
                       "Packaged 1 '.txt' file: file.txt", client.out)
 
     def test_with_deps(self):
@@ -344,10 +344,10 @@ def test_build_policy_never():
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})
     client.run("export-pkg . --name=pkg --version=1.0")
-    assert "conanfile.py (pkg/1.0) package(): Packaged 1 '.h' file: header.h" in client.out
+    assert "conanfile.py (pkg/1.0): package(): Packaged 1 '.h' file: header.h" in client.out
     # check for https://github.com/conan-io/conan/issues/10736
     client.run("export-pkg . --name=pkg --version=1.0")
-    assert "conanfile.py (pkg/1.0) package(): Packaged 1 '.h' file: header.h" in client.out
+    assert "conanfile.py (pkg/1.0): package(): Packaged 1 '.h' file: header.h" in client.out
     client.run("install --requires=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "conanfile.py (pkg/1.0): Calling build()" not in client.out
@@ -546,7 +546,7 @@ def test_export_pkg_output_folder():
 
     c.run("build . -of=mytmp")
     c.run("export-pkg . -of=mytmp")
-    assert "Copied 1 '.txt' file: myfile.txt" in c.out
+    assert "Packaged 1 '.txt' file: myfile.txt" in c.out
     assert os.path.exists(os.path.join(c.current_folder, "mytmp", "myfile.txt"))
 
 

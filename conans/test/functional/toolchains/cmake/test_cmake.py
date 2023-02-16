@@ -558,7 +558,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         # The create flow must work
         client.run("create . --name=pkg --version=0.1")
-        self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
+        self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_package_reference(ref)
         package_folder = client.get_latest_pkg_layout(pref).package()

@@ -425,6 +425,7 @@ def test_skip_transitive_components():
     c.run("install consumer -g CMakeDeps")
     c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
     # This used to error, as CMakeDeps was raising a KeyError
+    print(c.out)
     assert "'CMakeDeps' calling 'generate()'" in c.out
 
 
