@@ -95,12 +95,12 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("install . --profile ./profile.txt --build=Pythontool", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=tool/0.1*")
-        self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("tool/0.1@lasote/stable: Created package", client.out)
 
         # now remove packages, ensure --build=missing also creates them
         client.run('remove "*:*" -c')
         client.run("install . --profile ./profile.txt --build=missing")
-        self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("tool/0.1@lasote/stable: Created package", client.out)
 
     def test_profile_test_requires(self):
         client = TestClient()

@@ -675,7 +675,7 @@ class TestClient(object):
         """
         lines = self.out.splitlines()
         if test_package:
-            line_req = lines.index("-------- test_package: Computing dependency graph --------")
+            line_req = lines.index("======== test_package: Computing dependency graph ========")
             lines = lines[line_req:]
         header = "Requirements" if not build else "Build requirements"
         if python:
@@ -701,9 +701,9 @@ class TestClient(object):
         """
         lines = self.out.splitlines()
         if test_package:
-            line_req = lines.index("-------- test_package: Computing dependency graph --------")
+            line_req = lines.index("======== test_package: Computing dependency graph ========")
             lines = lines[line_req:]
-        line_req = lines.index("-------- Computing necessary packages --------")
+        line_req = lines.index("======== Computing necessary packages ========")
         header = "Requirements" if not build else "Build requirements"
         if test:
             header = "Test requirements"

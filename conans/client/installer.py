@@ -268,8 +268,8 @@ class BinaryInstaller:
             return
 
         download_count = len(downloads)
-        ConanOutput().title(f"Downloading {download_count} package"
-                            's' if download_count != 1 else '')
+        plural = 's' if download_count != 1 else ''
+        ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
         parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
@@ -306,7 +306,7 @@ class BinaryInstaller:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
         if package.binary == BINARY_BUILD:
-            ConanOutput().title(f"Building package {pref.ref} from source "
+            ConanOutput().subtitle(f"Building package {pref.ref} from source "
                                 f"({installed_count} of {total_count})")
             ConanOutput(scope=str(pref.ref)).info(f"Package {pref}")
             self._handle_node_build(package, package_layout)

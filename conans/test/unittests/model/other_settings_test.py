@@ -225,7 +225,6 @@ class SayConan(ConanFile):
 
         save(client.cache.settings_path, config)
         client.run("create . -s os=ChromeOS --build missing")
-        self.assertIn('Generated conaninfo.txt', client.out)
 
         # Settings is None
         content = """
@@ -239,7 +238,6 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("remove say/0.1 -c")
         client.run("create . --build missing")
-        self.assertIn('Generated conaninfo.txt', client.out)
         conan_info = self._get_conaninfo("say/0.1", client)
         self.assertEqual(conan_info.get("settings"), None)
 
@@ -255,8 +253,6 @@ class SayConan(ConanFile):
         client.save({CONANFILE: content})
         client.run("remove say/0.1 -c")
         client.run("create . --build missing")
-        self.assertIn('Generated conaninfo.txt', client.out)
-
         conan_info = self._get_conaninfo("say/0.1", client)
 
         self.assertEqual(conan_info.get("settings"), None)

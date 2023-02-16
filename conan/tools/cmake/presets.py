@@ -208,7 +208,7 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
 
     preset_content = json.dumps(data, indent=4)
     save(preset_path, preset_content)
-    ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: CMakePresets.json")
+    ConanOutput(str(conanfile)).info("CMakeToolchain generated: CMakePresets.json")
     _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_prefix, data)
 
 

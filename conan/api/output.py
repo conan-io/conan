@@ -171,7 +171,12 @@ class ConanOutput:
 
     def title(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
+            self._write_message("\n======== {} ========".format(msg), "NOTICE",
+                                fg=Color.BRIGHT_MAGENTA)
+        return self
 
+    def subtitle(self, msg):
+        if log_level_allowed(LEVEL_NOTICE):
             self._write_message("\n-------- {} --------".format(msg), "NOTICE",
                                 fg=Color.BRIGHT_MAGENTA)
         return self

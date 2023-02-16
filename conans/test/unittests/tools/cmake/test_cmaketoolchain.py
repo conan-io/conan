@@ -18,7 +18,7 @@ from conans.util.files import load
 
 @pytest.fixture
 def conanfile():
-    c = ConanFile(None)
+    c = ConanFile()
     settings = Settings({"os": ["Windows"],
                            "compiler": {"clang": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
