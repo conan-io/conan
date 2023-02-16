@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import textwrap
 
@@ -187,6 +188,52 @@ class TestGitBasicClone:
                 self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
         """)
 
+    def test_clone_checkout(self):
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder)
+        # This second commit will NOT be used, as I will use the above commit in the conanfile
+        save_files(path=folder, files={"src/myfile.h": "my2header2!"})
+        git_add_changes_commit(folder=folder)
+
+        c = TestClient()
+        c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
+        # It also works in local flow
+        c.run("source .")
+        assert "conanfile.py (pkg/0.1): MYCMAKE: mycmake" in c.out
+        assert "conanfile.py (pkg/0.1): MYFILE: myheader!" in c.out
+        assert c.load("source/src/myfile.h") == "myheader!"
+        assert c.load("source/CMakeLists.txt") == "mycmake"
+
+
+class TestGitShallowClone:
+    """ base Git cloning operations
+    """
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def layout(self):
+                self.folders.source = "source"
+
+            def source(self):
+                git = Git(self)
+                git.fetch_commit(url="{url}", commit="{commit}")
+                self.output.info("MYCMAKE: {{}}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
+        """)
+
+    @pytest.mark.skipif(platform.system() == "Linux", reason="Git version in Linux not support it")
     def test_clone_checkout(self):
         folder = os.path.join(temp_folder(), "myrepo")
         url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
