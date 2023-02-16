@@ -1,10 +1,11 @@
 from conan.internal.api.new.autotools_lib import configure_ac, makefile_am
+from conan.internal.api.new.cmake_lib import source_cpp, test_main, source_h
 
 conanfile_exe = """
 import os
 
 from conan import ConanFile
-from conan.tools.gnu import AutotoolsToolchain, Autotools
+from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
 from conan.tools.layout import basic_layout
 from conan.tools.files import chdir
 
@@ -27,10 +28,19 @@ class {{package_name}}Conan(ConanFile):
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "configure.ac", "Makefile.am", "src/*"
 
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in requires -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+
     def layout(self):
         basic_layout(self)
 
     def generate(self):
+        deps = AutotoolsDeps(self)
+        deps.generate()
         at_toolchain = AutotoolsToolchain(self)
         at_toolchain.generate()
 
@@ -46,7 +56,7 @@ class {{package_name}}Conan(ConanFile):
 """
 makefile_am_exe = """
 bin_PROGRAMS = {{name}}
-{{name}}_SOURCES = main.cpp
+{{name}}_SOURCES = main.cpp {{name}}.cpp
 """
 
 test_conanfile_exe_v2 = """
@@ -70,20 +80,11 @@ class {{package_name}}TestConan(ConanFile):
             self.run("{{name}}", env="conanrun")
 """
 
-test_exe = r"""#include <iostream>
-
-int main() {
-    #ifdef NDEBUG
-    std::cout << "{{name}}/{{version}}: Hello World Release!\n";
-    #else
-    std::cout << "{{name}}/{{version}}: Hello World Debug!\n";
-    #endif
-}
-"""
-
 
 autotools_exe_files = {"conanfile.py": conanfile_exe,
-                       "src/main.cpp": test_exe,
+                       "src/{{name}}.cpp": source_cpp,
+                       "src/{{name}}.h": source_h,
+                       "src/main.cpp": test_main,
                        "configure.ac": configure_ac,
                        "Makefile.am": makefile_am,
                        "src/Makefile.am": makefile_am_exe,

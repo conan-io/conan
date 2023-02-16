@@ -42,12 +42,20 @@ class _Remotes(object):
         index = self._remotes.index(r)
         return self._remotes.pop(index)
 
-    def add(self, new_remote: Remote, index=None):
+    def add(self, new_remote: Remote, index=None, force=False):
         assert isinstance(new_remote, Remote)
         current = self.get_by_name(new_remote.name)
         if current:
             raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
                                  % new_remote.name)
+        for r in self._remotes:
+            if r.url == new_remote.url:
+                msg = f"Remote url already existing in remote '{r.name}'. " \
+                      f"Having different remotes with same URL is not recommended."
+                if not force:
+                    raise ConanException(msg + " Use '--force' to override.")
+                else:
+                    ConanOutput().warning(msg + " Adding duplicated remote because '--force'.")
         if index:
             self._remotes.insert(index, new_remote)
         else:
@@ -147,10 +155,10 @@ class RemoteRegistry(object):
         except ValueError:
             raise ConanException("No remote: '{}' found".format(remote.name))
 
-    def add(self, remote: Remote):
+    def add(self, remote: Remote, force=False):
         self._validate_url(remote.url)
         remotes = self._load_remotes()
-        remotes.add(remote)
+        remotes.add(remote, force=force)
         self.save_remotes(remotes)
 
     def remove(self, remote_name):

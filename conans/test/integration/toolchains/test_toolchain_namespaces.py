@@ -1,8 +1,7 @@
 import os
 import textwrap
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import load_toolchain_args, CONAN_TOOLCHAIN_ARGS_FILE
 from conans.test.utils.tools import TestClient
 
 

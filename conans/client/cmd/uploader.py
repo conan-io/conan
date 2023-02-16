@@ -10,7 +10,6 @@ from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
 from conans.util.files import (clean_dirty, is_dirty, gather_files,
                                gzopen_without_timestamps, set_dirty_context_manager, mkdir)
-from conans.util.tracer import log_recipe_upload, log_compressed_files, log_package_upload
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -233,7 +232,7 @@ class UploadExecutor:
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
 
         duration = time.time() - t1
-        log_recipe_upload(ref, duration, cache_files, remote.name)
+        self._output.debug(f"Upload {ref} in {duration} time")
         return ref
 
     def upload_package(self, pref, prev_bundle, remote):
@@ -245,7 +244,7 @@ class UploadExecutor:
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
-        log_package_upload(pref, duration, cache_files, remote)
+        self._output.debug(f"Upload {pref} in {duration} time")
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
@@ -264,6 +263,5 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
         tgz.close()
 
     duration = time.time() - t1
-    log_compressed_files(files, duration, tgz_path)
-
+    ConanOutput().debug(f"{name} compressed in {duration} time")
     return tgz_path

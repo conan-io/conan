@@ -23,27 +23,6 @@ def _file_document(name, path):
                 "sha1": sha1sum(path), "type": "folder"}
 
 
-def log_recipe_upload(ref, duration, files_uploaded, remote_name):
-    files_uploaded = files_uploaded or {}
-    files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    data = {"_action": "UPLOADED_RECIPE", "_id": repr(ref),
-                                          "duration": duration,
-                                          "files": files_uploaded,
-                                          "remote": remote_name}
-    ConanOutput().trace(data)
-
-
-def log_package_upload(pref, duration, files_uploaded, remote):
-    """files_uploaded is a dict with relative path as keys and abs path as values"""
-    files_uploaded = files_uploaded or {}
-    files_uploaded = [_file_document(name, path) for name, path in files_uploaded.items()]
-    data = {"_action": "UPLOADED_PACKAGE", "_id": repr(pref),
-                                           "duration": duration,
-                                           "files": files_uploaded,
-                                           "remote": remote.name}
-    ConanOutput().trace(data)
-
-
 def log_recipe_sources_download(ref, duration, remote_name, files_downloaded):
     assert(isinstance(ref, RecipeReference))
     files_downloaded = files_downloaded or {}
@@ -94,12 +73,6 @@ def log_client_rest_api_call(url, method, duration, headers):
     ConanOutput().trace(data)
 
 
-def log_conan_api_call(name, kwargs):
-    parameters = copy.copy(kwargs)  # Ensure we don't alter any app object like args
-    data = {"_action": "CONAN_API", "name": name, "parameters": parameters}
-    ConanOutput().trace(data)
-
-
 def log_download(url, duration):
     data = {"_action": "DOWNLOAD", "url": url, "duration": duration}
     ConanOutput().trace(data)
@@ -107,11 +80,4 @@ def log_download(url, duration):
 
 def log_uncompressed_file(src_path, duration, dest_folder):
     data = {"_action": "UNZIP", "src": src_path, "dst": dest_folder, "duration": duration}
-    ConanOutput().trace(data)
-
-
-def log_compressed_files(files, duration, tgz_path):
-    files = files or {}
-    files_compressed = [_file_document(name, path) for name, path in files.items()]
-    data = {"_action": "ZIP", "src": files_compressed, "dst": tgz_path, "duration": duration}
     ConanOutput().trace(data)

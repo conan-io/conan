@@ -29,7 +29,7 @@ class TestHelp:
     def test_help_command(self):
         c = TestClient()
         c.run("new -h")
-        assert "Create a new recipe" in c.out
+        assert "Create a new example recipe" in c.out
 
     def test_help_subcommand(self):
         c = TestClient()

@@ -59,8 +59,6 @@ test = textwrap.dedent("""
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        # VirtualBuildEnv and VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
-        # (it will be defined in Conan 2.0)
         generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
         apply_env = False
         test_type = "explicit"
@@ -170,12 +168,12 @@ def test_shared_static_targets():
 
     client.run_command("xcodegen generate")
 
-    client.run("create . -o *:shared=True -tf None")
+    client.run("create . -o *:shared=True -tf=\"\"")
     assert "Packaged 1 '.dylib' file: hello-dynamic.dylib" in client.out
     client.run("test test_package hello/1.0@ -o *:shared=True")
     assert "@rpath/hello-dynamic.dylib" in client.out
 
-    client.run("create . -tf None")
+    client.run("create . -tf=\"\"")
     assert "Packaged 1 '.a' file: libhello-static.a" in client.out
     client.run("test test_package hello/1.0@")
     # check the symbol hellofunction in in the executable

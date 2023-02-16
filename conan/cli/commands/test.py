@@ -3,7 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
-from conan.cli.args import add_lockfile_args, _add_common_install_arguments
+from conan.cli.args import add_lockfile_args, add_common_install_arguments
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
 
@@ -17,7 +17,7 @@ def test(conan_api, parser, *args):
                         help="Path to a test_package folder containing a conanfile.py")
     parser.add_argument("reference", action=OnceArgument,
                         help='Provide a package reference to test')
-    _add_common_install_arguments(parser, build_help=False)  # Used packages must exist
+    add_common_install_arguments(parser)
     add_lockfile_args(parser)
     args = parser.parse_args(*args)
 
@@ -39,7 +39,7 @@ def test(conan_api, parser, *args):
     out.info(profile_build.dumps())
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
-                          args.update, build_modes=None)
+                          args.update, build_modes=args.build)
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.path.dirname(path))

@@ -148,6 +148,7 @@ class CMakeToolchain(object):
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
         self.user_presets_path = "CMakeUserPresets.json"
+        self.presets_prefix = "conan"
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -202,7 +203,7 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path)
+                            self.user_presets_path, self.presets_prefix)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

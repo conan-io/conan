@@ -79,3 +79,28 @@ class TestDepDefinedMode:
         c.assert_listed_binary({"pkg/0.1": ("66a9e6a31e63f77952fd72744d0d5da07970f42e", "Build")})
         c.run("create pkg -o pkg/*:shared=True")
         c.assert_listed_binary({"pkg/0.1": ("5a5828e18eef6a86813b01d4f5a83ea7d87d1139", "Build")})
+
+    def test_dep_tool_require_defined(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                package_type = "application"
+                build_mode = "minor_mode"
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_tool_requires("dep/[*]")})
+        c.run("create dep --version=0.1")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("fcf70699eb821f51cd4f3e228341ac4f405ad220", "Build")})
+
+        # using dep 0.2, still same, because dependency chose "minor"
+        c.run("create dep --version=0.1.1")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("fcf70699eb821f51cd4f3e228341ac4f405ad220", "Build")})
+
+        # using dep 0.2, still same, because dependency chose "minor"
+        c.run("create dep --version=0.2")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("56934f87c11792e356423e081c7cd490f3c1fbe0", "Build")})

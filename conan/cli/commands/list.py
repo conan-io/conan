@@ -86,13 +86,12 @@ def print_list_json(data):
     cli_out_write(myjson)
 
 
-@conan_command(group="Creator", formatters={"text": print_list_text,
-                                            "json": print_list_json,
-                                            "html": list_packages_html})
+@conan_command(group="Consumer", formatters={"text": print_list_text,
+                                             "json": print_list_json,
+                                             "html": list_packages_html})
 def list(conan_api: ConanAPI, parser, *args):
     """
-    Lists existing recipes, revisions or packages in the cache or in remotes given a complete
-    reference or a pattern.
+    Lists existing recipes, revisions or packages in the cache or in remotes
     """
     parser.add_argument('reference', help="Recipe reference or package reference. "
                                           "Both can contain * as wildcard at any reference field. "

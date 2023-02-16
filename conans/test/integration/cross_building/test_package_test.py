@@ -60,7 +60,7 @@ class TestPackageTestCase(unittest.TestCase):
                 'profile_build': '[settings]\nos=Build', })
         t.run("export br.py --name=br1 --version=version")
         # It is necessary to build first the test_package build_requires br2
-        t.run("create br.py --name=br2 --version=version -tf=None --build-require "
+        t.run("create br.py --name=br2 --version=version -tf=\"\" --build-require "
               "--profile:host=profile_host --profile:build=profile_build")
 
         t.run("create conanfile.py --name=name --version=version --build=missing"

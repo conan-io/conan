@@ -23,7 +23,7 @@ class TestEncodings:
     def test_error(self):
         c = TestClient()
         conanfile = b"\x81\x8D\x8F\x90\x9D"
-        save(os.path.join(c.current_folder, "conanfile.txt"), conanfile)
+        open(os.path.join(c.current_folder, "conanfile.txt"), "wb").write(conanfile)
         c.run("install .", assert_error=True)
         assert "ERROR: Cannot load conanfile.txt" in c.out
         assert "It is recommended to use utf-8 encoding" in c.out
@@ -35,14 +35,14 @@ class TestProfileEncodings:
         c = TestClient()
         c.save({"conanfile.txt": ""})
         # BOM for utf-7
-        save(os.path.join(c.current_folder, "profile"), b'\x2b\x2f\x76\x38')
+        open(os.path.join(c.current_folder, "profile"), "wb").write(b'\x2b\x2f\x76\x38')
         c.run("install . -pr=profile")
         assert "Installing packages" in c.out
 
     def test_error(self):
         c = TestClient()
         c.save({"conanfile.txt": ""})
-        save(os.path.join(c.current_folder, "profile"), b"\x81\x8D\x8F\x90\x9D")
+        open(os.path.join(c.current_folder, "profile"), "wb").write(b"\x81\x8D\x8F\x90\x9D")
         c.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Cannot load profile" in c.out
         assert "It is recommended to use utf-8 encoding" in c.out

@@ -1,6 +1,7 @@
 import importlib
 import os
 import pkgutil
+import re
 import signal
 import sys
 import textwrap
@@ -111,7 +112,7 @@ class Cli:
         line_format = '{{: <{}}}'.format(max_len)
 
         for group_name, comm_names in sorted(self._groups.items()):
-            cli_out_write(group_name + " commands", Color.BRIGHT_MAGENTA)
+            cli_out_write("\n" + group_name + " commands", Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 cli_out_write(line_format.format(name), Color.GREEN, endline="")
@@ -133,7 +134,7 @@ class Cli:
                 cli_out_write(txt)
 
         cli_out_write("")
-        cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+        cli_out_write('Type "conan <command> -h" for help', Color.BRIGHT_MAGENTA)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
@@ -162,7 +163,38 @@ class Cli:
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
 
-        command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
+        try:
+            command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
+        except Exception as e:
+            self._conan2_migrate_recipe_msg(e)
+            raise
+
+    @staticmethod
+    def _conan2_migrate_recipe_msg(exception):
+        message = str(exception)
+
+        result = re.search(r"Package '(.*)' not resolved: .*: Cannot load recipe", message)
+        if result:
+            pkg = result.group(1)
+            error = "*********************************************************\n" \
+                    f"Recipe '{pkg}' seems broken.\n" \
+                    f"It is possible that this recipe is not Conan 2.0 ready\n"\
+                    "If the recipe comes from ConanCenter check: \n" \
+                    "https://github.com/conan-io/conan-center-index/blob/master/docs/v2_migration.md\n" \
+                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "*********************************************************\n"
+            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
+        result = re.search(r"(.*): Error in build\(\) method, line", message)
+        if result:
+            pkg = result.group(1)
+            error = "*********************************************************\n" \
+                    f"Recipe '{pkg}' cannot build its binary\n" \
+                    f"It is possible that this recipe is not Conan 2.0 ready\n" \
+                    "If the recipe comes from ConanCenter check: \n" \
+                    "https://github.com/conan-io/conan-center-index/blob/master/docs/v2_migration.md\n" \
+                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "*********************************************************\n"
+            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
 
     @staticmethod
     def exception_exit_error(exception):

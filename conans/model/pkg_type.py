@@ -27,6 +27,14 @@ class PackageType(Enum):
 
         def deduce_from_options():
             try:
+                header = conanfile.options.header_only
+            except ConanException:
+                pass
+            else:
+                if header:
+                    return PackageType.HEADER
+
+            try:
                 shared = conanfile.options.shared
             except ConanException:
                 pass
@@ -34,13 +42,6 @@ class PackageType(Enum):
                 if shared:
                     return PackageType.SHARED
                 else:
-                    try:
-                        header = conanfile.options.header_only
-                    except ConanException:
-                        pass
-                    else:
-                        if header:
-                            return PackageType.HEADER
                     return PackageType.STATIC
             return PackageType.UNKNOWN
 

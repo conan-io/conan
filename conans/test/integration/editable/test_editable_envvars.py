@@ -30,7 +30,7 @@ def test_editable_envvars():
                                               .with_requires("dep/1.0")
                                               .with_generator("VirtualBuildEnv")
                                               .with_generator("VirtualRunEnv")})
-    c.run("editable add dep dep/1.0")
+    c.run("editable add dep  --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     build_path = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
     buildenv = c.load("pkg/conanbuildenv.sh")
@@ -43,7 +43,7 @@ def test_editable_envvars():
     run_path = os.path.join(c.current_folder, "dep", "mysource", "mylocalsrc")
     assert f'export MYRUNPATH="$MYRUNPATH:{run_path}"' in runenv
 
-    c.run("editable remove dep/1.0")
+    c.run("editable remove dep")
     c.run("create dep")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     buildenv = c.load("pkg/conanbuildenv.sh")
@@ -84,7 +84,7 @@ def test_editable_conf():
         """)
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
-    c.run("editable add dep dep/1.0")
+    c.run("editable add dep --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     out = str(c.out).replace("\\\\", "\\")
     conf_source = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")

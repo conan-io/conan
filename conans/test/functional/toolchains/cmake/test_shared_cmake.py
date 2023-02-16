@@ -10,10 +10,9 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir
 
 
-@pytest.mark.tool("cmake")
-def test_shared_cmake_toolchain():
+@pytest.fixture(scope="module")
+def transitive_shared_client():
     client = TestClient(default_server_user=True)
-
     client.save(pkg_cmake("hello", "0.1"))
     client.run("create . -o hello/*:shared=True")
     client.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)
@@ -22,9 +21,18 @@ def test_shared_cmake_toolchain():
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
     client.run("upload * -c -r default")
     client.run("remove * -c")
+    return client
 
+
+@pytest.mark.tool("cmake")
+def test_other_client_can_execute(transitive_shared_client):
+    _check_install_run(transitive_shared_client)
+
+
+def _check_install_run(client):
     client = TestClient(servers=client.servers)
-    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
+    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True "
+               "-g VirtualRunEnv")
     # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
     command = environment_wrap_command("conanrun", client.current_folder, "app")
@@ -34,24 +42,48 @@ def test_shared_cmake_toolchain():
     assert "chat: Release!" in client.out
     assert "hello: Release!" in client.out
 
+
+@pytest.mark.tool("cmake")
+def test_other_client_can_link_cmake(transitive_shared_client):
+    client = transitive_shared_client
     # https://github.com/conan-io/conan/issues/13000
     # This failed, because of rpath link in Linux
     client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]), clean_first=True)
+    client.save(pkg_cmake_app("app", "0.1", requires=["chat/0.1"]))
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+
+    # check exe also keep running
     client.run("upload * -c -r default")
     client.run("remove * -c")
+    _check_install_run(transitive_shared_client)
 
-    client = TestClient(servers=client.servers)
-    client.run("install --requires=app/0.1@ -o chat*:shared=True -o hello/*:shared=True -g VirtualRunEnv")
-    # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
-    # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
-    command = environment_wrap_command("conanrun", client.current_folder, "app")
 
-    client.run_command(command)
-    assert "main: Release!" in client.out
-    assert "chat: Release!" in client.out
-    assert "hello: Release!" in client.out
+# FIXME: Move to the correct Meson space
+@pytest.mark.tool("meson")
+@pytest.mark.tool("pkg_config")
+def test_other_client_can_link_meson(transitive_shared_client):
+    client = transitive_shared_client
+    # https://github.com/conan-io/conan/issues/13000
+    # This failed, because of rpath link in Linux
+    client = TestClient(servers=client.servers, inputs=["admin", "password"], path_with_spaces=False)
+    client.run("new meson_exe -d name=app -d version=0.1 -d requires=chat/0.1")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    # TODO Check that static builds too
+    # client.run("create . --build=missing")
+
+
+# FIXME: Move to the correct Meson space
+@pytest.mark.tool("autotools")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Autotools needed")
+def test_other_client_can_link_autotools(transitive_shared_client):
+    client = transitive_shared_client
+    # https://github.com/conan-io/conan/issues/13000
+    # This failed, because of rpath link in Linux
+    client = TestClient(servers=client.servers, inputs=["admin", "password"], path_with_spaces=False)
+    client.run("new autotools_exe -d name=app -d version=0.1 -d requires=chat/0.1")
+    client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
+    # TODO Check that static builds too
+    # client.run("create . --build=missing")
 
 
 @pytest.mark.tool("cmake")

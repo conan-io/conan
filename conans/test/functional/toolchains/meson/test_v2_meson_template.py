@@ -1,5 +1,4 @@
 import os
-import sys
 
 import pytest
 
@@ -8,7 +7,6 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.tool("pkg_config")
 def test_meson_lib_template():
     # Identical to def test_cmake_lib_template(), but for Meson
@@ -37,7 +35,6 @@ def test_meson_lib_template():
 
 
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_meson_exe_template():
     client = TestClient(path_with_spaces=False)
     client.run("new meson_exe -d name=greet -d version=0.1")

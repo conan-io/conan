@@ -14,6 +14,7 @@ RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
 RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
+RECIPE_SYSTEM_TOOL = "System tool"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -24,6 +25,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
+BINARY_SYSTEM_TOOL = "System tool"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -55,6 +57,7 @@ class Node(object):
         self.binary_remote = None
         self.context = context
         self.test = test
+        self.test_package = False  # True if it is a test_package only package
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
