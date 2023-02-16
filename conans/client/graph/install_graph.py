@@ -287,6 +287,8 @@ class InstallGraph:
 
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'
-           Check the available packages using the 'conan list' command
+           Check the available packages using 'conan list {ref}:* -r=remote'
            or try to build locally from sources using the '{build_str}' argument
+
+           More Info at 'https://docs.conan.io/en/2/knowledge/faq.html#error-missing-prebuilt-package'
            '''))
