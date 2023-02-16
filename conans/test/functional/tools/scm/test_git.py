@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import textwrap
 
@@ -232,6 +233,7 @@ class TestGitShallowClone:
                 self.output.info("MYFILE: {{}}".format(load(self, "src/myfile.h")))
         """)
 
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Git version in Linux not support it")
     def test_clone_checkout(self):
         folder = os.path.join(temp_folder(), "myrepo")
         url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
