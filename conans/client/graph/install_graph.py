@@ -285,10 +285,10 @@ class InstallGraph:
         else:
             build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref) for pref in missing_prefs])))
 
-        raise ConanException(textwrap.dedent('''\
-           Missing prebuilt package for '%s'
-           Use 'conan list packages %s --format=html -r=remote > table.html' and open the table.html file to see available packages
-           Or try to build locally from sources with '%s'
+        raise ConanException(textwrap.dedent(f'''\
+           Missing prebuilt package for '{missing_pkgs}'
+           Check the available packages using 'conan list {ref}:* -r=remote'
+           or try to build locally from sources using the '{build_str}' argument
 
-           More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-           ''' % (missing_pkgs, ref, build_str)))
+           More Info at 'https://docs.conan.io/en/2/knowledge/faq.html#error-missing-prebuilt-package'
+           '''))
