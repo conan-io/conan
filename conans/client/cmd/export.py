@@ -33,7 +33,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     hook_manager.execute("pre_export", conanfile=conanfile)
 
-    scoped_output.info("Exporting package recipe")
+    scoped_output.info(f"Exporting package recipe: {conanfile_path}")
 
     export_folder = recipe_layout.export()
     export_src_folder = recipe_layout.export_sources()
@@ -78,7 +78,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             scoped_output.warning(str(e))
             set_dirty(source_folder)
 
-    scoped_output.success(f"Exported revision: {ref.repr_notime()}")
+    scoped_output.success(f"Exported: {ref.repr_humantime()}")
     return ref, conanfile
 
 
@@ -89,8 +89,6 @@ def calc_revision(scoped_output, path, manifest, revision_mode):
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
         revision = manifest.summary_hash
-        scoped_output.info("Using the exported files summary hash as the recipe"
-                           " revision: {} ".format(revision))
     else:
         try:
             with chdir(path):
@@ -139,7 +137,7 @@ def export_source(conanfile, destination_source_folder):
                     dst=destination_source_folder, excludes=excluded_sources)
         copied.extend(_tmp)
 
-    package_output = ConanOutput(scope="%s exports_sources" % conanfile.output.scope)
+    package_output = ConanOutput(scope="%s: exports_sources" % conanfile.output.scope)
     report_files_copied(copied, package_output)
     conanfile.folders.set_base_export_sources(destination_source_folder)
     _run_method(conanfile, "export_sources")
@@ -151,7 +149,7 @@ def export_recipe(conanfile, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports,)
 
-    package_output = ConanOutput(scope="%s exports" % conanfile.output.scope)
+    package_output = ConanOutput(scope="%s: exports" % conanfile.output.scope)
 
     if os.path.exists(os.path.join(conanfile.recipe_folder, DATA_YML)):
         package_output.info("File '{}' found. Exporting it...".format(DATA_YML))

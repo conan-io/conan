@@ -2,7 +2,6 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conan.cli.printers.graph import print_graph_basic
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -110,7 +109,7 @@ class GraphAPI:
             profile.options.scope(tool_requires[0])
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
-                            lockfile, remotes, update, check_updates=False, allow_error=False):
+                            lockfile, remotes, update, check_updates=False):
         requires = [RecipeReference.loads(r) if isinstance(r, str) else r for r in requires] \
             if requires else None
         tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
@@ -127,17 +126,11 @@ class GraphAPI:
                                      remotes=remotes,
                                      update=update,
                                      check_update=check_updates)
-        print_graph_basic(deps_graph)
-        if deps_graph.error:
-            if allow_error:
-                return deps_graph
-            raise deps_graph.error
-
         return deps_graph
 
     def load_graph_consumer(self, path, name, version, user, channel,
                             profile_host, profile_build, lockfile, remotes, update,
-                            allow_error=False, check_updates=False, is_build_require=False):
+                            check_updates=False, is_build_require=False):
         root_node = self._load_root_consumer_conanfile(path, profile_host, profile_build,
                                                        name=name, version=version, user=user,
                                                        channel=channel, lockfile=lockfile,
@@ -147,12 +140,6 @@ class GraphAPI:
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
-        print_graph_basic(deps_graph)
-        if deps_graph.error:
-            if allow_error:
-                return deps_graph
-            raise deps_graph.error
-
         return deps_graph
 
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,

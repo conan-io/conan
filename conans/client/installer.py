@@ -106,7 +106,6 @@ class _PackageBuilder(object):
     def _package(self, conanfile, pref):
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
-        conanfile.output.info("Generated %s" % CONANINFO)
 
         package_id = pref.package_id
         # Do the actual copy, call the conanfile.package() method
@@ -392,7 +391,7 @@ class BinaryInstaller:
             # but better make sure here, and be able to report the actual folder in case
             # something fails)
             node.conanfile.folders.set_base_package(pkg_layout.package())
-            node.conanfile.output.info("Package folder %s" % node.conanfile.package_folder)
+            node.conanfile.output.success("Package folder %s" % node.conanfile.package_folder)
 
     def _call_package_info(self, conanfile, package_folder, is_editable):
 

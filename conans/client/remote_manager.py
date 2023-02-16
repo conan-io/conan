@@ -57,13 +57,11 @@ class RemoteManager(object):
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()
 
-        t1 = time.time()
         download_export = layout.download_export()
         zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
         remote_refs = self._call_remote(remote, "get_recipe_revisions_references", ref)
         ref_time = remote_refs[0].timestamp
         ref.timestamp = ref_time
-        duration = time.time() - t1
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
         zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}

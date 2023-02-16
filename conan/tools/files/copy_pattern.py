@@ -149,14 +149,14 @@ def report_files_copied(copied, scoped_output, message_suffix="Copied"):
         ext_files[ext].append(os.path.basename(f))
 
     if not ext_files:
-        return False
+        return
 
     for ext, files in ext_files.items():
         files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
         file_or_files = "file" if len(files) == 1 else "files"
+
         if not ext:
             scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
         else:
             scoped_output.info("%s %d '%s' %s%s"
                                % (message_suffix, len(files), ext, file_or_files, files_str))
-    return True

@@ -1,7 +1,7 @@
 import json
 import os
 
-from conan.api.output import ConanOutput, cli_out_write
+from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_reference_args
 
@@ -51,5 +51,4 @@ def export(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
                                                          args.build_require)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    ConanOutput().success("Exported recipe: {}".format(ref.repr_humantime()))
     return ref

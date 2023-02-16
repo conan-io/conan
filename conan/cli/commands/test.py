@@ -4,6 +4,7 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
 
@@ -31,12 +32,7 @@ def test(conan_api, parser, *args):
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    out = ConanOutput()
-    out.title("Input profiles")
-    out.info("Profile host:")
-    out.info(profile_host.dumps())
-    out.info("Profile build:")
-    out.info(profile_build.dumps())
+    print_profiles(profile_host, profile_build)
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
                           args.update, build_modes=args.build)

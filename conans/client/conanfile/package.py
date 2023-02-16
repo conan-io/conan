@@ -38,14 +38,14 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     manifest = FileTreeManifest.create(conanfile.package_folder)
     manifest.save(conanfile.package_folder)
 
-    package_output = ConanOutput(scope="%s package()" % scoped_output.scope)
+    package_output = ConanOutput(scope="%s: package()" % scoped_output.scope)
     _report_files_from_manifest(package_output, manifest)
-    scoped_output.success("Package '%s' created" % package_id)
 
     prev = manifest.summary_hash
     scoped_output.info("Created package revision %s" % prev)
     pref = PkgReference(ref, package_id)
     pref.revision = prev
+    scoped_output.success("Package '%s' created" % package_id)
     scoped_output.success("Full package reference: {}".format(pref.repr_notime()))
     return prev
 

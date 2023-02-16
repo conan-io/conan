@@ -1,8 +1,8 @@
 import json
 import os
 
-from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.printers.graph import print_graph_packages
+from conan.api.output import ConanOutput, cli_out_write, Color
+from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
@@ -144,15 +144,17 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         allow_error=True,
                                                          check_updates=args.check_updates)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         allow_error=True,
                                                          check_updates=args.check_updates)
-    if not deps_graph.error:
+    print_graph_basic(deps_graph)
+    if deps_graph.error:
+        ConanOutput().info("Graph error", Color.BRIGHT_RED)
+        ConanOutput().info("    {}".format(graph.error), Color.BRIGHT_RED)
+    else:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
