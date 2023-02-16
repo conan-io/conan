@@ -6,6 +6,7 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conan.tools._compilers import architecture_flag, libcxx_flags
+from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
 from conan.tools.build.cross_building import cross_building
@@ -301,11 +302,6 @@ class AndroidSystemBlock(Block):
         if os_ != "Android":
             return
 
-        android_abi = {"x86": "x86",
-                       "x86_64": "x86_64",
-                       "armv7": "armeabi-v7a",
-                       "armv8": "arm64-v8a"}.get(str(self._conanfile.settings.arch))
-
         # TODO: only 'c++_shared' y 'c++_static' supported?
         #  https://developer.android.com/ndk/guides/cpp-support
         libcxx_str = self._conanfile.settings.get_safe("compiler.libcxx")
@@ -317,7 +313,7 @@ class AndroidSystemBlock(Block):
 
         ctxt_toolchain = {
             'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
-            'android_abi': android_abi,
+            'android_abi': android_abi(self._conanfile),
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
         }

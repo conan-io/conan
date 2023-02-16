@@ -106,6 +106,11 @@ class MesonInstall(TestMesonBase):
                      os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
                      os.path.join("test_package", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . hello/0.1@ %s" % self._settings_str)
+        # FIXME: Remove this and run a "conan create ..." instead whenever there will be tests with
+        #        export-pkg command running automatically the test_package as well.
+        self.t.run("install .")
+        self.t.run("build .")
+        self.t.run("export-pkg . hello/0.1@ %s" % self._settings_str)
+        self.t.run("test test_package/conanfile.py hello/0.1@ %s" % self._settings_str)
 
         self._check_binary()
