@@ -16,7 +16,7 @@ def test_basic():
     client.save({"conanfile.py": conanfile})
     client.run("export .")
     assert "hello/1.2@myuser/mychannel" in client.out
-    client.run("list recipes *")
+    client.run("list *")
     assert "hello/1.2@myuser/mychannel" in client.out
     client.run("create .")
     assert "hello/1.2@myuser/mychannel" in client.out

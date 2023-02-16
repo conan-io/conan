@@ -5,16 +5,18 @@ from conan.internal import check_duplicated_generator
 from conans.client.conf.detect_vs import vs_installation_path
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
+from conan.tools.intel.intel_cc import IntelCC
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
-def check_min_vs(conanfile, version):
+def check_min_vs(conanfile, version, raise_invalid=True):
     """
     This is a helper method to allow the migration of 1.X -> 2.0 and VisualStudio -> msvc settings
     without breaking recipes.
     The legacy "Visual Studio" with different toolset is not managed, not worth the complexity.
 
+    :param raise_invalid: ``bool`` Whether to raise or return False if the version check fails
     :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
     :param version: ``str`` Visual Studio or msvc version number.
     """
@@ -35,9 +37,13 @@ def check_min_vs(conanfile, version):
             compiler_version += ".{}".format(compiler_update)
 
     if compiler_version and Version(compiler_version) < version:
-        msg = "This package doesn't work with VS compiler version '{}'" \
-              ", it requires at least '{}'".format(compiler_version, version)
-        raise ConanInvalidConfiguration(msg)
+        if raise_invalid:
+            msg = f"This package doesn't work with VS compiler version '{compiler_version}'" \
+                  f", it requires at least '{version}'"
+            raise ConanInvalidConfiguration(msg)
+        else:
+            return False
+    return True
 
 
 def msvc_version_to_vs_ide_version(version):
@@ -69,7 +75,7 @@ def msvc_version_to_toolset_version(version):
                 '191': 'v141',
                 '192': 'v142',
                 "193": 'v143'}
-    return toolsets[str(version)]
+    return toolsets.get(str(version))
 
 
 class VCVars:
@@ -101,6 +107,10 @@ class VCVars:
         if compiler not in ("msvc", "clang"):
             return
 
+        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
+        if vs_install_path == "":  # Empty string means "disable"
+            return
+
         if compiler == "clang":
             # The vcvars only needed for LLVM/Clang and VS ClangCL, who define runtime
             if not conanfile.settings.get_safe("compiler.runtime"):
@@ -122,7 +132,6 @@ class VCVars:
             vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = _vcvars_arch(conanfile)
 
-        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
@@ -298,3 +307,24 @@ def is_msvc_static_runtime(conanfile):
     :return: ``bool`` True, if ``msvc + runtime MT``. Otherwise, False.
     """
     return is_msvc(conanfile) and "MT" in msvc_runtime_flag(conanfile)
+
+
+def msvs_toolset(conanfile):
+    """ Returns the corresponding platform toolset based on the compiler of the given conanfile.
+        In case no toolset is configured in the profile, it will return a toolset based on the
+        compiler version, otherwise, it will return the toolset from the profile.
+        When there is no compiler version neither toolset configured, it will return None
+        It supports Visual Studio, msvc and Intel.
+    :param conanfile: Conanfile instance to access settings.compiler
+    :return: A toolset when compiler.version is valid or compiler.toolset is configured. Otherwise, None.
+    """
+    settings = conanfile.settings
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    if compiler == "msvc":
+        subs_toolset = settings.get_safe("compiler.toolset")
+        if subs_toolset:
+            return subs_toolset
+        return msvc_version_to_toolset_version(compiler_version)
+    if compiler == "intel-cc":
+        return IntelCC(conanfile).ms_toolset

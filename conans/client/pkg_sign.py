@@ -28,13 +28,12 @@ class PkgSignaturesPlugin:
             for f in os.listdir(metadata_sign):
                 files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
-        for ref, bundle in upload_data.recipes.items():
-            if bundle.upload:
-                _sign(ref, bundle.files, self._cache.ref_layout(ref).download_export())
-            for package in bundle.packages:
-                if package.upload:
-                    _sign(package.pref, package.files,
-                          self._cache.pkg_layout(package.pref).download_package())
+        for rref, recipe_bundle in upload_data.refs():
+            if recipe_bundle["upload"]:
+                _sign(rref, recipe_bundle["files"], self._cache.ref_layout(rref).download_export())
+            for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle):
+                if pkg_bundle["upload"]:
+                    _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
 
     def verify(self, ref, folder):
         if self._plugin_verify_function is None:

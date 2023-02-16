@@ -9,19 +9,26 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
-def _build_preset(conanfile, multiconfig):
+def _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix):
     build_type = conanfile.settings.get_safe("build_type")
     configure_preset_name = _configure_preset_name(conanfile, multiconfig)
-    ret = {"name": _build_preset_name(conanfile),
+    build_preset_name = _build_and_test_preset_name(conanfile)
+    if preset_prefix:
+        configure_preset_name = f"{preset_prefix}-{configure_preset_name}"
+        build_preset_name = f"{preset_prefix}-{build_preset_name}"
+    ret = {"name": build_preset_name,
            "configurePreset": configure_preset_name}
     if multiconfig:
         ret["configuration"] = build_type
     return ret
 
 
-def _build_preset_name(conanfile):
+def _build_and_test_preset_name(conanfile):
     build_type = conanfile.settings.get_safe("build_type")
-    custom_conf = get_build_folder_custom_vars(conanfile)
+    custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
+    if user_defined_build:
+        return custom_conf
+
     if custom_conf:
         if build_type:
             return "{}-{}".format(custom_conf, build_type.lower())
@@ -32,7 +39,10 @@ def _build_preset_name(conanfile):
 
 def _configure_preset_name(conanfile, multiconfig):
     build_type = conanfile.settings.get_safe("build_type")
-    custom_conf = get_build_folder_custom_vars(conanfile)
+    custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
+
+    if user_defined_build:
+        return custom_conf
 
     if multiconfig or not build_type:
         return "default" if not custom_conf else custom_conf
@@ -43,9 +53,12 @@ def _configure_preset_name(conanfile, multiconfig):
         return str(build_type).lower()
 
 
-def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig):
+def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
+                      preset_prefix):
     build_type = conanfile.settings.get_safe("build_type")
     name = _configure_preset_name(conanfile, multiconfig)
+    if preset_prefix:
+        name = f"{preset_prefix}-{name}"
     if not multiconfig and build_type:
         cache_variables["CMAKE_BUILD_TYPE"] = build_type
     ret = {
@@ -102,6 +115,14 @@ def _configure_preset(conanfile, generator, cache_variables, toolchain_file, mul
     return ret
 
 
+def _insert_preset(data, preset_name, preset):
+    position = _get_already_existing_preset_index(preset["name"], data.setdefault(preset_name, []))
+    if position is not None:
+        data[preset_name][position] = preset
+    else:
+        data[preset_name].append(preset)
+
+
 def _forced_schema_2(conanfile):
     version = conanfile.conf.get("tools.cmake.cmaketoolchain.presets:max_schema_version",
                                  check_type=int)
@@ -124,26 +145,27 @@ def _schema_version(conanfile, default):
     return default
 
 
-def _contents(conanfile, toolchain_file, cache_variables, generator):
+def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix):
     """
     Contents for the CMakePresets.json
     It uses schema version 3 unless it is forced to 2
     """
-    ret = {"version": _schema_version(conanfile, default=3),
-           "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
-           "configurePresets": [],
-           "buildPresets": [],
-           "testPresets": []
-          }
     multiconfig = is_multi_configuration(generator)
-    ret["buildPresets"].append(_build_preset(conanfile, multiconfig))
-    _conf = _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig)
-    ret["configurePresets"].append(_conf)
+    conf = _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
+                             preset_prefix)
+    build = _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix)
+    ret = {"version": _schema_version(conanfile, default=3),
+           "vendor": {"conan": {}},
+           "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
+           "configurePresets": [conf],
+           "buildPresets": [build],
+           "testPresets": [build]
+           }
     return ret
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
-                        user_presets_path=None):
+                        user_presets_path=None, preset_prefix=None):
     cache_variables = cache_variables or {}
     if platform.system() == "Windows" and generator == "MinGW Makefiles":
         if "CMAKE_SH" not in cache_variables:
@@ -164,61 +186,93 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
 
     preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
     multiconfig = is_multi_configuration(generator)
-
-    if os.path.exists(preset_path):
+    if os.path.exists(preset_path) and multiconfig:
         data = json.loads(load(preset_path))
-        build_preset = _build_preset(conanfile, multiconfig)
-        position = _get_already_existing_preset_index(build_preset["name"], data["buildPresets"])
-        if position is not None:
-            data["buildPresets"][position] = build_preset
-        else:
-            data["buildPresets"].append(build_preset)
-
+        build_preset = _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix)
+        _insert_preset(data, "buildPresets", build_preset)
+        _insert_preset(data, "testPresets", build_preset)
         configure_preset = _configure_preset(conanfile, generator, cache_variables, toolchain_file,
-                                             multiconfig)
-        position = _get_already_existing_preset_index(configure_preset["name"],
-                                                      data["configurePresets"])
-        if position is not None:
-            data["configurePresets"][position] = configure_preset
-        else:
-            data["configurePresets"].append(configure_preset)
+                                             multiconfig, preset_prefix)
+        # Conan generated presets should have only 1 configurePreset, no more, overwrite it
+        data["configurePresets"] = [configure_preset]
     else:
-        data = _contents(conanfile, toolchain_file, cache_variables, generator)
+        data = _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix)
 
-    data = json.dumps(data, indent=4)
-    save(preset_path, data)
-    save_cmake_user_presets(conanfile, preset_path, user_presets_path)
+    preset_content = json.dumps(data, indent=4)
+    save(preset_path, preset_content)
+    _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_prefix, data)
 
 
-def save_cmake_user_presets(conanfile, preset_path, user_presets_path=None):
-    if user_presets_path is False:
+def _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_prefix, preset_data):
+    if not user_presets_path:
         return
 
-    # Try to save the CMakeUserPresets.json if layout declared and CMakeLists.txt found
-    if conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder:
-        if user_presets_path:
-            output_dir = os.path.join(conanfile.source_folder, user_presets_path) \
-                if not os.path.isabs(user_presets_path) else user_presets_path
-        else:
-            output_dir = conanfile.source_folder
+    # If generators folder is the same as source folder, do not create the user presets
+    # we already have the CMakePresets.json right there
+    if not (conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder):
+        return
 
-        if user_presets_path or os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
-            """
-                Contents for the CMakeUserPresets.json
-                It uses schema version 4 unless it is forced to 2
-            """
-            user_presets_path = os.path.join(output_dir, "CMakeUserPresets.json")
-            if not os.path.exists(user_presets_path):
-                data = {"version": _schema_version(conanfile, default=4),
-                        "vendor": {"conan": dict()}}
-            else:
-                data = json.loads(load(user_presets_path))
-                if "conan" not in data.get("vendor", {}):
-                    # The file is not ours, we cannot overwrite it
-                    return
-            data = _append_user_preset_path(conanfile, data, preset_path)
-            data = json.dumps(data, indent=4)
-            save(user_presets_path, data)
+    user_presets_path = os.path.join(conanfile.source_folder, user_presets_path)
+    if os.path.isdir(user_presets_path):  # Allows user to specify only the folder
+        output_dir = user_presets_path
+        user_presets_path = os.path.join(user_presets_path, "CMakeUserPresets.json")
+    else:
+        output_dir = os.path.dirname(user_presets_path)
+
+    if not os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
+        return
+
+    # It uses schema version 4 unless it is forced to 2
+    inherited_user = {}
+    if os.path.basename(user_presets_path) != "CMakeUserPresets.json":
+        inherited_user = _collect_user_inherits(output_dir, preset_prefix)
+
+    if not os.path.exists(user_presets_path):
+        data = {"version": _schema_version(conanfile, default=4),
+                "vendor": {"conan": dict()}}
+        for preset, inherits in inherited_user.items():
+            for i in inherits:
+                data.setdefault(preset, []).append({"name": i})
+    else:
+        data = json.loads(load(user_presets_path))
+        if "conan" not in data.get("vendor", {}):
+            # The file is not ours, we cannot overwrite it
+            return
+
+    if inherited_user:
+        _clean_user_inherits(data, preset_data)
+    data = _append_user_preset_path(conanfile, data, preset_path)
+
+    data = json.dumps(data, indent=4)
+    save(user_presets_path, data)
+
+
+def _collect_user_inherits(output_dir, preset_prefix):
+    # Collect all the existing targets in the user files, to create empty conan- presets
+    # so things doesn't break for multi-platform, when inherits don't exist
+    collected_targets = {}
+    types = "configurePresets", "buildPresets", "testPresets"
+    for file in ("CMakePresets.json", "CMakeUserPresests.json"):
+        user_file = os.path.join(output_dir, file)
+        if os.path.exists(user_file):
+            user_json = json.loads(load(user_file))
+            for preset_type in types:
+                for preset in user_json.get(preset_type, []):
+                    inherits = preset.get("inherits", [])
+                    if isinstance(inherits, str):
+                        inherits = [inherits]
+                    conan_inherits = [i for i in inherits if i.startswith(preset_prefix)]
+                    if conan_inherits:
+                        collected_targets.setdefault(preset_type, []).extend(conan_inherits)
+    return collected_targets
+
+
+def _clean_user_inherits(data, preset_data):
+    for preset_type in "configurePresets", "buildPresets", "testPresets":
+        presets = preset_data.get(preset_type, [])
+        presets_names = [p["name"] for p in presets]
+        other = data.get(preset_type, [])
+        other[:] = [p for p in other if p["name"] not in presets_names]
 
 
 def _get_already_existing_preset_index(name, presets):
@@ -262,25 +316,11 @@ def _append_user_preset_path(conanfile, data, preset_path):
 
 
 def load_cmake_presets(folder):
-    tmp = load(os.path.join(folder, "CMakePresets.json"))
+    try:
+        tmp = load(os.path.join(folder, "CMakePresets.json"))
+    except FileNotFoundError:
+        # Issue: https://github.com/conan-io/conan/issues/12896
+        raise ConanException(f"CMakePresets.json was not found in {folder} folder. Check that you "
+                             f"are using CMakeToolchain as generator to ensure its correct "
+                             f"initialization.")
     return json.loads(tmp)
-
-
-def get_configure_preset(cmake_presets, conanfile):
-    expected_name = _configure_preset_name(conanfile, multiconfig=False)
-    # Do we find a preset for the current configuration?
-    for preset in cmake_presets["configurePresets"]:
-        if preset["name"] == expected_name:
-            return preset
-
-    expected_name = _configure_preset_name(conanfile, multiconfig=True)
-    # In case of multi-config generator or None build_type
-    for preset in cmake_presets["configurePresets"]:
-        if preset["name"] == expected_name:
-            return preset
-
-    # FIXME: Might be an issue if someone perform several conan install that involves different
-    #        CMake generators (multi and single config). Would be impossible to determine which
-    #        is the correct configurePreset because the generator IS in the configure preset.
-
-    raise ConanException("Not available configurePreset, expected name is {}".format(expected_name))

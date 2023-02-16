@@ -358,8 +358,7 @@ class TestValidate(unittest.TestCase):
                                                  "Invalid")})
         client.assert_listed_binary({"pkg/0.1": ("19ad5731bb09f24646c81060bd7730d6cb5b6108",
                                                  "Build")})
-        self.assertIn("ERROR: There are invalid packages (packages that cannot "
-                      "exist for this configuration):", client.out)
+        self.assertIn("ERROR: There are invalid packages:", client.out)
         self.assertIn("dep/0.1: Invalid: Windows not supported", client.out)
 
     def test_validate_export_pkg(self):

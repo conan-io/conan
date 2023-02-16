@@ -68,6 +68,8 @@ class _PackageOption:
             return self._value is None
         other = str(other)
         self._check_valid_value(other)
+        if self._value is None:
+            return False  # Other is not None here
         return other == self.__str__()
 
     @property

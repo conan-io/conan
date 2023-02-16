@@ -96,7 +96,7 @@ class SettingsItem(object):
         delattr(child_setting, item)
 
     def _validate(self, value):
-        value = str(value)
+        value = str(value) if value is not None else None
         if "ANY" not in self._definition and value not in self._definition:
             raise ConanException(bad_value_msg(self._name, value, self._definition))
         return value
@@ -179,6 +179,7 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+        self._frozen = False
 
     def serialize(self):
         """
@@ -272,6 +273,8 @@ class Settings(object):
             return super(Settings, self).__setattr__(field, value)
 
         self._check_field(field)
+        if self._frozen:
+            raise ConanException(f"Tried to define '{field}' setting inside recipe")
         self._data[field].value = value
 
     @property
@@ -290,6 +293,7 @@ class Settings(object):
         """ receives a list of tuples (compiler.version, value)
         This is more an updated than a setter
         """
+        self._frozen = False  # Could be restored at the end, but not really necessary
         assert isinstance(vals, (list, tuple)), vals
         for (name, value) in vals:
             list_settings = name.split(".")
@@ -300,8 +304,8 @@ class Settings(object):
             except ConanException:  # fails if receiving settings doesn't have it defined
                 pass
             else:
-                setattr(attr, list_settings[-1], str(value))
-
+                value = str(value) if value is not None else None
+                setattr(attr, list_settings[-1], value)
 
     def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object

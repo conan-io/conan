@@ -1,14 +1,14 @@
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, apple_sdk_path
 from conan.tools.apple.apple import get_apple_sdk_fullname
-from conan.tools.build import cmd_args_to_string
+from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
-from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conans.errors import ConanException
+from conans.model.pkg_type import PackageType
 
 
 class AutotoolsToolchain:
@@ -27,10 +27,6 @@ class AutotoolsToolchain:
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix
-
-        self.configure_args = self._default_configure_shared_flags() + self._default_configure_install_flags()
-        self.autoreconf_args = self._default_autoreconf_flags()
-        self.make_args = []
 
         # Flags
         self.extra_cxxflags = []
@@ -73,15 +69,16 @@ class AutotoolsToolchain:
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
             arch_build = conanfile.settings_build.get_safe('arch')
+
             compiler = self._conanfile.settings.get_safe("compiler")
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+            # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
-
             # Apple Stuff
             if os_build == "Macos":
                 # SDK path is mandatory for cross-building
-                sdk_path = conanfile.conf["tools.apple:sdk_path"]
+                sdk_path = apple_sdk_path(self._conanfile)
                 if not sdk_path:
                     raise ConanException("You must provide a valid SDK path for cross-compilation.")
                 apple_arch = to_apple_arch(self._conanfile)
@@ -93,6 +90,12 @@ class AutotoolsToolchain:
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+
+        self.configure_args = self._default_configure_shared_flags() + \
+                              self._default_configure_install_flags() + \
+                              self._get_triplets()
+        self.autoreconf_args = self._default_autoreconf_flags()
+        self.make_args = []
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -131,6 +134,8 @@ class AutotoolsToolchain:
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                    check_type=list))
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + apple_flags + conf_flags + self.build_type_link_flags + self.extra_ldflags
         return self._filter_list_empty_fields(ret)
 
@@ -169,11 +174,10 @@ class AutotoolsToolchain:
     def _default_configure_shared_flags(self):
         args = []
         # Just add these flags if there's a shared option defined (never add to exe's)
-        # FIXME: For Conan 2.0 use the package_type to decide if adding these flags or not
         try:
-            if self._conanfile.options.shared:
+            if self._conanfile.package_type is PackageType.SHARED:
                 args.extend(["--enable-shared", "--disable-static"])
-            else:
+            elif self._conanfile.package_type is PackageType.STATIC:
                 args.extend(["--disable-shared", "--enable-static"])
         except ConanException:
             pass
@@ -197,19 +201,72 @@ class AutotoolsToolchain:
                                        _get_argument("datarootdir", "resdirs")])
         return [el for el in configure_install_flags if el]
 
-    def _default_autoreconf_flags(self):
+    @staticmethod
+    def _default_autoreconf_flags():
         return ["--force", "--install"]
 
-    def generate_args(self):
-        configure_args = []
-        configure_args.extend(self.configure_args)
-        user_args_str = cmd_args_to_string(self.configure_args)
-        for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
-            if var and flag not in user_args_str:
-                configure_args.append('--{}={}'.format(flag, var))
+    def _get_triplets(self):
+        triplets = []
+        for flag, value in (("--host=", self._host), ("--build=", self._build),
+                            ("--target=", self._target)):
+            if value:
+                triplets.append(f'{flag}{value}')
+        return triplets
 
-        args = {"configure_args": cmd_args_to_string(configure_args),
+    def update_configure_args(self, updated_flags):
+        """
+        Helper to update/prune flags from ``self.configure_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("configure_args", updated_flags)
+
+    def update_make_args(self, updated_flags):
+        """
+        Helper to update/prune arguments from ``self.make_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("make_args", updated_flags)
+
+    def update_autoreconf_args(self, updated_flags):
+        """
+        Helper to update/prune arguments from ``self.autoreconf_args``.
+
+        :param updated_flags: ``dict`` with arguments as keys and their argument values.
+                              Notice that if argument value is ``None``, this one will be pruned.
+        """
+        self._update_flags("autoreconf_args", updated_flags)
+
+    # FIXME: Remove all these update_xxxx whenever xxxx_args are dicts or new ones replace them
+    def _update_flags(self, attr_name, updated_flags):
+
+        def _list_to_dict(flags):
+            ret = {}
+            for flag in flags:
+                # Only splitting if "=" is there
+                option = flag.split("=", 1)
+                if len(option) == 2:
+                    ret[option[0]] = option[1]
+                else:
+                    ret[option[0]] = ""
+            return ret
+
+        def _dict_to_list(flags):
+            return [f"{k}={v}" if v else k for k, v in flags.items() if v is not None]
+
+        self_args = getattr(self, attr_name)
+        # FIXME: if xxxxx_args -> dict-type at some point, all these lines could be removed
+        options = _list_to_dict(self_args)
+        # Add/update/remove the current xxxxx_args with the new flags given
+        options.update(updated_flags)
+        # Update the current ones
+        setattr(self, attr_name, _dict_to_list(options))
+
+    def generate_args(self):
+        args = {"configure_args": cmd_args_to_string(self.configure_args),
                 "make_args":  cmd_args_to_string(self.make_args),
                 "autoreconf_args": cmd_args_to_string(self.autoreconf_args)}
-
         save_toolchain_args(args, namespace=self._namespace)

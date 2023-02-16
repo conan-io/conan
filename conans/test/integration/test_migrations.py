@@ -13,7 +13,7 @@ from conans.util.files import save, load
 def test_migration_profile_checker_plugin(plugin_path, string_replace, new_string):
     t = TestClient()
     # Any command generates the profile and compatibility plugin files
-    t.run("list recipes '*'")
+    t.run("-v")
 
     profile_plugin_path = os.path.join(t.cache.plugins_path, plugin_path)
     contents = load(profile_plugin_path)
@@ -27,7 +27,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     save(profile_plugin_path, contents)
 
     # Trigger the migrations
-    t.run("list recipes '*'")
+    t.run("-v")
     assert f"Migration: Successfully updated {os.path.basename(plugin_path)}" in t.out
     contents = load(profile_plugin_path)
     # Our changes are removed!!!
@@ -37,7 +37,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     # New client, everything new
     t2 = TestClient()
     # This generates the new plugin file
-    t2.run("list recipes '*'")
+    t2.run("-v")
 
     # Do a modification to the profile plugin but changing the comment
     profile_plugin_path2 = os.path.join(t2.cache.plugins_path, plugin_path)
@@ -51,7 +51,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     version_txt_file_path2 = os.path.join(t2.cache_folder, "version.txt")
     save(version_txt_file_path2, "1.0.0")
     # Trigger the migrations
-    t2.run("list recipes '*'")
+    t2.run("-v")
     assert f"Migration: Successfully updated" not in t2.out
     contents = load(profile_plugin_path2)
     # Our Changes are kept!

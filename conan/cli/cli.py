@@ -1,9 +1,11 @@
 import importlib
 import os
 import pkgutil
+import re
 import signal
 import sys
 import textwrap
+import traceback
 from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
@@ -12,11 +14,10 @@ from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, Color, cli_out_write
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
-    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_INVALID_SYSTEM_REQUIREMENTS
+    ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
-from conans.errors import ConanInvalidSystemRequirements
 from conans.util.files import exception_message_safe
 
 
@@ -111,7 +112,7 @@ class Cli:
         line_format = '{{: <{}}}'.format(max_len)
 
         for group_name, comm_names in sorted(self._groups.items()):
-            cli_out_write(group_name + " commands", Color.BRIGHT_MAGENTA)
+            cli_out_write("\n" + group_name + " commands", Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 cli_out_write(line_format.format(name), Color.GREEN, endline="")
@@ -133,63 +134,89 @@ class Cli:
                 cli_out_write(txt)
 
         cli_out_write("")
-        cli_out_write('Conan commands. Type "conan <command> -h" for help', Color.BRIGHT_YELLOW)
+        cli_out_write('Type "conan <command> -h" for help', Color.BRIGHT_MAGENTA)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
         methods
         """
         output = ConanOutput()
+        self._add_commands()
         try:
-            self._add_commands()
-            try:
-                command_argument = args[0][0]
-            except IndexError:  # No parameters
+            command_argument = args[0][0]
+        except IndexError:  # No parameters
+            self._output_help_cli()
+            return
+        try:
+            command = self._commands[command_argument]
+        except KeyError as exc:
+            if command_argument in ["-v", "--version"]:
+                cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
+                return
+
+            if command_argument in ["-h", "--help"]:
                 self._output_help_cli()
-                return SUCCESS
-            try:
-                command = self._commands[command_argument]
-            except KeyError as exc:
-                if command_argument in ["-v", "--version"]:
-                    cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
-                    return SUCCESS
+                return
 
-                if command_argument in ["-h", "--help"]:
-                    self._output_help_cli()
-                    return SUCCESS
-
-                output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
-                output.info("")
-                self._print_similar(command_argument)
-                raise ConanException("Unknown command %s" % str(exc))
-        except ConanException as exc:
-            output.error(exc)
-            return ERROR_GENERAL
+            output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+            output.info("")
+            self._print_similar(command_argument)
+            raise ConanException("Unknown command %s" % str(exc))
 
         try:
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
-            exit_error = SUCCESS
-        except SystemExit as exc:
-            if exc.code != 0:
-                output.error("Exiting with code: %d" % exc.code)
-            exit_error = exc.code
-        except ConanInvalidConfiguration as exc:
-            exit_error = ERROR_INVALID_CONFIGURATION
-            output.error(exc)
-        except ConanInvalidSystemRequirements as exc:
-            exit_error = ERROR_INVALID_SYSTEM_REQUIREMENTS
-            output.error(exc)
-        except ConanException as exc:
-            exit_error = ERROR_GENERAL
-            output.error(exc)
-        except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
-            exit_error = ERROR_GENERAL
-            msg = exception_message_safe(exc)
-            output.error(msg)
+        except Exception as e:
+            self._conan2_migrate_recipe_msg(e)
+            raise
 
-        return exit_error
+    @staticmethod
+    def _conan2_migrate_recipe_msg(exception):
+        message = str(exception)
+
+        result = re.search(r"Package '(.*)' not resolved: .*: Cannot load recipe", message)
+        if result:
+            pkg = result.group(1)
+            error = "*********************************************************\n" \
+                    f"Recipe '{pkg}' seems broken.\n" \
+                    f"It is possible that this recipe is not Conan 2.0 ready\n"\
+                    "If the recipe comes from ConanCenter check: \n" \
+                    "https://github.com/conan-io/conan-center-index/blob/master/docs/v2_migration.md\n" \
+                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "*********************************************************\n"
+            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
+        result = re.search(r"(.*): Error in build\(\) method, line", message)
+        if result:
+            pkg = result.group(1)
+            error = "*********************************************************\n" \
+                    f"Recipe '{pkg}' cannot build its binary\n" \
+                    f"It is possible that this recipe is not Conan 2.0 ready\n" \
+                    "If the recipe comes from ConanCenter check: \n" \
+                    "https://github.com/conan-io/conan-center-index/blob/master/docs/v2_migration.md\n" \
+                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "*********************************************************\n"
+            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
+
+    @staticmethod
+    def exception_exit_error(exception):
+        output = ConanOutput()
+        if exception is None:
+            return SUCCESS
+        if isinstance(exception, ConanInvalidConfiguration):
+            output.error(exception)
+            return ERROR_INVALID_CONFIGURATION
+        if isinstance(exception, ConanException):
+            output.error(exception)
+            return ERROR_GENERAL
+        if isinstance(exception, SystemExit):
+            if exception.code != 0:
+                output.error("Exiting with code: %d" % exception.code)
+            return exception.code
+
+        assert isinstance(exception, Exception)
+        print(traceback.format_exc())
+        msg = exception_message_safe(exception)
+        output.error(msg)
+        return ERROR_UNEXPECTED
 
 
 def main(args):
@@ -234,6 +261,9 @@ def main(args):
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
     cli = Cli(conan_api)
-    exit_error = cli.run(args)
-
-    sys.exit(exit_error)
+    error = SUCCESS
+    try:
+        cli.run(args)
+    except BaseException as e:
+        error = cli.exception_exit_error(e)
+    sys.exit(error)

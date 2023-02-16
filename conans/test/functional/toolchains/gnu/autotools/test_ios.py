@@ -3,10 +3,9 @@ import textwrap
 
 import pytest
 
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import load_toolchain_args
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
-from conan.tools.apple.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 
@@ -14,9 +13,6 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("autotools")
 def test_ios():
-    xcrun = XCRun(None, sdk='iphoneos')
-    sdk_path = xcrun.sdk_path
-
     profile = textwrap.dedent("""
         include(default)
         [settings]
@@ -24,15 +20,12 @@ def test_ios():
         os.sdk=iphoneos
         os.version=12.0
         arch=armv8
-
-        [conf]
-        tools.apple:sdk_path={sdk_path}
-    """).format(sdk_path=sdk_path)
+        """)
 
     client = TestClient(path_with_spaces=False)
     client.save({"ios-armv8": profile}, clean_first=True)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf None")
+    client.run("create . --profile:build=default --profile:host=ios-armv8 -tf=\"\"")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")

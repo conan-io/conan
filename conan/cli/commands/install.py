@@ -44,6 +44,9 @@ def install(conan_api, parser, *args):
                              "--requires")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
+    if args.path and (args.requires or args.tool_requires):
+        raise ConanException("--requires and --tool-requires arguments are incompatible with "
+                             f"[path] '{args.path}' argument")
     cwd = os.getcwd()
 
     if args.path:
@@ -58,7 +61,7 @@ def install(conan_api, parser, *args):
         output_folder = None
 
     # Basic collaborators, remotes, lockfile, profiles
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
@@ -78,7 +81,8 @@ def install(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out = ConanOutput()
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
+    out.title("Installing packages")
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     out.title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph=deps_graph,

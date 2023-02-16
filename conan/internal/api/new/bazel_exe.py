@@ -37,7 +37,7 @@ class {{package_name}}Recipe(ConanFile):
         """
 
 test_conanfile_exe_v2 = """from conan import ConanFile
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}Test(ConanFile):
@@ -47,7 +47,7 @@ class {{package_name}}Test(ConanFile):
         self.requires(self.tested_reference_str)
 
     def test(self):
-        if not cross_building(self):
+        if can_run(self):
             self.run("{{name}}", env="conanrun")
 """
 

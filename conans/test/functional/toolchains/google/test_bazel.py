@@ -207,8 +207,6 @@ def test_transitive_consuming():
 
     class OpenSSLTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        # VirtualBuildEnv and VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
-        # (it will be defined in Conan 2.0)
         generators = "BazelToolchain", "BazelDeps", "VirtualBuildEnv", "VirtualRunEnv"
         apply_env = False
 

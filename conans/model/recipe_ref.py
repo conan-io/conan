@@ -120,16 +120,24 @@ class RecipeReference:
                 f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")
 
-    def validate_ref(self):
+    def validate_ref(self, allow_uppercase=False):
         """ at the moment only applied to exported (exact) references, but not for requires
         that could contain version ranges
         """
+        from conan.api.output import ConanOutput
         self_str = str(self)
         if self_str != self_str.lower():
-            raise ConanException(f"Conan packages names '{self_str}' must be all lowercase")
+            if not allow_uppercase:
+                raise ConanException(f"Conan packages names '{self_str}' must be all lowercase")
+            else:
+                ConanOutput().warning(f"Package name '{self_str}' has uppercase, and has been "
+                                      "allowed by temporary config. This will break in later 2.X")
         if len(self_str) > 200:
             raise ConanException(f"Package reference too long >200 {self_str}")
-        validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}$")
+        if not allow_uppercase:
+            validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}$")
+        else:
+            validation_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,100}$")
         if validation_pattern.match(self.name) is None:
             raise ConanException(f"Invalid package name '{self.name}'")
         if validation_pattern.match(str(self.version)) is None:
@@ -141,7 +149,6 @@ class RecipeReference:
 
         # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
         pattern = re.compile(r'[.+-]')
-        from conan.api.output import ConanOutput
         if pattern.search(self.name):
             ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
         if self.user and pattern.search(self.user):

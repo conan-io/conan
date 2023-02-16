@@ -3,8 +3,7 @@ import os
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
-from conan.cli.args import add_lockfile_args, _add_common_install_arguments, add_reference_args, \
-    _help_build_policies
+from conan.cli.args import add_lockfile_args, add_common_install_arguments, add_reference_args
 from conan.internal.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_packages
 from conans.client.conanfile.build import run_build_method
@@ -13,23 +12,24 @@ from conans.client.conanfile.build import run_build_method
 @conan_command(group='Creator')
 def build(conan_api, parser, *args):
     """
-    Install + calls the build() method
+    Install dependencies and calls the build() method
     """
     parser.add_argument("path", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py "
                              "or conanfile.txt) or to a recipe file. e.g., "
                              "./my_project/conanfile.txt.")
     add_reference_args(parser)
+    # TODO: Missing --build-require argument and management
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+    add_common_install_arguments(parser)
     add_lockfile_args(parser)
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
-    remotes = conan_api.remotes.list(args.remote)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
@@ -47,7 +47,8 @@ def build(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out = ConanOutput()
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
+    out.title("Installing packages")
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     source_folder = folder
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None

@@ -5,7 +5,7 @@ import pytest
 
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.presets import load_cmake_presets
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import load_toolchain_args
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp

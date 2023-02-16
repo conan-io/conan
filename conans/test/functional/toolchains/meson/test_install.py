@@ -23,7 +23,11 @@ class MesonInstall(TestMesonBase):
 
             def config_options(self):
                 if self.settings.os == "Windows":
-                    del self.options.fPIC
+                    self.options.rm_safe("fPIC")
+
+            def configure(self):
+                if self.options.shared:
+                    self.options.rm_safe("fPIC")
 
             def layout(self):
                 self.folders.build = "build"
@@ -107,5 +111,4 @@ class MesonInstall(TestMesonBase):
                      os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
 
         self.t.run("create . --name=hello --version=0.1")
-
         self._check_binary()

@@ -3,16 +3,15 @@ import os
 import textwrap
 import unittest
 
-import pytest
 from requests.models import Response
 
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestRequester
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestRequester
 from conans.test.utils.tools import TestServer
 from conans.util.env import environment_update
 from conans.util.files import save
@@ -130,6 +129,15 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
         self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
 
+    def test_authorize_disabled_remote(self):
+        tc = TestClient(servers=self.servers)
+        # Sanity check, this should not fail
+        tc.run("remote login default pepe -p pepepass")
+        tc.run("remote logout default")
+        # This used to fail when the authentication was not possible for disabled remotes
+        tc.run("remote disable default")
+        tc.run("remote login default pepe -p pepepass")
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
 
 class AuthenticationTest(unittest.TestCase):
 
@@ -172,7 +180,7 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
                       client.out)
         client.run("search pkg -r=default")
-        self.assertIn("There are no matching recipe references", client.out)
+        self.assertIn("ERROR: Recipe 'pkg' not found", client.out)
 
 
 def test_token_expired():

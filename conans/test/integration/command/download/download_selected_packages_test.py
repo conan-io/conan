@@ -25,6 +25,7 @@ def setup():
     return client, ref, package_ids, str(conanfile)
 
 
+@pytest.mark.artifactory_ready
 def test_download_recipe_twice(setup):
     client, ref, package_ids, conanfile = setup
     new_client = TestClient(servers=client.servers, inputs=["admin", "password"])
@@ -41,6 +42,7 @@ def test_download_recipe_twice(setup):
     assert conanfile == load(conanfile_path)
 
 
+@pytest.mark.artifactory_ready
 def test_download_packages_twice(setup):
     client, ref, package_ids, _ = setup
     new_client = TestClient(servers=client.servers, inputs=["admin", "password"])

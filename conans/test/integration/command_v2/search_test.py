@@ -9,6 +9,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, TestServer
 
 
+# FIXME: we could remove this whenever @conan_alias_command will be implemented
 class TestSearch:
 
     @pytest.fixture
@@ -24,13 +25,13 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search", assert_error=True)
-        assert "error: the following arguments are required: query" in self.client.out
+        assert "error: the following arguments are required: reference" in self.client.out
 
     def test_search_no_matching_recipes(self, remotes):
-        expected_output = ("remote1:\n"
-                           "  There are no matching recipe references\n"
-                           "remote2:\n"
-                           "  There are no matching recipe references\n")
+        expected_output = ("remote1\n"
+                           "  ERROR: Recipe 'whatever' not found\n"
+                           "remote2\n"
+                           "  ERROR: Recipe 'whatever' not found\n")
 
         self.client.run("search whatever")
         assert expected_output == self.client.out
@@ -85,9 +86,9 @@ class TestRemotes:
         with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
             self.client.run("search whatever")
         expected_output = textwrap.dedent(f"""\
-        remote1:
+        remote1
           {output}
-        remote2:
+        remote2
           {output}
         """)
         assert expected_output == self.client.out
@@ -106,7 +107,7 @@ class TestRemotes:
         self.client.run("search -r {} {}".format(remote_name, "test_recipe"))
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    {}\n".format(recipe_name)
         )
@@ -123,11 +124,11 @@ class TestRemotes:
         remote2_recipe2 = "test_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
-            "remote2:\n"
+            "remote2\n"
             "  test_recipe\n"
             "    test_recipe/2.0.0@user/channel\n"
             "    test_recipe/2.1.0@user/channel\n"
@@ -154,7 +155,7 @@ class TestRemotes:
         remote2_recipe2 = "test_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
@@ -182,12 +183,12 @@ class TestRemotes:
         remote2_recipe2 = "another_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
-            "remote2:\n"
-            "  There are no matching recipe references\n"
+            "remote2\n"
+            "  ERROR: Recipe 'test_recipe' not found\n"
         )
 
         self._add_remote(remote1)
@@ -224,7 +225,7 @@ class TestRemotes:
         remote1_recipe4 = "test_another/4.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_another\n"
             "    test_another/2.1.0@user/channel\n"
             "    test_another/4.1.0@user/channel\n"

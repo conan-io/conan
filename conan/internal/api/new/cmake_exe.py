@@ -1,7 +1,7 @@
 from conan.internal.api.new.cmake_lib import source_cpp, source_h, test_main
 
 conanfile_exe = '''from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 
 
 class {{package_name}}Recipe(ConanFile):
@@ -26,6 +26,8 @@ class {{package_name}}Recipe(ConanFile):
         cmake_layout(self)
 
     def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
         tc = CMakeToolchain(self)
         tc.generate()
 
@@ -37,12 +39,31 @@ class {{package_name}}Recipe(ConanFile):
     def package(self):
         cmake = CMake(self)
         cmake.install()
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in requires -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 '''
 
 cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
 
+{% if requires is defined -%}
+{% for require in requires -%}
+find_package({{as_name(require)}} CONFIG REQUIRED)
+{% endfor %}
+{%- endif %}
+
 add_executable({{name}} src/{{name}}.cpp src/main.cpp)
+
+{% if requires is defined -%}
+{% for require in requires -%}
+target_link_libraries({{name}} PRIVATE {{as_name(require)}}::{{as_name(require)}})
+{% endfor %}
+{%- endif %}
 
 install(TARGETS {{name}} DESTINATION "."
         RUNTIME DESTINATION bin
@@ -53,7 +74,7 @@ install(TARGETS {{name}} DESTINATION "."
 
 test_conanfile_exe_v2 = """import os
 from conan import ConanFile
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -63,7 +84,7 @@ class {{package_name}}TestConan(ConanFile):
         self.requires(self.tested_reference_str)
 
     def test(self):
-        if not cross_building(self):
+        if can_run(self):
             self.run("{{name}}", env="conanrun")
 """
 

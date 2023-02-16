@@ -2,6 +2,7 @@ import os
 import platform
 from typing import List
 
+import yaml
 from jinja2 import Template
 
 
@@ -10,6 +11,7 @@ from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -39,7 +41,6 @@ class ClientCache(object):
         self.cache_folder = cache_folder
 
         # Caching
-        self._config = None
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
@@ -49,11 +50,6 @@ class ClientCache(object):
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
-        # The cache is first thing instantiated, we can remove this from env now
-        self._localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
-
-    def closedb(self):
-        self._data_cache.closedb()
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
@@ -163,7 +159,7 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB.create(localdb_filename, encryption_key=self._localdb_encryption_key)
+        return LocalDB.create(localdb_filename)
 
     @property
     def profiles_path(self):
@@ -202,8 +198,37 @@ class ClientCache(object):
         """Returns {setting: [value, ...]} defining all the possible
            settings without values"""
         self.initialize_settings()
-        content = load(self.settings_path)
-        return Settings.loads(content)
+
+        def _load_settings(path):
+            try:
+                return yaml.safe_load(load(path)) or {}
+            except yaml.YAMLError as ye:
+                raise ConanException("Invalid settings.yml format: {}".format(ye))
+
+        settings = _load_settings(self.settings_path)
+        user_settings_file = os.path.join(self.cache_folder, "settings_user.yml")
+        if os.path.exists(user_settings_file):
+            settings_user = _load_settings(user_settings_file)
+
+            def appending_recursive_dict_update(d, u):
+                # Not the same behavior as conandata_update, because this append lists
+                for k, v in u.items():
+                    if isinstance(v, list):
+                        current = d.get(k) or []
+                        d[k] = current + [value for value in v if value not in current]
+                    elif isinstance(v, dict):
+                        current = d.get(k) or {}
+                        d[k] = appending_recursive_dict_update(current, v)
+                    else:
+                        d[k] = v
+                return d
+
+            appending_recursive_dict_update(settings, settings_user)
+
+        try:
+            return Settings(settings)
+        except AttributeError as e:
+            raise ConanException("Invalid settings.yml format: {}".format(e))
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

@@ -47,7 +47,7 @@ class ConanApp(object):
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)
         # Handle remote connections
-        self.remote_manager = RemoteManager(self.cache, auth_manager, self.hook_manager)
+        self.remote_manager = RemoteManager(self.cache, auth_manager)
 
         self.proxy = ConanProxy(self)
         self.range_resolver = RangeResolver(self)

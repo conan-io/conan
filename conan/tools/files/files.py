@@ -1,5 +1,3 @@
-import configparser
-import errno
 import gzip
 import os
 import platform
@@ -13,7 +11,6 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
@@ -25,15 +22,14 @@ def load(conanfile, path, encoding="utf-8"):
     Utility function to load files in one line. It will manage the open and close of the file,
     and load binary encodings. Returns the content of the file.
 
-
     :param conanfile: The current recipe object. Always use ``self``.
     :param path: Path to the file to read
     :param encoding: (Optional, Defaulted to ``utf-8``): Specifies the input file text encoding.
     :return: The contents of the file
     """
-    with open(path, 'rb') as handle:
+    with open(path, "r", encoding=encoding, newline="") as handle:
         tmp = handle.read()
-        return tmp.decode(encoding)
+        return tmp
 
 
 def save(conanfile, path, content, append=False, encoding="utf-8"):
@@ -48,28 +44,10 @@ def save(conanfile, path, content, append=False, encoding="utf-8"):
            existing one.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the output file text encoding.
     """
-    if append:
-        mode = "ab"
-        try:
-            os.makedirs(os.path.dirname(path))
-        except Exception:
-            pass
-    else:
-        mode = "wb"
-        dir_path = os.path.dirname(path)
-        if not os.path.isdir(dir_path):
-            try:
-                os.makedirs(dir_path)
-            except OSError as error:
-                if error.errno not in (errno.EEXIST, errno.ENOENT):
-                    raise OSError("The folder {} does not exist and could not be created ({})."
-                                  .format(dir_path, error.strerror))
-            except Exception:
-                raise
-
-    with open(path, mode) as handle:
-        if not isinstance(content, bytes):
-            content = bytes(content, encoding=encoding)
+    dir_path = os.path.dirname(path)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(path, "a" if append else "w", encoding=encoding, newline="") as handle:
         handle.write(content)
 
 
@@ -228,6 +206,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     if download_cache and not os.path.isabs(download_cache):
         raise ConanException("core.download:download_cache must be an absolute path")
 
+    filename = os.path.abspath(filename)
+
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
         if file_url.startswith("file:"):
@@ -235,6 +215,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
                                       sha1=sha1, sha256=sha256)
         else:
             downloader = CachingFileDownloader(requester, download_cache=download_cache)
+            os.makedirs(os.path.dirname(filename), exist_ok=True)  # filename in subfolder must exist
             downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
                                 verify_ssl=verify, retry=retry, retry_wait=retry_wait,
                                 headers=headers, md5=md5, sha1=sha1, sha256=sha256)
@@ -305,51 +286,6 @@ def rename(conanfile, src, dst):
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
-def load_toolchain_args(generators_folder=None, namespace=None):
-    """
-    Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
-
-    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
-    :param namespace: `str` namespace to be prepended to the filename.
-    :return: <class 'configparser.SectionProxy'>
-    """
-    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
-        else CONAN_TOOLCHAIN_ARGS_FILE
-    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
-        else namespace_name
-    toolchain_config = configparser.ConfigParser()
-    toolchain_file = toolchain_config.read(args_file)
-    if not toolchain_file:
-        raise ConanException("The file %s does not exist. Please, make sure that it was not"
-                             " generated in another folder." % args_file)
-    try:
-        return toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION]
-    except KeyError:
-        raise ConanException("The primary section [%s] does not exist in the file %s. Please, add it"
-                             " as the default one of all your configuration variables." %
-                             (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
-
-
-def save_toolchain_args(content, generators_folder=None, namespace=None):
-    """
-    Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
-
-    :param content: `dict` all the information to be saved into the toolchain file.
-    :param namespace: `str` namespace to be prepended to the filename.
-    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
-    """
-    # Let's prune None values
-    content_ = {k: v for k, v in content.items() if v is not None}
-    namespace_name = "{}_{}".format(namespace, CONAN_TOOLCHAIN_ARGS_FILE) if namespace \
-        else CONAN_TOOLCHAIN_ARGS_FILE
-    args_file = os.path.join(generators_folder, namespace_name) if generators_folder \
-        else namespace_name
-    toolchain_config = configparser.ConfigParser()
-    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
-    with open(args_file, "w") as f:
-        toolchain_config.write(f)
-
-
 @contextmanager
 def chdir(conanfile, newdir):
     """
@@ -391,10 +327,13 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern, strip_root)
     if filename.endswith(".gz"):
-        with gzip.open(filename, 'rb') as f:
-            file_content = f.read()
         target_name = filename[:-3] if destination == "." else destination
-        save(conanfile, target_name, file_content)
+        target_dir = os.path.dirname(target_name)
+        if target_dir:
+            os.makedirs(target_dir, exist_ok=True)
+        with gzip.open(filename, 'rb') as fin:
+            with open(target_name, "wb") as fout:
+                shutil.copyfileobj(fin, fout)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         return untargz(filename, destination, pattern, strip_root)
@@ -599,7 +538,7 @@ def collect_libs(conanfile, folder=None):
     name **math**.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param folder (Optional, Defaulted to ``None``): String indicating the subfolder name inside
+    :param folder: (Optional, Defaulted to ``None``): String indicating the subfolder name inside
            ``conanfile.package_folder`` where the library files are.
     :return: A list with the library names
     """

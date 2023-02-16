@@ -42,8 +42,9 @@ class ProfilesAPI:
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
         loader = ProfileLoader(self._cache)
-        env = None  # TODO: Not handling environment
-        profile = loader.from_cli_args(profiles, settings, options, env, conf, cwd)
+        profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
+        profile.conf.validate()
+        self._cache.new_config.validate()
         # Apply the new_config to the profiles the global one, so recipes get it too
         profile.conf.rebase_conf_definition(self._cache.new_config)
         return profile
@@ -62,10 +63,16 @@ class ProfilesAPI:
         List all the profiles file sin the cache
         :return: an alphabetically ordered list of profile files in the default cache location
         """
+        # List is to be extended (directories should not have a trailing slash)
+        paths_to_ignore = ['.DS_Store']
+
         profiles = []
         profiles_path = self._cache.profiles_path
         if os.path.exists(profiles_path):
             for current_directory, _, files in os.walk(profiles_path, followlinks=True):
+                files = filter(lambda file: os.path.relpath(
+                    os.path.join(current_directory, file), profiles_path) not in paths_to_ignore, files)
+
                 for filename in files:
                     rel_path = os.path.relpath(os.path.join(current_directory, filename),
                                                profiles_path)
@@ -74,7 +81,8 @@ class ProfilesAPI:
         profiles.sort()
         return profiles
 
-    def detect(self):
+    @staticmethod
+    def detect():
         """
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """

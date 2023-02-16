@@ -4,7 +4,8 @@ import textwrap
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
+    apple_sdk_path
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
@@ -249,9 +250,6 @@ class MesonToolchain(object):
             elements = getattr(self._conanfile.cpp.package, name)
             return elements[0] if elements else None
 
-        if not self._conanfile.package_folder:
-            return {}
-
         ret = {}
         bindir = _get_cpp_info_value("bindirs")
         datadir = _get_cpp_info_value("resdirs")
@@ -280,9 +278,12 @@ class MesonToolchain(object):
         if not self._is_apple_system:
             return
         # SDK path is mandatory for cross-building
-        sdk_path = self._conanfile.conf.get("tools.apple:sdk_path")
+        sdk_path = apple_sdk_path(self._conanfile)
         if not sdk_path and self.cross_build:
-            raise ConanException("You must provide a valid SDK path for cross-compilation.")
+            raise ConanException(
+                "Apple SDK path not found. For cross-compilation, you must "
+                "provide a valid SDK path in 'tools.apple:sdk_path' config."
+            )
 
         # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
         os_sdk = self._conanfile.settings.get_safe('os.sdk')
@@ -331,10 +332,12 @@ class MesonToolchain(object):
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
-            "ldflags": sharedlinkflags + exelinkflags
+            "ldflags": sharedlinkflags + exelinkflags + linker_script_flags
         }
 
     @staticmethod

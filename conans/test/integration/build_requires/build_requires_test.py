@@ -726,3 +726,25 @@ def test_both_context_options_error():
     c.assert_listed_binary({"pkg/0.1": ("62e589af96a19807968167026d906e63ed4de1f5", "Build")},
                            build=True)
     assert "Finalizing install" in c.out
+
+
+def test_conditional_require_context():
+    """ test that we can condition on the context to define a dependency
+    """
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+           name = "pkg"
+           version = "0.1"
+           def requirements(self):
+               if self.context == "host":
+                   self.requires("dep/1.0")
+           """)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+            "consumer/conanfile.py": pkg})
+    c.run("create dep")
+    c.run("create consumer")
+    c.assert_listed_require({"dep/1.0": "Cache"})
+    c.run("create consumer --build-require")
+    assert "dep/1.0" not in c.out

@@ -10,7 +10,7 @@ from conans.test.utils.tools import TestClient
 def hello_client():
     client = TestClient()
     client.run("new cmake_lib -d name=hello -d version=1.1")
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
     return client
 
 

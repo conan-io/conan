@@ -1,4 +1,5 @@
 from conan.api.conan_api import ConanAPI
+from conan.api.model import ListPattern
 from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
 from conans.errors import ConanException
@@ -7,7 +8,8 @@ from conans.errors import ConanException
 @conan_command(group="Creator")
 def upload(conan_api: ConanAPI, parser, *args):
     """
-    Uploads a recipe and binary packages to a remote.
+    Uploads packages to a remote.
+
     By default, all the matching references are uploaded (all revisions).
     By default, if a recipe reference is specified, it will upload all the revisions for all the
     binary packages, unless --only-recipe is specified. You can use the "latest" placeholder at the
@@ -37,37 +39,36 @@ def upload(conan_api: ConanAPI, parser, *args):
     remote = conan_api.remotes.get(args.remote)
     enabled_remotes = conan_api.remotes.list()
 
-    upload_bundle = conan_api.upload.get_bundle(args.reference, args.package_query, args.only_recipe)
-    if not upload_bundle.recipes:
+    ref_pattern = ListPattern(args.reference, package_id="*", only_recipe=args.only_recipe)
+    package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+
+    if not package_list.recipes:
         raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 
     if args.check:
-        conan_api.upload.check_integrity(upload_bundle)
-
+        conan_api.cache.check_integrity(package_list)
     # Check if the recipes/packages are in the remote
-    conan_api.upload.check_upstream(upload_bundle, remote, args.force)
+    conan_api.upload.check_upstream(package_list, remote, args.force)
 
     # If only if search with "*" we ask for confirmation
     if not args.confirm and "*" in args.reference:
-        _ask_confirm_upload(conan_api, upload_bundle)
+        _ask_confirm_upload(conan_api, package_list)
 
-    if not upload_bundle.any_upload:
-        return
-
-    conan_api.upload.prepare(upload_bundle, enabled_remotes)
-    conan_api.upload.upload_bundle(upload_bundle, remote)
+    conan_api.upload.prepare(package_list, enabled_remotes)
+    conan_api.upload.upload(package_list, remote)
 
 
 def _ask_confirm_upload(conan_api, upload_data):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    for ref, bundle in upload_data.recipes.items():
+    for ref, bundle in upload_data.refs():
         msg = "Are you sure you want to upload recipe '%s'?" % ref.repr_notime()
         if not ui.request_boolean(msg):
-            bundle.upload = False
-            for package in bundle.packages:
-                package.upload = False
+            bundle["upload"] = False
+            for _, prev_bundle in upload_data.prefs(ref, bundle):
+                prev_bundle["upload"] = False
+
         else:
-            for package in bundle.packages:
-                msg = "Are you sure you want to upload package '%s'?" % package.pref.repr_notime()
+            for pref, prev_bundle in upload_data.prefs(ref, bundle):
+                msg = "Are you sure you want to upload package '%s'?" % pref.repr_notime()
                 if not ui.request_boolean(msg):
-                    package.upload = False
+                    prev_bundle["upload"] = False

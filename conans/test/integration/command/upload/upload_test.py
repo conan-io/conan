@@ -636,7 +636,7 @@ def test_upload_only_without_user_channel():
     c.save({"conanfile.py": GenConanfile("lib", "1.0")})
     c.run('create .')
     c.run("create . --user=user --channel=channel")
-    c.run("list recipes *")
+    c.run("list *")
     assert "lib/1.0@user/channel" in c.out
 
     c.run('upload */*@ -c -r=default')

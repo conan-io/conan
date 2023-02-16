@@ -63,17 +63,14 @@ class RestApiClient(object):
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
 
-    def get_recipe_snapshot(self, ref):
-        return self._get_api().get_recipe_snapshot(ref)
-
     def get_recipe_sources(self, ref, dest_folder):
         return self._get_api().get_recipe_sources(ref, dest_folder)
 
     def get_package(self, pref, dest_folder):
         return self._get_api().get_package(pref, dest_folder)
 
-    def upload_recipe(self, ref, files_to_upload, deleted):
-        return self._get_api().upload_recipe(ref, files_to_upload, deleted)
+    def upload_recipe(self, ref, files_to_upload):
+        return self._get_api().upload_recipe(ref, files_to_upload)
 
     def upload_package(self, pref, files_to_upload):
         return self._get_api().upload_package(pref, files_to_upload)

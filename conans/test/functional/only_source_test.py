@@ -26,18 +26,18 @@ class OnlySourceTest(unittest.TestCase):
         # Will Fail because hello0/0.0 and hello1/1.1 has not built packages
         # and by default no packages are built
         client.run("create . --user=lasote --channel=stable", assert_error=True)
-        self.assertIn("Or try to build locally from sources with '--build=hello0/0.0@lasote/stable "
+        self.assertIn("or try to build locally from sources using the '--build=hello0/0.0@lasote/stable "
                       "--build=hello1/1.1@lasote/stable'",
                       client.out)
         # Only 1 reference!
-        assert "Use 'conan list packages hello0/0.0@lasote/stable" in client.out
+        assert "Check the available packages using 'conan list hello0/0.0@lasote/stable:* -r=remote'" in client.out
 
         # We generate the package for hello0/0.0
         client.run("install --requires=hello0/0.0@lasote/stable --build hello0*")
 
         # Still missing hello1/1.1
         client.run("create . --user=lasote --channel=stable", assert_error=True)
-        self.assertIn("Or try to build locally from sources with "
+        self.assertIn("or try to build locally from sources using the "
                       "'--build=hello1/1.1@lasote/stable'", client.out)
 
         # We generate the package for hello1/1.1
@@ -128,12 +128,17 @@ class OnlySourceTest(unittest.TestCase):
         self.assertNotIn("Copying sources to build folder", other_client.out)
 
 
-def test_build_policy_installer():
+def test_build_policy_missing():
     c = TestClient(default_server_user=True)
     conanfile = GenConanfile("pkg", "1.0").with_class_attribute('build_policy = "missing"')\
                                           .with_class_attribute('upload_policy = "skip"')
     c.save({"conanfile.py": conanfile})
     c.run("export .")
+
+    # the --build=never has higher priority
+    c.run("install --requires=pkg/1.0@ --build=never", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/1.0'" in c.out
+
     c.run("install --requires=pkg/1.0@")
     assert "pkg/1.0: Building package from source as defined by build_policy='missing'" in c.out
 

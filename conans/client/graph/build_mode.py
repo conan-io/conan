@@ -95,7 +95,7 @@ class BuildMode:
         return False
 
     def allowed(self, conan_file):
-        if conan_file.build_policy == "never":  # this package has been export-pkg
+        if self.never or conan_file.build_policy == "never":  # this package has been export-pkg
             return False
         if self.missing:
             return True

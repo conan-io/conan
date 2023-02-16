@@ -11,7 +11,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
-    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock
+    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -131,6 +131,7 @@ class CMakeToolchain(object):
                                        ("apple_system", AppleSystemBlock),
                                        ("fpic", FPicBlock),
                                        ("arch_flags", ArchitectureBlock),
+                                       ("linker_scripts", LinkerScriptsBlock),
                                        ("libcxx", GLibCXXBlock),
                                        ("vs_runtime", VSRuntimeBlock),
                                        ("cppstd", CppStdBlock),
@@ -146,7 +147,8 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
-        self.user_presets_path = None
+        self.user_presets_path = "CMakeUserPresets.json"
+        self.presets_prefix = "conan"
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -201,7 +203,7 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path)
+                            self.user_presets_path, self.presets_prefix)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

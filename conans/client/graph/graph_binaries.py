@@ -4,7 +4,8 @@ from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_EDITABLE_BUILD)
+                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_SYSTEM_TOOL,
+                                       BINARY_SYSTEM_TOOL)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 
@@ -56,7 +57,8 @@ class GraphBinariesAnalyzer(object):
         pref = node.pref
         for r in self._selected_remotes:
             try:
-                latest_pref = self._remote_manager.get_latest_package_reference(pref, r)
+                info = node.conanfile.info
+                latest_pref = self._remote_manager.get_latest_package_reference(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
                 if len(results) > 0 and not self._update:
                     break
@@ -157,6 +159,9 @@ class GraphBinariesAnalyzer(object):
 
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID
+            return
+        if node.recipe == RECIPE_SYSTEM_TOOL:
+            node.binary = BINARY_SYSTEM_TOOL
             return
 
         if node.recipe == RECIPE_EDITABLE:
@@ -295,10 +300,16 @@ class GraphBinariesAnalyzer(object):
                 conanfile.layout()
 
     def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
-        self._selected_remotes = remotes or []# TODO: A bit dirty interfaz, pass as arg instead
+        self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
-        build_mode = BuildMode(build_mode)
+        test_package = deps_graph.root.conanfile.tested_reference_str is not None
+        if test_package:
+            main_mode = BuildMode(["never"])
+            test_mode = BuildMode(build_mode)
+        else:
+            main_mode = test_mode = BuildMode(build_mode)
         for node in deps_graph.ordered_iterate():
+            build_mode = test_mode if node.test_package else main_mode
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc

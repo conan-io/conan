@@ -5,10 +5,9 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import mkdir, rmdir, save
+from conans.util.files import mkdir, save
 
 
 @pytest.fixture()
@@ -32,6 +31,12 @@ def test_install_reference_error(client):
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
 
 
+def test_install_args_error():
+    c = TestClient()
+    c.run("install . --requires=zlib/1.0", assert_error=True)
+    assert "--requires and --tool-requires arguments are incompatible" in c.out
+
+
 def test_four_subfolder_install(client):
     # https://github.com/conan-io/conan/issues/3950
     client.save({"path/to/sub/folder/conanfile.txt": ""})
@@ -39,6 +44,7 @@ def test_four_subfolder_install(client):
     client.run(" install path/to/sub/folder")
 
 
+@pytest.mark.artifactory_ready
 def test_install_system_requirements(client):
     client.save({"conanfile.py": textwrap.dedent("""
         from conan import ConanFile
@@ -190,24 +196,6 @@ def test_install_with_path_errors(client):
     assert "Conanfile not found" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
-def test_install_broken_reference(client):
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
-    client.run("remote add_ref hello/0.1@lasote/stable default")
-    ref = RecipeReference.loads("hello/0.1@lasote/stable")
-    # Because the folder is removed, the metadata is removed and the
-    # origin remote is lost
-    rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
-    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
-
-    # If it was associated, it has to be desasociated
-    client.run("remote remove_ref hello/0.1@lasote/stable")
-    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
-
-
 @pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
                           "of the folders")
 def test_install_argument_order(client):
@@ -255,6 +243,7 @@ def test_install_anonymous(client):
     assert "pkg/0.1@lasote/testing: Package installed" in client2.out
 
 
+@pytest.mark.artifactory_ready
 def test_install_without_ref(client):
     client.save({"conanfile.py": GenConanfile("lib", "1.0")})
     client.run('create .')
@@ -275,6 +264,7 @@ def test_install_without_ref(client):
     client.run('upload lib/1.0 -c -r default')
 
 
+@pytest.mark.artifactory_ready
 def test_install_disabled_remote(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
@@ -287,6 +277,17 @@ def test_install_disabled_remote(client):
     client.run("remote disable default")
     client.run("install --requires=pkg/0.1@lasote/testing --update -r default", assert_error=True)
     assert "ERROR: Remote 'default' can't be found or is disabled" in client.out
+
+
+def test_install_no_remotes(client):
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    client.run("create .")
+    client.run("upload * --confirm -r default")
+    client.run("remove * -c")
+    client.run("install --requires=pkg/0.1 -nr", assert_error=True)
+    assert "ERROR: Package 'pkg/0.1' not resolved: No remote defined" in client.out
+    client.run("install --requires=pkg/0.1")  # this works without issue
+    client.run("install --requires=pkg/0.1 -nr")  # and now this too, pkg in cache
 
 
 def test_install_skip_disabled_remote():

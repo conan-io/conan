@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 
 import pytest
@@ -63,10 +64,10 @@ conaninfo = '''
 class RemoveWithoutUserChannel(unittest.TestCase):
 
     def setUp(self):
-        self.test_server = TestServer(users={"lasote": "password"},
-                                      write_permissions=[("lib/1.0@*/*", "lasote")])
+        self.test_server = TestServer(users={"admin": "password"},
+                                      write_permissions=[("lib/1.0@*/*", "admin")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, inputs=["lasote", "password"])
+        self.client = TestClient(servers=servers, inputs=["admin", "password"])
 
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
@@ -80,6 +81,7 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.assertFalse(os.path.exists(ref_layout.base_folder))
         self.assertFalse(os.path.exists(pkg_layout.base_folder))
 
+    @pytest.mark.artifactory_ready
     def test_remote(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=lib --version=1.0")
@@ -102,10 +104,10 @@ class RemovePackageRevisionsTest(unittest.TestCase):
     NO_SETTINGS_RREF = "4d670581ccb765839f2239cc8dff8fbd"
 
     def setUp(self):
-        self.test_server = TestServer(users={"user": "password"},
-                                      write_permissions=[("foobar/0.1@*/*", "user")])
+        self.test_server = TestServer(users={"admin": "password"},
+                                      write_permissions=[("foobar/0.1@*/*", "admin")])
         servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, inputs=["user", "password"])
+        self.client = TestClient(servers=servers, inputs=["admin", "password"])
         ref = RecipeReference.loads(f"foobar/0.1@user/testing#{self.NO_SETTINGS_RREF}")
         self.pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
 
@@ -135,6 +137,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
+    @pytest.mark.artifactory_ready
     def test_remove_remote_package_id_reference(self):
         """ Remove remote package ID based on recipe revision. The package must be deleted, but
             the recipe must be preserved.
@@ -150,6 +153,7 @@ class RemovePackageRevisionsTest(unittest.TestCase):
                         .format(self.NO_SETTINGS_RREF, NO_SETTINGS_PACKAGE_ID))
         assert not self.client.package_exists(self.pref)
 
+    @pytest.mark.artifactory_ready
     def test_remove_all_packages_but_the_recipe_at_remote(self):
         """ Remove all the packages but not the recipe in a remote
         """
@@ -159,15 +163,15 @@ class RemovePackageRevisionsTest(unittest.TestCase):
         self.client.run("upload foobar/0.1@user/testing -r default -c")
         ref = self.client.cache.get_latest_recipe_reference(
                RecipeReference.loads("foobar/0.1@user/testing"))
-        self.client.run("list packages foobar/0.1@user/testing#{} -r default".format(ref.revision))
+        self.client.run("list foobar/0.1@user/testing#{}:* -r default".format(ref.revision))
         default_arch = self.client.get_default_host_profile().settings['arch']
-        self.assertIn(f"arch={default_arch}", self.client.out)
-        self.assertIn("arch=x86", self.client.out)
+        self.assertIn(f"arch: {default_arch}", self.client.out)
+        self.assertIn("arch: x86", self.client.out)
 
         self.client.run("remove -c foobar/0.1@user/testing:* -r default")
         self.client.run("search foobar/0.1@user/testing -r default")
-        self.assertNotIn(f"arch={default_arch}", self.client.out)
-        self.assertNotIn("arch=x86", self.client.out)
+        self.assertNotIn(f"arch: {default_arch}", self.client.out)
+        self.assertNotIn("arch: x86", self.client.out)
 
 
 # populated packages of bar
@@ -184,8 +188,8 @@ bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
 bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
-@pytest.fixture()
-def populated_client():
+@pytest.fixture(scope="module")
+def _populated_client_base():
     """
     foo/1.0@ (one revision) no packages
     foo/1.0@user/channel (one revision)  no packages
@@ -227,6 +231,20 @@ def populated_client():
     client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
     client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
 
+    return client
+
+
+@pytest.fixture()
+def populated_client(_populated_client_base):
+    """ this is much faster than creating and uploading everythin
+    """
+    client = TestClient(default_server_user=True)
+    shutil.rmtree(client.cache_folder)
+    shutil.copytree(_populated_client_base.cache_folder, client.cache_folder)
+    shutil.rmtree(client.servers["default"].test_server._base_path)
+    shutil.copytree(_populated_client_base.servers["default"].test_server._base_path,
+                    client.servers["default"].test_server._base_path)
+    client.update_servers()
     return client
 
 
@@ -286,7 +304,7 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:*#*", "prefs": []},
     {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
     {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1#*:{}".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:{}*".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
     {"remove": "bar/1.1#*:*{}".format(pkg_id_release[-12:]), "prefs": [bar_rrev2_debug]},
     {"remove": "{}:*{}*".format(bar_rrev2, pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
     {"remove": "*/*#*:*{}*".format(pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
@@ -297,15 +315,13 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": '*/*#*:*#* -p', "error": True,
      "error_msg": "argument -p/--package-query: expected one argument"},
     {"remove": "bar/1.1#*:", "prefs": []},
-    {"remove": "bar/1.1#*:234234#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1:234234", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1 -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:234234*#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:234234*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:* -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
-    populated_client.run("remove f/* -c {}".format(r))
-
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
     assert pids == {bar_rrev2_debug, bar_rrev2_release}
 

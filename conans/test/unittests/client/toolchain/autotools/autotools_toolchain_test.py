@@ -3,7 +3,7 @@ from os import chdir
 
 import pytest
 
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf

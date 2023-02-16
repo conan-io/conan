@@ -31,9 +31,6 @@ class TestVersionRangesCache:
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})
 
-        users = {"server0": [("user", "password")],
-                 "server1": [("user", "password")]}
-
         client = TestClient(servers=servers, inputs=["user", "password", "user", "password"])
 
         # server0 does not satisfy range
@@ -67,3 +64,39 @@ class TestVersionRangesCache:
             client.run("create . --update")
             assert self.counters["server0"] == 1
             assert self.counters["server1"] == 1
+
+
+class TestVersionRangesDiamond:
+
+    def test_caching_errors(self):
+        # https://github.com/conan-io/conan/issues/6110
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("zlib")})
+        c.run("create . --version=1.0")
+        c.run("create . --version=1.1")
+        c.save({"conanfile.py": GenConanfile("poco", "1.0").with_requires("zlib/1.0")})
+        c.run("create .")
+        c.save({"conanfile.py": GenConanfile("boost", "1.0").with_requires("zlib/[*]")})
+        c.run("create .")
+
+        c.run("upload * -c -r=default")
+        c.run("remove * -c")
+        c.save({"conanfile.py": GenConanfile().with_requires("poco/1.0", "boost/1.0")})
+        c.run("install .")  # Ok, no conflict
+        c.run("install . --update")  # Fails due to conflict
+
+
+def test_prefer_cache_version():
+    """ the latest version whenever it is
+    https://github.com/conan-io/conan/issues/6544
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg"),
+            "consumer/conanfile.py": GenConanfile().with_requires("pkg/[*]")})
+    c.run("create pkg --version=1.0")
+    c.run("upload * -c -r=default")
+    c.run("install consumer")
+    c.run("create pkg --version=1.1")
+    c.run("install consumer --update")
+    assert "pkg/1.1" in c.out
+    assert "pkg/1.0" not in c.out

@@ -1,3 +1,4 @@
+import json
 import os
 
 from jinja2 import Template, select_autoescape
@@ -15,6 +16,6 @@ def list_packages_html(result):
     user_template = os.path.join(template_folder, "list_packages.html")
     template = load(user_template) if os.path.isfile(user_template) else list_packages_html_template
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
-    content = template.render(results=results, base_template_path=template_folder,
+    content = template.render(results=json.dumps(results), base_template_path=template_folder,
                               version=client_version)
     cli_out_write(content)

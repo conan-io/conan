@@ -21,7 +21,11 @@ class {{package_name}}Recipe(ConanFile):
 
     def config_options(self):
         if self.settings.os == "Windows":
-            del self.options.fPIC
+            self.options.rm_safe("fPIC")
+
+    def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
 
     def layout(self):
         bazel_layout(self)
@@ -51,7 +55,7 @@ class {{package_name}}Recipe(ConanFile):
 test_conanfile_v2 = """import os
 from conan import ConanFile
 from conan.tools.google import Bazel, bazel_layout
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -70,8 +74,8 @@ class {{package_name}}TestConan(ConanFile):
         bazel_layout(self)
 
     def test(self):
-        if not cross_building(self):
-            cmd = os.path.join(self.cpp.build.bindirs[0], "main", "example")
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "main", "example")
             self.run(cmd, env="conanrun")
 """
 

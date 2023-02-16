@@ -1,5 +1,5 @@
 conanfile_sources_v2 = '''from conan import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 
 
 class {{package_name}}Recipe(ConanFile):
@@ -23,12 +23,18 @@ class {{package_name}}Recipe(ConanFile):
 
     def config_options(self):
         if self.settings.os == "Windows":
-            del self.options.fPIC
+            self.options.rm_safe("fPIC")
+
+    def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
 
     def layout(self):
         cmake_layout(self)
 
     def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
         tc = CMakeToolchain(self)
         tc.generate()
 
@@ -43,13 +49,33 @@ class {{package_name}}Recipe(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["{{name}}"]
+
+    {% if requires is defined -%}
+    def requirements(self):
+        {% for require in requires -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
 '''
 
 cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
 
+{% if requires is defined -%}
+{% for require in requires -%}
+find_package({{as_name(require)}} CONFIG REQUIRED)
+{% endfor %}
+{%- endif %}
+
+
 add_library({{name}} src/{{name}}.cpp)
 target_include_directories({{name}} PUBLIC include)
+
+{% if requires is defined -%}
+{% for require in requires -%}
+target_link_libraries({{name}} PRIVATE {{as_name(require)}}::{{as_name(require)}})
+{% endfor %}
+{%- endif %}
 
 set_target_properties({{name}} PROPERTIES PUBLIC_HEADER "include/{{name}}.h")
 install(TARGETS {{name}})
@@ -57,20 +83,32 @@ install(TARGETS {{name}})
 
 source_h = """#pragma once
 
-{% set define_name = name.replace("-", "_").replace("+", "_").replace(".", "_").upper() %}
+{% set define_name = package_name.upper() %}
 #ifdef _WIN32
   #define {{define_name}}_EXPORT __declspec(dllexport)
 #else
   #define {{define_name}}_EXPORT
 #endif
 
-{{define_name}}_EXPORT void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
+{{define_name}}_EXPORT void {{package_name}}();
 """
 
 source_cpp = r"""#include <iostream>
 #include "{{name}}.h"
+{% if requires is defined -%}
+{% for require in requires -%}
+#include "{{ as_name(require) }}.h"
+{% endfor %}
+{%- endif %}
 
-void {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}(){
+
+void {{package_name}}(){
+    {% if requires is defined -%}
+    {% for require in requires -%}
+    {{ as_name(require) }}();
+    {% endfor %}
+    {%- endif %}
+
     #ifdef NDEBUG
     std::cout << "{{name}}/{{version}}: Hello World Release!\n";
     #else
@@ -169,7 +207,7 @@ test_conanfile_v2 = """import os
 
 from conan import ConanFile
 from conan.tools.cmake import CMake, cmake_layout
-from conan.tools.build import cross_building
+from conan.tools.build import can_run
 
 
 class {{package_name}}TestConan(ConanFile):
@@ -188,8 +226,8 @@ class {{package_name}}TestConan(ConanFile):
         cmake_layout(self)
 
     def test(self):
-        if not cross_building(self):
-            cmd = os.path.join(self.cpp.build.bindirs[0], "example")
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "example")
             self.run(cmd, env="conanrun")
 """
 
@@ -197,6 +235,12 @@ test_cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project(PackageTest CXX)
 
 find_package({{name}} CONFIG REQUIRED)
+
+{% if requires is defined -%}
+{% for require in requires -%}
+find_package({{as_name(require)}} CONFIG REQUIRED)
+{% endfor %}
+{%- endif %}
 
 add_executable(example src/example.cpp)
 target_link_libraries(example {{name}}::{{name}})
@@ -206,7 +250,7 @@ target_link_libraries(example {{name}}::{{name}})
 test_main = """#include "{{name}}.h"
 
 int main() {
-    {{name.replace("-", "_").replace("+", "_").replace(".", "_")}}();
+    {{package_name}}();
 }
 """
 

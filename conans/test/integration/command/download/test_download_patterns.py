@@ -7,6 +7,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
 
 
+@pytest.mark.artifactory_ready
 class TestDownloadPatterns:
     # FIXME The fixture is copied from TestUploadPatterns, reuse it
     @pytest.fixture(scope="class")  # Takes 6 seconds, reuse it
@@ -157,7 +158,8 @@ class TestDownloadPatterErrors:
         assert error in client.out
 
     def test_recipe_not_found(self, client):
-        error = "ERROR: Recipe 'zlib/1.2.11' not found"
+        # FIXME: This error is ugly
+        error = "ERROR: Recipe not found: 'zlib/1.2.11@_/_'. [Remote: default]"
         self.assert_error("zlib/1.2.11", error, client)
 
     def test_rrev_not_found(self, client):
@@ -165,8 +167,9 @@ class TestDownloadPatterErrors:
         self.assert_error("pkg/0.1#rev1", error, client)
 
     def test_pid_not_found(self, client):
+        # FIXME: Ugly error, improve it
         rrev = "485dad6cb11e2fa99d9afbe44a57a164"
-        error = f"ERROR: Package ID 'pkg/0.1#{rrev}:pid1' not found"
+        error = f"Binary package not found: 'pkg/0.1@_/_#{rrev}:pid1'. [Remote: default]"
         self.assert_error(f"pkg/0.1#{rrev}:pid1", error, client)
 
     def test_prev_not_found(self, client):

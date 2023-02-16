@@ -1,5 +1,5 @@
 from conan.internal import check_duplicated_generator
-from conan.tools.files.files import save_toolchain_args
+from conan.tools.build import save_toolchain_args
 
 
 class BazelToolchain(object):

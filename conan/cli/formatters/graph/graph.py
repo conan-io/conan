@@ -5,6 +5,7 @@ from jinja2 import Template, select_autoescape
 
 
 from conan.api.output import cli_out_write
+from conan.cli.formatters.graph.graph_info_text import filter_graph
 from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
 from conan.cli.formatters.graph.info_graph_html import graph_info_html
 from conans.client.graph.graph import BINARY_CACHE, \
@@ -99,6 +100,11 @@ def _render_graph(graph, template, template_folder):
 def format_graph_html(result):
     graph = result["graph"]
     conan_api = result["conan_api"]
+    package_filter = result["package_filter"]
+    serial = graph.serialize()
+    # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
+    #  instead of the native graph
+    serial = filter_graph(serial, package_filter)
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
@@ -110,6 +116,11 @@ def format_graph_html(result):
 def format_graph_dot(result):
     graph = result["graph"]
     conan_api = result["conan_api"]
+    package_filter = result["package_filter"]
+    serial = graph.serialize()
+    # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
+    #  instead of the native graph
+    serial = filter_graph(serial, package_filter)
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
@@ -120,8 +131,11 @@ def format_graph_dot(result):
 
 def format_graph_json(result):
     graph = result["graph"]
-    serialized = graph.serialize()
-    json_result = json.dumps(serialized, indent=4)
+    field_filter = result["field_filter"]
+    package_filter = result["package_filter"]
+    serial = graph.serialize()
+    serial = filter_graph(serial, package_filter, field_filter)
+    json_result = json.dumps(serial, indent=4)
     cli_out_write(json_result)
     if graph.error:
         raise graph.error

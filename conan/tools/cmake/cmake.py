@@ -1,7 +1,7 @@
 import os
 
 from conan.tools.build import build_jobs, cmd_args_to_string
-from conan.tools.cmake.presets import load_cmake_presets, get_configure_preset
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
@@ -42,7 +42,8 @@ class CMake(object):
         self._conanfile = conanfile
 
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
-        configure_preset = get_configure_preset(cmake_presets, conanfile)
+        # Conan generated presets will have exactly 1 configurePresets, no more
+        configure_preset = cmake_presets["configurePresets"][0]
 
         self._generator = configure_preset["generator"]
         self._toolchain_file = configure_preset.get("toolchainFile")
@@ -156,10 +157,11 @@ class CMake(object):
         """
         self._build(build_type, target, cli_args, build_tool_args)
 
-    def install(self, build_type=None):
+    def install(self, build_type=None, component=None):
         """
         Equivalent to run ``cmake --build . --target=install``
 
+        :param component: The specific component to install, if any
         :param build_type: Use it only to override the value defined in the settings.build_type.
                            It can fail if the build is single configuration (e.g. Unix Makefiles),
                            as in that case the build type must be specified at configure time,
@@ -176,6 +178,8 @@ class CMake(object):
         pkg_folder = '"{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
         build_folder = '"{}"'.format(self._conanfile.build_folder)
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
+        if component:
+            arg_list.extend(["--component", component])
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)

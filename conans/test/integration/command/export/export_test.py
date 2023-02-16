@@ -360,8 +360,7 @@ class OpenSSLConan(ConanFile):
         self._create_packages_and_builds()
         # Export an update of the same conans
 
-        # Do not adjust cpu_count, it is reusing a cache
-        client2 = TestClient(self.client.cache_folder, cpu_count=False)
+        client2 = TestClient(self.client.cache_folder)
         files2 = {"conanfile.py": "# insert comment\n" +
                                   str(GenConanfile("hello0", "0.1").with_exports("*")),
                   "main.cpp": "MyMain",
@@ -515,6 +514,17 @@ def test_export_invalid_refs():
     assert "ERROR: Invalid package user 'user%'" in c.out
     c.run("export . --name=pkg --version=0.1 --user=user --channel=channel%", assert_error=True)
     assert "ERROR: Invalid package channel 'channel%'" in c.out
+
+
+def test_allow_temp_uppercase():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("export . --name=Pkg --version=0.1", assert_error=True)
+    assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+    c.save({"global.conf": "core:allow_uppercase_pkg_names=True"}, path=c.cache.cache_folder)
+    c.run("export . --name=Pkg --version=0.1")
+    assert "WARN: Package name 'Pkg/0.1' has uppercase, " \
+           "and has been allowed by temporary config." in c.out
 
 
 def test_warn_special_chars_refs():

@@ -4,7 +4,7 @@ from collections import OrderedDict
 from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
 from conans.errors import conanfile_exception_formatter
-from conans.util.files import save
+
 
 # TODO: Define other compatibility besides applications
 _default_compat = """\

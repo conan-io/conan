@@ -500,7 +500,7 @@ def test_system_dep():
     files = pkg_cmake("mylib", "0.1", requires=["zlib/0.1"])
     files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("find_package(zlib)",
                                                               "find_package(ZLIB)")
-    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("zlib::zlib","ZLIB::ZLIB")
+    files["CMakeLists.txt"] = files["CMakeLists.txt"].replace("zlib::zlib", "ZLIB::ZLIB")
     client.save({os.path.join("mylib", name): content for name, content in files.items()})
     files = pkg_cmake("consumer", "0.1", requires=["mylib/0.1"])
     client.save({os.path.join("consumer", name): content for name, content in files.items()})
@@ -512,7 +512,7 @@ def test_system_dep():
     client.run("install consumer")
     if platform.system() != "Windows":
         host_arch = client.get_default_host_profile().settings['arch']
-        data = os.path.join(f"consumer/build/generators/mylib-release-{host_arch}-data.cmake")
+        data = f"consumer/build/Release/generators/mylib-release-{host_arch}-data.cmake"
         contents = client.load(data)
         assert 'set(ZLIB_FIND_MODE "")' in contents
 
@@ -523,7 +523,7 @@ def test_error_missing_build_type():
     client = TestClient()
 
     client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -585,7 +585,7 @@ def test_map_imported_config():
 
     client = TestClient()
     client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create . -tf=None -s build_type=Release")
+    client.run("create . -tf=\"\" -s build_type=Release")
 
     # It is necessary a 2-level test to make the fixes evident
     talk_cpp = gen_function_cpp(name="talk", includes=["hello"], calls=["hello"])
@@ -622,7 +622,7 @@ def test_map_imported_config():
                                                   install=True, public_header="talk.h"),
                  "talk.cpp": talk_cpp,
                  "talk.h": talk_h}, clean_first=True)
-    client.run("create . -tf=None -s build_type=Release")
+    client.run("create . -tf=\"\" -s build_type=Release")
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -660,3 +660,42 @@ def test_map_imported_config():
     assert "hello/1.0: Hello World Release!" in client.out
     assert "talk: Release!" in client.out
     assert "main: Debug!" in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_quiet():
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Test(ConanFile):
+            name = "test"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.system_libs = ["lib1"]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        test/0.1
+
+        [generators]
+        CMakeDeps
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+        set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+        find_package(test QUIET)
+        """)
+
+    client.save({"conanfile.txt": conanfile,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install .")
+    client.run_command('cmake . -DCMAKE_BUILD_TYPE=Release')
+    # Because we used QUIET, not in output
+    assert "Target declared 'test::test'" not in client.out

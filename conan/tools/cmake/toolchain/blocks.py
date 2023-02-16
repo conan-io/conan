@@ -5,7 +5,9 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_fullname
+from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.tools.android.utils import android_abi
+from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
@@ -181,6 +183,21 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag}
 
 
+class LinkerScriptsBlock(Block):
+    template = textwrap.dedent("""
+        string(APPEND CONAN_EXE_LINKER_FLAGS {{ linker_script_flags }})
+        """)
+
+    def context(self):
+        linker_scripts = self._conanfile.conf.get(
+            "tools.build:linker_scripts", check_type=list, default=[])
+        if not linker_scripts:
+            return
+        linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
+        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        return {"linker_script_flags": " ".join(linker_script_flags)}
+
+
 class CppStdBlock(Block):
     template = textwrap.dedent("""
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
@@ -252,11 +269,6 @@ class AndroidSystemBlock(Block):
         if os_ != "Android":
             return
 
-        android_abi = {"x86": "x86",
-                       "x86_64": "x86_64",
-                       "armv7": "armeabi-v7a",
-                       "armv8": "arm64-v8a"}.get(str(self._conanfile.settings.arch))
-
         # TODO: only 'c++_shared' y 'c++_static' supported?
         #  https://developer.android.com/ndk/guides/cpp-support
         libcxx_str = self._conanfile.settings.get_safe("compiler.libcxx")
@@ -268,7 +280,7 @@ class AndroidSystemBlock(Block):
 
         ctxt_toolchain = {
             'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
-            'android_abi': android_abi,
+            'android_abi': android_abi(self._conanfile),
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
         }
@@ -330,7 +342,6 @@ class AppleSystemBlock(Block):
         """)
 
     def context(self):
-        os_ = self._conanfile.settings.get_safe("os")
         if not is_apple_os(self._conanfile):
             return None
 
@@ -444,7 +455,6 @@ class FindFiles(Block):
         if prefer_config is False:
             find_package_prefer_config = "OFF"
 
-        os_ = self._conanfile.settings.get_safe("os")
         is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context
