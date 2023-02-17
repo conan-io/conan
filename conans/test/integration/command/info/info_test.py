@@ -314,6 +314,22 @@ class TestErrorsInGraph:
         assert exit_code == ERROR_GENERAL
 
 
+class TestInfoUpdate:
+
+    def test_update(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("tool")})
+        c.run("create . --version=1.0")
+        c.run("create . --version=1.1")
+        c.run("upload tool/1.1 -r=default -c")
+        c.run("remove tool/1.1 -c")
+        c.save({"conanfile.py": GenConanfile().with_requires("tool/[*]")})
+        c.run("graph info . --filter=recipe")
+        assert "tool/1.0#7fbd52996f34447f4a4c362edb5b4af5 - Cache" in c.out
+        c.run("graph info . --update --filter=recipe")
+        assert "tool/1.1#7fbd52996f34447f4a4c362edb5b4af5 - Downloaded (default)" in c.out
+
+
 def test_info_not_hit_server():
     """
     the command graph info shouldn't be hitting the server if packages are in the Conan cache
