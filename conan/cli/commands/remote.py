@@ -1,7 +1,7 @@
 import json
 from collections import OrderedDict
 
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, Color
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
@@ -236,6 +236,30 @@ def remote_logout(conan_api, parser, subparser, *args):
         conan_api.remotes.logout(r)
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
+    return ret
+
+
+def print_auth(remotes):
+    for remote_name, msg in remotes.items():
+        color = Color.RED if "error" in msg.lower() else None
+        cli_out_write(f"{remote_name}: {msg}", fg=color)
+
+
+@conan_subcommand(formatters={"text": print_auth})
+def remote_auth(conan_api, parser, subparser, *args):
+    """
+    Add a remote
+    """
+    subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
+                                          "The pattern uses 'fnmatch' style wildcards.")
+    args = parser.parse_args(*args)
+    remotes = conan_api.remotes.list(pattern=args.remote)
+    if not remotes:
+        raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
+
+    ret = {}
+    for r in remotes:
+        ret[r.name] = conan_api.remotes.auth(r)
     return ret
 
 

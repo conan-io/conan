@@ -98,3 +98,11 @@ class RemotesAPI:
     def user_set(self, remote: Remote, username):
         app = ConanApp(self.conan_api.cache_folder)
         return user_set(app.cache.localdb, username, remote)
+
+    def auth(self, remote: Remote):
+        app = ConanApp(self.conan_api.cache_folder)
+        try:
+            app.remote_manager.check_credentials(remote)
+            return f"Succesfully auth in {remote.name}"
+        except Exception as e:
+            return f"ERROR: Couldn't auth in {remote.name}: {str(e)}"
