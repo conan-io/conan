@@ -133,7 +133,7 @@ class TestPackageID:
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
                      "profile": "[system_tools]\ndep/1.0"})
         client.run("create . -pr=profile")
-        assert "dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 - System tool" in client.out
+        assert "dep/1.0 - System tool" in client.out
 
     def test_package_id_explicit_revision(self):
         """
@@ -145,12 +145,12 @@ class TestPackageID:
                      "profile": "[system_tools]\ndep/1.0#r1",
                      "profile2": "[system_tools]\ndep/1.0#r2"})
         client.run("create . -pr=profile")
-        assert "dep/1.0#r1:da39a3ee5e6b4b0d3255bfef95601890afd80709 - System tool" in client.out
+        assert "dep/1.0#r1 - System tool" in client.out
         assert "pkg/1.0#27a56f09310cf1237629bae4104fe5bd:" \
                "ea0e320d94b4b70fcb3efbabf9ab871542f8f696 - Build" in client.out
 
         client.run("create . -pr=profile2")
         # pkg gets a new package_id because it is a different revision
-        assert "dep/1.0#r2:da39a3ee5e6b4b0d3255bfef95601890afd80709 - System tool" in client.out
+        assert "dep/1.0#r2 - System tool" in client.out
         assert "pkg/1.0#27a56f09310cf1237629bae4104fe5bd:" \
                "334882884da082740e5a002a0b6fdb509a280159 - Build" in client.out
