@@ -228,7 +228,7 @@ class Options:
                     tokens = k.split(":", 1)
                     if len(tokens) == 2:
                         package, option = tokens
-                        if "/" not in package and "*" not in package:
+                        if "/" not in package and "*" not in package and "&" not in package:
                             msg = "The usage of package names `{}` in options is " \
                                   "deprecated, use a pattern like `{}/*` or `{}*` " \
                                   "instead".format(k, package, package)
