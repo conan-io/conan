@@ -5,6 +5,22 @@ import unittest
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 
+mytool_conanfile = """
+import os
+from conans import ConanFile
+
+class Tool(ConanFile):
+    name = "mytool"
+    version = "0.1"
+    exports_sources = "mytool*"
+
+    def package(self):
+        self.copy("mytool*")
+
+    def package_info(self):
+        self.env_info.PATH.append(self.package_folder)
+"""
+
 tool_conanfile = """
 import os
 from conans import ConanFile
@@ -35,7 +51,6 @@ class Tool(ConanFile):
 
     def package_info(self):
         self.env_info.PYTHONPATH.append(self.package_folder)
-
 """
 
 
@@ -52,6 +67,20 @@ class MyLib(ConanFile):
         import mypythontool
         self.output.info(mypythontool.tool_hello_world())
 """
+
+lib_conanfile_overriding_mytool = """
+import os
+from conans import ConanFile, tools
+
+class MyLib(ConanFile):
+    name = "MyLibOverridingMytool"
+    version = "0.1"
+    build_requires = "mytool/0.1@lasote/stable"
+    override_profiles = True
+    
+    def build(self):
+        self.run("mytool")
+""".format(locate="where" if platform.system()== "Windows" else "which")
 
 profile = """
 [build_requires]
@@ -135,6 +164,10 @@ build2/0.1@user/testing
                      name: "echo Hello World!"}, clean_first=True)
         os.chmod(os.path.join(client.current_folder, name), 0o777)
         client.run("export . lasote/stable")
+        client.save({CONANFILE: mytool_conanfile,
+                     name: "echo overridden mytool is called!"}, clean_first=True)
+        os.chmod(os.path.join(client.current_folder, name), 0o777)
+        client.run("export . lasote/stable")
         client.save({CONANFILE: python_conanfile,
                      "mypythontool.py": """def tool_hello_world():
     return 'Hello world from python tool!'"""}, clean_first=True)
@@ -156,6 +189,17 @@ build2/0.1@user/testing
         client.run("install MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
         self.assertIn("Hello World!", client.out)
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.out)
+
+    def test_profile_requires_overriding(self):
+        client = TestClient()
+        self._create(client)
+
+        client.save({CONANFILE: lib_conanfile_overriding_mytool,
+                     "profile.txt": profile2,
+                     }, clean_first=True)
+        client.run("export . lasote/stable")
+        client.run("install MyLibOverridingMytool/0.1@lasote/stable --profile ./profile.txt --build=missing")
+        self.assertIn("overridden mytool is called!", client.out)
 
     def test_profile_open_requires(self):
         client = TestClient()

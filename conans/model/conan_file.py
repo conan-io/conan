@@ -117,6 +117,7 @@ class ConanFile(object):
     exports_sources = None
     generators = ["txt"]
     revision_mode = "hash"
+    override_profiles = False
 
     # Vars to control the build steps (build(), package())
     should_configure = True
