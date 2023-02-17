@@ -65,6 +65,7 @@ def write_generators(conanfile, hook_manager):
                 try:
                     generator = generator_class(conanfile)
                     mkdir(new_gen_folder)
+                    conanfile.output.info(f"Generator '{generator_name}' calling 'generate()'")
                     with chdir(new_gen_folder):
                         generator.generate()
                     continue

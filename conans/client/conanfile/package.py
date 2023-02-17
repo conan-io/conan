@@ -1,6 +1,5 @@
 import os
 
-from conan.tools.files.copy_pattern import report_files_copied
 from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter, conanfile_remove_attr
 from conans.model.manifest import FileTreeManifest
@@ -37,9 +36,8 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
     manifest = FileTreeManifest.create(conanfile.package_folder)
     manifest.save(conanfile.package_folder)
-
     package_output = ConanOutput(scope="%s: package()" % scoped_output.scope)
-    _report_files_from_manifest(package_output, manifest)
+    manifest.report_summary(package_output, "Packaged")
 
     prev = manifest.summary_hash
     scoped_output.info("Created package revision %s" % prev)
@@ -50,12 +48,3 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     return prev
 
 
-def _report_files_from_manifest(scoped_output, manifest):
-    copied_files = list(manifest.files())
-    copied_files.remove(CONANINFO)
-
-    if not copied_files:
-        scoped_output.warning("No files in this package!")
-        return
-
-    report_files_copied(copied_files, scoped_output, message_suffix="Packaged")

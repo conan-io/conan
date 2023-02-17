@@ -263,7 +263,7 @@ class ExportTest(unittest.TestCase):
 
         self.assertIn('%s: Exported' % str(self.ref),
                       self.client.out)
-        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path), self.client.out)
+        self.assertIn('%s: Exported to cache folder: %s' % (str(self.ref), reg_path), self.client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(self.files.keys()):
@@ -279,7 +279,7 @@ class ExportTest(unittest.TestCase):
         self.ref = RecipeReference("hello0", "0.1", "lasote", "stable")
         self.client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*")})
         self.client.run("export . --user=lasote --channel=stable")
-        self.assertIn("hello0/0.1@lasote/stable: Exported revision", self.client.out)
+        self.assertIn("hello0/0.1@lasote/stable: Exported", self.client.out)
 
     def test_export_filter(self):
         self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
@@ -470,7 +470,7 @@ class ExportMetadataTest(unittest.TestCase):
         client.run('export . --name=pkg --version=0.1')
         self.assertIn("pkg/0.1: Exported", client.out)
         client.run('export . --name=pkg --version=0.1')
-        self.assertIn("pkg/0.1: Exported revision", client.out)
+        self.assertIn("pkg/0.1: Exported", client.out)
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")

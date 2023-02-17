@@ -313,10 +313,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "other.txt": "text"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: Exports sources! *.h", client.out)
-        self.assertIn("pkg/0.1@user/testing: exports: Copied 1 '.txt' file: other.txt",
-                      client.out)
-        self.assertIn("pkg/0.1@user/testing: exports_sources: Copied 1 '.h' file: header.h",
-                      client.out)
+        self.assertIn("pkg/0.1@user/testing: Copied 1 '.txt' file: other.txt", client.out)
+        self.assertIn("pkg/0.1@user/testing: Copied 1 '.h' file: header.h", client.out)
         self.assertIn("pkg/0.1@user/testing: Short paths! True", client.out)
         self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("pkg/0.1@user/testing: Author! author@company.com", client.out)

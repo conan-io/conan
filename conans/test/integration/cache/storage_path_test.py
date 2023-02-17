@@ -11,7 +11,7 @@ def test_storage_path():
     client.save({"global.conf": f"core.cache:storage_path={tmp_folder}"},
                 path=client.cache.cache_folder)
     client.run("create . --name=mypkg --version=0.1")
-    assert f"mypkg/0.1: Folder: {tmp_folder}" in client.out
+    assert f"mypkg/0.1: Package folder {tmp_folder}" in client.out
     assert os.path.isfile(os.path.join(tmp_folder, "cache.sqlite3"))
 
     client.run("cache path mypkg/0.1")

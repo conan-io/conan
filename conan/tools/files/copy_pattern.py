@@ -1,7 +1,6 @@
 import fnmatch
 import os
 import shutil
-from collections import defaultdict
 
 from conans.util.files import mkdir
 
@@ -140,23 +139,3 @@ def _copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst):
         os.symlink(link_dst, symlink_path)
         copied_files.append(symlink_path)
     return copied_files
-
-
-def report_files_copied(copied, scoped_output, message_suffix="Copied"):
-    ext_files = defaultdict(list)
-    for f in copied:
-        _, ext = os.path.splitext(f)
-        ext_files[ext].append(os.path.basename(f))
-
-    if not ext_files:
-        return
-
-    for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
-        file_or_files = "file" if len(files) == 1 else "files"
-
-        if not ext:
-            scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
-        else:
-            scoped_output.info("%s %d '%s' %s%s"
-                               % (message_suffix, len(files), ext, file_or_files, files_str))

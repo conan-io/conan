@@ -23,7 +23,7 @@ class ExportsMethodTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . --name=pkg --version=0.1")
-        self.assertIn("pkg/0.1 exports: Copied 1 '.txt' file: file.txt", client.out)
+        self.assertIn("pkg/0.1: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("pkg/0.1: Calling export()", client.out)
         self.assertIn("Copied 1 '.md' file: LICENSE.md", client.out)
 
@@ -170,7 +170,7 @@ class ExportsSourcesMethodTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . --name=pkg --version=0.1")
-        self.assertIn("pkg/0.1 exports_sources: Copied 1 '.txt' file: file.txt", client.out)
+        self.assertIn("pkg/0.1: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("Copied 1 '.md' file: LICENSE.md", client.out)
 
         latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("pkg/0.1"))
@@ -248,5 +248,5 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         client.run("upload pkg/0.1 -r default")
         client.run("remove * -c")
         client.run("install --requires=pkg/0.1@ --build='*'")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
+        self.assertIn("pkg/0.1: Sources downloaded from 'default'", client.out)
         self.assertIn("pkg/0.1: CONTENT: mycontent", client.out)

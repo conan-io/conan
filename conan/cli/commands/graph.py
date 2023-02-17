@@ -153,7 +153,7 @@ def graph_info(conan_api, parser, subparser, *args):
     print_graph_basic(deps_graph)
     if deps_graph.error:
         ConanOutput().info("Graph error", Color.BRIGHT_RED)
-        ConanOutput().info("    {}".format(graph.error), Color.BRIGHT_RED)
+        ConanOutput().info("    {}".format(deps_graph.error), Color.BRIGHT_RED)
     else:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
