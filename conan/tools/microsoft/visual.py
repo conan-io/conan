@@ -310,11 +310,13 @@ def is_msvc_static_runtime(conanfile):
 
 
 def msvs_toolset(conanfile):
-    """ Returns the corresponding platform toolset based on the compiler of the given conanfile.
-        In case no toolset is configured in the profile, it will return a toolset based on the
-        compiler version, otherwise, it will return the toolset from the profile.
-        When there is no compiler version neither toolset configured, it will return None
-        It supports Visual Studio, msvc and Intel.
+    """
+    Returns the corresponding platform toolset based on the compiler of the given conanfile.
+    In case no toolset is configured in the profile, it will return a toolset based on the
+    compiler version, otherwise, it will return the toolset from the profile.
+    When there is no compiler version neither toolset configured, it will return None
+    It supports Visual Studio, msvc and Intel.
+
     :param conanfile: Conanfile instance to access settings.compiler
     :return: A toolset when compiler.version is valid or compiler.toolset is configured. Otherwise, None.
     """
