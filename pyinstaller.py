@@ -1,3 +1,20 @@
+"""
+This file is able to create a self contained Conan executable that contains all it needs,
+including the Python interpreter, so it wouldnt be necessary to have Python installed
+in the system
+It is important to install the dependencies and the project first with "pip install -e ."
+which configures the project as "editable", that is, to run from the current source folder
+After creating the executable, it can be pip uninstalled
+
+$ pip install -e .
+$ python pyinstaller.py
+
+This has to run in the same platform that will be using the executable, pyinstaller does
+not cross-build
+
+The resulting executable can be put in the system PATH of the running machine
+"""
+
 import os
 import platform
 import shutil
