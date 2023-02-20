@@ -86,3 +86,34 @@ class TestTestRequiresDiamond:
         c.assert_listed_require({"zlib/1.0": "Cache",
                                  "engine/1.0": "Cache"})
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
+
+
+def test_require_options():
+    c = TestClient()
+    gtest = textwrap.dedent("""
+        from conan import ConanFile
+        class Gtest(ConanFile):
+            name = "gtest"
+            version = "1.0"
+            options = {"myoption": [1, 2, 3]}
+            default_options = {"myoption": 1}
+            def package_info(self):
+                self.output.info(f"MYOPTION: {self.options.myoption}")
+        """)
+    engine = textwrap.dedent("""
+        from conan import ConanFile
+        class Engine(ConanFile):
+            name = "engine"
+            version = "1.0"
+            def build_requirements(self):
+                self.test_requires("gtest/1.0", options={"myoption": "2"})
+        """)
+    c.save({"gtest/conanfile.py": gtest,
+            "engine/conanfile.py": engine})
+    c.run("create gtest")
+    c.run("create gtest -o gtest*:myoption=2")
+    c.run("create gtest -o gtest*:myoption=3")
+    c.run("create engine")
+    assert "gtest/1.0: MYOPTION: 2" in c.out
+    c.run("create engine -o gtest*:myoption=3")
+    assert "gtest/1.0: MYOPTION: 3" in c.out
