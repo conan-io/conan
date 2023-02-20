@@ -248,10 +248,12 @@ def print_auth(remotes):
 @conan_subcommand(formatters={"text": print_auth})
 def remote_auth(conan_api, parser, subparser, *args):
     """
-    Add a remote
+    Authenticate in the defined remotes
     """
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
+    subparser.add_argument("--with-user", help="Only try to auth in those remotes that already"
+                                               "have a username or a CONAN_LOGIN_ env-var defined")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
