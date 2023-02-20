@@ -408,8 +408,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None):
-        self._requires.test_require(ref, run=run)
+    def __call__(self, ref, run=None, options=None):
+        self._requires.test_require(ref, run=run, options=options)
 
 
 class Requirements:
