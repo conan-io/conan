@@ -18,7 +18,7 @@ def json_export(ref):
 @conan_command(group="Creator", formatters={"json": json_export})
 def export(conan_api, parser, *args):
     """
-    Export recipe to the Conan package cache.
+    Export a recipe to the Conan package cache.
     """
     common_args_export(parser)
     group = parser.add_mutually_exclusive_group()
