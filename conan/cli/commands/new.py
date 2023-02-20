@@ -24,7 +24,7 @@ def new(conan_api, parser, *args):
                         "as your template, or a path relative to your conan home folder."
                         )
     parser.add_argument("-d", "--define", action="append",
-                        help="Define a template argument as key=value")
+                        help="Define a template argument as key=value, e.g., -d name=mypkg")
     parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if it already exists")
 
     args = parser.parse_args(*args)

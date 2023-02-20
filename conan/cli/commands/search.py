@@ -12,7 +12,7 @@ from conans.errors import ConanException
                                              "json": print_list_json})
 def search(conan_api: ConanAPI, parser, *args):
     """
-    Searches for package recipes in a remote or remotes
+    Search for package recipes in all the remotes (by default), or a remote.
     """
     parser.add_argument('reference', help="Recipe reference to search for."
                                           "It can contain * as wildcard at any reference field.")

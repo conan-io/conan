@@ -10,14 +10,15 @@ from conans.util.config_parser import get_bool_from_text
 @conan_command(group='Consumer')
 def config(conan_api, parser, *args):
     """
-    Manages the Conan configuration in the current Conan home.
+    Manage the Conan configuration in the Conan home.
     """
 
 
 @conan_subcommand()
 def config_install(conan_api, parser, subparser, *args):
     """
-    Installs the configuration (remotes, profiles, conf), from git, http or folder
+    Install the configuration (remotes, profiles, conf), from git, http or a folder, into the
+    Conan home folder.
     """
     subparser.add_argument("item",
                            help="git repository, local file or folder or zip file (local or "
@@ -50,7 +51,7 @@ def list_text_formatter(confs):
 @conan_subcommand(formatters={"text": default_text_formatter})
 def config_home(conan_api, parser, subparser, *args):
     """
-    Gets the Conan home folder
+    Show the Conan home folder.
     """
     return conan_api.config.home()
 
@@ -58,6 +59,6 @@ def config_home(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
 def config_list(conan_api, parser, subparser, *args):
     """
-    Prints all the Conan available configurations: core and tools.
+    Show all the Conan available configurations: core and tools.
     """
     return BUILT_IN_CONFS

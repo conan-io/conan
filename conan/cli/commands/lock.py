@@ -13,14 +13,14 @@ from conans.model.recipe_ref import RecipeReference
 @conan_command(group="Consumer")
 def lock(conan_api, parser, *args):
     """
-    Create or manages lockfiles
+    Create or manages lockfiles.
     """
 
 
 @conan_subcommand()
 def lock_create(conan_api, parser, subparser, *args):
     """
-    Create a lockfile from a conanfile or a reference
+    Create a lockfile from a conanfile or a reference.
     """
     common_graph_args(subparser)
     args = parser.parse_args(*args)
@@ -63,7 +63,7 @@ def lock_create(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def lock_merge(conan_api, parser, subparser, *args):
     """
-    Merge 2 or more lockfiles
+    Merge 2 or more lockfiles.
     """
     subparser.add_argument('--lockfile', action="append", help='Path to lockfile to be merged')
     subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
@@ -88,7 +88,7 @@ def lock_add(conan_api, parser, subparser, *args):
     Add requires, build-requires or python-requires to existing or new lockfile. Resulting lockfile
     will be ordereded, newer versions/revisions first.
     References can be with our without revisions like "--requires=pkg/version", but they
-    must be package references, including at least the version, they cannot contain a version range
+    must be package references, including at least the version, they cannot contain a version range.
     """
     subparser.add_argument('--requires', action="append", help='Add references to lockfile.')
     subparser.add_argument('--build-requires', action="append",

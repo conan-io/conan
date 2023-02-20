@@ -12,7 +12,7 @@ from conans.model.recipe_ref import RecipeReference
 @conan_command(group="Creator")
 def test(conan_api, parser, *args):
     """
-    Test a package from a test_package folder
+    Test a package from a test_package folder.
     """
     parser.add_argument("path", action=OnceArgument,
                         help="Path to a test_package folder containing a conanfile.py")

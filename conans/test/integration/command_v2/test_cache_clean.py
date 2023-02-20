@@ -32,4 +32,4 @@ def test_cache_clean():
 def test_cache_clean_noargs_error():
     c = TestClient()
     c.run('cache clean "*"', assert_error=True)
-    assert "Define at least one argument from --source, --build, --download" in c.out
+    assert "Define at least one argument among [--source, --build, --download]" in c.out
