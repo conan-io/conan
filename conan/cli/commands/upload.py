@@ -8,7 +8,7 @@ from conans.errors import ConanException
 @conan_command(group="Creator")
 def upload(conan_api: ConanAPI, parser, *args):
     """
-    Uploads packages to a remote.
+    Upload packages to a remote.
 
     By default, all the matching references are uploaded (all revisions).
     By default, if a recipe reference is specified, it will upload all the revisions for all the

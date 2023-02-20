@@ -23,13 +23,13 @@ def json_create(deps_graph):
 @conan_command(group="Creator", formatters={"json": json_create})
 def create(conan_api, parser, *args):
     """
-    Create a package
+    Create a package.
     """
     common_args_export(parser)
     add_lockfile_args(parser)
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')

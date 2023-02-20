@@ -17,13 +17,13 @@ def json_export_pkg(info):
 @conan_command(group="Creator", formatters={"json": json_export_pkg})
 def export_pkg(conan_api, parser, *args):
     """
-    Create a package directly from pre-compiled binaries
+    Create a package directly from pre-compiled binaries.
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')

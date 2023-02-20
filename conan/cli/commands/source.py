@@ -12,7 +12,7 @@ from conans.errors import conanfile_exception_formatter
 @conan_command(group="Creator")
 def source(conan_api, parser, *args):
     """
-    Calls the source() method
+    Call the source() method.
     """
     parser.add_argument("path", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py "
