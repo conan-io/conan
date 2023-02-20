@@ -18,7 +18,7 @@ def cache(conan_api: ConanAPI, parser, *args):
 @conan_subcommand(formatters={"text": default_text_formatter})
 def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Show the path to the Conan cache af a given reference.
+    Show the path to the Conan cache if a given reference.
     """
     subparser.add_argument("reference", help="Recipe reference or Package reference")
     subparser.add_argument("--folder", choices=['export_source', 'source', 'build'],
