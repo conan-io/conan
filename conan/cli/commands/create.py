@@ -29,7 +29,7 @@ def create(conan_api, parser, *args):
     add_lockfile_args(parser)
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='If the provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')

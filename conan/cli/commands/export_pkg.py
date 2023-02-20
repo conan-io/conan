@@ -23,7 +23,7 @@ def export_pkg(conan_api, parser, *args):
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='If the provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')

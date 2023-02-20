@@ -33,7 +33,7 @@ def export(conan_api, parser, *args):
     parser.add_argument("--lockfile-partial", action="store_true",
                         help="Do not raise an error if some dependency is not found in lockfile")
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='If the provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
