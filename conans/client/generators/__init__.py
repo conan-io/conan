@@ -31,10 +31,11 @@ def _get_generator_class(generator_name):
     try:
         generator_class = _generators[generator_name]
         # This is identical to import ... form ... in terms of cacheing
-        return getattr(importlib.import_module(generator_class), generator_name)
     except KeyError as e:
         raise ConanException(f"Invalid generator '{generator_name}'. "
                              f"Available types: {', '.join(_generators)}") from e
+    try:
+        return getattr(importlib.import_module(generator_class), generator_name)
     except ImportError as e:
         raise ConanException("Internal Conan error: "
                              f"Could not find module {generator_class}") from e
@@ -51,7 +52,7 @@ def write_generators(conanfile, hook_manager):
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
     if conanfile.generators:
-        conanfile.output.info(f"Writing generators to {new_gen_folder}")
+        conanfile.output.highlight(f"Writing generators to {new_gen_folder}")
     # generators check that they are not present in the generators field,
     # to avoid duplicates between the generators attribute and the generate() method
     # They would raise an exception here if we don't invalidate the field while we call them
@@ -63,8 +64,8 @@ def write_generators(conanfile, hook_manager):
             if generator_class:
                 try:
                     generator = generator_class(conanfile)
-                    conanfile.output.highlight(f"Generator '{generator_name}' calling 'generate()'")
                     mkdir(new_gen_folder)
+                    conanfile.output.info(f"Generator '{generator_name}' calling 'generate()'")
                     with chdir(new_gen_folder):
                         generator.generate()
                     continue
@@ -78,6 +79,7 @@ def write_generators(conanfile, hook_manager):
         conanfile.generators = old_generators
     if hasattr(conanfile, "generate"):
         conanfile.output.highlight("Calling generate()")
+        conanfile.output.info(f"Generators folder: {new_gen_folder}")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
             with conanfile_exception_formatter(conanfile, "generate"):
@@ -96,7 +98,6 @@ def write_generators(conanfile, hook_manager):
             env = VirtualRunEnv(conanfile)
             env.generate()
 
-    conanfile.output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
 
     hook_manager.execute("post_generate", conanfile=conanfile)
@@ -125,6 +126,7 @@ def _generate_aggregated_env(conanfile):
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
 
+    generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
         bats = []
@@ -146,6 +148,7 @@ def _generate_aggregated_env(conanfile):
             def sh_content(files):
                 return ". " + " && . ".join('"{}"'.format(s) for s in files)
             filename = "conan{}.sh".format(group)
+            generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  sh_content(deactivates(shs)))
@@ -153,6 +156,7 @@ def _generate_aggregated_env(conanfile):
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
             filename = "conan{}.bat".format(group)
+            generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  bat_content(deactivates(bats)))
@@ -160,6 +164,10 @@ def _generate_aggregated_env(conanfile):
             def ps1_content(files):
                 return "\r\n".join(['& "{}"'.format(b) for b in files])
             filename = "conan{}.ps1".format(group)
+            generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  ps1_content(deactivates(ps1s)))
+    if generated:
+        conanfile.output.highlight("Generating aggregated env files")
+        conanfile.output.info(f"Generated aggregated env files: {generated}")

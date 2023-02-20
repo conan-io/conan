@@ -106,7 +106,6 @@ class _PackageBuilder(object):
     def _package(self, conanfile, pref):
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
-        conanfile.output.info("Generated %s" % CONANINFO)
 
         package_id = pref.package_id
         # Do the actual copy, call the conanfile.package() method
@@ -235,19 +234,25 @@ class BinaryInstaller:
     def install(self, deps_graph, remotes):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
 
-        ConanOutput().title("Installing (downloading, building) binaries...")
+        ConanOutput().title("Installing packages")
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
 
+        package_count = sum([sum(len(install_reference.packages.values())
+                            for level in install_order
+                            for install_reference in level)])
+        installed_count = 1
+
         self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
-                    self._handle_package(package, install_reference)
+                    self._handle_package(package, install_reference, installed_count, package_count)
+                    installed_count += 1
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
@@ -262,6 +267,9 @@ class BinaryInstaller:
         if not downloads:
             return
 
+        download_count = len(downloads)
+        plural = 's' if download_count != 1 else ''
+        ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
         parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
@@ -279,9 +287,10 @@ class BinaryInstaller:
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference):
+    def _handle_package(self, package, install_reference, installed_count, total_count):
         if package.binary == BINARY_SYSTEM_TOOL:
             return
+
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return
@@ -297,6 +306,9 @@ class BinaryInstaller:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
         if package.binary == BINARY_BUILD:
+            ConanOutput().subtitle(f"Building package {pref.ref} from source "
+                                f"({installed_count} of {total_count})")
+            ConanOutput(scope=str(pref.ref)).info(f"Package {pref}")
             self._handle_node_build(package, package_layout)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed
@@ -379,7 +391,7 @@ class BinaryInstaller:
             # but better make sure here, and be able to report the actual folder in case
             # something fails)
             node.conanfile.folders.set_base_package(pkg_layout.package())
-            node.conanfile.output.info("Package folder %s" % node.conanfile.package_folder)
+            node.conanfile.output.success("Package folder %s" % node.conanfile.package_folder)
 
     def _call_package_info(self, conanfile, package_folder, is_editable):
 

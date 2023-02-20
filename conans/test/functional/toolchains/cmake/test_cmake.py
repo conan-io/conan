@@ -222,7 +222,7 @@ class WinTest(Base):
         # FIXME: Hardcoded VS version and partial toolset check
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
+        self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
@@ -318,7 +318,7 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
+        self.assertIn('cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
         assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
@@ -374,7 +374,7 @@ class LinuxTest(Base):
         self._run_build(settings, {"shared": shared})
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
+        self.assertIn('cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
@@ -431,7 +431,7 @@ class AppleTest(Base):
 
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
+        self.assertIn('cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "OFF" if cppstd else ""
@@ -558,7 +558,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         # The create flow must work
         client.run("create . --name=pkg --version=0.1")
-        self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
+        self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_package_reference(ref)
         package_folder = client.get_latest_pkg_layout(pref).package()
@@ -596,7 +596,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         # The create flow must work
         client.run("build .")
-        assert "conanfile.py: CMake command: cmake --install" in client.out
+        assert "conanfile.py: RUN: cmake --install" in client.out
 
 
 @pytest.mark.tool("cmake")

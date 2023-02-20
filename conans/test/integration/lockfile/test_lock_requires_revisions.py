@@ -77,7 +77,7 @@ def test_conanfile_txt_strict_revisions(requires):
 
     client.save({"pkg/conanfile.py": GenConanfile().with_package_id("self.output.info('REV2!!!!')")})
     client.run("create pkg --name=pkg --version=0.1 --user=user --channel=testing")
-    rrev = re.search(r"pkg/0.1@user/testing: Exported revision: (\S+)", str(client.out)).group(1)
+    rrev = client.exported_recipe_revision()
 
     # Not strict mode works
     client.save({"consumer/conanfile.txt": f"[{requires}]\npkg/0.1@user/testing#{rrev}"})
@@ -169,9 +169,9 @@ def test_conditional_same_package_revisions(requires):
                  "pkg/conanfile.py": pkg_conanfile,
                  "consumer/conanfile.txt": f"[{requires}]\npkg/0.1"})
     client.run("create dep1 --name=dep --version=0.1")
-    rrev1 = re.search(r"dep/0.1: Exported revision: (\S+)", str(client.out)).group(1)
+    rrev1 = client.exported_recipe_revision()
     client.run("create dep2 --name=dep --version=0.1")
-    rrev2 = re.search(r"dep/0.1: Exported revision: (\S+)", str(client.out)).group(1)
+    rrev2 = client.exported_recipe_revision()
     client.save({"pkg/conanfile.py": pkg_conanfile.format(rrev1, rrev2)})
 
     client.run("create pkg --name=pkg --version=0.1 -s os=Windows")

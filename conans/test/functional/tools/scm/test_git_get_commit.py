@@ -124,7 +124,6 @@ def test_relative_folder_repo():
     c.save({"root_change": ""})
     c.run_command("git add .")
     c.run_command('git commit -m "root change"')
-    print(c.current_folder)
 
     # Relative paths for folders, from the current_folder
     with chdir(c.current_folder):

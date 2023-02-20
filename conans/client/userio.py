@@ -99,7 +99,10 @@ class UserInput(object):
     def get_password(self):
         """Overridable for testing purpose"""
         self._raise_if_non_interactive()
-        return getpass.getpass("")
+        try:
+            return getpass.getpass("")
+        except BaseException:  # For KeyboardInterrupt too
+            raise ConanException("Interrupted interactive password input")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg

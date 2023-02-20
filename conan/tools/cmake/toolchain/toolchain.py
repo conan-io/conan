@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
@@ -180,6 +181,7 @@ class CMakeToolchain(object):
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
+            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()

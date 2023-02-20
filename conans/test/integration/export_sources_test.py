@@ -69,4 +69,4 @@ def test_test_package_copied():
     client.save({"conanfile.py": conanfile,
                  "test_package/foo.txt": "bar"})
     client.run("export . --name foo --version 1.0")
-    assert "Copied 1 '.txt' file" in client.out
+    assert "Copied 2 '.txt' file" in client.out
