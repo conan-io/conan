@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput, Color
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, \
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
     BINARY_SYSTEM_TOOL
 
 
@@ -96,7 +96,7 @@ def print_graph_packages(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            if remote is not None:
+            if remote is not None and status != BINARY_SKIP:
                 status = "{} ({})".format(status, remote.name)
             name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
             output.info("    {} - {}".format(name, status), Color.BRIGHT_CYAN)
