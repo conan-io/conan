@@ -4,6 +4,7 @@ import unittest
 from collections import OrderedDict
 
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.env import environment_update
 
 
 class UserTest(unittest.TestCase):
@@ -337,3 +338,48 @@ def test_user_removed_remote_removed():
     c.run("remote remove default")
     login = c.cache.localdb.get_login(server_url)
     assert login == (None, None, None)
+
+
+class TestRemoteAuth:
+    def test_remote_auth(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["other_server"] = TestServer(users={"lasote": "mypass"})
+        c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
+                                                "lasote", "mypass"])
+        c.run("remote auth *")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: lasote""")
+        assert text in c.out
+
+    def test_remote_auth_with_user(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["other_server"] = TestServer()
+        c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass"])
+        c.run("remote set-user default lasote")
+        c.run("remote auth * --with-user")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: None""")
+        assert text in c.out
+
+    def test_remote_auth_with_user_env_var(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["other_server"] = TestServer()
+        c = TestClient(servers=servers)
+        with environment_update({"CONAN_LOGIN_USERNAME_DEFAULT": "lasote",
+                                 "CONAN_PASSWORD_DEFAULT": "mypass"}):
+            c.run("remote auth * --with-user")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: None""")
+        assert text in c.out

@@ -249,8 +249,12 @@ def remote_logout(conan_api, parser, subparser, *args):
 
 def print_auth(remotes):
     for remote_name, msg in remotes.items():
-        color = Color.RED if "error" in msg.lower() else None
-        cli_out_write(f"{remote_name}: {msg}", fg=color)
+        if msg is None:
+            cli_out_write(f"{remote_name}: No user defined")
+        else:
+            cli_out_write(f"{remote_name}:")
+            for k, v in msg.items():
+                cli_out_write(f"    {k}: {v}", fg=Color.BRIGHT_RED if k == "error" else Color.WHITE)
 
 
 @conan_subcommand(formatters={"text": print_auth})
@@ -260,17 +264,21 @@ def remote_auth(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
-    subparser.add_argument("--with-user", help="Only try to auth in those remotes that already"
-                                               "have a username or a CONAN_LOGIN_ env-var defined")
+    subparser.add_argument("--with-user", action="store_true",
+                           help="Only try to auth in those remotes that already"
+                                "have a username or a CONAN_LOGIN_ env-var defined")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
-    ret = {}
+    results = {}
     for r in remotes:
-        ret[r.name] = conan_api.remotes.auth(r)
-    return ret
+        try:
+            results[r.name] = {"user": conan_api.remotes.auth(r, args.with_user)}
+        except Exception as e:
+            results[r.name] = {"error": str(e)}
+    return results
 
 
 @conan_command(group="Consumer")
