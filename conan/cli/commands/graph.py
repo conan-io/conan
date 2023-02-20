@@ -16,7 +16,7 @@ from conans.errors import ConanException
 @conan_command(group="Consumer")
 def graph(conan_api, parser, *args):
     """
-    Compute a dependency graph, without  installing or building the binaries.
+    Compute a dependency graph, without installing or building the binaries.
     """
 
 
