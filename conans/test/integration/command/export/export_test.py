@@ -29,7 +29,7 @@ class ExportSettingsTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=lib --version=1.0 --user=lasote --channel=channel")
-        self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0@lasote/channel: Exported", client.out)
 
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
         client.run("export . --user=lasote")
@@ -186,7 +186,7 @@ class TestConan(ConanFile):
         client = TestClient()
         client.save({filename: GenConanfile("hello", "1.2")})
         client.run("export %s --user=user --channel=stable" % filename)
-        self.assertIn("hello/1.2@user/stable: A new conanfile.py version was exported", client.out)
+        self.assertIn("hello/1.2@user/stable: Exported", client.out)
         ref = RecipeReference("hello", "1.2", "user", "stable")
         latest_rrev = client.cache.get_latest_recipe_reference(ref)
         export_path = client.cache.ref_layout(latest_rrev).export()
@@ -261,9 +261,9 @@ class ExportTest(unittest.TestCase):
         reg_path = self.client.cache.ref_layout(latest_rrev).export()
         manif = FileTreeManifest.load(reg_path)
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
+        self.assertIn('%s: Exported' % str(self.ref),
                       self.client.out)
-        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path), self.client.out)
+        self.assertIn('%s: Exported to cache folder: %s' % (str(self.ref), reg_path), self.client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(self.files.keys()):
@@ -279,7 +279,7 @@ class ExportTest(unittest.TestCase):
         self.ref = RecipeReference("hello0", "0.1", "lasote", "stable")
         self.client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*")})
         self.client.run("export . --user=lasote --channel=stable")
-        self.assertIn("hello0/0.1@lasote/stable: Exported revision", self.client.out)
+        self.assertIn("hello0/0.1@lasote/stable: Exported", self.client.out)
 
     def test_export_filter(self):
         self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
@@ -338,7 +338,7 @@ class OpenSSLConan(ConanFile):
         self.assertNotIn('Cleaning the old builds ...', client2.out)
         self.assertNotIn('Cleaning the old packs ...', client2.out)
         self.assertNotIn('All the previous packs were cleaned', client2.out)
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
+        self.assertIn('%s: Exported' % str(self.ref),
                       self.client.out)
         self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path2), self.client.out)
         self.assertTrue(os.path.exists(reg_path2))
@@ -373,7 +373,7 @@ class OpenSSLConan(ConanFile):
         reg_path3 = client2.get_latest_ref_layout(self.ref).export()
         digest3 = FileTreeManifest.load(client2.get_latest_ref_layout(self.ref).export())
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
+        self.assertIn('%s: Exported' % str(self.ref),
                       self.client.out)
         self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path3), self.client.out)
 
@@ -442,14 +442,14 @@ class ExportMetadataTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
         client.run('export .')
-        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0: Exported", client.out)
 
     def test_export_with_name_and_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=lib --version=1.0')
-        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0: Exported", client.out)
 
     def test_export_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
@@ -457,20 +457,20 @@ class ExportMetadataTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
 
         client.run('export .  --version= --user=user --channel=channel')
-        self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0@user/channel: Exported", client.out)
 
     def test_export_conflict_no_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=pkg --version=0.1 --user=user --channel=channel')
-        self.assertIn("pkg/0.1@user/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/0.1@user/channel: Exported", client.out)
         client.run('export . --name=pkg --version=0.1 --user=other --channel=stable')
-        self.assertIn("pkg/0.1@other/stable: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/0.1@other/stable: Exported", client.out)
         client.run('export . --name=pkg --version=0.1')
-        self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/0.1: Exported", client.out)
         client.run('export . --name=pkg --version=0.1')
-        self.assertIn("pkg/0.1: Exported revision", client.out)
+        self.assertIn("pkg/0.1: Exported", client.out)
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")

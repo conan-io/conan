@@ -5,14 +5,14 @@ from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
 from conan.cli.args import add_lockfile_args, add_common_install_arguments, add_reference_args
 from conan.internal.conan_app import ConanApp
-from conan.cli.printers.graph import print_graph_packages
+from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conans.client.conanfile.build import run_build_method
 
 
 @conan_command(group='Creator')
 def build(conan_api, parser, *args):
     """
-    Install dependencies and calls the build() method
+    Install dependencies and calls the build() method.
     """
     parser.add_argument("path", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py "
@@ -41,7 +41,8 @@ def build(conan_api, parser, *args):
                                                      args.user, args.channel,
                                                      profile_host, profile_build, lockfile, remotes,
                                                      args.update)
-
+    print_graph_basic(deps_graph)
+    deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)

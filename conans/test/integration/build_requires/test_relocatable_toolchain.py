@@ -5,6 +5,14 @@ from conans.test.utils.tools import TestClient
 
 
 def test_relocatable_toolchain():
+    """ Implements the following use case:
+    - base/1.0 implements an SDK that needs to be relocated in every maching, but this package
+      contains the non relocatable part and the relocation scripts
+    - sdk/1.0 --tool_requires-> base/1.0 and implements just the relocation execution, copying
+      whatever is necessary from base, and relocating it.
+      It defines build_policy = "missing" and upload policy = "skip"
+    https://github.com/conan-io/conan/issues/5059
+    """
     c = TestClient(default_server_user=True)
     base = textwrap.dedent("""
         from conan import ConanFile

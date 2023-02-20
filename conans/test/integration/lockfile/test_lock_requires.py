@@ -174,7 +174,7 @@ def test_conditional_os(requires):
     client.run("install consumer -s os=Linux -s:b os=Linux")
     assert "nix/0.2#" in client.out
     assert "nix/0.1" not in client.out
-    assert "win" not in client.out
+    assert "win/" not in client.out
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])

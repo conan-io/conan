@@ -20,5 +20,3 @@ def test_pure_runtime_dep():
     c.run("create tool")
     c.run("create lib")
     c.run("install consumer -g CMakeDeps")
-    print(c.out)
-    print(c.current_folder)

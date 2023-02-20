@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, Color
 from conans.client.subsystems import command_env_wrapper
 from conans.errors import ConanException
 from conans.model.build_info import MockInfoProperty
@@ -289,8 +289,10 @@ class ConanFile:
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conans.util.runners import conan_run
-        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}")
+        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}",
+                              fg=Color.BRIGHT_BLUE)
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
+        ConanOutput().writeln("")
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing" % retcode)

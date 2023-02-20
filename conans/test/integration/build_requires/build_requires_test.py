@@ -201,7 +201,6 @@ class BuildRequiresTest(unittest.TestCase):
                                                      env_info={"MYENV": ["myenvcatch0.1env"]})})
         t.run("create . --name=catch --version=0.1 --user=user --channel=testing")
         t.save({"conanfile.py": GenConanfile().with_requirement(catch_ref, private=True)})
-        print(t.load("conanfile.py"))
         t.run("create . --name=LibA --version=0.1 --user=user --channel=testing")
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
                                               .with_tool_requires(catch_ref)})

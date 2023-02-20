@@ -4,6 +4,7 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
 
@@ -11,7 +12,7 @@ from conans.model.recipe_ref import RecipeReference
 @conan_command(group="Creator")
 def test(conan_api, parser, *args):
     """
-    Test a package from a test_package folder
+    Test a package from a test_package folder.
     """
     parser.add_argument("path", action=OnceArgument,
                         help="Path to a test_package folder containing a conanfile.py")
@@ -31,12 +32,7 @@ def test(conan_api, parser, *args):
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    out = ConanOutput()
-    out.title("Input profiles")
-    out.info("Profile host:")
-    out.info(profile_host.dumps())
-    out.info("Profile build:")
-    out.info(profile_build.dumps())
+    print_profiles(profile_host, profile_build)
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
                           args.update, build_modes=args.build)
@@ -55,7 +51,7 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
                                                          tested_python_requires=tested_python_requires)
 
     out = ConanOutput()
-    out.title("test_package: Computing dependency graph")
+    out.title("Launching test_package")
     deps_graph = conan_api.graph.load_graph(root_node, profile_host=profile_host,
                                             profile_build=profile_build,
                                             lockfile=lockfile,
@@ -63,13 +59,12 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
                                             update=update,
                                             check_update=update)
     print_graph_basic(deps_graph)
-    out.title("test_package: Computing necessary packages")
     deps_graph.report_graph_error()
+
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
 
-    out.title("test_package: Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     _check_tested_reference_matches(deps_graph, ref, out)
     test_package(conan_api, deps_graph, path, tested_python_requires)

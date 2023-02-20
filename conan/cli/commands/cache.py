@@ -9,7 +9,8 @@ from conans.model.recipe_ref import RecipeReference
 
 @conan_command(group="Consumer")
 def cache(conan_api: ConanAPI, parser, *args):
-    """Performs file operations in the local cache (of recipes and packages)
+    """
+    Perform file operations in the local cache (of recipes and/or packages).
     """
     pass
 
@@ -17,11 +18,11 @@ def cache(conan_api: ConanAPI, parser, *args):
 @conan_subcommand(formatters={"text": default_text_formatter})
 def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
-        Shows the path in the Conan cache af a given reference
+    Show the path to the Conan cache for a given reference.
     """
     subparser.add_argument("reference", help="Recipe reference or Package reference")
     subparser.add_argument("--folder", choices=['export_source', 'source', 'build'],
-                           help="Show the path to the specified element. The 'build'"
+                           help="Path to show. The 'build'"
                                 " requires a package reference. If not specified it shows 'exports'"
                                 " path ")
 
@@ -54,22 +55,23 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
 @conan_subcommand()
 def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     """
-        Shows the path in the Conan cache af a given reference
+    Remove non-critical folders from the cache, like source, build and/or download
+    (.tgz store) ones.
     """
-    subparser.add_argument("pattern", help="selection pattern for references to clean")
+    subparser.add_argument("pattern", help="Selection pattern for references to clean")
     subparser.add_argument("-s", "--source", action='store_true', default=False,
                            help="Clean source folders")
     subparser.add_argument("-b", "--build", action='store_true', default=False,
-                           help="Clean source folders")
+                           help="Clean build folders")
     subparser.add_argument("-d", "--download", action='store_true', default=False,
                            help="Clean download folders")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
-                           help="Remove all packages (empty) or provide a query: "
+                           help="Remove only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
     args = parser.parse_args(*args)
 
     if not args.source and not args.build and not args.download:
-        raise ConanException("Define at least one argument from --source, --build, --download")
+        raise ConanException("Define at least one argument among [--source, --build, --download]")
 
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)

@@ -3,8 +3,6 @@ import platform
 import textwrap
 import unittest
 
-import pytest
-
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -95,12 +93,12 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("install . --profile ./profile.txt --build=Pythontool", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1@lasote/stable'", client.out)
         client.run("install . --profile ./profile.txt --build=tool/0.1*")
-        self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("tool/0.1@lasote/stable: Created package", client.out)
 
         # now remove packages, ensure --build=missing also creates them
         client.run('remove "*:*" -c')
         client.run("install . --profile ./profile.txt --build=missing")
-        self.assertIn("tool/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("tool/0.1@lasote/stable: Created package", client.out)
 
     def test_profile_test_requires(self):
         client = TestClient()
@@ -209,8 +207,9 @@ def test_consumer_patterns_loop_error():
 
     client.run("export tool1 --name=tool1 --version=1.0")
     client.run("export tool2 --name=tool2 --version=1.0")
-    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt", assert_error=True)
-    assert "graph loop" in client.out
+    client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt",
+               assert_error=True)
+    assert "There is a cycle/loop in the graph" in client.out
 
     # we can fix it with the negation
     profile_patterns = textwrap.dedent("""

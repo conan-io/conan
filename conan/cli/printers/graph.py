@@ -1,5 +1,6 @@
 from conan.api.output import ConanOutput, Color
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
+    BINARY_SYSTEM_TOOL
 
 
 def print_graph_basic(graph):
@@ -70,10 +71,6 @@ def print_graph_basic(graph):
             reason = f": {reason}" if reason else ""
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
 
-    if graph.error:
-        output.info("Graph error", Color.BRIGHT_RED)
-        output.info("    {}".format(graph.error), Color.BRIGHT_RED)
-
 
 def print_graph_packages(graph):
     # I am excluding the "download"-"cache" or remote information, that is not
@@ -101,7 +98,8 @@ def print_graph_packages(graph):
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
             if remote is not None and status != BINARY_SKIP:
                 status = "{} ({})".format(status, remote.name)
-            output.info("    {} - {}".format(pref.repr_notime(), status), Color.BRIGHT_CYAN)
+            name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
+            output.info("    {} - {}".format(name, status), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)

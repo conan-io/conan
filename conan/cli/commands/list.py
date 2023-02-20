@@ -91,16 +91,16 @@ def print_list_json(data):
                                              "html": list_packages_html})
 def list(conan_api: ConanAPI, parser, *args):
     """
-    Lists existing recipes, revisions or packages in the cache or in remotes
+    List existing recipes, revisions, or packages in the cache (by default) or the remotes.
     """
     parser.add_argument('reference', help="Recipe reference or package reference. "
                                           "Both can contain * as wildcard at any reference field. "
                                           "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
-                        help="Only list packages matching a specific query. e.g: os=Windows AND "
+                        help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", default=None, action="append",
-                        help="Remote names. Accepts wildcards")
+                        help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
     args = parser.parse_args(*args)

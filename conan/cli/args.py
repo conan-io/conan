@@ -102,7 +102,7 @@ def add_reference_args(parser):
     parser.add_argument("--user", action=OnceArgument,
                         help='Provide a user if not specified in conanfile')
     parser.add_argument("--channel", action=OnceArgument,
-                        help='Provide a channel if not specified in conanfil')
+                        help='Provide a channel if not specified in conanfile')
 
 
 def common_graph_args(subparser):

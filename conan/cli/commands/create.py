@@ -6,8 +6,9 @@ from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.printers import print_profiles
 from conan.internal.conan_app import ConanApp
-from conan.cli.printers.graph import print_graph_packages
+from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conans.client.conanfile.build import run_build_method
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import chdir, mkdir
@@ -22,13 +23,13 @@ def json_create(deps_graph):
 @conan_command(group="Creator", formatters={"json": json_create})
 def create(conan_api, parser, *args):
     """
-    Create a package
+    Create a package.
     """
     common_args_export(parser)
     add_lockfile_args(parser)
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
@@ -45,8 +46,6 @@ def create(conan_api, parser, *args):
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    out = ConanOutput()
-    out.highlight("Exporting the recipe")
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,
                                              user=args.user, channel=args.channel,
@@ -57,11 +56,7 @@ def create(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
                                                          args.build_require)
 
-    out.title("Input profiles")
-    out.info("Profile host:")
-    out.info(profile_host.dumps())
-    out.info("Profile build:")
-    out.info(profile_build.dumps())
+    print_profiles(profile_host, profile_build)
 
     deps_graph = None
     if not is_python_require:
@@ -69,22 +64,20 @@ def create(conan_api, parser, *args):
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
 
-        out.title("Computing dependency graph")
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
                                                          lockfile=lockfile,
                                                          remotes=remotes, update=args.update)
+        print_graph_basic(deps_graph)
         deps_graph.report_graph_error()
 
-        out.title("Computing necessary packages")
         # Not specified, force build the tested library
         build_modes = [ref.repr_notime()] if args.build is None else args.build
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)
 
-        out.title("Installing packages")
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
@@ -146,7 +139,7 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
     conanfile.folders.set_base_package(conanfile.folders.base_build)
     run_build_method(conanfile, app.hook_manager)
 
-    out.title("Testing the package: Running test()")
+    out.title("Testing the package: Executing test")
     conanfile.output.highlight("Running test()")
     with conanfile_exception_formatter(conanfile, "test"):
         with chdir(conanfile.build_folder):

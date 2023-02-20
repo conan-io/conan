@@ -1,8 +1,8 @@
 import json
 import os
 
-from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.printers.graph import print_graph_packages
+from conan.api.output import ConanOutput, cli_out_write, Color
+from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
@@ -16,7 +16,7 @@ from conans.errors import ConanException
 @conan_command(group="Consumer")
 def graph(conan_api, parser, *args):
     """
-    Computes a dependency graph, without  installing or building the binaries
+    Compute a dependency graph, without installing or building the binaries.
     """
 
 
@@ -36,7 +36,7 @@ def json_build_order(build_order):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
-    Computes the build order of a dependency graph
+    Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
     args = parser.parse_args(*args)
@@ -86,7 +86,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
-    Merges more than 1 build-order file
+    Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
     args = parser.parse_args(*args)
@@ -107,10 +107,11 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
                               "dot": format_graph_dot})
 def graph_info(conan_api, parser, subparser, *args):
     """
-    Computes the dependency graph and shows information about it
+    Compute the dependency graph and shows information about it.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--check-updates", default=False, action="store_true")
+    subparser.add_argument("--check-updates", default=False, action="store_true",
+                           help="Check if there are recipe updates")
     subparser.add_argument("--filter", action="append",
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", action="append",
@@ -144,15 +145,17 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         allow_error=True,
                                                          check_updates=args.check_updates)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         allow_error=True,
                                                          check_updates=args.check_updates)
-    if not deps_graph.error:
+    print_graph_basic(deps_graph)
+    if deps_graph.error:
+        ConanOutput().info("Graph error", Color.BRIGHT_RED)
+        ConanOutput().info("    {}".format(deps_graph.error), Color.BRIGHT_RED)
+    else:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)

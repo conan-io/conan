@@ -6,6 +6,7 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
 from conan.cli.commands import make_abs_path
 from conan.cli.commands.create import _get_test_conanfile_path
+from conan.cli.printers.graph import print_graph_basic
 
 
 def json_export_pkg(info):
@@ -16,13 +17,13 @@ def json_export_pkg(info):
 @conan_command(group="Creator", formatters={"json": json_export_pkg})
 def export_pkg(conan_api, parser, *args):
     """
-    Create a package directly from pre-compiled binaries
+    Create a package directly from pre-compiled binaries.
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
+                        help='Whether the provided reference is a build-require')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
@@ -54,6 +55,7 @@ def export_pkg(conan_api, parser, *args):
                                                      lockfile=lockfile, remotes=None, update=None,
                                                      is_build_require=args.build_require)
 
+    print_graph_basic(deps_graph)
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, build_mode=[ref.name], lockfile=lockfile)
     deps_graph.report_graph_error()

@@ -491,7 +491,7 @@ def test_create_format_json():
             raise Exception("Ref not found. Review the revisions hash.")
 
     # Consumer information
-    assert consumer_info["recipe"] == "Virtual"
+    assert consumer_info["recipe"] == "Cli"
     assert consumer_info["package_id"] is None
     assert consumer_info["prev"] is None
     assert consumer_info["options"] == {}
