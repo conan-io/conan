@@ -71,7 +71,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     if not args.source and not args.build and not args.download:
-        raise ConanException("Define at least one argument between [--source, --build, --download]")
+        raise ConanException("Define at least one argument among [--source, --build, --download]")
 
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
