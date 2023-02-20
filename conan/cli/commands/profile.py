@@ -52,7 +52,7 @@ def profile_path(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def profile_detect(conan_api, parser, subparser, *args):
     """
-    Generate a default profile using auto-detected values.
+    Generate a profile using auto-detected values.
     """
     subparser.add_argument("--name", help="Profile name, 'default' if not specified")
     subparser.add_argument("-f", "--force", action='store_true', help="Overwrite if exists")
