@@ -36,7 +36,7 @@ def json_build_order(build_order):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
-    Computes the build order of a dependency graph.
+    Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
     args = parser.parse_args(*args)
@@ -110,7 +110,8 @@ def graph_info(conan_api, parser, subparser, *args):
     Compute the dependency graph and shows information about it.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--check-updates", default=False, action="store_true")
+    subparser.add_argument("--check-updates", default=False, action="store_true",
+                           help="Check if there are recipe updates")
     subparser.add_argument("--filter", action="append",
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", action="append",
