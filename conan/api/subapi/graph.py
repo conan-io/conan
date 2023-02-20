@@ -2,7 +2,6 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conan.cli.printers.graph import print_graph_basic
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
@@ -110,24 +109,16 @@ class GraphAPI:
             profile.options.scope(tool_requires[0])
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
-                            lockfile, remotes, update, check_updates=False, allow_error=False):
+                            lockfile, remotes, update, check_updates=False):
         requires = [RecipeReference.loads(r) if isinstance(r, str) else r for r in requires] \
             if requires else None
         tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
                          for r in tool_requires] if tool_requires else None
 
-        out = ConanOutput()
-        out.title("Input profiles")
-        out.info("Profile host:")
-        out.info(profile_host.dumps())
-        out.info("Profile build:")
-        out.info(profile_build.dumps())
-
         self._scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = self._load_root_virtual_conanfile(requires=requires, tool_requires=tool_requires,
                                                       profile_host=profile_host)
 
-        out.title("Computing dependency graph")
         # check_updates = args.check_updates if "check_updates" in args else False
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build,
@@ -135,40 +126,20 @@ class GraphAPI:
                                      remotes=remotes,
                                      update=update,
                                      check_update=check_updates)
-        print_graph_basic(deps_graph)
-        if deps_graph.error:
-            if allow_error:
-                return deps_graph
-            raise deps_graph.error
-
         return deps_graph
 
     def load_graph_consumer(self, path, name, version, user, channel,
                             profile_host, profile_build, lockfile, remotes, update,
-                            allow_error=False, check_updates=False, is_build_require=False):
-        out = ConanOutput()
-        out.title("Input profiles")
-        out.info("Profile host:")
-        out.info(profile_host.dumps())
-        out.info("Profile build:")
-        out.info(profile_build.dumps())
-
+                            check_updates=False, is_build_require=False):
         root_node = self._load_root_consumer_conanfile(path, profile_host, profile_build,
                                                        name=name, version=version, user=user,
                                                        channel=channel, lockfile=lockfile,
                                                        remotes=remotes, update=update,
                                                        is_build_require=is_build_require)
 
-        out.title("Computing dependency graph")
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
                                      profile_build=profile_build, lockfile=lockfile,
                                      remotes=remotes, update=update, check_update=check_updates)
-        print_graph_basic(deps_graph)
-        if deps_graph.error:
-            if allow_error:
-                return deps_graph
-            raise deps_graph.error
-
         return deps_graph
 
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,
@@ -189,6 +160,7 @@ class GraphAPI:
             revisions for already existing recipes in the Conan cache
         :param check_update: For "graph info" command, check if there are recipe updates
         """
+        ConanOutput().title("Computing dependency graph")
         app = ConanApp(self.conan_api.cache_folder)
 
         assert profile_host is not None

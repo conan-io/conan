@@ -675,7 +675,7 @@ class TestClient(object):
         """
         lines = self.out.splitlines()
         if test_package:
-            line_req = lines.index("-------- test_package: Computing dependency graph --------")
+            line_req = lines.index("======== Launching test_package ========")
             lines = lines[line_req:]
         header = "Requirements" if not build else "Build requirements"
         if python:
@@ -701,9 +701,9 @@ class TestClient(object):
         """
         lines = self.out.splitlines()
         if test_package:
-            line_req = lines.index("-------- test_package: Computing dependency graph --------")
+            line_req = lines.index("======== Launching test_package ========")
             lines = lines[line_req:]
-        line_req = lines.index("-------- Computing necessary packages --------")
+        line_req = lines.index("======== Computing necessary packages ========")
         header = "Requirements" if not build else "Build requirements"
         if test:
             header = "Test requirements"
@@ -743,7 +743,7 @@ class TestClient(object):
         return PkgReference.loads(pref)
 
     def exported_recipe_revision(self):
-        return re.search(r"Exported revision: (\S+)", str(self.out)).group(1)
+        return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)
 
 
 class TurboTestClient(TestClient):

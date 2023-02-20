@@ -1,7 +1,6 @@
 import fnmatch
 import os
 import shutil
-from collections import defaultdict
 
 from conans.util.files import mkdir
 
@@ -38,10 +37,6 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
-
-    # FIXME: Not always passed conanfile
-    if conanfile:
-        report_files_copied(copied_files, conanfile.output)
     return copied_files
 
 
@@ -144,23 +139,3 @@ def _copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst):
         os.symlink(link_dst, symlink_path)
         copied_files.append(symlink_path)
     return copied_files
-
-
-def report_files_copied(copied, scoped_output, message_suffix="Copied"):
-    ext_files = defaultdict(list)
-    for f in copied:
-        _, ext = os.path.splitext(f)
-        ext_files[ext].append(os.path.basename(f))
-
-    if not ext_files:
-        return False
-
-    for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
-        file_or_files = "file" if len(files) == 1 else "files"
-        if not ext:
-            scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
-        else:
-            scoped_output.info("%s %d '%s' %s%s"
-                               % (message_suffix, len(files), ext, file_or_files, files_str))
-    return True

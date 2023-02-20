@@ -19,6 +19,11 @@ class GraphError(ConanException):
         elif self.kind == GraphError.VERSION_CONFLICT:
             return f"Version conflict: {self.node.ref}->{self.require.ref}, "\
                    f"{self.base_previous.ref}->{self.prev_require.ref}."
+        elif self.kind == GraphError.LOOP:
+            return "There is a cycle/loop in the graph:\n"\
+                   f"    Initial ancestor: {self.ancestor}\n" \
+                   f"    Require: {self.require.ref}\n" \
+                   f"    Dependency: {self.node}"
         return self.kind
 
     @staticmethod

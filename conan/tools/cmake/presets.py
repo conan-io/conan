@@ -2,9 +2,11 @@ import json
 import os
 import platform
 
+from conan.api.output import ConanOutput
 from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.microsoft import is_msvc
+from conans.client.graph.graph import RECIPE_CONSUMER
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -106,12 +108,18 @@ def _configure_preset(conanfile, generator, cache_variables, toolchain_file, mul
     add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file} " \
         if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
 
-    conanfile.output.info(f"Preset '{name}' added to CMakePresets.json. Invoke it manually using "
-                          f"'cmake --preset {name}'")
-    conanfile.output.info(f"If your CMake version is not compatible with "
-                          f"CMakePresets (<3.19) call cmake like: 'cmake <path> "
-                          f"-G {_format_val(generator)} {add_toolchain_cache}"
-                          f"{cache_variables_info}'")
+    try:
+        is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
+                      conanfile.tested_reference_str is None
+    except:
+        is_consumer = False
+    if is_consumer:
+        conanfile.output.info(f"Preset '{name}' added to CMakePresets.json. Invoke it manually using "
+                              f"'cmake --preset {name}'")
+        conanfile.output.info(f"If your CMake version is not compatible with "
+                              f"CMakePresets (<3.19) call cmake like: 'cmake <path> "
+                              f"-G {_format_val(generator)} {add_toolchain_cache}"
+                              f"{cache_variables_info}'")
     return ret
 
 
@@ -200,6 +208,7 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
 
     preset_content = json.dumps(data, indent=4)
     save(preset_path, preset_content)
+    ConanOutput(str(conanfile)).info("CMakeToolchain generated: CMakePresets.json")
     _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_prefix, data)
 
 
@@ -244,6 +253,8 @@ def _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_p
     data = _append_user_preset_path(conanfile, data, preset_path)
 
     data = json.dumps(data, indent=4)
+    relpath = os.path.relpath(user_presets_path, conanfile.generators_folder)
+    ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {relpath}")
     save(user_presets_path, data)
 
 

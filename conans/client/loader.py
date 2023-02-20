@@ -246,7 +246,7 @@ class ConanFileLoader:
     def load_virtual(self, requires=None, tool_requires=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(display_name="virtual")
+        conanfile = ConanFile(display_name="cli")
 
         if tool_requires:
             for reference in tool_requires:

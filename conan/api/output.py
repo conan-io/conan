@@ -139,7 +139,7 @@ class ConanOutput:
             else:
                 ret = "{}: ".format(self._scope)
 
-        if self._color and not self._scope:
+        if self._color:
             ret += "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         else:
             ret += "{}".format(msg)
@@ -170,6 +170,12 @@ class ConanOutput:
     info = status
 
     def title(self, msg):
+        if log_level_allowed(LEVEL_NOTICE):
+            self._write_message("\n======== {} ========".format(msg), "NOTICE",
+                                fg=Color.BRIGHT_MAGENTA)
+        return self
+
+    def subtitle(self, msg):
         if log_level_allowed(LEVEL_NOTICE):
             self._write_message("\n-------- {} --------".format(msg), "NOTICE",
                                 fg=Color.BRIGHT_MAGENTA)

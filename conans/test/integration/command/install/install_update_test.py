@@ -126,8 +126,7 @@ def test_reuse():
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --requires=hello0/1.0@lasote/stable")
-
-    assert str(client2.out).count("Downloading conaninfo.txt") == 1
+    assert "hello0/1.0@lasote/stable: Retrieving package" in client2.out
 
     client.save({"header.h": "//EMPTY!"})
     sleep(1)

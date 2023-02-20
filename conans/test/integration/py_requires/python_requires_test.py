@@ -313,10 +313,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "other.txt": "text"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: Exports sources! *.h", client.out)
-        self.assertIn("pkg/0.1@user/testing exports: Copied 1 '.txt' file: other.txt",
-                      client.out)
-        self.assertIn("pkg/0.1@user/testing exports_sources: Copied 1 '.h' file: header.h",
-                      client.out)
+        self.assertIn("pkg/0.1@user/testing: Copied 1 '.txt' file: other.txt", client.out)
+        self.assertIn("pkg/0.1@user/testing: Copied 1 '.h' file: header.h", client.out)
         self.assertIn("pkg/0.1@user/testing: Short paths! True", client.out)
         self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("pkg/0.1@user/testing: Author! author@company.com", client.out)
@@ -611,7 +609,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "name.txt": "mypkg",
                      "version.txt": "myversion"})
         client.run("export .")
-        self.assertIn("mypkg/myversion: A new conanfile.py version was exported", client.out)
+        self.assertIn("mypkg/myversion: Exported", client.out)
         client.run("create .")
         self.assertIn("mypkg/myversion: Pkg1 source: mypkg:myversion", client.out)
         self.assertIn("mypkg/myversion: Pkg1 build: mypkg:myversion", client.out)
@@ -657,7 +655,7 @@ class PyRequiresExtendTest(unittest.TestCase):
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
         client.run("export . --name=pkg --version=1.0 --user=user --channel=channel")
-        self.assertIn("pkg/1.0@user/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/1.0@user/channel: Exported", client.out)
         client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
         self.assertIn("pkg/1.0@user/channel: Source: tool header: myheader", client.out)
         self.assertIn("pkg/1.0@user/channel: Source: tool other: otherheader", client.out)

@@ -119,10 +119,9 @@ class GraphManagerTest(unittest.TestCase):
 
         conan_api = ConanAPI(cache_folder=self.cache_folder)
 
-        
         deps_graph = conan_api.graph.load_graph_consumer(path, None, None, None, None,
                                                          profile_host, profile_build, None, None,
-                                                         None, allow_error=True)
+                                                         None)
 
         if install:
             deps_graph.report_graph_error()

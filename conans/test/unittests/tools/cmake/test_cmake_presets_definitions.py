@@ -13,7 +13,7 @@ from conans.test.utils.test_files import temp_folder
 
 @pytest.fixture(scope="module")
 def conanfile():
-    c = ConanFile(Mock())
+    c = ConanFile("")
     c.settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],

@@ -24,7 +24,7 @@ class SetVersionNameTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         user_channel_arg = "--user=user --channel=channel" if user_channel else ""
         client.run("export . %s" % user_channel_arg)
-        self.assertIn("pkg/2.1%s: A new conanfile.py version was exported" % user_channel,
+        self.assertIn("pkg/2.1%s: Exported" % user_channel,
                       client.out)
         # installing it doesn't break
         client.run("install --requires=pkg/2.1%s --build=missing" % (user_channel or "@"))
@@ -54,7 +54,7 @@ class SetVersionNameTest(unittest.TestCase):
                      "name.txt": "pkg",
                      "version.txt": "2.1"})
         client.run("export . --user=user --channel=testing")
-        self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/2.1@user/testing: Exported", client.out)
         client.run("install --requires=pkg/2.1@user/testing --build=missing")
         client.assert_listed_binary({f"pkg/2.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Build")})
         client.run("install --requires=pkg/2.1@user/testing")
@@ -149,4 +149,4 @@ class SetVersionNameTest(unittest.TestCase):
         with client.chdir("build"):
             client.save({"version.txt": "2.1"}, clean_first=True)
             client.run("export .. ")
-            self.assertIn("pkg/2.1: A new conanfile.py version was exported", client.out)
+            self.assertIn("pkg/2.1: Exported", client.out)
