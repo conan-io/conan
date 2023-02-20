@@ -62,7 +62,7 @@ def remote_list(conan_api: ConanAPI, parser, subparser, *args):
 @conan_subcommand()
 def remote_add(conan_api, parser, subparser, *args):
     """
-    Add a remote
+    Add a remote.
     """
     subparser.add_argument("name", help="Name of the remote to add")
     subparser.add_argument("url", help="Url of the remote")
@@ -83,7 +83,7 @@ def remote_add(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def remote_remove(conan_api, parser, subparser, *args):
     """
-    Remove a remote
+    Remove a remote.
     """
     subparser.add_argument("remote", help="Name of the remote to remove. "
                                           "Accepts 'fnmatch' style wildcards.")  # to discuss
@@ -94,7 +94,7 @@ def remote_remove(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def remote_update(conan_api, parser, subparser, *args):
     """
-    Update the remote
+    Update the remote.
     """
     subparser.add_argument("remote", help="Name of the remote to update")
     subparser.add_argument("--url", action=OnceArgument, help="New url for the remote")
@@ -121,7 +121,7 @@ def remote_update(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def remote_rename(conan_api, parser, subparser, *args):
     """
-    Rename a remote
+    Rename a remote.
     """
     subparser.add_argument("remote", help="Current name of the remote")
     subparser.add_argument("new_name", help="New name for the remote")
@@ -133,7 +133,7 @@ def remote_rename(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def remote_enable(conan_api, parser, subparser, *args):
     """
-    Enable all the remotes matching a pattern
+    Enable all the remotes matching a pattern.
     """
     subparser.add_argument("remote", help="Pattern of the remote/s to enable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
@@ -144,7 +144,7 @@ def remote_enable(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def remote_disable(conan_api, parser, subparser, *args):
     """
-    Disable all the remotes matching a pattern
+    Disable all the remotes matching a pattern.
     """
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
@@ -156,7 +156,9 @@ def remote_disable(conan_api, parser, subparser, *args):
 
 @conan_subcommand(formatters={"text": print_remote_user_list, "json": output_remotes_json})
 def remote_list_users(conan_api, parser, subparser, *args):
-    """List the users logged into the remotes"""
+    """
+    List the users logged into the remotes.
+    """
     remotes = conan_api.remotes.list()
     ret = OrderedDict()
     if not remotes:
@@ -169,7 +171,9 @@ def remote_list_users(conan_api, parser, subparser, *args):
 
 @conan_subcommand(formatters={"text": print_remote_user_set, "json": output_remotes_json})
 def remote_login(conan_api, parser, subparser, *args):
-    """Login into the specified remotes"""
+    """
+    Login into the specified remotes.
+    """
     subparser.add_argument("remote", help="Pattern or name of the remote to login into. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     subparser.add_argument("username", help='Username')
@@ -200,7 +204,9 @@ def remote_login(conan_api, parser, subparser, *args):
 
 @conan_subcommand(formatters={"text": print_remote_user_set, "json": output_remotes_json})
 def remote_set_user(conan_api, parser, subparser, *args):
-    """Associates a username with a remote without performing the authentication"""
+    """
+    Associate a username with a remote without performing the authentication.
+    """
     subparser.add_argument("remote", help="Pattern or name of the remote. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     subparser.add_argument("username", help='Username')
@@ -222,7 +228,9 @@ def remote_set_user(conan_api, parser, subparser, *args):
 
 @conan_subcommand(formatters={"text": print_remote_user_set, "json": output_remotes_json})
 def remote_logout(conan_api, parser, subparser, *args):
-    """Clear the existing credentials for the specified remotes"""
+    """
+    Clear the existing credentials for the specified remotes.
+    """
     subparser.add_argument("remote", help="Pattern or name of the remote to logout. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
@@ -242,5 +250,5 @@ def remote_logout(conan_api, parser, subparser, *args):
 @conan_command(group="Consumer")
 def remote(conan_api, parser, *args):
     """
-    Manages the remote list and the users authenticated on them.
+    Manage the remote list and the users authenticated on them.
     """

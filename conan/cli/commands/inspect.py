@@ -21,7 +21,7 @@ def inspect_text_formatter(data):
 @conan_command(group="Consumer", formatters={"text": inspect_text_formatter, "json": default_json_formatter})
 def inspect(conan_api, parser, *args):
     """
-    Inspect a conanfile.py to return the public fields
+    Inspect a conanfile.py to return the public fields.
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
 

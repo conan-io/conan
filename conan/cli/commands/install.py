@@ -18,7 +18,7 @@ def json_install(info):
 @conan_command(group="Consumer", formatters={"json": json_install})
 def install(conan_api, parser, *args):
     """
-    Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
+    Install the requirements specified in a recipe (conanfile.py or conanfile.txt).
 
     It can also be used to install a concrete package specifying a
     reference. If any requirement is not found in the local cache, it will

@@ -18,7 +18,7 @@ def json_export(ref):
 @conan_command(group="Creator", formatters={"json": json_export})
 def export(conan_api, parser, *args):
     """
-    Export recipe to the Conan package cache
+    Export recipe to the Conan package cache.
     """
     common_args_export(parser)
     group = parser.add_mutually_exclusive_group()
@@ -33,7 +33,7 @@ def export(conan_api, parser, *args):
     parser.add_argument("--lockfile-partial", action="store_true",
                         help="Do not raise an error if some dependency is not found in lockfile")
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='The provided reference is a build-require')
+                        help='If the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()

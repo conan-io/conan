@@ -16,7 +16,7 @@ from conans.errors import ConanException
 @conan_command(group="Consumer")
 def graph(conan_api, parser, *args):
     """
-    Computes a dependency graph, without  installing or building the binaries
+    Compute a dependency graph, without  installing or building the binaries.
     """
 
 
@@ -36,7 +36,7 @@ def json_build_order(build_order):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
-    Computes the build order of a dependency graph
+    Computes the build order of a dependency graph.
     """
     common_graph_args(subparser)
     args = parser.parse_args(*args)
@@ -86,7 +86,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
-    Merges more than 1 build-order file
+    Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
     args = parser.parse_args(*args)
@@ -107,7 +107,7 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
                               "dot": format_graph_dot})
 def graph_info(conan_api, parser, subparser, *args):
     """
-    Computes the dependency graph and shows information about it
+    Compute the dependency graph and shows information about it.
     """
     common_graph_args(subparser)
     subparser.add_argument("--check-updates", default=False, action="store_true")

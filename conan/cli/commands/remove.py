@@ -7,7 +7,7 @@ from conans.client.userio import UserInput
 @conan_command(group="Consumer")
 def remove(conan_api: ConanAPI, parser, *args):
     """
-    Removes recipes or packages from local cache or a remote.
+    Remove recipes or packages from local cache or a remote.
 
     - If no remote is specified (-r), the removal will be done in the local conan cache.
     - If a recipe reference is specified, it will remove the recipe and all the packages, unless -p
