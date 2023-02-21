@@ -105,7 +105,7 @@ class RemotesAPI:
         if with_user:
             user, token, _ = app.cache.localdb.get_login(remote.url)
             if not user:
-                var_name = f"CONAN_LOGIN_USERNAME_{remote.name}"
+                var_name = f"CONAN_LOGIN_USERNAME_{remote.name.upper()}"
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
                 return
