@@ -40,7 +40,11 @@ def color_enabled(stream):
 def init_colorama(stream):
     import colorama
     if color_enabled(stream):
-        colorama.init()
+        if os.getenv("CLICOLOR_FORCE", "0") != "0":
+            # Otherwise it is not really forced if colorama doesn't feel it
+            colorama.init(strip=False, convert=False)
+        else:
+            colorama.init()
 
 
 class UserInput(object):
