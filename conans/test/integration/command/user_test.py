@@ -357,9 +357,9 @@ class TestRemoteAuth:
 
     def test_remote_auth_with_user(self):
         servers = OrderedDict()
-        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["default"] = TestServer(users={"lasote": "mypass"})
         servers["other_server"] = TestServer()
-        c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass"])
+        c = TestClient(servers=servers, inputs=["lasote", "mypass"])
         c.run("remote set-user default lasote")
         c.run("remote auth * --with-user")
         text = textwrap.dedent("""\
@@ -371,7 +371,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_with_user_env_var(self):
         servers = OrderedDict()
-        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["default"] = TestServer(users={"lasote": "mypass"})
         servers["other_server"] = TestServer()
         c = TestClient(servers=servers)
         with environment_update({"CONAN_LOGIN_USERNAME_DEFAULT": "lasote",
