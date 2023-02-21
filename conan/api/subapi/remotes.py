@@ -1,4 +1,5 @@
 import fnmatch
+import os
 
 from conan.internal.conan_app import ConanApp
 from conans.client.cache.remote_registry import Remote
@@ -98,3 +99,16 @@ class RemotesAPI:
     def user_set(self, remote: Remote, username):
         app = ConanApp(self.conan_api.cache_folder)
         return user_set(app.cache.localdb, username, remote)
+
+    def auth(self, remote: Remote, with_user=False):
+        app = ConanApp(self.conan_api.cache_folder)
+        if with_user:
+            user, token, _ = app.cache.localdb.get_login(remote.url)
+            if not user:
+                var_name = f"CONAN_LOGIN_USERNAME_{remote.name.upper()}"
+                user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
+            if not user:
+                return
+        app.remote_manager.check_credentials(remote)
+        user, token, _ = app.cache.localdb.get_login(remote.url)
+        return user
