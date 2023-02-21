@@ -228,6 +228,9 @@ def _detect_compiler_version(result):
 
     if compiler != "msvc":
         cppstd = _cppstd_default(compiler, version)
+        if compiler == "apple-clang" and version >= "11":
+            # forced auto-detection, gnu98 is too old
+            cppstd = "gnu17"
         result.append(("compiler.cppstd", cppstd))
 
 
@@ -375,7 +378,7 @@ def _cppstd_default(compiler, compiler_version):
     assert isinstance(compiler_version, Version)
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
+               "apple-clang": "gnu98",
                "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
