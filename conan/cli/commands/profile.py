@@ -67,8 +67,11 @@ def profile_detect(conan_api, parser, subparser, *args):
     detected_profile_cli_output(detected_profile)
     contents = detected_profile.dumps()
     ConanOutput().warning("This profile is a guess of your environment, please check it.")
+    if detected_profile.settings.get("os") == "Macos":
+        ConanOutput().warning("Defaulted to cppstd='gnu17' for apple-clang.")
     ConanOutput().warning("The output of this command is not guaranteed to be stable and can "
-                          "change in future Conan versions")
+                          "change in future Conan versions.")
+    ConanOutput().warning("Use your own profile files for stability.")
     ConanOutput().success(f"Saving detected profile to {profile_pathname}")
     save(profile_pathname, contents)
 
