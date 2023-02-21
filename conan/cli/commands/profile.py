@@ -30,7 +30,7 @@ def detected_profile_cli_output(detect_profile):
 @conan_subcommand(formatters={"text": print_profiles})
 def profile_show(conan_api, parser, subparser, *args):
     """
-    Show profiles.
+    Show aggregated profiles from the passed arguments.
     """
     add_profiles_args(subparser)
     args = parser.parse_args(*args)
@@ -52,7 +52,7 @@ def profile_path(conan_api, parser, subparser, *args):
 @conan_subcommand()
 def profile_detect(conan_api, parser, subparser, *args):
     """
-    Detect default profile.
+    Generate a profile using auto-detected values.
     """
     subparser.add_argument("--name", help="Profile name, 'default' if not specified")
     subparser.add_argument("-f", "--force", action='store_true', help="Overwrite if exists")

@@ -9,7 +9,7 @@ from conan.cli.command import conan_command, conan_subcommand
 @conan_command(group="Creator")
 def editable(conan_api, parser, *args):
     """
-    Allows working with a package in user folder.
+    Allow working with a package that resides in user folder.
     """
 
 
@@ -17,7 +17,7 @@ def editable(conan_api, parser, *args):
 def editable_add(conan_api, parser, subparser, *args):
     """
     Define the given <path> location as the package <reference>, so when this
-    package is required, it is used from this <path> location instead of from the cache.
+    package is required, it is used from this <path> location instead of the cache.
     """
     subparser.add_argument('path', help='Path to the package folder in the user workspace')
     add_reference_args(subparser)
