@@ -290,5 +290,5 @@ class InstallGraph:
            Check the available packages using 'conan list {ref}:* -r=remote'
            or try to build locally from sources using the '{build_str}' argument
 
-           More Info at 'https://docs.conan.io/en/2/knowledge/faq.html#error-missing-prebuilt-package'
+           More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
            '''))
