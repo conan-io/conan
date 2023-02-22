@@ -5,7 +5,7 @@ from conans.errors import ConanException
 
 def bad_value_msg(name, value, value_range):
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s\n"
-            'Read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
+            'Read "http://docs.conan.io/2/knowledge/faq.html#error-invalid-setting"'
             # value range can be either a list or a dict, we only want to list the keys
             % (value, name, [v for v in value_range if v is not None]))
 
