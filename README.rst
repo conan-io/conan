@@ -7,7 +7,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
-- Docs: https://docs.conan.io/en/latest/
+- Docs: https://docs.conan.io
 - Slack: https://cpplang.slack.com (#conan channel)
 - Twitter: https://twitter.com/conan_io
 
