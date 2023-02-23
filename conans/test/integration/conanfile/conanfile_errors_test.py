@@ -175,3 +175,20 @@ def test_notduplicate_requires_py():
     client.save(files)
     client.run("export .")
     assert "hello/0.1: Exported" in client.out
+
+
+def test_requirements_change_options():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+
+            def requirements(self):
+                self.options["mydep"].myoption = 3
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert "Dependencies options were defined incorrectly." in c.out
