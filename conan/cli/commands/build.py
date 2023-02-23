@@ -15,9 +15,9 @@ def build(conan_api, parser, *args):
     Install dependencies and call the build() method.
     """
     parser.add_argument("path", nargs="?",
-                        help="Path to a folder containing a recipe (conanfile.py "
-                             "or conanfile.txt) or to a recipe file. e.g., "
-                             "./my_project/conanfile.txt.")
+                        help='Path to a python-based recipe file or a folder '
+                             'containing a conanfile.py recipe. conanfile.txt '
+                             'cannot be used with conan build.')
     add_reference_args(parser)
     # TODO: Missing --build-require argument and management
     parser.add_argument("-of", "--output-folder",
