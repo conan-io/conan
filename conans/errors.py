@@ -10,8 +10,6 @@
 """
 from contextlib import contextmanager
 
-from conans.util.env import get_env
-
 
 @contextmanager
 def conanfile_remove_attr(conanfile, names, method):
@@ -42,6 +40,10 @@ def conanfile_exception_formatter(conanfile_name, func_name):
     """
 
     def _raise_conanfile_exc(e):
+        from conan.api.output import LEVEL_DEBUG, conan_output_level
+        if conan_output_level <= LEVEL_DEBUG:
+            import traceback
+            raise ConanExceptionInUserConanfileMethod(traceback.format_exc())
         m = _format_conanfile_exception(conanfile_name, func_name, e)
         raise ConanExceptionInUserConanfileMethod(m)
 
@@ -72,8 +74,6 @@ def _format_conanfile_exception(scope, method, exception):
     """
     import sys
     import traceback
-    if get_env("CONAN_VERBOSE_TRACEBACK", False):
-        return traceback.format_exc()
     try:
         conanfile_reached = False
         tb = sys.exc_info()[2]
