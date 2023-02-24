@@ -76,7 +76,7 @@ class AutotoolsToolchain:
             # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
-            if os_build == "Macos":
+            if os_host == "Macos":
                 # SDK path is mandatory for cross-building
                 sdk_path = apple_sdk_path(self._conanfile)
                 if not sdk_path:
