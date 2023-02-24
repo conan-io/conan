@@ -23,6 +23,12 @@ convert = textwrap.dedent("""\
        txt = ConanFileTextLoader(open(path, "r").read())
        template = textwrap.dedent('''\\
             from conan import ConanFile
+            {% if layout == "cmake_layout" %}
+            from conan.tools.cmake import cmake_layout
+            {% endif %}
+            {% if layout == "vs_layout" %}
+            from conan.tools.microsoft import vs_layout
+            {% endif %}
 
             class Pkg(ConanFile):
                 {% if generators %}
@@ -101,6 +107,7 @@ def test_convert_txt():
     c.run("convert-txt .", redirect_stdout="conanfile.py")
     expected = textwrap.dedent("""\
         from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
 
         class Pkg(ConanFile):
             generators = "CMakeToolchain", "CMakeDeps",
