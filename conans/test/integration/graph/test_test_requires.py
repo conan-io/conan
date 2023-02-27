@@ -117,3 +117,33 @@ def test_require_options():
     assert "gtest/1.0: MYOPTION: 2" in c.out
     c.run("create engine -o gtest*:myoption=3")
     assert "gtest/1.0: MYOPTION: 3" in c.out
+
+
+def test_requires_components():
+    """ this test used to fail with "gtest" not required by components
+    It is important to have at least 1 external ``requires`` because with
+    no requires at all it doesn't fail.
+    https://github.com/conan-io/conan/issues/13187
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyLib(ConanFile):
+            name = "mylib"
+            version = "0.1"
+
+            requires = "openssl/1.1"
+            test_requires = "gtest/1.0"
+
+            def package_info(self):
+                self.cpp_info.components["mylib"].requires = ["openssl::openssl"]
+        """)
+    c.save({"gtest/conanfile.py": GenConanfile("gtest", "1.0"),
+            "openssl/conanfile.py": GenConanfile("openssl", "1.1"),
+            "pkg/conanfile.py": conanfile})
+    c.run("create gtest")
+    c.run("create openssl")
+    c.run("create pkg")
+    # This NO LONGER FAILS
+    c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)

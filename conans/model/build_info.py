@@ -553,11 +553,13 @@ class CppInfo(object):
         # Only direct host dependencies can be used with components
         direct_dependencies = [d.ref.name
                                for d, _ in conanfile.dependencies.filter({"direct": True,
-                                                                          "build": False}).items()]
+                                                                          "build": False,
+                                                                          "test": False}).items()]
         for e in external:
             if e not in direct_dependencies:
                 raise ConanException(
                     f"{conanfile}: required component package '{e}::' not in dependencies")
+        # TODO: discuss if there are cases that something is required but not transitive
         for e in direct_dependencies:
             if e not in external:
                 raise ConanException(
