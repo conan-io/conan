@@ -339,7 +339,7 @@ def test_do_not_mix_cflags_cxxflags():
 
 
 def test_custom_configuration(client):
-    """  The configuration may differ from the build context and the host context"""
+    """  The configuration in the build context is still the same than the host context"""
     conanfile = textwrap.dedent("""
        from conans import ConanFile
        from conan.tools.cmake import CMakeDeps
@@ -364,12 +364,12 @@ def test_custom_configuration(client):
     client.run("install . -pr:h default -s:b build_type=RelWithDebInfo"
                " -pr:b default -s:b arch=x86 --build missing")
     curdir = client.current_folder
-    data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
+    data_name_context_build = f"liba_build-debug-{host_arch}-data.cmake"
     data_name_context_host = f"liba-debug-{host_arch}-data.cmake"
     assert os.path.exists(os.path.join(curdir, data_name_context_build))
     assert os.path.exists(os.path.join(curdir, data_name_context_host))
 
-    assert "set(liba_build_INCLUDE_DIRS_RELWITHDEBINFO" in \
+    assert "set(liba_build_INCLUDE_DIRS_DEBUG" in \
            open(os.path.join(curdir, data_name_context_build)).read()
     assert "set(liba_INCLUDE_DIRS_DEBUG" in \
            open(os.path.join(curdir, data_name_context_host)).read()
