@@ -46,8 +46,11 @@ class _Remotes(object):
         assert isinstance(new_remote, Remote)
         current = self.get_by_name(new_remote.name)
         if current:
-            raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
-                                 % new_remote.name)
+            if force:
+                ConanOutput().warning(f"Remote '{new_remote.name}' already exists in remotes")
+            else:
+                raise ConanException(f"Remote '{new_remote.name}' already exists in remotes "
+                                     "(use --force to continue)")
         for r in self._remotes:
             if r.url == new_remote.url:
                 msg = f"Remote url already existing in remote '{r.name}'. " \

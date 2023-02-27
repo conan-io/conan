@@ -250,11 +250,16 @@ class RemoteTest(unittest.TestCase):
         """ check remote name are not duplicated
         """
         self.client.run("remote add remote1 http://otherurl", assert_error=True)
-        self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
+        self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use --force to continue)",
                       self.client.out)
 
         self.client.run("remote list")
         assert "otherurl" not in self.client.out
+        self.client.run("remote add remote1 http://otherurl --force")
+        self.assertIn("WARN: Remote 'remote1' already exists in remotes", self.client.out)
+
+        self.client.run("remote list")
+        assert "remote1: http://otherurl" in self.client.out
 
     def test_missing_subarguments(self):
         self.client.run("remote", assert_error=True)
@@ -274,7 +279,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("pepe.org", self.client.out)
 
 
-def test_duplicated_url():
+def test_add_duplicated_url():
     """ allow duplicated URL with --force
     """
     c = TestClient()
@@ -286,5 +291,6 @@ def test_duplicated_url():
     assert "remote2" not in c.out
     c.run("remote add remote2 http://url --force")
     assert "WARN: Remote url already existing in remote 'remote1'." in c.out
+    c.run("remote list")
     assert "remote1" in c.out
-    assert "remote2" not in c.out
+    assert "remote2" in c.out
