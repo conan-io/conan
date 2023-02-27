@@ -438,3 +438,34 @@ def test_error_missing_config_build_context():
 
     assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
     assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out
+
+
+def test_using_package_module():
+    """
+    This crashed, because the profile "build" didn't have "build_type"
+    https://github.com/conan-io/conan/issues/13209
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("tool", "0.1")})
+    c.run("create .")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            tool_requires = "tool/0.1"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.build_context_activated = ["tool"]
+                deps.build_context_build_modules = ["tool"]
+                deps.generate()
+        """)
+    c.save({"conanfile.py": consumer,
+            "profile_build": ""}, clean_first=True)
+    c.run("create . -pr:b=profile_build")
+    # it doesn't crash anymore, it used to crash
+    assert "pkg/0.1: Created package" in c.out
