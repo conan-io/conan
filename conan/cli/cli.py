@@ -11,7 +11,7 @@ from difflib import get_close_matches
 from inspect import getmembers
 
 from conan.api.conan_api import ConanAPI
-from conan.api.output import ConanOutput, Color, cli_out_write
+from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
@@ -166,6 +166,10 @@ class Cli:
         try:
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
         except Exception as e:
+            # must be a local-import to get updated value
+            from conan.api.output import conan_output_level
+            if conan_output_level <= LEVEL_TRACE:
+                print(traceback.format_exc())
             self._conan2_migrate_recipe_msg(e)
             raise
 
