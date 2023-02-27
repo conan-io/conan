@@ -1,5 +1,5 @@
 from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference, ref_matches
+from conans.model.recipe_ref import ref_matches
 
 _falsey_options = ["false", "none", "0", "off", ""]
 
@@ -308,22 +308,7 @@ class Options:
         self._package_options.__delattr__(field)
 
     def __getitem__(self, item):
-        # FIXME: Kept for configure => self.options["xxx"].shared = True
-        # To access dependencies options like ``options["mydep"]``. This will no longer be
-        # a read case, only for defining values. Read access will be via self.dependencies["dep"]
-        if isinstance(item, str):
-            if "/" not in item:  # FIXME: To allow patterns like "*" or "foo*"
-                item += "/*"
-            item = RecipeReference.loads(item)
-
-        return self.get(item, is_consumer=False)
-
-    def get(self, ref, is_consumer):
-        ret = _PackageOptions()
-        for pattern, options in self._deps_package_options.items():
-            if ref_matches(ref, pattern, is_consumer):
-                ret.update(options)
-        return self._deps_package_options.setdefault(ref.repr_notime(), ret)
+        return self._deps_package_options.setdefault(item, _PackageOptions())
 
     def scope(self, ref):
         """ when there are free options like "shared=True", they apply to the "consumer" package
