@@ -1,37 +1,9 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
+from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
-from conans.model.ref import ConanFileReference
-
-
-class Requirement(object):
-
-    def __init__(self, ref, build=False, direct=True, test=False, visible=True):
-        # By default this is a generic library requirement
-        self.ref = ref
-        self.build = build  # This dependent node is a build tool that is executed at build time only
-        self.direct = direct
-        self.test = test
-        self.visible = visible
-
-    def __repr__(self):
-        return repr(self.__dict__)
-
-    def __hash__(self):
-        return hash((self.ref.name, self.build))
-
-    def __eq__(self, other):
-        return self.ref.name == other.ref.name and self.build == other.build
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def aggregate(self, other):
-        """ when closing loop and finding the same dependency on a node, the information needs
-        to be aggregated
-        """
-        assert self.build == other.build
-        self.visible |= other.visible
 
 
 class UserRequirementsDict(object):
@@ -53,30 +25,46 @@ class UserRequirementsDict(object):
     def __bool__(self):
         return bool(self._data)
 
-    __nonzero__ = __bool__
+    def get(self, ref, build=None, **kwargs):
+        return self._get(ref, build, **kwargs)[1]
 
-    def _get_require(self, ref, **kwargs):
-        assert isinstance(ref, str)
-        if "/" in ref:
-            ref = ConanFileReference.loads(ref)
+    def _get(self, ref, build=None, **kwargs):
+        if build is None:
+            current_filters = self._require_filter or {}
+            if "build" not in current_filters:
+                # By default we search in the "host" context
+                kwargs["build"] = False
         else:
-            ref = ConanFileReference(ref, "unknown", "unknown", "unknown", validate=False)
+            kwargs["build"] = build
+        data = self.filter(kwargs)
+        ret = []
+        if "/" in ref:
+            # FIXME: Validate reference
+            ref = RecipeReference.loads(ref)
+            for require, value in data.items():
+                if require.ref == ref:
+                    ret.append((require, value))
+        else:
+            name = ref
+            for require, value in data.items():
+                if require.ref.name == name:
+                    ret.append((require, value))
+        if len(ret) > 1:
+            current_filters = data._require_filter or "{}"
+            requires = "\n".join(["- {}".format(require) for require, _ in ret])
+            raise ConanException("There are more than one requires matching the specified filters:"
+                                 " {}\n{}".format(current_filters, requires))
+        if not ret:
+            raise KeyError("'{}' not found in the dependency set".format(ref))
 
-        if self._require_filter:
-            kwargs.update(self._require_filter)
-        r = Requirement(ref, **kwargs)
-        return r
-
-    def get(self, ref, **kwargs):
-        r = self._get_require(ref, **kwargs)
-        return self._data.get(r)
+        key, value = ret[0]
+        return key, value
 
     def __getitem__(self, name):
-        r = self._get_require(name)
-        return self._data[r]
+        return self.get(name)
 
     def __delitem__(self, name):
-        r = self._get_require(name)
+        r, _ = self._get(name)
         del self._data[r]
 
     def items(self):
@@ -90,60 +78,11 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        # TODO: This construction will be easier in 2.0
-        build, test, host, private = [], [], [], []
-        for edge in node.dependencies:
-            if edge.build_require:
-                if not edge.require.force_host_context:
-                    build.append(edge.dst)
-                else:
-                    test.append(edge.dst)
-            elif edge.private:
-                private.append(edge.dst)
-            else:
-                host.append(edge.dst)
-
-        d = OrderedDict()
-
-        def update_existing(req, conanfile):
-            existing = d.get(req)
-            if existing is not None:
-                _, existing_req = existing
-                existing_req.aggregate(req)
-                req = existing_req
-            d[req] = conanfile, req
-
-        def expand(nodes, is_build, is_test, is_visible):
-            all_nodes = set(nodes)
-            for n in nodes:
-                conanfile = ConanFileInterface(n.conanfile)
-                req = Requirement(n.ref, build=is_build, test=is_test, visible=is_visible)
-                update_existing(req, conanfile)
-
-            next_nodes = nodes
-            while next_nodes:
-                new_nodes = []
-                for next_node in next_nodes:
-                    for e in next_node.dependencies:
-                        if not e.build_require and not e.private and e.dst not in all_nodes:
-                            new_nodes.append(e.dst)
-                            all_nodes.add(e.dst)
-                next_nodes = new_nodes
-                for n in next_nodes:
-                    conanfile = ConanFileInterface(n.conanfile)
-                    req = Requirement(n.ref, build=is_build, test=is_test, direct=False,
-                                      visible=is_visible)
-                    update_existing(req, conanfile)
-
-        expand(host, is_build=False, is_test=False, is_visible=True)
-        expand(private, is_build=False, is_test=False, is_visible=False)
-        expand(build, is_build=True, is_test=False, is_visible=False)
-        expand(test, is_build=False, is_test=True, is_visible=False)
-
-        d = OrderedDict([(k, v[0])for k, v in d.items()])
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+                        for require, transitive in node.transitive_deps.items())
         return ConanFileDependencies(d)
 
-    def filter(self, require_filter):
+    def filter(self, require_filter, remove_system_tools=False):
         # FIXME: Copy of hte above, to return ConanFileDependencies class object
         def filter_fn(require):
             for k, v in require_filter.items():
@@ -152,7 +91,22 @@ class ConanFileDependencies(UserRequirementsDict):
             return True
 
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
+        if remove_system_tools:
+            data = OrderedDict((k, v) for k, v in data.items()
+                               # TODO: Make "recipe" part of ConanFileInterface model
+                               if v._conanfile._conan_node.recipe != RECIPE_SYSTEM_TOOL)
         return ConanFileDependencies(data, require_filter)
+
+    def transitive_requires(self, other):
+        """
+        :type other: ConanFileDependencies
+        """
+        data = OrderedDict()
+        for k, v in self._data.items():
+            for otherk, otherv in other._data.items():
+                if v == otherv:
+                    data[k] = v
+        return ConanFileDependencies(data)
 
     @property
     def topological_sort(self):
@@ -175,20 +129,32 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True, "test": False})
+        return self.filter({"build": False, "direct": True, "test": False, "skip": False})
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True})
+        return self.filter({"build": True, "direct": True}, remove_system_tools=True)
 
     @property
     def host(self):
-        return self.filter({"build": False, "test": False})
+        return self.filter({"build": False, "test": False, "skip": False})
 
     @property
     def test(self):
-        return self.filter({"build": False, "test": True})
+        # Not needed a direct_test because they are visible=False so only the direct consumer
+        # will have them in the graph
+        return self.filter({"build": False, "test": True, "skip": False})
 
     @property
     def build(self):
-        return self.filter({"build": True})
+        return self.filter({"build": True}, remove_system_tools=True)
+
+
+def get_transitive_requires(consumer, dependency):
+    """ the transitive requires that we need are the consumer ones, not the current dependencey
+    ones, so we get the current ones, then look for them in the consumer, and return those
+    """
+    pkg_deps = dependency.dependencies.filter({"direct": True})
+    result = consumer.dependencies.transitive_requires(pkg_deps)
+    result = result.filter({"skip": False})
+    return result

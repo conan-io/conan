@@ -1,10 +1,10 @@
 import os
-import textwrap
 import platform
+import textwrap
 
 import pytest
 
-from conans.client.tools.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 makefile = gen_makefile(apps=["app"], libs=["hello"])
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
     from conan.tools.gnu import Autotools
 
     class App(ConanFile):
@@ -23,7 +23,11 @@ conanfile_py = textwrap.dedent("""
 
         def config_options(self):
             if self.settings.os == "Windows":
-                del self.options.fPIC
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
 
         def build(self):
             env_build = Autotools(self)
@@ -32,22 +36,25 @@ conanfile_py = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.parametrize("config", [("x86_64", "Macos", "10.14"),
-                                    ("armv8", "iOS", "10.0"),
-                                    ("armv7", "iOS", "10.0"),
-                                    ("x86", "iOS", "10.0"),
-                                    ("x86_64", "iOS", "10.0"),
-                                    ("armv8", "Macos", "10.14")  # M1
+@pytest.mark.parametrize("config", [("x86_64", "Macos", "10.14", None),
+                                    ("armv8", "iOS", "10.0", "iphoneos"),
+                                    ("armv7", "iOS", "10.0", "iphoneos"),
+                                    ("x86", "iOS", "10.0", "iphonesimulator"),
+                                    ("x86_64", "iOS", "10.0", "iphonesimulator"),
+                                    ("armv8", "Macos", "10.14", None)  # M1
                                     ])
 def test_makefile_arch(config):
-    arch, os_, os_version = config
+    arch, os_, os_version, os_sdk = config
+
     profile = textwrap.dedent("""
                 include(default)
                 [settings]
                 os = {os}
+                {os_sdk}
                 os.version = {os_version}
                 arch = {arch}
-                """).format(os=os_, arch=arch, os_version=os_version)
+                """).format(os=os_, arch=arch,
+                            os_version=os_version, os_sdk="os.sdk = " + os_sdk if os_sdk else "")
 
     t = TestClient()
     hello_h = gen_function_h(name="hello")
@@ -62,14 +69,14 @@ def test_makefile_arch(config):
             "profile": profile})
 
     t.run("install . --profile:host=profile --profile:build=default")
-    t.run("build .")
+    t.run("build . --profile:host=profile --profile:build=default")
 
     libhello = os.path.join(t.current_folder, "libhello.a")
     app = os.path.join(t.current_folder, "app")
     assert os.path.isfile(libhello)
     assert os.path.isfile(app)
 
-    expected_arch = to_apple_arch(arch)
+    expected_arch = _to_apple_arch(arch)
 
     t.run_command('lipo -info "%s"' % libhello)
     assert "architecture: %s" % expected_arch in t.out
@@ -86,7 +93,6 @@ def test_catalyst(arch):
         [settings]
         os = Macos
         os.version = 13.0
-        os.sdk = macosx
         os.subsystem = catalyst
         os.subsystem.ios_version = 13.1
         arch = {arch}
@@ -118,14 +124,14 @@ def test_catalyst(arch):
             "profile": profile})
 
     t.run("install . --profile:host=profile --profile:build=default")
-    t.run("build .")
+    t.run("build . --profile:host=profile --profile:build=default")
 
     libhello = os.path.join(t.current_folder, "libhello.a")
     app = os.path.join(t.current_folder, "app")
     assert os.path.isfile(libhello)
     assert os.path.isfile(app)
 
-    expected_arch = to_apple_arch(arch)
+    expected_arch = _to_apple_arch(arch)
 
     t.run_command('lipo -info "%s"' % libhello)
     assert "architecture: %s" % expected_arch in t.out

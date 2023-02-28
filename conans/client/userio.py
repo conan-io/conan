@@ -2,29 +2,65 @@ import getpass
 import os
 import sys
 
-from six.moves import input as raw_input
-
-from conans.client.output import ConanOutput
 from conans.errors import ConanException
 
 
-class UserIO(object):
+def is_terminal(stream):
+    return hasattr(stream, "isatty") and stream.isatty()
+
+
+def color_enabled(stream):
+    """
+    NO_COLOR: No colors
+
+    https://no-color.org/
+
+    Command-line software which adds ANSI color to its output by default should check for the
+    presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
+    prevents the addition of ANSI color.
+
+    CLICOLOR_FORCE: Force color
+
+    https://bixense.com/clicolors/
+    """
+
+    from conan.api.output import conan_output_logger_format
+    if conan_output_logger_format:
+        return False
+
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
+        return True
+
+    if os.getenv("NO_COLOR") is not None:
+        return False
+    return is_terminal(stream)
+
+
+def init_colorama(stream):
+    import colorama
+    if color_enabled(stream):
+        if os.getenv("CLICOLOR_FORCE", "0") != "0":
+            # Otherwise it is not really forced if colorama doesn't feel it
+            colorama.init(strip=False, convert=False)
+        else:
+            colorama.init()
+
+
+class UserInput(object):
     """Class to interact with the user, used to show messages and ask for information"""
 
-    def __init__(self, ins=sys.stdin, out=None):
+    def __init__(self, non_interactive):
         """
         Params:
             ins: input stream
             out: ConanOutput, should have "write" method
         """
-        self._ins = ins
-        if not out:
-            out = ConanOutput(sys.stdout, sys.stderr)
-        self.out = out
-        self._interactive = True
-
-    def disable_input(self):
-        self._interactive = False
+        self._ins = sys.stdin
+        # FIXME: circular include, move "color_enabled" function to better location
+        from conan.api.output import ConanOutput
+        self._out = ConanOutput()
+        self._interactive = not non_interactive
 
     def _raise_if_non_interactive(self):
         if not self._interactive:
@@ -32,49 +68,57 @@ class UserIO(object):
 
     def raw_input(self):
         self._raise_if_non_interactive()
-        return raw_input()
-
-    def get_pass(self):
-        self._raise_if_non_interactive()
-        return getpass.getpass("")
+        return input()
 
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
+        :param remote_name:
         :param username If username is specified it only request password"""
 
         if not username:
             if self._interactive:
-                self.out.write("Remote '%s' username: " % remote_name)
-            username = self.get_username(remote_name)
+                self._out.write("Remote '%s' username: " % remote_name)
+            username = self._get_env_username(remote_name)
+            if not username:
+                self._raise_if_non_interactive()
+                username = self.get_username()
 
         if self._interactive:
-            self.out.write('Please enter a password for "%s" account: ' % username)
+            self._out.write('Please enter a password for "%s" account: ' % username)
         try:
-            pwd = self.get_password(remote_name)
+            pwd = self._get_env_password(remote_name)
+            if not pwd:
+                self._raise_if_non_interactive()
+                pwd = self.get_password()
         except ConanException:
             raise
         except Exception as e:
             raise ConanException('Cancelled pass %s' % e)
         return username, pwd
 
-    def get_username(self, remote_name):
+    def get_username(self):
         """Overridable for testing purpose"""
-        return self._get_env_username(remote_name) or self.raw_input()
+        return self.raw_input()
 
-    def get_password(self, remote_name):
+    def get_password(self):
         """Overridable for testing purpose"""
-        return self._get_env_password(remote_name) or self.get_pass()
+        self._raise_if_non_interactive()
+        try:
+            return getpass.getpass("")
+        except BaseException:  # For KeyboardInterrupt too
+            raise ConanException("Interrupted interactive password input")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg
+        :param default_value:
         :param msg Name of the msg
         """
         self._raise_if_non_interactive()
 
         if default_value:
-            self.out.input_text('%s (%s): ' % (msg, default_value))
+            self._out.write('%s (%s): ' % (msg, default_value))
         else:
-            self.out.input_text('%s: ' % msg)
+            self._out.write('%s: ' % msg)
         s = self._ins.readline().replace("\n", "")
         if default_value is not None and s == '':
             return default_value
@@ -97,7 +141,7 @@ class UserIO(object):
             elif s.lower() in ['no', 'n']:
                 ret = False
             else:
-                self.out.error("%s is not a valid answer" % s)
+                self._out.error("%s is not a valid answer" % s)
         return ret
 
     def _get_env_password(self, remote_name):
@@ -108,7 +152,7 @@ class UserIO(object):
         var_name = "CONAN_PASSWORD_%s" % remote_name
         ret = os.getenv(var_name, None) or os.getenv("CONAN_PASSWORD", None)
         if ret:
-            self.out.info("Got password '******' from environment")
+            self._out.info("Got password '******' from environment")
         return ret
 
     def _get_env_username(self, remote_name):
@@ -120,5 +164,5 @@ class UserIO(object):
         ret = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
 
         if ret:
-            self.out.info("Got username '%s' from environment" % ret)
+            self._out.info("Got username '%s' from environment" % ret)
         return ret

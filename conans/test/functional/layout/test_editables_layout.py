@@ -1,14 +1,11 @@
 import textwrap
 
-import pytest
-import six
-
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_cpp_info_editable():
 
     client = TestClient()
@@ -53,39 +50,42 @@ def test_cpp_info_editable():
      """
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
-    ref = ConanFileReference.loads("hello/1.0")
-    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
+    client.run("create . --name=hello --version=1.0")
+    rrev = client.exported_recipe_revision()
+    ref = RecipeReference.loads("hello/1.0")
+    ref.revision = rrev
+    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
 
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         requires = "hello/1.0"
         def build(self):
             info = self.dependencies["hello"].cpp_info
-            self.output.warn("**includedirs:{}**".format(info.includedirs))
-            self.output.warn("**libdirs:{}**".format(info.libdirs))
-            self.output.warn("**builddirs:{}**".format(info.builddirs))
-            self.output.warn("**frameworkdirs:{}**".format(info.frameworkdirs))
-            self.output.warn("**libs:{}**".format(info.libs))
-            self.output.warn("**objects:{}**".format(info.objects))
-            self.output.warn("**build_modules:{}**".format(info.get_property("cmake_build_modules")))
-            self.output.warn("**cxxflags:{}**".format(info.cxxflags))
-            self.output.warn("**cflags:{}**".format(info.cflags))
+
+            self.output.warning("**includedirs:{}**".format(info.includedirs))
+            self.output.warning("**libdirs:{}**".format(info.libdirs))
+            self.output.warning("**builddirs:{}**".format(info.builddirs))
+            self.output.warning("**frameworkdirs:{}**".format(info.frameworkdirs))
+            self.output.warning("**libs:{}**".format(info.libs))
+            self.output.warning("**objects:{}**".format(info.objects))
+            self.output.warning("**build_modules:{}**".format(info.get_property("cmake_build_modules")))
+            self.output.warning("**cxxflags:{}**".format(info.cxxflags))
+            self.output.warning("**cflags:{}**".format(info.cflags))
     """)
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-    client2.run("create . lib/1.0@")
+    client2.run("create . --name=lib --version=1.0")
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
-    assert "**builddirs:['']**" in out
+    assert "**builddirs:[]**" in out
     assert "**frameworkdirs:['package_frameworks_path']**" in out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
     assert "**objects:['myobject.o']**" in out
@@ -95,12 +95,13 @@ def test_cpp_info_editable():
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
-    client2.run("create . lib/1.0@")
+    client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
+
     assert "**includedirs:['my_sources/my_include_source', 'my_build/my_include']**" in out
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out
@@ -112,7 +113,6 @@ def test_cpp_info_editable():
     assert "**frameworkdirs:[]**" in out
 
 
-@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_cpp_info_components_editable():
 
     client = TestClient()
@@ -175,46 +175,51 @@ def test_cpp_info_components_editable():
      """
 
     client.save({"conanfile.py": conan_hello})
-    client.run("create . hello/1.0@")
-    ref = ConanFileReference.loads("hello/1.0")
-    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/") + "/"
+    client.run("create . --name=hello --version=1.0")
+    rrev = client.exported_recipe_revision()
+    ref = RecipeReference.loads("hello/1.0")
+    ref.revision = rrev
+    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
+    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
 
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
 
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         requires = "hello/1.0"
         def build(self):
             info = self.dependencies["hello"].cpp_info
-            self.output.warn("**FOO includedirs:{}**".format(info.components["foo"].includedirs))
-            self.output.warn("**FOO libdirs:{}**".format(info.components["foo"].libdirs))
-            self.output.warn("**FOO builddirs:{}**".format(info.components["foo"].builddirs))
-            self.output.warn("**FOO libs:{}**".format(info.components["foo"].libs))
-            self.output.warn("**FOO cxxflags:{}**".format(info.components["foo"].cxxflags))
-            self.output.warn("**FOO cflags:{}**".format(info.components["foo"].cflags))
-            self.output.warn("**FOO objects:{}**".format(info.components["foo"].objects))
-            self.output.warn("**FOO build_modules:{}**".format(
+
+            self.output.warning("**FOO includedirs:{}**".format(info.components["foo"].includedirs))
+            self.output.warning("**FOO libdirs:{}**".format(info.components["foo"].libdirs))
+            self.output.warning("**FOO builddirs:{}**".format(info.components["foo"].builddirs))
+            self.output.warning("**FOO libs:{}**".format(info.components["foo"].libs))
+            self.output.warning("**FOO cxxflags:{}**".format(info.components["foo"].cxxflags))
+            self.output.warning("**FOO cflags:{}**".format(info.components["foo"].cflags))
+            self.output.warning("**FOO objects:{}**".format(info.components["foo"].objects))
+            self.output.warning("**FOO build_modules:{}**".format(
                                         info.components["foo"].get_property("cmake_build_modules")))
 
-            self.output.warn("**VAR includedirs:{}**".format(info.components["var"].includedirs))
-            self.output.warn("**VAR libdirs:{}**".format(info.components["var"].libdirs))
-            self.output.warn("**VAR builddirs:{}**".format(info.components["var"].builddirs))
-            self.output.warn("**VAR libs:{}**".format(info.components["var"].libs))
-            self.output.warn("**VAR cxxflags:{}**".format(info.components["var"].cxxflags))
-            self.output.warn("**VAR cflags:{}**".format(info.components["var"].cflags))
+            self.output.warning("**VAR includedirs:{}**".format(info.components["var"].includedirs))
+            self.output.warning("**VAR libdirs:{}**".format(info.components["var"].libdirs))
+            self.output.warning("**VAR builddirs:{}**".format(info.components["var"].builddirs))
+            self.output.warning("**VAR libs:{}**".format(info.components["var"].libs))
+            self.output.warning("**VAR cxxflags:{}**".format(info.components["var"].cxxflags))
+            self.output.warning("**VAR cflags:{}**".format(info.components["var"].cflags))
     """)
     # When hello is not editable
     client2 = TestClient(client.cache_folder)
     client2.save({"conanfile.py": conan_consumer})
-    client2.run("create . lib/1.0@")
+    client2.run("create . --name=lib --version=1.0")
+
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**FOO includedirs:['package_include_foo']**" in out
     assert "**FOO libdirs:['lib']**" in out  # The components does have default dirs
     assert "**FOO builddirs:[]**" in out  # The components don't have default dirs for builddirs
+
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in out
     assert "**FOO objects:['myobject.o']**" in out
     assert "**FOO build_modules:['mymodules/mybuildmodule']**" in out
@@ -224,18 +229,20 @@ def test_cpp_info_components_editable():
     assert "**VAR includedirs:['package_include_var']**" in out
     assert "**VAR libdirs:['lib']**" in out  # The components does have default dirs
     assert "**VAR builddirs:[]**" in out  # The components don't have default dirs
+
     assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag2_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
-    client2.run("create . lib/1.0@")
+    client2.run("create . --name=lib --version=1.0")
     base_folder = client.current_folder.replace("\\", "/") + "/"
     out = str(client2.out).replace(r"\\", "/").replace(base_folder, "")
+
     assert "**FOO includedirs:['my_sources/my_include_source_foo', " \
            "'my_build/my_include_foo']**" in out
     assert "**FOO libdirs:['my_build/my_libdir_foo']**" in out
@@ -277,6 +284,6 @@ def test_editable_package_folder():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-    c.run("editable add . pkg/0.1")
-    c.run("install pkg/0.1@")
+    c.run("editable add .")
+    c.run("install --requires=pkg/0.1@")
     assert "pkg/0.1: PKG FOLDER=None!!!"

@@ -1,5 +1,4 @@
 import textwrap
-
 from conans.test.utils.tools import TestClient
 
 

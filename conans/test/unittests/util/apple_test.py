@@ -7,14 +7,18 @@ import unittest
 
 import pytest
 
-from conans.client import tools
+from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
+    is_apple_os, XCRun
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 class FakeSettings(object):
-    def __init__(self, _os, _arch, _os_sdk=None):
+    def __init__(self, _os, arch, os_sdk=None, os_version=None, subsystem=None):
         self._os = _os
-        self._arch = _arch
-        self._os_sdk = _os_sdk
+        self._arch = arch
+        self._os_sdk = os_sdk
+        self._os_version = os_version
+        self._os_subystem = subsystem
 
     def get_safe(self, name):
         if name == 'os':
@@ -23,105 +27,61 @@ class FakeSettings(object):
             return self._arch
         elif name == 'os.sdk':
             return self._os_sdk
+        elif name == "os.version":
+            return self._os_version
+        elif name == "os.subsystem":
+            return self._os_subystem
+
+
+class TestApple:
+    @pytest.mark.parametrize("os_, version, sdk, subsystem, flag",
+                             [("Macos", "10.1", "macosx", None, '-mmacosx-version-min=10.1'),
+                              ("iOS", "10.1", "iphoneos", None, '-mios-version-min=10.1'),
+                              ("iOS", "10.1", "iphonesimulator", None,
+                               '-mios-simulator-version-min=10.1'),
+                              ("watchOS", "10.1", "watchos", None, '-mwatchos-version-min=10.1'),
+                              ("watchOS", "10.1", "watchsimulator", None,
+                               '-mwatchos-simulator-version-min=10.1'),
+                              ("tvOS", "10.1", "appletvos", None, '-mtvos-version-min=10.1'),
+                              ("tvOS", "10.1", "appletvsimulator", None,
+                               '-mtvos-simulator-version-min=10.1'),
+                              ("Macos", "10.1", "macosx", "catalyst", '-mios-version-min=10.1'),
+                              ("Solaris", "10.1", None, None, ''),
+                              ("Macos", "10.1", None, None, ''),
+                              ("Macos", None, "macosx", None, '')
+                              ])
+    def test_deployment_target_flag_name(self, os_, version, sdk, subsystem, flag):
+        assert apple_min_version_flag(version, sdk, subsystem) == flag
 
 
 class AppleTest(unittest.TestCase):
+
     def test_is_apple_os(self):
-        self.assertTrue(tools.is_apple_os('iOS'))
-        self.assertTrue(tools.is_apple_os('tvOS'))
-        self.assertTrue(tools.is_apple_os('watchOS'))
-        self.assertTrue(tools.is_apple_os('Macos'))
-        self.assertFalse(tools.is_apple_os('Windows'))
-        self.assertFalse(tools.is_apple_os('Linux'))
-        self.assertFalse(tools.is_apple_os('Android'))
+        # FIXME: parametrize!
+        apple_os = ['iOS', 'tvOS', 'watchOS', 'Macos']
+        non_apple_os = ['Windows', 'Linux', 'Android']
+        conanfile = ConanFileMock()
+        for os_ in apple_os:
+            settings = MockSettings({"os": os_})
+            conanfile.settings = settings
+            self.assertTrue(is_apple_os(conanfile))
+        for os_ in non_apple_os:
+            settings = MockSettings({"os": os_})
+            conanfile.settings = settings
+            self.assertFalse(is_apple_os(conanfile))
 
     def test_to_apple_arch(self):
-        self.assertEqual(tools.to_apple_arch('x86'), 'i386')
-        self.assertEqual(tools.to_apple_arch('x86_64'), 'x86_64')
-        self.assertEqual(tools.to_apple_arch('armv7'), 'armv7')
-        self.assertEqual(tools.to_apple_arch('armv7s'), 'armv7s')
-        self.assertEqual(tools.to_apple_arch('armv7k'), 'armv7k')
-        self.assertEqual(tools.to_apple_arch('armv8'), 'arm64')
-        self.assertEqual(tools.to_apple_arch('armv8.3'), 'arm64e')
-        self.assertEqual(tools.to_apple_arch('armv8_32'), 'arm64_32')
-        self.assertIsNone(tools.to_apple_arch('mips'))
+        self.assertEqual(_to_apple_arch('x86'), 'i386')
+        self.assertEqual(_to_apple_arch('x86_64'), 'x86_64')
+        self.assertEqual(_to_apple_arch('armv7'), 'armv7')
+        self.assertEqual(_to_apple_arch('armv7s'), 'armv7s')
+        self.assertEqual(_to_apple_arch('armv7k'), 'armv7k')
+        self.assertEqual(_to_apple_arch('armv8'), 'arm64')
+        self.assertEqual(_to_apple_arch('armv8.3'), 'arm64e')
+        self.assertEqual(_to_apple_arch('armv8_32'), 'arm64_32')
+        self.assertIsNone(_to_apple_arch('mips'))
+        self.assertEqual(_to_apple_arch('mips', default='mips'), 'mips')
 
-    def test_apple_sdk_name(self):
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'x86')), 'macosx')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'x86_64')), 'macosx')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'x86_64')), 'iphonesimulator')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv7')), 'iphoneos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('watchOS', 'x86_64')), 'watchsimulator')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('watchOS', 'armv7k')), 'watchos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'x86')), 'appletvsimulator')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'armv8')), 'appletvos')
-        self.assertIsNone(tools.apple_sdk_name(FakeSettings('Windows', 'x86')))
-
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8')), 'iphoneos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphoneos')),
-                         'iphoneos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphonesimulator')),
-                         'iphonesimulator')
-
-    def test_apple_sdk_name_build_folder_vars(self):
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('Macos', 'ios_fat')), 'macosx')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'ios_fat')), 'iphoneos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('watchOS', 'ios_fat')), 'watchos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('tvOS', 'ios_fat')), 'appletvos')
-        self.assertIsNone(tools.apple_sdk_name(FakeSettings('ConanOS', 'ios_fat')))
-
-    def test_deployment_target_env_name(self):
-        self.assertEqual(tools.apple_deployment_target_env('Macos', "10.1"),
-                         {"MACOSX_DEPLOYMENT_TARGET": "10.1"})
-        self.assertEqual(tools.apple_deployment_target_env('iOS', "10.1"),
-                         {"IOS_DEPLOYMENT_TARGET": "10.1"})
-        self.assertEqual(tools.apple_deployment_target_env('watchOS', "10.1"),
-                         {"WATCHOS_DEPLOYMENT_TARGET": "10.1"})
-        self.assertEqual(tools.apple_deployment_target_env('tvOS', "10.1"),
-                         {"TVOS_DEPLOYMENT_TARGET": "10.1"})
-        self.assertEqual(tools.apple_deployment_target_env('Linux', "10.1"), {})
-
-    def test_deployment_target_flag_name(self):
-        self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1"),
-                         '-mmacosx-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1", 'macosx'),
-                         '-mmacosx-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1"),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iphoneos'),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iphonesimulator'),
-                         '-mios-simulator-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1"),
-                         '-mwatchos-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchos'),
-                         '-mwatchos-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchsimulator'),
-                         '-mwatchos-simulator-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1"),
-                         '-mtvos-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvos'),
-                         '-mtvos-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvsimulator'),
-                         '-mtvos-simulator-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", None, "catalyst"),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", "macosx", "catalyst"),
-                         '-mios-version-min=10.1')
-
-        self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
     def test_xcrun(self):
@@ -135,27 +95,28 @@ class AppleTest(unittest.TestCase):
             self.assertTrue(xcrun_.find('lipo').endswith('lipo'))
             self.assertTrue(os.path.isdir(xcrun_.sdk_path))
 
-        settings = FakeSettings('Macos', 'x86')
-        xcrun = tools.XCRun(settings)
+        conanfile = ConanFileMock({})
+        conanfile.settings = FakeSettings('Macos', 'x86')
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
 
-        settings = FakeSettings('iOS', 'x86')
-        xcrun = tools.XCRun(settings, sdk='macosx')
+        conanfile.settings = FakeSettings('iOS', 'x86')
+        xcrun = XCRun(conanfile, sdk='macosx')
         _common_asserts(xcrun)
         # Simulator
         self.assertNotIn("iPhoneOS", xcrun.sdk_path)
 
-        settings = FakeSettings('iOS', 'armv7')
-        xcrun = tools.XCRun(settings)
+        conanfile.settings = FakeSettings('iOS', 'armv7', os_sdk="iphoneos")
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
         self.assertIn("iPhoneOS", xcrun.sdk_path)
 
-        settings = FakeSettings('watchOS', 'armv7')
-        xcrun = tools.XCRun(settings)
+        conanfile.settings = FakeSettings('watchOS', 'armv7', os_sdk="watchos")
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
         self.assertIn("WatchOS", xcrun.sdk_path)
 
         # Default one
-        settings = FakeSettings(None, None)
-        xcrun = tools.XCRun(settings)
+        conanfile.settings = FakeSettings(None, None)
+        xcrun = XCRun(conanfile)
         _common_asserts(xcrun)

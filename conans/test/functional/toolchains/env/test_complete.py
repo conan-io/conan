@@ -1,23 +1,26 @@
 import textwrap
 
+import pytest
+
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("cmake")
 def test_cmake_virtualenv():
     client = TestClient()
-    client.run("new hello/0.1 --template=cmake_lib")
-    client.run("create . -tf=None")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
+    client.run("create . -tf=")
 
     cmakewrapper = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
-        from conans.tools import save, chdir
+        from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             def package(self):
-                with chdir(self.package_folder):
-                    save("cmake.bat", "@echo off\necho MYCMAKE WRAPPER!!\ncmake.exe %*")
-                    save("cmake.sh", 'echo MYCMAKE WRAPPER!!\ncmake "$@"')
+                with chdir(self, self.package_folder):
+                    save(self, "cmake.bat", "@echo off\necho MYCMAKE WRAPPER!!\ncmake.exe %*")
+                    save(self, "cmake.sh", 'echo MYCMAKE WRAPPER!!\ncmake "$@"')
                     os.chmod("cmake.sh", 0o777)
 
             def package_info(self):
@@ -25,7 +28,7 @@ def test_cmake_virtualenv():
                 self.buildenv_info.prepend_path("PATH", self.package_folder)
             """)
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -33,7 +36,6 @@ def test_cmake_virtualenv():
             requires = "hello/0.1"
             build_requires = "cmakewrapper/0.1"
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
-            apply_env = False
 
             def build(self):
                 cmake = CMake(self)
@@ -59,30 +61,32 @@ def test_cmake_virtualenv():
                  "consumer/CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create cmakewrapper cmakewrapper/0.1@")
-    client.run("create consumer consumer/0.1@")
+    client.run("create cmakewrapper --name=cmakewrapper --version=0.1")
+    client.run("create consumer --name=consumer --version=0.1")
     assert "MYCMAKE WRAPPER!!" in client.out
     assert "consumer/0.1: Created package" in client.out
 
 
+@pytest.mark.tool("cmake")
 def test_complete():
     client = TestClient()
-    client.run("new myopenssl/1.0 -m=cmake_lib")
-    client.run("create . -o myopenssl:shared=True")
-    client.run("create . -o myopenssl:shared=True -s build_type=Debug")
+    client.run("new cmake_lib -d name=myopenssl -d version=1.0")
+    client.run("create . -o myopenssl/*:shared=True")
+    client.run("create . -o myopenssl/*:shared=True -s build_type=Debug")
 
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
     mycmake_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        import os
+        from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "myopenssl/1.0"
             default_options = {"myopenssl:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
-            exports = "*"
-            apply_env = False
+            exports_sources = "*"
 
             def build(self):
                 cmake = CMake(self)
@@ -91,7 +95,8 @@ def test_complete():
 
             def package(self):
                 src = str(self.settings.build_type) if self.settings.os == "Windows" else ""
-                self.copy("mycmake*", src=src, dst="bin")
+                copy(self, "mycmake*", os.path.join(self.source_folder, src),
+                     os.path.join(self.package_folder, "bin"))
 
             def package_info(self):
                 self.cpp_info.bindirs = ["bin"]
@@ -109,20 +114,27 @@ def test_complete():
     client.save({"conanfile.py": mycmake_conanfile,
                  "CMakeLists.txt": mycmake_cmakelists,
                  "main.cpp": mycmake_main}, clean_first=True)
-    client.run("create . mycmake/1.0@")
+    client.run("create . --name=mycmake --version=1.0", assert_error=True)
+    assert "The usage of package names `myopenssl:shared` in options is deprecated, " \
+           "use a pattern like `myopenssl/*:shared` instead" in client.out
+
+    # Fix the default options and repeat the create
+    fixed_cf = mycmake_conanfile.replace('default_options = {"myopenssl:shared": True}',
+                                         'default_options = {"myopenssl*:shared": True}')
+    client.save({"conanfile.py": fixed_cf})
+    client.run("create . --name=mycmake --version=1.0")
 
     mylib = textwrap.dedent(r"""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             build_requires = "mycmake/1.0"
             requires = "myopenssl/1.0"
-            default_options = {"myopenssl:shared": True}
+            default_options = {"myopenssl/*:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
-            generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-            apply_env = False
+            generators = "CMakeDeps", "CMakeToolchain"
 
             def build(self):
                 cmake = CMake(self)
@@ -154,7 +166,7 @@ def test_complete():
                  "CMakeLists.txt": cmakelists},
                 clean_first=True)
 
-    client.run("create . myapp/0.1@ -s:b build_type=Release -s:h build_type=Debug")
+    client.run("create . --name=myapp --version=0.1 -s:b build_type=Release -s:h build_type=Debug")
     first, last = str(client.out).split("RUNNING MYAPP")
     assert "mycmake: Release!" in first
     assert "myopenssl/1.0: Hello World Release!" in first

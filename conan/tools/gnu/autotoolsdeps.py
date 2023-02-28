@@ -1,7 +1,7 @@
-from conan.tools._check_build_profile import check_using_build_profile
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.new_build_info import NewCppInfo
+from conans.model.build_info import CppInfo
 
 
 class AutotoolsDeps:
@@ -9,7 +9,6 @@ class AutotoolsDeps:
         self._conanfile = conanfile
         self._environment = None
         self._ordered_deps = []
-        check_using_build_profile(self._conanfile)
 
     @property
     def ordered_deps(self):
@@ -19,7 +18,7 @@ class AutotoolsDeps:
         return self._ordered_deps
 
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo()
         for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
@@ -36,7 +35,11 @@ class AutotoolsDeps:
 
     @property
     def environment(self):
-        # TODO: Seems we want to make this uniform, equal to other generators
+        """
+
+        :return: An ``Environment`` object containing the computed variables. If you need
+                 to modify some of the computed values you can access to the ``environment`` object.
+        """
         if self._environment is None:
             flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 
@@ -77,4 +80,5 @@ class AutotoolsDeps:
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self,  scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conanautotoolsdeps")

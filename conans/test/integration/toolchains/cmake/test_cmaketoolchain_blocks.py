@@ -7,7 +7,7 @@ def test_custom_block():
     # https://github.com/conan-io/conan/issues/9998
     c = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain
         class Pkg(ConanFile):
             def generate(self):

@@ -21,6 +21,7 @@ import os
 import platform
 import textwrap
 
+from conan.internal import check_duplicated_generator
 from conans.errors import ConanException
 
 
@@ -57,6 +58,7 @@ class IntelCC:
         self._mode = mode
         self._out = conanfile.output
         # Public properties
+        #: arch setting
         self.arch = conanfile.settings.get_safe("arch")
 
     @property
@@ -72,6 +74,7 @@ class IntelCC:
 
     def generate(self, scope="build"):
         """Generate the Conan Intel file to be loaded in build environment by default"""
+        check_duplicated_generator(self, self._conanfile)
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
                 @echo off
@@ -100,28 +103,26 @@ class IntelCC:
         """
         The Intel oneAPI DPC++/C++ Compiler includes environment configuration scripts to
         configure your build and development environment variables:
-            On Linux*, the file is a shell script called setvars.sh.
-            On Windows*, the file is a batch file called setvars.bat.
 
-        * Linux:
-            >> . /<install-dir>/setvars.sh <arg1> <arg2> … <argn><arg1> <arg2> … <argn>
+        - On Linux, the file is a shell script called setvars.sh.
+        - On Windows, the file is a batch file called setvars.bat.
 
-            The compiler environment script file accepts an optional target architecture
-            argument <arg>:
-                intel64: Generate code and use libraries for Intel 64 architecture-based targets.
-                ia32: Generate code and use libraries for IA-32 architecture-based targets.
-        * Windows:
-            >> call <install-dir>\\setvars.bat [<arg1>] [<arg2>]
+        - Linux -> ``>> . /<install-dir>/setvars.sh <arg1> <arg2> … <argn><arg1> <arg2> … <argn>``
+          The compiler environment script file accepts an optional target architecture
+          argument <arg>:
+          - intel64: Generate code and use libraries for Intel 64 architecture-based targets.
+          - ia32: Generate code and use libraries for IA-32 architecture-based targets.
 
-            Where <arg1> is optional and can be one of the following:
-                intel64: Generate code and use libraries for Intel 64 architecture
-                         (host and target).
-                ia32: Generate code and use libraries for IA-32 architecture (host and target).
-            With the dpcpp compiler, <arg1> is intel64 by default.
+        - Windows -> ``>> call <install-dir>\\setvars.bat [<arg1>] [<arg2>]``
+          Where <arg1> is optional and can be one of the following:
+          - intel64: Generate code and use libraries for Intel 64 architecture (host and target).
+          - ia32: Generate code and use libraries for IA-32 architecture (host and target).
 
-            The <arg2> is optional. If specified, it is one of the following:
-                vs2019: Microsoft Visual Studio* 2019
-                vs2017: Microsoft Visual Studio 2017
+          With the dpcpp compiler, <arg1> is intel64 by default.
+
+          The <arg2> is optional. If specified, it is one of the following:
+          - vs2019: Microsoft Visual Studio* 2019
+          - vs2017: Microsoft Visual Studio 2017
 
         :return: `str` setvars.sh|bat command to be run
         """

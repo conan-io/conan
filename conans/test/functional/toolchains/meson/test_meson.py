@@ -1,11 +1,12 @@
 import os
 import platform
+import re
 import sys
 import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 from conans.test.utils.tools import TestClient
@@ -24,7 +25,11 @@ class MesonToolchainTest(TestMesonBase):
 
         def config_options(self):
             if self.settings.os == "Windows":
-                del self.options.fPIC
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
 
         def layout(self):
             self.folders.generators = 'build/gen_folder'
@@ -76,7 +81,7 @@ class MesonToolchainTest(TestMesonBase):
                      "hello.cpp": hello_cpp,
                      "main.cpp": app})
 
-        self.t.run("install . %s" % self._settings_str)
+        self.t.run("install .")
 
         content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
 
@@ -102,7 +107,7 @@ class MesonToolchainTest(TestMesonBase):
         self._check_binary()
 
     def test_meson_default_dirs(self):
-        self.t.run("new hello/1.0 -m meson_exe")
+        self.t.run("new meson_exe -d name=hello -d version=1.0")
         # self.t.run("new meson_exe -d name=hello -d version=1.0 -m meson_exe")
 
         meson_build = textwrap.dedent("""
@@ -123,6 +128,7 @@ class MesonToolchainTest(TestMesonBase):
             settings = "os", "compiler", "build_type", "arch"
             exports_sources = "meson.build", "src/*"
             generators = "MesonToolchain"
+            package_type = "application"
 
             def layout(self):
                 self.folders.build = "build"
@@ -143,8 +149,9 @@ class MesonToolchainTest(TestMesonBase):
         from conan.tools.build import cross_building
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "VirtualRunEnv"
-            apply_env = False
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def test(self):
                 if not cross_building(self):
@@ -157,9 +164,9 @@ class MesonToolchainTest(TestMesonBase):
                      "src/file1.txt": "", "src/file2.txt": ""})
         self.t.run("create .")
         # Check if all the files are in the final directories
-        ref = ConanFileReference.loads("hello/1.0")
-        cache_package_folder = self.t.cache.package_layout(ref).packages()
-        package_folder = os.path.join(cache_package_folder, os.listdir(cache_package_folder)[0])
+        ref = RecipeReference.loads("hello/1.0")
+        pref = self.t.get_latest_package_reference(ref)
+        package_folder = self.t.get_latest_pkg_layout(pref).package()
         if platform.system() == "Windows":
             assert os.path.exists(os.path.join(package_folder, "lib", "hello.lib"))
             assert os.path.exists(os.path.join(package_folder, "bin", "hello.dll"))
@@ -173,7 +180,7 @@ class MesonToolchainTest(TestMesonBase):
         assert os.path.exists(os.path.join(package_folder, "res", "tutorial", "file2.txt"))
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 @pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
 def test_meson_and_additional_machine_files_composition():
     """
@@ -218,10 +225,8 @@ def test_meson_and_additional_machine_files_composition():
                  "meson.build": "project('tutorial', 'cpp')",  # dummy one
                  "profile": profile})
 
-    client.run("install . -pr=profile -if build")
-    client.run("build . -bf build", assert_error=True)
+    client.run("install . -pr:h=profile -pr:b=profile")
+    client.run("build . -pr:h=profile -pr:b=profile", assert_error=True)
     # Checking the order of the appended user file (the order matters)
-    conan_meson_native = os.path.join(client.current_folder, "build", "conan_meson_native.ini")
-    assert f'meson setup --native-file "{conan_meson_native}" --native-file "myfilename.ini"' in client.out
-    # Meson fails because of an unknown option
-    assert 'ERROR: Unknown options: "my_option"' in client.out
+    match = re.search(r"meson setup --native-file .* --native-file \"myfilename\.ini\"", client.out)
+    assert match

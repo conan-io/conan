@@ -5,10 +5,11 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._compilers import architecture_flag, libcxx_flags
+from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
+from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
@@ -16,35 +17,6 @@ from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conans.errors import ConanException
 from conans.util.files import load
-
-
-class ToolchainBlocks:
-    def __init__(self, conanfile, toolchain, items=None):
-        self._blocks = OrderedDict()
-        self._conanfile = conanfile
-        self._toolchain = toolchain
-        if items:
-            for name, block in items:
-                self._blocks[name] = block(conanfile, toolchain)
-
-    def remove(self, name):
-        del self._blocks[name]
-
-    def __setitem__(self, name, block_type):
-        # Create a new class inheriting Block with the elements of the provided one
-        block_type = type('proxyUserBlock', (Block,), dict(block_type.__dict__))
-        self._blocks[name] = block_type(self._conanfile, self._toolchain)
-
-    def __getitem__(self, name):
-        return self._blocks[name]
-
-    def process_blocks(self):
-        result = []
-        for b in self._blocks.values():
-            content = b.get_rendered_content()
-            if content:
-                result.append(content)
-        return result
 
 
 class Block(object):
@@ -108,7 +80,7 @@ class VSRuntimeBlock(Block):
             return
 
         compiler = settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc", "clang", "intel-cc"):
+        if compiler not in ("msvc", "clang", "intel-cc"):
             return
 
         runtime = settings.get_safe("compiler.runtime")
@@ -129,12 +101,7 @@ class VSRuntimeBlock(Block):
         if build_type is None:
             return None
 
-        if compiler == "Visual Studio":
-            config_dict[build_type] = {"MT": "MultiThreaded",
-                                       "MTd": "MultiThreadedDebug",
-                                       "MD": "MultiThreadedDLL",
-                                       "MDd": "MultiThreadedDebugDLL"}[runtime]
-        elif compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
+        if compiler == "msvc" or compiler == "intel-cc" or compiler == "clang":
             runtime_type = settings.get_safe("compiler.runtime_type")
             rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
             if runtime != "static":
@@ -165,7 +132,7 @@ class FPicBlock(Block):
             return None
         os_ = self._conanfile.settings.get_safe("os")
         if os_ and "Windows" in os_:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
+            self._conanfile.output.warning("Toolchain: Ignoring fPIC option defined for Windows")
             return None
         return {"fpic": "ON" if fpic else "OFF"}
 
@@ -277,7 +244,7 @@ class ParallelBlock(Block):
         # TODO: Check this conf
 
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler not in ("Visual Studio", "msvc") or "Visual" not in self._toolchain.generator:
+        if compiler != "msvc" or "Visual" not in self._toolchain.generator:
             return
 
         jobs = build_jobs(self._conanfile)
@@ -374,39 +341,17 @@ class AppleSystemBlock(Block):
         endif()
         """)
 
-    def _apple_sdk_name(self):
-        """
-        Returns the value for the SDKROOT with this preference:
-        - 1. The full path set in the conf with tools.apple:sdk_path
-        - 2. osd.sdk + os.sdk_version
-        Otherwise None
-        Every user should specify it because there could be several ones depending
-        on the OS architecture.
-
-        Note: In case of MacOS it'll be the same for all the architectures.
-        """
-        os_ = self._conanfile.settings.get_safe('os')
-        os_sdk = self._conanfile.settings.get_safe('os.sdk')
-        os_sdk_version = self._conanfile.settings.get_safe('os.sdk_version') or ""
-        sdk = self._conanfile.conf.get("tools.apple:sdk_path")
-
-        if sdk:
-            return sdk
-        elif os_ == "Macos":  # if the host is Macos it can only be "macosx"
-            return "{}{}".format("macosx", os_sdk_version)
-        elif os_sdk:
-            return "{}{}".format(os_sdk, os_sdk_version)
-        else:
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
     def context(self):
-        os_ = self._conanfile.settings.get_safe("os")
         if not is_apple_os(self._conanfile):
             return None
 
+        # check valid combinations of architecture - os ?
+        # for iOS a FAT library valid for simulator and device can be generated
+        # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
         host_architecture = to_apple_arch(self._conanfile)
+
         host_os_version = self._conanfile.settings.get_safe("os.version")
-        host_sdk_name = self._apple_sdk_name()
+        host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
         is_debug = self._conanfile.settings.get_safe('build_type') == "Debug"
 
         # Reading some configurations to enable or disable some Xcode toolchain flags and variables
@@ -444,17 +389,8 @@ class FindFiles(Block):
         {% endif %}
 
         # Definition of CMAKE_MODULE_PATH
-        {% if build_build_paths %}
-        # Explicitly defined "buildirs" of "build" context dependencies
-        list(PREPEND CMAKE_MODULE_PATH {{ build_build_paths }})
-        {% endif %}
-        {% if host_build_paths_noroot %}
-        # Explicitly defined "builddirs" of "host" dependencies
-        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_noroot }})
-        {% endif %}
-        {% if host_build_paths_root %}
-        # The root (which is the default builddirs) path of dependencies in the host context
-        list(PREPEND CMAKE_MODULE_PATH {{ host_build_paths_root }})
+        {% if build_paths %}
+        list(PREPEND CMAKE_MODULE_PATH {{ build_paths }})
         {% endif %}
         {% if generators_folder %}
         # the generators folder (where conan generates files, like this toolchain)
@@ -462,9 +398,9 @@ class FindFiles(Block):
         {% endif %}
 
         # Definition of CMAKE_PREFIX_PATH, CMAKE_XXXXX_PATH
-        {% if host_build_paths_noroot %}
+        {% if build_paths %}
         # The explicitly defined "builddirs" of "host" context dependencies must be in PREFIX_PATH
-        list(PREPEND CMAKE_PREFIX_PATH {{ host_build_paths_noroot }})
+        list(PREPEND CMAKE_PREFIX_PATH {{ build_paths }})
         {% endif %}
         {% if generators_folder %}
         # The Conan local "generators" folder, where this toolchain is saved.
@@ -519,54 +455,36 @@ class FindFiles(Block):
         if prefer_config is False:
             find_package_prefer_config = "OFF"
 
-        os_ = self._conanfile.settings.get_safe("os")
         is_apple_ = is_apple_os(self._conanfile)
 
-        # Read information from host context, also including test_requires, which are in host
+        # Read information from host context
         # TODO: Add here in 2.0 the "skip": False trait
         host_req = self._conanfile.dependencies.filter({"build": False}).values()
-        host_build_paths_root = []
-        host_build_paths_noroot = []
+        build_paths = []
         host_lib_paths = []
-        host_bin_paths = [] # Only to be used when only one profile is present
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            # If the builddir is the package_folder, then it is the default "root" one
-            # The package_folder can be None if editable and layout(), in that case only the
-            # host_build_paths_noroot will be populated
-            if req.package_folder:
-                nf = os.path.normpath(req.package_folder)
-                host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
-                host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
-            else:
-                host_build_paths_root = []
-                host_build_paths_noroot.extend(p for p in cppinfo.builddirs)
+            build_paths.extend(cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
-            host_bin_paths.extend(cppinfo.bindirs)
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
             host_include_paths.extend(cppinfo.includedirs)
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
-        build_build_paths = []
         build_bin_paths = []
         for req in build_req:
             cppinfo = req.cpp_info.aggregated_components()
-            build_build_paths.extend(cppinfo.builddirs)
+            build_paths.extend(cppinfo.builddirs)
             build_bin_paths.extend(cppinfo.bindirs)
-        has_build_context = hasattr(self._conanfile, "settings_build") # always true in Conan 2.0
-        bin_paths = build_bin_paths if has_build_context else host_bin_paths
 
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
-            "host_build_paths_root": self._join_paths(host_build_paths_root),
-            "host_build_paths_noroot": self._join_paths(host_build_paths_noroot),
-            "build_build_paths": self._join_paths(build_build_paths),
-            "cmake_program_path": self._join_paths(bin_paths),
+            "build_paths": self._join_paths(build_paths),
+            "cmake_program_path": self._join_paths(build_bin_paths),
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
             "cmake_include_path": self._join_paths(host_include_paths),
@@ -732,22 +650,12 @@ class GenericSystemBlock(Block):
         """)
 
     def _get_toolset(self, generator):
+        toolset = None
         if generator is None or ("Visual" not in generator and "Xcode" not in generator):
             return None
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
-        compiler_base = settings.get_safe("compiler.base")
-        toolset = None
-        if compiler == "Visual Studio":
-            toolset = settings.get_safe("compiler.toolset")
-        elif compiler == "intel" and compiler_base == "Visual Studio" and "Visual" in generator:
-            # TODO: This intel toolset needs to be validated too
-            compiler_version = settings.get_safe("compiler.version")
-            if compiler_version:
-                compiler_version = compiler_version if "." in compiler_version else \
-                    "%s.0" % compiler_version
-                toolset = "Intel C++ Compiler " + compiler_version
-        elif compiler == "intel-cc":
+        if compiler == "intel-cc":
             return IntelCC(self._conanfile).ms_toolset
         elif compiler == "msvc":
             toolset = settings.get_safe("compiler.toolset")
@@ -776,14 +684,12 @@ class GenericSystemBlock(Block):
         settings = self._conanfile.settings
         # Returns the generator platform to be used by CMake
         compiler = settings.get_safe("compiler")
-        compiler_base = settings.get_safe("compiler.base")
         arch = settings.get_safe("arch")
 
         if settings.get_safe("os") == "WindowsCE":
             return settings.get_safe("os.platform")
 
-        if (compiler in ("Visual Studio", "msvc", "clang") or compiler_base == "Visual Studio") and \
-                generator and "Visual" in generator:
+        if compiler in ("msvc", "clang") and generator and "Visual" in generator:
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
@@ -822,6 +728,7 @@ class GenericSystemBlock(Block):
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
+        assert hasattr(self._conanfile, "settings_build")
         if hasattr(self._conanfile, "settings_build"):
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
@@ -904,3 +811,32 @@ class OutputDirsBlock(Block):
                 "default_lib": self._get_cpp_info_value("libdirs"),
                 "default_include": self._get_cpp_info_value("includedirs"),
                 "default_res": self._get_cpp_info_value("resdirs")}
+
+
+class ToolchainBlocks:
+    def __init__(self, conanfile, toolchain, items=None):
+        self._blocks = OrderedDict()
+        self._conanfile = conanfile
+        self._toolchain = toolchain
+        if items:
+            for name, block in items:
+                self._blocks[name] = block(conanfile, toolchain)
+
+    def remove(self, name):
+        del self._blocks[name]
+
+    def __setitem__(self, name, block_type):
+        # Create a new class inheriting Block with the elements of the provided one
+        block_type = type('proxyUserBlock', (Block,), dict(block_type.__dict__))
+        self._blocks[name] = block_type(self._conanfile, self._toolchain)
+
+    def __getitem__(self, name):
+        return self._blocks[name]
+
+    def process_blocks(self):
+        result = []
+        for b in self._blocks.values():
+            content = b.get_rendered_content()
+            if content:
+                result.append(content)
+        return result

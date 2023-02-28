@@ -33,12 +33,14 @@ main = textwrap.dedent("""
 
 test = textwrap.dedent("""
     import os
-    from conans import ConanFile, tools
+    from conan import ConanFile, tools
+    from conan.tools.build import cross_building
     class TestApp(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        generators = "VirtualRunEnv"
+        def requirements(self):
+            self.requires(self.tested_reference_str)
         def test(self):
-            if not tools.cross_building(self):
+            if not cross_building(self):
                 self.run("app", env="conanrun")
     """)
 
@@ -46,20 +48,20 @@ test = textwrap.dedent("""
 @pytest.fixture(scope="module")
 def client():
     client = TestClient()
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("create . -s build_type=Release")
     client.run("create . -s build_type=Debug")
     return client
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_project_xcodebuild(client):
 
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.apple import XcodeBuild
         from conan.tools.files import copy
         class MyApplicationConan(ConanFile):
@@ -69,6 +71,7 @@ def test_project_xcodebuild(client):
             settings = "os", "compiler", "build_type", "arch"
             generators = "XcodeDeps"
             exports_sources = "app.xcodeproj/*", "app/*"
+            package_type = "application"
             def build(self):
                 xcode = XcodeBuild(self)
                 xcode.build("app.xcodeproj")
@@ -97,13 +100,13 @@ def test_project_xcodebuild(client):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 @pytest.mark.skip(reason="Different sdks not installed in CI")
 def test_xcodebuild_test_different_sdk(client):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.apple import XcodeBuild
         class MyApplicationConan(ConanFile):
             name = "myapplication"
@@ -127,18 +130,18 @@ def test_xcodebuild_test_different_sdk(client):
     client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=10.15 "
                "-c tools.apple:sdk_path='/Applications/Xcode11.7.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk'")
     assert "sdk 10.15.6" in client.out
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=11.3 "
+    client.run("create . --build=missing -s os.sdk_version=11.3 "
                "-c tools.apple:sdk_path='/Applications/Xcode12.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk'")
     assert "sdk 11.3" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_missing_sdk(client):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.apple import XcodeBuild
         class MyApplicationConan(ConanFile):
             name = "myapplication"

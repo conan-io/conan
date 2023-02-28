@@ -9,12 +9,12 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 @pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
 def test_cross_x86():
     conanfile_py = textwrap.dedent("""
-        from conans import ConanFile, tools
+        from conan import ConanFile, tools
         from conan.tools.meson import Meson, MesonToolchain
 
 
@@ -25,7 +25,11 @@ def test_cross_x86():
 
             def config_options(self):
                 if self.settings.os == "Windows":
-                    del self.options.fPIC
+                    self.options.rm_safe("fPIC")
+
+            def configure(self):
+                if self.options.shared:
+                    self.options.rm_safe("fPIC")
 
             def layout(self):
                 self.folders.build = "build"

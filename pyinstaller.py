@@ -1,3 +1,20 @@
+"""
+This file is able to create a self contained Conan executable that contains all it needs,
+including the Python interpreter, so it wouldnt be necessary to have Python installed
+in the system
+It is important to install the dependencies and the project first with "pip install -e ."
+which configures the project as "editable", that is, to run from the current source folder
+After creating the executable, it can be pip uninstalled
+
+$ pip install -e .
+$ python pyinstaller.py
+
+This has to run in the same platform that will be using the executable, pyinstaller does
+not cross-build
+
+The resulting executable can be put in the system PATH of the running machine
+"""
+
 import os
 import platform
 import shutil
@@ -86,11 +103,11 @@ def pyinstall(source_folder):
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
-    conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
     hidden = ("--hidden-import=glob "  # core stdlib
               "--hidden-import=pathlib "
               "--hidden-import=distutils.dir_util "
               # Modules that can be imported in ConanFile conan.tools and errors
+              "--collect-submodules=conan.cli.commands "
               "--hidden-import=conan.errors "
               "--hidden-import=conan.tools.microsoft "
               "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
@@ -122,16 +139,10 @@ def pyinstall(source_folder):
                     % (command, source_folder, conan_server_path, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
-    subprocess.call('%s -y -p "%s" --console "%s" -n conan_build_info %s'
-                    % (command, source_folder, conan_build_info_path, win_ver),
-                    cwd=pyinstaller_path, shell=True)
-
     conan_bin = os.path.join(pyinstaller_path, 'dist', 'conan')
     conan_server_folder = os.path.join(pyinstaller_path, 'dist', 'conan_server')
 
-    conan_build_info_folder = os.path.join(pyinstaller_path, 'dist', 'conan_build_info')
     dir_util.copy_tree(conan_server_folder, conan_bin)
-    dir_util.copy_tree(conan_build_info_folder, conan_bin)
     _run_bin(pyinstaller_path)
 
     return os.path.abspath(os.path.join(pyinstaller_path, 'dist', 'conan'))

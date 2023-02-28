@@ -17,12 +17,18 @@ def test_link_lib_correct_order():
     consumer = GenConanfile().with_require("libc/0.1")
     client.save({"liba.py": liba, "libb.py": libb, "libc.py": libc, "consumer.py": consumer})
     client.run("create liba.py")
+    pid_a = client.created_package_reference("liba/0.1")
+    folder_a = client.get_latest_pkg_layout(pid_a).package()
     client.run("create libb.py")
+    pid_b = client.created_package_reference("libb/0.1")
+    folder_b = client.get_latest_pkg_layout(pid_b).package()
     client.run("create libc.py")
+    pid_c = client.created_package_reference("libc/0.1")
+    folder_c = client.get_latest_pkg_layout(pid_c).package()
     client.run("install consumer.py -g AutotoolsDeps")
     deps = client.load("conanautotoolsdeps.sh")
     # check the libs are added in the correct order with this regex
-    assert re.search("export LDFLAGS.*libc.*libb.*liba", deps)
+    assert re.search("export LDFLAGS.*{}.*{}.*{}".format(folder_c, folder_b, folder_a), deps)
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Autotools")
@@ -36,7 +42,7 @@ def test_cpp_info_aggregation():
          compiler=gcc
          compiler.libcxx=libstdc++11
          compiler.version=7.1
-         cppstd=17
+         compiler.cppstd=17
     """)
 
     dep_conanfile = textwrap.dedent("""
@@ -78,8 +84,8 @@ def test_cpp_info_aggregation():
 
     t = TestClient()
     t.save({"conanfile.py": dep_conanfile, "macos": profile})
-    t.run("create . dep1/1.0@ --profile:host=macos")
-    t.run("create . dep2/1.0@ --profile:host=macos")
+    t.run("create . --name dep1 --version 1.0 --profile:host=macos")
+    t.run("create . --name dep2 --version 1.0 --profile:host=macos")
 
     consumer = textwrap.dedent("""
         from conan import ConanFile
@@ -100,8 +106,6 @@ def test_cpp_info_aggregation():
 
                 env = deps.vars()
                 # The contents are of course modified
-                self.output.warn(env["CXXFLAGS"])
-
                 # The topological order puts dep2 before dep1
                 assert env["CXXFLAGS"] == 'dep2_a_cxx_flag dep1_a_cxx_flag'
                 assert env["CFLAGS"] == 'dep2_a_c_flag dep1_a_c_flag'
@@ -115,4 +119,4 @@ def test_cpp_info_aggregation():
     """)
 
     t.save({"conanfile.py": consumer})
-    t.run("create . consumer/1.0@ --profile:host=macos")
+    t.run("create . --name consumer --version 1.0 --profile:host=macos")

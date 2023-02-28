@@ -53,8 +53,11 @@ _vs_cppstd_map = {
     '20': "vc++latest"
 }
 
+# Meson valid values
+# "none", "c++98", "c++03", "c++11", "c++14", "c++17", "c++1z", "c++2a", "c++20",
+# "gnu++11", "gnu++14", "gnu++17", "gnu++1z", "gnu++2a", "gnu++20"
 _cppstd_map = {
-    '98': "c++03", 'gnu98': "gnu++03",
+    '98': "c++98", 'gnu98': "c++98",
     '11': "c++11", 'gnu11': "gnu++11",
     '14': "c++14", 'gnu14': "gnu++14",
     '17': "c++17", 'gnu17': "gnu++17",
@@ -63,6 +66,12 @@ _cppstd_map = {
 
 
 def to_meson_machine(machine_os, machine_arch):
+    """Gets the OS system info as the Meson machine context.
+
+    :param machine_os: ``str`` OS name.
+    :param machine_arch: ``str`` OS arch.
+    :return: ``dict`` Meson machine context.
+    """
     system = _meson_system_map.get(machine_os, machine_os.lower())
     default_cpu_tuple = (machine_arch.lower(), machine_arch.lower(), 'little')
     cpu_tuple = _meson_cpu_family_map.get(machine_arch, default_cpu_tuple)
@@ -77,6 +86,11 @@ def to_meson_machine(machine_os, machine_arch):
 
 
 def to_meson_value(value):
+    """Puts any value with a valid str-like Meson format.
+
+    :param value: ``str``, ``bool``, or ``list``, otherwise, it will do nothing.
+    :return: formatted value as a ``str``.
+    """
     # https://mesonbuild.com/Machine-files.html#data-types
     if isinstance(value, str):
         return "'%s'" % value
@@ -89,7 +103,13 @@ def to_meson_value(value):
 
 # FIXME: Move to another more common module
 def to_cppstd_flag(compiler, cppstd):
-    if compiler in ("msvc", "Visual Studio"):
+    """Gets a valid cppstd flag.
+
+    :param compiler: ``str`` compiler name.
+    :param cppstd: ``str`` cppstd version.
+    :return: ``str`` cppstd flag.
+    """
+    if compiler == "msvc":
         return _vs_cppstd_map.get(cppstd)
     else:
         return _cppstd_map.get(cppstd)

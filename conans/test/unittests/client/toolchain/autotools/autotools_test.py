@@ -1,10 +1,8 @@
 import os
 
-from mock import Mock
-
-from conan.tools.files.files import save_toolchain_args
+from conan.tools.build import save_toolchain_args
 from conan.tools.gnu import Autotools
-from conans import ConanFile
+from conan import ConanFile
 from conans.model.conf import Conf
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.mocks import MockSettings
@@ -19,13 +17,14 @@ def test_configure_arguments():
         "make_args": "my_make_args"}
     )
     runner = RunnerMock()
-    conanfile = ConanFile(Mock(), runner=runner)
-    conanfile.settings = MockSettings({})
-    conanfile.folders.set_base_install(tmp)
+    conanfile = ConanFile()
+    conanfile.run = runner
+    conanfile.settings = MockSettings({"os": "Linux"})
+    conanfile.settings_build = conanfile.settings
     conanfile.folders.set_base_source(tmp)
     conanfile.conf = Conf()
-    conanfile.conf["tools.gnu:make_program"] = "my_make"
-    conanfile.conf["tools.build:jobs"] = 23
+    conanfile.conf.define("tools.gnu:make_program", "my_make")
+    conanfile.conf.define("tools.build:jobs", 23)
     ab = Autotools(conanfile)
     ab.configure()
     assert "configure\" my_configure_args" in runner.command_called

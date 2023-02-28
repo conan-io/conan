@@ -2,15 +2,14 @@ import os
 import textwrap
 
 import pytest
-from mock import Mock
 
 from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
+from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
-from conans.model.env_info import EnvValues
-from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions, MockConanfile
+from conans.model.settings import Settings
+from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
 from conans.test.utils.test_files import temp_folder
-from conans.tools import load
-from conans import ConanFile, Settings
+from conans.util.files import load
 
 
 def test_msbuild_targets():
@@ -56,9 +55,9 @@ def test_msbuild_toolset():
                          "compiler": {"msvc": {"version": ["193"], "toolset": [None, "v142_xp"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile(None)
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile.settings = settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
     conanfile.settings.compiler.version = "193"
@@ -79,14 +78,13 @@ def test_msbuild_toolset():
     ("classic", "Intel C++ Compiler 19.2")
 ])
 def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
-    settings = Settings({"build_type": ["Release"],
+    conanfile = ConanFile()
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.settings = Settings({"build_type": ["Release"],
                          "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},
                                       "msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
-    conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "intel-cc"
     conanfile.settings.compiler.version = "2021.3"
@@ -100,18 +98,16 @@ def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
 
 def test_msbuild_standard():
     test_folder = temp_folder()
-
-    settings = Settings({"build_type": ["Release"],
-                         "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
-                         "os": ["Windows"],
-                         "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile.settings = Settings({"build_type": ["Release"],
+                                   "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
+                                   "os": ["Windows"],
+                                   "arch": ["x86_64"]})
+    conanfile.settings_build = conanfile.settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
     conanfile.settings.compiler.version = "193"
@@ -132,14 +128,13 @@ def test_resource_compile():
                          "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.settings = settings
     conanfile.settings_build = settings
-    conanfile.initialize(settings, EnvValues())
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
     conanfile.settings.compiler.version = "193"
@@ -176,14 +171,13 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
                                       "msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.intel:installation_path"] = "my/intel/oneapi/path"
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
+    conanfile.conf.define("tools.intel:installation_path", "my/intel/oneapi/path")
+    conanfile.conf.define("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile.settings = settings
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "intel-cc"
     conanfile.settings.compiler.version = "2021.3"
@@ -198,7 +192,6 @@ def test_msbuild_and_intel_cc_props(mode, expected_toolset):
 
 
 @pytest.mark.parametrize("compiler,expected", [
-    ("Visual Studio", True),
     ("msvc", True),
     ("clang", False)
 ])
@@ -207,9 +200,8 @@ def test_is_msvc(compiler, expected):
                          "compiler": {compiler: {"version": ["2022"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
-    conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile = ConanFile()
+    conanfile.settings = settings
     conanfile.settings.compiler = compiler
     assert is_msvc(conanfile) == expected
 
@@ -219,9 +211,8 @@ def test_is_msvc_build():
                          "compiler": ["gcc", "msvc"],
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
-    conanfile.settings = "os", "compiler", "build_type", "arch"
-    conanfile.initialize(settings, EnvValues())
+    conanfile = ConanFile()
+    conanfile.settings = settings
     conanfile.settings.compiler = "gcc"
     conanfile.settings_build = conanfile.settings.copy()
     conanfile.settings_build.compiler = "msvc"
@@ -230,10 +221,7 @@ def test_is_msvc_build():
 
 
 @pytest.mark.parametrize("compiler,shared,runtime,build_type,expected", [
-    ("Visual Studio", True, "MT", "Release", True),
     ("msvc", True, "static", "Release", True),
-    ("Visual Studio", False, "MT", "Release", True),
-    ("Visual Studio", True, "MD", "Release", False),
     ("msvc", True, "static", "Debug", True),
     ("clang", True, None, "Debug", False),
 ])
@@ -251,19 +239,16 @@ def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected)
 
 def test_msbuildtoolchain_changing_flags_via_attributes():
     test_folder = temp_folder()
-
     settings = Settings({"build_type": ["Release"],
                          "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"]}},
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
-    conanfile = ConanFile(Mock(), None)
+    conanfile = ConanFile()
+    conanfile.settings = settings
     conanfile.folders.set_base_generators(test_folder)
-    conanfile.folders.set_base_install(test_folder)
     conanfile.conf = Conf()
-    conanfile.conf["tools.microsoft.msbuild:installation_path"] = "."
-    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.conf.define_path("tools.microsoft.msbuild:installation_path", ".")
     conanfile.settings_build = settings
-    conanfile.initialize(settings, EnvValues())
     conanfile.settings.build_type = "Release"
     conanfile.settings.compiler = "msvc"
     conanfile.settings.compiler.version = "193"

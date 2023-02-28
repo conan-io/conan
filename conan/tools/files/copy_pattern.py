@@ -1,7 +1,6 @@
 import fnmatch
 import os
 import shutil
-from collections import defaultdict
 
 from conans.util.files import mkdir
 
@@ -9,27 +8,24 @@ from conans.util.files import mkdir
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
          ignore_case=True):
     """
-        It will copy the files matching the pattern from the src folder to the dst, including the
-        symlinks to files. If a folder from "src" doesn't contain any file to be copied, it won't be
-        created empty at the "dst".
-        If in "src" there are symlinks to folders, they will be created at "dst" irrespective if
-        they (or the folder where points) have files to be copied or not, unless
-        "copy_symlink_folders=False" is specified.
+    Copy the files matching the pattern (fnmatch) at the src folder to a dst folder.
 
-        param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
-        param dst: the destination local folder, wrt to current conanfile dir, to which
-                   the files will be copied. Eg: "bin"
-        param src: the source folder in which those files will be searched. This folder
-                   will be stripped from the dst name. Eg.: lib/Debug/x86
-        param keep_path: False if you want the relative paths to be maintained from
-                         src to dst folders, or just drop. False is useful if you want
-                         to collect e.g. many *.libs among many dirs into a single
-                         lib dir
-        param excludes: Single pattern or a tuple of patterns to be excluded from the copy
-        param ignore_case: will do a case-insensitive pattern matching when True
-
-        return: list of copied files
-        """
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param pattern: (Required) An fnmatch file pattern of the files that should be copied.
+           It must not start with ``..`` relative path or an exception will be raised.
+    :param src: (Required) Source folder in which those files will be searched. This folder
+           will be stripped from the dst parameter. E.g., lib/Debug/x86.
+    :param dst: (Required) Destination local folder. It must be different from src value or an
+           exception will be raised.
+    :param keep_path: (Optional, defaulted to ``True``) Means if you want to keep the relative
+           path when you copy the files from the src folder to the dst one.
+    :param excludes: (Optional, defaulted to ``None``) A tuple/list of fnmatch patterns or even a
+           single one to be excluded from the copy.
+    :param ignore_case: (Optional, defaulted to ``True``) If enabled, it will do a
+           case-insensitive pattern matching. will do a case-insensitive pattern matching when
+           ``True``
+    :return: list of copied files
+    """
     assert src != dst
     assert not pattern.startswith("..")
 
@@ -37,14 +33,10 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     src = os.path.join(src, "")
     excluded_folder = dst
     files_to_copy, files_symlinked_to_folders = _filter_files(src, pattern, excludes, ignore_case,
-                                                           excluded_folder)
+                                                              excluded_folder)
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
-
-    # FIXME: Not always passed conanfile
-    if conanfile:
-        _report_files_copied(copied_files, conanfile.output)
     return copied_files
 
 
@@ -147,23 +139,3 @@ def _copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst):
         os.symlink(link_dst, symlink_path)
         copied_files.append(symlink_path)
     return copied_files
-
-
-def _report_files_copied(copied, scoped_output, message_suffix="Copied"):
-    ext_files = defaultdict(list)
-    for f in copied:
-        _, ext = os.path.splitext(f)
-        ext_files[ext].append(os.path.basename(f))
-
-    if not ext_files:
-        return False
-
-    for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
-        file_or_files = "file" if len(files) == 1 else "files"
-        if not ext:
-            scoped_output.info("%s %d %s%s" % (message_suffix, len(files), file_or_files, files_str))
-        else:
-            scoped_output.info("%s %d '%s' %s%s"
-                               % (message_suffix, len(files), ext, file_or_files, files_str))
-    return True

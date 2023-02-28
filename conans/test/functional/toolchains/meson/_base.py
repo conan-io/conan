@@ -6,51 +6,16 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_meson
+@pytest.mark.tool("meson")
 @pytest.mark.skipif(platform.system() not in ("Darwin", "Windows", "Linux"),
                     reason="Not tested for not mainstream boring operating systems")
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()
 
-    @property
-    def _settings(self):
-        interpreter_arch = platform.machine()
-        if interpreter_arch in ["x86_64", "AMD64"]:
-            host_arch = "x86_64"
-        elif interpreter_arch in ["arm64", "aarch64", "ARM64"]:
-            host_arch = "armv8"
-        else:
-            host_ach = interpreter_arch
-        settings_macosx = {"compiler": "apple-clang",
-                           "compiler.libcxx": "libc++",
-                           "compiler.version": "13",
-                           "arch": host_arch,
-                           "build_type": "Release"}
-
-        settings_windows = {"compiler": "Visual Studio",
-                            "compiler.version": "15",
-                            "compiler.runtime": "MD",
-                            "arch": host_arch,
-                            "build_type": "Release"}
-
-        settings_linux = {"compiler": "gcc",
-                          "compiler.version": "5",
-                          "compiler.libcxx": "libstdc++",
-                          "arch": host_arch,
-                          "build_type": "Release"}
-
-        return {"Darwin": settings_macosx,
-                "Windows": settings_windows,
-                "Linux": settings_linux}.get(platform.system())
-
-    @property
-    def _settings_str(self):
-        return " ".join('-s %s="%s"' % (k, v) for k, v in self._settings.items() if v)
-
     def _check_binary(self):
         # FIXME: Some values are hardcoded to match the CI setup
-        host_arch =  self.t.get_default_host_profile().settings['arch']
+        host_arch = self.t.get_default_host_profile().settings['arch']
         arch_macro = {
             "gcc": {"armv8": "__aarch64__", "x86_64": "__x86_64__"},
             "msvc": {"armv8": "_M_ARM64", "x86_64": "_M_X64"}
@@ -68,4 +33,4 @@ class TestMesonBase(unittest.TestCase):
             self.assertIn("main _MSVC_LANG2014", self.t.out)
         elif platform.system() == "Linux":
             self.assertIn(f"main {arch_macro['gcc'][host_arch]} defined", self.t.out)
-            self.assertIn("main __GNUC__5", self.t.out)
+            self.assertIn("main __GNUC__9", self.t.out)

@@ -1,5 +1,5 @@
 """
-    Exceptions raised and handled in Conan server.
+    Exceptions raised and handled in Conan
     These exceptions are mapped between server (as an HTTP response) and client
     through the REST API. When an error happens in server its translated to an HTTP
     error code that its sent to client. Client reads the server code and raise the
@@ -9,39 +9,61 @@
 
 """
 from contextlib import contextmanager
-from subprocess import CalledProcessError
-
-from conans.util.env_reader import get_env
-from conans.util.files import decode_text
 
 
-class CalledProcessErrorWithStderr(CalledProcessError):
-    def __str__(self):
-        ret = super(CalledProcessErrorWithStderr, self).__str__()
-        if self.output:
-            ret += "\n" + decode_text(self.output)
-        return ret
+@contextmanager
+def conanfile_remove_attr(conanfile, names, method):
+    """ remove some self.xxxx attribute from the class, so it raises an exception if used
+    within a given conanfile method
+    """
+    original_class = type(conanfile)
+
+    def _prop(attr_name):
+        def _m(_):
+            raise ConanException(f"'self.{attr_name}' access in '{method}()' method is forbidden")
+        return property(_m)
+
+    try:
+        new_class = type(original_class.__name__, (original_class, ), {})
+        conanfile.__class__ = new_class
+        for name in names:
+            setattr(new_class, name, _prop(name))
+        yield
+    finally:
+        conanfile.__class__ = original_class
 
 
 @contextmanager
 def conanfile_exception_formatter(conanfile_name, func_name):
     """
     Decorator to throw an exception formatted with the line of the conanfile where the error ocurrs.
-    :param reference: Reference of the conanfile
-    :return:
     """
+
+    def _raise_conanfile_exc(e):
+        from conan.api.output import LEVEL_DEBUG, conan_output_level
+        if conan_output_level <= LEVEL_DEBUG:
+            import traceback
+            raise ConanExceptionInUserConanfileMethod(traceback.format_exc())
+        m = _format_conanfile_exception(conanfile_name, func_name, e)
+        raise ConanExceptionInUserConanfileMethod(m)
+
     try:
         yield
-    # TODO: Move ConanInvalidSystemRequirements, ConanInvalidConfiguration from here?
-    except ConanInvalidSystemRequirements as exc:
-        msg = "{}: Invalid system requirements: {}".format(conanfile_name, exc)
-        raise ConanInvalidSystemRequirements(msg)
+    # TODO: Move ConanInvalidConfiguration from here?
     except ConanInvalidConfiguration as exc:
-        msg = "{}: Invalid configuration: {}".format(conanfile_name, exc)
+        msg = "{}: Invalid configuration: {}".format(str(conanfile_name), exc)
         raise ConanInvalidConfiguration(msg)
+    except AttributeError as exc:
+        list_methods = [m for m in dir(list) if not m.startswith('__')]
+        if "NoneType" in str(exc) and func_name in ['layout', 'package_info'] and \
+            any(method in str(exc) for method in list_methods):
+            raise ConanException("{}: {}. No default values are set for components. You are probably "
+                                 "trying to manipulate a component attribute in the '{}' method "
+                                 "without defining it previously".format(str(conanfile_name), exc, func_name))
+        else:
+            _raise_conanfile_exc(exc)
     except Exception as exc:
-        msg = _format_conanfile_exception(conanfile_name, func_name, exc)
-        raise ConanExceptionInUserConanfileMethod(msg)
+        _raise_conanfile_exc(exc)
 
 
 def _format_conanfile_exception(scope, method, exception):
@@ -52,8 +74,6 @@ def _format_conanfile_exception(scope, method, exception):
     """
     import sys
     import traceback
-    if get_env("CONAN_VERBOSE_TRACEBACK", False):
-        return traceback.format_exc()
     try:
         conanfile_reached = False
         tb = sys.exc_info()[2]
@@ -106,23 +126,13 @@ class ConanException(Exception):
         return exception_message_safe(msg)
 
 
-class ConanV2Exception(ConanException):
-    def __str__(self):
-        msg = super(ConanV2Exception, self).__str__()
-        # TODO: Add a link to a public webpage with Conan roadmap to v2
-        return "Conan v2 incompatible: {}".format(msg)
+class ConanReferenceDoesNotExistInDB(ConanException):
+    """ Reference does not exist in cache db """
+    pass
 
 
-class OnlyV2Available(ConanException):
-
-    def __init__(self, remote_url):
-        msg = "The remote at '%s' only works with revisions enabled. " \
-              "Set CONAN_REVISIONS_ENABLED=1 " \
-              "or set 'general.revisions_enabled = 1' at the 'conan.conf'" % remote_url
-        super(OnlyV2Available, self).__init__(msg)
-
-
-class NoRestV2Available(ConanException):
+class ConanReferenceAlreadyExistsInDB(ConanException):
+    """ Reference already exists in cache db """
     pass
 
 
@@ -148,11 +158,10 @@ class ConanExceptionInUserConanfileMethod(ConanException):
     pass
 
 
-class ConanInvalidSystemRequirements(ConanException):
-    pass
-
-
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
+    """
+    This binary, for the requested configuration and package-id cannot be built
+    """
     pass
 
 
@@ -201,33 +210,29 @@ class NotFoundException(ConanException):  # 404
 
 class RecipeNotFoundException(NotFoundException):
 
-    def __init__(self, ref, remote=None, print_rev=False):
-        from conans.model.ref import ConanFileReference
-        assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
-                                                    "ConanFileReference"
+    def __init__(self, ref, remote=None):
+        from conans.model.recipe_ref import RecipeReference
+        assert isinstance(ref, RecipeReference), "RecipeNotFoundException requires a RecipeReference"
         self.ref = ref
-        self.print_rev = print_rev
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_str() if self.print_rev else str(self.ref)
+        tmp = repr(self.ref)
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
 class PackageNotFoundException(NotFoundException):
 
-    def __init__(self, pref, remote=None, print_rev=False):
-        from conans.model.ref import PackageReference
-        assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
-                                                   "PackageReference"
+    def __init__(self, pref, remote=None):
+        from conans.model.package_ref import PkgReference
+        assert isinstance(pref, PkgReference), "PackageNotFoundException requires a PkgReference"
         self.pref = pref
-        self.print_rev = print_rev
 
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.pref.full_str() if self.print_rev else str(self.pref)
-        return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
+        return "Binary package not found: '{}'{}".format(self.pref.repr_notime(),
+                                                         self.remote_message())
 
 
 class UserInterfaceErrorException(RequestErrorException):

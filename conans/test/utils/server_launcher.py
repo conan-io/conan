@@ -3,10 +3,10 @@ import os
 import shutil
 import time
 
-from conans import SERVER_CAPABILITIES
+from conans import REVISIONS
+from conans.server import SERVER_CAPABILITIES
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
-from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.migrate import migrate_and_get_server_config
 from conans.server.rest.server import ConanServer
 from conans.server.service.authorize import BasicAuthenticator, BasicAuthorizer
@@ -35,13 +35,11 @@ class TestServerLauncher(object):
         server_config = migrate_and_get_server_config(base_path)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES)
+        elif REVISIONS not in server_capabilities:
+            server_capabilities.append(REVISIONS)
 
-        # Encode and Decode signature for Upload and Download service
-        updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,
-                                                   server_config.authorize_timeout)
         base_url = base_url or server_config.public_url
-        self.server_store = get_server_store(server_config.disk_storage_path,
-                                             base_url, updown_auth_manager)
+        self.server_store = get_server_store(server_config.disk_storage_path, base_url)
 
         # Prepare some test users
         if not read_permissions:
@@ -63,11 +61,9 @@ class TestServerLauncher(object):
                                                     server_config.jwt_expire_time)
 
         self.port = server_config.port
-        self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, self.server_store,
-                              server_capabilities)
+        self.ra = ConanServer(self.port, credentials_manager, authorizer, authenticator,
+                              self.server_store, server_capabilities)
         for plugin in plugins:
-            self.ra.api_v1.install(plugin)
             self.ra.api_v2.install(plugin)
 
     def start(self, daemon=True):

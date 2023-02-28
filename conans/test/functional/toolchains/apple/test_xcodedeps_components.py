@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_xcodedeps_components():
     """
     tcp/1.0 is a lib without components
@@ -25,8 +25,8 @@ def test_xcodedeps_components():
     """
     client = TestClient(path_with_spaces=False)
 
-    client.run("new tcp/1.0 -m=cmake_lib")
-    client.run("create . -tf=None")
+    client.run("new cmake_lib -d name=tcp -d version=1.0")
+    client.run("create . -tf=\"\"")
 
     header = textwrap.dedent("""
         #pragma once
@@ -129,7 +129,7 @@ def test_xcodedeps_components():
         "CMakeLists.txt": cmakelists,
     }, clean_first=True)
 
-    client.run("create . network/1.0@")
+    client.run("create . --name=network --version=1.0")
 
     chat_pi = """
     def package_info(self):
@@ -158,7 +158,7 @@ def test_xcodedeps_components():
         "CMakeLists.txt": cmakelists_chat,
     }, clean_first=True)
 
-    client.run("create . chat/1.0@")
+    client.run("create . --name=chat --version=1.0")
 
     xcode_project = textwrap.dedent("""
         name: ChatApp
@@ -180,9 +180,9 @@ def test_xcodedeps_components():
         "project.yml": xcode_project
     }, clean_first=True)
 
-    client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan")
-    client.run("install chat/1.0@ -g XcodeDeps --install-folder=conan -s build_type=Debug "
-               "--build=missing")
+    client.run("install --requires=chat/1.0@ -g XcodeDeps --output-folder=conan")
+    client.run("install --requires=chat/1.0@ -g XcodeDeps --output-folder=conan "
+               "-s build_type=Debug --build=missing")
     chat_xcconfig = client.load(os.path.join("conan", "conan_chat_chat.xcconfig"))
     assert '#include "conan_network_client_test.xcconfig"' in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
@@ -205,7 +205,7 @@ def test_xcodedeps_components():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_cpp_info_require_whole_package():
     """
     https://github.com/conan-io/conan/issues/12089
@@ -263,13 +263,13 @@ def test_cpp_info_require_whole_package():
     client.run("create liba.py")
     client.run("create libb.py")
     client.run("create libc.py")
-    client.run("install libb/1.0@ -g XcodeDeps --install-folder=libb")
+    client.run("install --requires=libb/1.0 -g XcodeDeps -of=libb")
 
     libb_xcconfig = client.load(os.path.join("libb", "conan_libb_libb.xcconfig"))
     assert '#include "conan_liba.xcconfig"' in libb_xcconfig
     assert '#include "conan_liba_liba.xcconfig"' not in libb_xcconfig
 
-    client.run("install libc/1.0@ -g XcodeDeps --install-folder=libc")
+    client.run("install --requires=libc/1.0 -g XcodeDeps -of=libc")
 
     libc_comp1_xcconfig = client.load(os.path.join("libc", "conan_libc_cmp1.xcconfig"))
     assert '#include "conan_liba.xcconfig"' in libc_comp1_xcconfig
@@ -277,12 +277,11 @@ def test_cpp_info_require_whole_package():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_xcodedeps_test_require():
     client = TestClient()
-    client.run("new gtest/1.0 -m cmake_lib")
-    # client.run("new cmake_lib -d name=app -d version=1.0")
-    client.run("create . -tf=None")
+    client.run("new cmake_lib -d name=gtest -d version=1.0")
+    client.run("create . -tf=\"\"")
 
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''

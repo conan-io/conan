@@ -1,59 +1,64 @@
 # coding=utf-8
-
 import os
 import platform
+from pathlib import Path
 
 if platform.system() == "Windows":
-    from conans.util.windows import conan_expand_user, rm_conandir
+    from conans.util.windows import conan_expand_user
 else:
-    from conans.util.files import rmdir
-
     conan_expand_user = os.path.expanduser
-    rm_conandir = rmdir
+
+DEFAULT_CONAN_HOME = ".conan2"
 
 
 def get_conan_user_home():
-    user_home = os.getenv("CONAN_USER_HOME", "~")
-    tmp = conan_expand_user(user_home)
-    if not os.path.isabs(tmp):
-        raise Exception("Invalid CONAN_USER_HOME value '%s', "
+
+    def _find_conanrc_file():
+        path = Path(os.getcwd())
+        while path.is_dir() and len(path.parts) > 1:  # finish at '/'
+            conanrc_file = path / ".conanrc"
+            if conanrc_file.is_file():
+                return conanrc_file
+            else:
+                path = path.parent
+
+    def _user_home_from_conanrc_file():
+        try:
+            conanrc_path = _find_conanrc_file()
+
+            with open(conanrc_path) as conanrc_file:
+                values = {k: str(v) for k, v in
+                          (line.split('=') for line in conanrc_file.read().splitlines() if
+                           not line.startswith("#"))}
+
+            conan_home = values["conan_home"]
+            # check if it's a local folder
+            if conan_home[:2] in ("./", ".\\") or conan_home.startswith(".."):
+                conan_home = conanrc_path.parent.absolute() / conan_home
+            return conan_home
+        except (OSError, KeyError, TypeError):
+            return None
+
+    user_home = _user_home_from_conanrc_file() or os.getenv("CONAN_HOME")
+    if user_home is None:
+        # the default, in the user home
+        user_home = os.path.join(conan_expand_user("~"), DEFAULT_CONAN_HOME)
+    else:  # Do an expansion, just in case the user is using ~/something/here
+        user_home = conan_expand_user(user_home)
+    if not os.path.isabs(user_home):
+        raise Exception("Invalid CONAN_HOME value '%s', "
                         "please specify an absolute or path starting with ~/ "
-                        "(relative to user home)" % tmp)
-    return os.path.abspath(tmp)
+                        "(relative to user home)" % user_home)
+    return user_home
 
 
 # Files
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
-BUILD_INFO = 'conanbuildinfo.txt'
-BUILD_INFO_GCC = 'conanbuildinfo.gcc'
-BUILD_INFO_COMPILER_ARGS = 'conanbuildinfo.args'
-BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
-BUILD_INFO_QBS = 'conanbuildinfo.qbs'
-BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
-BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
-BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
-BUILD_INFO_DEPLOY = 'deploy_manifest.txt'
 CONANINFO = "conaninfo.txt"
-CONANENV = "conanenv.txt"
-SYSTEM_REQS = "system_reqs.txt"
-ARTIFACTS_PROPERTIES_FILE = "artifacts.properties"
-ARTIFACTS_PROPERTIES_PUT_PREFIX = "artifact_property_"
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
-RUN_LOG_NAME = "conan_run.log"
 DEFAULT_PROFILE_NAME = "default"
-PACKAGE_METADATA = "metadata.json"
-CACERT_FILE = "cacert.pem"  # Server authorities file
 DATA_YML = "conandata.yml"
-
-# Directories
-EXPORT_FOLDER = "export"
-EXPORT_SRC_FOLDER = "export_source"
-SRC_FOLDER = "source"
-BUILD_FOLDER = "build"
-PACKAGES_FOLDER = "package"
-SYSTEM_REQS_FOLDER = "system_reqs"
-SCM_SRC_FOLDER = "scm_source"

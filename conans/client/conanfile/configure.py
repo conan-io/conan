@@ -1,45 +1,44 @@
 from conans.errors import conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
-from conans.util.conan_v2_mode import conan_v2_error
-from conans.util.misc import make_tuple
+from conans.model.pkg_type import PackageType
+from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
+from conans.util.env import no_op
 
 
-def run_configure_method(conanfile, down_options, down_ref, ref):
+def run_configure_method(conanfile, down_options, profile_options, ref):
     """ Run all the config-related functions for the given conanfile object """
 
     # Avoid extra time manipulating the sys.path for python
-    with get_env_context_manager(conanfile, without_python=True):
-        if hasattr(conanfile, "config"):
-            conan_v2_error("config() has been deprecated. Use config_options() and configure()")
-            with conanfile_exception_formatter(str(conanfile), "config"):
-                conanfile.config()
+    with no_op():  # TODO: Remove this in a later refactor
+        if hasattr(conanfile, "config_options"):
+            with conanfile_exception_formatter(conanfile, "config_options"):
+                conanfile.config_options()
 
-        with conanfile_exception_formatter(str(conanfile), "config_options"):
-            conanfile.config_options()
+        # Assign only the current package options values, but none of the dependencies
+        is_consumer = conanfile._conan_is_consumer
+        conanfile.options.apply_downstream(down_options, profile_options, ref, is_consumer)
 
-        conanfile.options.propagate_upstream(down_options, down_ref, ref)
+        if hasattr(conanfile, "configure"):
+            with conanfile_exception_formatter(conanfile, "configure"):
+                conanfile.configure()
 
-        if hasattr(conanfile, "config"):
-            with conanfile_exception_formatter(str(conanfile), "config"):
-                conanfile.config()
+        self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
+                                                                          is_consumer)
+        # self_options are the minimum to reproduce state, as defined from downstream (not profile)
+        conanfile.self_options = self_options
+        # up_options are the minimal options that should be propagated to dependencies
+        conanfile.up_options = up_options
 
-        with conanfile_exception_formatter(str(conanfile), "configure"):
-            conanfile.configure()
+        PackageType.compute_package_type(conanfile)
 
-        conanfile.settings.validate()  # All has to be ok!
-        conanfile.options.validate()
-        # Recipe provides its own name if nothing else is defined
-        conanfile.provides = make_tuple(conanfile.provides or conanfile.name)
+        conanfile.build_requires = BuildRequirements(conanfile.requires)
+        conanfile.test_requires = TestRequirements(conanfile.requires)
+        conanfile.tool_requires = ToolRequirements(conanfile.requires)
 
-        if conanfile.deprecated:
-            from six import string_types
-            message = "Recipe '%s' is deprecated" % conanfile.display_name
-            if isinstance(conanfile.deprecated, string_types):
-                message += " in favor of '%s'" % conanfile.deprecated
-            message += ". Please, consider changing your requirements."
-            conanfile.output.warn(message)
+        if hasattr(conanfile, "requirements"):
+            with conanfile_exception_formatter(conanfile, "requirements"):
+                conanfile.requirements()
 
-        # Once the node is configured call the layout()
-        if hasattr(conanfile, "layout"):
-            with conanfile_exception_formatter(str(conanfile), "layout"):
-                conanfile.layout()
+        # TODO: Maybe this could be integrated in one single requirements() method
+        if hasattr(conanfile, "build_requirements"):
+            with conanfile_exception_formatter(conanfile, "build_requirements"):
+                conanfile.build_requirements()

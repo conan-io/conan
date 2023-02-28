@@ -20,16 +20,17 @@ from conans.test.utils.test_files import temp_folder
 ])
 def test_run_tests(generator, target):
     """
-    Testing that the proper test target is picked for different generators, especially multi-config ones.
+    Testing that the proper test target is picked for different generators, especially
+    multi-config ones.
     Issue related: https://github.com/conan-io/conan/issues/11405
     """
     settings = Settings.loads(get_default_settings_yml())
     settings.os = "Windows"
     settings.arch = "x86"
     settings.build_type = "Release"
-    settings.compiler = "Visual Studio"
-    settings.compiler.runtime = "MDd"
-    settings.compiler.version = "14"
+    settings.compiler = "msvc"
+    settings.compiler.runtime = "dynamic"
+    settings.compiler.version = "193"
 
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
@@ -41,7 +42,7 @@ def test_run_tests(generator, target):
     cmake = CMake(conanfile)
     cmake.test()
 
-    search_pattern = "--target {}" if platform.system() == "Windows" else "'--target' '{}'"
+    search_pattern = "--target {}"
     assert search_pattern.format(target) in conanfile.command
 
 

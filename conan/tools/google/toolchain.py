@@ -1,5 +1,5 @@
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.files.files import save_toolchain_args
+from conan.internal import check_duplicated_generator
+from conan.tools.build import save_toolchain_args
 
 
 class BazelToolchain(object):
@@ -7,9 +7,9 @@ class BazelToolchain(object):
     def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
         self._namespace = namespace
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         content = {}
         configs = ",".join(self._conanfile.conf.get("tools.google.bazel:configs",
                                                     default=[],

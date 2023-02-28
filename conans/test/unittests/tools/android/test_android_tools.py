@@ -4,6 +4,7 @@ from conan.tools.android import android_abi
 
 from pytest import raises
 
+
 def test_tools_android_abi():
     settings_linux = MockSettings({"os": "Linux", "arch": "foo"})
 
@@ -23,22 +24,12 @@ def test_tools_android_abi():
         conanfile = ConanFileMock()
         settings_android = MockSettings({"os": "Android", "arch": arch})
 
-        # 1 profile (legacy native build)
-        conanfile.settings = settings_android
-        assert android_abi(conanfile) == expected
-        assert android_abi(conanfile, context="host") == expected
-
-        with raises(ConanException):
-            assert android_abi(conanfile, context="build") == expected
-
-        with raises(ConanException):
-            assert android_abi(conanfile, context="target") == expected
-
         # 2 profiles
         ## native build
         conanfile.settings = settings_android
         conanfile.settings_host = settings_android
         conanfile.settings_build = settings_android
+
         assert android_abi(conanfile) == expected
         assert android_abi(conanfile, context="host") == expected
         assert android_abi(conanfile, context="build") == expected

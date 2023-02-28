@@ -43,7 +43,7 @@ class TestConanToolFiles:
 
     def test_load_save_mkdir(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import load, save, mkdir
 
             class Pkg(ConanFile):
@@ -77,7 +77,7 @@ class TestConanToolFiles:
 
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
 
             class Pkg(ConanFile):
@@ -96,7 +96,7 @@ class TestConanToolFiles:
 
 def test_patch(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import patch
 
         class Pkg(ConanFile):
@@ -111,7 +111,8 @@ def test_patch(mock_patch_ng):
     client.save({"conanfile.py": conanfile})
     client.run('create .')
 
-    assert os.path.exists(mock_patch_ng.apply_args[0])
+    # Note: This cannot exist anymore, because the path is moved when prev is computed
+    # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
@@ -177,7 +178,7 @@ def test_patch_real(no_copy_source):
 
 def test_apply_conandata_patches(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -214,8 +215,8 @@ def test_apply_conandata_patches(mock_patch_ng):
            ' clang compilers.' in str(client.out)
 
     # Test local methods
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
     assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
@@ -223,7 +224,7 @@ def test_apply_conandata_patches(mock_patch_ng):
 
 def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -254,7 +255,7 @@ def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
 
 def test_no_patch_file_entry():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -283,9 +284,10 @@ def test_no_patch_file_entry():
     assert "The 'conandata.yml' file needs a 'patch_file' or 'patch_string' entry for every patch" \
            " to be applied" in str(client.out)
 
+
 def test_patch_string_entry(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -307,14 +309,16 @@ def test_patch_string_entry(mock_patch_ng):
                  'conandata.yml': conandata_yml})
     client.run('create .')
 
-    assert os.path.exists(mock_patch_ng.apply_args[0])
+    # Note: This cannot exist anymore, because the path is moved when prev is computed
+    # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mock patch data' == mock_patch_ng.string.decode('utf-8')
     assert 'mypkg/1.11.0: Apply patch (string)' in str(client.out)
 
+
 def test_relate_base_path_all_versions(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -359,7 +363,8 @@ def test_export_conandata_patches(mock_patch_ng):
                 export_conandata_patches(self)
 
             def source(self):
-                self.output.info(load(self, os.path.join(self.export_sources_folder, "patches/mypatch.patch")))
+                self.output.info(load(self, os.path.join(self.export_sources_folder,
+                                                         "patches/mypatch.patch")))
         """)
     conandata_yml = textwrap.dedent("""
         patches:

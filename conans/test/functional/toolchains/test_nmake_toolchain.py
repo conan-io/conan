@@ -40,9 +40,11 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
 
     # Build the profile according to the settings provided
     settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+    client.run("new cmake_lib -d name=dep -d version=1.0")
     conf = " ".join(f'-c {k}="{v}"' for k, v in conf.items() if v)
-    client.run("new dep/1.0 -m=cmake_lib")
-    client.run(f'create . -tf=None {settings} {conf}')
+    client.run(f'create . -tf=\"\" {settings} {conf}'
+               f' -c tools.cmake.cmaketoolchain:generator="Visual Studio 15"')
 
     # Rearrange defines to macro / value dict
     conf_preprocessors = {}
@@ -78,8 +80,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
                  "makefile": makefile,
                  "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"], preprocessor=conf_preprocessors.keys())},
                 clean_first=True)
-    client.run(f"install . {settings} {conf}")
-    client.run("build .")
+    client.run(f"build . {settings} {conf}")
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd, conf_preprocessors)

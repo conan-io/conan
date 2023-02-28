@@ -2,11 +2,11 @@ from unittest.mock import patch
 
 import pytest
 
+from conan.tools.build import cmd_args_to_string
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings
-from conans.tools import args_to_string
 
 
 @pytest.fixture()
@@ -95,9 +95,10 @@ def test_visual_runtime(runtime):
     Testing AutotoolsToolchain with the msvc compiler adjust the runtime
     """
     # Issue: https://github.com/conan-io/conan/issues/10139
-    settings = MockSettings({"build_type": "Release",
-                             "compiler": "Visual Studio",
-                             "compiler.runtime": runtime,
+    settings = MockSettings({"build_type": "Release" if "d" not in runtime else "Debug",
+                             "compiler": "msvc",
+                             "compiler.runtime": "static" if "MT" in runtime else "dynamic",
+                             "compiler.runtime_type": "Release" if "d" not in runtime else "Debug",
                              "os": "Windows",
                              "arch": "x86_64"})
     conanfile = ConanFileMock()
@@ -136,7 +137,8 @@ def test_compilers_mapping():
                  "fortran": "path_to_fortran"}
     settings = MockSettings({"build_type": "Release",
                              "os": "Windows",
-                             "arch": "x86_64"})
+                             "arch": "x86_64",
+                             "compiler": "gcc"})
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
     conanfile.conf.define("tools.build:compiler_executables", compilers)
@@ -153,6 +155,7 @@ def test_linker_scripts():
     conanfile.conf.define("tools.build:linker_scripts", ["path_to_first_linker_script", "path_to_second_linker_script"])
     settings = MockSettings({"build_type": "Release",
                              "os": "Windows",
+                             "compiler": "gcc",
                              "arch": "x86_64"})
     conanfile.settings = settings
     autotoolschain = AutotoolsToolchain(conanfile)
@@ -195,16 +198,16 @@ def test_update_or_prune_any_args(cross_building_conanfile):
                               "--enable-flag1": "",  # without value
                               "-NEW-FLAG": "no"  # new flag
                               })
-    new_configure_args = args_to_string(at.configure_args)
+    new_configure_args = cmd_args_to_string(at.configure_args)
     assert "--prefix=/my/other/prefix" in new_configure_args
     assert "--build=" not in new_configure_args  # pruned
     assert "--enable-flag1" in new_configure_args  # flag without value
     assert "-NEW-FLAG=no" in new_configure_args  # new flag
     # Update autoreconf_args
     at.update_autoreconf_args({"--force": None})
-    new_autoreconf_args = args_to_string(at.autoreconf_args)
+    new_autoreconf_args = cmd_args_to_string(at.autoreconf_args)
     assert "'--force" not in new_autoreconf_args
     # Add new value to make_args
     at.update_make_args({"--new-complex-flag": "new-value"})
-    new_make_args = args_to_string(at.make_args)
+    new_make_args = cmd_args_to_string(at.make_args)
     assert "--new-complex-flag=new-value" in new_make_args

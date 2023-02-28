@@ -22,8 +22,8 @@ Potential scenarios:
 import os
 import platform
 import re
-import subprocess
 
+from conan.tools.build import cmd_args_to_string
 from conans.errors import ConanException
 
 WINDOWS = "windows"
@@ -31,7 +31,6 @@ MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
 WSL = 'wsl'  # Windows Subsystem for Linux
-SFU = 'sfu'  # Windows Services for UNIX
 
 
 def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="build"):
@@ -66,6 +65,9 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     """ Will wrap a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
 
     subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    if not platform.system() == "Windows":
+        raise ConanException("Command only for Windows operating system")
+
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
     if not shell_path:
         raise ConanException("The config 'tools.microsoft.bash:path' is "
@@ -98,7 +100,6 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     wrapped_user_cmd = environment_wrap_command(env, envfiles_folder, command,
                                                 accepted_extensions=("sh", ))
     wrapped_user_cmd = _escape_windows_cmd(wrapped_user_cmd)
-
     # according to https://www.msys2.org/wiki/Launchers/, it is necessary to use --login shell
     # running without it is discouraged
     final_command = '{} --login -c {}'.format(wrapped_shell, wrapped_user_cmd)
@@ -112,7 +113,7 @@ def _escape_windows_cmd(command):
 
         Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
     """
-    quoted_arg = subprocess.list2cmdline([command])
+    quoted_arg = cmd_args_to_string([command])
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
@@ -126,10 +127,9 @@ def deduce_subsystem(conanfile, scope):
     - unix_path: util for recipes
     """
     if scope.startswith("build"):
-        if hasattr(conanfile, "settings_build"):
-            the_os = conanfile.settings_build.get_safe("os")
-        else:
-            the_os = platform.system()  # FIXME: Temporary fallback until 2.0
+        the_os = conanfile.settings_build.get_safe("os")
+        if the_os is None:
+            raise ConanException("The 'build' profile must have a 'os' declared")
     else:
         the_os = conanfile.settings.get_safe("os")
 
@@ -184,9 +184,6 @@ def subsystem_path(subsystem, path):
             return '/cygdrive' + path.lower()
         elif subsystem == WSL:
             return '/mnt' + path[0:2].lower() + path[2:]
-        elif subsystem == SFU:
-            path = path.lower()
-            return '/dev/fs' + path[0] + path[1:].capitalize()
     else:
         return path if subsystem == WSL else path.lower()
     return None

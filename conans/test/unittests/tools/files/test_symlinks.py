@@ -34,7 +34,7 @@ def folders():
     return tmp, outside_folder
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks Not in Windows")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
 def test_absolute_to_relative_symlinks(folders):
     """If a symlink is absolute but relative to a file or folder that is contained in
     the base folder, we can make it relative"""
@@ -63,7 +63,7 @@ def test_absolute_to_relative_symlinks(folders):
     assert linked_to == outside_folder
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks Not in Windows")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
 def test_remove_external_symlinks(folders):
 
     folder, outside_folder = folders
@@ -95,7 +95,7 @@ def test_remove_external_symlinks(folders):
     assert not os.path.exists(os.path.join(folder, "foo/absolute_outside"))
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks Not in Windows")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
 def test_remove_broken_symlinks(folders):
     folder, outside_folder = folders
     # Remove the external symlinks

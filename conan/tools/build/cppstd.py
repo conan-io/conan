@@ -1,3 +1,5 @@
+import operator
+
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.version import Version
 
@@ -19,30 +21,27 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     :param cppstd: Minimal cppstd version required
     :param gnu_extensions: GNU extension is required (e.g gnu17)
     """
-    if not str(cppstd).isdigit():
-        raise ConanException("cppstd parameter must be a number")
+    _check_cppstd(conanfile, cppstd, operator.lt, gnu_extensions)
 
-    def less_than(lhs, rhs):
-        def extract_cpp_version(_cppstd):
-            return str(_cppstd).replace("gnu", "")
 
-        def add_millennium(_cppstd):
-            return "19%s" % _cppstd if _cppstd == "98" else "20%s" % _cppstd
+def check_max_cppstd(conanfile, cppstd, gnu_extensions=False):
+    """ Check if current cppstd fits the maximum version required.
 
-        lhs = add_millennium(extract_cpp_version(lhs))
-        rhs = add_millennium(extract_cpp_version(rhs))
-        return lhs < rhs
+        In case the current cppstd doesn't fit the maximum version required
+        by cppstd, a ConanInvalidConfiguration exception will be raised.
 
-    current_cppstd = conanfile.settings.get_safe("compiler.cppstd")
-    if current_cppstd is None:
-        raise ConanInvalidConfiguration("The compiler.cppstd is not defined for this configuration")
+        1. If settings.compiler.cppstd, the tool will use settings.compiler.cppstd to compare
+        2. It not settings.compiler.cppstd, the tool will use compiler to compare (reading the
+           default from cppstd_default)
+        3. If not settings.compiler is present (not declared in settings) will raise because it
+           cannot compare.
+        4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
 
-    if gnu_extensions and "gnu" not in current_cppstd:
-        raise ConanInvalidConfiguration("The cppstd GNU extension is required")
-
-    if less_than(current_cppstd, cppstd):
-        raise ConanInvalidConfiguration("Current cppstd ({}) is lower than the required C++ "
-                                        "standard ({}).".format(current_cppstd, cppstd))
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param cppstd: Maximum cppstd version required
+    :param gnu_extensions: GNU extension is required (e.g gnu17)
+    """
+    _check_cppstd(conanfile, cppstd, operator.gt, gnu_extensions)
 
 
 def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -55,6 +54,21 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     """
     try:
         check_min_cppstd(conanfile, cppstd, gnu_extensions)
+    except ConanInvalidConfiguration:
+        return False
+    return True
+
+
+def valid_max_cppstd(conanfile, cppstd, gnu_extensions=False):
+    """ Validate if current cppstd fits the maximum version required.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param cppstd: Maximum cppstd version required
+    :param gnu_extensions: GNU extension is required (e.g gnu17). This option ONLY works on Linux.
+    :return: True, if current cppstd matches the required cppstd version. Otherwise, False.
+    """
+    try:
+        check_max_cppstd(conanfile, cppstd, gnu_extensions)
     except ConanInvalidConfiguration:
         return False
     return True
@@ -74,22 +88,8 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
     compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
     if not compiler or not compiler_version:
         raise ConanException("Called default_cppstd with no compiler or no compiler.version")
-    from conans.client.build.cppstd_flags import _gcc_cppstd_default
-    from conans.client.build.cppstd_flags import _clang_cppstd_default
-    from conans.client.build.cppstd_flags import _visual_cppstd_default
-    from conans.client.build.cppstd_flags import _mcst_lcc_cppstd_default
-    def _msvc_cppstd_default(compiler_version):
-        if Version(compiler_version) >= "190":  # VS 2015 update 3 only
-            return "14"
-        return None
-    default = {"gcc": _gcc_cppstd_default(compiler_version),
-               "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",
-               # Confirmed in apple-clang 9.1 with a simple "auto i=1;"; 14.0 still the same
-               "Visual Studio": _visual_cppstd_default(compiler_version),
-               "msvc": _msvc_cppstd_default(compiler_version),
-               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
-    return default
+    from conans.client.conf.detect import _cppstd_default
+    return _cppstd_default(compiler, Version(compiler_version))
 
 
 def supported_cppstd(conanfile, compiler=None, compiler_version=None):
@@ -116,6 +116,51 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     if func:
         return func(Version(compiler_version))
     return None
+
+
+def _check_cppstd(conanfile, cppstd, comparator, gnu_extensions):
+    """ Check if current cppstd fits the version required according to a given comparator.
+
+        In case the current cppstd doesn't fit the maximum version required
+        by cppstd, a ConanInvalidConfiguration exception will be raised.
+
+        1. If settings.compiler.cppstd, the tool will use settings.compiler.cppstd to compare
+        2. It not settings.compiler.cppstd, the tool will use compiler to compare (reading the
+           default from cppstd_default)
+        3. If not settings.compiler is present (not declared in settings) will raise because it
+           cannot compare.
+        4. If can not detect the default cppstd for settings.compiler, a exception will be raised.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param cppstd: Required cppstd version.
+    :param comparator: Operator to use to compare the detected and the required cppstd versions.
+    :param gnu_extensions: GNU extension is required (e.g gnu17)
+    """
+    if not str(cppstd).isdigit():
+        raise ConanException("cppstd parameter must be a number")
+
+    def compare(lhs, rhs, comp):
+        def extract_cpp_version(_cppstd):
+            return str(_cppstd).replace("gnu", "")
+
+        def add_millennium(_cppstd):
+            return "19%s" % _cppstd if _cppstd == "98" else "20%s" % _cppstd
+
+        lhs = add_millennium(extract_cpp_version(lhs))
+        rhs = add_millennium(extract_cpp_version(rhs))
+        return not comp(lhs, rhs)
+
+    current_cppstd = conanfile.settings.get_safe("compiler.cppstd")
+    if current_cppstd is None:
+        raise ConanInvalidConfiguration("The compiler.cppstd is not defined for this configuration")
+
+    if gnu_extensions and "gnu" not in current_cppstd:
+        raise ConanInvalidConfiguration("The cppstd GNU extension is required")
+
+    if not compare(current_cppstd, cppstd, comparator):
+        raise ConanInvalidConfiguration(
+            "Current cppstd ({}) is {} than the required C++ standard ({}).".format(
+                current_cppstd, "higher" if comparator == operator.gt else "lower", cppstd))
 
 
 def _apple_clang_supported_cppstd(version):

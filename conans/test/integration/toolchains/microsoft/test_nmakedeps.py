@@ -32,7 +32,8 @@ def test_nmakedeps():
     """)
     client.save({"conanfile.py": conanfile})
     client.run("create . -s arch=x86_64")
-    client.run("install test-nmakedeps/1.0@ -g NMakeDeps -s build_type=Release -s arch=x86_64")
+    client.run("install --requires=test-nmakedeps/1.0"
+               " -g NMakeDeps -s build_type=Release -s arch=x86_64")
     # Checking that NMakeDeps builds correctly .bat file
     bat_file = client.load("conannmakedeps.bat")
     # Checking that defines are added to CL

@@ -1,16 +1,14 @@
-# coding=utf-8
-
 import os
 import unittest
 from collections import namedtuple, Counter
 
-import six
 from requests.exceptions import HTTPError
 
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException
+from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.tools import redirect_output
 from conans.util.files import save
 
 
@@ -44,9 +42,11 @@ class _RequesterMock:
 
 
 class _ConfigMock:
-    def __init__(self):
-        self.retry = 0
-        self.retry_wait = 0
+    def __getitem__(self, item):
+        return 0
+
+    def get(self, conf_name, default=None, check_type=None):
+        return 0
 
 
 class RetryDownloadTests(unittest.TestCase):
@@ -56,39 +56,42 @@ class RetryDownloadTests(unittest.TestCase):
         save(self.filename, "anything")
 
     def test_error_401(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(401, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "content"):
-            uploader.upload(url="fake", abs_path=self.filename, retry=2)
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 0)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            uploader = FileUploader(requester=_RequesterMock(401, "content"),
+                                    verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(AuthenticationException, "content"):
+                uploader.upload(url="fake", abs_path=self.filename, retry=2)
+            output_lines = output.getvalue().splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: content"], 0)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_403_forbidden(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(403, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, ForbiddenException, "content"):
-            auth = namedtuple("auth", "token")
-            uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 0)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            uploader = FileUploader(requester=_RequesterMock(403, "content"),
+                                    verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(ForbiddenException, "content"):
+                auth = namedtuple("auth", "token")
+                uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
+            output_lines = output.getvalue().splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: content"], 0)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_403_authentication(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(403, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "content"):
-            auth = namedtuple("auth", "token")
-            uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: content"], 0)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            uploader = FileUploader(requester=_RequesterMock(403, "content"),
+                                    verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(AuthenticationException, "content"):
+                auth = namedtuple("auth", "token")
+                uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
+            output_lines = output.getvalue().splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: content"], 0)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 0)
 
     def test_error_requests(self):
         class _RequesterMock:
@@ -96,23 +99,24 @@ class RetryDownloadTests(unittest.TestCase):
             def put(self, *args, **kwargs):
                 raise Exception("any exception")
 
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(), output=output,
-                                verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, Exception, "any exception"):
-            uploader.upload(url="fake", abs_path=self.filename, retry=2)
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: any exception"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            uploader = FileUploader(requester=_RequesterMock(), verify=False, config=_ConfigMock())
+            with self.assertRaisesRegex(Exception, "any exception"):
+                uploader.upload(url="fake", abs_path=self.filename, retry=2)
+            output_lines = output.getvalue().splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: any exception"], 2)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
 
     def test_error_500(self):
-        output = TestBufferConanOutput()
-        uploader = FileUploader(requester=_RequesterMock(500, "content"), output=output,
-                                verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, Exception, "500 Server Error: content"):
-            uploader.upload(url="fake", abs_path=self.filename, retry=2)
-        output_lines = str(output).splitlines()
-        counter = Counter(output_lines)
-        self.assertEqual(counter["ERROR: 500 Server Error: content"], 2)
-        self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            uploader = FileUploader(requester=_RequesterMock(500, "content"), verify=False,
+                                    config=_ConfigMock())
+            with self.assertRaisesRegex(Exception, "500 Server Error: content"):
+                uploader.upload(url="fake", abs_path=self.filename, retry=2)
+            output_lines = output.getvalue().splitlines()
+            counter = Counter(output_lines)
+            self.assertEqual(counter["ERROR: 500 Server Error: content"], 2)
+            self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)

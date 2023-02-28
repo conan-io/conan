@@ -1,18 +1,29 @@
 import os
 import re
 
-from conan.tools.build import build_jobs
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import build_jobs, cmd_args_to_string, load_toolchain_args
 from conans.client.subsystems import subsystem_path, deduce_subsystem
-from conans.client.build import join_arguments
-from conans.tools import args_to_string
 from conan.tools.files import chdir
 from conan.tools.microsoft import unix_path
+
+
+def join_arguments(args):
+    return " ".join(filter(None, args))
 
 
 class Autotools(object):
 
     def __init__(self, conanfile, namespace=None):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param namespace: this argument avoids collisions when you have multiple toolchain calls in
+                          the same recipe. By setting this argument, the *conanbuild.conf* file used
+                          to pass information to the toolchain will be named as:
+                          *<namespace>_conanbuild.conf*. The default value is ``None`` meaning that
+                          the name of the generated file is *conanbuild.conf*. This namespace must
+                          be also set with the same value in the constructor of the AutotoolsToolchain
+                          so that it reads the information from the proper file.
+        """
         self._conanfile = conanfile
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
@@ -24,16 +35,21 @@ class Autotools(object):
 
     def configure(self, build_script_folder=None, args=None):
         """
-        http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
-        https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+        Call the configure script.
+
+        :param args: List of arguments to use for the ``configure`` call.
+        :param build_script_folder: Subfolder where the `configure` script is located. If not specified
+                                    conanfile.source_folder is used.
         """
+        # http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
+        # https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         script_folder = os.path.join(self._conanfile.source_folder, build_script_folder) \
             if build_script_folder else self._conanfile.source_folder
 
         configure_args = []
         configure_args.extend(args or [])
 
-        self._configure_args = "{} {}".format(self._configure_args, args_to_string(configure_args))
+        self._configure_args = "{} {}".format(self._configure_args, cmd_args_to_string(configure_args))
 
         configure_cmd = "{}/configure".format(script_folder)
         subsystem = deduce_subsystem(self._conanfile, scope="build")
@@ -43,6 +59,15 @@ class Autotools(object):
         self._conanfile.run(cmd)
 
     def make(self, target=None, args=None):
+        """
+        Call the make program.
+
+        :param target: (Optional, Defaulted to ``None``): Choose which target to build. This allows
+                       building of e.g., docs, shared libraries or install for some AutoTools
+                       projects
+        :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
+                     ``make`` call.
+        """
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw()
                                                 else "make")
@@ -58,6 +83,15 @@ class Autotools(object):
         self._conanfile.run(command)
 
     def install(self, args=None, target="install"):
+        """
+        This is just an "alias" of ``self.make(target="install")``
+
+        :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
+                     ``make`` call. By default an argument ``DESTDIR=unix_path(self.package_folder)``
+                     is added to the call if the passed value is ``None``. See more information about
+                     :ref:`tools.microsoft.unix_path() function<conan_tools_microsoft_unix_path>`
+        :param target: (Optional, Defaulted to ``None``): Choose which target to install.
+        """
         args = args if args else []
         str_args = " ".join(args)
         if "DESTDIR=" not in str_args:
@@ -65,16 +99,19 @@ class Autotools(object):
         self.make(target=target, args=args)
 
     def autoreconf(self, args=None):
+        """
+        Call ``autoreconf``
+
+        :param args: (Optional, Defaulted to ``None``): List of arguments to use for the
+                     ``autoreconf`` call.
+        """
         args = args or []
-        command = join_arguments(["autoreconf", self._autoreconf_args, args_to_string(args)])
+        command = join_arguments(["autoreconf", self._autoreconf_args, cmd_args_to_string(args)])
         with chdir(self, self._conanfile.source_folder):
             self._conanfile.run(command)
 
     def _use_win_mingw(self):
-        if hasattr(self._conanfile, 'settings_build'):
-            os_build = self._conanfile.settings_build.get_safe('os')
-        else:
-            os_build = self._conanfile.settings.get_safe("os")
+        os_build = self._conanfile.settings_build.get_safe('os')
 
         if os_build == "Windows":
             compiler = self._conanfile.settings.get_safe("compiler")

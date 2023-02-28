@@ -8,7 +8,8 @@ from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.xfail(reason="NewCppInfo: xfail until it adds default folders for the components")
+@pytest.mark.tool("cmake")
 def test_file_api():
     """
     simple library providing 3 targets:
@@ -24,9 +25,9 @@ def test_file_api():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeFileAPI
-        from conan.tools.files import CppPackage
+        from conan.tools.files import CppPackage, copy
 
         class Triunfo(ConanFile):
             name = "triunfo"
@@ -48,7 +49,7 @@ def test_file_api():
             def package(self):
                 cmake = CMake(self)
                 cmake.install()
-                self.copy(CppPackage.DEFAULT_FILENAME)
+                copy(self, CppPackage.DEFAULT_FILENAME, self.build_folder, self.package_folder)
 
             def package_info(self):
                 cpp_package = CppPackage.load(CppPackage.DEFAULT_FILENAME)
@@ -91,7 +92,7 @@ def test_file_api():
     client.run("create .")
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, CMakeFileAPI
         from conan.tools.files import CppPackage
 

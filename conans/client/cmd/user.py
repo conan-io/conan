@@ -16,17 +16,12 @@ def users_list(localdb, remotes):
     return remotes_info
 
 
-def token_present(localdb, remote, user):
-    current_user, token, _ = localdb.get_login(remote.url)
-    return token is not None and (user is None or user == current_user)
-
-
-def users_clean(localdb):
-    localdb.clean()
+def users_clean(localdb, remote_url=None):
+    localdb.clean(remote_url=remote_url)
 
 
 def user_set(localdb, user, remote_name=None):
-    if user.lower() == "none":
+    if user == "":
         user = None
     return update_localdb(localdb, user, token=None, refresh_token=None, remote=remote_name)
 

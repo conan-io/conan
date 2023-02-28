@@ -1,10 +1,7 @@
 import unittest
 
-import six
-
 import conan.tools.qbs.qbs as qbs
 
-from conans.client import tools
 from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings
 from conans.test.utils.test_files import temp_folder
@@ -53,7 +50,6 @@ class QbsTest(unittest.TestCase):
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         conanfile.folders.set_base_source('.')
         build_helper = qbs.Qbs(conanfile)
-        self.assertEqual(build_helper.jobs, tools.cpu_count())
         self.assertEqual(build_helper._project_file, conanfile.source_folder)
 
     def test_construct_build_helper_with_project_file(self):
@@ -125,7 +121,6 @@ class QbsTest(unittest.TestCase):
                 conanfile.build_folder, build_helper._project_file,
                 build_helper.jobs, build_helper.profile))
 
-    @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
     def test_build_with_custom_configuration(self):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),

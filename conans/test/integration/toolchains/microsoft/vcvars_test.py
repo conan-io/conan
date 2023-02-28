@@ -14,7 +14,7 @@ def test_vcvars_generator(scope):
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.microsoft import VCVars
 
         class TestConan(ConanFile):
@@ -30,11 +30,9 @@ def test_vcvars_generator(scope):
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
+    bat_contents = client.load("conanbuild.bat")
     if scope in ("build", None):
-        bat_contents = client.load("conanbuild.bat")
         assert "conanvcvars.bat" in bat_contents
-    else:
-        assert not os.path.exists(os.path.join(client.current_folder, "conanbuild.bat"))
 
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
@@ -59,7 +57,7 @@ def test_vcvars_generator_string():
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             generators = "VCVars"
             settings = "os", "compiler", "arch", "build_type"
@@ -77,7 +75,7 @@ def test_vcvars_2015_error():
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             generators = "VCVars"
             settings = "os", "compiler", "arch", "build_type"
@@ -97,7 +95,7 @@ def test_vcvars_platform_x86():
     client = TestClient(path_with_spaces=False)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class TestConan(ConanFile):
             generators = "VCVars"
             settings = "os", "compiler", "arch", "build_type"

@@ -30,26 +30,27 @@ def test_editable_envvars():
                                               .with_requires("dep/1.0")
                                               .with_generator("VirtualBuildEnv")
                                               .with_generator("VirtualRunEnv")})
-    c.run("editable add dep dep/1.0")
+    c.run("editable add dep  --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     build_path = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
-    buildenv = c.load("conanbuildenv.sh")
+    buildenv = c.load("pkg/conanbuildenv.sh")
     assert f'export MYBUILDPATH="{build_path}"' in buildenv
+
+    runenv = c.load("pkg/conanrunenv.sh")
     # The package_info() buildenv is aggregated, no prob
     # But don't use same vars
     assert 'export OTHERVAR="randomvalue"' in buildenv
-    runenv = c.load("conanrunenv.sh")
     run_path = os.path.join(c.current_folder, "dep", "mysource", "mylocalsrc")
     assert f'export MYRUNPATH="$MYRUNPATH:{run_path}"' in runenv
 
-    c.run("editable remove dep/1.0")
+    c.run("editable remove dep")
     c.run("create dep")
     c.run("install pkg -s os=Linux -s:b os=Linux")
-    buildenv = c.load("conanbuildenv.sh")
+    buildenv = c.load("pkg/conanbuildenv.sh")
     assert 'mypkgbuild' in buildenv
     assert "mylocalbuild" not in buildenv
     assert 'export OTHERVAR="randomvalue"' in buildenv
-    runenv = c.load("conanrunenv.sh")
+    runenv = c.load("pkg/conanrunenv.sh")
     assert 'mypkgsrc' in runenv
     assert "mylocalsrc" not in runenv
 
@@ -63,10 +64,10 @@ def test_editable_conf():
             def layout(self):
                 self.folders.source = "mysource"
                 self.folders.build = "mybuild"
-                self.layouts.source.conf_info.append_path("myconf", "mylocalsrc")
-                self.layouts.build.conf_info.append_path("myconf", "mylocalbuild")
-                self.layouts.build.conf_info.update_path("mydictconf", {"a": "mypatha", "b": "mypathb"})
-                self.layouts.build.conf_info.define_path("mydictconf2", {"c": "mypathc"})
+                self.layouts.source.conf_info.append_path("user.myconf", "mylocalsrc")
+                self.layouts.build.conf_info.append_path("user.myconf", "mylocalbuild")
+                self.layouts.build.conf_info.update_path("user.mydictconf", {"a": "mypatha", "b": "mypathb"})
+                self.layouts.build.conf_info.define_path("user.mydictconf2", {"c": "mypathc"})
         """)
 
     pkg = textwrap.dedent("""
@@ -74,16 +75,16 @@ def test_editable_conf():
         class Pkg(ConanFile):
             requires = "dep/1.0"
             def generate(self):
-                conf = self.dependencies["dep"].conf_info.get("myconf")
+                conf = self.dependencies["dep"].conf_info.get("user.myconf")
                 self.output.info(f"CONF: {conf}")
-                dictconf = self.dependencies["dep"].conf_info.get("mydictconf", check_type=dict)
+                dictconf = self.dependencies["dep"].conf_info.get("user.mydictconf", check_type=dict)
                 self.output.info(f"CONFDICT: {dictconf}")
-                dictconf2 = self.dependencies["dep"].conf_info.get("mydictconf2", check_type=dict)
+                dictconf2 = self.dependencies["dep"].conf_info.get("user.mydictconf2", check_type=dict)
                 self.output.info(f"CONFDICT: {dictconf2}")
         """)
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
-    c.run("editable add dep dep/1.0")
+    c.run("editable add dep --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     out = str(c.out).replace("\\\\", "\\")
     conf_source = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")

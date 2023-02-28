@@ -1,4 +1,5 @@
-from conans.model.new_build_info import NewCppInfo
+from conan.internal import check_duplicated_generator
+from conans.model.build_info import CppInfo
 from conans.util.files import save
 
 PREMAKE_FILE = "conandeps.premake.lua"
@@ -41,13 +42,14 @@ class PremakeDeps(object):
         self._conanfile = conanfile
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo()
         for dep in self._conanfile.dependencies.host.values():
             dep_cppinfo = dep.cpp_info.copy()
             dep_cppinfo.set_relative_base_folder(dep.package_folder)

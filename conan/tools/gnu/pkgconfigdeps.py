@@ -4,18 +4,24 @@ from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
 
+from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.errors import ConanException
+from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
 
 def _get_name_with_namespace(namespace, name):
-    """Build a name with a namespace, e.g., openssl-crypto"""
+    """
+    Build a name with a namespace, e.g., openssl-crypto
+    """
     return f"{namespace}-{name}"
 
 
 def _get_package_reference_name(dep):
-    """Get the reference name for the given package"""
+    """
+    Get the reference name for the given package
+    """
     return dep.ref.name
 
 
@@ -207,6 +213,7 @@ class _PCGenerator:
         self._build_context_suffix = build_context_suffix or {}
         self._dep = dep
         self._content_generator = _PCContentGenerator(self._conanfile, self._dep)
+        self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
 
     def _get_cpp_info_requires_names(self, cpp_info):
         """
@@ -221,13 +228,8 @@ class _PCGenerator:
 
             def package_info(self):
                 self.cpp_info.requires = ["other::cmp1"]
-        ```
-        Or:
 
-        ```python
-        from conan import ConanFile
-        class PkgConfigConan(ConanFile):
-            requires = "other/1.0"
+            # Or:
 
             def package_info(self):
                 self.cpp_info.components["cmp"].requires = ["other::cmp1"]
@@ -239,7 +241,10 @@ class _PCGenerator:
             pkg_ref_name, comp_ref_name = req.split("::") if "::" in req else (dep_ref_name, req)
             # For instance, dep == "hello/1.0" and req == "other::cmp1" -> hello != other
             if dep_ref_name != pkg_ref_name:
-                req_conanfile = self._dep.dependencies.host[pkg_ref_name]
+                try:
+                    req_conanfile = self._transitive_reqs[pkg_ref_name]
+                except KeyError:
+                    continue  # If the dependency is not in the transitive, might be skipped
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = _get_component_name(req_conanfile, comp_ref_name, self._build_context_suffix)
@@ -291,7 +296,7 @@ class _PCGenerator:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
             requires = [_get_package_name(req, self._build_context_suffix)
-                        for req in self._dep.dependencies.direct_host.values()]
+                        for req in self._transitive_reqs.values()]
         description = "Conan package: %s" % pkg_name
         aliases = _get_package_aliases(self._dep)
         cpp_info = self._dep.cpp_info
@@ -383,7 +388,9 @@ class PkgConfigDeps:
 
     @property
     def content(self):
-        """Get all the *.pc files content"""
+        """
+        Get all the .pc files content
+        """
         pc_files = {}
         # Get all the dependencies
         host_req = self._conanfile.dependencies.host
@@ -405,14 +412,10 @@ class PkgConfigDeps:
         return pc_files
 
     def generate(self):
-        """Save all the *.pc files"""
-        # FIXME: Remove this in 2.0
-        if not hasattr(self._conanfile, "settings_build") and \
-                      (self.build_context_activated or self.build_context_suffix):
-            raise ConanException("The 'build_context_activated' and 'build_context_build_modules' of"
-                                 " the PkgConfigDeps generator cannot be used without specifying"
-                                 " a build profile. e.g: -pr:b=default")
-
+        """
+        Save all the `*.pc` files
+        """
+        check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():

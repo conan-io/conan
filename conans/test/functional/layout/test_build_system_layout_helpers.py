@@ -3,9 +3,8 @@ import platform
 import textwrap
 
 import pytest
-import six
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load
@@ -13,21 +12,21 @@ from conans.util.files import save, load
 
 @pytest.fixture
 def conanfile():
-    conanfile = str(GenConanfile().with_import("from conans import tools")
+    conanfile = str(GenConanfile()
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
-                    .with_import("from conan.tools.layout import {ly}")
-                    .with_import("from conan.tools.files import AutoPackager"))
+                    .with_import("from conan.tools.microsoft import vs_layout")
+                    .with_import("from conan.tools.files import AutoPackager, save"))
 
     conanfile += """
     def source(self):
-        tools.save("include/myheader.h", "")
+        save(self, "include/myheader.h", "")
 
     def build(self):
-        tools.save("{libpath}/mylib.lib", "")
+        save(self, "{libpath}/mylib.lib", "")
 
     def layout(self):
-        {ly}(self)
+        vs_layout(self)
 
     def package(self):
         AutoPackager(self).run()
@@ -46,13 +45,13 @@ def test_layout_in_cache(conanfile, build_type, arch):
     """
     client = TurboTestClient()
 
-    ref = ConanFileReference.loads("lib/1.0")
     libarch = subfolders_arch.get(arch)
     libpath = "{}{}".format(libarch + "/" if libarch else "", build_type)
+    ref = RecipeReference.loads("lib/1.0")
     pref = client.create(ref, args="-s arch={} -s build_type={}".format(arch, build_type),
-                         conanfile=conanfile.format(ly="vs_layout", libpath=libpath))
-    bf = client.cache.package_layout(pref.ref).build(pref)
-    pf = client.cache.package_layout(pref.ref).package(pref)
+                         conanfile=conanfile.format(libpath=libpath))
+    bf = client.cache.pkg_layout(pref).build()
+    pf = client.cache.pkg_layout(pref).package()
 
     # Check the build folder
     assert os.path.exists(os.path.join(os.path.join(bf, libpath), "mylib.lib"))
@@ -71,26 +70,22 @@ def test_layout_with_local_methods(conanfile, build_type, arch):
     client = TestClient()
     libarch = subfolders_arch.get(arch)
     libpath = "{}{}".format(libarch + "/" if libarch else "", build_type)
-    client.save({"conanfile.py": conanfile.format(ly="vs_layout", libpath=libpath)})
-    client.run("install . lib/1.0@ -s build_type={} -s arch={}".format(build_type, arch))
+    client.save({"conanfile.py": conanfile.format(libpath=libpath)})
+    client.run("install . --name=lib --version=1.0 -s build_type={} -s arch={}".format(build_type, arch))
     client.run("source .")
     # Check the source folder (release)
     assert os.path.exists(os.path.join(client.current_folder, "include", "myheader.h"))
-    client.run("build .")
+    client.run("build . --name=lib --version=1.0 -s build_type={} -s arch={}".format(build_type,
+                                                                                     arch))
     # Check the build folder (release)
     assert os.path.exists(os.path.join(os.path.join(client.current_folder, libpath), "mylib.lib"))
-
-    # Check the package
-    client.run("package .", assert_error=True)
-    assert "The usage of the 'conan package' local method is disabled when using layout()" \
-           "" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Removing msvc compiler")
 def test_error_no_msvc():
     # https://github.com/conan-io/conan/issues/9953
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import cmake_layout
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -111,14 +106,16 @@ def test_error_no_msvc():
     client.save({"conanfile.py": conanfile})
     save(client.cache.settings_path, settings_yml)
     client.run('install . -s os=Windows -s build_type=Release -s arch=x86_64 '
-               '-s compiler=gcc -s compiler.version=8')
+               '-s compiler=gcc -s compiler.version=8 '
+               '-s:b os=Windows -s:b build_type=Release -s:b arch=x86_64 '
+               '-s:b compiler=gcc -s:b compiler.version=8')
     assert "Installing" in client.out
 
 
 def test_error_no_build_type():
     # https://github.com/conan-io/conan/issues/9953
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import cmake_layout
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch"
@@ -132,11 +129,10 @@ def test_error_no_build_type():
     assert " 'build_type' setting not defined, it is necessary for cmake_layout()" in client.out
 
 
-@pytest.mark.skipif(six.PY2, reason="only Py3")
 def test_cmake_layout_external_sources():
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import cmake_layout
         from conan.tools.files import save, copy, load
         class Pkg(ConanFile):
@@ -163,11 +159,11 @@ def test_cmake_layout_external_sources():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder,
                                        "build", "Release", "generators", "generate.txt"))
     client.run("source .")
@@ -175,16 +171,15 @@ def test_cmake_layout_external_sources():
     client.run("build .")
     contents = load(os.path.join(client.current_folder, "build", "Release", "build.txt"))
     assert contents == "fooexported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
-@pytest.mark.skipif(six.PY2, reason="only Py3")
 @pytest.mark.parametrize("with_build_type", [True, False])
 def test_basic_layout_external_sources(with_build_type):
     conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.layout import basic_layout
             from conan.tools.files import save, load, copy
             class Pkg(ConanFile):
@@ -214,28 +209,27 @@ def test_basic_layout_external_sources(with_build_type):
         conanfile = conanfile.format("")
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
     build_folder = "build-release" if with_build_type else "build"
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
     client.run("source .")
     assert os.path.exists(os.path.join(client.current_folder, "src", "source.txt"))
     client.run("build .")
     contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
     assert contents == "fooexported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 
-@pytest.mark.skipif(six.PY2, reason="only Py3")
 @pytest.mark.parametrize("with_build_type", [True, False])
 def test_basic_layout_no_external_sources(with_build_type):
     conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.layout import basic_layout
             from conan.tools.files import save, load, copy
             class Pkg(ConanFile):
@@ -263,11 +257,11 @@ def test_basic_layout_no_external_sources(with_build_type):
 
     client = TestClient()
     client.save({"conanfile.py": conanfile, "exported.txt": "exported_contents"})
-    client.run("create . foo/1.0@ -s os=Linux")
+    client.run("create . --name=foo --version=1.0 -s os=Linux")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
     # Local flow
-    client.run("install . foo/1.0 -s os=Linux")
+    client.run("install . --name=foo --version=1.0 -s os=Linux")
 
     build_folder = "build-release" if with_build_type else "build"
     assert os.path.exists(os.path.join(client.current_folder, build_folder, "conan", "generate.txt"))
@@ -275,7 +269,7 @@ def test_basic_layout_no_external_sources(with_build_type):
     client.run("build .")
     contents = load(os.path.join(client.current_folder, build_folder, "build.txt"))
     assert contents == "exported_contents"
-    client.run("export-pkg . foo/1.0@ --force")
+    client.run("export-pkg . --name=foo --version=1.0")
     assert "Packaged 1 '.txt' file: build.txt" in client.out
 
 

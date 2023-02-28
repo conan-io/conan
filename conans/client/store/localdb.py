@@ -8,12 +8,14 @@ from conans.util import encrypt
 
 REMOTES_USER_TABLE = "users_remotes"
 
+_localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
+
 
 class LocalDB(object):
 
-    def __init__(self, dbfile, encryption_key):
+    def __init__(self, dbfile):
         self.dbfile = dbfile
-        self.encryption_key = encryption_key
+        self.encryption_key = _localdb_encryption_key
 
     def _encode(self, value):
         if value and self.encryption_key:
@@ -25,11 +27,14 @@ class LocalDB(object):
             return encrypt.decode(value, self.encryption_key)
         return value
 
-    def clean(self):
+    def clean(self, remote_url=None):
         with self._connect() as connection:
             try:
                 cursor = connection.cursor()
-                cursor.execute("DELETE FROM %s" % REMOTES_USER_TABLE)
+                query = "DELETE FROM %s" % REMOTES_USER_TABLE
+                if remote_url:
+                    query += ' WHERE remote_url="{}"'.format(remote_url)
+                cursor.execute(query)
                 try:
                     # https://github.com/ghaering/pysqlite/issues/109
                     connection.isolation_level = None
@@ -40,7 +45,7 @@ class LocalDB(object):
                 raise ConanException("Could not initialize local sqlite database", e)
 
     @staticmethod
-    def create(dbfile, encryption_key=None):
+    def create(dbfile):
         # Create the database file if it doesn't exist
         if not os.path.exists(dbfile):
             par = os.path.dirname(dbfile)
@@ -49,7 +54,7 @@ class LocalDB(object):
             db = open(dbfile, 'w+')
             db.close()
 
-        db = LocalDB(dbfile, encryption_key=encryption_key)
+        db = LocalDB(dbfile)
         with db._connect() as connection:
             try:
                 cursor = connection.cursor()

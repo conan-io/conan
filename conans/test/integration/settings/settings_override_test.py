@@ -2,8 +2,7 @@ import os
 
 import pytest
 
-from conans.client import tools
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -13,65 +12,116 @@ from conans.util.files import load
 @pytest.fixture()
 def client():
     client = TestClient()
-    conanfile = GenConanfile("MinGWBuild", "0.1").with_settings("compiler")
+    conanfile = GenConanfile("mingw", "0.1").with_settings("compiler")
     build_msg = """
     def build(self):
-        self.output.warn("COMPILER=> %s %s" % (self.name, str(self.settings.compiler)))
+        self.output.warning("COMPILER=> %s %s" % (self.name, str(self.settings.compiler)))
     """
     client.save({"conanfile.py": str(conanfile) + build_msg})
-    client.run("export . lasote/testing")
-    conanfile = GenConanfile("VisualBuild", "0.1").with_requires("MinGWBuild/0.1@lasote/testing")
+    client.run("export . --user=lasote --channel=testing")
+    conanfile = GenConanfile("visual", "0.1").with_requires("mingw/0.1@lasote/testing")
     conanfile.with_settings("compiler")
     client.save({"conanfile.py": str(conanfile) + build_msg})
-    client.run("export . lasote/testing")
+    client.run("export . --user=lasote --channel=testing")
     return client
 
 
 def test_override(client):
-    client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
-               "-s compiler.version=14 -s compiler.runtime=MD "
-               "-s MinGWBuild:compiler='gcc' -s MinGWBuild:compiler.libcxx='libstdc++' "
-               "-s MinGWBuild:compiler.version=4.8")
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler=msvc "
+               "-s compiler.version=191 -s compiler.runtime=dynamic "
+               "-s mingw*:compiler='gcc' -s mingw*:compiler.libcxx='libstdc++' "
+               "-s mingw*:compiler.version=4.8")
 
-    assert "COMPILER=> MinGWBuild gcc" in client.out
-    assert "COMPILER=> VisualBuild Visual Studio" in client.out
+    assert "COMPILER=> mingw gcc" in client.out
+    assert "COMPILER=> visual msvc" in client.out
 
     # CHECK CONANINFO FILE
-    packs_dir = client.cache.package_layout(
-        ConanFileReference.loads("MinGWBuild/0.1@lasote/testing")).packages()
-    pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
-    conaninfo = load(os.path.join(pack_dir, CONANINFO))
+    latest_rrev = client.cache.get_latest_recipe_reference(
+        RecipeReference.loads("mingw/0.1@lasote/testing"))
+    pkg_ids = client.cache.get_package_references(latest_rrev)
+    latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
+    package_path = client.cache.pkg_layout(latest_prev).package()
+    conaninfo = load(os.path.join(package_path, CONANINFO))
     assert "compiler=gcc" in conaninfo
 
     # CHECK CONANINFO FILE
-    packs_dir = client.cache.package_layout(
-        ConanFileReference.loads("VisualBuild/0.1@lasote/testing")).packages()
-    pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
-    conaninfo = load(os.path.join(pack_dir, CONANINFO))
-    assert "compiler=Visual Studio" in conaninfo
-    assert "compiler.version=14" in conaninfo
+    latest_rrev = client.cache.get_latest_recipe_reference(
+        RecipeReference.loads("visual/0.1@lasote/testing"))
+    pkg_ids = client.cache.get_package_references(latest_rrev)
+    latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
+    package_path = client.cache.pkg_layout(latest_prev).package()
+    conaninfo = load(os.path.join(package_path, CONANINFO))
+    assert "compiler=msvc" in conaninfo
+    assert "compiler.version=191" in conaninfo
 
 
 def test_non_existing_setting(client):
-    client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
-               "-s compiler.version=14 -s compiler.runtime=MD "
-               "-s MinGWBuild:missingsetting='gcc' ", assert_error=True)
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler=msvc "
+               "-s compiler.version=191 -s compiler.runtime=dynamic "
+               "-s mingw/*:missingsetting='gcc' ", assert_error=True)
     assert "settings.missingsetting' doesn't exist" in client.out
 
 
 def test_override_in_non_existing_recipe(client):
-    client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
-               "-s compiler.version=14 -s compiler.runtime=MD "
+    client.run("install --requires=visual/0.1@lasote/testing --build missing -s compiler=msvc "
+               "-s compiler.version=191 -s compiler.runtime=dynamic "
                "-s MISSINGID:compiler='gcc' ")
 
-    assert "COMPILER=> MinGWBuild Visual Studio" in client.out
-    assert "COMPILER=> VisualBuild Visual Studio" in client.out
+    assert "COMPILER=> mingw msvc" in client.out
+    assert "COMPILER=> visual msvc" in client.out
 
 
-def test_override_setting_with_env_variables(client):
-    with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio",
-                                   "CONAN_ENV_COMPILER_VERSION": "14",
-                                   "CONAN_ENV_COMPILER_RUNTIME": "MD"}):
-        client.run("install VisualBuild/0.1@lasote/testing --build missing")
+def test_exclude_patterns_settings():
 
-    assert "COMPILER=> MinGWBuild Visual Studio" in client.out
+    client = TestClient()
+    gen = GenConanfile().with_settings("build_type")
+    client.save({"zlib/conanfile.py": gen})
+    client.save({"openssl/conanfile.py": gen.with_require("zlib/1.0")})
+    client.save({"consumer/conanfile.py": gen.with_require("openssl/1.0")})
+    client.run("create zlib --name zlib --version 1.0")
+    client.run("create openssl --name openssl --version 1.0")
+
+    # We miss openss and zlib debug packages
+    client.run("install consumer -s build_type=Debug", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'openssl/1.0', 'zlib/1.0'" in client.out
+
+    # All except zlib are Release, the only missing is zlib debug
+    client.run("install consumer -s build_type=Debug "
+               "                 -s !zlib*:build_type=Release", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'zlib/1.0'"
+
+    # All the packages matches !potato* so all are Release
+    client.run("install consumer -s build_type=Debug -s !potato*:build_type=Release")
+
+    # All the packages except the consumer are Release, but we are creating consumer in Debug
+    client.run("create consumer --name=consumer --version=1.0 "
+               "-s=build_type=Debug -s=!&:build_type=Release")
+
+    client.run("install --requires consumer/1.0 -s consumer/*:build_type=Debug")
+
+    # Priority between package scoped settings
+    client.run('remove consumer/*#* -p="build_type=Debug" -c')
+    client.run("install --reference consumer/1.0 -s build_type=Debug", assert_error=True)
+    # Pre-check, there is no Debug package for any of them
+    assert "ERROR: Missing prebuilt package for 'consumer/1.0', 'openssl/1.0', 'zlib/1.0'"
+    # Pre-check there are Release packages
+    client.run("create consumer --name=consumer --version=1.0 -s build_type=Release")
+
+    # Try to install with this two scoped conditions, This is OK the right side has priority
+    client.run("install --requires consumer/1.0 -s zlib/*:build_type=Debug -s *:build_type=Release")
+
+    # Try to install with this two scoped conditions, This is ERROR the right side has priority
+    client.run("install --requires consumer/1.0 -s *:build_type=Release -s zlib/*:build_type=Debug",
+               assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'zlib/1.0'" in client.out
+
+    # Try to install with this two scoped conditions, This is OK again, the right side has priority
+    # The z* points to Release later, so zlib in Release
+    client.run("install --requires consumer/1.0 -s *:build_type=Release "
+               "-s zlib/*:build_type=Debug -s z*:build_type=Release")
+
+    # Try to install with this two scoped conditions, This is OK again, the right side has priority
+    # No package is potato, so all packages in Release
+    client.run("install --requires consumer/1.0 -s !zlib:build_type=Debug "
+               "-s !potato:build_type=Release")
+

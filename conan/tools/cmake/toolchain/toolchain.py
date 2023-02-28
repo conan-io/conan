@@ -2,11 +2,11 @@ import os
 import textwrap
 from collections import OrderedDict
 
-import six
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import use_win_mingw
+from conan.api.output import ConanOutput
+from conan.internal import check_duplicated_generator
+from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, GenericSystemBlock, \
@@ -17,7 +17,7 @@ from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
-from conans.model.options import PackageOption
+from conans.model.options import _PackageOption
 from conans.util.files import save
 
 
@@ -45,11 +45,11 @@ class Variables(OrderedDict):
 
     def quote_preprocessor_strings(self):
         for key, var in self.items():
-            if isinstance(var, six.string_types):
+            if isinstance(var, str):
                 self[key] = str(var).replace('"', '\\"')
         for config, data in self._configuration_types.items():
             for key, var in data.items():
-                if isinstance(var, six.string_types):
+                if isinstance(var, str):
                     data[key] = str(var).replace('"', '\\"')
 
 
@@ -118,7 +118,6 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
-        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
         self.generator = self._get_generator(generator)
         self.variables = Variables()
         # This doesn't support multi-config, they go to the same configPreset common in multi-config
@@ -147,8 +146,10 @@ class CMakeToolchain(object):
                                        ("shared", SharedLibBock),
                                        ("output_dirs", OutputDirsBlock)])
 
-        check_using_build_profile(self._conanfile)
+        # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
+        self.find_builddirs = True
         self.user_presets_path = "CMakeUserPresets.json"
+        self.presets_prefix = "conan"
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -173,9 +174,14 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
+        """
+          This method will save the generated files to the conanfile.generators_folder
+        """
+        check_duplicated_generator(self, self._conanfile)
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
+            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
@@ -188,7 +194,7 @@ class CMakeToolchain(object):
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
                 cache_variables[name] = "ON" if value else "OFF"
-            elif isinstance(value, PackageOption):
+            elif isinstance(value, _PackageOption):
                 if str(value).lower() in ["true", "false", "none"]:
                     cache_variables[name] = "ON" if bool(value) else "OFF"
                 elif str(value).isdigit():
@@ -199,7 +205,7 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path)
+                            self.user_presets_path, self.presets_prefix)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
@@ -233,15 +239,6 @@ class CMakeToolchain(object):
                 raise ConanException("compiler.version must be defined")
             vs_version = vs_ide_version(self._conanfile)
             return "Visual Studio %s" % cmake_years[vs_version]
-
-        compiler_base = conanfile.settings.get_safe("compiler.base")
-        compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
-
-        if compiler == "Visual Studio" or compiler_base == "Visual Studio":
-            version = compiler_base_version or compiler_version
-            major_version = version.split('.', 1)[0]
-            base = "Visual Studio %s" % cmake_years[major_version]
-            return base
 
         if use_win_mingw(conanfile):
             return "MinGW Makefiles"

@@ -1,4 +1,6 @@
-from conan.tools.files.files import load_toolchain_args
+import platform
+
+from conan.tools.build import load_toolchain_args
 
 
 class Bazel(object):
@@ -35,6 +37,9 @@ class Bazel(object):
         )
 
         self._conanfile.run(command)
+        # This is very important for Windows, as otherwise the bazel server locks files
+        if platform.system() == "Windows":
+            self._conanfile.run("bazel shutdown")
 
     def _get_bazel_project_configuration(self):
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,

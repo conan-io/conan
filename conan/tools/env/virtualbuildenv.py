@@ -1,10 +1,11 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.env.virtualrunenv import runenv_from_cpp_info
 
 
 class VirtualBuildEnv:
-    """ captures the conanfile environment that is defined from its
-    dependencies, and also from profiles
+    """ Calculates the environment variables of the build time context and produces a conanbuildenv
+        .bat or .sh script
     """
 
     def __init__(self, conanfile):
@@ -29,8 +30,10 @@ class VirtualBuildEnv:
         return f
 
     def environment(self):
-        """ collects the buildtime information from dependencies. This is the typical use case
-        of build_requires defining information for consumers
+        """
+        Returns an ``Environment`` object containing the environment variables of the build context.
+
+        :return: an ``Environment`` object instance containing the obtained variables.
         """
         # FIXME: Cache value?
         build_env = Environment()
@@ -49,12 +52,8 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 build_env.compose_env(build_require.runenv_info)
             # Then the implicit
-
-            if hasattr(self._conanfile, "settings_build"):
-                os_name = self._conanfile.settings_build.get_safe("os")
-            else:
-                os_name = self._conanfile.settings.get_safe("os")
-            build_env.compose_env(runenv_from_cpp_info(self._conanfile, build_require, os_name))
+            os_name = self._conanfile.settings_build.get_safe("os")
+            build_env.compose_env(runenv_from_cpp_info(build_require, os_name))
 
         # Requires in host context can also bring some direct buildenv_info
         host_requires = self._conanfile.dependencies.host.topological_sort
@@ -65,8 +64,18 @@ class VirtualBuildEnv:
         return build_env
 
     def vars(self, scope="build"):
+        """
+        :param scope: Scope to be used.
+        :return: An ``EnvVars`` instance containing the computed environment variables.
+        """
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        """
+        Produces the launcher scripts activating the variables for the build context.
+
+        :param scope: Scope to be used.
+        """
+        check_duplicated_generator(self, self._conanfile)
         build_env = self.environment()
         build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

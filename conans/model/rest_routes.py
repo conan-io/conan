@@ -5,13 +5,8 @@ class RestRoutes(object):
     oauth_authenticate = "users/token"
     common_check_credentials = "users/check_credentials"
 
-    def __init__(self, matrix_params=False):
-        if matrix_params:
-            self.base = 'conans{matrix_params}'
-            self.files_base = 'files{matrix_params}'
-        else:
-            self.base = 'conans'
-            self.files_base = 'files'
+    def __init__(self):
+        self.base = 'conans'
 
     @property
     def recipe(self):
@@ -77,43 +72,6 @@ class RestRoutes(object):
     @property
     def package_revision_file(self):
         return '%s/files/{path}' % self.package_revision
-
-    # ONLY V1
-    @property
-    def v1_updown_file(self):
-        return "%s/{path}" % self.files_base
-
-    @property
-    def v1_recipe_digest(self):
-        return "%s/digest" % self.recipe
-
-    @property
-    def v1_package_digest(self):
-        return "%s/digest" % self.package
-
-    @property
-    def v1_recipe_download_urls(self):
-        return "%s/download_urls" % self.recipe
-
-    @property
-    def v1_package_download_urls(self):
-        return "%s/download_urls" % self.package
-
-    @property
-    def v1_recipe_upload_urls(self):
-        return "%s/upload_urls" % self.recipe
-
-    @property
-    def v1_package_upload_urls(self):
-        return "%s/upload_urls" % self.package
-
-    @property
-    def v1_remove_recipe_files(self):
-        return "%s/remove_files" % self.recipe
-
-    @property
-    def v1_remove_packages(self):
-        return "%s/packages/delete" % self.recipe
 
     @property
     def common_search_packages(self):

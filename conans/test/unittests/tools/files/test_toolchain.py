@@ -2,24 +2,20 @@ import os
 import textwrap
 
 import pytest
-from conans import load
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
-from conan.tools.files.files import load_toolchain_args, save_toolchain_args
+from conan.tools.build import load_toolchain_args, save_toolchain_args, CONAN_TOOLCHAIN_ARGS_FILE, \
+    CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, remove
+from conans.util.files import save, remove, load
 
 
 def test_load_empty_toolchain_args_in_default_dir():
     folder = temp_folder()
     os.chdir(folder)
     save(CONAN_TOOLCHAIN_ARGS_FILE, "[%s]" % CONAN_TOOLCHAIN_ARGS_SECTION)
-    try:
-        config = load_toolchain_args()
-        assert not config
-    finally:
-        remove(CONAN_TOOLCHAIN_ARGS_FILE)
+    config = load_toolchain_args()
+    assert not config
 
 
 def test_load_toolchain_args_if_it_does_not_exist():

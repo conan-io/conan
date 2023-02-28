@@ -1,63 +1,106 @@
-from conans.client.tools import environment_append
+import textwrap
+
 from conans.test.utils.tools import GenConanfile, TestClient
-from conans.util.files import save
 
 
-def test_recipe_modes():
-    configs = []
-    mode = "semver_mode"
-    configs.append((mode, "liba/1.1.1@user/testing", "8ecbf93ba63522ffb32573610c80ab4dcb399b52"))
-    configs.append((mode, "liba/1.1.2@user/testing", "8ecbf93ba63522ffb32573610c80ab4dcb399b52"))
-    configs.append((mode, "liba/1.2.1@other/stable", "8ecbf93ba63522ffb32573610c80ab4dcb399b52"))
-    mode = "patch_mode"
-    configs.append((mode, "liba/1.1.1@user/testing", "bd664570d5174c601d5d417bc19257c4dba48f2e"))
-    configs.append((mode, "liba/1.1.2@user/testing", "fb1f766173191d44b67156c6b9ac667422e99286"))
-    configs.append((mode, "liba/1.1.1@other/stable", "bd664570d5174c601d5d417bc19257c4dba48f2e"))
-    mode = "full_recipe_mode"
-    configs.append((mode, "liba/1.1.1@user/testing", "9cbe703e1dee73a2a6807f71d8551c5f1e1b08fd"))
-    configs.append((mode, "liba/1.1.2@user/testing", "42a9ff9024adabbd54849331cf01be7d95139948"))
-    configs.append((mode, "liba/1.1.1@user/stable", "b41d6c026473cffed4abded4b0eaa453497be1d2"))
+def test_basic_default_modes_unknown():
+    c = TestClient()
+    c.save({"matrix/conanfile.py": GenConanfile("matrix"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("matrix/[*]")})
+    c.run("create matrix --version=1.0")
+    c.run("create engine")
+    package_id = c.created_package_id("engine/1.0")
 
-    client = TestClient()
-    # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework
-    save(client.cache.settings_path, "")
-    save(client.cache.default_profile_path, "")
+    # Using a patch version doesn't kick a engine rebuild
+    c.run("create matrix --version=1.0.1")
+    c.run("create engine --build=missing")
+    c.assert_listed_require({"matrix/1.0.1": "Cache"})
+    c.assert_listed_binary({"engine/1.0": (package_id, "Cache")})
 
-    def _assert_recipe_mode(liba_ref, package_id_arg):
-        client.save({"liba/conanfile.py": GenConanfile("liba"),
-                     "libb/conanfile.py": GenConanfile("libb", "0.1").with_require(liba_ref),
-                     "app/conanfile.py": GenConanfile("app", "0.1").with_require("libb/0.1")})
-        client.run("create liba {}".format(liba_ref))
-        client.run("create libb")
-        client.run("create app")
+    # same with minor version will not need rebuild
+    c.run("create matrix --version=1.1.0")
+    c.run("create engine --build=missing")
+    c.assert_listed_require({"matrix/1.1.0": "Cache"})
+    c.assert_listed_binary({"engine/1.0": (package_id, "Cache")})
 
-        assert "{}:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache".format(liba_ref) in client.out
-        assert "libb/0.1:{} - Cache".format(package_id_arg) in client.out
-
-    for package_id_mode, ref, package_id in configs:
-        client.run("config set general.default_package_id_mode={}".format(package_id_mode))
-        _assert_recipe_mode(ref, package_id)
-
-    for package_id_mode, ref, package_id in configs:
-        with environment_append({"CONAN_DEFAULT_PACKAGE_ID_MODE": package_id_mode}):
-            _assert_recipe_mode(ref, package_id)
+    # Major will require re-build
+    # TODO: Reconsider this default
+    c.run("create matrix --version=2.0.0")
+    c.run("create engine --build=missing")
+    c.assert_listed_require({"matrix/2.0.0": "Cache"})
+    c.assert_listed_binary({"engine/1.0": ("805fafebc9f7769a90dafb8c008578c6aa7f5d86", "Build")})
 
 
-def test_package_revision_mode():
-    client = TestClient()
-    # TODO: These 2 little simplifications can reduce test time by 30-40%, to do in test framework
-    save(client.cache.settings_path, "")
-    save(client.cache.default_profile_path, "")
+def test_basic_default_modes_application():
+    """
+    if the consumer package is a declared "package_type = "application"" recipe_revision_mode will
+    be used
+    """
+    c = TestClient()
+    c.save({"matrix/conanfile.py": GenConanfile("matrix"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("matrix/[*]")
+                                                                .with_package_type("application")})
+    c.run("create matrix --version=1.0")
+    c.run("create engine")
+    package_id = c.created_package_id("engine/1.0")
 
-    client.run("config set general.default_package_id_mode=package_revision_mode")
+    # Using a patch version requires a rebuild
+    c.run("create matrix --version=1.0.1")
+    c.run("create engine --build=missing")
+    c.assert_listed_require({"matrix/1.0.1": "Cache"})
+    new_package_id = "efe870a1b1b4fe60e55aa6e2d17436665404370f"
+    assert new_package_id != package_id
+    c.assert_listed_binary({"engine/1.0": (new_package_id, "Build")})
 
-    client.save({"liba/conanfile.py": GenConanfile("liba", "0.1.1"),
-                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_require("liba/0.1.1"),
-                 "app/conanfile.py": GenConanfile("app", "0.1").with_require("libb/0.1")})
 
-    client.run("create liba")
-    client.run("create libb")
-    client.run("create app")
+class TestDepDefinedMode:
+    def test_dep_defined(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                package_type = "static-library"
+                package_id_embed_mode = "major_mode"
+                package_id_non_embed_mode = "major_mode"
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
+                                                              .with_shared_option(False)})
+        c.run("create dep --version=0.1")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("66a9e6a31e63f77952fd72744d0d5da07970f42e", "Build")})
+        c.run("create pkg -o pkg/*:shared=True")
+        c.assert_listed_binary({"pkg/0.1": ("5a5828e18eef6a86813b01d4f5a83ea7d87d1139", "Build")})
 
-    assert "liba/0.1.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
-    assert "libb/0.1:f2431acdad185a6626b90ee1dffb06445f887cbb - Cache" in client.out
+        # using dep 0.2, still same, because dependency chose "major_mode"
+        c.run("create dep --version=0.2")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("66a9e6a31e63f77952fd72744d0d5da07970f42e", "Build")})
+        c.run("create pkg -o pkg/*:shared=True")
+        c.assert_listed_binary({"pkg/0.1": ("5a5828e18eef6a86813b01d4f5a83ea7d87d1139", "Build")})
+
+    def test_dep_tool_require_defined(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                package_type = "application"
+                build_mode = "minor_mode"
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_tool_requires("dep/[*]")})
+        c.run("create dep --version=0.1")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("fcf70699eb821f51cd4f3e228341ac4f405ad220", "Build")})
+
+        # using dep 0.2, still same, because dependency chose "minor"
+        c.run("create dep --version=0.1.1")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("fcf70699eb821f51cd4f3e228341ac4f405ad220", "Build")})
+
+        # using dep 0.2, still same, because dependency chose "minor"
+        c.run("create dep --version=0.2")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("56934f87c11792e356423e081c7cd490f3c1fbe0", "Build")})

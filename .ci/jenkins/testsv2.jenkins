@@ -1,0 +1,218 @@
+def branchName = env.BRANCH_NAME
+def jobName = env.JOB_NAME
+
+void cancelPrevious() {
+    stage("Cancelling previous") {
+        def buildNumber = env.BUILD_NUMBER as int
+        if (buildNumber > 1) milestone(buildNumber - 1)
+        milestone(buildNumber)
+    }
+}
+
+String getTempFolder(String nodeName) {
+    if (nodeName=="Windows") { return "D:/J/t/" }
+    return "/tmp/"
+}
+
+List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
+    // TODO: handle revision cases
+    def configs = []
+    if (branchName =~ /(^PR-.*)/) {
+        configs.add([node: "Linux", pyvers: ["PY36"]])
+        if (moduleName=="conans/test/functional") {
+            configs.add([node: "Windows", pyvers: ["PY36"]])
+            configs.add([node: "M1Macos", pyvers: ["PY36"]])
+        }
+    }
+    else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
+        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M1Macos", pyvers: ["PY36", "PY38"]])
+    }
+    else if (branchName == "develop2") {
+        configs.add([node: "Linux", pyvers: ["PY36"]])
+        configs.add([node: "Windows", pyvers: ["PY36"]])
+        configs.add([node: "M1Macos", pyvers: ["PY36"]])
+    }
+    return configs
+}
+
+String getDockerImage(String moduleName) {
+    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+        return "conanio/ci-unittests"
+    }
+    else if (moduleName=="conans/test/functional"){
+        return "conanio/ci-functional"
+    }
+    return ""
+}
+
+boolean shouldTestServer(String moduleName) {
+    // run conan_server --help after running functional tests
+    if (moduleName=="conans/test/functional") {
+        return true
+    }
+    return false
+}
+
+
+// call to pytest for different nodes
+private Closure runTests(String nodeName, String pythonVersion, String module) {
+    def ret = {
+        node(nodeName) {
+            stage("${nodeName} - ${pythonVersion}") {
+
+                def scmVars = checkout scm
+                def commit = scmVars["GIT_COMMIT"].substring(0, 4)
+
+                // leaving the flavor here to later adapt con conan 1.x new pipeline
+                // will have to add more configs
+                def flavor = "enabled_revisions"
+
+                def workDir = getTempFolder(nodeName) + "${commit}/${pythonVersion}/${flavor}/"
+                def venvName = "env_${env.BUILD_NUMBER}_${pythonVersion}_${commit}"
+
+                def pipArguments = "--no-cache-dir --timeout 30"
+                def pipInstalls = "python -m pip install -r conans/requirements.txt ${pipArguments} && " \
+                                + "python -m pip install -r conans/requirements_server.txt ${pipArguments} && " \
+                                + "python -m pip install -r conans/requirements_dev.txt ${pipArguments} && " \
+                                + "python -m pip install meson ${pipArguments} && "
+
+                def conanToolInstall = "python -m pip install . && " \
+                                     + "conan --version && conan --help && "
+
+
+                def launchTests = "python -m pytest ${module} -n=4 --durations=20"
+
+                if (shouldTestServer(module)) {
+                    def rm = (nodeName=="Windows") ? "del" : "rm"
+                    def mv = (nodeName=="Windows") ? "move" : "mv"
+
+                    def conanServerToolInstall = "${rm} setup.py && ${mv} setup_server.py setup.py && python -m pip install . && conan_server --help"
+                    launchTests = launchTests + ' && ' + conanServerToolInstall
+                }
+
+                if (nodeName=="Linux") {
+                    try {
+                        def dockerImage = getDockerImage(module)
+                        docker.image(dockerImage).inside("--entrypoint=") {
+                            def sourcedir = "/home/conan/"
+                            def pyenvdir = "${sourcedir}.pyenv"
+                            sh(script: "cp -R ./ ${sourcedir}")
+
+                            def launchCommand = "su - conan -c \"" \
+                                            + "export PYENV_ROOT=${pyenvdir} && " \
+                                            + "export PATH=\"${pyenvdir}/versions/\$${pythonVersion}/bin:${pyenvdir}/bin:\$PATH\" && " \
+                                            + "pyenv global \$${pythonVersion} && " \
+                                            + pipInstalls \
+                                            + conanToolInstall \
+                                            + launchTests + '\"'
+
+                            sh(script: launchCommand)
+                        }
+                    }
+                    finally {}
+                }
+                else if (nodeName=="M1Macos") {
+                    def localDir = "/Users/jenkins"
+                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.12", "PY39=3.9.10",
+                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
+                        try {
+                                sh(script: "mkdir -p ${workDir}")
+                                def pythonLocation = "${localDir}/.pyenv/versions/\$${pythonVersion}/bin/python"
+                                def configVenv = "${pythonLocation} -m virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
+                                               + "source ${workDir}${venvName}/bin/activate && python --version && "
+                                def launchCommand = configVenv + pipInstalls + conanToolInstall + launchTests
+                                sh(script: launchCommand)
+                        }
+                        finally {
+                            sh(script: "rm -rf ${workDir}")
+                        }
+                    }
+                }
+                else if (nodeName=="Windows") {
+                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "CONAN_BASH_PATH=c:/tools/msys64/usr/bin/bash",
+                             "CONAN_USER_HOME_SHORT=${workDir}.conan",
+                             "PY27=Python27", "PY36=Python36", "PY38=Python38-64"]) {
+                        try {
+                            bat(script: "if not exist \"${workDir}\" mkdir \"${workDir}\"")
+                            def pythonLocation = "C:/%${pythonVersion}%/python.exe"
+                            def configVenv = "virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
+                                           + "${workDir}${venvName}/Scripts/activate && python --version && "
+                            def launchCommand = configVenv + pipInstalls + conanToolInstall + launchTests
+                            bat(script: launchCommand)
+                        }
+                        finally {
+                            bat(script: "rd /s /q \"${workDir}\"")
+                        }
+                    }
+                }
+                cleanWs()
+            }
+        }
+    }
+    return ret
+}
+
+void runTestsModule(String moduleName, String branchName, String jobName) {
+    def configs = getConfigurations(moduleName, branchName, jobName)
+    def paralellRuns = [:]
+    configs.each { config ->
+        def testKind = moduleName.split("/").last()
+        config["pyvers"].each { pyver ->
+            paralellRuns["${testKind} - ${config['node']} - ${pyver}"] = runTests(config["node"], pyver, moduleName)
+        }
+    }
+    parallel(paralellRuns)
+}
+
+def testModules = ["conans/test/unittests", "conans/test/integration", "conans/test/functional"]
+
+void deployToPypiTest() {
+    node("Linux") {
+        try {
+            def scmVars = checkout scm
+            checkout scm
+            stage("Deploy conan to pypitesting") {
+                withCredentials([string(credentialsId: 'TWINE_USERNAME', variable: 'TWINE_USERNAME'),
+                                 string(credentialsId: 'TWINE_PASSWORD', variable: 'TWINE_PASSWORD')]) {
+                    def deployConan = "python -m pip install twine && " \
+                                    + "python .ci/bump_dev_version.py && " \
+                                    + "rm -rf dist/ && python setup.py sdist && " \
+                                    + "python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
+                    sh(script: deployConan)
+                }
+            }
+            stage("Deploy conan-server to pypitesting") {
+                withCredentials([string(credentialsId: 'TWINE_USERNAME_SERVER', variable: 'TWINE_USERNAME'),
+                                 string(credentialsId: 'TWINE_PASSWORD_SERVER', variable: 'TWINE_PASSWORD')]) {
+                    def deployServer = "rm -rf dist/ rm setup.py && mv setup_server.py setup.py && python setup.py sdist && " \
+                                     + "python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*"
+                    sh(script: deployServer)
+                }
+            }
+        }
+        finally {}
+    }
+}
+
+try {
+    cancelPrevious()
+
+ 
+    testModules.each { moduleName ->
+        runTestsModule(moduleName, branchName, jobName)
+    }
+
+    if (branchName == "develop2") {
+        deployToPypiTest()
+    }
+}
+catch(e){
+    if (branchName == "develop2") {
+        def subject = "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+        def summary = "${subject} (${env.BUILD_URL}), Conan Branch: ${branchName}"
+        slackSend (color: '#FF0000', message: summary)
+    }
+    throw e
+}

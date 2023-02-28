@@ -107,7 +107,6 @@ def test_supported_cppstd_mcst(compiler, compiler_version, values):
 @pytest.mark.parametrize("compiler,compiler_version,result", [
     ("gcc", "5", 'gnu98'),
     ("gcc", "8", "gnu14"),
-    ("Visual Studio", "14", "14"),
     ("msvc", "190", "14"),
     ("apple-clang", "12.0", "gnu98"),
     ("clang", "6", "gnu14"),

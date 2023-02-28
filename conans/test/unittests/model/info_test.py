@@ -1,6 +1,31 @@
 import unittest
 
-from conans.model.info import ConanInfo
+import pytest
+
+from conans.model.info import ConanInfo, RequirementsInfo, PythonRequiresInfo
+from conans.model.options import Options
+from conans.model.settings import Settings
+
+
+def test_false_values_affect_none():
+    """ False value do become part of conaninfo.txt and package_id
+    Only "None" Python values are discarded from conaninfo.txt
+    """
+    reqs = RequirementsInfo({})
+    build_reqs = RequirementsInfo({})
+    python_reqs = PythonRequiresInfo({}, default_package_id_mode=None)
+    options = Options({"shared": [True, False], "other": [None, "1"]}, {"shared": False})
+    settings = Settings({"mysetting": [1, 2, 3]})
+    c = ConanInfo(settings, options, reqs, build_reqs, python_reqs)
+    conaninfo = c.dumps()
+    assert "shared=False" in conaninfo
+    assert "other" not in conaninfo
+    assert "mysetting" not in conaninfo
+
+    settings.mysetting = 1
+    conaninfo = c.dumps()
+    assert "mysetting=1" in conaninfo
+
 
 info_text = '''[settings]
     arch=x86_64
@@ -31,25 +56,12 @@ info_text = '''[settings]
     bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641
     zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3
 
-[full_options]
-    fPIC=True
-    header_only=False
-    shared=False
-    bzip2:fPIC=True
-    bzip2:shared=False
-    zlib:shared=False
-
-[recipe_hash]
-    asdasdasd
-
 [env]
-    A_OTHERVAR=OTHERVALUES
-    Z_OTHERVAR=OTHERVALUES
-    Aackage1:PATH=/PATH/TO
-    Package1:PATH=/PATH/TO
+
 '''
 
 
+@pytest.mark.xfail(reason="It is no longer possible to read a conaninfo.txt and execute over it")
 class ConanInfoTest(unittest.TestCase):
 
     def test_serialize(self):
@@ -59,7 +71,6 @@ class ConanInfoTest(unittest.TestCase):
                     ['bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641',
                      'zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3'],
                     'options': {'shared': 'False', 'fPIC': 'True', 'header_only': 'False'},
-                    'recipe_hash': "asdasdasd",
                     'settings': {'arch': 'x86_64', 'compiler.libcxx': 'libstdc++11',
                                  'compiler.version': '5.2', 'os': 'Linux',
                                  'build_type': 'Debug', 'compiler': 'gcc'}}
@@ -88,7 +99,7 @@ class ConanInfoTest(unittest.TestCase):
     shared=False
 '''
         info = ConanInfo.loads(info_text)
-        info.header_only()
+        info.clear()
         self.assertEqual(info.settings.dumps(), "")
         self.assertEqual(info.options.dumps(), "")
         self.assertEqual(info.requires.dumps(), "")

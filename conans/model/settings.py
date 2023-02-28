@@ -1,17 +1,13 @@
 import yaml
 
 from conans.errors import ConanException
-from conans.model.values import Values
 
 
 def bad_value_msg(name, value, value_range):
-    tip = ""
-    if "settings" in name:
-        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html' \
-              '#error-invalid-setting"'
-
-    return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
-            % (value, name, value_range, tip))
+    return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s\n"
+            'Read "http://docs.conan.io/2/knowledge/faq.html#error-invalid-setting"'
+            # value range can be either a list or a dict, we only want to list the keys
+            % (value, name, [v for v in value_range if v is not None]))
 
 
 def undefined_field(name, field, fields=None, value=None):
@@ -21,15 +17,10 @@ def undefined_field(name, field, fields=None, value=None):
     return ConanException("\n".join(result))
 
 
-def undefined_value(name):
-    return ConanException("'%s' value not defined" % name)
-
-
 class SettingsItem(object):
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
-    - "ANY", as string to accept any value
-    - List ["None", "ANY"] to accept None or any value
+    - List [None, "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name):
@@ -39,13 +30,12 @@ class SettingsItem(object):
             self._definition = {}
             # recursive
             for k, v in definition.items():
-                k = str(k)
+                # None string from yaml definition maps to python None, means not-defined value
+                k = str(k) if k is not None else None
                 self._definition[k] = Settings(v, name, k)
-        elif definition == "ANY":
-            self._definition = "ANY"
         else:
-            # list or tuple of possible values
-            self._definition = [str(v) for v in definition]
+            # list or tuple of possible values, it can include "ANY"
+            self._definition = [str(v) if v is not None else None for v in definition]
 
     def __contains__(self, value):
         return value in (self._value or "")
@@ -55,83 +45,67 @@ class SettingsItem(object):
         """
         result = SettingsItem({}, name=self._name)
         result._value = self._value
-        if self.is_final:
+        if not isinstance(self._definition, dict):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
         return result
 
-    def copy_values(self):
-        if self._value is None and "None" not in self._definition:
-            return None
-
+    def copy_conaninfo_settings(self):
+        """ deepcopy, recursive
+        This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
+        values, but not all, just the "final" values without subsettings.
+        We cannot let usres manipulate to random strings
+        things that contain subsettings like ``compiler``, because that would leave the thing
+        in a undefined state, with some now inconsistent subsettings, that cannot be accessed
+        anymore. So with this change the options are:
+        - If you need more "binary-compatible" descriptions of a compiler, lets say like
+        "gcc_or_clang", then you need to add that string to settings.yml. And add the subsettings
+        that you want for it.
+        - Settings that are "final" (lists), like build_type, or arch or compiler.version they
+        can get any value without issues.
+        """
         result = SettingsItem({}, name=self._name)
         result._value = self._value
-        if self.is_final:
-            result._definition = self._definition[:]
+        if not isinstance(self._definition, dict):
+            result._definition = self._definition[:] + ["ANY"]
         else:
-            result._definition = {k: v.copy_values() for k, v in self._definition.items()}
+            result._definition = {k: v.copy_conaninfo_settings()
+                                  for k, v in self._definition.items()}
         return result
-
-    @property
-    def is_final(self):
-        return not isinstance(self._definition, dict)
 
     def __bool__(self):
         if not self._value:
             return False
         return self._value.lower() not in ["false", "none", "0", "off"]
 
-    def __nonzero__(self):
-        return self.__bool__()
-
     def __str__(self):
         return str(self._value)
-
-    def _not_any(self):
-        return self._definition != "ANY" and "ANY" not in self._definition
 
     def __eq__(self, other):
         if other is None:
             return self._value is None
-        other = str(other)
-        if self._not_any() and other not in self.values_range:
-            raise ConanException(bad_value_msg(self._name, other, self.values_range))
-        return other == self.__str__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+        other = self._validate(other)
+        return other == self._value
 
     def __delattr__(self, item):
         """ This is necessary to remove libcxx subsetting from compiler in config()
            del self.settings.compiler.stdlib
         """
-        try:
-            self._get_child(self._value).remove(item)
-        except Exception:
-            pass
+        child_setting = self._get_child(self._value)
+        delattr(child_setting, item)
 
-    def remove(self, values):
-        if not isinstance(values, (list, tuple, set)):
-            values = [values]
-        for v in values:
-            v = str(v)
-            if isinstance(self._definition, dict):
-                self._definition.pop(v, None)
-            elif self._definition == "ANY":
-                if v == "ANY":
-                    self._definition = []
-            elif v in self._definition:
-                self._definition.remove(v)
-
-        if self._value is not None and self._value not in self._definition and self._not_any():
-            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
+    def _validate(self, value):
+        value = str(value) if value is not None else None
+        if "ANY" not in self._definition and value not in self._definition:
+            raise ConanException(bad_value_msg(self._name, value, self._definition))
+        return value
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
             raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
-            raise undefined_value(self._name)
+            raise ConanException("'%s' value not defined" % self._name)
         return self._definition[self._value]
 
     def __getattr__(self, item):
@@ -147,30 +121,18 @@ class SettingsItem(object):
         sub_config_dict = self._get_child(item)
         return setattr(sub_config_dict, item, value)
 
-    def __getitem__(self, value):
-        value = str(value)
-        try:
-            return self._definition[value]
-        except Exception:
-            raise ConanException(bad_value_msg(self._name, value, self.values_range))
-
     @property
     def value(self):
         return self._value
 
     @value.setter
     def value(self, v):
-        v = str(v)
-        if self._not_any() and v not in self.values_range:
-            raise ConanException(bad_value_msg(self._name, v, self.values_range))
-        self._value = v
+        self._value = self._validate(v)
 
     @property
     def values_range(self):
-        try:
-            return sorted(list(self._definition.keys()))
-        except Exception:
-            return self._definition
+        # This needs to support 2 operations: "in" and iteration. Beware it can return "ANY"
+        return self._definition
 
     @property
     def values_list(self):
@@ -185,46 +147,80 @@ class SettingsItem(object):
         return result
 
     def validate(self):
-        if self._value is None and "None" not in self._definition:
-            raise undefined_value(self._name)
+        if self._value is None and None not in self._definition:
+            raise ConanException("'%s' value not defined" % self._name)
         if isinstance(self._definition, dict):
-            key = "None" if self._value is None else self._value
-            self._definition[key].validate()
+            self._definition[self._value].validate()
+
+    def get_definition(self):
+        if isinstance(self._definition, list):
+            return [e if e != 'None' else None for e in self.values_range]
+        ret = {}
+        for key, value in self._definition.items():
+            ret[key] = value.get_definition()
+        return ret
+
+    def rm_safe(self, name):
+        """ Iterates all possible subsettings, calling rm_safe() for all of them. If removing
+        "compiler.cppstd", this will iterate msvc, gcc, clang, etc, calling rm_safe(cppstd) for
+        all of them"""
+        if isinstance(self._definition, list):
+            return
+        for subsetting in self._definition.values():
+            subsetting.rm_safe(name)
 
 
 class Settings(object):
-    def __init__(self, definition=None, name="settings", parent_value=None):
-        if parent_value == "None" and definition:
-            raise ConanException("settings.yml: None setting can't have subsettings")
+    def __init__(self, definition=None, name="settings", parent_value="settings"):
+        if parent_value is None and definition:
+            raise ConanException("settings.yml: null setting can't have subsettings")
         definition = definition or {}
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
-        self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
+        self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+        self._frozen = False
+
+    def serialize(self):
+        """
+        Returns a dictionary with all the settings (and sub-settings) as ``field: value``
+        """
+        ret = []
+        for _, s in self._data.items():
+            # TODO: Refactor it and use s.serialize()
+            ret.extend(s.values_list)
+        return dict(ret)
 
     def get_safe(self, name, default=None):
+        """
+        Get the setting value avoiding
+        :param name:
+        :param default:
+        :return:
+        """
         try:
             tmp = self
             for prop in name.split("."):
                 tmp = getattr(tmp, prop, None)
         except ConanException:
             return default
-        if tmp is not None and tmp.value and tmp.value != "None":  # In case of subsettings is None
-            return str(tmp)
+        if tmp is not None and tmp.value is not None:  # In case of subsettings is None
+            return tmp.value
         return default
 
     def rm_safe(self, name):
-        try:
-            tmp = self
-            attr_ = name
-            if "." in name:
-                fields = name.split(".")
-                attr_ = fields.pop()
-                for prop in fields:
-                    tmp = getattr(tmp, prop)
-            delattr(tmp, attr_)
-        except ConanException:
-            pass
+        """ Removes the setting or subsetting from the definition. For example,
+        rm_safe("compiler.cppstd") remove all "cppstd" subsetting from all compilers, irrespective
+        of the current value of the "compiler"
+        """
+        if "." in name:
+            setting, remainder = name.split(".", 1)  # setting=compiler, remainder = cppstd
+            try:
+                self._data[setting].rm_safe(remainder)  # call rm_safe("cppstd") for the "compiler"
+            except KeyError:
+                pass
+        else:
+            self._data.pop(name, None)
 
     def copy(self):
         """ deepcopy, recursive
@@ -234,14 +230,10 @@ class Settings(object):
             result._data[k] = v.copy()
         return result
 
-    def copy_values(self):
-        """ deepcopy, recursive
-        """
+    def copy_conaninfo_settings(self):
         result = Settings({}, name=self._name, parent_value=self._parent_value)
         for k, v in self._data.items():
-            value = v.copy_values()
-            if value is not None:
-                result._data[k] = value
+            result._data[k] = v.copy_conaninfo_settings()
         return result
 
     @staticmethod
@@ -252,20 +244,12 @@ class Settings(object):
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 
     def validate(self):
-        for field in self.fields:
-            child = self._data[field]
+        for child in self._data.values():
             child.validate()
 
     @property
     def fields(self):
         return sorted(list(self._data.keys()))
-
-    def remove(self, item):
-        if not isinstance(item, (list, tuple, set)):
-            item = [item]
-        for it in item:
-            it = str(it)
-            self._data.pop(it, None)
 
     def clear(self):
         self._data = {}
@@ -289,14 +273,13 @@ class Settings(object):
             return super(Settings, self).__setattr__(field, value)
 
         self._check_field(field)
+        if self._frozen:
+            raise ConanException(f"Tried to define '{field}' setting inside recipe")
         self._data[field].value = value
 
     @property
-    def values(self):
-        return Values.from_list(self.values_list)
-
-    @property
     def values_list(self):
+        # TODO: make it private, leave .items accessor only
         result = []
         for field in self.fields:
             config_item = self._data[field]
@@ -306,69 +289,60 @@ class Settings(object):
     def items(self):
         return self.values_list
 
-    def iteritems(self):
-        return self.values_list
-
     def update_values(self, vals):
         """ receives a list of tuples (compiler.version, value)
         This is more an updated than a setter
         """
-        assert isinstance(vals, list), vals
+        self._frozen = False  # Could be restored at the end, but not really necessary
+        assert isinstance(vals, (list, tuple)), vals
         for (name, value) in vals:
             list_settings = name.split(".")
             attr = self
-            for setting in list_settings[:-1]:
-                attr = getattr(attr, setting)
-            setattr(attr, list_settings[-1], str(value))
+            try:
+                for setting in list_settings[:-1]:
+                    attr = getattr(attr, setting)
+            except ConanException:  # fails if receiving settings doesn't have it defined
+                pass
+            else:
+                value = str(value) if value is not None else None
+                setattr(attr, list_settings[-1], value)
 
-    @values.setter
-    def values(self, vals):
-        assert isinstance(vals, Values)
-        self.update_values(vals.as_list())
-
-    def constraint(self, constraint_def):
+    def constrained(self, constraint_def):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
         2. If the other defines {"compiler": None} means to keep the full specification
         """
-        if isinstance(constraint_def, (list, tuple, set)):
-            constraint_def = {str(k): None for k in constraint_def or []}
-        else:
-            constraint_def = {str(k): v for k, v in constraint_def.items()}
+        constraint_def = constraint_def or []
+        if not isinstance(constraint_def, (list, tuple, set)):
+            raise ConanException("Please defines settings as a list or tuple")
 
-        fields_to_remove = []
-        for field, config_item in self._data.items():
-            if field not in constraint_def:
-                fields_to_remove.append(field)
-                continue
-
-            other_field_def = constraint_def[field]
-            if other_field_def is None:  # Means leave it as is
-                continue
-            if isinstance(other_field_def, str):
-                other_field_def = [other_field_def]
-
-            values_to_remove = []
-            for value in config_item.values_range:  # value = "Visual Studio"
-                if value not in other_field_def:
-                    values_to_remove.append(value)
-                else:  # recursion
-                    if (not config_item.is_final and isinstance(other_field_def, dict) and
-                            other_field_def[value] is not None):
-                        config_item[value].constraint(other_field_def[value])
-
-            # Sanity check of input constraint values
-            for value in other_field_def:
-                if value not in config_item.values_range:
-                    raise ConanException(bad_value_msg(field, value, config_item.values_range))
-
-            config_item.remove(values_to_remove)
-
-        # Sanity check for input constraint wrong fields
         for field in constraint_def:
-            if field not in self._data:
-                raise undefined_field(self._name, field, self.fields)
+            self._check_field(field)
 
-        # remove settings not defined in the constraint
-        self.remove(fields_to_remove)
+        to_remove = [k for k in self._data if k not in constraint_def]
+        for k in to_remove:
+            del self._data[k]
+
+    def dumps(self):
+        """ produces a text string with lines containing a flattened version:
+        compiler.arch = XX
+        compiler.arch.speed = YY
+        """
+        result = []
+        for (name, value) in self.values_list:
+            # It is important to discard None values, so migrations in settings can be done
+            # without breaking all existing packages SHAs, by adding a first None option
+            # that doesn't change the final sha
+            if value is not None:
+                result.append("%s=%s" % (name, value))
+        return '\n'.join(result)
+
+    def get_definition(self):
+        """Check the range of values of the definition of a setting. e.g:
+           get_definition_values("compiler.gcc.version") """
+
+        ret = {}
+        for key, element in self._data.items():
+            ret[key] = element.get_definition()
+        return ret

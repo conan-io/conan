@@ -2,14 +2,14 @@
 import os
 import unittest
 
-import six
+import pytest
 
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, DepsCppInfo, DepCppInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="DepsCppInfo removed")
 class CppInfoComponentsTest(unittest.TestCase):
 
     def test_components_set(self):
@@ -250,11 +250,11 @@ class CppInfoComponentsTest(unittest.TestCase):
     def test_cppinfo_inexistent_component_dep(self):
         info = CppInfo("", None)
         info.components["LIB1"].requires = ["LIB2"]
-        with six.assertRaisesRegex(self, ConanException, "Component 'LIB1' required components "
+        with self.assertRaisesRegex(ConanException, "Component 'LIB1' required components "
                                                          "not found in this package: 'LIB2'"):
             _ = DepCppInfo(info).libs
         info.components["LIB1"].requires = ["::LIB2"]
-        with six.assertRaisesRegex(self, ConanException, "Leading character '::' not allowed in "
+        with self.assertRaisesRegex(ConanException, "Leading character '::' not allowed in "
                                                          "LIB1 requires"):
             _ = DepCppInfo(info).libs
 
@@ -262,18 +262,18 @@ class CppInfoComponentsTest(unittest.TestCase):
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB1"]
         msg = "There is a dependency loop in 'self.cpp_info.components' requires"
-        with six.assertRaisesRegex(self, ConanException, msg):
+        with self.assertRaisesRegex(ConanException, msg):
             _ = DepCppInfo(info).libs
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB2"]
         info.components["LIB2"].requires = ["LIB1", "LIB2"]
-        with six.assertRaisesRegex(self, ConanException, msg):
+        with self.assertRaisesRegex(ConanException, msg):
             _ = DepCppInfo(info).build_paths
         info = CppInfo("", "")
         info.components["LIB1"].requires = ["LIB2"]
         info.components["LIB2"].requires = ["LIB3"]
         info.components["LIB3"].requires = ["LIB1"]
-        with six.assertRaisesRegex(self, ConanException, msg):
+        with self.assertRaisesRegex(ConanException, msg):
             _ = DepCppInfo(info).defines
 
     def test_components_libs_order(self):

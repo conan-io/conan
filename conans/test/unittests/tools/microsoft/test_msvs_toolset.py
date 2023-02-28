@@ -4,42 +4,6 @@ from conan.errors import ConanException
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 
 
-@pytest.mark.parametrize("compiler_version,expected_toolset", [
-    ("17", "v143"),
-    ("16", "v142"),
-    ("15", "v141"),
-    ("14", "v140"),
-    ("12", "v120"),
-    ("11", "v110"),
-    ("10", "v100"),
-    ("9", "v90"),
-    ("8", "v80")])
-def test_visual_studio_default(compiler_version, expected_toolset):
-    """ When running Visual Studio as compiler, and there is no toolset configured,
-        msvs_toolset must return a specific version based on the compiler version
-    """
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({"compiler": "Visual Studio", "compiler.version": compiler_version})
-    assert msvs_toolset(conanfile) == expected_toolset
-
-
-@pytest.mark.parametrize("compiler_version,toolset,expected_toolset", [
-    ("16", "v142_xp", "v142_xp"),
-    ("15", "v141_xp", "v141_xp"),
-    ("14", "v140_xp", "v140_xp"),
-    ("12", "v120_xp", "v120_xp"),
-    ("11", "v110_xp", "v110_xp")])
-def test_visual_studio_custom(compiler_version, toolset, expected_toolset):
-    """ When running Visual Studio as compiler, and there is a toolset configured,
-        msvs_toolset must return the specified toolset from profile
-    """
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({"compiler": "Visual Studio",
-                             "compiler.version": compiler_version,
-                             "compiler.toolset": toolset})
-    assert msvs_toolset(conanfile) == expected_toolset
-
-
 def test_invalid_compiler():
     """ When the compiler version is unknown and there is no toolset configured,
         msvs_toolset must return None
@@ -82,29 +46,6 @@ def test_msvc_custom(compiler_version, toolset, expected_toolset):
                              "compiler.version": compiler_version,
                              "compiler.toolset": toolset})
     assert msvs_toolset(conanfile) == expected_toolset
-
-
-@pytest.mark.parametrize("compiler_version,expected_toolset", [
-    ("19.1", "Intel C++ Compiler 19.1"),
-    ("19", "Intel C++ Compiler 19.0"),
-    ("18", "Intel C++ Compiler 18.0"),
-    ("17", "Intel C++ Compiler 17.0")])
-def test_intel_default(compiler_version, expected_toolset):
-    """ When running intel as compiler, and there is a compiler version configured,
-        msvs_toolset must return the compiler version as its toolset
-    """
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({"compiler": "intel", "compiler.version": compiler_version})
-    assert msvs_toolset(conanfile) == expected_toolset
-
-
-def test_intel_invalid():
-    """ When running intel as compiler, and there is no compiler version configured,
-        msvs_toolset must return None
-    """
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({"compiler": "intel"})
-    assert msvs_toolset(conanfile) is None
 
 
 def test_intel_cc_old_compiler():

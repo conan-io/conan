@@ -4,21 +4,20 @@ from mock.mock import Mock
 
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
-from conan.tools.files.files import save_toolchain_args
-from conans import ConanFile, Settings
+from conan.tools.build import save_toolchain_args
+from conans.model.conan_file import ConanFile
 from conans.model.conf import Conf
-from conans.model.env_info import EnvValues
+from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")
 def conanfile():
-    c = ConanFile(Mock(), None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows"],
+    c = ConanFile("")
+    c.settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}), EnvValues())
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"

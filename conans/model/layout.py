@@ -1,15 +1,15 @@
 import os
 
+from conans.model.build_info import CppInfo
 from conans.model.conf import Conf
-from conans.model.new_build_info import NewCppInfo
 
 
 class Infos(object):
 
     def __init__(self):
-        self.source = NewCppInfo()
-        self.build = NewCppInfo()
-        self.package = NewCppInfo(with_defaults=True)
+        self.source = CppInfo()
+        self.build = CppInfo()
+        self.package = CppInfo(set_defaults=True)
 
 
 class PartialLayout(object):
@@ -35,12 +35,11 @@ class Layouts(object):
 class Folders(object):
 
     def __init__(self):
-        self._base_install = None
         self._base_source = None
         self._base_build = None
         self._base_package = None
         self._base_generators = None
-        self._base_imports = None
+
         self._base_export = None
         self._base_export_sources = None
 
@@ -48,7 +47,6 @@ class Folders(object):
         self.build = ""
         self.package = ""
         self.generators = ""
-        self.imports = ""
         # Relative location of the project root, if the conanfile is not in that project root, but
         # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
         self.root = None
@@ -56,6 +54,7 @@ class Folders(object):
         # conanfile.py, that makes most of the output folders defined in layouts (cmake_layout, etc)
         # start from the subproject again
         self.subproject = None
+        self.build_folder_vars = None
 
     def __repr__(self):
         return str(self.__dict__)
@@ -76,12 +75,8 @@ class Folders(object):
             os.path.normpath(os.path.join(conanfile_folder, self.root))
 
         self._base_source = base_folder
-
-        self._base_install = output_folder or base_folder
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
-        self._base_imports = output_folder or base_folder
-
         self._base_export_sources = output_folder or base_folder
 
     @property
@@ -116,13 +111,6 @@ class Folders(object):
         self._base_build = folder
 
     @property
-    def base_install(self):
-        return self._base_install
-
-    def set_base_install(self, folder):
-        self._base_install = folder
-
-    @property
     def base_package(self):
         return self._base_package
 
@@ -144,22 +132,6 @@ class Folders(object):
 
     def set_base_generators(self, folder):
         self._base_generators = folder
-
-    @property
-    def imports_folder(self):
-        if self._base_imports is None:
-            return None
-        if not self.imports:
-            return self._base_imports
-
-        return os.path.join(self._base_imports, self.imports)
-
-    @property
-    def base_imports(self):
-        return self._base_imports
-
-    def set_base_imports(self, folder):
-        self._base_imports = folder
 
     @property
     def base_export(self):

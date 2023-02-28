@@ -1,16 +1,14 @@
-import unittest
-
 from conans.test.utils.tools import TestClient
 
 
-class LoadRequirementsTextFileTest(unittest.TestCase):
+class TestLoadRequirementsTextFileTest:
 
     def test_load_reqs_from_text_file(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile, load
+        conanfile = """from conan import ConanFile
 def reqs():
     try:
-        content = load("reqs.txt")
+        content = open("reqs.txt", "r").read()
         lines = [line for line in content.splitlines() if line]
         return tuple(lines)
     except:
@@ -21,16 +19,16 @@ class Test(ConanFile):
     requires = reqs()
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create . Hello0/0.1@user/channel")
+        client.run("create . --name=hello0 --version=0.1 --user=user --channel=channel")
 
         for i in (0, 1, 2):
-            reqs = "Hello%s/0.1@user/channel" % i
+            reqs = "hello%s/0.1@user/channel" % i
             client.save({"conanfile.py": conanfile,
                          "reqs.txt": reqs})
-            client.run("create . Hello%s/0.1@user/channel" % (i + 1))
+            client.run("create . --name=hello%s --version=0.1 --user=user --channel=channel" % (i + 1))
 
-        client.run("install Hello3/0.1@user/channel")
-        self.assertIn("Hello0/0.1@user/channel from local", client.out)
-        self.assertIn("Hello1/0.1@user/channel from local", client.out)
-        self.assertIn("Hello2/0.1@user/channel from local", client.out)
-        self.assertIn("Hello3/0.1@user/channel from local", client.out)
+        client.run("install --requires=hello3/0.1@user/channel")
+        client.assert_listed_require({"hello0/0.1@user/channel": "Cache",
+                                      "hello1/0.1@user/channel": "Cache",
+                                      "hello2/0.1@user/channel": "Cache",
+                                      "hello3/0.1@user/channel": "Cache"})

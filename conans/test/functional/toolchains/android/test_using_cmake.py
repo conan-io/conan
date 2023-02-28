@@ -15,7 +15,7 @@ def client():
     create_library(t)
     t.save({
         'conanfile.py': textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
 
             class Library(ConanFile):
@@ -54,17 +54,17 @@ def client():
     return t
 
 
-@pytest.mark.tool_cmake
-@pytest.mark.tool_android_ndk
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("android_ndk")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
 def test_use_cmake_toolchain(client):
     """ This is the naive approach, we follow instruction from CMake in its documentation
         https://cmake.org/cmake/help/latest/manual/cmake-toolchains.7.html#cross-compiling-for-android
     """
     # Build in the cache
-    client.run('create . library/version@ --profile:host=profile_host --profile:build=default')
+    client.run('create . --name=library --version=version --profile:host=profile_host --profile:build=default')
 
     # Build locally
-    client.run('install . library/version@ --profile:host=profile_host --profile:build=default')
+    client.run('install . --name=library --version=version --profile:host=profile_host --profile:build=default')
     client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename))
     client.run_command('cmake --build .')

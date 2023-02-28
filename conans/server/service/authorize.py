@@ -11,18 +11,16 @@ Replace this module with other that keeps the interface or super class.
 
 from abc import ABCMeta, abstractmethod
 
-import six
-
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
-from conans.model.ref import ConanFileReference
 
 
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
 #  ############################################
+from conans.model.recipe_ref import RecipeReference
 
-@six.add_metaclass(ABCMeta)
-class Authorizer(object):
+
+class Authorizer(object, metaclass=ABCMeta):
     """
     Handles the access permissions to conans and packages
     """
@@ -31,7 +29,7 @@ class Authorizer(object):
     def check_read_conan(self, username, ref):
         """
         username: User that request to read the conans
-        ref: ConanFileReference
+        ref: RecipeReference
         """
         raise NotImplemented()
 
@@ -39,7 +37,7 @@ class Authorizer(object):
     def check_write_conan(self, username, ref):
         """
         username: User that request to write the conans
-        ref: ConanFileReference
+        ref: RecipeReference
         """
         raise NotImplemented()
 
@@ -76,8 +74,7 @@ class Authorizer(object):
         raise NotImplemented()
 
 
-@six.add_metaclass(ABCMeta)
-class Authenticator(object):
+class Authenticator(object, metaclass=ABCMeta):
     """
     Handles the user authentication
     """
@@ -129,7 +126,7 @@ class BasicAuthorizer(Authorizer):
     def check_read_conan(self, username, ref):
         """
         username: User that request to read the conans
-        ref: ConanFileReference
+        ref: RecipeReference
         """
         if ref.user == username:
             return
@@ -139,7 +136,7 @@ class BasicAuthorizer(Authorizer):
     def check_write_conan(self, username, ref):
         """
         username: User that request to write the conans
-        ref: ConanFileReference
+        ref: RecipeReference
         """
         if ref.user == username:
             return True
@@ -149,7 +146,7 @@ class BasicAuthorizer(Authorizer):
     def check_delete_conan(self, username, ref):
         """
         username: User that request to write the conans
-        ref: ConanFileReference
+        ref: RecipeReference
         """
         self.check_write_conan(username, ref)
 
@@ -189,7 +186,7 @@ class BasicAuthorizer(Authorizer):
         """Checks if a rule specified in config file applies to current conans
         reference and current user"""
         try:
-            rule_ref = ConanFileReference.loads(rule[0])
+            rule_ref = RecipeReference.loads(rule[0])
         except Exception:
             # TODO: Log error
             raise InternalErrorException("Invalid server configuration. "
@@ -214,11 +211,10 @@ class BasicAuthorizer(Authorizer):
 
         return False
 
-    def _check_ref_apply_for_rule(self, rule_ref, ref):
+    def _check_ref_apply_for_rule(self, rule_ref: RecipeReference, ref: RecipeReference):
         """Checks if a conans reference specified in config file applies to current conans
         reference"""
-        name, version, user, channel, _ = rule_ref
-        return not((name != "*" and name != ref.name) or
-                   (version != "*" and version != ref.version) or
-                   (user != "*" and user != ref.user) or
-                   (channel != "*" and channel != ref.channel))
+        return not((rule_ref.name != "*" and rule_ref.name != ref.name) or
+                   (rule_ref.version != "*" and rule_ref.version != ref.version) or
+                   (rule_ref.user != "*" and rule_ref.user != ref.user) or
+                   (rule_ref.channel != "*" and rule_ref.channel != ref.channel))
