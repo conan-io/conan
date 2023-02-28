@@ -144,8 +144,8 @@ OpenCV/2.4.10@phil/stable1111111111111111111111111111111111111111111111111111111
         save(file_path, conanfile_txt)
         loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException,
-                                   r"Error while parsing \[options\] in conanfile\n"
-                                   "Options should be specified as 'pkg:option=value'"):
+                                   r"Error while parsing \[options\] in conanfile.txt\n"
+                                   "Options should be specified as 'pkg/\*:option=value'"):
             loader.load_conanfile_txt(file_path)
 
     def test_layout_not_predefined(self):
