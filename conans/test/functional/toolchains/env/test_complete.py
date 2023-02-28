@@ -116,7 +116,7 @@ def test_complete():
                  "main.cpp": mycmake_main}, clean_first=True)
     client.run("create . --name=mycmake --version=1.0", assert_error=True)
     assert "The usage of package names `myopenssl:shared` in options is deprecated, " \
-           "use a pattern like `myopenssl/*` or `myopenssl*` instead" in client.out
+           "use a pattern like `myopenssl/*:shared` instead" in client.out
 
     # Fix the default options and repeat the create
     fixed_cf = mycmake_conanfile.replace('default_options = {"myopenssl:shared": True}',
