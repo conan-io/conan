@@ -24,8 +24,11 @@ def config_install(conan_api, parser, subparser, *args):
                            help="git repository, local file or folder or zip file (local or "
                                 "http) where the configuration is stored")
 
-    subparser.add_argument("--verify-ssl", nargs="?", default="True",
-                           help='Verify SSL connection when downloading file')
+    ssl_subgroup = subparser.add_mutually_exclusive_group()
+    ssl_subgroup.add_argument("--verify-ssl", nargs="?", default="True",
+                              help='Verify SSL connection when downloading file')
+    ssl_subgroup.add_argument("--insecure", action="store_true", default=None,
+                              help="Allow insecure server connections when using SSL")
     subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
                            help='Type of remote config')
     subparser.add_argument("-a", "--args",
@@ -36,8 +39,7 @@ def config_install(conan_api, parser, subparser, *args):
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
     args = parser.parse_args(*args)
-
-    verify_ssl = get_bool_from_text(args.verify_ssl)
+    verify_ssl = not args.insecure if args.insecure is not None else get_bool_from_text(args.verify_ssl)
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
                              source_folder=args.source_folder,
                              target_folder=args.target_folder)
