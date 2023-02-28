@@ -45,3 +45,13 @@ def test_config_list():
         assert f"{k}: {v}" in client.out
     client.run("config list --format=json")
     assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
+
+
+def test_config_install():
+    tc = TestClient()
+    tc.save({'config/foo': ''})
+    # This should not fail (insecure flag exists)
+    tc.run("config install config --insecure")
+    assert "foo" in os.listdir(tc.cache_folder)
+    # Negative test, ensure we would be catching a missing arg if it did not exist
+    tc.run("config install config --superinsecure", assert_error=True)
