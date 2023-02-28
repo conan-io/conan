@@ -469,9 +469,8 @@ def _parse_conanfile(conan_file_path):
                 except AttributeError:  # In case the module.__path__ doesn't exist
                     pass
                 else:
-                    if folder.startswith(current_dir):
-                        module = sys.modules.pop(added)
-                        sys.modules["%s.%s" % (module_id, added)] = module
+                    module = sys.modules.pop(added)
+                    sys.modules["%s.%s" % (module_id, added)] = module
     except ConanException:
         raise
     except Exception:
