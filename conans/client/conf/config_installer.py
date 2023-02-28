@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
+from conans.client.conanignore import ConanIgnoreMatcher
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 from conans.util.runners import detect_runner
@@ -99,10 +100,16 @@ def _process_folder(config, folder, cache):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
+    conanignore_path = os.path.join(folder, '.conanignore')
+    if os.path.exists(conanignore_path):
+        conanignore = ConanIgnoreMatcher(conanignore_path)
     for root, dirs, files in os.walk(folder):
+        # .git is always ignored by default, even if not present in .conanignore
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
-            _process_file(root, f, config, cache, folder)
+            rel_path = os.path.relpath(os.path.join(root, f), folder)
+            if conanignore is None or not conanignore.matches(rel_path):
+                _process_file(root, f, config, cache, folder)
 
 
 def _process_download(config, cache, requester):
