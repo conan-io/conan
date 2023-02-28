@@ -101,6 +101,7 @@ def _process_folder(config, folder, cache):
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
     conanignore_path = os.path.join(folder, '.conanignore')
+    conanignore = None
     if os.path.exists(conanignore_path):
         conanignore = ConanIgnoreMatcher(conanignore_path)
     for root, dirs, files in os.walk(folder):
