@@ -205,9 +205,11 @@ def _msvc_supported_cppstd(version):
     """
     [14, 17, 20, 23]
     """
-    if version < "190":
+    if version < "190":  # pre VS 2015
         return []
-    if version < "191":
+    if version < "191":  # VS 2015
+        return ["14"]
+    if version < "192":  # VS 2017
         return ["14", "17"]
     if version < "193":
         return ["14", "17", "20"]
