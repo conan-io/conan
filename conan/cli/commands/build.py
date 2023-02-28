@@ -5,6 +5,7 @@ from conan.cli.command import conan_command
 from conan.cli.commands import make_abs_path
 from conan.cli.args import add_lockfile_args, add_common_install_arguments, add_reference_args
 from conan.internal.conan_app import ConanApp
+from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conans.client.conanfile.build import run_build_method
 
@@ -15,9 +16,9 @@ def build(conan_api, parser, *args):
     Install dependencies and call the build() method.
     """
     parser.add_argument("path", nargs="?",
-                        help="Path to a folder containing a recipe (conanfile.py "
-                             "or conanfile.txt) or to a recipe file. e.g., "
-                             "./my_project/conanfile.txt.")
+                        help='Path to a python-based recipe file or a folder '
+                             'containing a conanfile.py recipe. conanfile.txt '
+                             'cannot be used with conan build.')
     add_reference_args(parser)
     # TODO: Missing --build-require argument and management
     parser.add_argument("-of", "--output-folder",
@@ -36,6 +37,7 @@ def build(conan_api, parser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
 
     deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                      args.user, args.channel,

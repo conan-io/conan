@@ -253,8 +253,11 @@ def _save_cmake_user_presets(conanfile, preset_path, user_presets_path, preset_p
     data = _append_user_preset_path(conanfile, data, preset_path)
 
     data = json.dumps(data, indent=4)
-    relpath = os.path.relpath(user_presets_path, conanfile.generators_folder)
-    ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {relpath}")
+    try:
+        presets_path = os.path.relpath(user_presets_path, conanfile.generators_folder)
+    except ValueError:  # in Windows this fails if in another drive
+        presets_path = user_presets_path
+    ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {presets_path}")
     save(user_presets_path, data)
 
 
