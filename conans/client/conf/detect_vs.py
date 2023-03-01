@@ -114,6 +114,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     arguments.append(vswhere_path)
 
     # Output json format
+    arguments.append("-utf8")
     arguments.append("-format")
     arguments.append("json")
 
