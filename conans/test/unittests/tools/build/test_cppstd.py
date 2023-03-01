@@ -79,8 +79,9 @@ def test_supported_cppstd_apple_clang(compiler, compiler_version, values):
 
 @pytest.mark.parametrize("compiler,compiler_version,values", [
     ("msvc", "180", []),
-    ("msvc", "190", ['14', '17']),
-    ("msvc", "191", ['14', '17', '20']),
+    ("msvc", "190", ['14']),
+    ("msvc", "191", ['14', '17']),
+    ("msvc", "192", ['14', '17', '20']),
     ("msvc", "193", ['14', '17', '20', '23']),
 ])
 def test_supported_cppstd_msvc(compiler, compiler_version, values):
