@@ -1,6 +1,6 @@
 import os
 
-from conan.cli.commands import make_abs_path
+from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference

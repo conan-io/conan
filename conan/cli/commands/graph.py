@@ -5,7 +5,7 @@ from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand
-from conan.cli.commands import make_abs_path
+from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
