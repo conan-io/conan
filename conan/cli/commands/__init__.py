@@ -45,8 +45,6 @@ def add_log_level_args(subparser):
                            help="Level of detail of the output. Valid options from less verbose "
                                 "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
-    subparser.add_argument("--logger", action="store_true",
-                           help="Show the output with log format, with time, type and message.")
 
 
 def process_log_level_args(args):
@@ -71,4 +69,3 @@ def process_log_level_args(args):
     if not level:
         raise ConanException(f"Invalid argument '-v{args.v}'")
     output.conan_output_level = level
-    output.conan_output_logger_format = args.logger

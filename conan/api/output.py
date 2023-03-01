@@ -19,7 +19,6 @@ LEVEL_TRACE = 10  # -vvv Fine-grained messages with very low-level implementatio
 
 # Singletons
 conan_output_level = LEVEL_STATUS
-conan_output_logger_format = False
 
 
 def log_level_allowed(level):
@@ -116,14 +115,6 @@ class ConanOutput:
                 return json.dumps(_obj)
             except TypeError:
                 return repr(_obj)
-
-        if conan_output_logger_format:
-            import datetime
-            the_date = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
-            ret = {"json": {"level": level_str, "time": the_date, "data": msg}}
-            ret = json.dumps(ret, default=json_encoder)
-            self.stream.write("{}\n".format(ret))
-            return
 
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural

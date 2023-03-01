@@ -1,6 +1,5 @@
 import os
 import shutil
-import time
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -17,11 +16,6 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
-
-# FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
-from conans.util.tracer import (log_package_download,
-                                log_recipe_sources_download,
-                                log_uncompressed_file)
 
 
 class RemoteManager(object):
@@ -80,7 +74,6 @@ class RemoteManager(object):
 
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
-        t1 = time.time()
 
         download_folder = layout.download_export()
         export_sources_folder = layout.export_sources()
@@ -88,9 +81,6 @@ class RemoteManager(object):
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
             return
-
-        duration = time.time() - t1
-        log_recipe_sources_download(ref, duration, remote.name, zipped_files)
 
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder)
@@ -107,7 +97,6 @@ class RemoteManager(object):
             self._get_package(pkg_layout, pref, remote, conanfile.output)
 
     def _get_package(self, layout, pref, remote, scoped_output):
-        t1 = time.time()
         try:
             assert pref.revision is not None
 
@@ -116,8 +105,6 @@ class RemoteManager(object):
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             self._signer.verify(pref, download_pkg_folder)
-            duration = time.time() - t1
-            log_package_download(pref, duration, remote, zipped_files)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
@@ -216,7 +203,6 @@ class RemoteManager(object):
 
 
 def uncompress_file(src_path, dest_folder):
-    t1 = time.time()
     try:
         ConanOutput().info("Decompressing %s" % os.path.basename(src_path))
         with open(src_path, mode='rb') as file_handler:
@@ -232,6 +218,3 @@ def uncompress_file(src_path, dest_folder):
         except Exception:
             error_msg += "Folder not removed, files/package might be damaged, remove manually"
         raise ConanException(error_msg)
-
-    duration = time.time() - t1
-    log_uncompressed_file(src_path, duration, dest_folder)
