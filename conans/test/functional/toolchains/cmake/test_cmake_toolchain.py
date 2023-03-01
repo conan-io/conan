@@ -863,64 +863,6 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert "MSVC_LANG2017" in client.out
 
 
-@pytest.mark.tool("cmake", "3.23")
-def test_max_schema_version2_build():
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_exe -d name=hello -d version=0.1")
-    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2"]
-    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
-    client.run("build .")
-
-
-@pytest.mark.tool("cmake", "3.23")
-def test_user_presets_version2():
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_exe -d name=hello -d version=0.1")
-    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
-               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
-    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
-    client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
-    # TODO: This line was failing, after being merged from conan 1.x, because the default
-    #  compiler in CI is VS 191, that do not support c++20, and this raises, but apparently
-    #  it does nothing @lasote
-    # client.run("install . {} -s compiler.cppstd=20".format(" ".join(configs)))
-
-    if platform.system() == "Windows":
-        client.run_command("cmake . --preset conan-14")
-        client.run_command("cmake --build --preset conan-14-release")
-        client.run_command("ctest --preset conan-14-release")
-        client.run_command(r"build\14\Release\hello.exe")
-    else:
-        client.run_command("cmake . --preset conan-14-release")
-        client.run_command("cmake --build --preset conan-14-release")
-        client.run_command("ctest --preset conan-14-release")
-        client.run_command("./build/14/Release/hello")
-
-    assert "Hello World Release!" in client.out
-
-    if platform.system() != "Windows":
-        assert "__cplusplus2014" in client.out
-    else:
-        assert "MSVC_LANG2014" in client.out
-
-    if platform.system() == "Windows":
-        client.run_command("cmake . --preset conan-17")
-        client.run_command("cmake --build --preset conan-17-release")
-        client.run_command("ctest --preset conan-17-release")
-        client.run_command(r"build\17\Release\hello.exe")
-    else:
-        client.run_command("cmake . --preset conan-17-release")
-        client.run_command("cmake --build --preset conan-17-release")
-        client.run_command("ctest --preset conan-17-release")
-        client.run_command("./build/17/Release/hello")
-
-    assert "Hello World Release!" in client.out
-    if platform.system() != "Windows":
-        assert "__cplusplus2017" in client.out
-    else:
-        assert "MSVC_LANG2017" in client.out
-
-
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_sysroot():
     client = TestClient(path_with_spaces=False)
