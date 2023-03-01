@@ -262,8 +262,8 @@ def remote_auth(conan_api, parser, subparser, *args):
     """
     Authenticate in the defined remotes
     """
-    subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
-                                          "The pattern uses 'fnmatch' style wildcards.")
+    subparser.add_argument("remote", help="Pattern or name of the remote/s to authenticate against."
+                                          " The pattern uses 'fnmatch' style wildcards.")
     subparser.add_argument("--with-user", action="store_true",
                            help="Only try to auth in those remotes that already "
                                 "have a username or a CONAN_LOGIN_ env-var defined")
