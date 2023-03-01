@@ -224,7 +224,6 @@ def _detect_compiler_version(result):
         # Add default mandatory fields for MSVC compiler
         result.append(("compiler.cppstd", "14"))
         result.append(("compiler.runtime", "dynamic"))
-        result.append(("compiler.runtime_type", "Release"))
 
     if compiler != "msvc":
         cppstd = _cppstd_default(compiler, version)
