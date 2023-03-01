@@ -470,6 +470,12 @@ class ConfigInstallTest(unittest.TestCase):
         with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
+        with patch.object(FileDownloader, 'download', new=download_verify_true):
+            self.client.run(f"config install {fake_url}")
+
+        with patch.object(FileDownloader, 'download', new=download_verify_false):
+            self.client.run(f"config install {fake_url} --insecure")
+
     @pytest.mark.tool("git")
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()

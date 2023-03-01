@@ -230,8 +230,8 @@ class Options:
                         package, option = tokens
                         if "/" not in package and "*" not in package and "&" not in package:
                             msg = "The usage of package names `{}` in options is " \
-                                  "deprecated, use a pattern like `{}/*` or `{}*` " \
-                                  "instead".format(k, package, package)
+                                  "deprecated, use a pattern like `{}/*:{}` " \
+                                  "instead".format(k, package, option)
                             raise ConanException(msg)
                         self._deps_package_options.setdefault(package, _PackageOptions())[option] = v
                     else:
