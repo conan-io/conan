@@ -35,7 +35,7 @@ class TestTransitiveOptionsAffectPackageID:
                     if self.dependencies["pkg"].package_type == "static-library":
                         self.output.info("EMBED MODE!!")
                         self.info.requires["pkg"].package_id = None
-                        self.info.options["pkg"].affect = self.dependencies["pkg"].options.affect
+                        self.info.options["pkg/*"].affect = self.dependencies["pkg"].options.affect
             """)
         client.save({"conanfile.py": app})
         client.run("create . -o pkg*:noaffect=1 -o pkg*:affect=False")
