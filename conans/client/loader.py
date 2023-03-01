@@ -238,8 +238,8 @@ class ConanFileLoader:
         try:
             conanfile.options = Options.loads(parser.options)
         except Exception:
-            raise ConanException("Error while parsing [options] in conanfile\n"
-                                 "Options should be specified as 'pkg:option=value'")
+            raise ConanException("Error while parsing [options] in conanfile.txt\n"
+                                 "Options should be specified as 'pkg/*:option=value'")
 
         return conanfile
 
