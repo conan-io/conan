@@ -26,8 +26,9 @@ class TestConfigHome:
         client.run("config home")
         assert f"{client.cache.cache_folder}\n" == client.stdout
 
-        client.run("config home --format=text")
-        assert f"{client.cache.cache_folder}\n" == client.stdout
+        client.run("config home --format=text", assert_error=True)
+        # It is not possible to use --format=text explicitly
+        assert "--format=text" in client.out
 
     def test_api_uses_env_var_home(self):
         cache_folder = os.path.join(temp_folder(), "custom")
@@ -46,6 +47,9 @@ def test_config_list():
         assert f"{k}: {v}" in client.out
     client.run("config list --format=json")
     assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
+
+    client.run("config list unexpectedarg", assert_error=True)
+    assert "unrecognized arguments: unexpectedarg" in client.out
 
 
 def test_config_install():
