@@ -79,7 +79,7 @@ def detect_runner(command):
     return proc.returncode, "".join(output_buffer)
 
 
-def check_output_runner(cmd, stderr=None):
+def check_output_runner(cmd, stderr=None, encoding="utf-8"):
     # Used to run several utilities, like Pacman detect, AIX version, uname, SCM
     assert isinstance(cmd, str)
     d = tempfile.mkdtemp()
@@ -96,7 +96,7 @@ def check_output_runner(cmd, stderr=None):
             msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
             raise ConanException(msg)
 
-        output = load(tmp_file)
+        output = load(tmp_file, encoding=encoding)
         return output
     finally:
         try:
