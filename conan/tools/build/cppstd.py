@@ -203,6 +203,10 @@ def _gcc_supported_cppstd(version):
 
 def _msvc_supported_cppstd(version):
     """
+    https://learn.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version?view=msvc-170
+    - /std:c++14 starting in Visual Studio 2015 Update 3 (190)
+    - /std:c++17 starting in Visual Studio 2017 version 15.3. (191)
+    - /std:c++20 starting in Visual Studio 2019 version 16.11 (192)
     [14, 17, 20, 23]
     """
     if version < "190":  # pre VS 2015
