@@ -1,5 +1,3 @@
-import sys
-
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import default_json_formatter, default_text_formatter
@@ -57,6 +55,7 @@ def config_home(conan_api, parser, subparser, *args):
     """
     Show the Conan home folder.
     """
+    parser.parse_args(*args)
     return conan_api.config.home()
 
 
@@ -65,4 +64,5 @@ def config_list(conan_api, parser, subparser, *args):
     """
     Show all the Conan available configurations: core and tools.
     """
+    parser.parse_args(*args)
     return BUILT_IN_CONFS

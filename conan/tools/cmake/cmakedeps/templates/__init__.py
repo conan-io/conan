@@ -60,18 +60,11 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def configuration(self):
-        if not self.require.build:
-            return self.cmakedeps.configuration \
-                if self.cmakedeps.configuration else None
-        else:
-            return self.conanfile.settings_build.get_safe("build_type")
+        return self.cmakedeps.configuration
 
     @property
     def arch(self):
-        if not self.require.build:
-            return self.cmakedeps.arch if self.cmakedeps.arch else None
-        else:
-            return self.conanfile.settings_build.get_safe("arch")
+        return self.cmakedeps.arch
 
     @property
     def config_suffix(self):
