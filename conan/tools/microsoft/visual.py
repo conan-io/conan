@@ -142,6 +142,8 @@ class VCVars:
 
         content = textwrap.dedent("""\
             @echo off
+            set __VSCMD_ARG_NO_LOGO=1
+            set VSCMD_SKIP_SENDTELEMETRY=1
             {}
             """.format(vcvars))
         from conan.tools.env.environment import create_env_script
