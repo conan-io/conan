@@ -1,5 +1,6 @@
 import os
 import shutil
+import fnmatch
 
 from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
@@ -9,6 +10,26 @@ from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 from conans.util.runners import detect_runner
+
+
+class ConanIgnoreMatcher:
+    def __init__(self, conanignore_path):
+        self.conanignore_path = os.path.abspath(conanignore_path)
+        self._ignored_entries = {".conanignore"}
+        self._parse_conanignore()
+
+    def _parse_conanignore(self):
+        with open(self.conanignore_path, 'r') as conanignore:
+            for line in conanignore:
+                line_content = line.strip()
+                if line_content != "":
+                    self._ignored_entries.add(line_content)
+
+    def matches(self, path):
+        for ignore_entry in self._ignored_entries:
+            if fnmatch.fnmatch(path, ignore_entry):
+                return True
+        return False
 
 
 def _hide_password(resource):
@@ -99,10 +120,17 @@ def _process_folder(config, folder, cache):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
+    conanignore_path = os.path.join(folder, '.conanignore')
+    conanignore = None
+    if os.path.exists(conanignore_path):
+        conanignore = ConanIgnoreMatcher(conanignore_path)
     for root, dirs, files in os.walk(folder):
+        # .git is always ignored by default, even if not present in .conanignore
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
-            _process_file(root, f, config, cache, folder)
+            rel_path = os.path.relpath(os.path.join(root, f), folder)
+            if conanignore is None or not conanignore.matches(rel_path):
+                _process_file(root, f, config, cache, folder)
 
 
 def _process_download(config, cache, requester):

@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 
 from conan.api.conan_api import ConanAPI
 from conans.model.conf import BUILT_IN_CONFS
@@ -45,3 +46,61 @@ def test_config_list():
         assert f"{k}: {v}" in client.out
     client.run("config list --format=json")
     assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
+
+
+def test_config_install():
+    tc = TestClient()
+    tc.save({'config/foo': ''})
+    # This should not fail (insecure flag exists)
+    tc.run("config install config --insecure")
+    assert "foo" in os.listdir(tc.cache_folder)
+    # Negative test, ensure we would be catching a missing arg if it did not exist
+    tc.run("config install config --superinsecure", assert_error=True)
+
+
+def test_config_install_conanignore():
+    tc = TestClient()
+    conanignore = textwrap.dedent("""
+    a/*
+    b/c/*
+    d/*
+    """)
+    tc.save({
+        'config_folder/.conanignore': conanignore,
+        "config_folder/a/test": '',
+        'config_folder/abracadabra': '',
+        'config_folder/b/bison': '',
+        'config_folder/b/a/test2': '',
+        'config_folder/b/c/helmet': '',
+        'config_folder/d/prix': '',
+        'config_folder/d/foo/bar': '',
+        'config_folder/foo': ''
+    })
+    def _assert_config_exists(path):
+        assert os.path.exists(os.path.join(tc.cache_folder, path))
+
+    def _assert_config_not_exists(path):
+        assert not os.path.exists(os.path.join(tc.cache_folder, path))
+
+    tc.run('config install config_folder')
+
+    _assert_config_not_exists(".conanignore")
+
+    _assert_config_not_exists("a")
+    _assert_config_not_exists("a/test")
+
+    _assert_config_exists("abracadabra")
+
+    _assert_config_exists("b")
+    _assert_config_exists("b/bison")
+    _assert_config_exists("b/a/test2")
+    _assert_config_not_exists("b/c/helmet")
+    _assert_config_not_exists("b/c")
+
+    _assert_config_not_exists("d/prix")
+    _assert_config_not_exists("d/foo/bar")
+    _assert_config_not_exists("d")
+
+    _assert_config_exists("foo")
+
+    os.listdir(tc.current_folder)
