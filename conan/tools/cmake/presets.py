@@ -83,7 +83,7 @@ class _CMakePresets:
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
                                                multiconfig, preset_prefix)
         build = _CMakePresets._build_and_test_preset_fields(conanfile, multiconfig, preset_prefix)
-        ret = {"version": "3",
+        ret = {"version": 3,
                "vendor": {"conan": {}},
                "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
                "configurePresets": [conf],
