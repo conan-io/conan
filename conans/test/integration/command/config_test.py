@@ -47,6 +47,9 @@ def test_config_list():
     client.run("config list --format=json")
     assert f"{json.dumps(BUILT_IN_CONFS, indent=4)}\n" == client.stdout
 
+    client.run("config list unexpectedarg", assert_error=True)
+    assert "unrecognized arguments: unexpectedarg" in client.out
+
 
 def test_config_install():
     tc = TestClient()
