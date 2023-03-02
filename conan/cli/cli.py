@@ -184,7 +184,7 @@ class Cli:
                     f"Recipe '{pkg}' seems broken.\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n"\
                     "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
-                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
         result = re.search(r"(.*): Error in build\(\) method, line", message)
@@ -194,7 +194,7 @@ class Cli:
                     f"Recipe '{pkg}' cannot build its binary\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n" \
                     "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
-                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
 

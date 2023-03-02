@@ -6,7 +6,7 @@ from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands import make_abs_path
-from conan.cli.args import common_graph_args
+from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conans.client.graph.install_graph import InstallGraph
@@ -121,11 +121,7 @@ def graph_info(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.requires and (args.name or args.version or args.user or args.channel):
-        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--requires")
-    if not args.path and not args.requires and not args.tool_requires:
-        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
+    validate_common_graph_args(args)
     if args.format in ("html", "dot") and args.filter:
         raise ConanException(f"Formatted output '{args.format}' cannot filter fields")
 
