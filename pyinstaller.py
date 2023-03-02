@@ -139,10 +139,6 @@ def pyinstall(source_folder):
                     % (command, source_folder, conan_server_path, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
-    conan_bin = os.path.join(pyinstaller_path, 'dist', 'conan')
-    conan_server_folder = os.path.join(pyinstaller_path, 'dist', 'conan_server')
-
-    dir_util.copy_tree(conan_server_folder, conan_bin)
     _run_bin(pyinstaller_path)
 
     return os.path.abspath(os.path.join(pyinstaller_path, 'dist', 'conan'))
