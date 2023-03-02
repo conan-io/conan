@@ -1,7 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
-from conan.cli.commands import make_abs_path
+from conan.cli import make_abs_path
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 
@@ -11,7 +11,8 @@ class LockfileAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def get_lockfile(self, lockfile=None, conanfile_path=None, cwd=None, partial=False):
+    @staticmethod
+    def get_lockfile(lockfile=None, conanfile_path=None, cwd=None, partial=False):
         """ obtain a lockfile, following this logic:
         - If lockfile is explicitly defined, it would be either absolute or relative to cwd and
           the lockfile file must exist. If lockfile="" (empty string) the default "conan.lock"
