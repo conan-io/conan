@@ -68,7 +68,8 @@ def _check_correct_cppstd(settings):
                     "14": "5.1",
                     "11": "4.5"}.get(cppstd)
         elif compiler == "msvc":
-            mver = {"20": "193",
+            mver = {"23": "193",
+                    "20": "192",
                     "17": "191",
                     "14": "190"}.get(cppstd)
         if mver and version < mver:
