@@ -434,7 +434,7 @@ def _parse_conanfile(conan_file_path):
     current_dir = os.path.dirname(conan_file_path)
     sys.path.insert(0, current_dir)
     try:
-        old_modules = list(sys.modules.keys())
+        sys_modules_bak = {k:v for k,v in sys.modules.items()}
         with chdir(current_dir):
             old_dont_write_bytecode = sys.dont_write_bytecode
             try:
@@ -451,26 +451,10 @@ def _parse_conanfile(conan_file_path):
             required_conan_version = getattr(loaded, "required_conan_version", None)
             if required_conan_version:
                 validate_conan_version(required_conan_version)
-
-        # These lines are necessary, otherwise local conanfile imports with same name
-        # collide, but no error, and overwrite other packages imports!!
-        added_modules = set(sys.modules).difference(old_modules)
-        for added in added_modules:
-            module = sys.modules[added]
-            if module:
-                try:
-                    try:
-                        # Most modules will have __file__ != None
-                        folder = os.path.dirname(module.__file__)
-                    except (AttributeError, TypeError):
-                        # But __file__ might not exist or equal None
-                        # Like some builtins and Namespace packages py3
-                        folder = module.__path__._path[0]
-                except AttributeError:  # In case the module.__path__ doesn't exist
-                    pass
-                else:
-                    module = sys.modules.pop(added)
-                    sys.modules["%s.%s" % (module_id, added)] = module
+                
+        # make sure that no import from inside a conanfile is cached
+        sys.modules = sys_modules_bak
+        
     except ConanException:
         raise
     except Exception:
