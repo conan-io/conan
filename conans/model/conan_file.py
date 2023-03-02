@@ -95,6 +95,11 @@ class ConanFile:
 
         self.options = Options(self.options or {}, self.default_options)
 
+        if isinstance(self.topics, str):
+            self.topics = [self.topics]
+        if isinstance(self.provides, str):
+            self.provides = [self.provides]
+
         # user declared variables
         self.user_info = MockInfoProperty("user_info")
         self.env_info = MockInfoProperty("env_info")
@@ -115,18 +120,11 @@ class ConanFile:
 
     def serialize(self):
         result = {}
-
-        # Some fields are requested in the docs to be tuples, but we accept single strings too,
-        # ensure those fields are serialized as lists so things like CIs don't break unexpectedly,
-        # as it did for cci
-        def _ensure_iterable_if_needed(k, value):
-            return [value] if k in ("topics", "provides") and isinstance(value, str) else value
-
         for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
                   "revision_mode", "provides", "deprecated", "win_bash"):
             v = getattr(self, a)
             if v is not None:
-                result[a] = _ensure_iterable_if_needed(a, v)
+                result[a] = v
         result["package_type"] = str(self.package_type)
         result["settings"] = self.settings.serialize()
         if hasattr(self, "python_requires"):
