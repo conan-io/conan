@@ -15,8 +15,6 @@ def check_graph_provides(dep_graph):
             dep_provides = dep_node.conanfile.provides
             if dep_provides is None:
                 continue
-            if isinstance(dep_provides, str):
-                dep_provides = dep_provides,  # convert to tuple to iterate
             for provide in dep_provides:
                 # First check if collides with current node
                 if current_provides is not None and provide in current_provides:
