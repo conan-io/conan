@@ -70,7 +70,7 @@ class TestConanfilePath:
         client = TestClient()
 
         client.run("graph info", assert_error=True)
-        assert "ERROR: Please specify at least a path" in client.out
+        assert "ERROR: Please specify a path" in client.out
 
         client.run("graph info not_real_path", assert_error=True)
         assert "ERROR: Conanfile not found" in client.out
