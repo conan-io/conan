@@ -342,10 +342,10 @@ def check_msvc_runtime_flag(msvc_version):
     assert "MSVC FLAG=MD!!" in client.out
 
 
-vs_versions = [{"vs_version": "15", "msvc_version": "191", "ide_year": "2017", "toolset": "v141"}]
+vs_versions = [{"vs_version": "15", "msvc_version": "191", "toolset": "v141"}]
 
 if "17" in tools_locations['visual_studio'] and not tools_locations['visual_studio']['17'].get('disabled', False):
-    vs_versions.append({"vs_version": "17", "msvc_version": "193", "ide_year": "2022", "toolset": "v143"})
+    vs_versions.append({"vs_version": "17", "msvc_version": "193", "toolset": "v143"})
 
 
 @parameterized_class(vs_versions)
@@ -482,7 +482,8 @@ class WinTest(unittest.TestCase):
         client.run("build . %s %s -pr:h=myprofile " % (settings_h, settings_b))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
-        self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
+        self.assertIn(f"conanvcvars.bat: Activating environment Visual Studio {self.vs_version}",
+                      client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
 
         self._run_app(client, "x86", "Release")
@@ -525,7 +526,8 @@ class WinTest(unittest.TestCase):
         client.run("build . %s" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
-        self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
+        self.assertIn(f"conanvcvars.bat: Activating environment Visual Studio {self.vs_version}",
+                      client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
         self.assertIn("Hello World Debug", client.out)
@@ -588,7 +590,8 @@ class WinTest(unittest.TestCase):
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
-            self.assertIn("Visual Studio {ide_year}".format(ide_year=self.ide_year), client.out)
+            self.assertIn(f"conanvcvars.bat: Activating environment Visual Studio {self.vs_version}",
+                          client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
 
             self._run_app(client, arch, build_type, shared)
