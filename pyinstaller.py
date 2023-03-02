@@ -135,12 +135,6 @@ def pyinstall(source_folder):
 
     _run_bin(pyinstaller_path)
 
-    subprocess.call('%s -y -p "%s" --console "%s" %s'
-                    % (command, source_folder, conan_server_path, win_ver),
-                    cwd=pyinstaller_path, shell=True)
-
-    _run_bin(pyinstaller_path)
-
     return os.path.abspath(os.path.join(pyinstaller_path, 'dist', 'conan'))
 
 
