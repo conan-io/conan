@@ -102,7 +102,6 @@ def pyinstall(source_folder):
         print("Unable to remove old folder", e)
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
-    conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     hidden = ("--hidden-import=glob "  # core stdlib
               "--hidden-import=pathlib "
               "--hidden-import=distutils.dir_util "
