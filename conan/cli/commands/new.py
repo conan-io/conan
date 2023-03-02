@@ -5,7 +5,7 @@ from jinja2 import Environment, meta, exceptions
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 

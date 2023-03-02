@@ -1,7 +1,7 @@
 import argparse
 import textwrap
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class OnceArgument(argparse.Action):

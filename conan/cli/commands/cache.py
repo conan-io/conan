@@ -2,7 +2,7 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 

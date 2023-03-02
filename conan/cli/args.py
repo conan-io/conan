@@ -1,5 +1,5 @@
 from conan.cli.command import OnceArgument
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
     '--build' options on one command line is allowed.

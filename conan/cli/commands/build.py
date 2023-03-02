@@ -4,10 +4,8 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
 from conan.cli import make_abs_path
 from conan.cli.args import add_lockfile_args, add_common_install_arguments, add_reference_args
-from conan.internal.conan_app import ConanApp
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.client.conanfile.build import run_build_method
 
 
 @conan_command(group='Creator')
@@ -59,11 +57,9 @@ def build(conan_api, parser, *args):
     conan_api.install.install_consumer(deps_graph=deps_graph, source_folder=source_folder,
                                        output_folder=output_folder)
 
-    # TODO: Decide API to put this
-    app = ConanApp(conan_api.cache_folder)
+    out.title("Calling build()")
     conanfile = deps_graph.root.conanfile
-    conanfile.folders.set_base_package(conanfile.folders.base_build)
-    run_build_method(conanfile, app.hook_manager)
+    conan_api.local.build(conanfile)
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
