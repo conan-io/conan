@@ -4,7 +4,7 @@ import os
 from conan.api.output import cli_out_write, ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
-from conan.cli.commands import make_abs_path
+from conan.cli import make_abs_path
 from conan.cli.commands.create import _get_test_conanfile_path
 from conan.cli.printers.graph import print_graph_basic
 

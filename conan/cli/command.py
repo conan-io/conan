@@ -1,7 +1,6 @@
 import argparse
 import textwrap
 
-from conan.cli.commands import add_log_level_args, process_log_level_args
 from conans.errors import ConanException
 
 
@@ -24,7 +23,7 @@ class SmartFormatter(argparse.HelpFormatter):
         return ''.join(indent + line for line in text.splitlines(True))
 
 
-class BaseConanCommand(object):
+class BaseConanCommand:
     def __init__(self, method, formatters=None):
         self._formatters = {"text": lambda x: None}
         self._method = method
@@ -45,7 +44,12 @@ class BaseConanCommand(object):
                                  "its use briefly.".format(self._name))
 
     def _init_log_levels(self):
-        add_log_level_args(self._parser)
+        self._parser.add_argument("-v", default="status", nargs='?',
+                                   help="Level of detail of the output. Valid options from less verbose "
+                                        "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
+                                        "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
+        self._parser.add_argument("--logger", action="store_true",
+                                   help="Show the output with log format, with time, type and message.")
 
     @property
     def _help_formatters(self):
@@ -101,8 +105,33 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        process_log_level_args(args)
+        self._process_log_level_args(args)
         return args
+
+    @staticmethod
+    def _process_log_level_args(args):
+        from conan.api import output
+        from conan.api.output import LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
+            LEVEL_STATUS, LEVEL_VERBOSE, LEVEL_DEBUG, LEVEL_TRACE
+
+        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
+                  "error": LEVEL_ERROR,  # -verror 70
+                  "warning": LEVEL_WARNING,  # -vwaring 60
+                  "notice": LEVEL_NOTICE,  # -vnotice 50
+                  "status": LEVEL_STATUS,  # -vstatus 40
+                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
+                  None: LEVEL_VERBOSE,  # -v 30
+                  "debug": LEVEL_DEBUG,  # -vdebug 20
+                  "v": LEVEL_DEBUG,  # -vv 20
+                  "trace": LEVEL_TRACE,  # -vtrace 10
+                  "vv": LEVEL_TRACE,  # -vvv 10
+                  }
+
+        level = levels.get(args.v)
+        if not level:
+            raise ConanException(f"Invalid argument '-v{args.v}'")
+        output.conan_output_level = level
+        output.conan_output_logger_format = args.logger
 
 
 class ConanCommand(BaseConanCommand):

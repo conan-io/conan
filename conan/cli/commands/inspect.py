@@ -3,7 +3,7 @@ import os
 
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command
-from conan.cli.commands import default_json_formatter
+from conan.cli.formatters import default_json_formatter
 
 
 def inspect_text_formatter(data):

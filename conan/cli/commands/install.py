@@ -4,7 +4,7 @@ import os
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
-from conan.cli.commands import make_abs_path
+from conan.cli import make_abs_path
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conans.errors import ConanException

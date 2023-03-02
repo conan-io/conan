@@ -2,7 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
-from conan.cli.commands import make_abs_path
+from conan.cli import make_abs_path
 from conan.cli.args import add_lockfile_args, add_common_install_arguments, add_reference_args
 from conan.internal.conan_app import ConanApp
 from conan.cli.printers import print_profiles
