@@ -189,7 +189,7 @@ def test_install_with_profile(client):
 def test_install_with_path_errors(client):
     # Install without path param not allowed
     client.run("install", assert_error=True)
-    assert "ERROR: Please specify at least a path to a conanfile or a valid reference." in client.out
+    assert "ERROR: Please specify a path" in client.out
 
     # Path with wrong conanfile.txt path
     client.run("install not_real_dir/conanfile.txt", assert_error=True)
