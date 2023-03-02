@@ -7,7 +7,7 @@ from conan.cli.command import conan_command
 from conan.cli import make_abs_path
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def json_install(info):

@@ -4,7 +4,7 @@ from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.formatters import default_json_formatter
 from conan.cli.args import add_profiles_args
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 

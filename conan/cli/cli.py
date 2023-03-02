@@ -17,7 +17,7 @@ from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_C
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
-from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
+from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 
 

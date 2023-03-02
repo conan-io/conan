@@ -10,7 +10,7 @@ from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conans.client.graph.install_graph import InstallGraph
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @conan_command(group="Consumer")
