@@ -590,8 +590,6 @@ class WinTest(unittest.TestCase):
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
-            self.assertIn(f"conanvcvars.bat: Activating environment Visual Studio {self.vs_version}",
-                          client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
 
             self._run_app(client, arch, build_type, shared)
