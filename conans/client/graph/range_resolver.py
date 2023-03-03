@@ -27,7 +27,7 @@ class RangeResolver:
 
         # If the conf is None, do whatever the range specifies
         # True: Force prerelease resolving, False: Force no prerelease resolving
-        resolve_prereleases = self._cache.new_confg.get('core.ranges_resolve_prereleases', default=None, check_type=bool)
+        resolve_prereleases = self._cache.new_config.get('core.ranges_resolve_prereleases', default=None, check_type=bool)
 
         ref = require.ref
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
