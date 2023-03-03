@@ -218,6 +218,8 @@ class ClientCache(object):
                         d[k] = current + [value for value in v if value not in current]
                     elif isinstance(v, dict):
                         current = d.get(k) or {}
+                        if isinstance(current, list):  # convert to dict lists
+                            current = {k: None for k in current}
                         d[k] = appending_recursive_dict_update(current, v)
                     else:
                         d[k] = v
