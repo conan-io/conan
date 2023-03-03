@@ -95,3 +95,28 @@ def test_editable_conf():
     assert conf_build in out
     assert confdict1 in out
     assert confdict2 in out
+
+
+def test_editable_conf_tool_require_builtin():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            def layout(self):
+                self.layouts.build.conf_info.define_path("tools.android:ndk_path", "mybuild")
+        """)
+
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "dep/1.0"
+            def generate(self):
+                ndk = self.conf.get("tools.android:ndk_path")
+                self.output.info(f"NDK: {ndk}!!!")
+        """)
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("editable add dep --name=dep --version=1.0")
+    c.run("install pkg -s os=Linux -s:b os=Linux")
+    ndk_path = os.path.join(c.current_folder, "dep", "mybuild")
+    assert f"conanfile.py: NDK: {ndk_path}!!!" in c.out
