@@ -12,7 +12,7 @@ from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, conanfile_remove_attr)
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
@@ -249,6 +249,8 @@ class BinaryInstaller:
                     self._handle_package(package, install_reference, installed_count, package_count)
                     installed_count += 1
 
+        MockInfoProperty.message()
+
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
         PREF
@@ -395,6 +397,7 @@ class BinaryInstaller:
 
                 if hasattr(conanfile, "package_info"):
                     with conanfile_remove_attr(conanfile, ['info'], "package_info"):
+                        MockInfoProperty.package = str(conanfile)
                         conanfile.package_info()
 
                 # TODO: Check this package_folder usage for editable when not defined
