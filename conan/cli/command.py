@@ -129,7 +129,6 @@ class ConanArgumentParser(argparse.ArgumentParser):
         if not level:
             raise ConanException(f"Invalid argument '-v{args.v}'")
         output.conan_output_level = level
-        output.conan_output_logger_format = args.logger
 
 
 class ConanCommand(BaseConanCommand):
