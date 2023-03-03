@@ -83,7 +83,7 @@ class PyRequireLoader(object):
         for py_requires_ref in py_requires_refs:
             py_requires_ref = RecipeReference.loads(py_requires_ref)
             requirement = Requirement(py_requires_ref)
-            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update)
+            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update, resolve_prereleases)
             try:
                 py_require = self._cached_py_requires[resolved_ref]
             except KeyError:
