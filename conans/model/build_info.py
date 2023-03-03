@@ -50,6 +50,7 @@ class MockInfoProperty:
                               "Conan 2.X:")
         for k, v in MockInfoProperty.counter.items():
             ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}")
+        MockInfoProperty.counter = {}
 
     def __getitem__(self, key):
         MockInfoProperty.counter.setdefault(self._name, set()).add(self.package)
