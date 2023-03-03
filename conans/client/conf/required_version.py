@@ -10,7 +10,7 @@ def validate_conan_version(required_range):
     version_range = VersionRange(required_range)
     for conditions in version_range.condition_sets:
         conditions.prerelease = True
-    if clientver not in version_range:
+    if not version_range.contains(clientver):
         raise ConanException("Current Conan version ({}) does not satisfy "
                              "the defined one ({}).".format(clientver, required_range))
 

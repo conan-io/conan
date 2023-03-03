@@ -47,10 +47,45 @@ def test_range(version_range, conditions, versions_in, versions_out):
             assert condition.version == expected_condition[1]
 
     for v in versions_in:
-        assert Version(v) in r
+        assert r.contains(Version(v))
 
     for v in versions_out:
-        assert Version(v) not in r
+        assert not r.contains(Version(v))
+
+
+@pytest.mark.parametrize("version_range, resolve_prereleases, versions_in, versions_out", [
+    ['*', True, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+    ['*', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    ['*', None, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+
+    ['*-', True, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+    ['*-', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    ['*-', None, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+
+    ['*, include_prerelease', True, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+    ['*, include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    ['*, include_prerelease', None, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
+
+    ['>1 <2.0', True, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+    ['>1 <2.0', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    ['>1 <2.0', None, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+
+    ['>1- <2.0', True, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+    ['>1- <2.0', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    ['>1- <2.0', None, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+
+    ['>1 <2.0, include_prerelease', True, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+    ['>1 <2.0, include_prerelease', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
+    ['>1 <2.0, include_prerelease', None, ["1.5.1", "1.5.1-pre1"], ["2.1-pre1"]],
+])
+def test_range_prereleases_conf(version_range, resolve_prereleases, versions_in, versions_out):
+    r = VersionRange(version_range)
+
+    for v in versions_in:
+        assert r.contains(Version(v), resolve_prereleases), f"Expected '{version_range}' to contain '{v}' (conf.ranges_resolve_prereleases={resolve_prereleases})"
+
+    for v in versions_out:
+        assert not r.contains(Version(v), resolve_prereleases), f"Expected '{version_range}' NOT to contain '{v}' (conf.ranges_resolve_prereleases={resolve_prereleases})"
 
 
 def test_wrong_range_syntax():

@@ -56,9 +56,14 @@ class _ConditionSet:
         else:
             return [_Condition(operator, Version(version))]
 
-    def valid(self, version):
+    def valid(self, version, conf_resolve_prepreleases=None):
         if version.pre:
-            if not self.prerelease:
+            # Follow the expression desires only if core.ranges_resolve_prereleases is None,
+            # else force to the conf's value
+            if conf_resolve_prepreleases is None:
+                if not self.prerelease:
+                    return False
+            elif conf_resolve_prepreleases is False:
                 return False
         for condition in self.conditions:
             if condition.operator == ">":
@@ -83,7 +88,7 @@ class VersionRange:
     def __init__(self, expression):
         self._expression = expression
         tokens = expression.split(",")
-        prereleases = None
+        prereleases = False
         for t in tokens[1:]:
             if "include_prerelease" in t:
                 prereleases = True
@@ -96,9 +101,10 @@ class VersionRange:
     def __str__(self):
         return self._expression
 
-    def __contains__(self, version):
+    def contains(self, version, conf_resolve_prerelease=None):
         assert isinstance(version, Version), type(version)
         for condition_set in self.condition_sets:
-            if condition_set.valid(version):
+            if condition_set.valid(version, conf_resolve_prerelease):
                 return True
         return False
+
