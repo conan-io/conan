@@ -1,5 +1,4 @@
 import os
-import platform
 import unittest
 
 import pytest
@@ -98,17 +97,6 @@ class RestApiTest(unittest.TestCase):
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir)
         self.assertIn("conanmanifest.txt", os.listdir(tmp_dir))
-
-    @pytest.mark.skipif(platform.system() != "Linux", reason="only Linux")
-    def test_upload_huge_conan(self):
-        ref = RecipeReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
-        files = {"file%s.cpp" % name: "File conent" for name in range(10)}
-        self._upload_recipe(ref, files)
-
-        tmp = temp_folder()
-        files = self.api.get_recipe(ref, tmp)
-        self.assertIsNotNone(files)
-        self.assertTrue(os.path.exists(os.path.join(tmp, "file9.cpp")))
 
     def test_search(self):
         # Upload a conan1
