@@ -3,7 +3,6 @@ import os
 import time
 
 from conan.api.output import ConanOutput
-
 from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
@@ -32,15 +31,20 @@ class RestV2Methods(RestCommonMethods):
     def _get_file_list_json(self, url):
         data = self.get_json(url)
         # Discarding (.keys()) still empty metadata for files
-        data["files"] = list(data["files"].keys())
+        # Damn windows conan-server returns paths with backslash
+        data["files"] = list(d.replace("\\", "/") for d in data["files"].keys())
         return data
 
     def get_recipe(self, ref, dest_folder):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        if EXPORT_SOURCES_TGZ_NAME in files:
-            files.remove(EXPORT_SOURCES_TGZ_NAME)
+
+        # Do not download by default the metadata files, except package signing
+        accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt"]
+        metadata = self._config.get("core.metadata:download", default=["sign"], check_type=list)
+        accepted_files.extend(f"metadata/{m}" for m in metadata)
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -70,6 +74,12 @@ class RestV2Methods(RestCommonMethods):
         data = self._get_file_list_json(url)
         files = data["files"]
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
+        # Do not download the metadata files, except package signing
+        accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt"]
+        metadata = self._config.get("core.metadata:download", default=["sign"], check_type=list)
+        accepted_files.extend(f"metadata/{m}" for m in metadata)
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
+
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}

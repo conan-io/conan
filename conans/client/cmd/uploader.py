@@ -153,7 +153,17 @@ class PackagePreparator:
 
         add_tgz(EXPORT_TGZ_NAME, files, "Compressing recipe...")
         add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files, "Compressing recipe sources...")
+        self._gather_metadata(layout.metadata(), result)
         return result
+
+    @staticmethod
+    def _gather_metadata(folder, upload_files):
+        for root, _, files in os.walk(folder):
+            for f in files:
+                abs_path = os.path.join(root, f)
+                relpath = os.path.relpath(abs_path, folder)
+                path = os.path.join("metadata", relpath).replace("\\", "/")
+                upload_files[path] = abs_path
 
     def _prepare_package(self, pref, prev_bundle):
         pkg_layout = self._app.cache.pkg_layout(pref)
@@ -162,6 +172,7 @@ class PackagePreparator:
                                  "Remove it with 'conan remove %s -p=%s'"
                                  % (pref, pref.ref, pref.package_id))
         cache_files = self._compress_package_files(pkg_layout, pref)
+        self._gather_metadata(pkg_layout.metadata(), cache_files)
         prev_bundle["files"] = cache_files
 
     def _compress_package_files(self, layout, pref):

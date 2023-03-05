@@ -253,6 +253,14 @@ class ConanFile:
         return self.folders.build_folder
 
     @property
+    def recipe_metadata_folder(self):
+        return self.folders.recipe_metadata_folder
+
+    @property
+    def pkg_metadata_folder(self):
+        return self.folders.pkg_metadata_folder
+
+    @property
     def build_path(self) -> Path:
         assert self.build_folder is not None, "`build_folder` is `None`"
         return Path(self.build_folder)

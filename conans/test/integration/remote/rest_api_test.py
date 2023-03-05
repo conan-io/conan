@@ -97,7 +97,7 @@ class RestApiTest(unittest.TestCase):
         # Get the package
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir)
-        self.assertIn("hello.cpp", os.listdir(tmp_dir))
+        self.assertIn("conanmanifest.txt", os.listdir(tmp_dir))
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="only Linux")
     def test_upload_huge_conan(self):
@@ -198,9 +198,7 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_package(self, package_reference, base_files=None):
 
-        files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
-                 "hello.cpp": "hello",
-                 "conanmanifest.txt": ""}
+        files = {"conanmanifest.txt": ""}
         if base_files:
             files.update(base_files)
 
