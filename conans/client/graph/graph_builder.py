@@ -39,11 +39,12 @@ class DepsGraphBuilder(object):
         root_node.conanfile.settings_target = None
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
-        self._initialize_requires(root_node, dep_graph, graph_lock)
+        resolve_prereleases = self._cache.new_config.get('core.ranges_resolve_prereleases',
+                                                         default=None, check_type=bool)
+        self._initialize_requires(root_node, dep_graph, graph_lock, resolve_prereleases)
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
-        resolve_prereleases = self._cache.new_config.get('core.ranges_resolve_prereleases', default=None, check_type=bool)
         try:
             while open_requires:
                 # Fetch the first waiting to be expanded (depth-first)
@@ -53,7 +54,7 @@ class DepsGraphBuilder(object):
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock, resolve_prereleases)
                 if new_node:
-                    self._initialize_requires(new_node, dep_graph, graph_lock)
+                    self._initialize_requires(new_node, dep_graph, graph_lock, resolve_prereleases)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
@@ -159,12 +160,12 @@ class DepsGraphBuilder(object):
                     node.conanfile.requires.tool_require(str(tool_require),
                                                          raise_if_duplicated=False)
 
-    def _initialize_requires(self, node, graph, graph_lock):
+    def _initialize_requires(self, node, graph, graph_lock, resolve_prereleases):
         # Introduce the current requires to define overrides
         # This is the first pass over one recipe requires
         if graph_lock is not None:
             for require in node.conanfile.requires.values():
-                graph_lock.resolve_locked(node, require)
+                graph_lock.resolve_locked(node, require, resolve_prereleases)
 
         for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph)
