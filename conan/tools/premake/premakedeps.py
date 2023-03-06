@@ -2,10 +2,14 @@ from conan.internal import check_duplicated_generator
 from conans.model.build_info import CppInfo
 from conans.util.files import save
 
+import itertools 
+import glob
+import re
+
 # Filename format strings
 PREMAKE_VAR_FILE = "conan_{pkgname}_vars{config}.premake5.lua"
 PREMAKE_CONF_FILE = "conan_{pkgname}{config}.premake5.lua"
-PREMAKE_LIB_FILE = "conan_{pkgname}.premake5.lua"
+PREMAKE_PKG_FILE = "conan_{pkgname}.premake5.lua"
 PREMAKE_ROOT_FILE = "conandeps.premake5.lua"
 
 # File template format strings
@@ -22,32 +26,36 @@ conan_sharedlinkflags_{pkgname}{config} = {{{deps.sharedlinkflags}}}
 conan_exelinkflags_{pkgname}{config} = {{{deps.exelinkflags}}}
 conan_frameworks_{pkgname}{config} = {{{deps.frameworks}}}
 """
-# TODO: Somehow add the correct flags (maybe as subfunctions like "conan_setup_c_...", "conan_setup_cpp_...", "conan_setup_sharedlib_...", "conan_setup_application_...")
 PREMAKE_TEMPLATE_CONF = """
-include "{PREMAKE_VAR_FILE}"
+include "{premake_varfile}"
 function conan_setup_build_{pkgname}{config}()
-    includedirs{{conan_includedirs_{pkgname}{config}}}
-    bindirs{{conan_bindirs_{pkgname}{config}}}
-    defines{{conan_defines_{pkgname}{config}}}
+{conf_consume_build}
 end
 function conan_setup_link_{pkgname}{config}()
-    libdirs{{conan_libdirs_{pkgname}{config}}}
-    links{{conan_libs_{pkgname}{config}}}
-    links{{conan_system_libs_{pkgname}{config}}}
-    links{{conan_frameworks_{pkgname}{config}}}
+{conf_consume_link}
 end
 function conan_setup_{pkgname}{config}()
     conan_setup_build_{pkgname}{config}()
     conan_setup_link_{pkgname}{config}()
 end
 """
-PREMAKE_TEMPLATE_LIB = """
-{LIB_ALLCONF_INCLUDES}
+PREMAKE_TEMPLATE_CONF_BUILD = """
+includedirs{{conan_includedirs_{pkgname}{config}}}
+bindirs{{conan_bindirs_{pkgname}{config}}}
+defines{{conan_defines_{pkgname}{config}}}
+"""
+PREMAKE_TEMPLATE_CONF_LINK = """
+libdirs{{conan_libdirs_{pkgname}{config}}}
+links{{conan_libs_{pkgname}{config}}}
+links{{conan_system_libs_{pkgname}{config}}}
+links{{conan_frameworks_{pkgname}{config}}}
+"""
+PREMAKE_TEMPLATE_PKG = """
 function conan_setup_build_{pkgname}()
-    {LIB_FILTER_EXPAND_BUILD}
+{pkg_filter_expand_build}
 end
 function conan_setup_link_{pkgname}()
-    {LIB_FILTER_EXPAND_LINK}
+{pkg_filter_expand_link}
 end
 function conan_setup_{pkgname}()
     conan_setup_build_{pkgname}()
@@ -55,12 +63,11 @@ function conan_setup_{pkgname}()
 end
 """
 PREMAKE_TEMPLATE_ROOT = """
-{ROOT_ALL_INCLUDES}
 function conan_setup_build()
-
+{root_call_all_build}
 end
 function conan_setup_link()
-
+{root_call_all_link}
 end
 function conan_setup()
     conan_setup_build()
@@ -104,6 +111,10 @@ class PremakeDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+
+        # Tab configuration
+        self.tab = "\t"
+
         # Return value buffer
         self.output_files = {}
         # Extract configuration and architecture form conanfile
@@ -126,6 +137,38 @@ class PremakeDeps(object):
     def _output_lua_file(self, filename, content):
         self.output_files[filename] = "\n".join(["#!lua", *content])
 
+    def _indent_string(self, string, indent=1):
+        return "\n".join([f"{self.tab * indent}{line}" for line in list(filter(None, string.splitlines()))])
+
+    def _premake_filtered(self, content, configuration, architecture, indent=0):
+        lines = list(itertools.chain.from_iterable([cnt.splitlines() for cnt in content]))
+        return [
+            # Set new filter
+            f'{self.tab * indent}filter {{ "configurations:{configuration}", "architecture:{architecture}" }}',
+            # Emit content
+            *[f"{self.tab * indent}{self.tab}{line.strip()}" for line in list(filter(None, lines))],
+            # Clear active filter
+            f"{self.tab * indent}filter {{}}",
+        ]
+    
+    def _premake_filtered_fallback(self, content, configurations, architecture, indent=1):
+        fallback_filter = ", ".join([f'"configuration:not {configuration}"' for configuration in configurations])
+        lines = list(itertools.chain.from_iterable([cnt.splitlines() for cnt in content]))
+        return [
+            # Set new filter
+            f'{self.tab * indent}filter {{ {fallback_filter}, "architecture:{architecture}" }}',
+            # Emit content
+            *[f"{self.tab * indent}{self.tab}{line.strip()}" for line in list(filter(None, lines))],
+            # Clear active filter
+            f"{self.tab * indent}filter {{}}",
+        ]
+    
+    def _premake_pkg_expand(self, configurations, architectures, profiles, callback_profile, callback_architecture):
+        return "\n".join([
+            *["\n".join(self._premake_filtered(callback_profile(profile), profile[2], profile[3], indent=1)) for profile in profiles],
+            *["\n".join(self._premake_filtered_fallback(callback_architecture(architecture), configurations, architecture, indent=1)) for architecture in architectures]
+        ])
+
     @property
     def content(self):
         check_duplicated_generator(self, self._conanfile)
@@ -138,8 +181,11 @@ class PremakeDeps(object):
         build_req = self._conanfile.dependencies.build
 
         # Iterate all the transitive requires
+        pkg_files = []
+        dep_names = []
         for require, dep in list(host_req.items()) + list(test_req.items()) + list(build_req.items()):
             dep_name = require.ref.name
+            dep_names.append(dep_name)
 
             # Convert and aggregate dependency's
             dep_cppinfo = dep.cpp_info.copy()
@@ -153,11 +199,52 @@ class PremakeDeps(object):
                 PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name, config=conf_suffix, deps=_PremakeTemplate(dep_aggregate))
             ])
             self._output_lua_file(conf_filename, [
-                PREMAKE_TEMPLATE_CONF.format(pkgname=dep_name, config=conf_suffix, PREMAKE_VAR_FILE=var_filename)
+                PREMAKE_TEMPLATE_CONF.format(pkgname=dep_name, config=conf_suffix, premake_varfile=var_filename,
+                    conf_consume_build=self._indent_string(PREMAKE_TEMPLATE_CONF_BUILD.format(pkgname=dep_name, config=conf_suffix)),
+                    conf_consume_link=self._indent_string(PREMAKE_TEMPLATE_CONF_LINK.format(pkgname=dep_name, config=conf_suffix))
+                )
             ])
 
-            # TODO: Output global lib lua file
+            # Create list of all available profiles
+            file_pattern = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="_*")
+            file_regex = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="_(([^_]*)_(.*))")
+            available_files = glob.glob(file_pattern)
+            profiles = [(regex_res[0], regex_res.group(1), regex_res.group(2), regex_res.group(3)) for regex_res in [re.search(file_regex, file_name) for file_name in available_files]]
+            configurations = [profile[2] for profile in profiles]
+            architectures = list(dict.fromkeys([profile[3] for profile in profiles]))
 
-        # TODO: Output global premake file 
+            # Fallback configuration
+            fallback_configuration = configurations[0]
+            if "release" in configurations: 
+                fallback_configuration = "release"
+            
+            # Emit package file
+            pkg_files.append(PREMAKE_PKG_FILE.format(pkgname=dep_name))
+            self._output_lua_file(pkg_files[-1], [
+                # Includes
+                *['include "{}"'.format(profile[0]) for profile in profiles],
+                # Functions
+                PREMAKE_TEMPLATE_PKG.format(pkgname=dep_name, 
+                    pkg_filter_expand_build=self._premake_pkg_expand(configurations, architectures, profiles, 
+                        lambda profile: [PREMAKE_TEMPLATE_CONF_BUILD.format(pkgname=dep_name, config=f"_{profile[1]}")], 
+                        lambda architecture: [PREMAKE_TEMPLATE_CONF_BUILD.format(pkgname=dep_name, config=f"_{fallback_configuration}_{architecture}")]
+                    ), 
+                    pkg_filter_expand_link=self._premake_pkg_expand(configurations, architectures, profiles, 
+                        lambda profile: [PREMAKE_TEMPLATE_CONF_LINK.format(pkgname=dep_name, config=f"_{profile[1]}")], 
+                        lambda architecture: [PREMAKE_TEMPLATE_CONF_LINK.format(pkgname=dep_name, config=f"_{fallback_configuration}_{architecture}")]
+                    ), 
+                )
+            ])
+
+        # Output global premake file 
+        self._output_lua_file(PREMAKE_ROOT_FILE, [
+            # Includes
+            *[f'include "{pkg_file}"' for pkg_file in pkg_files],
+            # Functions
+            PREMAKE_TEMPLATE_ROOT.format(
+                root_call_all_build="\n".join([f"{self.tab}conan_setup_build_{dep_name}()" for dep_name in dep_names]), 
+                root_call_all_link="\n".join([f"{self.tab}conan_setup_link_{dep_name}()" for dep_name in dep_names])
+            )
+        ])
 
         return self.output_files
