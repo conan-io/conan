@@ -107,7 +107,7 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
                               "dot": format_graph_dot})
 def graph_info(conan_api, parser, subparser, *args):
     """
-    Compute the dependency graph and shows information about it.
+    Compute the dependency graph and show information about it.
     """
     common_graph_args(subparser)
     subparser.add_argument("--check-updates", default=False, action="store_true",
