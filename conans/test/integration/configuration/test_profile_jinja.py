@@ -36,7 +36,7 @@ def test_profile_template_variables():
     assert "os=FreeBSD" in client.out
 
 
-def test_profile_template_inclusion():
+def test_profile_template_import():
     client = TestClient()
     tpl1 = textwrap.dedent("""
         {% import "profile_vars" as vars %}
@@ -45,6 +45,23 @@ def test_profile_template_inclusion():
         """)
     tpl2 = textwrap.dedent("""
         {% set a = "FreeBSD" %}
+        """)
+    client.save({"conanfile.py": GenConanfile(),
+                 "profile1": tpl1,
+                 "profile_vars": tpl2})
+    client.run("install . -pr=profile1")
+    assert "os=FreeBSD" in client.out
+
+
+def test_profile_template_include():
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        {% include "profile_vars" %}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        [settings]
+        os = {{ a }}
         """)
     client.save({"conanfile.py": GenConanfile(),
                  "profile1": tpl1,

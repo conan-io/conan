@@ -220,3 +220,12 @@ def test_token_expired():
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is None
+
+
+def test_auth_username_space():
+    server = TestServer(users={"super admin": "password"})
+    c = TestClient(servers={"default": server}, inputs=["super admin", "password"])
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+    c.run("upload * -r=default -c")
+    # it doesn't crash, it accepts user with space
