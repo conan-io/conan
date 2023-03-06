@@ -2,7 +2,7 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @conan_command(group="Creator")

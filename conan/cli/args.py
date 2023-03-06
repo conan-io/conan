@@ -1,5 +1,5 @@
 from conan.cli.command import OnceArgument
-
+from conan.errors import ConanException
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
     '--build' options on one command line is allowed.
@@ -118,3 +118,14 @@ def common_graph_args(subparser):
                            help='Directly provide tool-requires instead of a conanfile')
     add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
+
+
+def validate_common_graph_args(args):
+    if args.requires and (args.name or args.version or args.user or args.channel):
+        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
+                             "--requires")
+    if not args.path and not args.requires and not args.tool_requires:
+        raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
+    if args.path and (args.requires or args.tool_requires):
+        raise ConanException("--requires and --tool-requires arguments are incompatible with "
+                             f"[path] '{args.path}' argument")

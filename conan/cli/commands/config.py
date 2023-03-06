@@ -1,8 +1,6 @@
-import sys
-
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand
-from conan.cli.commands import default_json_formatter, default_text_formatter
+from conan.cli.formatters import default_json_formatter
 from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 
@@ -52,11 +50,12 @@ def list_text_formatter(confs):
         cli_out_write(f"{k}: {v}")
 
 
-@conan_subcommand(formatters={"text": default_text_formatter})
+@conan_subcommand(formatters={"text": cli_out_write})
 def config_home(conan_api, parser, subparser, *args):
     """
     Show the Conan home folder.
     """
+    parser.parse_args(*args)
     return conan_api.config.home()
 
 
@@ -65,4 +64,5 @@ def config_list(conan_api, parser, subparser, *args):
     """
     Show all the Conan available configurations: core and tools.
     """
+    parser.parse_args(*args)
     return BUILT_IN_CONFS

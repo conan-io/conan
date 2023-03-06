@@ -4,7 +4,7 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.cli.command import conan_command
 from conan.cli.commands.list import print_list_text, print_list_json
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 # FIXME: "conan search" == "conan list (*) -r="*"" --> implement @conan_alias_command??

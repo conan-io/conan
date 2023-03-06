@@ -17,7 +17,7 @@ from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_C
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
-from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
+from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 
 
@@ -184,7 +184,7 @@ class Cli:
                     f"Recipe '{pkg}' seems broken.\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n"\
                     "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
-                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
         result = re.search(r"(.*): Error in build\(\) method, line", message)
@@ -194,7 +194,7 @@ class Cli:
                     f"Recipe '{pkg}' cannot build its binary\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n" \
                     "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
-                    "If it is your recipe, check it is updated to 2.0\n" \
+                    "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
 

@@ -55,6 +55,49 @@ class TestBasicCliOutput:
               package_id: {pref.package_id}
               prev: {pref.revision}""") in client.out
 
+    def test_nontuple_topics(self):
+        client = TestClient()
+        # This is the representation that should always happen,
+        # we wouldn't expect topics not to be a tuple here
+        conanfile = textwrap.dedent("""
+                            from conan import ConanFile
+
+                            class MyTest(ConanFile):
+                                name = "pkg"
+                                version = "0.2"
+                                provides = ("bar",)
+                                topics = ("foo",)
+                            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("graph info . --format=json")
+        recipe = json.loads(client.stdout)["nodes"][0]
+        assert type(recipe["topics"]) == list
+        assert recipe["topics"] == ["foo"]
+        assert type(recipe["provides"]) == list
+        assert recipe["provides"] == ["bar"]
+
+        # But this used to fail,
+        # topics were not converted to a list internally if one was not provided
+        client2 = TestClient()
+        conanfile2 = textwrap.dedent("""
+                    from conan import ConanFile
+
+                    class MyTest(ConanFile):
+                        name = "pkg"
+                        version = "0.2"
+                        provides = "bar"
+                        topics = "foo"
+                    """)
+        client2.save({"conanfile.py": conanfile2})
+        client2.run("graph info . --format=json")
+        recipe = json.loads(client2.stdout)["nodes"][0]
+        assert type(recipe["topics"]) == list
+        assert recipe["topics"] == ["foo"]
+        assert type(recipe["provides"]) == list
+        assert recipe["provides"] == ["bar"]
+
+
+
 
 class TestConanfilePath:
     def test_cwd(self):
@@ -70,7 +113,7 @@ class TestConanfilePath:
         client = TestClient()
 
         client.run("graph info", assert_error=True)
-        assert "ERROR: Please specify at least a path" in client.out
+        assert "ERROR: Please specify a path" in client.out
 
         client.run("graph info not_real_path", assert_error=True)
         assert "ERROR: Conanfile not found" in client.out

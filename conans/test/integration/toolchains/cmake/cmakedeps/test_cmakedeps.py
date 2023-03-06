@@ -468,6 +468,38 @@ def test_error_missing_config_build_context():
     # The debug binaries are missing, so adding --build=missing
     c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
           "--build=example")
+
     # listed as both requires and build_requires
     c.assert_listed_require({"example/1.0": "Cache"})
     c.assert_listed_require({"example/1.0": "Cache"}, build=True)
+
+
+def test_using_package_module():
+    """
+    This crashed, because the profile "build" didn't have "build_type"
+    https://github.com/conan-io/conan/issues/13209
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("tool", "0.1")})
+    c.run("create .")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            tool_requires = "tool/0.1"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.build_context_activated = ["tool"]
+                deps.build_context_build_modules = ["tool"]
+                deps.generate()
+        """)
+    c.save({"conanfile.py": consumer,
+            "profile_build": "[settings]\nos=Windows"}, clean_first=True)
+    c.run("create . -pr:b=profile_build")
+    # it doesn't crash anymore, it used to crash
+    assert "pkg/0.1: Created package" in c.out

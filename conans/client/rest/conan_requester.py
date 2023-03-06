@@ -2,14 +2,12 @@ import fnmatch
 import logging
 import os
 import platform
-import time
 
 import requests
 import urllib3
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
-from conans.util.tracer import log_client_rest_api_call
 
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
@@ -116,11 +114,8 @@ class ConanRequester(object):
                 popped = True if os.environ.pop(var_name, None) else popped
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
-            t1 = time.time()
             all_kwargs = self._add_kwargs(url, kwargs)
             tmp = getattr(requests, method)(url, **all_kwargs)
-            duration = time.time() - t1
-            log_client_rest_api_call(url, method.upper(), duration, all_kwargs.get("headers"))
             return tmp
         finally:
             if popped:

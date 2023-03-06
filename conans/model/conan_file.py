@@ -95,6 +95,11 @@ class ConanFile:
 
         self.options = Options(self.options or {}, self.default_options)
 
+        if isinstance(self.topics, str):
+            self.topics = [self.topics]
+        if isinstance(self.provides, str):
+            self.provides = [self.provides]
+
         # user declared variables
         self.user_info = MockInfoProperty("user_info")
         self.env_info = MockInfoProperty("env_info")

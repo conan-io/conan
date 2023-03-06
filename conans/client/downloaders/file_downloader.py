@@ -8,7 +8,6 @@ from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util.sha import check_with_algorithm_sum
-from conans.util.tracer import log_download
 
 
 class FileDownloader:
@@ -64,7 +63,6 @@ class FileDownloader:
             check_with_algorithm_sum("sha256", file_path, sha256)
 
     def _download_file(self, url, auth, headers, file_path, verify_ssl, try_resume=False):
-        t1 = time.time()
         if try_resume and os.path.exists(file_path):
             range_start = os.path.getsize(file_path)
             headers = headers.copy() if headers else {}
@@ -127,10 +125,6 @@ class FileDownloader:
                 else:
                     raise ConanException("Transfer interrupted before complete: %s < %s"
                                          % (total_downloaded_size, total_length))
-
-            duration = time.time() - t1
-            log_download(url, duration)
-
         except Exception as e:
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"

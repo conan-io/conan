@@ -7,11 +7,9 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
 from conan.cli.printers import print_profiles
-from conan.internal.conan_app import ConanApp
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.client.conanfile.build import run_build_method
-from conans.errors import ConanException, conanfile_exception_formatter
-from conans.util.files import chdir, mkdir
+from conan.errors import ConanException
+from conans.util.files import mkdir
 
 
 def json_create(deps_graph):
@@ -135,15 +133,11 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
                                        source_folder=conanfile_folder)
 
     out.title("Testing the package: Building")
-    app = ConanApp(conan_api.cache_folder)
-    conanfile.folders.set_base_package(conanfile.folders.base_build)
-    run_build_method(conanfile, app.hook_manager)
+    conan_api.local.build(conanfile)
 
     out.title("Testing the package: Executing test")
     conanfile.output.highlight("Running test()")
-    with conanfile_exception_formatter(conanfile, "test"):
-        with chdir(conanfile.build_folder):
-            conanfile.test()
+    conan_api.local.test(conanfile)
 
 
 def _get_test_conanfile_path(tf, conanfile_path):

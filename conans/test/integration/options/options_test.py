@@ -384,7 +384,7 @@ def test_configurable_default_options():
             version = "0.1"
             requires = "pkg/0.1"
             def configure(self):
-                self.options["pkg"].backend = 1
+                self.options["pkg*"].backend = 1
         """)
     c.save({"conanfile.py": consumer})
     c.run("install . -s os=Windows")
@@ -395,3 +395,112 @@ def test_configurable_default_options():
     # This fails in Conan 1.X
     c.run("create . -s os=Windows -o pkg*:backend=3")
     assert "pkg/0.1: Package with option:3!" in c.out
+
+
+class TestMultipleOptionsPatterns:
+    """
+    https://github.com/conan-io/conan/issues/13240
+    """
+
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+           version = "1.0"
+           options = {"shared": [True, False]}
+           default_options = {"shared": False}
+           def package_info(self):
+               self.output.info(f"SHARED: {self.options.shared}!!")
+        """)
+
+    def test_multiple_options_patterns_cli(self):
+        """
+        https://github.com/conan-io/conan/issues/13240
+        """
+        c = TestClient()
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+              settings = "os", "arch", "compiler", "build_type"
+
+              def requirements(self):
+                  self.requires("dep1/1.0")
+                  self.requires("dep2/1.0")
+                  self.requires("dep3/1.0")
+                  self.requires("dep4/1.0")
+            """)
+        c.save({"dep/conanfile.py": self.dep,
+                "pkg/conanfile.py": consumer})
+        for d in (1, 2, 3, 4):
+            c.run(f"export dep --name dep{d}")
+
+        # match in order left to right
+        c.run('install pkg -o *:shared=True -o dep1*:shared=False -o dep2*:shared=False -b missing')
+        assert "dep1/1.0: SHARED: False!!" in c.out
+        assert "dep2/1.0: SHARED: False!!" in c.out
+        assert "dep3/1.0: SHARED: True!!" in c.out
+        assert "dep4/1.0: SHARED: True!!" in c.out
+
+        # All match in order, left to right
+        c.run('install pkg -o dep1*:shared=False -o dep2*:shared=False -o *:shared=True -b missing')
+        assert "dep1/1.0: SHARED: True!!" in c.out
+        assert "dep2/1.0: SHARED: True!!" in c.out
+        assert "dep3/1.0: SHARED: True!!" in c.out
+        assert "dep4/1.0: SHARED: True!!" in c.out
+
+    def test_multiple_options_patterns(self):
+        c = TestClient()
+        configure_consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+
+                def requirements(self):
+                    self.requires("dep1/1.0")
+                    self.requires("dep2/1.0")
+                    self.requires("dep3/1.0")
+                    self.requires("dep4/1.0")
+
+                def configure(self):
+                    self.options["*"].shared = True
+                    self.options["dep1*"].shared = False
+                    self.options["dep2*"].shared = False
+            """)
+        c.save({"dep/conanfile.py": self.dep,
+                "pkg/conanfile.py": configure_consumer})
+        for d in (1, 2, 3, 4):
+            c.run(f"export dep --name dep{d}")
+
+        c.run("install pkg --build=missing")
+        assert "dep1/1.0: SHARED: False!!" in c.out
+        assert "dep2/1.0: SHARED: False!!" in c.out
+        assert "dep3/1.0: SHARED: True!!" in c.out
+        assert "dep4/1.0: SHARED: True!!" in c.out
+
+    def test_multiple_options_patterns_order(self):
+        c = TestClient()
+        configure_consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+
+                def requirements(self):
+                    self.requires("dep1/1.0")
+                    self.requires("dep2/1.0")
+                    self.requires("dep3/1.0")
+                    self.requires("dep4/1.0")
+
+                def configure(self):
+                    self.options["dep1*"].shared = False
+                    self.options["dep2*"].shared = False
+                    self.options["*"].shared = True
+            """)
+        c.save({"dep/conanfile.py": self.dep,
+                "pkg/conanfile.py": configure_consumer})
+        for d in (1, 2, 3, 4):
+            c.run(f"export dep --name dep{d}")
+
+        c.run("install pkg --build=missing")
+        assert "dep1/1.0: SHARED: True!!" in c.out
+        assert "dep2/1.0: SHARED: True!!" in c.out
+        assert "dep3/1.0: SHARED: True!!" in c.out
+        assert "dep4/1.0: SHARED: True!!" in c.out

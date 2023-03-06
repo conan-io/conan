@@ -1,6 +1,5 @@
 import os
 import shutil
-import time
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
@@ -17,7 +16,6 @@ from conans.model.build_info import CppInfo
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
-from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
 
 def build_id(conan_file):
@@ -116,8 +114,6 @@ class _PackageBuilder(object):
         return prev
 
     def build_package(self, node, package_layout):
-        t1 = time.time()
-
         conanfile = node.conanfile
         pref = node.pref
 
@@ -158,7 +154,6 @@ class _PackageBuilder(object):
                 prev = self._package(conanfile, pref)
                 assert prev
                 node.prev = prev
-                log_package_built(pref, time.time() - t1)
             except ConanException as exc:
                 raise exc
 
@@ -320,7 +315,6 @@ class BinaryInstaller:
             pref = node.pref
             assert node.prev, "PREV for %s is None" % str(pref)
             node.conanfile.output.success('Already installed!')
-            log_package_got_from_local_cache(pref)
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()

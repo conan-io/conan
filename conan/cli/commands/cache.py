@@ -1,8 +1,8 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
+from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
-from conan.cli.commands import default_text_formatter
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -15,7 +15,7 @@ def cache(conan_api: ConanAPI, parser, *args):
     pass
 
 
-@conan_subcommand(formatters={"text": default_text_formatter})
+@conan_subcommand(formatters={"text": cli_out_write})
 def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
     Show the path to the Conan cache for a given reference.

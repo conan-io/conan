@@ -10,7 +10,7 @@ from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.env import environment_update
-from conans.util.files import load, save
+from conans.util.files import save
 from conans.util.runners import check_output_runner
 
 
@@ -118,12 +118,13 @@ class DetectCompilersTest(unittest.TestCase):
         self.assertIn("gcc detected as a frontend using apple-clang", output)
 
     def test_profile_new(self):
-        client = TestClient()
+        c = TestClient()
+        c.run("profile detect --name=./MyProfile2")
+        profile = c.load("MyProfile2")
+        assert "os=" in profile
+        assert "compiler.runtime_type" not in profile  # Even in Windows
 
-        client.run("profile detect --name=./MyProfile2")
-        pr_path = os.path.join(client.current_folder, "MyProfile2")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "MyProfile2")))
-        self.assertIn("os=", load(pr_path))
+        c.run("profile detect --name=./MyProfile2", assert_error=True)
+        assert "MyProfile2' already exists" in c.out
 
-        client.run("profile detect --name=./MyProfile2", assert_error=True)
-        self.assertIn("MyProfile2' already exists", client.out)
+        c.run("profile detect --name=./MyProfile2 --force")  # will not raise error
