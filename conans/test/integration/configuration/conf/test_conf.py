@@ -188,6 +188,23 @@ def test_jinja_global_conf(client):
         assert "user.mycompany:dist=42" in client.out
 
 
+def test_jinja_global_conf_include(client):
+    global_conf = textwrap.dedent("""\
+        {% include "user_global.conf" %}
+        {% import "user_global.conf" as vars %}
+        user.mycompany:dist = {{vars.myvar*2}}
+        """)
+    user_global_conf = textwrap.dedent("""\
+        {% set myvar = 42 %}
+        user.mycompany:parallel = {{myvar}}
+        """)
+    save(client.cache.new_config_path, global_conf)
+    save(os.path.join(client.cache_folder, "user_global.conf"), user_global_conf)
+    client.run("install .")
+    assert "user.mycompany:parallel=42" in client.out
+    assert "user.mycompany:dist=84" in client.out
+
+
 def test_empty_conf_valid():
     tc = TestClient()
     profile = textwrap.dedent(r"""
