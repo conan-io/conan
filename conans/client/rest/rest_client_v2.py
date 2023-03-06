@@ -89,8 +89,8 @@ class RestV2Methods(RestCommonMethods):
         data = self._get_file_list_json(url)
         files = data["files"]
         check_compressed_files(EXPORT_TGZ_NAME, files)
-        if EXPORT_SOURCES_TGZ_NAME in files:
-            files.remove(EXPORT_SOURCES_TGZ_NAME)
+        accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt"]
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -122,6 +122,8 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
+        accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt"]
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
         check_compressed_files(PACKAGE_TGZ_NAME, files)
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
