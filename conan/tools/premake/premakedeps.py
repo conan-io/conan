@@ -2,9 +2,73 @@ from conan.internal import check_duplicated_generator
 from conans.model.build_info import CppInfo
 from conans.util.files import save
 
-PREMAKE_FILE = "conandeps.premake.lua"
+# Filename format strings
+PREMAKE_VAR_FILE = "conan_{pkgname}_vars{config}.premake5.lua"
+PREMAKE_CONF_FILE = "conan_{pkgname}{config}.premake5.lua"
+PREMAKE_LIB_FILE = "conan_{pkgname}.premake5.lua"
+PREMAKE_ROOT_FILE = "conandeps.premake5.lua"
 
+# File template format strings
+PREMAKE_TEMPLATE_VAR = """
+conan_includedirs_{pkgname}{config} = {{{deps.includedirs}}}
+conan_libdirs_{pkgname}{config} = {{{deps.libdirs}}}
+conan_bindirs_{pkgname}{config} = {{{deps.bindirs}}}
+conan_libs_{pkgname}{config} = {{{deps.libs}}}
+conan_system_libs_{pkgname}{config} = {{{deps.system_libs}}}
+conan_defines_{pkgname}{config} = {{{deps.defines}}}
+conan_cxxflags_{pkgname}{config} = {{{deps.cxxflags}}}
+conan_cflags_{pkgname}{config} = {{{deps.cflags}}}
+conan_sharedlinkflags_{pkgname}{config} = {{{deps.sharedlinkflags}}}
+conan_exelinkflags_{pkgname}{config} = {{{deps.exelinkflags}}}
+conan_frameworks_{pkgname}{config} = {{{deps.frameworks}}}
+"""
+# TODO: Somehow add the correct flags (maybe as subfunctions like "conan_setup_c_...", "conan_setup_cpp_...", "conan_setup_sharedlib_...", "conan_setup_application_...")
+PREMAKE_TEMPLATE_CONF = """
+include "{PREMAKE_VAR_FILE}"
+function conan_setup_build_{pkgname}{config}()
+    includedirs{{conan_includedirs_{pkgname}{config}}}
+    bindirs{{conan_bindirs_{pkgname}{config}}}
+    defines{{conan_defines_{pkgname}{config}}}
+end
+function conan_setup_link_{pkgname}{config}()
+    libdirs{{conan_libdirs_{pkgname}{config}}}
+    links{{conan_libs_{pkgname}{config}}}
+    links{{conan_system_libs_{pkgname}{config}}}
+    links{{conan_frameworks_{pkgname}{config}}}
+end
+function conan_setup_{pkgname}{config}()
+    conan_setup_build_{pkgname}{config}()
+    conan_setup_link_{pkgname}{config}()
+end
+"""
+PREMAKE_TEMPLATE_LIB = """
+{LIB_ALLCONF_INCLUDES}
+function conan_setup_build_{pkgname}()
+    {LIB_FILTER_EXPAND_BUILD}
+end
+function conan_setup_link_{pkgname}()
+    {LIB_FILTER_EXPAND_LINK}
+end
+function conan_setup_{pkgname}()
+    conan_setup_build_{pkgname}()
+    conan_setup_link_{pkgname}()
+end
+"""
+PREMAKE_TEMPLATE_ROOT = """
+{ROOT_ALL_INCLUDES}
+function conan_setup_build()
 
+end
+function conan_setup_link()
+
+end
+function conan_setup()
+    conan_setup_build()
+    conan_setup_link()
+end
+"""
+
+# Helper class that expands cpp_info meta information in lua readable string sequences
 class _PremakeTemplate(object):
     def __init__(self, deps_cpp_info):
         self.includedirs = ",\n".join('"%s"' % p.replace("\\", "/")
@@ -35,11 +99,16 @@ class _PremakeTemplate(object):
         self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\",
                                                             "/") if deps_cpp_info.sysroot else ""
 
-
+# Main premake5 dependency generator
 class PremakeDeps(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        # Return value buffer
+        self.output_files = {}
+        # Extract configuration and architecture form conanfile
+        self.configuration = conanfile.settings.build_type
+        self.architecture = conanfile.settings.arch
 
     def generate(self):
         check_duplicated_generator(self, self._conanfile)
@@ -48,63 +117,47 @@ class PremakeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _get_cpp_info(self):
-        ret = CppInfo()
-        for dep in self._conanfile.dependencies.host.values():
-            dep_cppinfo = dep.cpp_info.copy()
-            dep_cppinfo.set_relative_base_folder(dep.package_folder)
-            # In case we have components, aggregate them, we do not support isolated "targets"
-            dep_cppinfo.aggregate_components()
-            ret.merge(dep_cppinfo)
-        return ret
+    def _config_suffix(self):
+        props = [("Configuration", self.configuration),
+                 ("Platform", self.architecture)]
+        name = "".join("_%s" % v for _, v in props)
+        return name.lower()
+    
+    def _output_lua_file(self, filename, content):
+        self.output_files[filename] = "\n".join(["#!lua", *content])
 
     @property
     def content(self):
-        ret = {}  # filename -> file content
+        check_duplicated_generator(self, self._conanfile)
+        self.output_files = {}
 
+        # Variables required for generation
+        conf_suffix = self._config_suffix()
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-
-        template = ('conan_includedirs{dep} = {{{deps.includedirs}}}\n'
-                    'conan_libdirs{dep} = {{{deps.libdirs}}}\n'
-                    'conan_bindirs{dep} = {{{deps.bindirs}}}\n'
-                    'conan_libs{dep} = {{{deps.libs}}}\n'
-                    'conan_system_libs{dep} = {{{deps.system_libs}}}\n'
-                    'conan_defines{dep} = {{{deps.defines}}}\n'
-                    'conan_cxxflags{dep} = {{{deps.cxxflags}}}\n'
-                    'conan_cflags{dep} = {{{deps.cflags}}}\n'
-                    'conan_sharedlinkflags{dep} = {{{deps.sharedlinkflags}}}\n'
-                    'conan_exelinkflags{dep} = {{{deps.exelinkflags}}}\n'
-                    'conan_frameworks{dep} = {{{deps.frameworks}}}\n')
-
-        sections = ["#!lua"]
-
-        deps = _PremakeTemplate(self._get_cpp_info())
-        all_flags = template.format(dep="", deps=deps)
-        sections.append(all_flags)
-        sections.append(
-            "function conan_basic_setup()\n"
-            "    configurations{conan_build_type}\n"
-            "    architecture(conan_arch)\n"
-            "    includedirs{conan_includedirs}\n"
-            "    libdirs{conan_libdirs}\n"
-            "    links{conan_libs}\n"
-            "    links{conan_system_libs}\n"
-            "    links{conan_frameworks}\n"
-            "    defines{conan_defines}\n"
-            "    bindirs{conan_bindirs}\n"
-            "end\n")
-        ret[PREMAKE_FILE] = "\n".join(sections)
-
-        template_deps = template + 'conan_sysroot{dep} = "{deps.sysroot}"\n'
+        build_req = self._conanfile.dependencies.build
 
         # Iterate all the transitive requires
-        for require, dep in list(host_req.items()) + list(test_req.items()):
-            # FIXME: Components are not being aggregated
-            # FIXME: It is not clear the usage of individual dependencies
-            deps = _PremakeTemplate(dep.cpp_info)
-            dep_name = dep.ref.name.replace("-", "_")
-            dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
-            ret[dep.ref.name + '.lua'] = "\n".join(["#!lua", dep_flags])
+        for require, dep in list(host_req.items()) + list(test_req.items()) + list(build_req.items()):
+            dep_name = require.ref.name
 
-        return ret
+            # Convert and aggregate dependency's
+            dep_cppinfo = dep.cpp_info.copy()
+            dep_cppinfo.set_relative_base_folder(dep.package_folder)
+            dep_aggregate = dep_cppinfo.aggregated_components()
+            
+            # Generate package and config separated files
+            var_filename = PREMAKE_VAR_FILE.format(pkgname=dep_name, config=conf_suffix)
+            conf_filename = PREMAKE_CONF_FILE.format(pkgname=dep_name, config=conf_suffix)
+            self._output_lua_file(var_filename, [
+                PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name, config=conf_suffix, deps=_PremakeTemplate(dep_aggregate))
+            ])
+            self._output_lua_file(conf_filename, [
+                PREMAKE_TEMPLATE_CONF.format(pkgname=dep_name, config=conf_suffix, PREMAKE_VAR_FILE=var_filename)
+            ])
+
+            # TODO: Output global lib lua file
+
+        # TODO: Output global premake file 
+
+        return self.output_files
