@@ -38,7 +38,8 @@ def cppstd_compat(conanfile):
     base = dict(conanfile.settings.values_list)
     cppstd_possible_values = supported_cppstd(conanfile)
     if cppstd_possible_values is None:
-        raise ConanException(f"No cppstd compatibility defined for {compiler}")
+        conanfile.output.warning(f'No cppstd compatibility defined for compiler "{compiler}"')
+        return []
     ret = []
     for _cppstd in cppstd_possible_values:
         if _cppstd is None or _cppstd == cppstd:
