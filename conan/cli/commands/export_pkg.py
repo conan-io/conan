@@ -72,9 +72,12 @@ def export_pkg(conan_api, parser, *args):
     root_node = deps_graph.root
     root_node.ref = ref
 
-    # It is necessary to install binaries, in case there are build_requires necessary to export
-    # But they should be local, if this was built here
     if not args.skip_binaries:
+        # unless the user explicitly opts-out with --skip-binaries, it is necessary to install
+        # binaries, in case there are build_requires necessary to export, like tool-requires=cmake
+        # and package() method doing ``cmake.install()``
+        # for most cases, deps would be in local cache already because of a previous "conan install"
+        # but if it is not the case, the binaries from remotes will be downloaded
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     source_folder = os.path.dirname(path)
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
