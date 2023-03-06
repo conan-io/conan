@@ -1,10 +1,10 @@
-from conan.internal import check_duplicated_generator
-from conans.model.build_info import CppInfo
-from conans.util.files import save
-
 import itertools 
 import glob
 import re
+
+from conan.internal import check_duplicated_generator
+from conans.model.build_info import CppInfo
+from conans.util.files import save
 
 # Filename format strings
 PREMAKE_VAR_FILE = "conan_{pkgname}_vars{config}.premake5.lua"
@@ -106,10 +106,17 @@ class _PremakeTemplate(object):
         self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\",
                                                             "/") if deps_cpp_info.sysroot else ""
 
-# Main premake5 dependency generator
 class PremakeDeps(object):
+    """
+    PremakeDeps class generator
+    conandeps.premake5.lua: unconditional import of all *direct* dependencies only
+    """
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
+
         self._conanfile = conanfile
 
         # Tab configuration
@@ -122,6 +129,11 @@ class PremakeDeps(object):
         self.architecture = conanfile.settings.arch
 
     def generate(self):
+        """
+        Generates ``conan_<pkg>_vars_<config>.premake5.lua``, ``conan_<pkg>_<config>.premake5.lua``,
+        and ``conan_<pkg>.premake5.lua`` files into the ``conanfile.generators_folder``.
+        """
+
         check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self.content
@@ -152,7 +164,7 @@ class PremakeDeps(object):
         ]
     
     def _premake_filtered_fallback(self, content, configurations, architecture, indent=1):
-        fallback_filter = ", ".join([f'"configuration:not {configuration}"' for configuration in configurations])
+        fallback_filter = ", ".join([f'"configurations:not {configuration}"' for configuration in configurations])
         lines = list(itertools.chain.from_iterable([cnt.splitlines() for cnt in content]))
         return [
             # Set new filter
