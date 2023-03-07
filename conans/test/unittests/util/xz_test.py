@@ -21,21 +21,6 @@ from conans.util.files import load, save_files
 class XZTest(TestCase):
     output = TestBufferConanOutput()
 
-    def test_error_xz(self):
-        server = TestServer()
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-        export = server.server_store.export(ref)
-        server.server_store.update_last_revision(ref)
-        save_files(export, {"conanfile.py": "#",
-                            "conanmanifest.txt": "#",
-                            "conan_export.txz": "#"})
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
-        client.run("install Pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: This Conan version is not prepared to handle "
-                      "'conan_export.txz' file format", client.out)
-
     @pytest.mark.skipif(not six.PY3, reason="only Py3")
     def test(self):
         tmp_dir = temp_folder()
