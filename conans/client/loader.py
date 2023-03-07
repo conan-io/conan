@@ -454,6 +454,7 @@ def _parse_conanfile(conan_file_path):
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
+        cached_imports = getattr(loaded, "cached_imports", sys.modules.values())
         added_modules = set(sys.modules).difference(old_modules)
         for added in added_modules:
             module = sys.modules[added]
@@ -469,7 +470,7 @@ def _parse_conanfile(conan_file_path):
                 except AttributeError:  # In case the module.__path__ doesn't exist
                     pass
                 else:
-                    if folder.startswith(current_dir):
+                    if folder.startswith(current_dir) or module not in cached_imports:
                         module = sys.modules.pop(added)
                         sys.modules["%s.%s" % (module_id, added)] = module
     except ConanException:
