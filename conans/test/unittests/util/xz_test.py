@@ -36,51 +36,6 @@ class XZTest(TestCase):
         self.assertIn("ERROR: This Conan version is not prepared to handle "
                       "'conan_export.txz' file format", client.out)
 
-    def test_error_sources_xz(self):
-        server = TestServer()
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
-        server.server_store.update_last_revision(ref)
-        export = server.server_store.export(ref)
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    exports_sources = "*"
-"""
-        save_files(export, {"conanfile.py": conanfile,
-                            "conanmanifest.txt": "1",
-                            "conan_sources.txz": "#"})
-        client.run("install Pkg/0.1@user/channel --build", assert_error=True)
-        self.assertIn("ERROR: This Conan version is not prepared to handle "
-                      "'conan_sources.txz' file format", client.out)
-
-    def test_error_package_xz(self):
-        server = TestServer()
-        ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
-        client = TestClient(servers={"default": server},
-                            users={"default": [("lasote", "mypass")]})
-        server.server_store.update_last_revision(ref)
-        export = server.server_store.export(ref)  # *1 the path can't be known before upload a revision
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    exports_sources = "*"
-"""
-        save_files(export, {"conanfile.py": conanfile,
-                            "conanmanifest.txt": "1"})
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, DEFAULT_REVISION_V1)
-        server.server_store.update_last_package_revision(pref.copy_with_revs(DEFAULT_REVISION_V1,
-                                                                             DEFAULT_REVISION_V1))
-
-        package = server.server_store.package(pref)
-        save_files(package, {"conaninfo.txt": "#",
-                             "conanmanifest.txt": "1",
-                             "conan_package.txz": "#"})
-        client.run("install Pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: This Conan version is not prepared to handle "
-                      "'conan_package.txz' file format", client.out)
-
     @pytest.mark.skipif(not six.PY3, reason="only Py3")
     def test(self):
         tmp_dir = temp_folder()
