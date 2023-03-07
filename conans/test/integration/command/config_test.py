@@ -110,11 +110,26 @@ def test_config_install_conanignore():
     os.listdir(tc.current_folder)
 
 
-def test_config_get():
+def test_config_show():
     globalconf = textwrap.dedent("""
     tools.build:jobs=42
+    tools.files.download:retry_wait=10
+    tools.files.download:retry=7
+    core.net.http:timeout=30
+    core.net.http:max_retries=5
     """)
     tc = TestClient()
     tc.save_home({"global.conf": globalconf})
-    tc.run("config get tools.build:jobs")
+    tc.run("config show tools.build:jobs")
     assert "42" in tc.out
+
+    tc.run("config show core*")
+    assert "core.net.http:timeout" in tc.out
+    assert "30" in tc.out
+    assert "core.net.http:max_retries" in tc.out
+    assert "5" in tc.out
+
+    tc.run("config show *retr*")
+    assert "tools.files.download:retry_wait" in tc.out
+    assert "tools.files.download:retry" in tc.out
+    assert "core.net.http:max_retries" in tc.out
