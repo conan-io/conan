@@ -235,8 +235,11 @@ class PremakeDeps(object):
 
             # Create list of all available profiles by searching on disk
             file_pattern = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="_*")
-            file_regex = PREMAKE_VAR_FILE.format(pkgname=dep_name, config="_(([^_]*)_(.*))")
+            file_regex = PREMAKE_VAR_FILE.format(pkgname=re.escape(dep_name), config="_(([^_]*)_(.*))")
             available_files = glob.glob(file_pattern)
+            # Add filename of current generations var file if not already present
+            if var_filename not in available_files:
+                available_files.append(var_filename)
             profiles = [
                 (regex_res[0], regex_res.group(1), regex_res.group(2), regex_res.group(3)) for regex_res in [
                     re.search(file_regex, file_name) for file_name in available_files
@@ -246,9 +249,9 @@ class PremakeDeps(object):
             architectures = list(dict.fromkeys([profile[3] for profile in profiles]))
 
             # Fallback configuration (when user defined config is unknown -> prefer release or last)
-            fallback_configuration = configurations[-1]
-            if "release" in configurations: 
-                fallback_configuration = "release"
+            fallback_configuration = "release"
+            if "release" not in configurations and len(configurations) > 0: 
+                fallback_configuration = configurations[-1]
             
             # Emit package premake file
             pkg_files.append(PREMAKE_PKG_FILE.format(pkgname=dep_name))
