@@ -164,6 +164,7 @@ class BinaryInstaller:
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
+
     def __init__(self, app):
         self._app = app
         self._cache = app.cache
@@ -237,17 +238,17 @@ class BinaryInstaller:
         install_order = install_graph.install_order()
 
         package_count = sum([sum(len(install_reference.packages.values())
-                            for level in install_order
-                            for install_reference in level)])
-        installed_count = 1
+                                 for level in install_order
+                                 for install_reference in level)])
+        handled_count = 1
 
         self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
-                    self._handle_package(package, install_reference, installed_count, package_count)
-                    installed_count += 1
+                    self._handle_package(package, install_reference, None, handled_count, package_count)
+                    handled_count += 1
 
         MockInfoProperty.message()
 
@@ -284,7 +285,7 @@ class BinaryInstaller:
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, installed_count, total_count):
+    def _handle_package(self, package, install_reference, remotes, handled_count, total_count):
         if package.binary == BINARY_SYSTEM_TOOL:
             return
 
@@ -296,6 +297,8 @@ class BinaryInstaller:
         assert install_reference.ref.revision is not None, "Installer should receive RREV always"
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
+        ConanOutput().subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
+
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
             package_layout = self._cache.create_build_pkg_layout(pref)
@@ -303,9 +306,9 @@ class BinaryInstaller:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
         if package.binary == BINARY_BUILD:
-            ConanOutput().subtitle(f"Building package {pref.ref} from source "
-                                f"({installed_count} of {total_count})")
-            ConanOutput(scope=str(pref.ref)).info(f"Package {pref}")
+            ConanOutput(scope=str(pref.ref))\
+                .highlight("Building from source")\
+                .info(f"Package {pref}")
             self._handle_node_build(package, package_layout)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed
