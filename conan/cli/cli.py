@@ -61,8 +61,12 @@ class Cli:
             for module in pkgutil.iter_modules([layer_folder]):
                 module_name = module[1]
                 if module_name.startswith("cmd_"):
-                    self._add_command(f"{folder}.{module_name}", module_name.replace("cmd_", ""),
-                                      package=folder)
+                    module_path = f"{folder}.{module_name}"
+                    try:
+                        self._add_command(module_path, module_name.replace("cmd_", ""),
+                                          package=folder)
+                    except Exception as e:
+                        ConanOutput().error(f"Error loading custom command {module_path}: {e}")
 
     def _add_command(self, import_path, method_name, package=None):
         try:
