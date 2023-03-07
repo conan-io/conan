@@ -66,3 +66,13 @@ def config_list(conan_api, parser, subparser, *args):
     """
     parser.parse_args(*args)
     return BUILT_IN_CONFS
+
+
+@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+def config_get(conan_api, parser, subparser, *args):
+    """
+    Get the value of the specified conf
+    """
+    subparser.add_argument('conf', help='Conf item for which to query its value')
+    args = parser.parse_args(*args)
+    return {args.conf: conan_api.config.get(args.conf)}

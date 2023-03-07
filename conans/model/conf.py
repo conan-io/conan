@@ -475,7 +475,7 @@ class ConfDefinition:
 
     def get(self, conf_name, default=None, check_type=None):
         """
-        Get the value of the  conf name requested and convert it to the [type]-like passed.
+        Get the value of the conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
         return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
