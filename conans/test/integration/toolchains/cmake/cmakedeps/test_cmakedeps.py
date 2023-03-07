@@ -503,3 +503,43 @@ def test_using_package_module():
     c.run("create . -pr:b=profile_build")
     # it doesn't crash anymore, it used to crash
     assert "pkg/0.1: Created package" in c.out
+
+
+def test_system_libs_transitivity():
+    """
+    https://github.com/conan-io/conan/issues/13358
+    """
+    c = TestClient()
+    system = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "system"
+            def package_info(self):
+                self.cpp_info.system_libs = ["m"]
+            """)
+    header = textwrap.dedent("""
+        from conan import ConanFile
+        class Header(ConanFile):
+            name = "header"
+            version = "0.1"
+            package_type = "header-library"
+            requires = "dep/system"
+            def package_info(self):
+                self.cpp_info.system_libs = ["dl"]
+            """)
+    app = textwrap.dedent("""\
+        from conan import ConanFile
+        class App(ConanFile):
+            requires = "header/0.1"
+            settings = "build_type"
+            generators = "CMakeDeps"
+        """)
+    c.save({"dep/conanfile.py": system,
+            "header/conanfile.py": header,
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create header")
+    c.run("install app")
+    assert "set(dep_SYSTEM_LIBS_RELEASE m)" in c.load("app/dep-release-data.cmake")
+    assert "set(header_SYSTEM_LIBS_RELEASE dl)" in c.load("app/header-release-data.cmake")

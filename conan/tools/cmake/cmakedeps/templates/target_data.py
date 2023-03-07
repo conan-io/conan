@@ -322,7 +322,6 @@ class _TargetDataContext(object):
             # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
             #                      NOT REALLY LINKING LIB
             self.libs = ""
-            self.system_libs = ""
             self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
