@@ -108,3 +108,13 @@ def test_config_install_conanignore():
     _assert_config_exists("foo")
 
     os.listdir(tc.current_folder)
+
+
+def test_config_get():
+    globalconf = textwrap.dedent("""
+    tools.build:jobs=42
+    """)
+    tc = TestClient()
+    tc.save_home({"global.conf": globalconf})
+    tc.run("config get tools.build:jobs")
+    assert "42" in tc.out
