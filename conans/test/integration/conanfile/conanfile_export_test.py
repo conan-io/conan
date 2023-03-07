@@ -112,3 +112,74 @@ class ExportTest(unittest.TestCase):
         assert "pkg2/0.1: NUMBER1: 123" in c.out
         assert "pkg2/0.1: NUMBER2: 123" in c.out
         assert "pkg2/0.1: NUMBER3: 123" in c.out
+        
+        
+    def test_inherited_baseclass(self):
+        c = TestClient()
+        
+        conanfile_base = textwrap.dedent("""
+            from conan import ConanFile
+            import os
+            
+            class Base(ConanFile):
+                version = "0.1"
+                
+                def export(self):
+                    self.copy('*', src=os.path.dirname(__file__), dst=self.export_folder)
+                    assert os.path.isfile( os.path.join(self.export_folder, os.path.basename(__file__)) )
+                
+                def build(self):
+                    self.output.info(f"build of {self.name}")
+                    
+                def package_info(self):
+                    self.output.info(f"package_info of {self.name}")
+                    self.output.info(f"using conanfile_base {__file__}")
+        """)
+        
+        conanfile_pkg = textwrap.dedent("""
+            import conanfile_base
+            
+            class Pkg(conanfile_base.Base):
+                name = "{name}"
+                
+        """)
+        
+        conanfile_app = textwrap.dedent("""
+            import conanfile_base
+            
+            class Pkg(conanfile_base.Base):
+                name = "app"
+                requires = "pkg1/0.1", "pkg2/0.1"
+                
+                def requirements(self):
+                    self.output.info(f"using conanfile_base {conanfile_base.__file__}")
+        """)
+                
+        c.save({"pkg1/conanfile.py": conanfile_pkg.format(name="pkg1"),
+                "pkg2/conanfile.py": conanfile_pkg.format(name="pkg2"),
+                "base/conanfile_base.py": conanfile_base,
+                "app/conanfile.py": conanfile_app})
+    
+        
+        base_path = os.path.join(c.current_folder, "base")
+        try:
+            sys.path.insert(0, base_path)
+            c.run("export pkg1")
+            c.run("export pkg2")
+            c.run("install app --build=missing")
+            print(c.out)
+        finally:
+            sys.path.remove(base_path)
+            
+        
+        assert f"pkg1/0.1: build of pkg1" in c.out
+        assert f"pkg1/0.1: package_info of pkg1" in c.out
+        assert f"pkg1/0.1: using conanfile_base {c.cache_folder}/data/pkg1/0.1/_/_/export/conanfile_base.py" in c.out
+        
+        assert f"pkg2/0.1: package_info of pkg2" in c.out
+        assert f"pkg2/0.1: build of pkg2" in c.out
+        assert f"pkg2/0.1: using conanfile_base {c.cache_folder}/data/pkg2/0.1/_/_/export/conanfile_base.py" in c.out
+        
+        assert f"conanfile.py (app/0.1): using conanfile_base {base_path}/conanfile_base.py" in c.out
+        
+        
