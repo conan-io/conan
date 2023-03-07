@@ -297,7 +297,6 @@ class BinaryInstaller:
         assert install_reference.ref.revision is not None, "Installer should receive RREV always"
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
-        ConanOutput().subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
 
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
@@ -306,6 +305,8 @@ class BinaryInstaller:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
         if package.binary == BINARY_BUILD:
+            ConanOutput()\
+                .subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
             ConanOutput(scope=str(pref.ref))\
                 .highlight("Building from source")\
                 .info(f"Package {pref}")
@@ -319,7 +320,7 @@ class BinaryInstaller:
             node = package.nodes[0]
             pref = node.pref
             assert node.prev, "PREV for %s is None" % str(pref)
-            node.conanfile.output.success('Already installed!')
+            node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
