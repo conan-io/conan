@@ -1,6 +1,5 @@
 import copy
 import os
-import time
 
 from conan.api.output import ConanOutput
 
@@ -32,15 +31,16 @@ class RestV2Methods(RestCommonMethods):
     def _get_file_list_json(self, url):
         data = self.get_json(url)
         # Discarding (.keys()) still empty metadata for files
-        data["files"] = list(data["files"].keys())
+        # and make sure the paths like metadata/sign/signature are normalized to /
+        data["files"] = list(d.replace("\\", "/") for d in data["files"].keys())
         return data
 
     def get_recipe(self, ref, dest_folder):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        if EXPORT_SOURCES_TGZ_NAME in files:
-            files.remove(EXPORT_SOURCES_TGZ_NAME)
+        accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt", "metadata/sign"]
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -69,6 +69,9 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
+        # Download only known files, but not metadata (except sign)
+        accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt", "metadata/sign"]
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files)
@@ -108,7 +111,6 @@ class RestV2Methods(RestCommonMethods):
         self._upload_files(files_to_upload, urls)
 
     def _upload_files(self, files, urls):
-        t1 = time.time()
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
@@ -117,7 +119,7 @@ class RestV2Methods(RestCommonMethods):
         for filename in sorted(files):
             # As the filenames are sorted, the last one is always "conanmanifest.txt"
             if output and not output.is_terminal:
-                msg ="-> %s" % filename
+                msg = "-> %s" % filename
                 output.info(msg)
             resource_url = urls[filename]
             try:
@@ -276,7 +278,7 @@ class RestV2Methods(RestCommonMethods):
         url = self.router.package_revisions(pref)
         tmp = self.get_json(url, headers=headers)["revisions"]
         remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
-                              from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
+                        from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
 
         if pref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
             for _pref in remote_prefs:
