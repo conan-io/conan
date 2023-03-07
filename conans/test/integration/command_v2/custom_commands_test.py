@@ -19,6 +19,28 @@ class TestCustomCommands:
         client.run("list *")
         assert "ERROR: Error loading custom command 'cmd_mycommand.py': " \
                "No module named 'this_doesnt_exist'" in client.out
+        # But it won't break the whole conan and you can still use the rest of it
+        client.run("config home")
+        assert client.cache_folder in client.out
+
+    def test_import_error_custom_command_subfolder(self):
+        """
+        used to break, this is handled differently in conan
+        """
+        mycommand = textwrap.dedent("""
+            import this_doesnt_exist
+            """)
+
+        client = TestClient()
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'mycompany', 'cmd_mycommand.py')
+        client.save({f"{command_file_path}": mycommand})
+        # Call to any other command, it will fail loading the custom command,
+        client.run("list *")
+        assert "ERROR: Error loading custom command mycompany.cmd_mycommand" in client.out
+        # But it won't break the whole conan and you can still use the rest of it
+        client.run("config home")
+        assert client.cache_folder in client.out
 
     def test_simple_custom_command(self):
         mycommand = textwrap.dedent("""
