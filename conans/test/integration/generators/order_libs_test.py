@@ -1,59 +1,39 @@
-import textwrap
-import unittest
+import platform
 
-import pytest
-
-from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-class OrderLibsTest(unittest.TestCase):
+def test_library_order():
+    #
+    # project -> sdl2_ttf -> freetype ------------> bzip2
+    #             \             \----->libpng  -> zlib
+    #              \------> sdl2----------------->/
+    # Order: sdl2_ttf freetype sdl2 libpng zlib bzip
 
-    def setUp(self):
-        self.client = TestClient()
+    c = TestClient()
 
-    def _export(self, name, deps=None, export=True):
-        def _libs():
-            if name == "LibPNG":
-                libs = '"m"'
-            elif name == "SDL2":
-                libs = '"m", "rt", "pthread", "dl"'
-            else:
-                libs = ""
-            return libs
-        deps = ", ".join(['"%s/1.0@lasote/stable"' % d for d in deps or []]) or 'None'
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile, CMake
+    def _export(libname, refs=None):
+        conanfile = GenConanfile(libname, "0.1").with_package_info(cpp_info={"libs": [libname]},
+                                                                   env_info={})
+        for r in refs or []:
+            conanfile.with_requires(f"{r}/0.1")
+        c.save({"conanfile.py": conanfile}, clean_first=True)
+        c.run("export .")
 
-            class HelloReuseConan(ConanFile):
-                name = "%s"
-                version = "1.0"
-                requires = %s
-                generators = "cmake"
+    _export("zlib")
+    _export("bzip2")
+    _export("sdl2", ["zlib"])
+    _export("libpng", ["zlib"])
+    _export("freetype", ["bzip2", "libpng"])
+    _export("sdl2_ttf", ["freetype", "sdl2"])
+    _export("app", ["sdl2_ttf"])
 
-                def package_info(self):
-                    self.cpp_info.libs = ["%s", %s]
-            """ % (name, deps, name, _libs()))
+    c.run("install . --build missing -g AutotoolsDeps")
 
-        files = {CONANFILE: conanfile}
-        self.client.save(files, clean_first=True)
-        if export:
-            self.client.run("export . --user=lasote --channel=stable")
+    deps = "conanautotoolsdeps.bat" if platform.system() == "Windows" else "conanautotoolsdeps.sh"
+    autotoolsdeps = c.load(deps)
+    assert '-lsdl2_ttf -lfreetype -lsdl2 -llibpng -lzlib -lbzip2' in autotoolsdeps
 
-    @pytest.mark.xfail(reason="Generator cmake to be removed")
-    def test_reuse(self):
-        self._export("ZLib")
-        self._export("BZip2")
-        self._export("SDL2", ["ZLib"])
-        self._export("LibPNG", ["ZLib"])
-        self._export("freeType", ["BZip2", "LibPNG"])
-        self._export("SDL2_ttf", ["freeType", "SDL2"])
-        self._export("MyProject", ["SDL2_ttf"], export=False)
 
-        self.client.run("install . --build missing")
-
-        expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
-                         'BZip2', 'LibPNG', 'm', 'ZLib']
-        conanbuildinfo = self.client.load("conanbuildinfo.cmake")
-        libs = " ".join(expected_libs)
-        self.assertIn(libs, conanbuildinfo)
+# TODO: Add a test that manages too system libs
