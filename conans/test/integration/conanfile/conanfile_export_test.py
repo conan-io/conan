@@ -70,11 +70,14 @@ class ExportTest(unittest.TestCase):
 
         c.out = RedirectedTestOutput()
         base_path = os.path.join(c.current_folder, "base")
+        
         try:
             sys.path.insert(0, base_path)
+            __import__("myfile")
             c.run("install app")
         finally:
             sys.path.remove(base_path)
+            sys.modules.pop("myfile")
             
         # take the cached module from sys.path
         assert "pkg1/0.1: NUMBER1: 666" in c.out
@@ -167,19 +170,21 @@ class ExportTest(unittest.TestCase):
             c.run("export pkg1")
             c.run("export pkg2")
             c.run("install app --build=missing")
-            print(c.out)
         finally:
             sys.path.remove(base_path)
             
         
         assert f"pkg1/0.1: build of pkg1" in c.out
         assert f"pkg1/0.1: package_info of pkg1" in c.out
-        assert f"pkg1/0.1: using conanfile_base {c.cache_folder}/data/pkg1/0.1/_/_/export/conanfile_base.py" in c.out
+        expected_pkg1_base = os.path.join(c.cache_folder, "data", "pkg1", "0.1", "_", "_", "export", "conanfile_base.py")
+        assert f"pkg1/0.1: using conanfile_base {expected_pkg1_base}" in c.out
         
         assert f"pkg2/0.1: package_info of pkg2" in c.out
         assert f"pkg2/0.1: build of pkg2" in c.out
-        assert f"pkg2/0.1: using conanfile_base {c.cache_folder}/data/pkg2/0.1/_/_/export/conanfile_base.py" in c.out
+        expected_pkg2_base = os.path.join(c.cache_folder, "data", "pkg2", "0.1", "_", "_", "export", "conanfile_base.py")
+        assert f"pkg2/0.1: using conanfile_base {expected_pkg2_base}" in c.out
         
-        assert f"conanfile.py (app/0.1): using conanfile_base {base_path}/conanfile_base.py" in c.out
+        expected_base = os.path.join(base_path, "conanfile_base.py")
+        assert f"conanfile.py (app/0.1): using conanfile_base {expected_base}" in c.out
         
         

@@ -49,7 +49,7 @@ class ConanFileLoader(object):
                                       display)[0]
 
     def load_basic_module(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
-                          display=""):
+                          display="", module_cache=True):
         """ loads a conanfile basic object without evaluating anything, returns the module too
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
@@ -66,7 +66,7 @@ class ConanFileLoader(object):
         try:
             self._python_requires.valid = True
             module, conanfile = parse_conanfile(conanfile_path, self._python_requires,
-                                                self._generator_manager)
+                                                self._generator_manager, module_cache)
             self._python_requires.valid = False
 
             self._python_requires.locked_versions = None
@@ -131,10 +131,10 @@ class ConanFileLoader(object):
 
         return data or {}
 
-    def load_named(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
+    def load_named(self, conanfile_path, name, version, user, channel, lock_python_requires=None, module_cache=True):
         """ loads the basic conanfile object and evaluates its name and version
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel)
+        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel, module_cache=module_cache)
 
         # Export does a check on existing name & version
         if name:
@@ -215,7 +215,7 @@ class ConanFileLoader(object):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
-                                    lock_python_requires)
+                                    lock_python_requires, module_cache=False)
 
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel, validate=False)
         if str(ref):
@@ -399,9 +399,9 @@ def _parse_module(conanfile_module, module_id, generator_manager):
     return result
 
 
-def parse_conanfile(conanfile_path, python_requires, generator_manager):
+def parse_conanfile(conanfile_path, python_requires, generator_manager, module_cache=True):
     with python_requires.capture_requires() as py_requires:
-        module, filename = _parse_conanfile(conanfile_path)
+        module, filename = _parse_conanfile(conanfile_path, module_cache)
         try:
             conanfile = _parse_module(module, filename, generator_manager)
 
@@ -423,7 +423,7 @@ def parse_conanfile(conanfile_path, python_requires, generator_manager):
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
-def _parse_conanfile(conan_file_path):
+def _parse_conanfile(conan_file_path, module_cache=True):
     """ From a given path, obtain the in memory python import module
     """
 
@@ -454,7 +454,6 @@ def _parse_conanfile(conan_file_path):
 
         # These lines are necessary, otherwise local conanfile imports with same name
         # collide, but no error, and overwrite other packages imports!!
-        cached_imports = getattr(loaded, "cached_imports", sys.modules.values())
         added_modules = set(sys.modules).difference(old_modules)
         for added in added_modules:
             module = sys.modules[added]
@@ -470,7 +469,7 @@ def _parse_conanfile(conan_file_path):
                 except AttributeError:  # In case the module.__path__ doesn't exist
                     pass
                 else:
-                    if folder.startswith(current_dir) or module not in cached_imports:
+                    if folder.startswith(current_dir) or not module_cache:
                         module = sys.modules.pop(added)
                         sys.modules["%s.%s" % (module_id, added)] = module
     except ConanException:
