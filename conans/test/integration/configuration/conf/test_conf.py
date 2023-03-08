@@ -3,9 +3,9 @@ import platform
 import textwrap
 
 import pytest
-import six
 from mock import patch
 
+from conan import conan_version
 from conans.errors import ConanException
 from conans.util.files import save
 from conans.test.utils.tools import TestClient
@@ -180,10 +180,12 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
 def test_jinja_global_conf(client):
     save(client.cache.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
                                        "user.mycompany:other = {{platform.system()}}\n"
-                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n")
+                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n"
+                                       "user.conan:version = {{conan_version}}-{{conan_version>0.1}}")
     client.run("install .")
     assert "user.mycompany:parallel={}".format(os.cpu_count()/2) in client.out
     assert "user.mycompany:other={}".format(platform.system()) in client.out
+    assert f"user.conan:version={conan_version}-True" in client.out
     if platform.system() == "Linux":
         import distro
         assert "user.mycompany:dist={}".format(distro.id()) in client.out
