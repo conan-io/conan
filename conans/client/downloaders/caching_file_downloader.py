@@ -6,7 +6,6 @@ from threading import Lock
 
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.model.conan_file import ConanFile
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, load, save
 from conans.util.locks import SimpleLock
 from conans.util.sha import sha256 as compute_sha256
@@ -47,7 +46,7 @@ class CachingFileDownloader:
             finally:
                 thread_lock.release()
 
-    def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile: ConanFile, **kwargs):
+    def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile, **kwargs):
         sources_cache = False
         h = None
         if conanfile is not None:
@@ -81,10 +80,9 @@ class CachingFileDownloader:
                 try:
                     summary_key = conanfile.ref.repr_notime()
                 except AttributeError:
-                    if conanfile.recipe_folder is not None:
-                        summary_key = conanfile.recipe_folder
-                    else:
-                        summary_key = "unknown"
+                    # The recipe path would be different between machines
+                    # So best we can do is to set this as unknown
+                    summary_key = "unknown"
 
                 urls = summary.setdefault(summary_key, [])
                 if url not in urls:

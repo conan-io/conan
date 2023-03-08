@@ -192,8 +192,8 @@ class TestDownloadCache:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost:5000/myfile.txt" in content[client.current_folder]
-            assert len(content[client.current_folder]) == 1
+            assert "http://localhost:5000/myfile.txt" in content["unknown"]
+            assert len(content["unknown"]) == 1
 
             conanfile = textwrap.dedent(f"""
                 from conan import ConanFile
@@ -210,10 +210,15 @@ class TestDownloadCache:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost.mirror:5000/myfile.txt" in content[client.current_folder]
-            assert "http://localhost:5000/myfile.txt" in content[client.current_folder]
-            assert len(content[client.current_folder]) == 2
+            assert "http://localhost.mirror:5000/myfile.txt" in content["unknown"]
+            assert "http://localhost:5000/myfile.txt" in content["unknown"]
+            assert len(content["unknown"]) == 2
 
             # Ensure the cache is working and we didn't break anything by modifying the summary
             client.run("source .")
             assert "Downloading file" not in client.out
+
+            client.run("create . --format=json")
+            content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
+            out = json.loads(client.stdout)
+            assert content[out["graph"]["nodes"][1]["ref"]] == ["http://localhost.mirror:5000/myfile.txt"]
