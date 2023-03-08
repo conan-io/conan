@@ -122,7 +122,7 @@ class PremakeDeps(object):
         self._conanfile = conanfile
 
         # Tab configuration
-        self.tab = "\t"
+        self.tab = "    "
 
         # Return value buffer
         self.output_files = {}
@@ -157,6 +157,12 @@ class PremakeDeps(object):
         ])
 
     def _premake_filtered(self, content, configuration, architecture, indent=0):
+        """
+        - Surrounds the lua line(s) contained within ``content`` with a premake "filter" and returns the result.
+        - A "filter" will affect all premake function calls after it's set. It's used to limit following project 
+          setup function call(s) to a certain scope. Here it is used to limit the calls in content to only apply
+          if the premake ``configuration`` and ``architecture`` matches the parameters in this function call.
+        """
         lines = list(itertools.chain.from_iterable([cnt.splitlines() for cnt in content]))
         return [
             # Set new filter
@@ -168,6 +174,12 @@ class PremakeDeps(object):
         ]
     
     def _premake_filtered_fallback(self, content, configurations, architecture, indent=1):
+        """
+        - Uses filters that serve the same purpose than ``_premake_filtered()``
+        - This call will create an inverse filter on configurations. It will only apply if non of the 
+          ``configurations`` from this function call is present in premake. This is the fallback when a premake
+          configuration is NOT named like one of the conan build_type(s).
+        """
         fallback_filter = ", ".join(
             [f'"configurations:not {configuration}"' for configuration in configurations]
         )
@@ -202,10 +214,15 @@ class PremakeDeps(object):
         test_req = self._conanfile.dependencies.test
         build_req = self._conanfile.dependencies.build
 
+        # Merge into one list
+        full_req = list(host_req.items()) \
+                   + list(test_req.items()) \
+                   + list(build_req.items())
+
         # Process dependencies and accumulate globally required data
         pkg_files = []
         dep_names = []
-        for require, dep in list(host_req.items()) + list(test_req.items()) + list(build_req.items()):
+        for require, dep in full_req:
             dep_name = require.ref.name
             dep_names.append(dep_name)
 
