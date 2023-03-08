@@ -199,6 +199,12 @@ class RemoteTest(unittest.TestCase):
         assert "my-remote3: http://someurl3 [Verify SSL: True, Enabled: False]" in client.out
 
         client.run("remote disable * --format=json")
+
+        registry = load(client.cache.remotes_path)
+        data = json.loads(registry)
+        for remote in data["remotes"]:
+            self.assertEqual(remote["disabled"], True)
+
         data = json.loads(client.out)
         for remote in data:
             assert remote["enabled"] is False
