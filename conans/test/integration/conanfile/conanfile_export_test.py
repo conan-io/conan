@@ -1,4 +1,5 @@
 import os
+import shutil
 import textwrap
 from conans.test.utils.tools import TestClient
 
@@ -60,9 +61,12 @@ def test_inherited_baseclass():
     # you can do this easily with a scripts that reads the
     # conanfile and detect the recipes that are importing the
     # base module
-    c.run_command("cp base/conanfile_base.py pkg1")
-    c.run_command("cp base/conanfile_base.py pkg2")
-    c.run_command("cp base/conanfile_base.py app")
+    shutil.copyfile(os.path.join(c.current_folder, "base", "conanfile_base.py"),
+                    os.path.join(c.current_folder, "pkg1", "conanfile_base.py"))
+    shutil.copyfile(os.path.join(c.current_folder, "base", "conanfile_base.py"),
+                    os.path.join(c.current_folder, "pkg2", "conanfile_base.py"))
+    shutil.copyfile(os.path.join(c.current_folder, "base", "conanfile_base.py"),
+                    os.path.join(c.current_folder, "app", "conanfile_base.py"))
 
     c.run("export pkg1")
     c.run("export pkg2")
@@ -80,6 +84,6 @@ def test_inherited_baseclass():
     assert f"conanfile.py (app/0.1): using conanfile_base {app_path}/conanfile_base.py" in c.out
 
     # you could clean after this
-    c.run_command("rm pkg1/conanfile_base.py")
-    c.run_command("rm pkg2/conanfile_base.py")
-    c.run_command("rm app/conanfile_base.py")
+    os.remove(os.path.join(c.current_folder, "pkg1", "conanfile_base.py"))
+    os.remove(os.path.join(c.current_folder, "pkg2", "conanfile_base.py"))
+    os.remove(os.path.join(c.current_folder, "app", "conanfile_base.py"))
