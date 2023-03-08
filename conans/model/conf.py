@@ -307,8 +307,10 @@ class Conf:
         self._values.pop(conf_name, None)
         return value
 
-    def show(self, pattern):
-        return {key: self.get(key) for key in self._values.keys()if fnmatch.fnmatch(key, pattern)}
+    def show(self, fnpattern, pattern=""):
+        return {key: self.get(key)
+                for key in self._values.keys()
+                if fnmatch.fnmatch(pattern + key, fnpattern)}
 
     def copy(self):
         c = Conf()
@@ -485,11 +487,21 @@ class ConfDefinition:
         return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
                                                             check_type=check_type)
 
-    def show(self, pattern):
+    def show(self, fnpattern):
+        """
+        Get the value of the confs that match the requested pattern
+        """
         result = {}
 
-        for p in self._pattern_confs.values():
-            result.update(p.show(pattern))
+        for patter_key, patter_conf in self._pattern_confs.items():
+            if patter_key is None:
+                patter_key = ""
+            else:
+                patter_key += ":"
+
+            pattern_values = patter_conf.show(fnpattern, patter_key)
+            result.update({patter_key + pattern_subkey: pattern_subvalue
+                           for pattern_subkey, pattern_subvalue in pattern_values.items()})
 
         return result
 

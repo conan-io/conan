@@ -117,6 +117,9 @@ def test_config_show():
     tools.files.download:retry=7
     core.net.http:timeout=30
     core.net.http:max_retries=5
+    zlib/*:user.mycategory:retry=True
+    zlib/*:user.mycategory:foo=0
+    zlib/*:user.myothercategory:foo=0
     """)
     tc = TestClient()
     tc.save_home({"global.conf": globalconf})
@@ -133,3 +136,18 @@ def test_config_show():
     assert "tools.files.download:retry_wait" in tc.out
     assert "tools.files.download:retry" in tc.out
     assert "core.net.http:max_retries" in tc.out
+    assert "zlib/*:user.mycategory:retry" in tc.out
+
+    tc.run("config show zlib*")
+    assert "zlib/*:user.mycategory:retry" in tc.out
+    assert "zlib/*:user.mycategory:foo" in tc.out
+    assert "zlib/*:user.myothercategory:foo" in tc.out
+
+    tc.run("config show zlib/*")
+    assert "zlib/*:user.mycategory:retry" in tc.out
+    assert "zlib/*:user.mycategory:foo" in tc.out
+    assert "zlib/*:user.myothercategory:foo" in tc.out
+
+    tc.run("config show zlib/*:foo")
+    assert "zlib/*:user.mycategory:foo" in tc.out
+    assert "zlib/*:user.myothercategory:foo" in tc.out
