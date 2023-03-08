@@ -168,10 +168,9 @@ class TestDownloadCache:
         c.run("install --requires=mypkg/0.1@user/testing", assert_error=True)
         assert 'core.download:download_cache must be an absolute path' in c.out
 
-    def test_users_download_cache_(self):
-        nonce = ""
+    def test_users_download_cache_summary(self):
         def custom_download(this, url, filepath, **kwargs):
-            save(filepath, f"Hello, world!{nonce}")
+            save(filepath, f"Hello, world!")
 
         with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download", custom_download):
             client = TestClient()
@@ -192,8 +191,8 @@ class TestDownloadCache:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost:5000/myfile.txt" in content["unknown"]
-            assert len(content["unknown"]) == 1
+            assert "http://localhost:5000/myfile.txt" in content[client.current_folder]
+            assert len(content[client.current_folder]) == 1
 
             conanfile = textwrap.dedent(f"""
                 from conan import ConanFile
@@ -210,6 +209,6 @@ class TestDownloadCache:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost.mirror:5000/myfile.txt" in content["unknown"]
-            assert "http://localhost:5000/myfile.txt" in content["unknown"]
-            assert len(content["unknown"]) == 2
+            assert "http://localhost.mirror:5000/myfile.txt" in content[client.current_folder]
+            assert "http://localhost:5000/myfile.txt" in content[client.current_folder]
+            assert len(content[client.current_folder]) == 2

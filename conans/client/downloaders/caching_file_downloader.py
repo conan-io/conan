@@ -80,7 +80,10 @@ class CachingFileDownloader:
                 try:
                     summary_key = conanfile.ref.repr_notime()
                 except AttributeError:
-                    summary_key = "unknown"
+                    if conanfile.recipe_folder is not None:
+                        summary_key = conanfile.recipe_folder
+                    else:
+                        summary_key = "unknown"
 
                 urls = summary.setdefault(summary_key, [])
                 if url not in urls:
