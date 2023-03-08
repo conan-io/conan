@@ -33,12 +33,8 @@ def test_legacy_names_filenames():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-    message = "WARN: The use of '{}' is deprecated in Conan 2.0 and will be removed in " \
-              "Conan 2.X. Please, update your recipes unless you are maintaining compatibility " \
-              "with Conan 1.X"
-
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
-        assert message.format(name) in c.out
+        assert f"'{name}' used in: pkg/1.0" in c.out
 
 
 class TestLegacy1XRecipes:

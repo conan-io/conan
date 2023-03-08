@@ -31,31 +31,41 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
-class MockInfoProperty(object):
+class MockInfoProperty:
     """
     # TODO: Remove in 2.X
     to mock user_info and env_info
     """
+    counter = {}
+    package = None
+
     def __init__(self, name):
-        self._message = f"The use of '{name}' is deprecated in Conan 2.0 and will be removed in " \
-                        f"Conan 2.X. Please, update your recipes unless you are maintaining " \
-                        f"compatibility with Conan 1.X"
+        self._name = name
+
+    @staticmethod
+    def message():
+        if not MockInfoProperty.counter:
+            return
+        ConanOutput().warning("Usage of deprecated Conan 1.X features that will be removed in "
+                              "Conan 2.X:")
+        for k, v in MockInfoProperty.counter.items():
+            ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}")
+        MockInfoProperty.counter = {}
 
     def __getitem__(self, key):
-        ConanOutput().warning(self._message)
+        MockInfoProperty.counter.setdefault(self._name, set()).add(self.package)
         return []
 
     def __setitem__(self, key, value):
-        ConanOutput().warning(self._message)
+        MockInfoProperty.counter.setdefault(self._name, set()).add(self.package)
 
     def __getattr__(self, attr):
-        if attr != "_message":
-            ConanOutput().warning(self._message)
+        MockInfoProperty.counter.setdefault(self._name, set()).add(self.package)
         return []
 
     def __setattr__(self, attr, value):
-        if attr != "_message":
-            ConanOutput().warning(self._message)
+        if attr != "_name":
+            MockInfoProperty.counter.setdefault(self._name, set()).add(self.package)
         return super(MockInfoProperty, self).__setattr__(attr, value)
 
 

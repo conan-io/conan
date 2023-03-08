@@ -26,28 +26,23 @@ class ExportPkgTest(unittest.TestCase):
     def test_transitive_without_settings(self):
         # https://github.com/conan-io/conan/issues/3367
         client = TestClient()
-        client.save({CONANFILE: GenConanfile()})
-        client.run("create . --name=pkgc --version=0.1 --user=user --channel=testing")
-        conanfile = """from conan import ConanFile
-class PkgB(ConanFile):
-    settings = "arch"
-    requires = "pkgc/0.1@user/testing"
-"""
-        client.save({CONANFILE: conanfile})
-        client.run("create . --name=pkgb --version=0.1 --user=user --channel=testing")
-        conanfile = """from conan import ConanFile
-class PkgA(ConanFile):
-    requires = "pkgb/0.1@user/testing"
-    def build(self):
-        self.output.info("BUILDING PKGA")
-"""
-        client.save({CONANFILE: conanfile})
-        client.run("build . -bf=build")
-        client.run("export-pkg . --name=pkga --version=0.1 --user=user --channel=testing "
-                   "-pr=default")
+        client.save({"pkgc/conanfile.py": GenConanfile("pkgc", "0.1"),
+                     "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkgc/0.1"),
+                     "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("pkgb/0.1")})
+        client.run("create pkgc")
+        client.run("create pkgb")
+
+        client.run("build pkga -bf=build")
+        client.run("export-pkg pkga ")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        self.assertIn(f"conanfile.py (pkga/0.1@user/testing): "
-                      f"Package '{package_id}' created", client.out)
+        self.assertIn(f"conanfile.py (pkga/0.1): Package '{package_id}' created", client.out)
+
+        # we can export-pkg without the dependencies binaries if we need to optimize
+        client.run("remove pkgc*:* -c")
+        client.run("remove pkgb*:* -c")
+        client.run("export-pkg pkga --skip-binaries")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+        self.assertIn(f"conanfile.py (pkga/0.1): Package '{package_id}' created", client.out)
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
@@ -493,7 +488,7 @@ def test_export_pkg_tool_requires():
     - to inject the tool-requirements
     - to propagate the environment and the conf
     """
-    c = TestClient()
+    c = TestClient(default_server_user=True)
     tool = textwrap.dedent("""
         from conan import ConanFile
         class Tool(ConanFile):
@@ -520,6 +515,11 @@ def test_export_pkg_tool_requires():
             "consumer/conanfile.py": consumer})
 
     c.run("create tool")
+    c.run("export-pkg consumer")
+    assert "conanfile.py (consumer/0.1): MYCONF CONF_VALUE" in c.out
+    assert "MYVAR=MYVALUE" in c.out
+    c.run("upload tool* -r=default -c")
+    c.run("remove tool* -c")
     c.run("export-pkg consumer")
     assert "conanfile.py (consumer/0.1): MYCONF CONF_VALUE" in c.out
     assert "MYVAR=MYVALUE" in c.out

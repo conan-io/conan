@@ -96,7 +96,17 @@ class RestApiTest(unittest.TestCase):
         # Get the package
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir)
-        self.assertIn("conanmanifest.txt", os.listdir(tmp_dir))
+        # The hello.cpp file is not downloaded!
+        self.assertNotIn("hello.cpp", os.listdir(tmp_dir))
+
+    def test_upload_huge_conan(self):
+        ref = RecipeReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
+        self._upload_recipe(ref, {"file9.cpp": ""})
+
+        tmp = temp_folder()
+        files = self.api.get_recipe(ref, tmp)
+        self.assertIsNotNone(files)
+        self.assertFalse(os.path.exists(os.path.join(tmp, "file9.cpp")))
 
     def test_search(self):
         # Upload a conan1
@@ -186,7 +196,9 @@ class RestApiTest(unittest.TestCase):
 
     def _upload_package(self, package_reference, base_files=None):
 
-        files = {"conanmanifest.txt": ""}
+        files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
+                 "hello.cpp": "hello",
+                 "conanmanifest.txt": ""}
         if base_files:
             files.update(base_files)
 
