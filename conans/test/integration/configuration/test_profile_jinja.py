@@ -1,6 +1,7 @@
 import platform
 import textwrap
 
+from conan import conan_version
 from conans.client.tools import environment_append
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -71,3 +72,19 @@ def test_profile_template_profile_dir():
                  "anysubfolder/toolchain.cmake": "MyToolchainCMake!!!"})
     client.run("install . -pr=anysubfolder/profile1.jinja")
     assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
+
+
+def test_profile_version():
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        [options]
+        *:myoption={{conan_version}}
+        *:myoption2={{conan_version<13 and conan_version>1.0}}
+        """)
+
+    client.save({"conanfile.py": GenConanfile(),
+                 "profile1.jinja": tpl1})
+    client.run("install . -pr=profile1.jinja")
+    assert f"*:myoption={conan_version}" in client.out
+    assert "*:myoption2=True" in client.out
+
