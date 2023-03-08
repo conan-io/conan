@@ -55,7 +55,7 @@ class CachingFileDownloader:
                 h = sha256
                 sources_cache = True
             else:
-                ConanOutput().warning("sha256 expected")
+                ConanOutput().warning("Use sha256 as file checksums for downloaded sources")
         if h is None:
             h = self._get_hash(url, md5, sha1, sha256)
 

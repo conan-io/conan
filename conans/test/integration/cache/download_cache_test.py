@@ -170,6 +170,7 @@ class TestDownloadCache:
 
     def test_users_download_cache_summary(self):
         def custom_download(this, url, filepath, **kwargs):
+            print("Downloading file")
             save(filepath, f"Hello, world!")
 
         with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download", custom_download):
@@ -212,3 +213,7 @@ class TestDownloadCache:
             assert "http://localhost.mirror:5000/myfile.txt" in content[client.current_folder]
             assert "http://localhost:5000/myfile.txt" in content[client.current_folder]
             assert len(content[client.current_folder]) == 2
+
+            # Ensure the cache is working and we didn't break anything by modifying the summary
+            client.run("source .")
+            assert "Downloading file" not in client.out
