@@ -66,7 +66,7 @@ class PyRequireLoader(object):
             py_requires_refs = [py_requires_refs, ]
 
         py_requires = self._resolve_py_requires(py_requires_refs, graph_lock, loader, remotes,
-                                                update, check_update)
+                                                update, check_update, None)
         if hasattr(conanfile, "python_requires_extend"):
             py_requires_extend = conanfile.python_requires_extend
             if isinstance(py_requires_extend, str):
@@ -78,7 +78,7 @@ class PyRequireLoader(object):
         conanfile.python_requires = py_requires
 
     def _resolve_py_requires(self, py_requires_refs, graph_lock, loader, remotes, update,
-                             check_update):
+                             check_update, resolve_prereleases):
         result = PyRequires()
         for py_requires_ref in py_requires_refs:
             py_requires_ref = RecipeReference.loads(py_requires_ref)
