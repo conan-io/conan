@@ -66,7 +66,7 @@ class PyRequireLoader(object):
             py_requires_refs = [py_requires_refs, ]
 
         py_requires = self._resolve_py_requires(py_requires_refs, graph_lock, loader, remotes,
-                                                update, check_update, None)
+                                                update, check_update)
         if hasattr(conanfile, "python_requires_extend"):
             py_requires_extend = conanfile.python_requires_extend
             if isinstance(py_requires_extend, str):
@@ -78,12 +78,12 @@ class PyRequireLoader(object):
         conanfile.python_requires = py_requires
 
     def _resolve_py_requires(self, py_requires_refs, graph_lock, loader, remotes, update,
-                             check_update, resolve_prereleases):
+                             check_update):
         result = PyRequires()
         for py_requires_ref in py_requires_refs:
             py_requires_ref = RecipeReference.loads(py_requires_ref)
             requirement = Requirement(py_requires_ref)
-            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update, resolve_prereleases)
+            resolved_ref = self._resolve_ref(requirement, graph_lock, remotes, update)
             try:
                 py_require = self._cached_py_requires[resolved_ref]
             except KeyError:
