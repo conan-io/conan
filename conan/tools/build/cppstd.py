@@ -94,7 +94,7 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
 
 def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     """
-    Get the a list of supported ``compiler.cppstd`` for the "conanfile.settings.compiler" and
+    Get a list of supported ``compiler.cppstd`` for the "conanfile.settings.compiler" and
     "conanfile.settings.compiler_version" or for the parameters "compiler" and "compiler_version"
     if specified.
 
