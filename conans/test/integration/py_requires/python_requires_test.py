@@ -1120,3 +1120,40 @@ class TestTransitiveExtend:
         client.run("install consumer")
         assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
         assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+
+
+def test_editable_python_requires():
+    # https://github.com/conan-io/conan/issues/13362#issuecomment-1460109208
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+
+        number = 21
+
+        class Dep(ConanFile):
+            name = "dep"
+            version = "1.0"
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+
+        number = 42
+
+        class Dep(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            python_requires = "dep/1.0"
+
+            def generate(self):
+                self.output.info(f"NUMBER GEN: {self.python_requires['dep'].module.number}")
+            def build(self):
+                self.output.info(f"NUMBER BUILD: {self.python_requires['dep'].module.number}")
+        """)
+
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("editable add dep dep/1.0")
+    c.run("install pkg --install-folder=if")
+    assert "conanfile.py (pkg/1.0): NUMBER GEN: 21" in c.out
+    c.run("build pkg --install-folder=if")
+    assert "conanfile.py (pkg/1.0): NUMBER BUILD: 21" in c.out
