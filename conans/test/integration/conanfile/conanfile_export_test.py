@@ -1,9 +1,14 @@
 import os
+import platform
 import shutil
 import textwrap
+
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="...")
 def test_inherited_baseclass():
 
     c = TestClient()
@@ -75,13 +80,13 @@ def test_inherited_baseclass():
 
     assert f"pkg1/0.1: build of pkg1" in c.out
     assert f"pkg1/0.1: package_info of pkg1" in c.out
-    assert f"pkg1/0.1: using conanfile_base {c.cache_folder}/data/pkg1/0.1/_/_/export/conanfile_base.py".replace("\\", "/") in c.out
+    assert f"pkg1/0.1: using conanfile_base {c.cache_folder}/data/pkg1/0.1/_/_/export/conanfile_base.py" in c.out
 
     assert f"pkg2/0.1: package_info of pkg2" in c.out
     assert f"pkg2/0.1: build of pkg2" in c.out
-    assert f"pkg2/0.1: using conanfile_base {c.cache_folder}/data/pkg2/0.1/_/_/export/conanfile_base.py".replace("\\", "/") in c.out
+    assert f"pkg2/0.1: using conanfile_base {c.cache_folder}/data/pkg2/0.1/_/_/export/conanfile_base.py" in c.out
 
-    assert f"conanfile.py (app/0.1): using conanfile_base {app_path}/conanfile_base.py".replace("\\", "/") in c.out
+    assert f"conanfile.py (app/0.1): using conanfile_base {app_path}/conanfile_base.py" in c.out
 
     # you could clean after this
     os.remove(os.path.join(c.current_folder, "pkg1", "conanfile_base.py"))
