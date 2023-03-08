@@ -30,34 +30,15 @@ deps_txt_file = """
 package2/0.2.0@user/testing
 """
 
-
-@pytest.fixture()
-def user():
-    return "user"
-
-
-@pytest.fixture()
-def channel():
-    return "testing"
+user = "user"
+channel = "testing"
+user_channel = f"{user}/{channel}"
+reference1 = f"package/0.1.0@{user_channel}"
+reference2 = f"package2/0.2.0@{user_channel}"
 
 
 @pytest.fixture()
-def user_channel(user, channel):
-    return f"{user}/{channel}"
-
-
-@pytest.fixture()
-def reference1(user_channel):
-    return f"package/0.1.0@{user_channel}"
-
-
-@pytest.fixture()
-def reference2(user_channel):
-    return f"package2/0.2.0@{user_channel}"
-
-
-@pytest.fixture()
-def client(user, channel):
+def client_deps():
     client = TestClient()
     client.save({CONANFILE: conanfile_py})
     client.run(f"export . --user={user} --channel={channel}")
@@ -67,7 +48,7 @@ def client(user, channel):
     return client
 
 
-def test_basic(user, channel, reference1):
+def test_basic():
     client = TestClient()
     client.save({CONANFILE: conanfile_py})
     client.run(f"export . --user={user} --channel={channel}")
@@ -92,8 +73,8 @@ def test_build_id():
                 self.info_build.options.myOption = "Any"
         """)
     client.save({CONANFILE: conanfile})
-    client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
-    client.run("graph info --requires=pkg/0.1@user/testing -o pkg/*:myOption=True")
+    client.run(f"export . --name=pkg --version=0.1 --user={user} --channel={channel}")
+    client.run(f"graph info --requires=pkg/0.1@{user}/{channel} -o pkg/*:myOption=True")
     out = str(client.out).replace("\\", "/")
     assert "package_id: b868c8ab4ae6ddccfe19fabd62a5e180d4b18a2b" in out
     assert "build_id: d5d6fc54af6f589e338090910ac18c848a87720d" in out
@@ -104,17 +85,17 @@ def test_build_id():
     assert "build_id: d5d6fc54af6f589e338090910ac18c848a87720d" in out
 
 
-def test_deps_basic(client, reference1, reference2):
+def test_deps_basic(client_deps):
     for ref in [f"--requires={reference2}", "conanfile.txt"]:
-        client.run(f"graph info {ref} --format=json")
-        nodes = json.loads(client.stdout)
+        client_deps.run(f"graph info {ref} --format=json")
+        nodes = json.loads(client_deps.stdout)
         found_ref = False
 
         for node in nodes["nodes"]:
             if node["ref"] == "conanfile":
                 assert node["source_folder"] is None
             else:
-                assert client.cache_folder in node["recipe_folder"]
+                assert client_deps.cache_folder in node["recipe_folder"]
                 assert os.path.basename(node["recipe_folder"]).strip() == EXPORT_FOLDER
             assert node["source_folder"] is None
             assert node["build_folder"] is None
@@ -123,17 +104,17 @@ def test_deps_basic(client, reference1, reference2):
         assert found_ref
 
 
-def test_deps_specific_information(client, reference1, reference2):
-    client.run("graph info . --package-filter package/* --format=json")
-    nodes = json.loads(client.stdout)["nodes"]
+def test_deps_specific_information(client_deps):
+    client_deps.run("graph info . --package-filter package/* --format=json")
+    nodes = json.loads(client_deps.stdout)["nodes"]
     assert len(nodes) == 1
     assert reference1 in nodes[0]["ref"]
     assert nodes[0]["source_folder"] is None
     assert nodes[0]["build_folder"] is None
     assert nodes[0]["package_folder"] is None
 
-    client.run("graph info . --package-filter package* --format=json")
-    nodes = json.loads(client.stdout)["nodes"]
+    client_deps.run("graph info . --package-filter package* --format=json")
+    nodes = json.loads(client_deps.stdout)["nodes"]
     assert len(nodes) == 2
     assert reference2 in nodes[0]["ref"]
     assert nodes[0]["source_folder"] is None
@@ -145,7 +126,7 @@ def test_deps_specific_information(client, reference1, reference2):
     assert nodes[1]["package_folder"] is None
 
 
-def test_single_field(user, channel, reference1):
+def test_single_field():
     client = TestClient()
     client.save({CONANFILE: conanfile_py})
     client.run(f"export . --user={user} --channel={channel}")
