@@ -135,7 +135,7 @@ class RestApiTest(unittest.TestCase):
         # Get the package
         tmp_dir = temp_folder()
         self.api.get_package(pref, tmp_dir)
-        self.assertIn("hello.cpp", os.listdir(tmp_dir))
+        self.assertNotIn("hello.cpp", os.listdir(tmp_dir))
 
     def test_get_package_info(self):
         # Upload a conans

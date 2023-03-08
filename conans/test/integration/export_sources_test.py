@@ -143,7 +143,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertEqual(scan_folder(export_src_folder or self.export_sources_folder),
                          sorted(expected_src_exports))
 
-    def _check_export_installed_folder(self, mode, updated=False):
+    def _check_export_installed_folder(self, mode):
         """ Just installed, no EXPORT_SOURCES_DIR is present
         """
         if mode == "exports_sources":
@@ -156,8 +156,6 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt"]
         if mode == "overlap":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt", "src/hello.h"]
-        if updated:
-            expected_exports.append("license.txt")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
         self.assertFalse(os.path.exists(self.export_sources_folder))
@@ -376,15 +374,3 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("install Hello/0.1@lasote/testing --update")
         self.assertIn("Hello/0.1@lasote/testing: Already installed!", self.client.out)
         self._check_export_installed_folder(mode)
-
-        rev = self.server.server_store.get_last_revision(self.ref)
-        ref = self.ref.copy_with_rev(rev.revision)
-        server_path = self.server.server_store.export(ref)
-        save(os.path.join(server_path, "license.txt"), "mylicense")
-        manifest = FileTreeManifest.load(server_path)
-        manifest.time += 1
-        manifest.file_sums["license.txt"] = md5sum(os.path.join(server_path, "license.txt"))
-        manifest.save(server_path)
-
-        self.client.run("install Hello/0.1@lasote/testing --update")
-        self._check_export_installed_folder(mode, updated=True)

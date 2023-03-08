@@ -210,6 +210,8 @@ class RestV1Methods(RestCommonMethods):
     def get_recipe(self, ref, dest_folder):
         urls = self._get_recipe_urls(ref)
         urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
+        accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt"]
+        urls = {f: url for f, url in urls.items() if any(f.startswith(m) for m in accepted_files)}
         check_compressed_files(EXPORT_TGZ_NAME, urls)
         md5s = self.get_recipe_snapshot(ref) if self._config.download_cache else None
         zipped_files = self._download_files_to_folder(urls, dest_folder, md5s)
@@ -234,6 +236,8 @@ class RestV1Methods(RestCommonMethods):
 
     def get_package(self, pref, dest_folder):
         urls = self._get_package_urls(pref)
+        accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt"]
+        urls = {f: url for f, url in urls.items() if any(f.startswith(m) for m in accepted_files)}
         check_compressed_files(PACKAGE_TGZ_NAME, urls)
         md5s = self.get_package_snapshot(pref) if self._config.download_cache else None
         zipped_files = self._download_files_to_folder(urls, dest_folder, md5s)
