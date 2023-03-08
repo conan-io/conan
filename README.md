@@ -4,8 +4,7 @@
   <img alt="Shows an illustrated sun in light mode and a moon with stars in dark mode." src="https://user-images.githubusercontent.com/25423296/163456779-a8556205-d0a5-45e2-ac17-42d089e3c3f8.png">
 </picture>
 
-Conan
-=====
+# Conan
 
 Decentralized, open-source (MIT), C/C++ package manager.
 
@@ -35,81 +34,79 @@ Conan is a package manager for C and C++ developers:
 This is the **developer/maintainer** documentation. For user documentation, go to https://docs.conan.io
 
 
-+-------------------------+
 | **develop2**            |
-+=========================+
-| |Build Status Develop|  |
-+-------------------------+
+|-------------------------|
+| [![Build Status Develop](https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop)](https://ci.conan.io/blue/organizations/jenkins/ConanTestSuitev2/activity)  |
 
 
-Setup
-=====
+
+## Setup
 
 You can run Conan from source in Windows, MacOS, and Linux:
 
-- **Install pip following** `pip docs`_.
+- **Install pip following** [pip docs](https://pip.pypa.io/en/stable/installation/).
 
 - **Clone Conan repository:**
 
-  .. code-block:: bash
+  ```bash
+  $ git clone https://github.com/conan-io/conan.git conan-io
+  ```
 
-      $ git clone https://github.com/conan-io/conan.git conan-io
-
-  NOTE: repository directory name matters, some directories are known to be problematic to run tests (e.g. `conan`). `conan-io` directory name was tested and guaranteed to be working.
+  > **Note**: repository directory name matters, some directories are known to be problematic to run tests (e.g. `conan`). `conan-io` directory name was tested and guaranteed to be working.
 
 - **Install in editable mode**
 
-  .. code-block:: bash
-
-      $ cd conan-io && sudo pip install -e .
+  ```bash
+  $ cd conan-io && sudo pip install -e .
+  ```
 
   If you are in Windows, using ``sudo`` is not required.
 
 - **You are ready, try to run Conan:**
 
-  .. code-block::
+  ```bash
+  $ conan --help
 
-    $ conan --help
-
-    Consumer commands
-      install    Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
-      ...
+  Consumer commands
+    install    Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
+    ...
 
     Conan commands. Type "conan <command> -h" for help
+  ```
 
-Contributing to the project
-===========================
+## Contributing to the project
+
 
 Feedback and contribution are always welcome in this project.
-Please read our `contributing guide <https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md>`_.
-Also, if you plan to contribute, please add some testing for your changes. You can read the `Conan
-tests guidelines section <https://github.com/conan-io/conan/blob/develop/conans/test/README.md>`_ for
+Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+Also, if you plan to contribute, please add some testing for your changes. You can read the [Conan
+tests guidelines section](https://github.com/conan-io/conan/blob/develop/conans/test/README.md) for
 some advise on how to write tests for Conan.
 
-Running the tests
-=================
+### Running the tests
+
 
 **Install python requirements**
 
-.. code-block:: bash
-
-    $ python -m pip install -r conans/requirements_server.txt
-    $ python -m pip install -r conans/requirements_dev.txt
+```bash
+$ python -m pip install -r conans/requirements_server.txt
+$ python -m pip install -r conans/requirements_dev.txt
+```
 
 If you are not Windows and you are not using a python virtual environment, you will need to run these
 commands using `sudo`.
 
 Before you can run the tests, you need to set a few environment variables first.
 
-.. code-block:: bash
-
-    $ export PYTHONPATH=$PYTHONPATH:$(pwd)
+```bash
+$ export PYTHONPATH=$PYTHONPATH:$(pwd)
+```
 
 On Windows it would be (while being in the Conan root directory):
 
-.. code-block:: bash
-
-    $ set PYTHONPATH=.
+```bash
+$ set PYTHONPATH=.
+```
 
 Conan test suite defines and configure some required tools (CMake, Ninja, etc) in the
 ``conftest.py`` and allows to define a custom ``conftest_user.py``.
@@ -118,60 +115,50 @@ Some specific versions, like cmake>=3.15 are necessary.
 
 You can run the tests like this:
 
-.. code-block:: bash
-
-    $ python -m pytest .
-
+```bash
+$ python -m pytest .
+```
 
 A few minutes later it should print ``OK``:
 
-.. code-block:: bash
+```bash
+............................................................................................
+----------------------------------------------------------------------
+Ran 146 tests in 50.993s
 
-    ............................................................................................
-    ----------------------------------------------------------------------
-    Ran 146 tests in 50.993s
-
-    OK
+OK
+```
 
 To run specific tests, you can specify the test name too, something like:
 
-.. code-block:: bash
+```bash
+$ python -m pytest conans/test/unittests/client/cmd/export_test.py::ExportTest::test_export_warning -s
+```
 
-    $ python -m pytest conans/test/unittests/client/cmd/export_test.py::ExportTest::test_export_warning -s
-
-The ``-s`` argument can be useful to see some output that otherwise is captured by pytest.
+The `-s` argument can be useful to see some output that otherwise is captured by pytest.
 
 Also, you can run tests against an instance of Artifactory. Those tests should add the attribute
-``artifactory_ready``.
+`artifactory_ready`.
 
-.. code-block:: bash
-
-    $ python -m pytest . -m artifactory_ready
+```bash
+$ python -m pytest . -m artifactory_ready
+```
 
 Some environment variables have to be defined to run them. For example, for an
 Artifactory instance that is running on the localhost with default user and password configured, the
 variables could take the values:
 
-.. code-block:: bash
+```bash
+$ export CONAN_TEST_WITH_ARTIFACTORY=1
+$ export ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
+$ export ARTIFACTORY_DEFAULT_USER=admin
+$ export ARTIFACTORY_DEFAULT_PASSWORD=password
+```
 
-    $ export CONAN_TEST_WITH_ARTIFACTORY=1
-    $ export ARTIFACTORY_DEFAULT_URL=http://localhost:8081/artifactory
-    $ export ARTIFACTORY_DEFAULT_USER=admin
-    $ export ARTIFACTORY_DEFAULT_PASSWORD=password
-
-``ARTIFACTORY_DEFAULT_URL`` is the base url for the Artifactory repo, not one for a specific
+`ARTIFACTORY_DEFAULT_URL` is the base url for the Artifactory repo, not one for a specific
 repository. Running the tests with a real Artifactory instance will create repos on the fly so please
 use a separate server for testing purposes.
 
-License
--------
+## License
 
-`MIT LICENSE <./LICENSE.md>`__
-
-.. |Build Status Develop| image:: https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop
-   :target: https://ci.conan.io/blue/organizations/jenkins/ConanTestSuitev2/activity
-
-.. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
-
-
-.. _`pip docs`: https://pip.pypa.io/en/stable/installation/
+[MIT LICENSE](LICENSE.md)
