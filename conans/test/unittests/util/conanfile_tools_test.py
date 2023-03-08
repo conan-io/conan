@@ -2,25 +2,12 @@ import os
 import stat
 import unittest
 
-import pytest
-
 from conan.tools.files import replace_in_file, unzip
 from conans.test.utils.mocks import ConanFileMock
 
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
-
-
-base_conanfile = '''
-from conan import ConanFile
-from conans.tools import patch, replace_in_file
-import os
-
-class ConanFileToolsTest(ConanFile):
-    name = "test"
-    version = "1.9.10"
-'''
 
 
 class ConanfileToolsTest(unittest.TestCase):
@@ -65,23 +52,16 @@ class Pkg(ConanFile):
         replace_in_file(ConanFileMock(), text_file, "ONE TWO THREE", "FOUR FIVE SIX")
         self.assertEqual(load(text_file), "FOUR FIVE SIX")
 
-    @pytest.mark.xfail(reason="_add_write_permissions has been removed, this no longer pass")
     def test_replace_in_file_readonly(self):
+        """
+        If we try to replace_in_file a read only file it should raise a PermissionError
+        """
         tmp_dir = temp_folder()
         text_file = os.path.join(tmp_dir, "text.txt")
         save(text_file, "ONE TWO THREE")
 
         os.chmod(text_file,
                  os.stat(text_file).st_mode & ~(stat.S_IWRITE | stat.S_IWGRP | stat.S_IWOTH))
-        mode_before_replace = os.stat(text_file).st_mode
 
-        replace_in_file(ConanFileMock(), text_file, "ONE TWO THREE", "FOUR FIVE SIX")
-        self.assertEqual(load(text_file), "FOUR FIVE SIX")
-
-        self.assertEqual(os.stat(text_file).st_mode, mode_before_replace)
-
-        # FIXME: replace_path_in_file not migrated yet
-        # replace_path_in_file(text_file, "FOUR FIVE SIX", "SEVEN EIGHT NINE")
-        # self.assertEqual(load(text_file), "SEVEN EIGHT NINE")
-
-        # self.assertEqual(os.stat(text_file).st_mode, mode_before_replace)
+        with self.assertRaises(PermissionError):
+            replace_in_file(ConanFileMock(), text_file, "ONE TWO THREE", "FOUR FIVE SIX")
