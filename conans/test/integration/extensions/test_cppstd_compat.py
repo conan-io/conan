@@ -1,6 +1,7 @@
 import textwrap
 
-from utils.tools import TestClient, GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.tools import TestClient
 
 
 def test_compatible_cppstd():
