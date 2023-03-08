@@ -49,12 +49,14 @@ class RemotesAPI:
         for r in remotes:
             r.disabled = True
             self.update(r)
+        return remotes
 
     def enable(self, pattern):
         remotes = self.list(pattern, only_enabled=False)
         for r in remotes:
             r.disabled = False
             self.update(r)
+        return remotes
 
     def get(self, remote_name):
         app = ConanApp(self.conan_api.cache_folder)
