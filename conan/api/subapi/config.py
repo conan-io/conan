@@ -21,3 +21,7 @@ class ConfigAPI:
     def get(self, name, default=None, check_type=None):
         app = ConanApp(self.conan_api.cache_folder)
         return app.cache.new_config.get(name, default=default, check_type=check_type)
+
+    def show(self, pattern):
+        app = ConanApp(self.conan_api.cache_folder)
+        return app.cache.new_config.show(pattern)
