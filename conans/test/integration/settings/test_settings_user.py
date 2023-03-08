@@ -52,3 +52,32 @@ def test_settings_user_subdict():
     c.run("install . -s other_new=other2 -s other_new.version=2")
     assert "other_new=other2" in c.out
     assert "other_new.version=2" in c.out
+
+
+def test_settings_user_convert_list_dict():
+    c = TestClient()
+    settings_user = textwrap.dedent("""\
+        arch:
+            x86:
+                subarch32:
+                    a:
+                        version: ["a1", "a2"]
+                    b:
+                        variant: ["b1", "b2"]
+            x86_64:
+                subarch: [1, 2, 3]
+          """)
+    save(os.path.join(c.cache_folder, "settings_user.yml"), settings_user)
+    c.save({"conanfile.py": GenConanfile().with_settings("arch")})
+    # check others are maintained
+    c.run("install . -s arch=armv8")
+    assert "arch=armv8" in c.out
+
+    c.run("install . -s arch=x86 -s arch.subarch32=a -s arch.subarch32.version=a1")
+    assert "arch=x86" in c.out
+    assert "arch.subarch32=a" in c.out
+    assert "arch.subarch32.version=a1" in c.out
+
+    c.run("install . -s arch=x86_64 -s arch.subarch=2 ")
+    assert "arch=x86_64" in c.out
+    assert "arch.subarch=2" in c.out

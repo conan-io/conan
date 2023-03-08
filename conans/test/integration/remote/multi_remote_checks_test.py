@@ -1,6 +1,7 @@
 import unittest
 from collections import OrderedDict
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
@@ -92,3 +93,37 @@ class Pkg(ConanFile):
 
         client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=3", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'", client.out)
+
+
+def test_version_range_multi_remote():
+    """ captures the behavior of version-range resolution with multiple remotes:
+    - normally the first occurrence stops: if a valid is found in the cache, it returns, if a
+      valid is found in the first server, it is return
+    - Using --update forces to really update to the latest version available, anywhere
+    """
+    servers = OrderedDict([("server1", TestServer()),
+                           ("server2", TestServer()),
+                           ("server3", TestServer())])
+    client = TestClient(servers=servers, inputs=3*["admin", "password"])
+    client.save({"conanfile.py": GenConanfile()})
+    for i in (1, 2, 3):
+        client.run(f"create . --name=pkg1 --version=1.{i}")
+        client.run(f"upload pkg1/1.{i} -r=server{i}")
+        client.run(f"create . --name=pkg2 --version=1.{i}")
+        client.run(f"upload pkg2/1.{i} -r=server{4-i}")
+
+    client.run("remove * -c")
+    client.run("install  --requires=pkg1/[*] --requires=pkg2/[*]")
+    # First found
+    assert "pkg1/1.1#4d670581ccb765839f2239cc8dff8fbd - Downloaded (server1)" in client.out
+    assert "pkg2/1.3#4d670581ccb765839f2239cc8dff8fbd - Downloaded (server1)" in client.out
+    assert "pkg1/[*]: pkg1/1.1" in client.out
+    assert "pkg2/[*]: pkg2/1.3" in client.out
+
+    client.run("remove * -c")
+    client.run("install  --requires=pkg1/[*] --requires=pkg2/[*] --update")
+    # with --update, it guarantees the greatest version is found among remotes
+    assert "pkg1/1.3#4d670581ccb765839f2239cc8dff8fbd - Downloaded (server3)" in client.out
+    assert "pkg2/1.3#4d670581ccb765839f2239cc8dff8fbd - Downloaded (server1)" in client.out
+    assert "pkg1/[*]: pkg1/1.3" in client.out
+    assert "pkg2/[*]: pkg2/1.3" in client.out

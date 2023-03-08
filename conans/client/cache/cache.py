@@ -3,8 +3,7 @@ import platform
 from typing import List
 
 import yaml
-from jinja2 import Template
-
+from jinja2 import FileSystemLoader, Environment
 
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
@@ -152,7 +151,9 @@ class ClientCache(object):
                 distro = None
                 if platform.system() in ["Linux", "FreeBSD"]:
                     import distro
-                content = Template(text).render({"platform": platform, "os": os, "distro": distro})
+                base_path = os.path.dirname(self.new_config_path)
+                template = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+                content = template.render({"platform": platform, "os": os, "distro": distro})
                 self._new_config.loads(content)
         return self._new_config
 
@@ -218,6 +219,8 @@ class ClientCache(object):
                         d[k] = current + [value for value in v if value not in current]
                     elif isinstance(v, dict):
                         current = d.get(k) or {}
+                        if isinstance(current, list):  # convert to dict lists
+                            current = {k: None for k in current}
                         d[k] = appending_recursive_dict_update(current, v)
                     else:
                         d[k] = v

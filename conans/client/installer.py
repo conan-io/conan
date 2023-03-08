@@ -12,7 +12,7 @@ from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, conanfile_remove_attr)
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
 from conans.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
@@ -164,6 +164,7 @@ class BinaryInstaller:
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
+
     def __init__(self, app):
         self._app = app
         self._cache = app.cache
@@ -237,17 +238,19 @@ class BinaryInstaller:
         install_order = install_graph.install_order()
 
         package_count = sum([sum(len(install_reference.packages.values())
-                            for level in install_order
-                            for install_reference in level)])
-        installed_count = 1
+                                 for level in install_order
+                                 for install_reference in level)])
+        handled_count = 1
 
         self._download_bulk(install_order)
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
-                    self._handle_package(package, install_reference, installed_count, package_count)
-                    installed_count += 1
+                    self._handle_package(package, install_reference, None, handled_count, package_count)
+                    handled_count += 1
+
+        MockInfoProperty.message()
 
     def _download_bulk(self, install_order):
         """ executes the download of packages (both download and update), only once for a given
@@ -282,7 +285,7 @@ class BinaryInstaller:
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, installed_count, total_count):
+    def _handle_package(self, package, install_reference, remotes, handled_count, total_count):
         if package.binary == BINARY_SYSTEM_TOOL:
             return
 
@@ -294,6 +297,7 @@ class BinaryInstaller:
         assert install_reference.ref.revision is not None, "Installer should receive RREV always"
 
         pref = PkgReference(install_reference.ref, package.package_id, package.prev)
+
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
             package_layout = self._cache.create_build_pkg_layout(pref)
@@ -301,9 +305,11 @@ class BinaryInstaller:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 
         if package.binary == BINARY_BUILD:
-            ConanOutput().subtitle(f"Building package {pref.ref} from source "
-                                f"({installed_count} of {total_count})")
-            ConanOutput(scope=str(pref.ref)).info(f"Package {pref}")
+            ConanOutput()\
+                .subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
+            ConanOutput(scope=str(pref.ref))\
+                .highlight("Building from source")\
+                .info(f"Package {pref}")
             self._handle_node_build(package, package_layout)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed
@@ -314,7 +320,7 @@ class BinaryInstaller:
             node = package.nodes[0]
             pref = node.pref
             assert node.prev, "PREV for %s is None" % str(pref)
-            node.conanfile.output.success('Already installed!')
+            node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
@@ -395,6 +401,7 @@ class BinaryInstaller:
 
                 if hasattr(conanfile, "package_info"):
                     with conanfile_remove_attr(conanfile, ['info'], "package_info"):
+                        MockInfoProperty.package = str(conanfile)
                         conanfile.package_info()
 
                 # TODO: Check this package_folder usage for editable when not defined
