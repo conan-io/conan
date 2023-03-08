@@ -220,5 +220,4 @@ class TestDownloadCache:
 
             client.run("create . --format=json")
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            out = json.loads(client.stdout)
-            assert content[out["graph"]["nodes"][1]["ref"]] == ["http://localhost.mirror:5000/myfile.txt"]
+            assert content["pkg/1.0#" + client.exported_recipe_revision()] == ["http://localhost.mirror:5000/myfile.txt"]
