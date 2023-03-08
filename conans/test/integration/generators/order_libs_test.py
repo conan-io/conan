@@ -33,7 +33,7 @@ def test_library_order():
 
     deps = "conanautotoolsdeps.bat" if platform.system() == "Windows" else "conanautotoolsdeps.sh"
     autotoolsdeps = c.load(deps)
-    assert 'set "LIBS=%LIBS% -lsdl2_ttf -lfreetype -lsdl2 -llibpng -lzlib -lbzip2"' in autotoolsdeps
+    assert '-lsdl2_ttf -lfreetype -lsdl2 -llibpng -lzlib -lbzip2' in autotoolsdeps
 
 
 # TODO: Add a test that manages too system libs
