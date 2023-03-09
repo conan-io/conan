@@ -4,7 +4,9 @@ import os
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
+from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
+from conans.client.rest.file_uploader import FileUploader
 from conans.errors import ConanException
 from conans.util.files import load
 
@@ -52,24 +54,14 @@ class UploadAPI:
         url = config.get("core.backup_sources:url")
         if url is None:
             return
-        download_cache = config.get("tools.files.download:download_cache")
-        if download_cache is None:
+        download_cache_path = config.get("tools.files.download:download_cache")
+        if download_cache_path is None:
             raise ConanException("Need to define 'core.download:download_cache'")
 
-        path_backups = os.path.join(download_cache, "s")
-        all_refs = {k.repr_notime(): v for k, v in package_list.refs()}
-        print("ALL REFS ", all_refs)
-        files_to_upload = []
-        for f in os.listdir(path_backups):
-            print("CHECKING FILE ", f)
-            if f.endswith(".json"):
-                print("JSON ")
-                f = os.path.join(path_backups, f)
-                refs = json.loads(load(f))
-                print("REFS ", refs)
-                if any(ref in all_refs for ref in refs):
-                    files_to_upload.append(f)
-                    files_to_upload.append(f[:-5])
-
-        print(files_to_upload)
-        return files_to_upload
+        files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
+        print(files)
+        uploader = FileUploader(app.requester, verify=False, config=config)
+        for file in files:
+            # No need to dedup serverside, we already map to checksums
+            uploader.upload(url + os.path.basename(file), file, dedup=False, auth=None)
+        return files

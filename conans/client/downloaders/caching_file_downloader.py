@@ -6,16 +6,16 @@ from threading import Lock
 
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
+from conans.client.downloaders.download_cache import DownloadCache
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, load, save
 from conans.util.locks import SimpleLock
-from conans.util.sha import sha256 as compute_sha256
 
 
 class CachingFileDownloader:
 
     def __init__(self, requester,  download_cache):
         self._output = ConanOutput()
-        self._download_cache = download_cache
+        self._download_cache = DownloadCache(download_cache)
         self._file_downloader = FileDownloader(requester)
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
@@ -35,7 +35,7 @@ class CachingFileDownloader:
 
     @contextmanager
     def _lock(self, lock_id):
-        lock = os.path.join(self._download_cache, "locks", lock_id)
+        lock = self._download_cache.get_lock_path(lock_id)
         with SimpleLock(lock):
             # Once the process has access, make sure multithread is locked too
             # as SimpleLock doesn't work multithread
@@ -61,9 +61,9 @@ class CachingFileDownloader:
 
         with self._lock(h):
             if sources_cache:
-                cached_path = os.path.join(self._download_cache, 's', h)
+                cached_path = os.path.join(self._download_cache.get_local_sources_cache_path(), h)
             else:
-                cached_path = os.path.join(self._download_cache, 'c', h)
+                cached_path = os.path.join(self._download_cache.get_local_conan_cache_path(), h)
             remove_if_dirty(cached_path)
 
             if not os.path.exists(cached_path):
@@ -93,14 +93,3 @@ class CachingFileDownloader:
             mkdir(os.path.dirname(file_path))
             shutil.copy2(cached_path, file_path)
 
-    @staticmethod
-    def _get_hash(url, md5, sha1, sha256):
-        """ For Api V2, the cached downloads always have recipe and package REVISIONS in the URL,
-        making them immutable, and perfect for cached downloads of artifacts. For V2 checksum
-        will always be None.
-        """
-        checksum = sha256 or sha1 or md5
-        if checksum is not None:
-            url += checksum
-        h = compute_sha256(url.encode())
-        return h

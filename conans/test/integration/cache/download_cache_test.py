@@ -168,6 +168,9 @@ class TestDownloadCache:
         c.run("install --requires=mypkg/0.1@user/testing", assert_error=True)
         assert 'core.download:download_cache must be an absolute path' in c.out
 
+
+
+class TestDownloadCacheBackupSources:
     def test_users_download_cache_summary(self):
         def custom_download(this, url, filepath, **kwargs):
             print("Downloading file")
@@ -219,9 +222,52 @@ class TestDownloadCache:
             client.run("source .")
             assert "Downloading file" not in client.out
 
-            client.run("create . --format=json")
+            client.run("create .")
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
             assert content["pkg/1.0#" + client.exported_recipe_revision()] == ["http://localhost.mirror:5000/myfile.txt"]
 
             client.run("upload * -c -r=default")
             print(client.out)
+            # Temporal para saber si lo hemos roto
+            assert sha256 in client.out
+
+    def test_upload_sources_backup(self):
+        client = TestClient(default_server_user=True)
+        tmp_folder = temp_folder()
+        http_server = StoppableThreadBottle()
+        http_server_base_folder = temp_folder()
+
+        save(os.path.join(http_server_base_folder, "myfile.txt"), "Hello, world!")
+
+        @http_server.server.get("/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder)
+
+        @http_server.server.put("/<file>")
+        def put_file(file):
+            save(os.path.join(http_server_base_folder, file), request.body.read().decode())
+
+        http_server.run_server()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        conanfile = textwrap.dedent(f"""
+                        from conan import ConanFile
+                        from conan.tools.files import download
+                        class Pkg2(ConanFile):
+                            name = "pkg"
+                            version = "1.0"
+                            def source(self):
+                                download(self, "http://localhost:{http_server.port}/myfile.txt", "myfile.txt",
+                                         sha256="{sha256}")
+                        """)
+
+        client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
+                                    f"core.backup_sources:url=http://localhost:{http_server.port}/"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+        client.run("upload * -c -r=default")
+        server_contents = os.listdir(http_server_base_folder)
+        assert sha256 in server_contents
+        assert sha256 + ".json" in server_contents
