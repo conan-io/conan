@@ -1,5 +1,6 @@
 import re
 import os
+import fnmatch
 
 from collections import OrderedDict
 
@@ -306,6 +307,11 @@ class Conf:
         self._values.pop(conf_name, None)
         return value
 
+    def show(self, fnpattern, pattern=""):
+        return {key: self.get(key)
+                for key in self._values.keys()
+                if fnmatch.fnmatch(pattern + key, fnpattern)}
+
     def copy(self):
         c = Conf()
         c._values = self._values.copy()
@@ -475,11 +481,29 @@ class ConfDefinition:
 
     def get(self, conf_name, default=None, check_type=None):
         """
-        Get the value of the  conf name requested and convert it to the [type]-like passed.
+        Get the value of the conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
         return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
                                                             check_type=check_type)
+
+    def show(self, fnpattern):
+        """
+        Get the value of the confs that match the requested pattern
+        """
+        result = {}
+
+        for patter_key, patter_conf in self._pattern_confs.items():
+            if patter_key is None:
+                patter_key = ""
+            else:
+                patter_key += ":"
+
+            pattern_values = patter_conf.show(fnpattern, patter_key)
+            result.update({patter_key + pattern_subkey: pattern_subvalue
+                           for pattern_subkey, pattern_subvalue in pattern_values.items()})
+
+        return result
 
     def pop(self, conf_name, default=None):
         """
