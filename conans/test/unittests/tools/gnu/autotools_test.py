@@ -6,6 +6,7 @@ from conan.tools.gnu import Autotools
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 
+
 @patch('conan.tools.gnu.autotools.chdir')
 def test_source_folder_works(chdir_mock):
     folder = temp_folder()
