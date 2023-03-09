@@ -3,7 +3,10 @@ import textwrap
 
 import pytest
 
+from conan.tools.files.files import untargz
 from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
@@ -138,3 +141,20 @@ class TestHooksMetadataLogs:
         assert c.load("metadata/logs/src.log") == "srclog!!"
         c.run("build .")
         assert c.load("mybuild/metadata/logs/mylogs.txt") == "some logs!!!"
+
+
+class TestMetadataTestPackage:
+
+    def test(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        c.run("create .")
+        c.run("metadata add pkg/0.1 --src=test_package --dst=tps")
+        # Test local cache looks good
+        ref = RecipeReference.loads("pkg/0.1")
+        ref_layout = c.get_latest_ref_layout(ref)
+        assert os.listdir(ref_layout.metadata()) == ["tps"]
+        tgz = os.path.join(ref_layout.metadata(), "tps", "test_package")
+        test_conanfile = load(os.path.join(tgz, "conanfile.py"))
+        assert "class HelloConan(ConanFile):" in test_conanfile
