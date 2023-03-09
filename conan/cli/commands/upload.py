@@ -57,6 +57,8 @@ def upload(conan_api: ConanAPI, parser, *args):
     conan_api.upload.prepare(package_list, enabled_remotes)
     conan_api.upload.upload(package_list, remote)
 
+    conan_api.upload.upload_backup_sources(package_list)
+
 
 def _ask_confirm_upload(conan_api, upload_data):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
