@@ -58,7 +58,7 @@ class _ConditionSet:
 
     def valid(self, version, conf_resolve_prepreleases=None):
         if version.pre:
-            # Follow the expression desires only if core.ranges_resolve_prereleases is None,
+            # Follow the expression desires only if core.version_ranges:resolve_prereleases is None,
             # else force to the conf's value
             if conf_resolve_prepreleases is None:
                 if not self.prerelease:

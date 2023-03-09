@@ -39,7 +39,7 @@ class DepsGraphBuilder(object):
         root_node.conanfile.settings_target = None
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
-        resolve_prereleases = self._cache.new_config.get('core.ranges_resolve_prereleases',
+        resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases',
                                                          default=None, check_type=bool)
         self._initialize_requires(root_node, dep_graph, graph_lock, resolve_prereleases)
         dep_graph.add_node(root_node)
