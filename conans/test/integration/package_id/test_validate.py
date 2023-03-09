@@ -276,7 +276,6 @@ class TestValidate(unittest.TestCase):
         client.run("graph info --requires=pkg/0.1@ -s os=Windows -s build_type=Debug")
         assert "binary: Invalid" in client.out
 
-    @pytest.mark.xfail(reason="The way to check options of transitive deps has changed")
     def test_validate_options(self):
         # The dependency option doesn't affect pkg package_id, so it could find a valid binary
         # in the cache. So ConanInvalidConfiguration will solve this issue.
@@ -292,7 +291,7 @@ class TestValidate(unittest.TestCase):
                requires = "dep/0.1"
 
                def validate(self):
-                   if self.options["dep"].myoption == 2:
+                   if self.dependencies["dep"].options.myoption == 2:
                        raise ConanInvalidConfiguration("Option 2 of 'dep' not supported")
            """)
 
@@ -300,13 +299,13 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=pkg1 --version=0.1 -o dep/*:myoption=1")
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")
-                                                   .with_default_option("dep:myoption", 2)})
+                                                   .with_default_option("dep/*:myoption", 2)})
         client.run("create . --name=pkg2 --version=0.1")
 
-        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg2/0.1", "pkg1/0.1")})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("pkg1/0.1: ConfigurationError: Option 2 of 'dep' not supported", client.out)
+        self.assertIn("pkg1/0.1: Invalid: Option 2 of 'dep' not supported", client.out)
 
     @pytest.mark.xfail(reason="The way to check versions of transitive deps has changed")
     def test_validate_requires(self):

@@ -130,7 +130,7 @@ def remote_rename(conan_api, parser, subparser, *args):
     conan_api.remotes.rename(r, args.new_name)
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})
 def remote_enable(conan_api, parser, subparser, *args):
     """
     Enable all the remotes matching a pattern.
@@ -138,10 +138,10 @@ def remote_enable(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern of the remote/s to enable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    conan_api.remotes.enable(args.remote)
+    return conan_api.remotes.enable(args.remote)
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})
 def remote_disable(conan_api, parser, subparser, *args):
     """
     Disable all the remotes matching a pattern.
@@ -149,7 +149,7 @@ def remote_disable(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern of the remote/s to disable. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    conan_api.remotes.disable(args.remote)
+    return conan_api.remotes.disable(args.remote)
 
 
 # ### User related commands
