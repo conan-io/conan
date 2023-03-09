@@ -517,6 +517,7 @@ def test_system_libs_transitivity():
             version = "system"
             def package_info(self):
                 self.cpp_info.system_libs = ["m"]
+                self.cpp_info.frameworks = ["CoreFoundation"]
             """)
     header = textwrap.dedent("""
         from conan import ConanFile
@@ -527,6 +528,7 @@ def test_system_libs_transitivity():
             requires = "dep/system"
             def package_info(self):
                 self.cpp_info.system_libs = ["dl"]
+                self.cpp_info.frameworks = ["CoreDriver"]
             """)
     app = textwrap.dedent("""\
         from conan import ConanFile
@@ -541,5 +543,9 @@ def test_system_libs_transitivity():
     c.run("create dep")
     c.run("create header")
     c.run("install app")
-    assert "set(dep_SYSTEM_LIBS_RELEASE m)" in c.load("app/dep-release-data.cmake")
-    assert "set(header_SYSTEM_LIBS_RELEASE dl)" in c.load("app/header-release-data.cmake")
+    dep = c.load("app/dep-release-data.cmake")
+    assert "set(dep_SYSTEM_LIBS_RELEASE m)" in dep
+    assert "set(dep_FRAMEWORKS_RELEASE CoreFoundation)" in dep
+    app = c.load("app/header-release-data.cmake")
+    assert "set(header_SYSTEM_LIBS_RELEASE dl)" in app
+    assert "set(header_FRAMEWORKS_RELEASE CoreDriver)" in app
