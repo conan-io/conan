@@ -158,3 +158,8 @@ class TestMetadataTestPackage:
         tgz = os.path.join(ref_layout.metadata(), "tps", "test_package")
         test_conanfile = load(os.path.join(tgz, "conanfile.py"))
         assert "class HelloConan(ConanFile):" in test_conanfile
+
+        c.save({}, clean_first=True)
+        c.run("metadata get pkg/0.1 --src=tps/test_package --dst=test_package")
+        c.run("test test_package pkg/0.1")
+        print(c.out)
