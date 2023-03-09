@@ -116,8 +116,8 @@ class DepsGraphBuilder(object):
                     raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
 
         elif prev_version_range is not None:
-            # TODO: CHeck user/channel conflicts first
-            if require.ref.version not in prev_version_range:
+            # TODO: Check user/channel conflicts first
+            if not prev_version_range.contains(require.ref.version):
                 raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
         else:
             def _conflicting_refs(ref1, ref2):
