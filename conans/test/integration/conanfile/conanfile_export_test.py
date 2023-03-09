@@ -92,3 +92,64 @@ def test_inherited_baseclass():
     os.remove(os.path.join(c.current_folder, "pkg1", "conanfile_base.py"))
     os.remove(os.path.join(c.current_folder, "pkg2", "conanfile_base.py"))
     os.remove(os.path.join(c.current_folder, "app", "conanfile_base.py"))
+
+
+def test_inherited_baseclass_importing():
+
+    c = TestClient()
+
+    conanfile_base = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+
+        class Base(ConanFile):
+            version = "0.1"
+            def export(self):
+                copy(self, '*', src=self.recipe_folder, dst=self.export_folder)
+            def package_info(self):
+                self.output.info(f"package_info of {self.name}")
+                assert os.path.dirname(__file__) == self.recipe_folder
+    """)
+
+    conanfile_pkg = textwrap.dedent("""
+        import shutil, os
+        try:
+            current = os.path.dirname(__file__)
+            shutil.copy2(os.path.join(current, "..", "base", "conanfile_base.py"), current)
+        except Exception as e:
+            pass
+
+        import conanfile_base
+        class Pkg(conanfile_base.Base):
+            name = "{name}"
+            # version and export is inherited
+    """)
+
+    conanfile_app = textwrap.dedent("""
+        import shutil, os
+        try:
+            current = os.path.dirname(__file__)
+            shutil.copy2(os.path.join(current, "..", "base", "conanfile_base.py"), current)
+        except Exception as e:
+            pass
+
+        import conanfile_base
+        class Pkg(conanfile_base.Base):
+            name = "app"
+            def requirements(self):
+                self.requires("pkg1/0.1")
+                self.requires("pkg2/0.1")
+    """)
+
+    c.save({"pkg1/conanfile.py": conanfile_pkg.format(name="pkg1"),
+            "pkg2/conanfile.py": conanfile_pkg.format(name="pkg2"),
+            "base/conanfile_base.py": conanfile_base,
+            "app/conanfile.py": conanfile_app})
+
+    c.run("export pkg1")
+    c.run("export pkg2")
+    c.run("install app --build=missing")
+
+    assert f"pkg1/0.1: package_info of pkg1" in c.out
+    assert f"pkg2/0.1: package_info of pkg2" in c.out
