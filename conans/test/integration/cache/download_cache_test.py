@@ -8,7 +8,7 @@ from bottle import static_file, request
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import save, set_dirty, load, rmdir, mkdir
+from conans.util.files import save, set_dirty, load
 
 
 class TestDownloadCache:
