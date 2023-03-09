@@ -46,13 +46,11 @@ def test_basic_validate_build_test():
     # What happens with a conan info?
     t.run(f"graph info --requires=foo/1.0 {settings_gcc} --format=json", redirect_stdout="myjson")
     myjson = json.loads(t.load("myjson"))["nodes"]
-    assert myjson[1]["invalid_build"] is True
-    assert myjson[1]["invalid_build_reason"] == "This doesn't build in GCC"
+    assert myjson[1]["invalid_build"] == "This doesn't build in GCC"
 
     t.run(f"graph info --requires=foo/1.0 {settings_clang} --format=json", redirect_stdout="myjson")
     myjson = json.loads(t.load("myjson"))["nodes"]
     assert myjson[1]["invalid_build"] is False
-    assert "invalid_build_reason" not in myjson[1]
 
 
 def test_with_options_validate_build_test():
