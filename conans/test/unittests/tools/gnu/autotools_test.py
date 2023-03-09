@@ -1,18 +1,19 @@
 import os
+from mock import patch
 
 from conan.tools.build import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 
-
-def test_source_folder_works():
+@patch('conan.tools.gnu.autotools.chdir')
+def test_source_folder_works(chdir_mock):
     folder = temp_folder()
     os.chdir(folder)
     save_toolchain_args({
         "configure_args": "-foo bar",
         "make_args": "",
-        "autoreconf_args": ""}
+        "autoreconf_args": "-bar foo"}
     )
     conanfile = ConanFileMock()
     sources = "/path/to/sources"
@@ -24,3 +25,10 @@ def test_source_folder_works():
     autotools = Autotools(conanfile)
     autotools.configure()
     assert conanfile.command.replace("\\", "/") == '"/path/to/sources/configure" -foo bar '
+
+    autotools.autoreconf(build_script_folder="subfolder")
+    chdir_mock.assert_called_with(autotools, "/path/to/sources/subfolder")
+
+    autotools.autoreconf()
+    chdir_mock.assert_called_with(autotools, "/path/to/sources")
+    assert conanfile.command.replace("\\", "/") == 'autoreconf -bar foo'
