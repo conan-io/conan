@@ -205,7 +205,7 @@ def _detect_compiler_version(result):
         if platform.system() == "FreeBSD":
             result.append(("compiler.libcxx", "libc++"))
         elif platform.system() == "Darwin":
-            result.append("compiler.libcxx", "libc++")
+            result.append(("compiler.libcxx", "libc++"))
         elif platform.system() == "Windows":
             # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
             result.append(("compiler.runtime", "dynamic"))
