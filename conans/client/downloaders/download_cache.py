@@ -1,7 +1,8 @@
 import json
 import os
 
-from conans.util.files import load
+from conan.api.output import ConanOutput
+from conans.util.files import load, save
 from conans.util.sha import sha256 as compute_sha256
 
 
@@ -9,17 +10,46 @@ class DownloadCache:
     def __init__(self, path: str):
         self.path: str = path
 
+    def get_cache_path(self, url, md5, sha1, sha256, conanfile):
+        """
+        conanfile: if not None, it means it is a call from source() method
+        """
+        sources_cache = False
+        h = None
+        if conanfile is not None:
+            if sha256:
+                h = sha256
+                sources_cache = True
+            else:
+                ConanOutput() \
+                    .warning("Expected sha256 to be used as file checksums for downloaded sources")
+        if h is None:
+            h = self._get_hash(url, md5, sha1, sha256)
+        cached_path = os.path.join(self.path, 's' if sources_cache else 'c', h)
+        return cached_path, h
+
+    @staticmethod
+    def update_backup_sources_json(cached_path, conanfile, url):
+        summary_path = cached_path + ".json"
+        summary = json.loads(load(summary_path)) if os.path.exists(summary_path) else {}
+
+        try:
+            summary_key = conanfile.ref.repr_notime()
+        except AttributeError:
+            # The recipe path would be different between machines
+            # So best we can do is to set this as unknown
+            summary_key = "unknown"
+
+        urls = summary.setdefault(summary_key, [])
+        if url not in urls:
+            urls.append(url)
+        save(summary_path, json.dumps(summary))
+
     def get_lock_path(self, lock_id):
         return os.path.join(self.path, "locks", lock_id)
 
-    def get_local_sources_cache_path(self):
-        return os.path.join(self.path, 's')
-
-    def get_local_conan_cache_path(self):
-        return os.path.join(self.path, 'c')
-
     @staticmethod
-    def get_hash(url, md5, sha1, sha256):
+    def _get_hash(url, md5, sha1, sha256):
         """ For Api V2, the cached downloads always have recipe and package REVISIONS in the URL,
         making them immutable, and perfect for cached downloads of artifacts. For V2 checksum
         will always be None.
@@ -32,7 +62,7 @@ class DownloadCache:
 
     def get_files_to_upload(self, package_list):
         files_to_upload = []
-        path_backups = self.get_local_sources_cache_path()
+        path_backups = os.path.join(self.path, "s")
         all_refs = {k.repr_notime() for k, v in package_list.refs()}
         for f in os.listdir(path_backups):
             if f.endswith(".json"):

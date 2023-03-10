@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 from contextlib import contextmanager
@@ -7,7 +6,7 @@ from threading import Lock
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
-from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, load, save
+from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
 from conans.util.locks import SimpleLock
 
 
@@ -15,7 +14,7 @@ class CachingFileDownloader:
 
     def __init__(self, requester,  download_cache):
         self._output = ConanOutput()
-        self._download_cache = DownloadCache(download_cache)
+        self._download_cache = DownloadCache(download_cache) if download_cache else None
         self._file_downloader = FileDownloader(requester)
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
@@ -47,49 +46,18 @@ class CachingFileDownloader:
                 thread_lock.release()
 
     def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile, **kwargs):
-        sources_cache = False
-        h = None
-        if conanfile is not None:
-            if sha256:
-                h = sha256
-                sources_cache = True
-            else:
-                ConanOutput()\
-                    .warning("Expected sha256 to be used as file checksums for downloaded sources")
-        if h is None:
-            h = self._get_hash(url, md5, sha1, sha256)
-
+        cached_path, h = self._download_cache.get_cache_path(url, md5, sha1, sha256, conanfile)
         with self._lock(h):
-            if sources_cache:
-                cached_path = os.path.join(self._download_cache.get_local_sources_cache_path(), h)
-            else:
-                cached_path = os.path.join(self._download_cache.get_local_conan_cache_path(), h)
             remove_if_dirty(cached_path)
 
             if not os.path.exists(cached_path):
                 with set_dirty_context_manager(cached_path):
                     self._file_downloader.download(url, cached_path, md5=md5,
                                                    sha1=sha1, sha256=sha256, **kwargs)
-            if sources_cache:
-                summary_path = cached_path + ".json"
-                if os.path.exists(summary_path):
-                    summary = json.loads(load(summary_path))
-                else:
-                    summary = {}
+            if h == sha256:  # it means it is a sources-backup
+                self._download_cache.update_backup_sources_json(cached_path, conanfile, url)
 
-                try:
-                    summary_key = conanfile.ref.repr_notime()
-                except AttributeError:
-                    # The recipe path would be different between machines
-                    # So best we can do is to set this as unknown
-                    summary_key = "unknown"
-
-                urls = summary.setdefault(summary_key, [])
-                if url not in urls:
-                    urls.append(url)
-                save(summary_path, json.dumps(summary))
             # Everything good, file in the cache, just copy it to final destination
             file_path = os.path.abspath(file_path)
             mkdir(os.path.dirname(file_path))
             shutil.copy2(cached_path, file_path)
-

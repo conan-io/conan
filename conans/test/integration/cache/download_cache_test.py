@@ -169,7 +169,6 @@ class TestDownloadCache:
         assert 'core.download:download_cache must be an absolute path' in c.out
 
 
-
 class TestDownloadCacheBackupSources:
     def test_users_download_cache_summary(self):
         def custom_download(this, url, filepath, **kwargs):

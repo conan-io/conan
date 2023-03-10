@@ -1,4 +1,3 @@
-import json
 import os
 
 from conan.api.output import ConanOutput
@@ -8,7 +7,6 @@ from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import ConanException
-from conans.util.files import load
 
 
 class UploadAPI:
