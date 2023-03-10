@@ -6,6 +6,7 @@ from threading import Lock
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
+from conans.errors import NotFoundException
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
 from conans.util.locks import SimpleLock
 
@@ -47,14 +48,34 @@ class CachingFileDownloader:
 
     def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile, **kwargs):
         cached_path, h = self._download_cache.get_cache_path(url, md5, sha1, sha256, conanfile)
+        sources_download = conanfile and sha256
         with self._lock(h):
             remove_if_dirty(cached_path)
 
             if not os.path.exists(cached_path):
                 with set_dirty_context_manager(cached_path):
-                    self._file_downloader.download(url, cached_path, md5=md5,
-                                                   sha1=sha1, sha256=sha256, **kwargs)
-            if conanfile and sha256:  # it means it is a sources-backup
+                    found_in_backup = False
+                    if sources_download:
+                        upload_url = conanfile.conf.get("tools.backup_sources:url")
+                        try:
+                            self._file_downloader.download(upload_url + h, cached_path,
+                                                           sha256=sha256, **kwargs)
+                            self._file_downloader.download(upload_url + h + ".json",
+                                                           cached_path + ".json", **kwargs)
+                            # TODO: Handle the integrity errors
+                            found_in_backup = True
+                            conanfile.output.info(f"Sources from {url} found in remote backup {upload_url}")
+                        except NotFoundException:
+                            # TODO: Add policy configuration to handle different behaviours
+                            # but for now 404 is a nonissue
+                            pass
+                    if not found_in_backup:
+                        self._file_downloader.download(url, cached_path, md5=md5,
+                                                       sha1=sha1, sha256=sha256, **kwargs)
+            elif sources_download:
+                conanfile.output.info(f"Source {url} retrieved from local download cache")
+
+            if sources_download:  # it means it is a sources-backup
                 self._download_cache.update_backup_sources_json(cached_path, conanfile, url)
 
             # Everything good, file in the cache, just copy it to final destination

@@ -8,7 +8,7 @@ from bottle import static_file, request
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import save, set_dirty, load
+from conans.util.files import save, set_dirty, load, rmdir, sha256sum
 
 
 class TestDownloadCache:
@@ -179,7 +179,7 @@ class TestDownloadCacheBackupSources:
             client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
             client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
-                                        "core.backup_sources:url=http://localhost/"},
+                                        "tools.backup_sources:url=http://localhost/"},
                         path=client.cache.cache_folder)
             sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
             conanfile = textwrap.dedent(f"""
@@ -239,7 +239,9 @@ class TestDownloadCacheBackupSources:
 
         @http_server.server.put("/<file>")
         def put_file(file):
-            save(os.path.join(http_server_base_folder, file), request.body.read().decode())
+            dest = os.path.join(http_server_base_folder, file)
+            with open(dest, 'wb') as f:
+                f.write(request.body.read())
 
         http_server.run_server()
 
@@ -256,7 +258,7 @@ class TestDownloadCacheBackupSources:
                         """)
 
         client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
-                                    f"core.backup_sources:url=http://localhost:{http_server.port}/"},
+                                    f"tools.backup_sources:url=http://localhost:{http_server.port}/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
@@ -265,3 +267,13 @@ class TestDownloadCacheBackupSources:
         server_contents = os.listdir(http_server_base_folder)
         assert sha256 in server_contents
         assert sha256 + ".json" in server_contents
+
+        rmdir(tmp_folder)
+        # Remove the "remote" myfile.txt so if it raises
+        # we know it tried to download the original source
+        os.remove(os.path.join(http_server_base_folder, "myfile.txt"))
+
+        client.run("source .")
+        assert f"Sources from http://localhost:{http_server.port}/myfile.txt found in remote backup" in client.out
+        client.run("source .")
+        assert f"Source http://localhost:{http_server.port}/myfile.txt retrieved from local download cache" in client.out

@@ -49,16 +49,18 @@ class UploadAPI:
     def upload_backup_sources(self, package_list):
         app = ConanApp(self.conan_api.cache_folder)
         config = app.cache.new_config
-        url = config.get("core.backup_sources:url")
+        # TODO: Rethink this conf, does this live in core?
+        url = config.get("tools.backup_sources:url")
         if url is None:
             return
         download_cache_path = config.get("tools.files.download:download_cache")
         if download_cache_path is None:
-            raise ConanException("Need to define 'core.download:download_cache'")
+            raise ConanException("Need to define 'tools.files.download:download_cache'")
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
         uploader = FileUploader(app.requester, verify=False, config=config)
         for file in files:
-            # No need to dedup serverside, we already map to checksums
+            # TODO: Skip uploading files that are already present in the remote.
+            # Check Artifactory's HEAD
             uploader.upload(url + os.path.basename(file), file, dedup=False, auth=None)
         return files
