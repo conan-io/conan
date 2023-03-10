@@ -30,7 +30,7 @@ list_packages_html_template = r"""
         var list_results = {{ results| safe }};
 
         function getRefLink(origin, ref) {
-            return origin + "_" + ref.replaceAll(".", "_").replaceAll("/", "_").replaceAll("#", "_").replaceAll("@", "_").replaceAll(":", "_")
+            return origin + "_" + ref.replaceAll(".", "_").replaceAll("/", "_").replaceAll("#", "_").replaceAll("@", "_").replaceAll(":", "_").replaceAll(" ", "_")
         }
 
         function getPackagesCount(revInfo) {
@@ -95,31 +95,31 @@ list_packages_html_template = r"""
 
         let menu = `<div class="list-group list-group-flush" id="leftTabs" role="tablist">`;
         let tabs = `<div class="tab-content">`;
-        for (const [origin, references] of Object.entries(list_results)) {
-            if (Object.keys(references).length) {
 
+        for (const [origin, references] of Object.entries(list_results)) {
+            if (Object.keys(references).length>0) {
                 menu += `<li class="list-group-item"><b>${origin}</b>`;
                 if ("error" in references) {
                     menu += `<pre>${references["error"]}</pre>`;
                 }
                 else {
                     for (const [reference, revisions] of Object.entries(references)) {
-                        const refLink = getRefLink(origin, reference);
+                        let originStr = origin.replaceAll(" ", "_");
+                        const refLink = getRefLink(originStr, reference);
 
-                        menu += `<div class="accordion accordion-flush" id="accordion_${origin}">`;
+                        menu += `<div class="accordion accordion-flush" id="accordion_${originStr}">`;
                         menu += `<div class="accordion-item">`;
                         menu += `<h2 class="accordion-header" id="heading_${refLink}">`;
                         menu += `<button class="accordion-button collapsed" type="button" id="left_${refLink}" data-bs-toggle="collapse" data-bs-target="#rev_list_${refLink}" aria-expanded="false" aria-controls="${refLink}">${reference}</button>`;
                         menu += `</h2>`;
-                        menu += `<div id="rev_list_${refLink}" class="accordion-collapse collapse" aria-labelledby="heading_${refLink}" data-bs-parent="#accordion_${origin}">`
+                        menu += `<div id="rev_list_${refLink}" class="accordion-collapse collapse" aria-labelledby="heading_${refLink}" data-bs-parent="#accordion_${originStr}">`
 
                         if ("revisions" in revisions) {
                             for (const [revision, revInfo] of Object.entries(revisions["revisions"])) {
                                 let packageCount = getPackagesCount(revInfo);
                                 packageBadge = (packageCount == 0) ? '' : `&nbsp<span class="badge rounded-pill text-bg-success">${packageCount}</span>`;
-                                let tabID = `${origin}_${revision}`;
+                                let tabID = `${originStr}_${revision}`;
                                 menu += `<a class="list-group-item list-group-item-action" id="left_${revision}" data-bs-toggle="list" href="#${tabID}" role="tab" aria-controls="list-home">${revision.substring(0, 6)}&nbsp(${formatDate(revInfo["timestamp"])})${packageBadge}</a>`;
-                                console.log(revInfo);
                                 tabs += getTabContent(tabID, revision, revInfo);
                             }
                         }
