@@ -57,7 +57,6 @@ class UploadAPI:
             raise ConanException("Need to define 'core.download:download_cache'")
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
-        print(files)
         uploader = FileUploader(app.requester, verify=False, config=config)
         for file in files:
             # No need to dedup serverside, we already map to checksums
