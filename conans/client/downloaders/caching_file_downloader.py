@@ -54,7 +54,7 @@ class CachingFileDownloader:
                 with set_dirty_context_manager(cached_path):
                     self._file_downloader.download(url, cached_path, md5=md5,
                                                    sha1=sha1, sha256=sha256, **kwargs)
-            if h == sha256:  # it means it is a sources-backup
+            if conanfile and sha256:  # it means it is a sources-backup
                 self._download_cache.update_backup_sources_json(cached_path, conanfile, url)
 
             # Everything good, file in the cache, just copy it to final destination

@@ -14,18 +14,12 @@ class DownloadCache:
         """
         conanfile: if not None, it means it is a call from source() method
         """
-        sources_cache = False
-        h = None
-        if conanfile is not None:
-            if sha256:
-                h = sha256
-                sources_cache = True
-            else:
-                ConanOutput() \
-                    .warning("Expected sha256 to be used as file checksums for downloaded sources")
+        h = sha256  # lets be more efficient for de-dup server files
+        if conanfile and not sha256:
+            ConanOutput().warning("Expected sha256 to be used as checksum for downloaded sources")
         if h is None:
-            h = self._get_hash(url, md5, sha1, sha256)
-        cached_path = os.path.join(self.path, 's' if sources_cache else 'c', h)
+            h = self._get_hash(url, md5, sha1)
+        cached_path = os.path.join(self.path, 's' if conanfile and sha256 else 'c', h)
         return cached_path, h
 
     @staticmethod
@@ -49,12 +43,12 @@ class DownloadCache:
         return os.path.join(self.path, "locks", lock_id)
 
     @staticmethod
-    def _get_hash(url, md5, sha1, sha256):
+    def _get_hash(url, md5, sha1):
         """ For Api V2, the cached downloads always have recipe and package REVISIONS in the URL,
         making them immutable, and perfect for cached downloads of artifacts. For V2 checksum
         will always be None.
         """
-        checksum = sha256 or sha1 or md5
+        checksum = sha1 or md5
         if checksum is not None:
             url += checksum
         h = compute_sha256(url.encode())
