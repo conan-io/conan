@@ -1646,3 +1646,23 @@ def test_error_revision_search():
     c.run("config set general.revisions_enabled=1")
     c.run("search mozilla/1.0.0@ -r=default", assert_error=True)
     assert "ERROR: Recipe not found: 'mozilla/1.0.0'. [Remote: default]" in c.out
+
+
+def test_no_user_channel_error():
+    # https://github.com/conan-io/conan/issues/13170
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    c.run("export . 1.0@")
+    c.run("export . 1.0@user/channel")
+    c.run("search *")
+    assert "pkg/1.0" in str(c.out).splitlines()
+    assert "pkg/1.0@user/channel" in c.out
+    c.run("search pkg/*@")
+    assert "pkg/1.0" in c.out
+    assert "user/channel" not in c.out
+
+    # The same underlying logic is used in upload
+    c.run("upload pkg/*@ -r=default -c")
+    assert "Uploading pkg/1.0 to remote 'default'" in c.out
+    assert "user/channel" not in c.out
+
