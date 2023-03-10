@@ -65,13 +65,13 @@ list_packages_html_template = r"""
             return badges;
         }
 
-        function getTabContent(tabID, revInfo) {
+        function getTabContent(tabID, revID, revInfo) {
 
             tabContent = `<div class="tab-pane" id="${tabID}" role="tabpanel">`;
 
             if ("packages" in revInfo && Object.entries(revInfo["packages"]).length > 0) {
 
-                tabContent += `<h3>Packages</h3>`;
+                tabContent += `<h3>Packages for revision ${revID}</h3>`;
                 for (const [package, packageInfo] of Object.entries(revInfo["packages"])) {
 
                     tabContent += `<div class="bg-light">`;
@@ -99,31 +99,37 @@ list_packages_html_template = r"""
             if (Object.keys(references).length) {
 
                 menu += `<li class="list-group-item"><b>${origin}</b>`;
-
-                for (const [reference, revisions] of Object.entries(references)) {
-                    const refLink = getRefLink(origin, reference);
-
-                    menu += `<div class="accordion accordion-flush" id="accordion_${origin}">`;
-                    menu += `<div class="accordion-item">`;
-                    menu += `<h2 class="accordion-header" id="heading_${refLink}">`;
-                    menu += `<button class="accordion-button collapsed" type="button" id="left_${refLink}" data-bs-toggle="collapse" data-bs-target="#rev_list_${refLink}" aria-expanded="false" aria-controls="${refLink}">${reference}</button>`;
-                    menu += `</h2>`;
-                    menu += `<div id="rev_list_${refLink}" class="accordion-collapse collapse" aria-labelledby="heading_${refLink}" data-bs-parent="#accordion_${origin}">`
-
-                    if ("revisions" in revisions) {
-                        for (const [revision, revInfo] of Object.entries(revisions["revisions"])) {
-                            let packageCount = getPackagesCount(revInfo);
-                            packageBadge = (packageCount == 0) ? '' : `&nbsp<span class="badge rounded-pill text-bg-success">${packageCount}</span>`;
-                            let tabID = `${origin}_${revision}`;
-                            menu += `<a class="list-group-item list-group-item-action" id="left_${revision}" data-bs-toggle="list" href="#${tabID}" role="tab" aria-controls="list-home">${revision.substring(0, 6)}&nbsp(${formatDate(revInfo["timestamp"])})${packageBadge}</a>`;
-                            console.log(revInfo);
-                            tabs += getTabContent(tabID, revInfo);
-                        }
-                    }
-                    menu += `</div>`
-                    menu += '</div>';
-                    menu += '</div>';
+                if ("error" in references) {
+                    menu += `<pre>${references["error"]}</pre>`;
                 }
+                else {
+                    for (const [reference, revisions] of Object.entries(references)) {
+                        const refLink = getRefLink(origin, reference);
+
+                        menu += `<div class="accordion accordion-flush" id="accordion_${origin}">`;
+                        menu += `<div class="accordion-item">`;
+                        menu += `<h2 class="accordion-header" id="heading_${refLink}">`;
+                        menu += `<button class="accordion-button collapsed" type="button" id="left_${refLink}" data-bs-toggle="collapse" data-bs-target="#rev_list_${refLink}" aria-expanded="false" aria-controls="${refLink}">${reference}</button>`;
+                        menu += `</h2>`;
+                        menu += `<div id="rev_list_${refLink}" class="accordion-collapse collapse" aria-labelledby="heading_${refLink}" data-bs-parent="#accordion_${origin}">`
+
+                        if ("revisions" in revisions) {
+                            for (const [revision, revInfo] of Object.entries(revisions["revisions"])) {
+                                let packageCount = getPackagesCount(revInfo);
+                                packageBadge = (packageCount == 0) ? '' : `&nbsp<span class="badge rounded-pill text-bg-success">${packageCount}</span>`;
+                                let tabID = `${origin}_${revision}`;
+                                menu += `<a class="list-group-item list-group-item-action" id="left_${revision}" data-bs-toggle="list" href="#${tabID}" role="tab" aria-controls="list-home">${revision.substring(0, 6)}&nbsp(${formatDate(revInfo["timestamp"])})${packageBadge}</a>`;
+                                console.log(revInfo);
+                                tabs += getTabContent(tabID, revision, revInfo);
+                            }
+                        }
+                        menu += `</div>`
+                        menu += '</div>';
+                        menu += '</div>';
+                    }
+
+                }
+
                 menu += "</li>";
             }
         }
