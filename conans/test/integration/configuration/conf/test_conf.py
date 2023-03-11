@@ -208,6 +208,14 @@ def test_jinja_global_conf_include(client):
     assert "user.mycompany:dist=84" in client.out
 
 
+def test_jinja_global_conf_paths():
+    c = TestClient()
+    global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
+
+
 def test_empty_conf_valid():
     tc = TestClient()
     profile = textwrap.dedent(r"""
