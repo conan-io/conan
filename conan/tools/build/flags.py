@@ -185,7 +185,7 @@ def cppstd_flag(settings):
     return flag
 
 
-def _cppstd_msvc(visual_version, cppstd):
+def cppstd_msvc_flag(visual_version, cppstd):
     # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
     v14 = None
     v17 = None
@@ -198,11 +198,15 @@ def _cppstd_msvc(visual_version, cppstd):
     if visual_version >= "191":
         v17 = "c++17"
         v20 = "c++latest"
-    if visual_version >= "193":
+    if visual_version >= "192":
         v20 = "c++20"
+    if visual_version >= "193":
         v23 = "c++latest"
 
-    flag = {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
+    return {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
+
+def _cppstd_msvc(visual_version, cppstd):
+    flag = cppstd_msvc_flag(visual_version, cppstd)
     return "/std:%s" % flag if flag else None
 
 
