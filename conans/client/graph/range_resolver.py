@@ -12,6 +12,9 @@ class RangeResolver:
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
+        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges'
+                                                               ':resolve_prereleases',
+                                                               default=None, check_type=bool)
 
     def resolve(self, require, base_conanref, remotes, update):
         version_range = require.version_range
@@ -25,16 +28,12 @@ class RangeResolver:
             require.ref = previous_ref
             return
 
-        # If the conf is None, do whatever the range specifies
-        # True: Force prerelease resolving, False: Force no prerelease resolving
-        resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases', default=None, check_type=bool)
-
         ref = require.ref
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
-        resolved_ref = self._resolve_local(search_ref, version_range, resolve_prereleases)
+        resolved_ref = self._resolve_local(search_ref, version_range)
         if resolved_ref is None or update:
-            remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update, resolve_prereleases)
+            remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
                 resolved_ref = remote_resolved_ref
@@ -48,7 +47,7 @@ class RangeResolver:
         self.resolved_ranges[require.ref] = resolved_ref
         require.ref = resolved_ref
 
-    def _resolve_local(self, search_ref, version_range, resolve_prereleases):
+    def _resolve_local(self, search_ref, version_range):
         pattern = str(search_ref)
         local_found = self._cached_cache.get(pattern)
         if local_found is None:
@@ -59,7 +58,7 @@ class RangeResolver:
                            and ref.channel == search_ref.channel]
             self._cached_cache[pattern] = local_found
         if local_found:
-            return self._resolve_version(version_range, local_found, resolve_prereleases)
+            return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
         pattern = str(search_ref)
@@ -73,18 +72,20 @@ class RangeResolver:
             pattern_cached.update({remote.name: results})
         return results
 
-    def _resolve_remote(self, search_ref, version_range, remotes, update, resolve_prereleases):
+    def _resolve_remote(self, search_ref, version_range, remotes, update):
         update_candidates = []
         for remote in remotes:
             remote_results = self._search_remote_recipes(remote, search_ref)
-            resolved_version = self._resolve_version(version_range, remote_results, resolve_prereleases)
+            resolved_version = self._resolve_version(version_range, remote_results,
+                                                     self._resolve_prereleases)
             if resolved_version:
                 if not update:
                     return resolved_version  # Return first valid occurrence in first remote
                 else:
                     update_candidates.append(resolved_version)
         if len(update_candidates) > 0:  # pick latest from already resolved candidates
-            resolved_version = self._resolve_version(version_range, update_candidates, resolve_prereleases)
+            resolved_version = self._resolve_version(version_range, update_candidates,
+                                                     self._resolve_prereleases)
             return resolved_version
 
     @staticmethod

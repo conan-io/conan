@@ -201,7 +201,7 @@ class Lockfile(object):
             result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
         return result
 
-    def resolve_locked(self, node, require, resolve_prereleases=None):
+    def resolve_locked(self, node, require, resolve_prereleases):
         if require.build or node.context == CONTEXT_BUILD:
             locked_refs = self._build_requires.refs()
         else:

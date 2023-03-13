@@ -56,7 +56,7 @@ class _ConditionSet:
         else:
             return [_Condition(operator, Version(version))]
 
-    def valid(self, version, conf_resolve_prepreleases=None):
+    def _valid(self, version, conf_resolve_prepreleases):
         if version.pre:
             # Follow the expression desires only if core.version_ranges:resolve_prereleases is None,
             # else force to the conf's value
@@ -101,10 +101,10 @@ class VersionRange:
     def __str__(self):
         return self._expression
 
-    def contains(self, version, conf_resolve_prerelease=None):
+    def contains(self, version, resolve_prerelease=None):
         assert isinstance(version, Version), type(version)
         for condition_set in self.condition_sets:
-            if condition_set.valid(version, conf_resolve_prerelease):
+            if condition_set._valid(version, resolve_prerelease):
                 return True
         return False
 
