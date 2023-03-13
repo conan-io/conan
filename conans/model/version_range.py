@@ -101,7 +101,16 @@ class VersionRange:
     def __str__(self):
         return self._expression
 
-    def contains(self, version, resolve_prerelease=None):
+    def contains(self, version: Version, resolve_prerelease: bool | None):
+        """
+        Whether <version> is inside the version range
+
+        :param version: Version to check against
+        :param resolve_prerelease: If ``True``, ensure prereleases can be resolved in this range
+        If ``False``, prerelases can NOT be resolved in this range
+        If ``None``, prereleases are resolved only if this version range expression says so
+        :return: Whether the version is inside the range
+        """
         assert isinstance(version, Version), type(version)
         for condition_set in self.condition_sets:
             if condition_set._valid(version, resolve_prerelease):
