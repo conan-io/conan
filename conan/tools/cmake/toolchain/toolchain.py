@@ -174,7 +174,7 @@ class CMakeToolchain(object):
         return content
 
     @property
-    def _verbosity(self):
+    def _make_verbosity(self):
         verbosity = self._conanfile.conf.get("tools.build.verbosity")
         if verbosity:
             if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
