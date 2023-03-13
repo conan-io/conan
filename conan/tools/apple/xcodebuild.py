@@ -12,7 +12,7 @@ class XcodeBuild(object):
 
     @property
     def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build.verbosity")
+        verbosity = self._conanfile.conf.get("tools.build:verbosity")
         if verbosity:
             if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
                 raise ConanException(f"Unknown value '{verbosity}' for 'tools.build.verbosity'")
