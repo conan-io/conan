@@ -94,13 +94,19 @@ def _evaluate(prop_name, prop_value, conan_vars_info):
 
 def search_recipes(cache, pattern=None, ignorecase=True):
     # Conan references in main storage
+    no_user_channel = False
     if pattern:
         if isinstance(pattern, ConanFileReference):
             pattern = repr(pattern)
+        if pattern.endswith("@"):  # packages without user/channel:
+            no_user_channel = True
+            pattern = pattern[:-1]
         pattern = translate(pattern)
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
     refs = cache.all_refs()
+    if no_user_channel:
+        refs = [r for r in refs if r.user is None and r.channel is None]
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         refs = [r for r in refs if _partial_match(pattern, repr(r))]
