@@ -61,6 +61,12 @@ def test_source_download_password():
     c.run("source .")
     assert "Content: hello world!" in c.out
 
+    content = {f"http://localhost:{http_server.port}": {"token": "{{mytk}}"}}
+    content = "{% set mytk = 'mytoken' %}\n" + json.dumps(content)
+    save(os.path.join(c.cache_folder, "creds.json"), content)
+    c.run("source .")
+    assert "Content: hello world!" in c.out
+
     # Errors
     for invalid in [{"token": "mytoken2"},
                     {},

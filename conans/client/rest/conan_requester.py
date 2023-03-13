@@ -6,6 +6,7 @@ import platform
 
 import requests
 import urllib3
+from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
@@ -31,7 +32,9 @@ class URLCredentials:
         creds_path = os.path.join(cache_folder, "creds.json")
         if not os.path.exists(creds_path):
             return
-        content = json.loads(load(creds_path))
+        template = Template(load(creds_path))
+        content = template.render({"platform": platform, "os": os})
+        content = json.loads(content)
         self._urls = content
 
     def add_auth(self, url, kwargs):
@@ -107,22 +110,19 @@ class ConanRequester(object):
                 kwargs["proxies"] = self._proxies
         if self._timeout and self._timeout != INFINITE_TIMEOUT:
             kwargs["timeout"] = self._timeout
-
-        headers = kwargs.get("headers")
-        if not headers:
-            headers = {}
-            kwargs["headers"] = headers
+        if not kwargs.get("headers"):
+            kwargs["headers"] = {}
 
         self._url_creds.add_auth(url, kwargs)
 
         # Only set User-Agent if none was provided
-        if not headers.get("User-Agent"):
+        if not kwargs["headers"].get("User-Agent"):
             platform_info = "; ".join([
                 " ".join([platform.system(), platform.release()]),
                 "Python "+platform.python_version(),
                 platform.machine()])
             user_agent = "Conan/%s (%s)" % (client_version, platform_info)
-            headers["User-Agent"] = user_agent
+            kwargs["headers"]["User-Agent"] = user_agent
 
         return kwargs
 
