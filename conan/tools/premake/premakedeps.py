@@ -271,8 +271,9 @@ class PremakeDeps(object):
                 fallback_configuration = configurations[-1]
             
             # Emit package premake file
-            pkg_files.append(PREMAKE_PKG_FILE.format(pkgname=dep_name))
-            self._output_lua_file(pkg_files[-1], [
+            pkg_filename = PREMAKE_PKG_FILE.format(pkgname=dep_name)
+            pkg_files.append(pkg_filename)
+            self._output_lua_file(pkg_filename, [
                 # Includes
                 *['include "{}"'.format(profile[0]) for profile in profiles],
                 # Functions
