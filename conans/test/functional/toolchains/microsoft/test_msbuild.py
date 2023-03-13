@@ -28,8 +28,8 @@ Global
         Debug|x86 = Debug|x86
         Release|x64 = Release|x64
         Release|x86 = Release|x86
-        ReleaseShared|x64 = ReleaseShared|x64
-        ReleaseShared|x86 = ReleaseShared|x86
+        Release - Shared|x64 = Release - Shared|x64
+        Release - Shared|x86 = Release - Shared|x86
     EndGlobalSection
     GlobalSection(ProjectConfigurationPlatforms) = postSolution
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Debug|x64.ActiveCfg = Debug|x64
@@ -40,10 +40,10 @@ Global
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release|x64.Build.0 = Release|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release|x86.ActiveCfg = Release|Win32
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release|x86.Build.0 = Release|Win32
-        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x64.ActiveCfg = ReleaseShared|x64
-        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x64.Build.0 = ReleaseShared|x64
-        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.ActiveCfg = ReleaseShared|Win32
-        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.Build.0 = ReleaseShared|Win32
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release - Shared|x64.ActiveCfg = Release - Shared|x64
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release - Shared|x64.Build.0 = Release - Shared|x64
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release - Shared|x86.ActiveCfg = Release - Shared|Win32
+        {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.Release - Shared|x86.Build.0 = Release - Shared|Win32
     EndGlobalSection
     GlobalSection(SolutionProperties) = preSolution
         HideSolutionNode = FALSE
@@ -63,12 +63,12 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="ReleaseShared|Win32">
-      <Configuration>ReleaseShared</Configuration>
+    <ProjectConfiguration Include="Release - Shared|Win32">
+      <Configuration>Release - Shared</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="ReleaseShared|x64">
-      <Configuration>ReleaseShared</Configuration>
+    <ProjectConfiguration Include="Release - Shared|x64">
+      <Configuration>Release - Shared</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
@@ -91,14 +91,14 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     <RootNamespace>MyApp</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Shared|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Shared|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
@@ -152,12 +152,12 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
     Label="LocalAppDataPlatform" />
   </ImportGroup>
-   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
+   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release - Shared|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
     Label="LocalAppDataPlatform" />
   </ImportGroup>
-   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release - Shared|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props"
     Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')"
     Label="LocalAppDataPlatform" />
@@ -185,10 +185,10 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Shared|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release - Shared|x64'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -206,7 +206,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - Shared|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
@@ -225,7 +225,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseShared|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release - Shared|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
@@ -374,8 +374,8 @@ class WinTest(unittest.TestCase):
                 gen = MSBuildDeps(self)
                 shared_option = self.dependencies["hello"].options.get_safe("shared")
                 if shared_option and self.settings.build_type == "Release":
-                    tc.configuration = "ReleaseShared"
-                    gen.configuration = "ReleaseShared"
+                    tc.configuration = "Release - Shared"
+                    gen.configuration = "Release - Shared"
 
                 tc.preprocessor_definitions["DEFINITIONS_BOTH"] = '"True"'
                 tc.preprocessor_definitions["DEFINITIONS_BOTH2"] = 'DEFINITIONS_BOTH'
@@ -393,7 +393,7 @@ class WinTest(unittest.TestCase):
 
                 shared_option = self.dependencies["hello"].options.get_safe("shared")
                 if shared_option and self.settings.build_type == "Release":
-                    configuration = "ReleaseShared"
+                    configuration = "Release - Shared"
                     if self.settings.arch == "x86_64":
                         dst = "x64/%s" % configuration
                     else:
@@ -418,7 +418,7 @@ class WinTest(unittest.TestCase):
     @staticmethod
     def _run_app(client, arch, build_type, shared=None):
         if build_type == "Release" and shared:
-            configuration = "ReleaseShared"
+            configuration = "Release - Shared"
         else:
             configuration = build_type
 
@@ -581,13 +581,13 @@ class WinTest(unittest.TestCase):
         for build_type, arch, shared in configs:
             platform_arch = "x86" if arch == "x86" else "x64"
             if build_type == "Release" and shared:
-                configuration = "ReleaseShared"
+                configuration = "Release - Shared"
             else:
                 configuration = build_type
 
             # The "conan build" command is not good enough, cannot do the switch between configs
             cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
-                   '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
+                   '"%s" x64 && msbuild "MyProject.sln" /p:Configuration="%s" '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
             client.run_command(cmd)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
