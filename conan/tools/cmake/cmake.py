@@ -111,6 +111,20 @@ class CMake(object):
         with chdir(self, build_folder):
             self._conanfile.run(command)
 
+    @property
+    def _verbosity(self):
+        verbosity = self._conanfile.conf.get("tools.build.verbosity")
+        if verbosity:
+            if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
+                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build.verbosity'")
+            else:
+                return {"Quiet": "ERROR",
+                        "Minimal": "NOTICE",
+                        "Normal": "STATUS",
+                        "Detailed": "VERBOSE",
+                        "Diagnostic": "TRACE"}.get(verbosity)
+        return ""
+
     def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env=""):
         bf = self._conanfile.build_folder
         is_multi = is_multi_configuration(self._generator)
@@ -134,6 +148,10 @@ class CMake(object):
             cmd_line_args.extend(build_tool_args)
         if cmd_line_args:
             args += ['--'] + cmd_line_args
+
+        verbosity = self._verbosity
+        if verbosity:
+            args.append("--log-level=" + verbosity)
 
         arg_list = ['"{}"'.format(bf), build_config, cmd_args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))

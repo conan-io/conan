@@ -12,7 +12,17 @@ class XcodeBuild(object):
 
     @property
     def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.apple.xcodebuild:verbosity", default="", check_type=str)
+        verbosity = self._conanfile.conf.get("tools.build.verbosity")
+        if verbosity:
+            if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
+                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build.verbosity'")
+            else:
+                if verbosity == "Quiet":
+                    verbosity = "quiet"
+                elif verbosity == "Detailed" or verbosity == "Diagnostic":
+                    verbosity = "verbose"
+        else:
+            verbosity = self._conanfile.conf.get("tools.apple.xcodebuild:verbosity", default="", check_type=str)
         if verbosity == "quiet" or verbosity == "verbose":
             return "-{}".format(verbosity)
         elif verbosity:
