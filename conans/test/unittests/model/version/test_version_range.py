@@ -47,10 +47,10 @@ def test_range(version_range, conditions, versions_in, versions_out):
             assert condition.version == expected_condition[1]
 
     for v in versions_in:
-        assert r.contains(Version(v))
+        assert r.contains(Version(v), None)
 
     for v in versions_out:
-        assert not r.contains(Version(v))
+        assert not r.contains(Version(v), None)
 
 
 @pytest.mark.parametrize("version_range, resolve_prereleases, versions_in, versions_out", [
