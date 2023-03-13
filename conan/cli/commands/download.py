@@ -23,7 +23,7 @@ def download(conan_api: ConanAPI, parser, *args):
     parser.add_argument("--only-recipe", action='store_true', default=False,
                         help='Download only the recipe/s, not the binary packages.')
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
-                        help="Only upload packages matching a specific query. e.g: os=Windows AND "
+                        help="Only download packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
                         help='Download from this specific remote')
