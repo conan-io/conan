@@ -116,7 +116,7 @@ class CMake(object):
         verbosity = self._conanfile.conf.get("tools.build:verbosity")
         if verbosity:
             if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
-                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build.verbosity'")
+                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
             else:
                 return {"Quiet": "ERROR",
                         "Minimal": "NOTICE",

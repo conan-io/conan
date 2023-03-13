@@ -191,6 +191,10 @@ class CMakeToolchain(object):
             VCVars(self._conanfile).generate()
         toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
                                                  toolchain_file or self.filename))
+
+        if "CMAKE_MAKE_VERBOSE" not in self.cache_variables:
+            self.cache_variables["CMAKE_MAKE_VERBOSE"] = self._conanfile.conf.get("tools.builds:verbosity", check_type=bool)
+
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):

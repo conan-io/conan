@@ -2,7 +2,7 @@ from conans.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    verbosity = conanfile.conf.get("tools.build.verbosity")
+    verbosity = conanfile.conf.get("tools.build:verbosity")
     if verbosity is None:
         verbosity = conanfile.conf.get("tools.microsoft.msbuild:verbosity")
     if verbosity:
