@@ -197,7 +197,6 @@ class MSBuildDeps(object):
         if require and not require.libs:
             lib_dirs = ""
             libs = ""
-            system_libs = ""
         if require and not require.libs and not require.headers:
             definitions = ""
             compiler_flags = ""
