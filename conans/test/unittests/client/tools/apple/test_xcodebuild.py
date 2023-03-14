@@ -24,6 +24,22 @@ def test_verbosity(mode):
             excinfo.value)
 
 
+@pytest.mark.parametrize("mode", ["Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"])
+def test_verbosity_global(mode):
+    conanfile = ConanFileMock()
+    conf = ConfDefinition()
+    conf.loads(f"tools.build:verbosity={mode}")
+    conanfile.conf = conf
+    conanfile.settings = MockSettings({})
+    xcodebuild = XcodeBuild(conanfile)
+
+    xcodebuild.build("app.xcodeproj")
+    if "mode" != "Normal":
+        assert "-quiet" in conanfile.command or "-verbose" in conanfile.command
+    else:
+        assert "-quiet" not in conanfile.command and "-verbose" not in conanfile.command
+
+
 def test_sdk_path():
     conanfile = ConanFileMock()
     conf = ConfDefinition()
