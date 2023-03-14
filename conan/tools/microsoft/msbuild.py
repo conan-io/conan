@@ -3,13 +3,10 @@ from conans.errors import ConanException
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
     verbosity = conanfile.conf.get("tools.build:verbosity")
-    if verbosity is None:
-        verbosity = conanfile.conf.get("tools.microsoft.msbuild:verbosity")
     if verbosity:
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
-            raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
+            raise ConanException(f"Unknown 'tools.build:verbosity' verbosity value: {verbosity}")
         return '/verbosity:{}'.format(verbosity)
-
 
 
 def msbuild_arch(arch):
