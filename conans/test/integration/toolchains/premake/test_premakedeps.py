@@ -1,28 +1,26 @@
 import textwrap
-import os
 
 from conans.test.utils.tools import TestClient
 
-def assert_configuration_file(client, configuration):
-    contents = client.load(f"conan_pkg.name-more+_{configuration}_x86_64.premake5.lua")
-    assert f'include "conan_pkg.name-more+_vars_{configuration}_x86_64.premake5.lua"' in contents
-    assert f'function conan_setup_build_pkg.name-more+_{configuration}_x86_64()' in contents
-    assert f'function conan_setup_link_pkg.name-more+_{configuration}_x86_64()' in contents
-    assert f'function conan_setup_pkg.name-more+_{configuration}_x86_64()' in contents
-
 def assert_vars_file(client, configuration):
     contents = client.load(f"conan_pkg.name-more+_vars_{configuration}_x86_64.premake5.lua")
-    assert f'conan_includedirs_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_libdirs_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_bindirs_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_libs_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_system_libs_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_defines_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_cxxflags_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_cflags_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_sharedlinkflags_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_exelinkflags_pkg.name-more+_{configuration}_x86_64' in contents
-    assert f'conan_frameworks_pkg.name-more+_{configuration}_x86_64' in contents
+    assert f'include "conanutils.premake5.lua"' in contents
+    assert f't_conandeps = {{}}' in contents
+    assert f't_conandeps["{configuration}_x86_64"] = {{}}' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"] = {{}}' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["includedirs"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["libdirs"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["bindirs"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["libs"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["system_libs"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["defines"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["cxxflags"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["cflags"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["sharedlinkflags"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["exelinkflags"]' in contents
+    assert f't_conandeps["{configuration}_x86_64"]["pkg.name-more+"]["frameworks"]' in contents
+    assert f'if conandeps == nil then conandeps = {{}} end' in contents
+    assert f'conan_premake_tmerge(conandeps, t_conandeps)' in contents
 
 def test_premakedeps():
     # Create package
@@ -51,20 +49,15 @@ def test_premakedeps():
     # Assert root lua file
     contents = client.load("conandeps.premake5.lua")
     assert 'include "conan_pkg.name-more+.premake5.lua"' in contents
-    assert 'function conan_setup_build()' in contents
-    assert 'function conan_setup_link()' in contents
-    assert 'function conan_setup()' in contents
+    assert 'function conan_setup_build(conf, pkg)' in contents
+    assert 'function conan_setup_link(conf, pkg)' in contents
+    assert 'function conan_setup(conf, pkg)' in contents
 
     # Assert package root file
     contents = client.load("conan_pkg.name-more+.premake5.lua")
     assert 'include "conan_pkg.name-more+_vars_debug_x86_64.premake5.lua"' in contents
     assert 'include "conan_pkg.name-more+_vars_release_x86_64.premake5.lua"' in contents
-    assert 'function conan_setup_build_pkg.name-more+()' in contents
-    assert 'function conan_setup_link_pkg.name-more+()' in contents
-    assert 'function conan_setup_pkg.name-more+()' in contents
 
     # Assert package per configuration files
-    assert_configuration_file(client, 'debug')
     assert_vars_file(client, 'debug')
-    assert_configuration_file(client, 'release')
     assert_vars_file(client, 'release')
