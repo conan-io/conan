@@ -17,25 +17,8 @@ def test_version_range_conf_nonexplicit_expression():
     tc.run("create base/conanfile.py --version=1.5.1")
     tc.run("create base/conanfile.py --version=2.5.0-pre")
 
-    conanfilev1 = textwrap.dedent("""
-    from conan import ConanFile
-
-    class Package(ConanFile):
-        name = "pkg"
-        version = "1.0"
-        requires = "base/[>1 <2]"
-    """)
-
-    conanfilev2 = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Package(ConanFile):
-            name = "pkg"
-            version = "2.0"
-            requires = "base/[>2 <3]"
-        """)
-
-    tc.save({"v1/conanfile.py": conanfilev1, "v2/conanfile.py": conanfilev2})
+    tc.save({"v1/conanfile.py": GenConanfile("pkg", "1.0").with_requires("base/[>1 <2]"),
+             "v2/conanfile.py": GenConanfile("pkg", "2.0").with_requires("base/[>2 <3]")})
 
     tc.save({"global.conf": "core.version_ranges:resolve_prereleases=False"}, path=tc.cache.cache_folder)
     tc.run("create v1/conanfile.py")
@@ -52,7 +35,8 @@ def test_version_range_conf_nonexplicit_expression():
     tc.save({"global.conf": "core.version_ranges:resolve_prereleases=None"}, path=tc.cache.cache_folder)
     tc.run("create v1/conanfile.py")
     assert "base/[>1 <2]: base/1.5.1" in tc.out
-    tc.run("create v2/conanfile.py")
+
+    tc.run("create v2/conanfile.py", assert_error=True)
     assert "Package 'base/[>2 <3]' not resolved" in tc.out
 
 
