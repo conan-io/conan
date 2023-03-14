@@ -125,10 +125,10 @@ class CMake(object):
                         "warning": "WARNING",
                         "notice": "NOTICE",
                         "status": "STATUS",
+                        # TODO: Normalize normal and verbose levels,
+                        #  in conan normal goes after vernose
+                        "normal": "STATUS",
                         "verbose": "VERBOSE",
-                        # This mapping seems iffy.
-                        # I expect normal to be at the same level as Cmake's default, status
-                        "normal": "VERBOSE",
                         "debug": "DEBUG",
                         "v": "DEBUG",
                         "trace": "TRACE",
