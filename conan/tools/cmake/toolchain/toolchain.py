@@ -193,7 +193,7 @@ class CMakeToolchain(object):
                                                  toolchain_file or self.filename))
 
         if "CMAKE_MAKE_VERBOSE" not in self.cache_variables:
-            self.cache_variables["CMAKE_MAKE_VERBOSE"] = self._conanfile.conf.get("tools.builds:verbosity", check_type=bool)
+            self.cache_variables["CMAKE_MAKE_VERBOSE"] = self._conanfile.conf.get("tools.build:verbosity", check_type=bool)
 
         cache_variables = {}
         for name, value in self.cache_variables.items():
