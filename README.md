@@ -1,8 +1,8 @@
 <picture>
   <!-- These are also used for https://github.com/conan-io/.github/blob/main/profile/README.md -->
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/prince-chrismc/conan/conan2-logo/.github/conan2-logo-for-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/prince-chrismc/conan/conan2-logo/.github/conan2-logo-for-light.svg">
-  <img alt="JFrog | Conan 2.0 Logo" src="https://raw.githubusercontent.com/prince-chrismc/conan/conan2-logo/.github/conan2-logo-with-bg.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/conan-io/conan/develop2/.github/conan2-logo-for-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/conan-io/conan/develop2/.github/conan2-logo-for-light.svg">
+  <img alt="JFrog | Conan 2.0 Logo" src="https://raw.githubusercontent.com/conan-io/conan/develop2/.github/conan2-logo-with-bg.svg">
 </picture>
 
 # Conan
