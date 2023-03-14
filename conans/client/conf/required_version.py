@@ -10,8 +10,6 @@ def validate_conan_version(required_range):
     version_range = VersionRange(required_range)
     for conditions in version_range.condition_sets:
         conditions.prerelease = True
-    # TODO: Think what's the better approach for resolving prereleases.
-    # Listening to the global conf does not sound useful here
     if not version_range.contains(clientver, resolve_prerelease=None):
         raise ConanException("Current Conan version ({}) does not satisfy "
                              "the defined one ({}).".format(clientver, required_range))
