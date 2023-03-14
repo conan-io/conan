@@ -47,7 +47,7 @@ class MSBuild(object):
         :return: ``str`` msbuild command line.
         """
         # TODO: Enable output_binary_log via config
-        cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
+        cmd = ('msbuild "%s" /p:Configuration="%s" /p:Platform=%s'
                % (sln, self.build_type, self.platform))
 
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
