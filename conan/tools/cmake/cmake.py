@@ -101,10 +101,6 @@ class CMake(object):
             variables = {}
         self._cache_variables.update(variables)
 
-        verbosity = self._verbosity
-        if verbosity:
-            arg_list.append("--log-level=" + verbosity)
-
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
@@ -114,30 +110,6 @@ class CMake(object):
         command = " ".join(arg_list)
         with chdir(self, build_folder):
             self._conanfile.run(command)
-
-    @property
-    def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build:verbosity")
-        if verbosity:
-            if verbosity not in ("quiet", "error", "warning", "notice", "status", "verbose",
-                                 "normal", "debug", "v", "trace", "vv"):
-                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
-            else:
-                # ERROR, WARNING, NOTICE, STATUS (default), VERBOSE, DEBUG, or TRACE
-                return {"quiet": "ERROR",
-                        "error": "ERROR",
-                        "warning": "WARNING",
-                        "notice": "NOTICE",
-                        "status": "STATUS",
-                        # TODO: Normalize normal and verbose levels,
-                        #  in conan normal goes after vernose
-                        "normal": "STATUS",
-                        "verbose": "VERBOSE",
-                        "debug": "DEBUG",
-                        "v": "DEBUG",
-                        "trace": "TRACE",
-                        "vv": "TRACE"}.get(verbosity)
-        return ""
 
     def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env=""):
         bf = self._conanfile.build_folder
@@ -154,10 +126,6 @@ class CMake(object):
         args = []
         if target is not None:
             args = ["--target", target]
-
-        verbosity = self._verbosity
-        if verbosity:
-            args.append("--log-level=" + verbosity)
 
         if cli_args:
             args.extend(cli_args)
@@ -214,10 +182,6 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
-
-        verbosity = self._verbosity
-        if verbosity:
-            arg_list.append("--log-level=" + verbosity)
 
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)

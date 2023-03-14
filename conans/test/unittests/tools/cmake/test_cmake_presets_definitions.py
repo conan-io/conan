@@ -33,11 +33,9 @@ def conanfile():
 def test_cmake_make_program(conanfile):
     def run(command):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
-        assert '--log-level=ERROR' in command
 
     conanfile.run = run
     conanfile.conf.define("tools.gnu:make_program", "C:\\mymake.exe")
-    conanfile.conf.define("tools.build:verbosity", "quiet")
 
     with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
         write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles", {})

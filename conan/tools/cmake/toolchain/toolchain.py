@@ -173,28 +173,6 @@ class CMakeToolchain(object):
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
         return content
 
-    @property
-    def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build:verbosity")
-        if verbosity:
-            if verbosity not in ("quiet", "error", "warning", "notice", "status", "verbose",
-                                 "normal", "debug", "v", "trace", "vv"):
-                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
-            else:
-                # ERROR, WARNING, NOTICE, STATUS (default), VERBOSE, DEBUG, or TRACE
-                return {"quiet": False,
-                        "error": False,
-                        "warning": False,
-                        "notice": None,
-                        "status": None,
-                        "verbose": None,
-                        "normal": None,
-                        "debug": True,
-                        "v": True,
-                        "trace": True,
-                        "vv": True}.get(verbosity)
-        return None
-
     def generate(self):
         """
           This method will save the generated files to the conanfile.generators_folder
@@ -212,10 +190,6 @@ class CMakeToolchain(object):
             VCVars(self._conanfile).generate()
         toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
                                                  toolchain_file or self.filename))
-
-        verbosity = self._verbosity
-        if verbosity is not None and "CMAKE_MAKE_VERBOSE" not in self.cache_variables:
-            self.cache_variables["CMAKE_MAKE_VERBOSE"] = verbosity
 
         cache_variables = {}
         for name, value in self.cache_variables.items():
