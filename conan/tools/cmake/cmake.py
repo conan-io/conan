@@ -101,6 +101,10 @@ class CMake(object):
             variables = {}
         self._cache_variables.update(variables)
 
+        verbosity = self._verbosity
+        if verbosity:
+            arg_list.append("--log-level=" + verbosity)
+
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
@@ -150,6 +154,11 @@ class CMake(object):
         args = []
         if target is not None:
             args = ["--target", target]
+
+        verbosity = self._verbosity
+        if verbosity:
+            args.append("--log-level=" + verbosity)
+
         if cli_args:
             args.extend(cli_args)
 
@@ -158,10 +167,6 @@ class CMake(object):
             cmd_line_args.extend(build_tool_args)
         if cmd_line_args:
             args += ['--'] + cmd_line_args
-
-        verbosity = self._verbosity
-        if verbosity:
-            args.append("--log-level=" + verbosity)
 
         arg_list = ['"{}"'.format(bf), build_config, cmd_args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))
@@ -209,6 +214,11 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
+
+        verbosity = self._verbosity
+        if verbosity:
+            arg_list.append("--log-level=" + verbosity)
+
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.run(command)
