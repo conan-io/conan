@@ -177,17 +177,23 @@ class CMakeToolchain(object):
     def _verbosity(self):
         verbosity = self._conanfile.conf.get("tools.build:verbosity")
         if verbosity:
-            if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
-                raise ConanException(
-                    f"Value '{verbosity}' for 'tools.build:verbosity' is not valid")
+            if verbosity not in ("quiet", "error", "warning", "notice", "status", "verbose",
+                                 "normal", "debug", "v", "trace", "vv"):
+                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
             else:
-                return {"Quiet": False,
-                        "Minimal": False,
-                        "Normal": None,
-                        "Detailed": True,
-                        "Diagnostic": True}.get(verbosity)
+                # ERROR, WARNING, NOTICE, STATUS (default), VERBOSE, DEBUG, or TRACE
+                return {"quiet": False,
+                        "error": False,
+                        "warning": False,
+                        "notice": None,
+                        "status": None,
+                        "verbose": None,
+                        "normal": None,
+                        "debug": True,
+                        "v": True,
+                        "trace": True,
+                        "vv": True}.get(verbosity)
         return None
-
 
     def generate(self):
         """
