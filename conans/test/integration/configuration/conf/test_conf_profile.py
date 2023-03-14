@@ -54,7 +54,7 @@ def test_cmake_config(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
@@ -71,7 +71,7 @@ def test_cmake_config_error(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=non-existing
+        tools.build:verbosity=non-existing
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile", assert_error=True)
@@ -88,7 +88,7 @@ def test_cmake_config_package(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        dep*:tools.microsoft.msbuild:verbosity=Minimal
+        dep*:tools.build:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
@@ -107,7 +107,7 @@ def test_cmake_config_package_not_scoped(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
@@ -149,7 +149,7 @@ def test_msbuild_config():
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
