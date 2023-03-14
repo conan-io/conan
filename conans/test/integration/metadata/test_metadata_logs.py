@@ -45,7 +45,7 @@ class TestRecipeMetadataLogs:
         ref = RecipeReference.loads("pkg/0.1")
         ref_layout = c.get_latest_ref_layout(ref)
         assert os.listdir(ref_layout.metadata()) == ["logs"]
-        assert os.listdir(os.path.join(ref_layout.metadata(), "logs")) == ["file.log", "src.log"]
+        assert set(os.listdir(os.path.join(ref_layout.metadata(), "logs"))) == set(["file.log", "src.log"])
         assert load(os.path.join(ref_layout.metadata(), "logs", "file.log")) == "log contents!"
         assert load(os.path.join(ref_layout.metadata(), "logs", "src.log")) == "srclog!!"
 
