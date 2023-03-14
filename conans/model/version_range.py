@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional
 
 from conans.errors import ConanException
 from conans.model.recipe_ref import Version
@@ -101,7 +102,7 @@ class VersionRange:
     def __str__(self):
         return self._expression
 
-    def contains(self, version: Version, resolve_prerelease: bool | None):
+    def contains(self, version: Version, resolve_prerelease: Optional[bool]):
         """
         Whether <version> is inside the version range
 
