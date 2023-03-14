@@ -17,7 +17,7 @@ def test_verbosity_global(mode):
     xcodebuild = XcodeBuild(conanfile)
 
     xcodebuild.build("app.xcodeproj")
-    if "mode" not in ("status", "verbose", "normal"):
+    if mode not in ("status", "verbose", "normal"):
         assert "-quiet" in conanfile.command or "-verbose" in conanfile.command
     else:
         assert "-quiet" not in conanfile.command and "-verbose" not in conanfile.command

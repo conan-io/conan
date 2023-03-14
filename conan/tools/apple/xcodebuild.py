@@ -30,8 +30,8 @@ class XcodeBuild(object):
                              "v": "verbose",
                              "trace": "verbose",
                              "vv": "verbose"}.get(verbosity)
-        if verbosity is not None:
-            return "-{}".format(verbosity)
+                if verbosity is not None:
+                    return "-{}".format(verbosity)
         return ""
 
     @property
