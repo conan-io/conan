@@ -191,6 +191,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     """
     # TODO: Add all parameters to the new conf
     requester = conanfile._conan_helpers.requester
+    hook_manager = conanfile._conan_helpers.hook_manager
     config = conanfile.conf
     out = ConanOutput()
     overwrite = True
@@ -222,18 +223,24 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
                                 conanfile=conanfile)
         out.writeln("")
 
+    url_list = list()
     if not isinstance(url, (list, tuple)):
-        _download_file(url)
-    else:  # We were provided several URLs to try
-        for url_it in url:
-            try:
-                _download_file(url_it)
-                break
-            except Exception as error:
-                message = "Could not download from the URL {}: {}.".format(url_it, str(error))
-                out.warning(message + " Trying another mirror.")
-        else:
-            raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
+        url_list.append(url)
+    else:
+        url_list.extend(url)
+
+    hook_manager.execute("pre_download", conanfile, url_list, filename, md5=md5, sha1=sha1, sha256=sha256)
+
+    # We were provided several URLs to try
+    for url_it in url_list:
+        try:
+            _download_file(url_it)
+            break
+        except Exception as error:
+            message = "Could not download from the URL {}: {}.".format(url_it, str(error))
+            out.warning(message + " Trying another mirror.")
+    else:
+        raise ConanException("All downloads from ({}) URLs have failed.".format(len(url_list)))
 
 
 def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sha256=None):

@@ -8,7 +8,8 @@ valid_hook_methods = ["pre_export", "post_export",
                       "pre_generate", "post_generate",
                       "pre_build", "post_build", "post_build_fail",
                       "pre_package", "post_package",
-                      "pre_package_info", "post_package_info"]
+                      "pre_package_info", "post_package_info",
+                      "pre_download"]
 
 
 class HookManager:
@@ -18,7 +19,7 @@ class HookManager:
         self.hooks = {}
         self._load_hooks()  # A bit dirty, but avoid breaking tests
 
-    def execute(self, method_name, conanfile):
+    def execute(self, method_name, conanfile, *args, **kwargs):
         assert method_name in valid_hook_methods, \
             "Method '{}' not in valid hooks methods".format(method_name)
         hooks = self.hooks.get(method_name)
@@ -30,7 +31,7 @@ class HookManager:
             try:
                 conanfile.display_name = "%s: [HOOK - %s] %s()" % (conanfile.display_name, name,
                                                                    method_name)
-                method(conanfile)
+                method(conanfile, *args, **kwargs)
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
             finally:
