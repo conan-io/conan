@@ -115,14 +115,24 @@ class CMake(object):
     def _verbosity(self):
         verbosity = self._conanfile.conf.get("tools.build:verbosity")
         if verbosity:
-            if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
+            if verbosity not in ("quiet", "error", "warning", "notice", "status", "verbose",
+                                 "normal", "debug", "v", "trace", "vv"):
                 raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
             else:
-                return {"Quiet": "ERROR",
-                        "Minimal": "NOTICE",
-                        "Normal": "STATUS",
-                        "Detailed": "VERBOSE",
-                        "Diagnostic": "TRACE"}.get(verbosity)
+                # ERROR, WARNING, NOTICE, STATUS (default), VERBOSE, DEBUG, or TRACE
+                return {"quiet": "ERROR",
+                        "error": "ERROR",
+                        "warning": "WARNING",
+                        "notice": "NOTICE",
+                        "status": "STATUS",
+                        "verbose": "VERBOSE",
+                        # This mapping seems iffy.
+                        # I expect normal to be at the same level as Cmake's default, status
+                        "normal": "VERBOSE",
+                        "debug": "DEBUG",
+                        "v": "DEBUG",
+                        "trace": "TRACE",
+                        "vv": "TRACE"}.get(verbosity)
         return ""
 
     def _build(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env=""):
