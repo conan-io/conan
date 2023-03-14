@@ -527,3 +527,11 @@ def test_linker_scripts_block(conanfile):
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS -T"path_to_first_linker_script" -T"path_to_second_linker_script")' in content
+
+
+def test_verbosity_make(conanfile):
+    conanfile.conf.define("tools.build:verbosity", "trace")
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.generate()
+    preset = load(os.path.join(conanfile.generators_folder, "CMakePresets.json"))
+    assert '"CMAKE_MAKE_VERBOSE": "ON"' in preset
