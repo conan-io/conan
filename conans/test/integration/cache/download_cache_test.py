@@ -371,7 +371,7 @@ def test_download_sources_multiurl():
 @pytest.mark.parametrize(["policy", "urls_in", "urls_out"], [
     ["ignore", ["http://fake/myfile.txt", "http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], []],
     ["warn", ["http://fake/myfile.txt", "http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], []],
-    ["raise", ["http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], ["http://fake/myfile.txt"]],
+    ["error", ["http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], ["http://fake/myfile.txt"]],
 ])
 def test_cache_miss_policy(policy, urls_in, urls_out):
     visited_urls = []

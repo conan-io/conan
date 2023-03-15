@@ -68,7 +68,7 @@ class CachingFileDownloader:
                                         default="ignore")
             # TODO: Think about what is the best default
             message = f"Sources from {url} not found in remote backup sources server(s)"
-            if policy == "raise":
+            if policy == "error":
                 raise ConanException(message)
             elif policy == "warn":
                 conanfile.output.warning(message)
@@ -76,9 +76,9 @@ class CachingFileDownloader:
                 # Do nothing, we're fine with looking externally for the files
                 pass
             else:
-                conanfile.output.warning("Backup sources cache missed but "
-                                         "'tools.backup_sources:cache_miss_policy' "
-                                         f"has an unknown value of '{policy}'")
+                raise ConanException("Backup sources cache missed but "
+                                     "'tools.backup_sources:cache_miss_policy' "
+                                     f"has an unknown value of '{policy}'")
         return found_in_backup
 
     def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile, **kwargs):
