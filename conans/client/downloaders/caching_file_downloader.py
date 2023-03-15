@@ -64,13 +64,15 @@ class CachingFileDownloader:
                 # TODO: What happens if sha256 missmatch?
                 pass
         if not found_in_backup:
-            policy = conanfile.conf.get("tools.backup_sources:cache_miss_policy", check_type=str)
+            policy = conanfile.conf.get("tools.backup_sources:cache_miss_policy", check_type=str,
+                                        default="ignore")
+            # TODO: Think about what is the best default
             message = f"Sources from {url} not found in remote backup sources server(s)"
             if policy == "raise":
                 raise ConanException(message)
             elif policy == "warn":
                 conanfile.output.warning(message)
-            elif policy == "ignore" or policy == "" or policy is None:
+            elif policy == "ignore":
                 # Do nothing, we're fine with looking externally for the files
                 pass
             else:
