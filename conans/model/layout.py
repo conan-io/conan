@@ -43,6 +43,9 @@ class Folders(object):
         self._base_export = None
         self._base_export_sources = None
 
+        self._base_recipe_metadata = None
+        self._base_pkg_metadata = None
+
         self.source = ""
         self.build = ""
         self.package = ""
@@ -78,6 +81,8 @@ class Folders(object):
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_export_sources = output_folder or base_folder
+        self._base_recipe_metadata = base_folder
+        self._base_pkg_metadata = output_folder or base_folder
 
     @property
     def source_folder(self):
@@ -102,6 +107,20 @@ class Folders(object):
         if not self.build:
             return self._base_build
         return os.path.join(self._base_build, self.build)
+
+    @property
+    def recipe_metadata_folder(self):
+        return self._base_recipe_metadata
+
+    def set_base_recipe_metadata(self, folder):
+        self._base_recipe_metadata = folder
+
+    @property
+    def pkg_metadata_folder(self):
+        return self._base_pkg_metadata
+
+    def set_base_pkg_metadata(self, folder):
+        self._base_pkg_metadata = folder
 
     @property
     def base_build(self):
