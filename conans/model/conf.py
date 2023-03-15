@@ -40,6 +40,7 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.backup_sources:cache_miss_policy": "Backup sources download miss policy. Valid values are 'ignore', 'warn' and 'error'",
     "tools.backup_sources:download_urls": "List of URLs to download backup sources from",
     "tools.backup_sources:upload_url": "Remote URL to upload backup sources to",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",

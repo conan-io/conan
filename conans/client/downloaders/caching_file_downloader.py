@@ -6,7 +6,7 @@ from threading import Lock
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
 from conans.util.locks import SimpleLock
 
@@ -64,8 +64,21 @@ class CachingFileDownloader:
                 # TODO: What happens if sha256 missmatch?
                 pass
         if not found_in_backup:
-            # TODO: Policy to control this behaviour
-            pass
+            policy = conanfile.conf.get("tools.backup_sources:cache_miss_policy", check_type=str,
+                                        default="ignore")
+            # TODO: Think about what is the best default
+            message = f"Sources from {url} not found in remote backup sources server(s)"
+            if policy == "error":
+                raise ConanException(message)
+            elif policy == "warn":
+                conanfile.output.warning(message)
+            elif policy == "ignore":
+                # Do nothing, we're fine with looking externally for the files
+                pass
+            else:
+                raise ConanException("Backup sources cache missed but "
+                                     "'tools.backup_sources:cache_miss_policy' "
+                                     f"has an unknown value of '{policy}'")
         return found_in_backup
 
     def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile, **kwargs):

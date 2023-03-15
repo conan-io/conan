@@ -4,6 +4,7 @@ import textwrap
 from shutil import copytree
 from unittest import mock
 
+import pytest
 from bottle import static_file, request
 
 from conans.errors import NotFoundException
@@ -365,3 +366,47 @@ def test_download_sources_multiurl():
     rmdir(download_cache_folder)
     client.run("source .")
     assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader1/" in client.out
+
+
+@pytest.mark.parametrize(["policy", "urls_in", "urls_out"], [
+    ["ignore", ["http://fake/myfile.txt", "http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], []],
+    ["warn", ["http://fake/myfile.txt", "http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], []],
+    ["error", ["http://extrafake/315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"], ["http://fake/myfile.txt"]],
+])
+def test_cache_miss_policy(policy, urls_in, urls_out):
+    visited_urls = []
+
+    def custom_download(this, url, *args, **kwargs):
+        visited_urls.append(url)
+        raise NotFoundException()
+
+    with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
+                    custom_download):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+
+
+        conanfile = textwrap.dedent(f"""
+                from conan import ConanFile
+                from conan.tools.files import download
+                class Pkg2(ConanFile):
+                    name = "pkg"
+                    version = "1.0"
+                    def source(self):
+                        download(self, "http://fake/myfile.txt", "myfile.txt", sha256="{sha256}")
+                """)
+
+        client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+                                    f"tools.backup_sources:download_urls=['http://extrafake/']\n"
+                                    f"tools.backup_sources:cache_miss_policy={policy}"},
+                    path=client.cache.cache_folder)
+        client.save({"conanfile.py": conanfile})
+        client.run("source .", assert_error=True)
+        if policy == "warn":
+            assert "Sources from http://fake/myfile.txt not found in remote backup sources" in client.out
+        for url_in in urls_in:
+            assert url_in in visited_urls
+        for url_out in urls_out:
+            assert url_out not in visited_urls
