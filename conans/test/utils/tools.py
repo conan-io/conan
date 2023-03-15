@@ -178,6 +178,14 @@ class TestRequester:
         else:
             return requests.put(url, **kwargs)
 
+    def head(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
+        if app:
+            response = app.head(url, **kwargs)
+            return TestingResponse(response)
+        else:
+            return requests.head(url, **kwargs)
+
     def delete(self, url, **kwargs):
         app, url = self._prepare_call(url, kwargs)
         if app:

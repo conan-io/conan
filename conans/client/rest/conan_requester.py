@@ -96,6 +96,9 @@ class ConanRequester(object):
     def get(self, url, **kwargs):
         return self._call_method("get", url, **kwargs)
 
+    def head(self, url, **kwargs):
+        return self._call_method("head", url, **kwargs)
+
     def put(self, url, **kwargs):
         return self._call_method("put", url, **kwargs)
 
