@@ -17,13 +17,15 @@ from conans.model.requires import Requirement
 
 class DepsGraphBuilder(object):
 
-    def __init__(self, proxy, loader, resolver, remotes, update, check_update):
+    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
+        self._cache = cache
         self._remotes = remotes  # TODO: pass as arg to load_graph()
         self._update = update
         self._check_update = check_update
+        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -82,7 +84,7 @@ class DepsGraphBuilder(object):
                 require.ref = prev_ref
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
-                                          prev_ref, base_previous)
+                                          prev_ref, base_previous, self._resolve_prereleases)
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
@@ -99,7 +101,7 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _conflicting_version(require, node,
-                             prev_require, prev_node, prev_ref, base_previous):
+                             prev_require, prev_node, prev_ref, base_previous, resolve_prereleases):
         version_range = require.version_range
         prev_version_range = prev_require.version_range if prev_node is None else None
         if version_range:
@@ -107,14 +109,14 @@ class DepsGraphBuilder(object):
             if prev_version_range is not None:
                 pass  # Do nothing, evaluate current as it were a fixed one
             else:
-                if prev_ref.version in version_range:
+                if version_range.contains(prev_ref.version, resolve_prereleases):
                     require.ref = prev_ref
                 else:
                     raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
 
         elif prev_version_range is not None:
-            # TODO: CHeck user/channel conflicts first
-            if require.ref.version not in prev_version_range:
+            # TODO: Check user/channel conflicts first
+            if not prev_version_range.contains(require.ref.version, resolve_prereleases):
                 raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
         else:
             def _conflicting_refs(ref1, ref2):
@@ -162,7 +164,7 @@ class DepsGraphBuilder(object):
         # This is the first pass over one recipe requires
         if graph_lock is not None:
             for require in node.conanfile.requires.values():
-                graph_lock.resolve_locked(node, require)
+                graph_lock.resolve_locked(node, require, self._resolve_prereleases)
 
         for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph)
@@ -215,7 +217,7 @@ class DepsGraphBuilder(object):
         return new_ref, dep_conanfile, recipe_status, remote
 
     @staticmethod
-    def _resolved_system_tool(node, require, profile_build, profile_host):
+    def _resolved_system_tool(node, require, profile_build, profile_host, resolve_prereleases):
         if node.context == CONTEXT_HOST and not require.build:  # Only for tool_requires
             return
         system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
@@ -225,13 +227,14 @@ class DepsGraphBuilder(object):
             for d in system_tool:
                 if require.ref.name == d.name:
                     if version_range:
-                        if d.version in version_range:
+                        if version_range.contains(d.version, resolve_prereleases):
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
                     elif require.ref.version == d.version:
                         return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        resolved = self._resolved_system_tool(node, require, profile_build, profile_host)
+        resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
+                                              self._resolve_prereleases)
 
         if resolved is None:
             try:
