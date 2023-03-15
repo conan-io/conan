@@ -9,8 +9,6 @@ from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
-    "tools.backup_sources:upload_url": "Remote URL to upload backup sources to",
-    "tools.backup_sources:download_urls": "List of URLs to download backup sources from",
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:default_profile": "Defines the default host profile ('default' by default)",
@@ -42,6 +40,8 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.backup_sources:download_urls": "List of URLs to download backup sources from",
+    "tools.backup_sources:upload_url": "Remote URL to upload backup sources to",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
