@@ -9,7 +9,8 @@ from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
-    "tools.backup_sources:url": "to backup sources",
+    "tools.backup_sources:upload_url": "Remote URL to upload backup sources to",
+    "tools.backup_sources:download_urls": "List of URLs to download backup sources from",
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:default_profile": "Defines the default host profile ('default' by default)",

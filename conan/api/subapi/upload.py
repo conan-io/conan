@@ -50,7 +50,7 @@ class UploadAPI:
         app = ConanApp(self.conan_api.cache_folder)
         config = app.cache.new_config
         # TODO: Rethink this conf, does this live in core?
-        url = config.get("tools.backup_sources:url")
+        url = config.get("tools.backup_sources:upload_url")
         if url is None:
             return
         download_cache_path = config.get("tools.files.download:download_cache")
