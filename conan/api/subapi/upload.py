@@ -53,14 +53,23 @@ class UploadAPI:
         url = config.get("tools.backup_sources:url")
         if url is None:
             return
+        url = url if url.endswith("/") else url + "/"
         download_cache_path = config.get("tools.files.download:download_cache")
         if download_cache_path is None:
             raise ConanException("Need to define 'tools.files.download:download_cache'")
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
         uploader = FileUploader(app.requester, verify=False, config=config)
+        # TODO: Dedup and list files
         for file in files:
             # TODO: Skip uploading files that are already present in the remote.
             # Check Artifactory's HEAD
-            uploader.upload(url + os.path.basename(file), file, dedup=False, auth=None)
+            basename = os.path.basename(file)
+            full_url = url + basename
+            exist = uploader.exist(full_url, auth=None)
+            if not exist:
+                ConanOutput().info(f"Uploading file '{basename} to server")
+                uploader.upload(full_url, file, dedup=False, auth=None)
+            else:
+                ConanOutput().info(f"File '{basename} already in server, skipping upload")
         return files

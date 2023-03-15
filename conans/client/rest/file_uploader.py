@@ -47,6 +47,10 @@ class FileUploader(object):
         if response.status_code == 201:  # Artifactory returns 201 if the file is there
             return response
 
+    def exist(self, url, auth):
+        response = self._requester.head(url, verify=self._verify_ssl, auth=auth)
+        return response
+
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
                headers=None, display_name=None):
         retry = retry if retry is not None else self._config.get("core.upload:retry", default=1, check_type=int)

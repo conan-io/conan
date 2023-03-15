@@ -268,9 +268,13 @@ class TestDownloadCacheBackupSources:
         client.save({"conanfile.py": conanfile})
         client.run("create .")
         client.run("upload * -c -r=default")
+        print(client.out)
         server_contents = os.listdir(http_server_base_folder)
         assert sha256 in server_contents
         assert sha256 + ".json" in server_contents
+
+        client.run("upload * -c -r=default")
+        assert "already in server, skipping upload" in client.out
 
         rmdir(tmp_folder)
         # Remove the "remote" myfile.txt so if it raises
