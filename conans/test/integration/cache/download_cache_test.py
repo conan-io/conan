@@ -5,10 +5,11 @@ from unittest import mock
 
 from bottle import static_file, request
 
+from conans.errors import NotFoundException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import save, set_dirty, load, rmdir, sha256sum
+from conans.util.files import save, set_dirty, load, rmdir
 
 
 class TestDownloadCache:
@@ -172,14 +173,16 @@ class TestDownloadCache:
 class TestDownloadCacheBackupSources:
     def test_users_download_cache_summary(self):
         def custom_download(this, url, filepath, **kwargs):
-            print("Downloading file")
+            if url.startswith("http://myback"):
+                raise NotFoundException()
             save(filepath, f"Hello, world!")
 
-        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download", custom_download):
+        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
+                        custom_download):
             client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
             client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
-                                        "tools.backup_sources:url=http://localhost/"},
+                                        "tools.backup_sources:url=http://myback"},
                         path=client.cache.cache_folder)
             sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
             conanfile = textwrap.dedent(f"""
@@ -223,7 +226,8 @@ class TestDownloadCacheBackupSources:
 
             client.run("create .")
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert content["pkg/1.0#" + client.exported_recipe_revision()] == ["http://localhost.mirror:5000/myfile.txt"]
+            assert content["pkg/1.0#" + client.exported_recipe_revision()] == \
+                   ["http://localhost.mirror:5000/myfile.txt"]
 
     def test_upload_sources_backup(self):
         client = TestClient(default_server_user=True)
@@ -247,15 +251,15 @@ class TestDownloadCacheBackupSources:
 
         sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
         conanfile = textwrap.dedent(f"""
-                        from conan import ConanFile
-                        from conan.tools.files import download
-                        class Pkg2(ConanFile):
-                            name = "pkg"
-                            version = "1.0"
-                            def source(self):
-                                download(self, "http://localhost:{http_server.port}/myfile.txt", "myfile.txt",
-                                         sha256="{sha256}")
-                        """)
+            from conan import ConanFile
+            from conan.tools.files import download
+            class Pkg2(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                def source(self):
+                    download(self, "http://localhost:{http_server.port}/myfile.txt", "myfile.txt",
+                             sha256="{sha256}")
+            """)
 
         client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
                                     f"tools.backup_sources:url=http://localhost:{http_server.port}/"},
