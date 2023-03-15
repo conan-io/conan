@@ -126,7 +126,6 @@ class CMake(object):
         args = []
         if target is not None:
             args = ["--target", target]
-
         if cli_args:
             args.extend(cli_args)
 
@@ -182,7 +181,6 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
-
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.run(command)

@@ -190,7 +190,6 @@ class CMakeToolchain(object):
             VCVars(self._conanfile).generate()
         toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
                                                  toolchain_file or self.filename))
-
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
