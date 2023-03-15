@@ -121,11 +121,11 @@ def test_inherited_baseclass2():
 
     conanfile_pkg = textwrap.dedent("""
         import os
+        import importlib
+
         try:
-            from importlib.util import spec_from_file_location, module_from_spec
-            spec = spec_from_file_location("conanfile_base", f"{{os.path.dirname(__file__)}}/conanfile_base.py")
-            conanfile_base = module_from_spec(spec)
-            spec.loader.exec_module(conanfile_base)
+            conanfile_base = importlib.util.module_from_spec(importlib.util.spec_from_file_location("conanfile_base", f"{{os.path.dirname(__file__)}}/conanfile_base.py"))
+            conanfile_base.__loader__.exec_module(conanfile_base)
         except Exception as e:
             import conanfile_base
 
