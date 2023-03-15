@@ -1,6 +1,7 @@
 import json
 import os
 import textwrap
+from shutil import copytree
 from unittest import mock
 
 from bottle import static_file, request
@@ -182,7 +183,7 @@ class TestDownloadCacheBackupSources:
             client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
             client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
-                                        "tools.backup_sources:url=http://myback"},
+                                        "tools.backup_sources:download_urls=['http://myback']"},
                         path=client.cache.cache_folder)
             sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
             conanfile = textwrap.dedent(f"""
@@ -231,19 +232,24 @@ class TestDownloadCacheBackupSources:
 
     def test_upload_sources_backup(self):
         client = TestClient(default_server_user=True)
-        tmp_folder = temp_folder()
+        download_cache_folder = temp_folder()
         http_server = StoppableThreadBottle()
-        http_server_base_folder = temp_folder()
+        http_server_base_folder_backups = temp_folder()
+        http_server_base_folder_internet = temp_folder()
 
-        save(os.path.join(http_server_base_folder, "myfile.txt"), "Hello, world!")
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
 
-        @http_server.server.get("/<file>")
+        @http_server.server.get("/internet/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
+
+        @http_server.server.get("/downloader/<file>")
         def get_file(file):
-            return static_file(file, http_server_base_folder)
+            return static_file(file, http_server_base_folder_backups)
 
-        @http_server.server.put("/<file>")
+        @http_server.server.put("/uploader/<file>")
         def put_file(file):
-            dest = os.path.join(http_server_base_folder, file)
+            dest = os.path.join(http_server_base_folder_backups, file)
             with open(dest, 'wb') as f:
                 f.write(request.body.read())
 
@@ -257,31 +263,105 @@ class TestDownloadCacheBackupSources:
                 name = "pkg"
                 version = "1.0"
                 def source(self):
-                    download(self, "http://localhost:{http_server.port}/myfile.txt", "myfile.txt",
+                    download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
-                                    f"tools.backup_sources:url=http://localhost:{http_server.port}/"},
+        client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+                                    f"tools.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/']\n"
+                                    f"tools.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
         client.run("upload * -c -r=default")
-        print(client.out)
-        server_contents = os.listdir(http_server_base_folder)
+
+        server_contents = os.listdir(http_server_base_folder_backups)
         assert sha256 in server_contents
         assert sha256 + ".json" in server_contents
 
         client.run("upload * -c -r=default")
         assert "already in server, skipping upload" in client.out
 
-        rmdir(tmp_folder)
+        rmdir(download_cache_folder)
+
         # Remove the "remote" myfile.txt so if it raises
         # we know it tried to download the original source
-        os.remove(os.path.join(http_server_base_folder, "myfile.txt"))
+        os.remove(os.path.join(http_server_base_folder_internet, "myfile.txt"))
 
         client.run("source .")
-        assert f"Sources from http://localhost:{http_server.port}/myfile.txt found in remote backup" in client.out
+        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
         client.run("source .")
-        assert f"Source http://localhost:{http_server.port}/myfile.txt retrieved from local download cache" in client.out
+        assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
+
+
+def test_download_sources_multiurl():
+    client = TestClient(default_server_user=True)
+    download_cache_folder = temp_folder()
+    http_server = StoppableThreadBottle()
+    http_server_base_folder_internet = temp_folder()
+    http_server_base_folder_backup1 = temp_folder()
+    http_server_base_folder_backup2 = temp_folder()
+
+    save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+    sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+
+    @http_server.server.get("/internet/<file>")
+    def get_internet_file(file):
+        return static_file(file, http_server_base_folder_internet)
+
+    @http_server.server.get("/downloader1/<file>")
+    def get_file(file):
+        return static_file(file, http_server_base_folder_backup1)
+
+    @http_server.server.get("/downloader2/<file>")
+    def get_file(file):
+        return static_file(file, http_server_base_folder_backup2)
+
+    # Uploader and backup2 are the same
+    @http_server.server.put("/uploader/<file>")
+    def put_file(file):
+        dest = os.path.join(http_server_base_folder_backup2, file)
+        with open(dest, 'wb') as f:
+            f.write(request.body.read())
+
+    http_server.run_server()
+
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import download
+        class Pkg2(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def source(self):
+                download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
+                         sha256="{sha256}")
+        """)
+
+    client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+                                f"tools.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
+                                f"tools.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', 'http://localhost:{http_server.port}/downloader2/']"},
+                path=client.cache.cache_folder)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.run("upload * -c -r=default")
+    # We upload files to second backup,
+    # to ensure that the first one gets skipped in the list but finds in the second one
+    server_contents = os.listdir(http_server_base_folder_backup2)
+    assert sha256 in server_contents
+    assert sha256 + ".json" in server_contents
+
+    rmdir(download_cache_folder)
+    # Remove the "remote" myfile.txt so if it raises
+    # we know it tried to download the original source
+    os.remove(os.path.join(http_server_base_folder_internet, "myfile.txt"))
+
+    client.run("source .")
+    assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+
+    # And if the first one has them, prefer it before others in the list
+    copytree(http_server_base_folder_backup2, http_server_base_folder_backup1, dirs_exist_ok=True)
+    rmdir(download_cache_folder)
+    client.run("source .")
+    assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader1/" in client.out
