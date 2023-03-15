@@ -81,6 +81,7 @@ class LocalAPI:
         folder = conanfile.recipe_folder
         conanfile.folders.set_base_source(folder)
         conanfile.folders.set_base_export_sources(folder)
+        conanfile.folders.set_base_recipe_metadata(os.path.join(folder, "metadata"))
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
@@ -92,6 +93,7 @@ class LocalAPI:
         """
         app = ConanApp(self._conan_api.cache_folder)
         conanfile.folders.set_base_package(conanfile.folders.base_build)
+        conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
         run_build_method(conanfile, app.hook_manager)
 
     @staticmethod

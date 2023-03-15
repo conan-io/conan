@@ -50,6 +50,9 @@ class RecipeLayout(LayoutBase):
     def export_sources(self):
         return os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
 
+    def metadata(self):
+        return os.path.join(self.download_export(), "metadata")
+
     def download_export(self):
         return os.path.join(self.base_folder, DOWNLOAD_EXPORT_FOLDER)
 
@@ -111,6 +114,9 @@ class PackageLayout(LayoutBase):
 
     def download_package(self):
         return os.path.join(self.base_folder, DOWNLOAD_EXPORT_FOLDER)
+
+    def metadata(self):
+        return os.path.join(self.download_package(), "metadata")
 
     def package_manifests(self):
         package_folder = self.package()

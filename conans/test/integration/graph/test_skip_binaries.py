@@ -1,5 +1,3 @@
-import re
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -82,3 +80,15 @@ def test_test_requires():
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     client.run("create . --name=app --version=1.0")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
+
+
+def test_build_scripts_no_skip():
+    c = TestClient()
+    c.save({"scripts/conanfile.py": GenConanfile("script", "0.1").with_package_type("build-scripts"),
+            "app/conanfile.py": GenConanfile().with_tool_requires("script/0.1")})
+    c.run("create scripts")
+    c.assert_listed_binary({"script/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")},
+                           build=True)
+    c.run("install app")
+    c.assert_listed_binary({"script/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
+                           build=True)

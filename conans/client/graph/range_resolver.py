@@ -12,6 +12,7 @@ class RangeResolver:
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
+        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
 
     def resolve(self, require, base_conanref, remotes, update):
         version_range = require.version_range
@@ -55,7 +56,7 @@ class RangeResolver:
                            and ref.channel == search_ref.channel]
             self._cached_cache[pattern] = local_found
         if local_found:
-            return self._resolve_version(version_range, local_found)
+            return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
         pattern = str(search_ref)
@@ -73,18 +74,20 @@ class RangeResolver:
         update_candidates = []
         for remote in remotes:
             remote_results = self._search_remote_recipes(remote, search_ref)
-            resolved_version = self._resolve_version(version_range, remote_results)
+            resolved_version = self._resolve_version(version_range, remote_results,
+                                                     self._resolve_prereleases)
             if resolved_version:
                 if not update:
-                    return resolved_version  # Return first valid occurence in first remote
+                    return resolved_version  # Return first valid occurrence in first remote
                 else:
                     update_candidates.append(resolved_version)
         if len(update_candidates) > 0:  # pick latest from already resolved candidates
-            resolved_version = self._resolve_version(version_range, update_candidates)
+            resolved_version = self._resolve_version(version_range, update_candidates,
+                                                     self._resolve_prereleases)
             return resolved_version
 
     @staticmethod
-    def _resolve_version(version_range, refs_found):
+    def _resolve_version(version_range, refs_found, resolve_prereleases):
         for ref in reversed(sorted(refs_found)):
-            if ref.version in version_range:
+            if version_range.contains(ref.version, resolve_prereleases):
                 return ref

@@ -59,6 +59,11 @@ class RemoteManager(object):
         # filter metadata files
         # This could be also optimized in the download, avoiding downloading them, for performance
         zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
+        # quick server package integrity check:
+        if "conanfile.py" not in zipped_files:
+            raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: no conanfile.py")
+        if "conanmanifest.txt" not in zipped_files:
+            raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: no conanmanifest.txt")
         self._signer.verify(ref, download_export)
         export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
@@ -104,13 +109,15 @@ class RemoteManager(object):
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
+            # quick server package integrity check:
+            for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
+                if f not in zipped_files:
+                    raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
             self._signer.verify(pref, download_pkg_folder)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
-            if tgz_file:  # This must happen always, but just in case
-                # TODO: The output could be changed to the package one, but
-                uncompress_file(tgz_file, package_folder)
+            uncompress_file(tgz_file, package_folder)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))

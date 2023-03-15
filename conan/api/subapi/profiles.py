@@ -55,6 +55,7 @@ class ProfilesAPI:
             or local, depending on the "cwd"
         """
         loader = ProfileLoader(self._cache)
+        cwd = cwd or os.getcwd()
         profile_path = loader.get_profile_path(profile, cwd, exists=exists)
         return profile_path
 
