@@ -28,8 +28,7 @@ class URLCredentials:
         self._urls = {}
         if not cache_folder:
             return
-        # TODO: Make it a jinja template so env-vars can be used too
-        creds_path = os.path.join(cache_folder, "creds.json")
+        creds_path = os.path.join(cache_folder, "source_credentials.json")
         if not os.path.exists(creds_path):
             return
         template = Template(load(creds_path))

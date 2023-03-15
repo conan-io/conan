@@ -51,19 +51,19 @@ def test_source_download_password():
             """)
     c.save({"conanfile.py": conanfile})
     content = {f"http://localhost:{http_server.port}": {"token": "mytoken"}}
-    save(os.path.join(c.cache_folder, "creds.json"), json.dumps(content))
+    save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .")
     assert "Content: hello world!" in c.out
     content = {f"http://localhost:{http_server.port}": {
         "auth": {"user": "myuser", "password": "mypassword"}}
     }
-    save(os.path.join(c.cache_folder, "creds.json"), json.dumps(content))
+    save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .")
     assert "Content: hello world!" in c.out
 
     content = {f"http://localhost:{http_server.port}": {"token": "{{mytk}}"}}
     content = "{% set mytk = 'mytoken' %}\n" + json.dumps(content)
-    save(os.path.join(c.cache_folder, "creds.json"), content)
+    save(os.path.join(c.cache_folder, "source_credentials.json"), content)
     c.run("source .")
     assert "Content: hello world!" in c.out
 
@@ -73,6 +73,6 @@ def test_source_download_password():
                     {"auth": {}},
                     {"auth": {"user": "other", "password": "pass"}}]:
         content = {f"http://localhost:{http_server.port}": invalid}
-        save(os.path.join(c.cache_folder, "creds.json"), json.dumps(content))
+        save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
         c.run("source .", assert_error=True)
         assert "Authentication" in c.out
