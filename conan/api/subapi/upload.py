@@ -60,7 +60,7 @@ class UploadAPI:
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
         uploader = FileUploader(app.requester, verify=False, config=config)
-        # TODO: Dedup and list files
+        # TODO: List files
         for file in files:
             # Check Artifactory's HEAD
             basename = os.path.basename(file)
