@@ -261,6 +261,9 @@ class AndroidSystemBlock(Block):
         set(ANDROID_STL {{ android_stl }})
         {% endif %}
         set(ANDROID_ABI {{ android_abi }})
+        {% if android_define_legacy_toolchain_flag %}
+        set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE {{ android_use_legacy_toolchain_file }})
+        {% endif %}
         include({{ android_ndk_path }}/build/cmake/android.toolchain.cmake)
         """)
 
@@ -278,11 +281,16 @@ class AndroidSystemBlock(Block):
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
+        use_cmake_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain")
+        legacy_toolchain_flag_defined = use_cmake_legacy_toolchain is not None
+
         ctxt_toolchain = {
             'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
             'android_abi': android_abi(self._conanfile),
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
+            'android_define_legacy_toolchain_flag': legacy_toolchain_flag_defined,
+            'android_use_legacy_toolchain_file': "ON" if use_cmake_legacy_toolchain else "OFF",
         }
         return ctxt_toolchain
 
@@ -564,6 +572,14 @@ class ExtraFlagsBlock(Block):
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+        
+        # See https://github.com/conan-io/conan/issues/13374
+        android_ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
+        android_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain")
+        if android_ndk_path and (cxxflags or cflags) and android_legacy_toolchain is not False:
+            self._conanfile.output.warning("tools.build:cxxflags or cflags are defined, but Android NDK toolchain may be overriding "
+                                            "the values. Consider setting tools.android:cmake_legacy_toolchain to False.")
+
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,

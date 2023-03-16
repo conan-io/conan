@@ -579,6 +579,51 @@ def test_android_c_library():
     assert "include(/foo/build/cmake/android.toolchain.cmake)" in conan_toolchain
     client.run("create . --name=foo --version=1.0 " + settings)
 
+@pytest.mark.parametrize("cmake_legacy_toolchain", [True, False, None])
+def test_android_legacy_toolchain_flag(cmake_legacy_toolchain):
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile})
+    settings = "-s arch=x86_64 -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo"
+    if cmake_legacy_toolchain is not None:
+        settings += f" -c tools.android:cmake_legacy_toolchain={cmake_legacy_toolchain}"
+        expected = "ON" if cmake_legacy_toolchain else "OFF"
+    client.run("install . " + settings)
+    conan_toolchain = client.load(os.path.join(client.current_folder, "conan_toolchain.cmake"))
+    if cmake_legacy_toolchain is not None:
+        assert f"set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE {expected})" in conan_toolchain
+    else:
+        assert "ANDROID_USE_LEGACY_TOOLCHAIN_FILE" not in conan_toolchain
+
+
+@pytest.mark.parametrize("cmake_legacy_toolchain", [True, False, None])
+def test_android_legacy_toolchain_with_compileflags(cmake_legacy_toolchain):
+    # https://github.com/conan-io/conan/issues/13374
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch")\
+        .with_generator("CMakeToolchain")
+    profile = textwrap.dedent("""
+    [settings]
+    os=Android
+    os.api_level=23
+    arch=armv8
+
+    [conf]
+    tools.android:ndk_path=/foo
+    tools.build:cflags=["-foobar"]
+    tools.build:cxxflags=["-barfoo"]
+    """)
+    if cmake_legacy_toolchain is not None:
+        profile += f"\ntools.android:cmake_legacy_toolchain={cmake_legacy_toolchain}"
+
+    client.save({"conanfile.py": conanfile, "profile_host": profile})
+    client.run("install . -pr profile_host")
+    warning_text = "Consider setting tools.android:cmake_legacy_toolchain to False"
+    if cmake_legacy_toolchain is not False:
+        assert warning_text in client.out
+    else:
+        assert warning_text not in client.out
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_presets_paths_normalization():
