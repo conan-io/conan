@@ -41,7 +41,7 @@ class ConanApp(object):
 
         self.hook_manager = HookManager(self.cache.hooks_path)
         # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(self.cache.new_config)
+        self.requester = ConanRequester(self.cache.new_config, cache_folder)
         # To handle remote connections
         rest_client_factory = RestApiClientFactory(self.requester, self.cache.new_config)
         # Wraps RestApiClient to add authentication support (same interface)
