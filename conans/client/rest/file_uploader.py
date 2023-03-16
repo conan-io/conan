@@ -47,7 +47,7 @@ class FileUploader(object):
         if response.status_code == 201:  # Artifactory returns 201 if the file is there
             return response
 
-    def exist(self, url, auth):
+    def exists(self, url, auth):
         response = self._requester.head(url, verify=self._verify_ssl, auth=auth)
         return response
 
