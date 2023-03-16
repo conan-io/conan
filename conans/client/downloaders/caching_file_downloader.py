@@ -48,7 +48,8 @@ class CachingFileDownloader:
                 thread_lock.release()
 
     def _try_download_from_backup(self, url, conanfile, h, cached_path, sha256, **kwargs):
-        download_urls = conanfile.conf.get("tools.backup_sources:download_urls")
+        global_conf = conanfile._conan_helpers.global_conf
+        download_urls = global_conf.get("core.backup_sources:download_urls")
         if not download_urls:
             return False
         found_in_backup = False
@@ -68,8 +69,8 @@ class CachingFileDownloader:
                 raise ConanException(f"The source backup server '{download_url}' need authentication"
                                      f"/permissions, please provide 'source_credentials.json': {e}")
         if not found_in_backup:
-            policy = conanfile.conf.get("tools.backup_sources:cache_miss_policy", check_type=str,
-                                        default="ignore")
+            policy = global_conf.get("core.backup_sources:cache_miss_policy", check_type=str,
+                                     default="ignore")
             # TODO: Think about what is the best default
             message = f"Sources from {url} not found in remote backup sources server(s)"
             if policy == "error":
@@ -81,7 +82,7 @@ class CachingFileDownloader:
                 pass
             else:
                 raise ConanException("Backup sources cache missed but "
-                                     "'tools.backup_sources:cache_miss_policy' "
+                                     "'core.backup_sources:cache_miss_policy' "
                                      f"has an unknown value of '{policy}'")
         return found_in_backup
 
