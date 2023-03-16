@@ -94,7 +94,7 @@ class TestDownloadCache:
 
         client = TestClient()
         tmp_folder = temp_folder()
-        client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}"},
+        client.save({"global.conf": f"core.download:download_cache={tmp_folder}"},
                     path=client.cache.cache_folder)
         # badchecksums are not cached
         conanfile = textwrap.dedent("""
@@ -183,7 +183,7 @@ class TestDownloadCacheBackupSources:
                         custom_download):
             client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
-            client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}\n"
+            client.save({"global.conf": f"core.download:download_cache={tmp_folder}\n"
                                         "core.backup_sources:download_urls=['http://myback']"},
                         path=client.cache.cache_folder)
             sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
@@ -268,7 +268,7 @@ class TestDownloadCacheBackupSources:
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+        client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
                                     f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
@@ -343,7 +343,7 @@ class TestDownloadCacheBackupSources:
                     self.output.info(f"CONTENT: {{load(self, 'myfile.txt')}}")
             """)
 
-        client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+        client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
                                     f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
@@ -430,7 +430,7 @@ class TestDownloadCacheBackupSources:
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+        client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
                                     f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
                                     f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', 'http://localhost:{http_server.port}/downloader2/']"},
                     path=client.cache.cache_folder)
@@ -487,7 +487,7 @@ class TestDownloadCacheBackupSources:
                         download(self, "http://fake/myfile.txt", "myfile.txt", sha256="{sha256}")
                 """)
 
-            client.save({"global.conf": f"tools.files.download:download_cache={download_cache_folder}\n"
+            client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
                                         f"core.backup_sources:download_urls=['http://extrafake/']\n"
                                         f"core.backup_sources:cache_miss_policy={policy}"},
                         path=client.cache.cache_folder)
