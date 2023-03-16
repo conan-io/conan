@@ -395,25 +395,30 @@ class TestDownloadCacheBackupSources:
         http_server_base_folder_backup1 = temp_folder()
         http_server_base_folder_backup2 = temp_folder()
 
-        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        server_folders = {"internet": http_server_base_folder_internet,
+                          "backup1": http_server_base_folder_backup1,
+                          "backup2": http_server_base_folder_backup2,
+                          "upload": http_server_base_folder_backup2}
+
+        save(os.path.join(server_folders["internet"], "myfile.txt"), "Hello, world!")
         sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
 
         @http_server.server.get("/internet/<file>")
         def get_internet_file(file):
-            return static_file(file, http_server_base_folder_internet)
+            return static_file(file, server_folders["internet"])
 
         @http_server.server.get("/downloader1/<file>")
         def get_file(file):
-            return static_file(file, http_server_base_folder_backup1)
+            return static_file(file, server_folders["backup1"])
 
         @http_server.server.get("/downloader2/<file>")
         def get_file(file):
-            return static_file(file, http_server_base_folder_backup2)
+            return static_file(file, server_folders["backup2"])
 
         # Uploader and backup2 are the same
         @http_server.server.put("/uploader/<file>")
         def put_file(file):
-            dest = os.path.join(http_server_base_folder_backup2, file)
+            dest = os.path.join(server_folders["upload"], file)
             with open(dest, 'wb') as f:
                 f.write(request.body.read())
 
@@ -440,20 +445,20 @@ class TestDownloadCacheBackupSources:
         client.run("upload * -c -r=default")
         # We upload files to second backup,
         # to ensure that the first one gets skipped in the list but finds in the second one
-        server_contents = os.listdir(http_server_base_folder_backup2)
+        server_contents = os.listdir(server_folders["upload"])
         assert sha256 in server_contents
         assert sha256 + ".json" in server_contents
 
         rmdir(download_cache_folder)
         # Remove the "remote" myfile.txt so if it raises
         # we know it tried to download the original source
-        os.remove(os.path.join(http_server_base_folder_internet, "myfile.txt"))
+        os.remove(os.path.join(server_folders["internet"], "myfile.txt"))
 
         client.run("source .")
         assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
 
         # And if the first one has them, prefer it before others in the list
-        copytree(http_server_base_folder_backup2, http_server_base_folder_backup1, dirs_exist_ok=True)
+        server_folders["backup1"] = server_folders["backup2"]
         rmdir(download_cache_folder)
         client.run("source .")
         assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader1/" in client.out
