@@ -29,83 +29,47 @@ class CreateTest(unittest.TestCase):
         conandeps = client.load("conandeps.props")
         assert conandeps.find("pkgb") < conandeps.find("pkga")
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
         client.save({"conanfile.py": """from conan import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
     def configure(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
     def requirements(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
     def build(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
     def package(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
     def package_info(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
     def system_requirements(self):
         assert(self.version=="0.1")
-        assert(self.name=="Pkg")
+        assert(self.name=="pkg")
         self.output.info("Running system requirements!!")
 """})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
-        self.assertIn("Configuration (profile_host):[settings]",
-                      "".join(str(client.out).splitlines()))
+        self.assertIn("Profile host:\n[settings]", client.out)
         self.assertIn("pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Running system requirements!!", client.out)
-        client.run("search")
+        client.run('list -c *')
         self.assertIn("pkg/0.1@lasote/testing", client.out)
 
         # Create with only user will raise an error because of no name/version
-        client.run("create conanfile.py --use=lasote --channel=testing", assert_error=True)
+        client.run("create conanfile.py --user=lasote --channel=testing", assert_error=True)
         self.assertIn("ERROR: conanfile didn't specify name", client.out)
-        # Same with only user, (default testing)
-        client.run("create . --user=lasote")
+        # Create with user but no channel should be valid
+        client.run("create . --name=pkg --version=0.1 --user=lasote")
         assert "pkg/0.1@lasote:" in client.out
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_create_name_command_line(self):
-        client = TestClient()
-        client.save({"conanfile.py": """from conan import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    def source(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-    def configure(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-    def requirements(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-    def build(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-    def package(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-    def package_info(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-    def system_requirements(self):
-        assert(self.version=="0.1")
-        assert(self.name=="Pkg")
-        self.output.info("Running system requirements!!")
-"""})
-        client.run("create . 0.1@lasote/testing")
-        self.assertIn("pkg/0.1@lasote/testing: Generating the package", client.out)
-        self.assertIn("Running system requirements!!", client.out)
-        client.run("search")
-        self.assertIn("pkg/0.1@lasote/testing", client.out)
 
     def test_error_create_name_version(self):
         client = TestClient()
@@ -116,36 +80,33 @@ class MyPkg(ConanFile):
         client.run("create . --version=1.1", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
         client.run("create . --user=lasote --channel=channel")
         self.assertIn("pkg/0.1@lasote/channel: Generating the package", client.out)
-        client.run("search")
+        client.run("list * -c")
         self.assertIn("pkg/0.1@lasote/channel", client.out)
+        
+        # test default without user and channel
+        client.run("create . ")
+        self.assertIn("pkg/0.1: Generating the package", client.out)
 
-        client.run("create . lasote", assert_error=True)  # testing default
-        self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
-                      client.out)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder(self):
         client = TestClient()
         client.save({"subfolder/conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("create subfolder lasote/channel")
+        client.run("create subfolder --user=lasote --channel=channel")
         self.assertIn("pkg/0.1@lasote/channel: Generating the package", client.out)
-        client.run("search")
+        client.run("list * -c")
         self.assertIn("pkg/0.1@lasote/channel", client.out)
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder_with_different_name(self):
         # Now with a different name
         client = TestClient()
         client.save({"subfolder/Custom.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("create subfolder/Custom.py lasote/channel")
+        client.run("create subfolder/Custom.py --user=lasote --channel=channel")
         self.assertIn("pkg/0.1@lasote/channel: Generating the package", client.out)
-        client.run("search")
+        client.run("list * -c")
         self.assertIn("pkg/0.1@lasote/channel", client.out)
 
     def test_create_test_package(self):
@@ -329,8 +290,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("/_", conaninfo)
         self.assertIn("[requires]\nhello/0.1\n", conaninfo)
 
-    @pytest.mark.xfail(reason="--json output has been disabled")
-    def test_compoents_json_output(self):
+    def test_components_json_output(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -346,15 +306,13 @@ class MyPkg(ConanFile):
                     self.cpp_info.components["pkg2"].requires = ["pkg1"]
             """)
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create . --json jsonfile.json")
-        path = os.path.join(self.client.current_folder, "jsonfile.json")
-        content = self.client.load(path)
-        data = json.loads(content)
-        cpp_info_data = data["installed"][0]["packages"][0]["cpp_info"]
-        self.assertIn("libpkg1", cpp_info_data["components"]["pkg1"]["libs"])
-        self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
-        self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
-        self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])
+        self.client.run("create . --format=json")
+        data = json.loads(self.client.stdout)
+        cpp_info_data = data["graph"]["nodes"][1]["cpp_info"]
+        self.assertIn("libpkg1", cpp_info_data["pkg1"]["libs"])
+        self.assertListEqual([], cpp_info_data["pkg1"]["requires"])
+        self.assertIn("libpkg2", cpp_info_data["pkg2"]["libs"])
+        self.assertListEqual(["pkg1"], cpp_info_data["pkg2"]["requires"])
 
 
 def test_lockfile_input_not_specified():

@@ -1,14 +1,13 @@
 import pytest
 from mock import mock
-from mock.mock import Mock
 
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
-from conan.tools.build import save_toolchain_args
 from conans.model.conan_file import ConanFile
 from conans.model.conf import Conf
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
 
 
 @pytest.fixture(scope="module")

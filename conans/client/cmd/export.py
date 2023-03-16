@@ -39,6 +39,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     # TODO: cache2.0 move this creation to other place
     mkdir(export_folder)
     mkdir(export_src_folder)
+    conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
     export_recipe(conanfile, export_folder)
     export_source(conanfile, export_src_folder)
     shutil.copy2(conanfile_path, recipe_layout.conanfile())

@@ -120,21 +120,28 @@ class ConanFile:
 
     def serialize(self):
         result = {}
+
         for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
-                  "revision_mode", "provides", "deprecated", "win_bash"):
+                  "upload_policy",
+                  "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run"):
             v = getattr(self, a)
             if v is not None:
                 result[a] = v
+
         result["package_type"] = str(self.package_type)
         result["settings"] = self.settings.serialize()
+        result["options"] = self.options.serialize()
+
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result["system_requires"] = self.system_requires
-        result["options"] = self.options.serialize()
+
         result["recipe_folder"] = self.recipe_folder
         result["source_folder"] = self.source_folder
         result["build_folder"] = self.build_folder
+        result["generators_folder"] = self.generators_folder
         result["package_folder"] = self.package_folder
+
         result["cpp_info"] = self.cpp_info.serialize()
         result["label"] = self.display_name
         return result
@@ -251,6 +258,14 @@ class ConanFile:
         :return: A string with the path to the build folder.
         """
         return self.folders.build_folder
+
+    @property
+    def recipe_metadata_folder(self):
+        return self.folders.recipe_metadata_folder
+
+    @property
+    def pkg_metadata_folder(self):
+        return self.folders.pkg_metadata_folder
 
     @property
     def build_path(self) -> Path:

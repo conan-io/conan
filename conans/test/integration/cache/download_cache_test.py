@@ -1,12 +1,14 @@
+import json
 import os
 import textwrap
+from unittest import mock
 
 from bottle import static_file, request
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import save, set_dirty
+from conans.util.files import save, set_dirty, load
 
 
 class TestDownloadCache:
@@ -129,7 +131,8 @@ class TestDownloadCache:
 
         # 2 files cached, plus "locks" folder = 3
         # "locks" folder + 2 files cached + .dirty file from previous failure
-        assert 4 == len(os.listdir(tmp_folder))
+        assert 2 == len(os.listdir(tmp_folder))
+        assert 3 == len(os.listdir(os.path.join(tmp_folder, "c")))
 
         # remove remote file
         os.remove(file_path)
@@ -164,3 +167,57 @@ class TestDownloadCache:
                path=c.cache.cache_folder)
         c.run("install --requires=mypkg/0.1@user/testing", assert_error=True)
         assert 'core.download:download_cache must be an absolute path' in c.out
+
+    def test_users_download_cache_summary(self):
+        def custom_download(this, url, filepath, **kwargs):
+            print("Downloading file")
+            save(filepath, f"Hello, world!")
+
+        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download", custom_download):
+            client = TestClient()
+            tmp_folder = temp_folder()
+            client.save({"global.conf": f"tools.files.download:download_cache={tmp_folder}"},
+                        path=client.cache.cache_folder)
+            sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
+            conanfile = textwrap.dedent(f"""
+                from conan import ConanFile
+                from conan.tools.files import download
+                class Pkg(ConanFile):
+                   def source(self):
+                       download(self, "http://localhost:5000/myfile.txt", "myfile.txt",
+                                sha256="{sha256}")
+                """)
+            client.save({"conanfile.py": conanfile})
+            client.run("source .")
+
+            assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
+            content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
+            assert "http://localhost:5000/myfile.txt" in content["unknown"]
+            assert len(content["unknown"]) == 1
+
+            conanfile = textwrap.dedent(f"""
+                from conan import ConanFile
+                from conan.tools.files import download
+                class Pkg2(ConanFile):
+                    name = "pkg"
+                    version = "1.0"
+                    def source(self):
+                        download(self, "http://localhost.mirror:5000/myfile.txt", "myfile.txt",
+                                 sha256="{sha256}")
+                """)
+            client.save({"conanfile.py": conanfile})
+            client.run("source .")
+
+            assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
+            content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
+            assert "http://localhost.mirror:5000/myfile.txt" in content["unknown"]
+            assert "http://localhost:5000/myfile.txt" in content["unknown"]
+            assert len(content["unknown"]) == 2
+
+            # Ensure the cache is working and we didn't break anything by modifying the summary
+            client.run("source .")
+            assert "Downloading file" not in client.out
+
+            client.run("create . --format=json")
+            content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
+            assert content["pkg/1.0#" + client.exported_recipe_revision()] == ["http://localhost.mirror:5000/myfile.txt"]

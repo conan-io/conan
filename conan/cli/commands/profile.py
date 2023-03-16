@@ -43,7 +43,6 @@ def profile_path(conan_api, parser, subparser, *args):
     """
     Show profile path location.
     """
-    add_profiles_args(subparser)
     subparser.add_argument("name", help="Profile name")
     args = parser.parse_args(*args)
     return conan_api.profiles.get_path(args.name)

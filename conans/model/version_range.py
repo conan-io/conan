@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional
 
 from conans.errors import ConanException
 from conans.model.recipe_ref import Version
@@ -56,9 +57,14 @@ class _ConditionSet:
         else:
             return [_Condition(operator, Version(version))]
 
-    def valid(self, version):
+    def _valid(self, version, conf_resolve_prepreleases):
         if version.pre:
-            if not self.prerelease:
+            # Follow the expression desires only if core.version_ranges:resolve_prereleases is None,
+            # else force to the conf's value
+            if conf_resolve_prepreleases is None:
+                if not self.prerelease:
+                    return False
+            elif conf_resolve_prepreleases is False:
                 return False
         for condition in self.conditions:
             if condition.operator == ">":
@@ -83,7 +89,7 @@ class VersionRange:
     def __init__(self, expression):
         self._expression = expression
         tokens = expression.split(",")
-        prereleases = None
+        prereleases = False
         for t in tokens[1:]:
             if "include_prerelease" in t:
                 prereleases = True
@@ -96,9 +102,19 @@ class VersionRange:
     def __str__(self):
         return self._expression
 
-    def __contains__(self, version):
+    def contains(self, version: Version, resolve_prerelease: Optional[bool]):
+        """
+        Whether <version> is inside the version range
+
+        :param version: Version to check against
+        :param resolve_prerelease: If ``True``, ensure prereleases can be resolved in this range
+        If ``False``, prerelases can NOT be resolved in this range
+        If ``None``, prereleases are resolved only if this version range expression says so
+        :return: Whether the version is inside the range
+        """
         assert isinstance(version, Version), type(version)
         for condition_set in self.condition_sets:
-            if condition_set.valid(version):
+            if condition_set._valid(version, resolve_prerelease):
                 return True
         return False
+

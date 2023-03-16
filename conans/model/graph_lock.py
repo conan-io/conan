@@ -201,12 +201,12 @@ class Lockfile(object):
             result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
         return result
 
-    def resolve_locked(self, node, require):
+    def resolve_locked(self, node, require, resolve_prereleases):
         if require.build or node.context == CONTEXT_BUILD:
             locked_refs = self._build_requires.refs()
         else:
             locked_refs = self._requires.refs()
-        self._resolve(require, locked_refs)
+        self._resolve(require, locked_refs, resolve_prereleases)
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:
@@ -216,14 +216,14 @@ class Lockfile(object):
         if prevs:
             return prevs.get(node.package_id)
 
-    def _resolve(self, require, locked_refs):
+    def _resolve(self, require, locked_refs, resolve_prereleases):
         version_range = require.version_range
         ref = require.ref
         matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                    r.channel == ref.channel]
         if version_range:
             for m in matches:
-                if m.version in version_range:
+                if version_range.contains(m.version, resolve_prereleases):
                     require.ref = m
                     break
             else:
@@ -250,6 +250,6 @@ class Lockfile(object):
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
-    def resolve_locked_pyrequires(self, require):
+    def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE
-        self._resolve(require, locked_refs)
+        self._resolve(require, locked_refs, resolve_prereleases)

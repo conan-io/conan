@@ -322,8 +322,9 @@ class _TargetDataContext(object):
             # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
             #                      NOT REALLY LINKING LIB
             self.libs = ""
-            self.system_libs = ""
-            self.frameworks = ""
+            if cpp_info.frameworkdirs:  # Only invalidate for in-package frameworks
+                # FIXME: The mix of in-package frameworks + system ones is broken
+                self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""
