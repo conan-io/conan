@@ -66,7 +66,7 @@ class CachingFileDownloader:
                 # TODO: What happens if sha256 missmatch?
                 pass
             except (AuthenticationException, ForbiddenException) as e:
-                raise ConanException(f"The source backup server '{download_url}' need authentication"
+                raise ConanException(f"The source backup server '{download_url}' needs authentication"
                                      f"/permissions, please provide 'source_credentials.json': {e}")
         if not found_in_backup:
             policy = global_conf.get("core.backup_sources:cache_miss_policy", check_type=str,
