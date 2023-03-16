@@ -68,7 +68,7 @@ class UploadAPI:
             full_url = url + basename
             try:
                 upload = file.endswith(".json")
-                upload = upload or not uploader.exist(full_url, auth=None)
+                upload = upload or not uploader.exists(full_url, auth=None)
                 if upload:
                     ConanOutput().info(f"Uploading file '{basename}' to server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
