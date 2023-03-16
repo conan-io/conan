@@ -40,7 +40,7 @@ def load_version():
 
 def generate_long_description_file():
     this_directory = path.abspath(path.dirname(__file__))
-    with open(path.join(this_directory, 'README.rst')) as f:
+    with open(path.join(this_directory, 'README.md')) as f:
         long_description = f.read()
     return long_description
 
@@ -61,7 +61,7 @@ setup(
 
     description='Conan C/C++ package manager',
     long_description=generate_long_description_file(),
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
 
     # The project's main homepage.
     url='https://conan.io',
