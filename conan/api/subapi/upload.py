@@ -6,7 +6,7 @@ from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, Upload
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.client.rest.file_uploader import FileUploader
-from conans.errors import ConanException
+from conans.errors import ConanException, AuthenticationException, ForbiddenException
 
 
 class UploadAPI:
@@ -62,14 +62,17 @@ class UploadAPI:
         uploader = FileUploader(app.requester, verify=False, config=config)
         # TODO: Dedup and list files
         for file in files:
-            # TODO: Skip uploading files that are already present in the remote.
             # Check Artifactory's HEAD
             basename = os.path.basename(file)
             full_url = url + basename
-            exist = uploader.exist(full_url, auth=None)
-            if not exist:
-                ConanOutput().info(f"Uploading file '{basename} to server")
-                uploader.upload(full_url, file, dedup=False, auth=None)
-            else:
-                ConanOutput().info(f"File '{basename} already in server, skipping upload")
+            try:
+                exist = uploader.exist(full_url, auth=None)
+                if not exist:
+                    ConanOutput().info(f"Uploading file '{basename}' to server")
+                    uploader.upload(full_url, file, dedup=False, auth=None)
+                else:
+                    ConanOutput().info(f"File '{basename}' already in server, skipping upload")
+            except (AuthenticationException, ForbiddenException) as e:
+                raise ConanException(f"The source backup server '{url}' need authentication"
+                                     f"/permissions, please provide 'source_credentials.json': {e}")
         return files
