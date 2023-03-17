@@ -120,7 +120,9 @@ def list(conan_api: ConanAPI, parser, *args):
             results[name] = {"error": str(e)}
         else:
             results[name] = list_bundle.serialize()
+
     return {
         "results": results,
-        "conan_api": conan_api
+        "conan_api": conan_api,
+        "cli_args": " ".join([f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg)])
     }
