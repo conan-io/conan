@@ -93,7 +93,8 @@ class BaseConanCommand:
             raise ConanException("{} is not a known format. Supported formatters are: {}".format(
                 formatarg, ", ".join(self._help_formatters)))
 
-        info["cli_args"] = " ".join([f"{arg}={getattr(parser_args, arg)}" for arg in vars(parser_args) if getattr(parser_args, arg)])
+        if info is not None:
+            info["cli_args"] = " ".join([f"{arg}={getattr(parser_args, arg)}" for arg in vars(parser_args) if getattr(parser_args, arg)])
         formatter(info)
 
 
