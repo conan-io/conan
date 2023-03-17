@@ -54,6 +54,7 @@ class UploadAPI:
             return
         url = url if url.endswith("/") else url + "/"
         download_cache_path = config.get("tools.files.download:download_cache")
+        download_cache_path = download_cache_path or config.get("core.backup_sources:download_cache")
         download_cache_path = download_cache_path or config.get("core.download:download_cache")
         if download_cache_path is None:
             raise ConanException("Need to define 'core.download:download_cache'")

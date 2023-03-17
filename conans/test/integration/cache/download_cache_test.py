@@ -1,7 +1,6 @@
 import json
 import os
 import textwrap
-from shutil import copytree
 from unittest import mock
 
 import pytest
@@ -183,7 +182,7 @@ class TestDownloadCacheBackupSources:
                         custom_download):
             client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
-            client.save({"global.conf": f"core.download:download_cache={tmp_folder}\n"
+            client.save({"global.conf": f"core.backup_sources:download_cache={tmp_folder}\n"
                                         "core.backup_sources:download_urls=['http://myback']"},
                         path=client.cache.cache_folder)
             sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
@@ -268,7 +267,7 @@ class TestDownloadCacheBackupSources:
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
+        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
                                     f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
@@ -294,6 +293,46 @@ class TestDownloadCacheBackupSources:
         assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
         client.run("source .")
         assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
+
+    def test_sources_backup_server_error_500(self):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+        http_server = StoppableThreadBottle()
+        http_server_base_folder_backups = temp_folder()
+        http_server_base_folder_internet = temp_folder()
+
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        @http_server.server.get("/internet/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
+
+        @http_server.server.get("/downloader/<file>")
+        def get_file(file):
+            return HTTPError(500, "The server has crashed :( :( :(")
+
+        http_server.run_server()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "1.0"
+               def source(self):
+                   download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
+                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/', "
+                                    f"'http://localhost:{http_server.port}/downloader2/']\n"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .", assert_error=True)
+        assert "ConanException: Error 500 downloading file" in client.out
 
     def test_upload_sources_backup_creds_needed(self):
         client = TestClient(default_server_user=True)
@@ -343,7 +382,7 @@ class TestDownloadCacheBackupSources:
                     self.output.info(f"CONTENT: {{load(self, 'myfile.txt')}}")
             """)
 
-        client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
+        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
                                     f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
@@ -435,7 +474,7 @@ class TestDownloadCacheBackupSources:
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
+        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
                                     f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
                                     f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', 'http://localhost:{http_server.port}/downloader2/']"},
                     path=client.cache.cache_folder)
@@ -492,7 +531,7 @@ class TestDownloadCacheBackupSources:
                         download(self, "http://fake/myfile.txt", "myfile.txt", sha256="{sha256}")
                 """)
 
-            client.save({"global.conf": f"core.download:download_cache={download_cache_folder}\n"
+            client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
                                         f"core.backup_sources:download_urls=['http://extrafake/']\n"
                                         f"core.backup_sources:cache_miss_policy={policy}"},
                         path=client.cache.cache_folder)

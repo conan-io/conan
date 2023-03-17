@@ -22,6 +22,11 @@ BUILT_IN_CONFS = {
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
+    # Sources backup
+    "core.backup_sources:download_cache": "Folder to store the sources backup",
+    "core.backup_sources:cache_miss_policy": "Backup sources download miss policy. Valid values are 'ignore', 'warn' and 'error'",
+    "core.backup_sources:download_urls": "List of URLs to download backup sources from",
+    "core.backup_sources:upload_url": "Remote URL to upload backup sources to",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
@@ -40,9 +45,6 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
-    "core.backup_sources:cache_miss_policy": "Backup sources download miss policy. Valid values are 'ignore', 'warn' and 'error'",
-    "core.backup_sources:download_urls": "List of URLs to download backup sources from",
-    "core.backup_sources:upload_url": "Remote URL to upload backup sources to",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
