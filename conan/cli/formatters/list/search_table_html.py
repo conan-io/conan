@@ -281,7 +281,7 @@ list_packages_html_template = r"""
 <body>
     <nav class="navbar navbar-expand-lg bg-light">
         <div class="container-fluid">
-            <a class="navbar-brand">conan list results</a>
+            <a class="navbar-brand">conan list: {{ cli_args }}</a>
         </div>
     </nav>
 
