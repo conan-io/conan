@@ -29,7 +29,7 @@ list_packages_html_template = r"""
     <script>
         var list_results = {{ results| safe }};
 
-        function getRefLink(origin, ref) {
+        function replaceChars(origin, ref) {
             return origin + "_" + ref.replaceAll(".", "_").replaceAll("/", "_").replaceAll("#", "_").replaceAll("@", "_").replaceAll(":", "_").replaceAll(" ", "_")
         }
 
@@ -53,39 +53,144 @@ list_packages_html_template = r"""
             return new Date(timeStamp * 1000).toLocaleDateString('en', options);
         }
 
-        function getInfoFieldsBadges(property, info) {
+        function getInfoFieldsBadges(info) {
             let style = '';
             let badges = '';
-            if (property in info) {
-                for (const [key, value] of Object.entries(info[property])) {
-                    style = (key == 'os') ? 'text-bg-info' : 'text-bg-secondary';
-                    badges += `<span class="badge ${style}">${key}: ${value}</span>&nbsp;`
+            for (property of ["settings", "options"]) {
+                if (property in info) {
+                    for (const [key, value] of Object.entries(info[property])) {
+                        style = (key == 'os') ? 'text-bg-info' : 'text-bg-secondary';
+                        badges += `<span class="badge ${style}">${key}: ${value}</span>&nbsp;`
+                    }
                 }
             }
             return badges;
         }
 
+        function isSubset(setA, setB) {
+            for (let elem of setA) {
+                if (!setB.has(elem)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function isFiltered(info, filters) {
+            if (filters.length == 0) {
+                return false;
+            }
+            packageProperties = [];
+            for (property of ["settings", "options"]) {
+                if (property in info) {
+                    for (const [key, value] of Object.entries(info[property])) {
+                        packageProperties.push(`${key}=${value}`);
+                    }
+                }
+            }
+            packageSet = new Set(packageProperties);
+            filtersSet = new Set(filters);
+            if (isSubset(filtersSet, packageSet)) {
+                return false;
+            }
+            return true;
+        }
+
+        function getUniqueSettingsOptions(revInfo) {
+            let options = new Set();
+            let settings = new Set();
+            for (const [package, packageInfo] of Object.entries(revInfo["packages"])) {
+                for (const [key, value] of Object.entries(packageInfo["info"]["options"])) {
+                    options.add(`${key}=${value}`)
+                }
+                for (const [key, value] of Object.entries(packageInfo["info"]["settings"])) {
+                    settings.add(`${key}=${value}`)
+                }
+            }
+            return [options, settings]
+        }
+
+        function getFilters(revID, revInfo) {
+            let options_settings = getUniqueSettingsOptions(revInfo);
+            let options = Array.from(options_settings[0]);
+            let settings = Array.from(options_settings[1]);
+            let filter = `<h6>Filter packages:</h6>`
+            for (setting of settings) {
+                filter += `
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="${revID}#${setting}" value="${setting}">
+                            <label class="form-check-label" for="${revID}#${setting}">${setting}</label>
+                        </div>
+                      `
+            }
+            for (option of options) {
+                filter += `
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="${revID}#${option}" value="${option}">
+                            <label class="form-check-label" for="${revID}#${option}">${option}</label>
+                        </div>
+                      `
+            }
+            return filter;
+        }
+
+        let activeRevision = {};
+        let tabsInfo = {};
+
+        function filterPackages() {
+            const activeTab = document.querySelector('.tab-pane.active');
+            const packageList = activeTab.querySelector('#packageList');
+            activeRevision.revision = tabsInfo[activeTab.getAttribute('id')].revision;
+            activeRevision.revInfo = tabsInfo[activeTab.getAttribute('id')].revInfo;
+            packageList.innerHTML = getPackagesList(activeRevision.revision, activeRevision.revInfo);
+        }
+
+        function getPackagesList(revision, revInfo) {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            filters = [];
+            checkboxes.forEach(function (checkbox) {
+                if (checkbox.checked) {
+                    filters.push(checkbox.value)
+                }
+            })
+            console.log(filters);
+
+            activeRevInfo = revInfo;
+            let packageList = ``;
+            for (const [package, packageInfo] of Object.entries(revInfo["packages"])) {
+
+                if (!isFiltered(packageInfo["info"], filters)) {
+                    packageList += `<div class="bg-light">`;
+                    packageList += `<h6 class="mb-1">${package}</h6>`;
+                    packageList += `${getInfoFieldsBadges(packageInfo["info"])}`;
+
+                    packageList += `<br><br><b>Package revisions:</>`;
+                    packageList += `<ul>`;
+                    for (const [packageRev, packageRevInfo] of Object.entries(packageInfo["revisions"])) {
+                        packageList += `<li>${packageRev}&nbsp(${formatDate(packageRevInfo["timestamp"])})</li>`;
+                    }
+                    packageList += `</ul>`;
+                    packageList += `</div>`;
+                    packageList += `<br>`;
+                }
+            }
+            return packageList;
+        }
+
         function getTabContent(tabID, revID, revInfo) {
 
-            tabContent = `<div class="tab-pane" id="${tabID}" role="tabpanel">`;
+            let tabContent = `<div class="tab-pane" id="${tabID}" role="tabpanel">`;
 
             if ("packages" in revInfo && Object.entries(revInfo["packages"]).length > 0) {
 
                 tabContent += `<h3>Packages for revision ${revID}</h3>`;
-                for (const [package, packageInfo] of Object.entries(revInfo["packages"])) {
 
-                    tabContent += `<div class="bg-light">`;
-                    tabContent += `<h6 class="mb-1">${package}</h6>`;
-                    tabContent += `${getInfoFieldsBadges("settings", packageInfo["info"])}${getInfoFieldsBadges("options", packageInfo["info"])}`;
-                    tabContent += `<br><br><b>Package revisions:</>`;
-                    tabContent += `<ul>`;
-                    for (const [packageRev, packageRevInfo] of Object.entries(packageInfo["revisions"])) {
-                        tabContent += `<li>${packageRev}&nbsp(${formatDate(packageRevInfo["timestamp"])})</li>`;
-                    }
-                    tabContent += `</ul>`;
-                    tabContent += `</div>`;
-                    tabContent += `<br>`;
-                }
+                tabContent += getFilters(revID, revInfo);
+
+                tabContent += `<div id="packageList">`;
+                tabContent += getPackagesList(revID, revInfo);
+                tabContent += `</div>`;
+
             }
             tabContent += `<h3>JSON</h3>`;
             tabContent += `<pre class="p-3 mb-2 bg-light text-dark">${JSON.stringify(revInfo, null, 2)}</pre>`;
@@ -97,7 +202,7 @@ list_packages_html_template = r"""
         let tabs = `<div class="tab-content">`;
 
         for (const [origin, references] of Object.entries(list_results)) {
-            if (Object.keys(references).length>0) {
+            if (Object.keys(references).length > 0) {
                 menu += `<li class="list-group-item"><b>${origin}</b>`;
                 if ("error" in references) {
                     menu += `<pre>${references["error"]}</pre>`;
@@ -105,7 +210,7 @@ list_packages_html_template = r"""
                 else {
                     for (const [reference, revisions] of Object.entries(references)) {
                         let originStr = origin.replaceAll(" ", "_");
-                        const refLink = getRefLink(originStr, reference);
+                        const refLink = replaceChars(originStr, reference);
 
                         menu += `<div class="accordion accordion-flush" id="accordion_${originStr}">`;
                         menu += `<div class="accordion-item">`;
@@ -120,6 +225,8 @@ list_packages_html_template = r"""
                                 packageBadge = (packageCount == 0) ? '' : `&nbsp<span class="badge rounded-pill text-bg-success">${packageCount}</span>`;
                                 let tabID = `${originStr}_${revision}`;
                                 menu += `<a class="list-group-item list-group-item-action" id="left_${revision}" data-bs-toggle="list" href="#${tabID}" role="tab" aria-controls="list-home">${revision.substring(0, 6)}&nbsp(${formatDate(revInfo["timestamp"])})${packageBadge}</a>`;
+
+                                tabsInfo[tabID] = { "revision": revision, "revInfo": revInfo }
                                 tabs += getTabContent(tabID, revision, revInfo);
                             }
                         }
@@ -155,6 +262,14 @@ list_packages_html_template = r"""
                     tabTrigger.show()
                 })
             })
+
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    filterPackages();
+                });
+            });
+
         });
     </script>
 </head>
@@ -179,7 +294,7 @@ list_packages_html_template = r"""
 
 <footer>
     <div class="text-center p-2" style="background-color: rgba(0, 0, 0, 0.05);">
-        Conan <b>{{ version }}</b>
+        Conan <b>2.0.2</b>
         <script>
             document.write(new Date().getFullYear());
         </script>
