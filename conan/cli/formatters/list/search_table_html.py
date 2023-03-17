@@ -100,11 +100,16 @@ list_packages_html_template = r"""
             let options = new Set();
             let settings = new Set();
             for (const [package, packageInfo] of Object.entries(revInfo["packages"])) {
-                for (const [key, value] of Object.entries(packageInfo["info"]["options"])) {
-                    options.add(`${key}=${value}`)
+                let info = packageInfo["info"];
+                if ("options" in info) {
+                    for (const [key, value] of Object.entries(info["options"])) {
+                        options.add(`${key}=${value}`)
+                    }
                 }
-                for (const [key, value] of Object.entries(packageInfo["info"]["settings"])) {
-                    settings.add(`${key}=${value}`)
+                if ("settings" in info) {
+                    for (const [key, value] of Object.entries(info["settings"])) {
+                        settings.add(`${key}=${value}`)
+                    }
                 }
             }
             return [options, settings]
@@ -153,7 +158,6 @@ list_packages_html_template = r"""
                     filters.push(checkbox.value)
                 }
             })
-            console.log(filters);
 
             activeRevInfo = revInfo;
             let packageList = ``;
