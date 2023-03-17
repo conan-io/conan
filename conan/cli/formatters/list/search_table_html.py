@@ -294,7 +294,7 @@ list_packages_html_template = r"""
 
 <footer>
     <div class="text-center p-2" style="background-color: rgba(0, 0, 0, 0.05);">
-        Conan <b>2.0.2</b>
+        Conan <b>{{ version }}</b>
         <script>
             document.write(new Date().getFullYear());
         </script>
