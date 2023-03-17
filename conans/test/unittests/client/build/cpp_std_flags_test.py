@@ -235,6 +235,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("msvc", "170", "17"), None)
 
         self.assertEqual(_make_cppstd_flag("msvc", "180", "11"), None)
+
         self.assertEqual(_make_cppstd_flag("msvc", "190", "14"), '/std:c++14')
         self.assertEqual(_make_cppstd_flag("msvc", "190", "17"), '/std:c++latest')
 
@@ -244,7 +245,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("msvc", "191", "20"), '/std:c++latest')
 
         self.assertEqual(_make_cppstd_flag("msvc", "192", "17"), '/std:c++17')
-        self.assertEqual(_make_cppstd_flag("msvc", "192", "20"), '/std:c++latest')
+        self.assertEqual(_make_cppstd_flag("msvc", "192", "20"), '/std:c++20')
 
         self.assertEqual(_make_cppstd_flag("msvc", "193", "20"), '/std:c++20')
         self.assertEqual(_make_cppstd_flag("msvc", "193", "23"), '/std:c++latest')

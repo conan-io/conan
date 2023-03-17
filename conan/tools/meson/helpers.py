@@ -1,3 +1,5 @@
+from conan.tools.build.flags import cppstd_msvc_flag
+
 __all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag"]
 
 # https://mesonbuild.com/Reference-tables.html#operating-system-names
@@ -47,11 +49,6 @@ _meson_cpu_family_map = {
     'x86_64': ('x86_64', 'x86_64', 'little')
 }
 
-_vs_cppstd_map = {
-    '14': "vc++14",
-    '17': "vc++17",
-    '20': "vc++latest"
-}
 
 # Meson valid values
 # "none", "c++98", "c++03", "c++11", "c++14", "c++17", "c++1z", "c++2a", "c++20",
@@ -102,14 +99,19 @@ def to_meson_value(value):
 
 
 # FIXME: Move to another more common module
-def to_cppstd_flag(compiler, cppstd):
+def to_cppstd_flag(compiler, compiler_version, cppstd):
     """Gets a valid cppstd flag.
 
     :param compiler: ``str`` compiler name.
+    :param compiler_version: ``str`` compiler version.
     :param cppstd: ``str`` cppstd version.
     :return: ``str`` cppstd flag.
     """
     if compiler == "msvc":
-        return _vs_cppstd_map.get(cppstd)
+        # Meson's logic with 'vc++X' vs 'c++X' is possibly a little outdated.
+        # Presumably the intent is 'vc++X' is permissive and 'c++X' is not,
+        # but '/permissive-' is the default since 16.8.
+        flag = cppstd_msvc_flag(compiler_version, cppstd)
+        return 'v%s' % flag if flag else None
     else:
         return _cppstd_map.get(cppstd)
