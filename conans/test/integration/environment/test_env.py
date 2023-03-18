@@ -325,7 +325,6 @@ def test_buildenv_from_requires():
     assert "BUILDENV OpenSSL: MyOpenSSLLinuxValue!!!" in client.out
 
 
-@pytest.mark.xfail(reason="The VirtualEnv generator is not fully complete")
 def test_diamond_repeated():
     pkga = textwrap.dedent(r"""
         from conan import ConanFile
@@ -392,15 +391,20 @@ def test_diamond_repeated():
     client.run("export pkgc --name=pkgc --version=1.0")
     client.run("export pkgd --name=pkgd --version=1.0")
 
-    client.run("install --requires=pkge --build")
+    client.run("install pkge --build=missing")
+    # PkgB has higher priority (included first) so it is appended last and prepended first (wrtC)
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
 
     # No settings always sh
-    conanrun = client.load("conanrunenv.sh")
+    conanrun = client.load("pkge/conanrunenv.sh")
     assert "PATH" not in conanrun
+    assert 'export MYVAR1="PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1"' in client.out
+    assert 'export MYVAR2="$MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2"' in client.out
+    assert 'export MYVAR3="PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 $MYVAR3"' in client.out
+    assert 'export MYVAR4="PkgDValue4""' in client.out
 
 
 @pytest.mark.parametrize("require_run", [True, False])
@@ -422,8 +426,8 @@ def test_environment_scripts_generated_envvars(require_run):
                                   .with_package_file("lib/mylib", "mylibcontent")
                                   .with_settings("os"))
     conanfile_require = (GenConanfile().with_package_file("bin/myapp", "myexe")
-                    .with_package_file("lib/mylib", "mylibcontent")
-                    .with_settings("os"))
+                                       .with_package_file("lib/mylib", "mylibcontent")
+                                       .with_settings("os"))
     if require_run:
         conanfile_require.with_package_type("application")
     client.save({"build_require_pkg/conanfile.py": conanfile_br,
@@ -622,7 +626,7 @@ def test_profile_build_env_spaces():
                               shell=True, cwd=client.current_folder).communicate()
     out = out.decode()
     assert "VAR1= VALUE1!!" in out
-    assert  "Restoring environment" in out
+    assert "Restoring environment" in out
     assert "VAR1=!!" in out
 
 
