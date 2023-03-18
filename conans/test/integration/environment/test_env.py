@@ -401,10 +401,10 @@ def test_diamond_repeated():
     # No settings always sh
     conanrun = client.load("pkge/conanrunenv.sh")
     assert "PATH" not in conanrun
-    assert 'export MYVAR1="PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1"' in client.out
-    assert 'export MYVAR2="$MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2"' in client.out
-    assert 'export MYVAR3="PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 $MYVAR3"' in client.out
-    assert 'export MYVAR4="PkgDValue4""' in client.out
+    assert 'export MYVAR1="PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1"' in conanrun
+    assert 'export MYVAR2="$MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2"' in conanrun
+    assert 'export MYVAR3="PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 $MYVAR3"' in conanrun
+    assert 'export MYVAR4="PkgDValue4"' in conanrun
 
 
 @pytest.mark.parametrize("require_run", [True, False])
