@@ -10,6 +10,7 @@ from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
+from conans.errors import ConanException
 
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
@@ -34,7 +35,27 @@ class URLCredentials:
         template = Template(load(creds_path))
         content = template.render({"platform": platform, "os": os})
         content = json.loads(content)
-        self._urls = content
+
+        def _get_auth(credentials):
+            result = {}
+            has_auth = False
+            if "token" in credentials:
+                result["token"] = credentials["token"]
+                has_auth = True
+            if "user" in credentials and "password" in credentials:
+                result["user"] = credentials["user"]
+                result["password"] = credentials["password"]
+                has_auth = True
+            if has_auth:
+                return result
+            else:
+                raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
+
+        try:
+            self._urls = {credentials["url"]: _get_auth(credentials)
+                          for credentials in content["credentials"]}
+        except KeyError as e:
+            raise ConanException(f"Authentication error, wrong source_credentials.json layout: {e}")
 
     def add_auth(self, url, kwargs):
         for u, creds in self._urls.items():
@@ -42,9 +63,10 @@ class URLCredentials:
                 token = creds.get("token")
                 if token:
                     kwargs["headers"]["Authorization"] = f"Bearer {token}"
-                auth = creds.get("auth")
-                if auth:
-                    kwargs["auth"] = (auth["user"], auth["password"])
+                user = creds.get("user")
+                password = creds.get("password")
+                if user and password:
+                    kwargs["auth"] = (user, password)
                 break
 
 

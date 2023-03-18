@@ -199,8 +199,8 @@ class TestDownloadCacheBackupSources:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost:5000/myfile.txt" in content["unknown"]
-            assert len(content["unknown"]) == 1
+            assert "http://localhost:5000/myfile.txt" in content["references"]["unknown"]
+            assert len(content["references"]["unknown"]) == 1
 
             conanfile = textwrap.dedent(f"""
                 from conan import ConanFile
@@ -217,9 +217,9 @@ class TestDownloadCacheBackupSources:
 
             assert 2 == len(os.listdir(os.path.join(tmp_folder, "s")))
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert "http://localhost.mirror:5000/myfile.txt" in content["unknown"]
-            assert "http://localhost:5000/myfile.txt" in content["unknown"]
-            assert len(content["unknown"]) == 2
+            assert "http://localhost.mirror:5000/myfile.txt" in content["references"]["unknown"]
+            assert "http://localhost:5000/myfile.txt" in content["references"]["unknown"]
+            assert len(content["references"]["unknown"]) == 2
 
             # Ensure the cache is working and we didn't break anything by modifying the summary
             client.run("source .")
@@ -227,7 +227,12 @@ class TestDownloadCacheBackupSources:
 
             client.run("create .")
             content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
-            assert content["pkg/1.0#" + client.exported_recipe_revision()] == \
+            assert content["references"]["pkg/1.0"] == \
+                   ["http://localhost.mirror:5000/myfile.txt"]
+
+            client.run("create . --user=barbarian --channel=stable")
+            content = json.loads(load(os.path.join(tmp_folder, "s", sha256 + ".json")))
+            assert content["references"]["pkg/1.0@barbarian/stable"] == \
                    ["http://localhost.mirror:5000/myfile.txt"]
 
     def test_upload_sources_backup(self):
@@ -390,16 +395,18 @@ class TestDownloadCacheBackupSources:
         client.save({"conanfile.py": conanfile})
         client.run("create .", assert_error=True)
         assert f"ConanException: The source backup server 'http://localhost:{http_server.port}" \
-               f"/downloader/' need authentication" in client.out
-        content = {f"http://localhost:{http_server.port}": {"token": "mytoken"}}
+               f"/downloader/' needs authentication" in client.out
+        content = {"credentials":
+                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
 
         client.run("create .")
         assert "CONTENT: Hello, world!" in client.out
         client.run("upload * -c -r=default", assert_error=True)
         assert f"The source backup server 'http://localhost:{http_server.port}" \
-               f"/uploader/' need authentication" in client.out
-        content = {f"http://localhost:{http_server.port}": {"token": "myuploadtoken"}}
+               f"/uploader/' needs authentication" in client.out
+        content = {"credentials":
+                       [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
         # Now use the correct UPLOAD token
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         client.run("upload * -c -r=default")
@@ -411,7 +418,9 @@ class TestDownloadCacheBackupSources:
         client.run("upload * -c -r=default")
         assert "already in server, skipping upload" in client.out
 
-        content = {f"http://localhost:{http_server.port}": {"token": "mytoken"}}
+        content = {"credentials":
+                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         rmdir(download_cache_folder)
 

@@ -70,10 +70,10 @@ class UploadAPI:
                 upload = file.endswith(".json")
                 upload = upload or not uploader.exists(full_url, auth=None)
                 if upload:
-                    ConanOutput().info(f"Uploading file '{basename}' to server")
+                    ConanOutput().info(f"Uploading file '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
-                    ConanOutput().info(f"File '{basename}' already in server, skipping upload")
+                    ConanOutput().info(f"File '{basename}' already in backup sources server, skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
                 raise ConanException(f"The source backup server '{url}' needs authentication"
                                      f"/permissions, please provide 'source_credentials.json': {e}")
