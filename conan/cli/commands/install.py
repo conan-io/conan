@@ -86,7 +86,7 @@ def install(conan_api, parser, *args):
                                        deploy=args.deploy
                                        )
 
-    out.success("Install finished succesfully")
+    out.success("Install finished successfully")
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
