@@ -91,7 +91,8 @@ class Folders(object):
         if not self.source:
             return self._base_source
 
-        return os.path.join(self._base_source, self.source)
+        # To resolve relative source paths like self.folders.source = "."
+        return os.path.abspath(os.path.join(self._base_source, self.source))
 
     @property
     def base_source(self):
