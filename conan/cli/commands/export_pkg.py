@@ -49,7 +49,8 @@ def export_pkg(conan_api, parser, *args):
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
 
     ref, conanfile = conan_api.export.export(path=path, name=args.name, version=args.version,
-                                             user=args.user, channel=args.channel, lockfile=lockfile)
+                                             user=args.user, channel=args.channel, lockfile=lockfile,
+                                             remotes=remotes)
     # The package_type is not fully processed at export
     assert conanfile.package_type != "python-require", "A python-require cannot be export-pkg"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
