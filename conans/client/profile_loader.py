@@ -280,12 +280,19 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
-        base_profile.system_tools = system_tools
+        current_system_tools = {r.name: r for r in base_profile.system_tools}
+        current_system_tools.update({r.name: r for r in system_tools})
+        base_profile.system_tools = list(current_system_tools.values())
+
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
         for pattern, refs in tool_requires.items():
-            base_profile.tool_requires.setdefault(pattern, []).extend(refs)
+            # If the same package, different version is added, the latest version prevail
+            current = base_profile.tool_requires.setdefault(pattern, [])
+            current_dict = {r.name: r for r in current}
+            current_dict.update({r.name: r for r in refs})
+            current[:] = list(current_dict.values())
         if options is not None:
             base_profile.options.update_options(options)
         if conf is not None:

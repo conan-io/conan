@@ -12,39 +12,6 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.env import environment_update
 
 
-class RemoveOutdatedTest(unittest.TestCase):
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_remove_query(self):
-        test_server = TestServer(users={"admin": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conan import ConanFile
-class Test(ConanFile):
-    settings = "os"
-    """
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Windows")
-        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Linux")
-        client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
-        client.run("create . --name=Test2 --version=0.1 --user=lasote --channel=testing")
-        client.run("upload * --confirm -r default")
-
-        for remote in ("", "-r=default"):
-            client.run("remove Test/0.1@lasote/testing -q=os=Windows -c %s" % remote)
-            client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertNotIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-
-            client.run("remove Test2/0.1@lasote/testing -q=os=Windows -c %s" % remote)
-            client.run("search Test2/0.1@lasote/testing %s" % remote)
-            self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-            client.run("remove Test2/0.1@lasote/testing -q=os=None -c %s" % remote)
-            client.run("search Test2/0.1@lasote/testing %s" % remote)
-            self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-            self.assertIn("There are no packages", client.out)
-
-
 conaninfo = '''
 [settings]
     arch=x64
@@ -406,4 +373,3 @@ def _get_revisions_packages(client, pref, with_remote):
             return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])
         except NotFoundException:
             return set()
-
