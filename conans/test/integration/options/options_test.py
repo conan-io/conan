@@ -462,7 +462,8 @@ class TestMultipleOptionsPatterns:
 
                 def configure(self):
                     self.options["*"].shared = True
-                    self.options["dep1*"].shared = False
+                    # Without * also works, equivalent to dep1/*
+                    self.options["dep1"].shared = False
                     self.options["dep2*"].shared = False
             """)
         c.save({"dep/conanfile.py": self.dep,
