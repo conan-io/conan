@@ -594,3 +594,17 @@ def test_export_pkg_test_package_build_require():
     assert "RUN TEST PACKAGE!!!!" in c.out
     lock = json.loads(c.load("conan.lock"))
     assert "pkg/1.0" in lock["build_requires"][0]
+
+
+def test_export_pkg_remote_python_requires():
+    """ Test that remote python-requires can be resolved
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_python_requires("tool/1.0")})
+
+    c.run("create tool")
+    c.run("upload tool* -r=default -c")
+    c.run("remove * -c")
+    c.run("export-pkg pkg")
+    assert "conanfile.py (pkg/1.0): Exported package binary" in c.out

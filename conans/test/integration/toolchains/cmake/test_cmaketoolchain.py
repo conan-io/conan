@@ -781,6 +781,33 @@ def test_cmake_layout_toolchain_folder():
                                        "build/linux/Debug/generators/conan_toolchain.cmake"))
 
 
+def test_build_folder_vars_editables():
+    """ when packages are in editable, they must also follow the build_folder_vars
+    https://github.com/conan-io/conan/issues/13485
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "dep"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"dep/conanfile.py": conanfile,
+            "app/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+    c.run("editable add dep")
+    conf = "tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\", \"settings.build_type\"]'"
+    settings = " -s os=FreeBSD -s arch=armv8 -s build_type=Debug"
+    c.run("install app -c={} {}".format(conf, settings))
+    assert os.path.exists(os.path.join(c.current_folder, "dep", "build", "freebsd-debug"))
+
+
 def test_set_linker_scripts():
     profile = textwrap.dedent(r"""
     [settings]
