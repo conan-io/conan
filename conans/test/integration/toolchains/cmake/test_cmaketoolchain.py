@@ -579,6 +579,7 @@ def test_android_c_library():
     assert "include(/foo/build/cmake/android.toolchain.cmake)" in conan_toolchain
     client.run("create . --name=foo --version=1.0 " + settings)
 
+
 @pytest.mark.parametrize("cmake_legacy_toolchain", [True, False, None])
 def test_android_legacy_toolchain_flag(cmake_legacy_toolchain):
     client = TestClient()
@@ -624,6 +625,7 @@ def test_android_legacy_toolchain_with_compileflags(cmake_legacy_toolchain):
         assert warning_text in client.out
     else:
         assert warning_text not in client.out
+
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
 def test_presets_paths_normalization():
