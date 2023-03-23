@@ -14,7 +14,7 @@ from conans.util.locks import SimpleLock
 
 class CachingFileDownloader:
 
-    def __init__(self, requester,  download_cache):
+    def __init__(self, requester, download_cache):
         self._output = ConanOutput()
         self._download_cache = DownloadCache(download_cache) if download_cache else None
         self._file_downloader = FileDownloader(requester)
@@ -47,44 +47,48 @@ class CachingFileDownloader:
             finally:
                 thread_lock.release()
 
-    def _try_download_from_backup(self, url, conanfile, h, cached_path, sha256, **kwargs):
+    def _handle_sources_download(self, url, conanfile, h, cached_path, sha256, **kwargs):
         global_conf = conanfile._conan_helpers.global_conf
-        download_urls = global_conf.get("core.backup_sources:download_urls")
+        origin_placeholder = "origin"
+        download_urls = global_conf.get("core.backup_sources:download_urls",
+                                        default=[origin_placeholder,
+                                                 "https://center-sources.conan.io/"],
+                                        check_type=list)
         if not download_urls:
-            return False
-        found_in_backup = False
+            raise ConanException(
+                f"There are no URLs defined to fetch {url} from in 'core.backup_sources:download_urls'.\n"
+                f"Set the conf to ['{origin_placeholder}'] to allow downloading from the internet.")
+
+        found = False
         for download_url in download_urls:
             try:
-                self._file_downloader.download(download_url + h, cached_path,
-                                               sha256=sha256, **kwargs)
-                self._file_downloader.download(download_url + h + ".json",
-                                               cached_path + ".json", **kwargs)
-                found_in_backup = True
-                conanfile.output.info(f"Sources from {url} found in remote backup {download_url}")
+                if download_url == origin_placeholder:
+                    self._file_downloader.download(url, cached_path, sha256=sha256, **kwargs)
+                else:
+                    self._file_downloader.download(download_url + h, cached_path, sha256=sha256,
+                                                   **kwargs)
+                    self._file_downloader.download(download_url + h + ".json", cached_path + ".json",
+                                                   **kwargs)
+                found = True
+                location = "origin" if download_url == origin_placeholder else "remote backup"
+                conanfile.output.info(f"Sources from {url} found in {location} {download_url}")
                 break
             except NotFoundException:
-                # TODO: What happens if sha256 missmatch?
-                pass
+                if download_url == origin_placeholder and download_urls.index(origin_placeholder) == 0:
+                    conanfile.output.warning(
+                        f"File could not be fetch from origin '{url}', trying with sources backups next")
             except (AuthenticationException, ForbiddenException) as e:
-                raise ConanException(f"The source backup server '{download_url}' needs authentication"
-                                     f"/permissions, please provide 'source_credentials.json': {e}")
-        if not found_in_backup:
-            policy = global_conf.get("core.backup_sources:cache_miss_policy", check_type=str,
-                                     default="ignore")
-            # TODO: Think about what is the best default
-            message = f"Sources from {url} not found in remote backup sources server(s)"
-            if policy == "error":
-                raise ConanException(message)
-            elif policy == "warn":
-                conanfile.output.warning(message)
-            elif policy == "ignore":
-                # Do nothing, we're fine with looking externally for the files
-                pass
-            else:
-                raise ConanException("Backup sources cache missed but "
-                                     "'core.backup_sources:cache_miss_policy' "
-                                     f"has an unknown value of '{policy}'")
-        return found_in_backup
+                raise ConanException(
+                    f"The source backup server '{download_url}' needs authentication"
+                    f"/permissions, please provide 'source_credentials.json': {e}")
+            except ConanException as e:
+                # TODO: Rethink how we detect a broken origin
+                if "Error 500 downloading file" in str(e) and download_url == origin_placeholder:
+                    pass
+                else:
+                    raise
+        if not found:
+            raise ConanException(f"'{url}' could not be fetched from any of {download_urls}")
 
     def _caching_download(self, url, file_path, md5, sha1, sha256, conanfile, **kwargs):
         cached_path, h = self._download_cache.get_cache_path(url, md5, sha1, sha256, conanfile)
@@ -94,12 +98,10 @@ class CachingFileDownloader:
 
             if not os.path.exists(cached_path):
                 with set_dirty_context_manager(cached_path):
-                    found_in_backup = False
                     if sources_download:
-                        found_in_backup = self._try_download_from_backup(url, conanfile, h,
-                                                                         cached_path, sha256,
-                                                                         **kwargs)
-                    if not found_in_backup:
+                        self._handle_sources_download(url, conanfile, h, cached_path, sha256,
+                                                      **kwargs)
+                    else:
                         self._file_downloader.download(url, cached_path, md5=md5,
                                                        sha1=sha1, sha256=sha256, **kwargs)
             elif sources_download:
