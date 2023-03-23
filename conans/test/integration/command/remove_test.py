@@ -191,12 +191,7 @@ def _populated_client_base():
     client.save({"conanfile.py": conanfile + "\n # THIS IS ANOTHER RECIPE REVISION"})
     client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
-    client.run("upload '*' -c -r default")
-    # By default only the latest is uploaded, we want all of them
-    client.run("upload {} -c -r default".format(bar_rrev))
-    client.run("upload {} -c -r default".format(bar_rrev2))
-    client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
-    client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
+    client.run("upload '*#*:*#*' -c -r default")
 
     return client
 
@@ -236,15 +231,13 @@ def populated_client(_populated_client_base):
     {"remove": "*/*#", "recipes": []},
 ])
 def test_new_remove_recipes_expressions(populated_client, with_remote, data):
-
-    with populated_client.mocked_servers():
-        r = "-r default" if with_remote else ""
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
-        elif data.get("error_msg"):
-            assert data.get("error_msg") in populated_client.out
+    r = "-r default" if with_remote else ""
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
+    elif data.get("error_msg"):
+        assert data.get("error_msg") in populated_client.out
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -254,15 +247,16 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     {"remove": "bar/1.1#*9*", "rrevs": []},
     {"remove": "bar/1.1#*2a", "rrevs": [bar_rrev]},
     {"remove": "bar*#*50", "rrevs": [bar_rrev, bar_rrev2]},
+    {"remove": "bar*#latest", "rrevs": [bar_rrev2]},  # latest is bar_rrev
+    {"remove": "bar*#!latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
-    with populated_client.mocked_servers():
-        r = "-r default" if with_remote else ""
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            rrevs = _get_revisions_recipes(populated_client, "bar/1.1", with_remote)
-            assert rrevs == set(data["rrevs"])
+    r = "-r default" if with_remote else ""
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        rrevs = _get_revisions_recipes(populated_client, "bar/1.1", with_remote)
+        assert rrevs == set(data["rrevs"])
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -292,14 +286,13 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
     assert pids == {bar_rrev2_debug, bar_rrev2_release}
 
-    with populated_client.mocked_servers():
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
-            assert pids == set(data["prefs"])
-        elif data.get("error_msg"):
-            assert data.get("error_msg") in populated_client.out
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
+        assert pids == set(data["prefs"])
+    elif data.get("error_msg"):
+        assert data.get("error_msg") in populated_client.out
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -316,6 +309,8 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
      "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
     # Errors
     {"remove": '{}#'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}#latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1]},
+    {"remove": '{}#!latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
 ])
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
@@ -325,14 +320,13 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
     prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
     assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
-    with populated_client.mocked_servers():
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
-            assert set(prefs) == set(data["prevs"])
-        elif data.get("error_msg"):
-            assert data.get("error_msg") in populated_client.out
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
+        assert set(prefs) == set(data["prevs"])
+    elif data.get("error_msg"):
+        assert data.get("error_msg") in populated_client.out
 
 
 def _get_all_recipes(client, with_remote):

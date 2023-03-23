@@ -132,6 +132,8 @@ class ListPattern:
             raise ConanException(f"Recipe '{self.ref}' not found")
 
     def filter_rrevs(self, rrevs):
+        if self.rrev == "!latest":
+            return rrevs[1:]
         rrevs = [r for r in rrevs if fnmatch.fnmatch(r.revision, self.rrev)]
         if not rrevs:
             refs_str = f'{self.ref}#{self.rrev}'
@@ -148,6 +150,8 @@ class ListPattern:
         return prefs
 
     def filter_prevs(self, prevs):
+        if self.prev == "!latest":
+            return prevs[1:]
         prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, self.prev)]
         if not prevs:
             refs_str = f'{self.ref}#{self.rrev}:{self.package_id}#{self.prev}'
