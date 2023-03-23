@@ -308,6 +308,9 @@ class Options:
         self._package_options.__delattr__(field)
 
     def __getitem__(self, item):
+        if isinstance(item, str):
+            if "/" not in item and "*" not in item:  # FIXME: To allow patterns like "*" or "foo*"
+                item += "/*"
         return self._deps_package_options.setdefault(item, _PackageOptions())
 
     def scope(self, ref):
