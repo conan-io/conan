@@ -24,7 +24,6 @@ BUILT_IN_CONFS = {
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     # Sources backup
     "core.backup_sources:download_cache": "Folder to store the sources backup",
-    "core.backup_sources:cache_miss_policy": "Backup sources download miss policy. Valid values are 'ignore', 'warn' and 'error'",
     "core.backup_sources:download_urls": "List of URLs to download backup sources from",
     "core.backup_sources:upload_url": "Remote URL to upload backup sources to",
     # Package ID
