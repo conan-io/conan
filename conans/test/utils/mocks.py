@@ -129,7 +129,7 @@ class ConanFileMock(ConanFile):
         self.system_requires = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
-        self._conan_helpers = ConanFileHelpers(None, None)
+        self._conan_helpers = ConanFileHelpers(None, None, {})
         self.cpp = Infos()
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
