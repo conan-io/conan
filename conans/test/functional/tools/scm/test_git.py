@@ -596,7 +596,9 @@ class TestGitMonorepoSCMFlow:
                     git.checkout(commit=sources["commit"])
                     # Layout is pkg/pkg/<files> and pkg/common/<files>
                     # Final we want is pkg/<files> and common/<files>
-                    move_folder_contents(self.source_folder, os.path.dirname(self.source_folder))
+                    # NOTE: This abs_path is IMPORTANT to avoid the trailing "."
+                    src_folder = os.path.abspath(self.source_folder)
+                    move_folder_contents(src_folder, os.path.dirname(src_folder))
 
                 def build(self):
                     cmake = CMake(self)
