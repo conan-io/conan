@@ -149,6 +149,7 @@ class ConanCommand(BaseConanCommand):
             self._subcommand_parser = self._parser.add_subparsers(dest='subcommand',
                                                                   help='sub-command help')
             self._subcommand_parser.required = True
+        subcommand.set_name(self.name)
         subcommand.set_parser(self._parser, self._subcommand_parser)
         self._subcommands[subcommand.name] = subcommand
 
@@ -174,12 +175,15 @@ class ConanSubCommand(BaseConanCommand):
         super().__init__(method, formatters=formatters)
         self._parent_parser = None
         self._parser = None
-        self._name = "-".join(method.__name__.split("_")[1:])
+        self._subcommand_name = method.__name__.replace('_', '-')
 
     def run(self, conan_api, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         # It is necessary to do it after calling the "method" otherwise parser not complete
         self._format(self._parent_parser, info, *args)
+
+    def set_name(self, parent_name):
+        self._name = self._subcommand_name.replace(f'{parent_name}-', '', 1)
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
