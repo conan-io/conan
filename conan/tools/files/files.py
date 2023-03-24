@@ -191,6 +191,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     """
     # TODO: Add all parameters to the new conf
     requester = conanfile._conan_helpers.requester
+    global_conf = conanfile._conan_helpers.global_conf
     config = conanfile.conf
     out = ConanOutput()
     overwrite = True
@@ -200,11 +201,12 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry_wait = retry_wait if retry_wait is not None else 5
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
 
-    # Conan 2.0: Removed "tools.files.download:download_cache" from configuration
-    checksum = md5 or sha1 or sha256
-    download_cache = config.get("tools.files.download:download_cache") if checksum else None
-    if download_cache and not os.path.isabs(download_cache):
-        raise ConanException("core.download:download_cache must be an absolute path")
+    download_cache = None
+    if md5 or sha1 or sha256:  # If there is no checksum, no cache is used
+        download_cache = config.get("tools.files.download:download_cache")
+        download_cache = download_cache or global_conf.get("core.download:download_cache")
+        if download_cache and not os.path.isabs(download_cache):
+            raise ConanException("core.download:download_cache must be an absolute path")
 
     filename = os.path.abspath(filename)
 
@@ -218,7 +220,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
             os.makedirs(os.path.dirname(filename), exist_ok=True)  # filename in subfolder must exist
             downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
                                 verify_ssl=verify, retry=retry, retry_wait=retry_wait,
-                                headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+                                headers=headers, md5=md5, sha1=sha1, sha256=sha256,
+                                conanfile=conanfile)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):

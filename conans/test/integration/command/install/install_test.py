@@ -437,6 +437,14 @@ def test_install_json_formatter():
         elif ref == pkg_pkg_ref:
             assert n['binary'] == "Cache"
             pkg_cpp_info = n['cpp_info']
+
+    hello = nodes[0]
+    assert hello["ref"] == hello_pkg_ref
+    assert hello["recipe_folder"] == client.current_folder
+    assert hello["build_folder"] == client.current_folder
+    assert hello["generators_folder"] == client.current_folder
+    assert hello["package_folder"] is None
+
     assert hello_cpp_info and pkg_cpp_info
     # hello/0.1 cpp_info
     assert hello_cpp_info['root']["libs"] is None

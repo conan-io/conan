@@ -179,7 +179,11 @@ class RemoteTest(unittest.TestCase):
         client.run("remote add my-remote2 http://someurl2")
         client.run("remote add my-remote3 http://someurl3")
         client.run("remote disable my-remote0")
+        assert "my-remote0" in client.out
+        assert "Enabled: False" in client.out
         client.run("remote disable my-remote3")
+        assert "my-remote3" in client.out
+        assert "Enabled: False" in client.out
         registry = load(client.cache.remotes_path)
         data = json.loads(registry)
         self.assertEqual(data["remotes"][0]["name"], "my-remote0")
@@ -194,17 +198,27 @@ class RemoteTest(unittest.TestCase):
         assert "my-remote0: http://someurl0 [Verify SSL: True, Enabled: False]" in client.out
         assert "my-remote3: http://someurl3 [Verify SSL: True, Enabled: False]" in client.out
 
-        client.run("remote disable *")
+        client.run("remote disable * --format=json")
+
         registry = load(client.cache.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
             self.assertEqual(remote["disabled"], True)
+
+        data = json.loads(client.out)
+        for remote in data:
+            assert remote["enabled"] is False
 
         client.run("remote enable *")
         registry = load(client.cache.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
             self.assertNotIn("disabled", remote)
+        assert "my-remote0" in client.out
+        assert "my-remote1" in client.out
+        assert "my-remote2" in client.out
+        assert "my-remote3" in client.out
+        assert "Enabled: False" not in client.out
 
     def test_invalid_remote_disable(self):
         client = TestClient()

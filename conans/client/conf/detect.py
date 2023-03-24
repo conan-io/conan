@@ -204,18 +204,19 @@ def _detect_compiler_version(result):
     elif compiler == "clang":
         if platform.system() == "FreeBSD":
             result.append(("compiler.libcxx", "libc++"))
+        elif platform.system() == "Darwin":
+            result.append(("compiler.libcxx", "libc++"))
+        elif platform.system() == "Windows":
+            # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
+            result.append(("compiler.runtime", "dynamic"))
+            result.append(("compiler.runtime_type", "Release"))
+            result.append(("compiler.runtime_version", "v143"))
+            ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
+            ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
+                                  "define compiler.libcxx")
         else:
-            if platform.system() == "Windows":
-                # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
-                result.append(("compiler.runtime", "dynamic"))
-                result.append(("compiler.runtime_type", "Release"))
-                result.append(("compiler.runtime_version", "v143"))
-                ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
-                ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
-                                      "define compiler.libcxx")
-            else:
-                libcxx = _detect_gcc_libcxx(version, "clang++")
-                result.append(("compiler.libcxx", libcxx))
+            libcxx = _detect_gcc_libcxx(version, "clang++")
+            result.append(("compiler.libcxx", libcxx))
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":

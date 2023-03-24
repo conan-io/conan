@@ -122,8 +122,12 @@ class MesonToolchain(object):
         compiler = self._conanfile.settings.get_safe("compiler")
         if compiler is None:
             raise ConanException("MesonToolchain needs 'settings.compiler', but it is not defined")
+        compiler_version = self._conanfile.settings.get_safe("compiler.version")
+        if compiler_version is None:
+            raise ConanException("MesonToolchain needs 'settings.compiler.version', but it is not defined")
+
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        self._cpp_std = to_cppstd_flag(compiler, cppstd)
+        self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
 
         if compiler == "msvc":
             vscrt = msvc_runtime_flag(self._conanfile)

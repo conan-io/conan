@@ -1,5 +1,6 @@
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
+from conan.internal.upload_metadata import gather_metadata
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conans.client.pkg_sign import PkgSignaturesPlugin
 
@@ -34,6 +35,7 @@ class UploadAPI:
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
+        gather_metadata(package_list, app.cache)
 
     def upload(self, package_list, remote):
         app = ConanApp(self.conan_api.cache_folder)

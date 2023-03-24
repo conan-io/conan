@@ -5,6 +5,7 @@ import textwrap
 import pytest
 from mock import patch
 
+from conan import conan_version
 from conans.errors import ConanException
 from conans.util.files import save
 from conans.test.utils.tools import TestClient
@@ -28,32 +29,32 @@ def client():
 def test_basic_composition(client):
     profile1 = textwrap.dedent("""\
         [conf]
-        tools.microsoft.msbuild:verbosity=Quiet
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:vs_version=Slow
         tools.cmake.cmaketoolchain:generator=Extra
         """)
     profile2 = textwrap.dedent("""\
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=notice
         tools.microsoft.msbuild:max_cpu_count=High
         tools.meson.mesontoolchain:backend=Super
         """)
     client.save({"profile1": profile1,
                  "profile2": profile2})
     client.run("install . -pr=profile1")
-    assert "tools.microsoft.msbuild:verbosity$Quiet" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
 
     client.run("install . -pr=profile1 -pr=profile2")
-    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.build:verbosity$notice" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
 
     client.run("install . -pr=profile2 -pr=profile1")
-    assert "tools.microsoft.msbuild:verbosity$Quiet" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
@@ -63,14 +64,14 @@ def test_basic_composition(client):
 def test_basic_inclusion(client):
     profile1 = textwrap.dedent("""\
         [conf]
-        tools.microsoft.msbuild:verbosity=Quiet
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:vs_version=Slow
         tools.cmake.cmaketoolchain:generator=Extra
         """)
     profile2 = textwrap.dedent("""\
         include(profile1)
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=notice
         tools.microsoft.msbuild:max_cpu_count=High
         tools.meson.mesontoolchain:backend=Super
         """)
@@ -78,7 +79,7 @@ def test_basic_inclusion(client):
                  "profile2": profile2})
 
     client.run("install . -pr=profile2")
-    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.build:verbosity$notice" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
@@ -87,20 +88,20 @@ def test_basic_inclusion(client):
 
 def test_composition_conan_conf(client):
     conf = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=Quiet
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:vs_version=Slow
         tools.cmake.cmaketoolchain:generator=Extra
         """)
     save(client.cache.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=notice
         tools.microsoft.msbuild:max_cpu_count=High
         tools.meson.mesontoolchain:backend=Super
         """)
     client.save({"profile": profile})
     client.run("install . -pr=profile")
-    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.build:verbosity$notice" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
@@ -109,14 +110,14 @@ def test_composition_conan_conf(client):
 
 def test_new_config_file(client):
     conf = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=notice
         user.mycompany.myhelper:myconfig=myvalue
         *:tools.cmake.cmaketoolchain:generator=X
         cache:read_only=True
         """)
     save(client.cache.new_config_path, conf)
     client.run("install .")
-    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.build:verbosity$notice" in client.out
     assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
     assert "tools.cmake.cmaketoolchain:generator$X" in client.out
     assert "read_only" not in client.out
@@ -137,19 +138,19 @@ def test_new_config_file_required_version():
 
 def test_composition_conan_conf_overwritten_by_cli_arg(client):
     conf = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=Quiet
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:max_cpu_count=Slow
         """)
     save(client.cache.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=notice
         tools.microsoft.msbuild:vs_version=High
         """)
     client.save({"profile": profile})
-    client.run("install . -pr=profile -c tools.microsoft.msbuild:verbosity=Detailed "
+    client.run("install . -pr=profile -c tools.build:verbosity=debug "
                "-c tools.meson.mesontoolchain:backend=Super")
-    assert "tools.microsoft.msbuild:verbosity$Detailed" in client.out
+    assert "tools.build:verbosity$debug" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$Slow" in client.out
     assert "tools.microsoft.msbuild:vs_version$High" in client.out
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
@@ -177,10 +178,12 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
 def test_jinja_global_conf(client):
     save(client.cache.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
                                        "user.mycompany:other = {{platform.system()}}\n"
-                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n")
+                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n"
+                                       "user.conan:version = {{conan_version}}-{{conan_version>0.1}}")
     client.run("install .")
     assert "user.mycompany:parallel={}".format(os.cpu_count()/2) in client.out
     assert "user.mycompany:other={}".format(platform.system()) in client.out
+    assert f"user.conan:version={conan_version}-True" in client.out
     if platform.system() == "Linux":
         import distro
         assert "user.mycompany:dist={}".format(distro.id()) in client.out
@@ -203,6 +206,14 @@ def test_jinja_global_conf_include(client):
     client.run("install .")
     assert "user.mycompany:parallel=42" in client.out
     assert "user.mycompany:dist=84" in client.out
+
+
+def test_jinja_global_conf_paths():
+    c = TestClient()
+    global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
 
 
 def test_empty_conf_valid():

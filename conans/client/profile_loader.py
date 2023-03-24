@@ -4,6 +4,7 @@ from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
 
+from conan import conan_version
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
@@ -159,7 +160,8 @@ class ProfileLoader:
         base_path = os.path.dirname(profile_path)
         context = {"platform": platform,
                    "os": os,
-                   "profile_dir": base_path}
+                   "profile_dir": base_path,
+                   "conan_version": conan_version}
         rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
         text = rtemplate.render(context)
 
@@ -278,12 +280,19 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
-        base_profile.system_tools = system_tools
+        current_system_tools = {r.name: r for r in base_profile.system_tools}
+        current_system_tools.update({r.name: r for r in system_tools})
+        base_profile.system_tools = list(current_system_tools.values())
+
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
             base_profile.package_settings[pkg_name].update(values_dict)
         for pattern, refs in tool_requires.items():
-            base_profile.tool_requires.setdefault(pattern, []).extend(refs)
+            # If the same package, different version is added, the latest version prevail
+            current = base_profile.tool_requires.setdefault(pattern, [])
+            current_dict = {r.name: r for r in current}
+            current_dict.update({r.name: r for r in refs})
+            current[:] = list(current_dict.values())
         if options is not None:
             base_profile.options.update_options(options)
         if conf is not None:

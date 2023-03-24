@@ -28,9 +28,10 @@ class CmdWrapper:
 
 
 class ConanFileHelpers:
-    def __init__(self, requester, cmd_wrapper):
+    def __init__(self, requester, cmd_wrapper, global_conf):
         self.requester = requester
         self.cmd_wrapper = cmd_wrapper
+        self.global_conf = global_conf
 
 
 class ConanApp(object):
@@ -41,9 +42,10 @@ class ConanApp(object):
 
         self.hook_manager = HookManager(self.cache.hooks_path)
         # Wraps an http_requester to inject proxies, certs, etc
-        self.requester = ConanRequester(self.cache.new_config)
+        global_conf = self.cache.new_config
+        self.requester = ConanRequester(global_conf, cache_folder)
         # To handle remote connections
-        rest_client_factory = RestApiClientFactory(self.requester, self.cache.new_config)
+        rest_client_factory = RestApiClientFactory(self.requester, global_conf)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)
         # Handle remote connections
@@ -54,5 +56,5 @@ class ConanApp(object):
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         cmd_wrap = CmdWrapper(self.cache)
-        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap)
+        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)

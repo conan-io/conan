@@ -1,10 +1,12 @@
 import fnmatch
+import json
 import logging
 import os
 import platform
 
 import requests
 import urllib3
+from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
 from conans import __version__ as client_version
@@ -12,6 +14,8 @@ from conans import __version__ as client_version
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
 # TODO: Fix this security warning
+from conans.util.files import load
+
 logging.captureWarnings(True)
 
 
@@ -19,9 +23,34 @@ DEFAULT_TIMEOUT = (30, 60)  # connect, read timeouts
 INFINITE_TIMEOUT = -1
 
 
+class URLCredentials:
+    def __init__(self, cache_folder):
+        self._urls = {}
+        if not cache_folder:
+            return
+        creds_path = os.path.join(cache_folder, "source_credentials.json")
+        if not os.path.exists(creds_path):
+            return
+        template = Template(load(creds_path))
+        content = template.render({"platform": platform, "os": os})
+        content = json.loads(content)
+        self._urls = content
+
+    def add_auth(self, url, kwargs):
+        for u, creds in self._urls.items():
+            if url.startswith(u):
+                token = creds.get("token")
+                if token:
+                    kwargs["headers"]["Authorization"] = f"Bearer {token}"
+                auth = creds.get("auth")
+                if auth:
+                    kwargs["auth"] = (auth["user"], auth["password"])
+                break
+
+
 class ConanRequester(object):
 
-    def __init__(self, config):
+    def __init__(self, config, cache_folder=None):
         # TODO: Make all this lazy, to avoid fully configuring Requester, for every api call
         #  even if it doesn't use it
         # FIXME: Trick for testing when requests is mocked
@@ -31,6 +60,7 @@ class ConanRequester(object):
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
+        self._url_creds = URLCredentials(cache_folder)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
         self._no_proxy_match = config.get("core.net.http:no_proxy_match")
         self._proxies = config.get("core.net.http:proxies")
@@ -81,6 +111,8 @@ class ConanRequester(object):
             kwargs["timeout"] = self._timeout
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
+
+        self._url_creds.add_auth(url, kwargs)
 
         # Only set User-Agent if none was provided
         if not kwargs["headers"].get("User-Agent"):

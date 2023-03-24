@@ -21,7 +21,7 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     Show the path to the Conan cache for a given reference.
     """
     subparser.add_argument("reference", help="Recipe reference or Package reference")
-    subparser.add_argument("--folder", choices=['export_source', 'source', 'build'],
+    subparser.add_argument("--folder", choices=['export_source', 'source', 'build', 'metadata'],
                            help="Path to show. The 'build'"
                                 " requires a package reference. If not specified it shows 'exports'"
                                 " path ")
@@ -40,6 +40,8 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
             path = conan_api.cache.export_source_path(ref)
         elif args.folder == "source":
             path = conan_api.cache.source_path(ref)
+        elif args.folder == "metadata":
+            path = conan_api.cache.recipe_metadata_path(ref)
         else:
             raise ConanException(f"'--folder {args.folder}' requires a valid package reference")
     else:
@@ -47,6 +49,8 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
             path = conan_api.cache.package_path(pref)
         elif args.folder == "build":
             path = conan_api.cache.build_path(pref)
+        elif args.folder == "metadata":
+            path = conan_api.cache.package_metadata_path(pref)
         else:
             raise ConanException(f"'--folder {args.folder}' requires a recipe reference")
     return path
@@ -77,3 +81,19 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.clean(package_list, source=args.source, build=args.build,
                           download=args.download)
+
+
+@conan_subcommand(formatters={"text": cli_out_write})
+def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Check the integrity of the local cache for the given references
+    """
+    subparser.add_argument("pattern", help="Selection pattern for references to check integrity for")
+    subparser.add_argument('-p', '--package-query', action=OnceArgument,
+                           help="Only the packages matching a specific query, e.g., "
+                                "os=Windows AND (arch=x86 OR compiler=gcc)")
+    args = parser.parse_args(*args)
+
+    ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+    package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    conan_api.cache.check_integrity(package_list)
