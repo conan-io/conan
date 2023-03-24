@@ -544,18 +544,39 @@ def collect_libs(conanfile, folder=None):
 
 
 # TODO: Do NOT document this yet. It is unclear the interface, maybe should be split
-def swap_child_folder(parent_folder, child_folder):
+def move_folder_contents(src_folder, dst_folder):
     """ replaces the current folder contents with the contents of one child folder. This
     is used in the SCM monorepo flow, when it is necessary to use one subproject subfolder
     to replace the whole cloned git repo
+    /base-folder                       /base-folder
+        /pkg  (src folder)                 /other/<otherfiles>
+          /other/<otherfiles>              /pkg/<pkgfiles>
+          /pkg/<pkgfiles>                  <files>
+          <files>
+        /siblings
+        <siblingsfiles>
     """
-    for f in os.listdir(parent_folder):
-        if f != child_folder:
-            path = os.path.join(parent_folder, f)
-            if os.path.isfile(path):
-                os.remove(path)
+    # Remove potential "siblings" folders not wanted
+    src_folder_name = os.path.basename(src_folder)
+    for f in os.listdir(dst_folder):
+        if f != src_folder_name:  # FIXME: Only works for 1st level subfolder
+            dst = os.path.join(dst_folder, f)
+            if os.path.isfile(dst):
+                os.remove(dst)
             else:
-                _internal_rmdir(path)
-    child = os.path.join(parent_folder, child_folder)
-    for f in os.listdir(child):
-        shutil.move(os.path.join(child, f), os.path.join(parent_folder, f))
+                _internal_rmdir(dst)
+
+    # Move all the contents
+    for f in os.listdir(src_folder):
+        src = os.path.join(src_folder, f)
+        dst = os.path.join(dst_folder, f)
+        if not os.path.exists(dst):
+            shutil.move(src, dst_folder)
+        else:
+            for sub_src in os.listdir(src):
+                shutil.move(os.path.join(src, sub_src), dst)
+            _internal_rmdir(src)
+    try:
+        os.rmdir(src_folder)
+    except OSError:
+        pass
