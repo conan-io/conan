@@ -23,7 +23,7 @@ def test_require_different_versions():
                 os.chmod(os.path.join(self.package_folder, "bin", f"mygcc{self.version}.sh"), 0o777)
             """)
     wise = textwrap.dedent("""
-        import os
+        import os, platform
         from conan import ConanFile
         from conan.tools.files import save, chdir
         class Pkg(ConanFile):
@@ -34,8 +34,9 @@ def test_require_different_versions():
                 self.tool_requires("gcc/2.0", run=False)
 
             def build(self):
-                self.run("mygcc1.0")
-                self.run("mygcc2.0")
+                ext = "bat" if platform.system() == "Windows" else "sh"
+                self.run(f"mygcc1.0.{ext}")
+                self.run(f"mygcc2.0.{ext}")
             """)
     c.save({"gcc/conanfile.py": gcc,
             "wise/conanfile.py": wise})
@@ -72,7 +73,7 @@ def test_require_different_options():
                 os.chmod(os.path.join(self.package_folder, "bin", f"mygcc{self.options.myoption}.sh"), 0o777)
             """)
     wise = textwrap.dedent("""
-        import os
+        import os, platform
         from conan import ConanFile
         from conan.tools.files import save, chdir
         class Pkg(ConanFile):
@@ -83,8 +84,9 @@ def test_require_different_options():
                 self.tool_requires("gcc/1.0", run=False, options={"myoption": 2})
 
             def build(self):
-                self.run("mygcc1")
-                self.run("mygcc2")
+                ext = "bat" if platform.system() == "Windows" else "sh"
+                self.run(f"mygcc1.{ext}")
+                self.run(f"mygcc2.{ext}")
             """)
     c.save({"gcc/conanfile.py": gcc,
             "wise/conanfile.py": wise})
