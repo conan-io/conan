@@ -414,8 +414,11 @@ class EnvVars:
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
+        location = os.path.dirname(file_location)
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
+            # To make the script relocatable
+            value = value.replace(location, "%~dp0")
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
