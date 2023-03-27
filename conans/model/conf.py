@@ -44,6 +44,7 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",

@@ -1,6 +1,6 @@
 import os
 
-from conans.client.graph.graph import RECIPE_CONSUMER
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conans.errors import ConanException
 
 
@@ -59,7 +59,7 @@ def get_build_folder_custom_vars(conanfile):
                       "settings.compiler.cppstd", "settings.build_type", "options.shared"]
     else:
         try:
-            is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER
+            is_consumer = conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)
         except AttributeError:
             is_consumer = False
         if is_consumer:
