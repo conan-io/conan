@@ -473,7 +473,7 @@ class TestDownloadCacheBackupSources:
                         path=client.cache.cache_folder)
             client.save({"conanfile.py": conanfile})
             client.run("source .", assert_error=True)
-            assert "File could not be fetch from origin 'http://fake/myfile.txt', trying with sources backups next" in client.out
+            assert "File could not be fetched from origin 'http://fake/myfile.txt', trying with sources backups next" in client.out
             assert "'http://fake/myfile.txt' could not be fetched from any of ['origin', 'http://extrafake/']" in client.out
 
     def test_ok_when_origin_breaks_midway_list(self):
