@@ -114,7 +114,7 @@ class ConanProxy(object):
         return found_rrev.get("remote"), found_rrev.get("ref")
 
     def _download_recipe(self, ref, remotes, scoped_output, update, check_update):
-        # When a recipe doesn't existin local cache, it is retrieved from sservers
+        # When a recipe doesn't existin local cache, it is retrieved from servers
         scoped_output.info("Not found in local cache, looking in remotes...")
         if not remotes:
             raise ConanException("No remote defined")
