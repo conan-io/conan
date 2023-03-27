@@ -1,6 +1,5 @@
-# coding=utf-8
-
 import os
+import textwrap
 import unittest
 
 import pytest
@@ -38,3 +37,52 @@ class TransitiveEditableTest(unittest.TestCase):
         client2.current_folder = os.path.join(client2.current_folder, "build")
         mkdir(client2.current_folder)
         client2.run("install ..")
+
+
+def test_transitive_test_requires():
+    c = TestClient()
+    pkga = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps, cmake_layout
+
+        class Pkg(ConanFile):
+            name = "pkga"
+            version = "1.0"
+
+            # Binary configuration
+            settings = "os", "compiler", "build_type", "arch"
+
+            def build_requirements(self):
+                self.test_requires("gtest/1.0")
+
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                cd = CMakeDeps(self)
+                cd.generate()
+        """)
+    pkgb = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Pkg(ConanFile):
+            name = "pkgb"
+            version = "1.0"
+
+            # Binary configuration
+            settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires("pkga/1.0")
+
+            def layout(self):
+                cmake_layout(self)
+            """)
+    c.save({"gtest/conanfile.py": GenConanfile("gtest", "1.0"),
+            "pkga/conanfile.py": pkga,
+            "pkgb/conanfile.py": pkgb})
+    c.run("create gtest")
+    c.run("build pkga")
+    c.run("editable add pkga")
+    c.run("build pkgb")
