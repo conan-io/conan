@@ -336,7 +336,8 @@ class GraphBinariesAnalyzer(object):
         required_nodes = set()
         required_nodes.add(graph.root)
         for node in graph.nodes:
-            if node.binary != BINARY_BUILD and node is not graph.root:
+            if node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE) \
+                    and node is not graph.root:
                 continue
             for req, dep in node.transitive_deps.items():
                 dep_node = dep.node
