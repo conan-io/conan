@@ -6,7 +6,7 @@ import time
 from conan.api.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
-    ForbiddenException, ConanConnectionError, RequestErrorException
+    ForbiddenException, ConanConnectionError, RequestErrorException, InternalServerErrorException
 from conans.util.sha import check_with_algorithm_sum
 
 
@@ -20,7 +20,7 @@ class FileDownloader:
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
         """ in order to make the download concurrent, the folder for file_path MUST exist
         """
-        assert file_path, "Conan 2.0 always download files to disk, not to memory"
+        assert file_path, "Conan 2.0 always downloads files to disk, not to memory"
         assert os.path.isabs(file_path), "Target file_path must be absolute"
 
         if os.path.exists(file_path):
@@ -86,6 +86,8 @@ class FileDownloader:
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
                 raise AuthenticationException()
+            elif response.status_code == 500:
+                raise InternalServerErrorException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         def get_total_length():

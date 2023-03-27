@@ -250,3 +250,14 @@ EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
                           RecipeNotFoundException: 404,
                           PackageNotFoundException: 404,
                           UserInterfaceErrorException: 420}
+
+
+class InternalServerErrorException(ConanException):
+    """
+    500 error
+    """
+    pass
+
+
+class ChecksumSignatureMissmatchException(ConanException):
+    pass

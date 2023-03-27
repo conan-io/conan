@@ -273,7 +273,7 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .", assert_error=True)
-        assert "ConanException: Error 500 downloading file" in client.out
+        assert "Internal server error in" in client.out
 
     def test_upload_sources_backup_creds_needed(self):
         client = TestClient(default_server_user=True)
@@ -502,7 +502,6 @@ class TestDownloadCacheBackupSources:
 
         http_server.run_server()
 
-        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
         conanfile = textwrap.dedent(f"""
            from conan import ConanFile
            from conan.tools.files import download
@@ -523,4 +522,99 @@ class TestDownloadCacheBackupSources:
         client.run("create .")
         assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
 
+    def test_ok_when_origin_authorization_error(self):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+        http_server = StoppableThreadBottle()
+
+        http_server_base_folder_backup1 = temp_folder()
+        http_server_base_folder_backup2 = temp_folder()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_backup2, sha256), "Hello, world!")
+        save(os.path.join(http_server_base_folder_backup2, sha256 + ".json"), '{"references": {}}')
+
+        @http_server.server.get("/internet/<file>")
+        def get_internet_file(file):
+            return HTTPError(401, "You Are Not Allowed Here")
+
+        @http_server.server.get("/downloader1/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder_backup1)
+
+        @http_server.server.get("/downloader2/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder_backup2)
+
+        http_server.run_server()
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "1.0"
+               def source(self):
+                   download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
+                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
+                                    f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+        assert "Authorization required for origin" in client.out
+
+    def test_ok_when_origin_bad_sha256(self):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+        http_server = StoppableThreadBottle()
+
+        http_server_base_folder_internet = temp_folder()
+        http_server_base_folder_backup1 = temp_folder()
+        http_server_base_folder_backup2 = temp_folder()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Bye, world!")
+        save(os.path.join(http_server_base_folder_backup2, sha256), "Hello, world!")
+        save(os.path.join(http_server_base_folder_backup2, sha256 + ".json"), '{"references": {}}')
+
+        @http_server.server.get("/internet/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
+
+        @http_server.server.get("/downloader1/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder_backup1)
+
+        @http_server.server.get("/downloader2/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder_backup2)
+
+        http_server.run_server()
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "1.0"
+               def source(self):
+                   download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
+                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
+                                    f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+        assert "Signature missmatch for" in client.out
 

@@ -7,7 +7,7 @@ from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import NotFoundException, ConanException, AuthenticationException, \
-    ForbiddenException
+    ForbiddenException, InternalServerErrorException, ChecksumSignatureMissmatchException
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
 from conans.util.locks import SimpleLock
 
@@ -50,10 +50,8 @@ class CachingFileDownloader:
     def _handle_sources_download(self, url, conanfile, h, cached_path, sha256, **kwargs):
         global_conf = conanfile._conan_helpers.global_conf
         origin_placeholder = "origin"
-        download_urls = global_conf.get("core.backup_sources:download_urls",
-                                        default=[origin_placeholder,
-                                                 "https://center-sources.conan.io/"],
-                                        check_type=list)
+        # TODO: Make download_urls default to [origin_placeholder, "https://center-sources.conan.io/"]
+        download_urls = global_conf.get("core.backup_sources:download_urls", check_type=list)
         if not download_urls:
             raise ConanException(
                 f"There are no URLs defined to fetch {url} from in 'core.backup_sources:download_urls'.\n"
@@ -76,17 +74,23 @@ class CachingFileDownloader:
             except NotFoundException:
                 if download_url == origin_placeholder and download_urls.index(origin_placeholder) == 0:
                     conanfile.output.warning(
-                        f"File could not be fetch from origin '{url}', trying with sources backups next")
+                        f"File could not be fetched from origin '{url}', trying with sources backups next")
             except (AuthenticationException, ForbiddenException) as e:
-                raise ConanException(
-                    f"The source backup server '{download_url}' needs authentication"
-                    f"/permissions, please provide 'source_credentials.json': {e}")
-            except ConanException as e:
-                # TODO: Rethink how we detect a broken origin
-                if "Error 500 downloading file" in str(e) and download_url == origin_placeholder:
-                    pass
+                if download_url == origin_placeholder:
+                    conanfile.output.warning(f"Authorization required for origin '{url}', trying with sources backups")
                 else:
+                    raise ConanException(
+                        f"The source backup server '{download_url}' needs authentication"
+                        f"/permissions, please provide 'source_credentials.json': {e}")
+            except InternalServerErrorException:
+                conanfile.output.warning(f"Internal server error in {download_url} while trying to download {url}")
+                # TODO: Should we really break if a backup source returns 500?
+                if download_url != origin_placeholder:
                     raise
+            except ChecksumSignatureMissmatchException as e:
+                conanfile.output.warning(f"Signature missmatch for {url} in {download_url}, skipping: {e}")
+            except ConanException:
+                raise
         if not found:
             raise ConanException(f"'{url}' could not be fetched from any of {download_urls}")
 
