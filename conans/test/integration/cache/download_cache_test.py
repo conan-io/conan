@@ -101,7 +101,7 @@ class TestDownloadCache:
            """ % http_server.port)
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
-        assert "ConanException: md5 signature failed for" in client.out
+        assert "ChecksumSignatureMissmatchException: md5 signature failed for" in client.out
         assert "Provided signature: kk" in client.out
 
         # There are 2 things in the cache, the "locks" folder and the .dirty file because failure
