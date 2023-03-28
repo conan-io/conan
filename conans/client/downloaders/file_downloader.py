@@ -47,14 +47,14 @@ class FileDownloader:
                         self._output.info(f"Waiting {retry_wait} seconds to retry...")
                         time.sleep(retry_wait)
 
-            self._check_checksum(file_path, md5, sha1, sha256)
+            self.check_checksum(file_path, md5, sha1, sha256)
         except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)
             raise
 
     @staticmethod
-    def _check_checksum(file_path, md5, sha1, sha256):
+    def check_checksum(file_path, md5, sha1, sha256):
         if md5 is not None:
             check_with_algorithm_sum("md5", file_path, md5)
         if sha1 is not None:

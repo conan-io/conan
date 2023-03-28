@@ -3,6 +3,9 @@ import shutil
 from contextlib import contextmanager
 from threading import Lock
 
+from urllib.parse import urlparse
+from urllib.request import url2pathname
+
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
@@ -10,6 +13,49 @@ from conans.errors import NotFoundException, ConanException, AuthenticationExcep
     ForbiddenException, InternalServerErrorException, ChecksumSignatureMissmatchException
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
 from conans.util.locks import SimpleLock
+
+
+def sources_caching_download(conanfile, urls, file_path,
+                             retry, retry_wait, verify_ssl, auth, headers,
+                             md5, sha1, sha256):
+    global_conf = conanfile._conan_helpers.global_conf
+    download_cache = global_conf.get("core.sources:download_cache")
+    backups_urls = global_conf.get("core.sources:download_urls", check_type=list)
+    if not (backups_urls or download_cache):
+        _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
+                            md5, sha1, sha256)
+        return
+
+    # We are going to use the download_urls definition for backups
+    download_cache = download_cache or cache.default_sources_backup_folder
+    # regular local shared download cache, not using Conan backup sources servers
+    backups_urls = backups_urls or ["origin"]
+    if download_cache and not os.path.isabs(download_cache):
+        raise ConanException("core.download:download_cache must be an absolute path")
+    os.makedirs(os.path.dirname(filename), exist_ok=True)  # filename in subfolder must exist
+
+
+def _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
+                        md5, sha1, sha256):
+    file_downloader = FileDownloader(requester)
+    if not isinstance(urls, (list, tuple)):
+        urls = [urls]
+    messages = []
+    for url in urls:
+        try:
+            if url.startswith("file:"):
+                file_origin = url2pathname(urlparse(url).path)
+                shutil.copyfile(file_origin, file_path)
+                file_downloader.check_checksum(file_path, md5, sha1, sha256)
+            else:
+                file_downloader.download(url, file_path, retry=retry, retry_wait=retry_wait,
+                                         verify_ssl=verify_ssl, auth=auth, overwrite=True,
+                                         headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+            return url
+        except Exception as error:
+            messages.append(f"Could not download from the URL {url}: {error}.")
+    # If we didn't succeed, raise error
+    raise ConanException("\n".join(messages))
 
 
 class CachingFileDownloader:

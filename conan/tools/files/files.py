@@ -192,6 +192,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     # TODO: Add all parameters to the new conf
     requester = conanfile._conan_helpers.requester
     global_conf = conanfile._conan_helpers.global_conf
+    cache = conanfile._conan_helpers.cache
     config = conanfile.conf
     out = ConanOutput()
     overwrite = True
@@ -201,59 +202,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry_wait = retry_wait if retry_wait is not None else 5
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
 
-    download_cache = None
-    if md5 or sha1 or sha256:  # If there is no checksum, no cache is used
-        download_cache = config.get("tools.files.download:download_cache")
-        download_cache = download_cache or global_conf.get("core.backup_sources:download_cache")
-        download_cache = download_cache or global_conf.get("core.download:download_cache")
-        if download_cache and not os.path.isabs(download_cache):
-            raise ConanException("core.download:download_cache must be an absolute path")
-
     filename = os.path.abspath(filename)
 
-    def _download_file(file_url):
-        # The download cache is only used if a checksum is provided, otherwise, a normal download
-        if file_url.startswith("file:"):
-            _copy_local_file_from_uri(conanfile, url=file_url, file_path=filename, md5=md5,
-                                      sha1=sha1, sha256=sha256)
-        else:
-            downloader = CachingFileDownloader(requester, download_cache=download_cache)
-            os.makedirs(os.path.dirname(filename), exist_ok=True)  # filename in subfolder must exist
-            downloader.download(url=file_url, file_path=filename, auth=auth, overwrite=overwrite,
-                                verify_ssl=verify, retry=retry, retry_wait=retry_wait,
-                                headers=headers, md5=md5, sha1=sha1, sha256=sha256,
-                                conanfile=conanfile)
-        out.writeln("")
-
-    if not isinstance(url, (list, tuple)):
-        _download_file(url)
-    else:  # We were provided several URLs to try
-        for url_it in url:
-            try:
-                _download_file(url_it)
-                break
-            except Exception as error:
-                message = "Could not download from the URL {}: {}.".format(url_it, str(error))
-                out.warning(message + " Trying another mirror.")
-        else:
-            raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
-
-
-def _copy_local_file_from_uri(conanfile, url, file_path, md5=None, sha1=None, sha256=None):
-    file_origin = _path_from_file_uri(url)
-    shutil.copyfile(file_origin, file_path)
-
-    if md5 is not None:
-        check_md5(conanfile, file_path, md5)
-    if sha1 is not None:
-        check_sha1(conanfile, file_path, sha1)
-    if sha256 is not None:
-        check_sha256(conanfile, file_path, sha256)
-
-
-def _path_from_file_uri(uri):
-    path = urlparse(uri).path
-    return url2pathname(path)
 
 
 def rename(conanfile, src, dst):
