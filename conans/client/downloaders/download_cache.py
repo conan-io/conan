@@ -1,10 +1,10 @@
 import json
 import os
+from contextlib import contextmanager
+from threading import Lock
 
-from conan.api.output import ConanOutput
-from conans.util.dates import timestamp_now
-from conans.util.files import load, save
-from conans.util.sha import sha256 as compute_sha256
+from conans.util.files import load
+from conans.util.locks import SimpleLock
 
 
 class DownloadCache:
@@ -13,60 +13,25 @@ class DownloadCache:
     - "c": CONAN_CACHE: for caching Conan packages artifacts
     - "locks": The LOCKS folder containing the file locks for concurrent access to the cache
     """
-    _SOURCE_BACKUP_DIR = "s"
-    _CONAN_CACHE_DIR = "c"
     _LOCKS = "locks"
 
     def __init__(self, path: str):
         self._path: str = path
 
-    def get_cache_path(self, url, md5, sha1, sha256, conanfile):
-        """
-        conanfile: if not None, it means it is a call from source() method
-        """
-        h = sha256  # lets be more efficient for de-dup server files
-        if conanfile and not sha256:
-            ConanOutput().warning("Expected sha256 to be used as checksum for downloaded sources")
-        if h is None:
-            h = self._get_hash(url, md5, sha1)
-        subfolder = self._SOURCE_BACKUP_DIR if conanfile and sha256 else self._CONAN_CACHE_DIR
-        cached_path = os.path.join(self._path, subfolder, h)
-        return cached_path, h
+    _thread_locks = {}  # Needs to be shared among all instances
 
-    @staticmethod
-    def update_backup_sources_json(cached_path, conanfile, url):
-        summary_path = cached_path + ".json"
-        if os.path.exists(summary_path):
-            summary = json.loads(load(summary_path))
-        else:
-            summary = {"references": {}, "timestamp": timestamp_now()}
-
-        try:
-            summary_key = str(conanfile.ref)
-        except AttributeError:
-            # The recipe path would be different between machines
-            # So best we can do is to set this as unknown
-            summary_key = "unknown"
-
-        urls = summary["references"].setdefault(summary_key, [])
-        if url not in urls:
-            urls.append(url)
-        save(summary_path, json.dumps(summary))
-
-    def get_lock_path(self, lock_id):
-        return os.path.join(self._path, self._LOCKS, lock_id)
-
-    @staticmethod
-    def _get_hash(url, md5, sha1):
-        """ For Api V2, the cached downloads always have recipe and package REVISIONS in the URL,
-        making them immutable, and perfect for cached downloads of artifacts. For V2 checksum
-        will always be None.
-        """
-        checksum = sha1 or md5
-        if checksum is not None:
-            url += checksum
-        h = compute_sha256(url.encode())
-        return h
+    @contextmanager
+    def lock(self, lock_id):
+        lock = os.path.join(self._path, self._LOCKS, lock_id)
+        with SimpleLock(lock):
+            # Once the process has access, make sure multithread is locked too
+            # as SimpleLock doesn't work multithread
+            thread_lock = self._thread_locks.setdefault(lock, Lock())
+            thread_lock.acquire()
+            try:
+                yield
+            finally:
+                thread_lock.release()
 
     def get_files_to_upload(self, package_list):
         files_to_upload = []
