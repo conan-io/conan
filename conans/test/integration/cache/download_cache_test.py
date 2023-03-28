@@ -79,6 +79,8 @@ class TestDownloadCache:
         save(file_path, "some content")
         file_path_query = os.path.join(temp_folder(), "myfile2.txt")
         save(file_path_query, "some query")
+        file_path_query = os.path.join(temp_folder(), "myfile3.txt")
+        save(file_path_query, "some content 3")
 
         @http_server.server.get("/myfile.txt")
         def get_file():
@@ -115,7 +117,9 @@ class TestDownloadCache:
                 def source(self):
                     md5 = "9893532233caff98cd083a116b013c0b"
                     md5_2 = "0dc8a17658b1c7cfa23657780742a353"
+                    sha256 = "patata"
                     download(self, "http://localhost:{0}/myfile.txt", "myfile.txt", md5=md5)
+                    download(self, "http://localhost:{0}/myfile3.txt", "myfile3.txt", sha256=sha256)
                     download(self, "http://localhost:{0}/myfile.txt?q=2", "myfile2.txt", md5=md5_2)
             """).format(http_server.port)
         client.save({"conanfile.py": conanfile})
