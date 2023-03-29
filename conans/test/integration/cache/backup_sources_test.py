@@ -12,7 +12,7 @@ from conans.util.files import save, load, rmdir
 
 class TestDownloadCacheBackupSources:
     def test_users_download_cache_summary(self):
-        def custom_download(this, url, filepath, **kwargs):
+        def custom_download(this, url, filepath, *args, **kwargs):
             if url.startswith("http://myback"):
                 raise NotFoundException()
             save(filepath, f"Hello, world!")

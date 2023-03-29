@@ -8,8 +8,8 @@ from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
 
-from conan.api.output import ConanOutput
-from conans.client.downloaders.caching_file_downloader import sources_caching_download
+
+from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
 from conans.util.sha import check_with_algorithm_sum
@@ -195,9 +195,8 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
 
     filename = os.path.abspath(filename)
-    sources_caching_download(conanfile, url, filename,
-                             retry, retry_wait, verify, auth, headers,
-                             md5, sha1, sha256)
+    downloader = SourcesCachingDownloader(conanfile)
+    downloader.download(url, filename, retry, retry_wait, verify, auth, headers, md5, sha1, sha256)
 
 
 def rename(conanfile, src, dst):

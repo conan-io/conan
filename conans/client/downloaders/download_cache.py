@@ -5,6 +5,7 @@ from threading import Lock
 
 from conans.util.files import load
 from conans.util.locks import SimpleLock
+from conans.util.sha import sha256 as compute_sha256
 
 
 class DownloadCache:
@@ -14,11 +15,18 @@ class DownloadCache:
     - "locks": The LOCKS folder containing the file locks for concurrent access to the cache
     """
     _LOCKS = "locks"
-    _SOURCES = "s"
-    _CONAN = "c"
+    _SOURCE_BACKUP = "s"
+    _CONAN_CACHE = "c"
 
     def __init__(self, path: str):
         self._path: str = path
+
+    def source_path(self, sha256):
+        return os.path.join(self._path, self._SOURCE_BACKUP, sha256)
+
+    def cached_path(self, url):
+        h = compute_sha256(url.encode())
+        return os.path.join(self._path, self._CONAN_CACHE, h), h
 
     _thread_locks = {}  # Needs to be shared among all instances
 
@@ -37,7 +45,7 @@ class DownloadCache:
 
     def get_files_to_upload(self, package_list):
         files_to_upload = []
-        path_backups = os.path.join(self._path, self._SOURCES)
+        path_backups = os.path.join(self._path, self._SOURCE_BACKUP)
         all_refs = {str(k) for k, v in package_list.refs() if v.get("upload")}
         for f in os.listdir(path_backups):
             if f.endswith(".json"):
