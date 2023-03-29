@@ -21,10 +21,10 @@ class CmdWrapper:
         else:
             self._wrapper = None
 
-    def wrap(self, cmd):
+    def wrap(self, cmd, conanfile, **kwargs):
         if self._wrapper is None:
             return cmd
-        return self._wrapper(cmd)
+        return self._wrapper(cmd, conanfile=conanfile, **kwargs)
 
 
 class ConanFileHelpers:
