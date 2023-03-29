@@ -5,11 +5,11 @@ import shutil
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
-from conan.api.output import ConanOutput
 from conans.util.sha import sha256 as compute_sha256
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
-from conans.errors import NotFoundException, ConanException
+from conans.errors import NotFoundException, ConanException, AuthenticationException, \
+    ForbiddenException
 from conans.util.dates import timestamp_now
 from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, load, save
 
@@ -29,7 +29,7 @@ def sources_caching_download(conanfile, urls, file_path,
         if backups_urls or download_cache:
             conanfile.output.warning("Cannot cache download() without sha256 checksum")
         _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
-                            md5, sha1, sha256, file_downloader)
+                            md5, sha1, sha256, file_downloader, conanfile)
         return
 
     # We are going to use the download_urls definition for backups
@@ -49,32 +49,46 @@ def sources_caching_download(conanfile, urls, file_path,
         else:
             with set_dirty_context_manager(cached_path):
                 for backup_url in backups_urls:
+                    is_last = backup_url is backups_urls[-1]
                     if backup_url == "origin":  # recipe defined URLs
                         try:
-                            url = _download_from_urls(urls, cached_path, retry, retry_wait, verify_ssl,
-                                                      auth, headers, md5, sha1, sha256, file_downloader)
+                            _download_from_urls(urls, cached_path, retry, retry_wait, verify_ssl,
+                                                auth, headers, md5, sha1, sha256, file_downloader,
+                                                conanfile)
                         except ConanException as e:
-                            conanfile.output.warning(str(e))
+                            if is_last:
+                                raise
+                            else:
+                                # TODO: Improve printing of AuthenticationException
+                                conanfile.output.warning(f"Sources for {urls} failed in 'origin': {e}")
+                                conanfile.output.warning("Checking backups")
                         else:
-                            _update_backup_sources_json(cached_path, conanfile, url)
+                            if not is_last:
+                                conanfile.output.info(f"Sources for {urls} found in origin")
                             break
                     else:
                         try:
                             file_downloader.download(backup_url + sha256, cached_path, sha256=sha256)
                             file_downloader.download(backup_url + sha256 + ".json", cached_path + ".json")
-                            conanfile.output.info(f"Sources for {urls} found in {backup_url}")
+                            conanfile.output.info(f"Sources for {urls} found in remote backup {backup_url}")
                             break
                         except NotFoundException:
-                            pass
-                else:
-                    raise ConanException(f"{urls} not found in {backups_urls}")
+                            if is_last:
+                                raise NotFoundException(f"File {urls} not found in {backups_urls}")
+                            else:
+                                conanfile.output.warning(f"Sources not found in backup {backup_url}")
+                        except (AuthenticationException, ForbiddenException) as e:
+                            raise ConanException(f"The source backup server '{backup_url}' "
+                                                 f"needs authentication: {e}. "
+                                                 f"Please provide 'source_credentials.json'")
 
+        _update_backup_sources_json(cached_path, conanfile, urls)
         # Everything good, file in the cache, just copy it to final destination
         mkdir(os.path.dirname(file_path))
         shutil.copy2(cached_path, file_path)
 
 
-def _update_backup_sources_json(cached_path, conanfile, url):
+def _update_backup_sources_json(cached_path, conanfile, urls):
     summary_path = cached_path + ".json"
     if os.path.exists(summary_path):
         summary = json.loads(load(summary_path))
@@ -88,14 +102,15 @@ def _update_backup_sources_json(cached_path, conanfile, url):
         # So best we can do is to set this as unknown
         summary_key = "unknown"
 
-    urls = summary["references"].setdefault(summary_key, [])
-    if url not in urls:
-        urls.append(url)
+    if not isinstance(urls, (list, tuple)):
+        urls = [urls]
+    existing_urls = summary["references"].setdefault(summary_key, [])
+    existing_urls.extend(url for url in urls if url not in existing_urls)
     save(summary_path, json.dumps(summary))
 
 
 def _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
-                        md5, sha1, sha256, file_downloader):
+                        md5, sha1, sha256, file_downloader, conanfile):
     os.makedirs(os.path.dirname(file_path), exist_ok=True)  # filename in subfolder must exist
     if not isinstance(urls, (list, tuple)):
         urls = [urls]
@@ -109,18 +124,19 @@ def _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, he
                 file_downloader.download(url, file_path, retry=retry, retry_wait=retry_wait,
                                          verify_ssl=verify_ssl, auth=auth, overwrite=True,
                                          headers=headers, md5=md5, sha1=sha1, sha256=sha256)
-            return url
+            return
         except Exception as error:
             if url != urls[-1]:
                 msg = f"Could not download from the URL {url}: {error}."
-                ConanOutput().warning(msg)
-                ConanOutput().info("Trying another mirror.")
+                conanfile.output.warning(msg)
+                conanfile.output.info("Trying another mirror.")
             else:
-                error.args += (f"Could not download from the URL {url}",)
-                raise error
+                raise
 
 
 class ConanInternalCacheDownloader:
+    """ This is used for the download of Conan packages from server, not for sources
+    """
     def __init__(self, requester, config):
         self._download_cache = config.get("core.download:download_cache")
         if self._download_cache and not os.path.isabs(self._download_cache):

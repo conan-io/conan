@@ -179,7 +179,7 @@ class TestDownloadCacheBackupSources:
         rmdir(download_cache_folder)
 
         client.run("source .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in origin" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in origin" in client.out
         client.run("source .")
         assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
 
@@ -232,7 +232,7 @@ class TestDownloadCacheBackupSources:
         rmdir(download_cache_folder)
 
         client.run("source .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
         client.run("source .")
         assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
 
@@ -273,7 +273,7 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .", assert_error=True)
-        assert "Internal server error in" in client.out
+        assert "ConanException: Error 500 downloading file " in client.out
 
     def test_upload_sources_backup_creds_needed(self):
         client = TestClient(default_server_user=True)
@@ -333,7 +333,7 @@ class TestDownloadCacheBackupSources:
         assert f"ConanException: The source backup server 'http://localhost:{http_server.port}" \
                f"/downloader/' needs authentication" in client.out
         content = {"credentials":
-                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+                   [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
 
         client.run("create .")
@@ -342,10 +342,10 @@ class TestDownloadCacheBackupSources:
         assert f"The source backup server 'http://localhost:{http_server.port}" \
                f"/uploader/' needs authentication" in client.out
         content = {"credentials":
-                       [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
+                   [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
         # Now use the correct UPLOAD token
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
-        client.run("upload * -c -r=default")
+        client.run("upload * -c -r=default --force")  # need --force to guarantee cached updated
 
         server_contents = os.listdir(http_server_base_folder_backups)
         assert sha256 in server_contents
@@ -355,7 +355,7 @@ class TestDownloadCacheBackupSources:
         assert "already in server, skipping upload" in client.out
 
         content = {"credentials":
-                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+                   [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
 
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         rmdir(download_cache_folder)
@@ -365,7 +365,7 @@ class TestDownloadCacheBackupSources:
         os.remove(os.path.join(http_server_base_folder_internet, "myfile.txt"))
 
         client.run("source .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
         assert "CONTENT: Hello, world!" in client.out
         client.run("source .")
         assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
@@ -439,13 +439,13 @@ class TestDownloadCacheBackupSources:
         os.remove(os.path.join(server_folders["internet"], "myfile.txt"))
 
         client.run("source .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
 
         # And if the first one has them, prefer it before others in the list
         server_folders["backup1"] = server_folders["backup2"]
         rmdir(download_cache_folder)
         client.run("source .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader1/" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader1/" in client.out
 
     def test_list_urls_miss(self):
         def custom_download(this, url, *args, **kwargs):
@@ -473,8 +473,10 @@ class TestDownloadCacheBackupSources:
                         path=client.cache.cache_folder)
             client.save({"conanfile.py": conanfile})
             client.run("source .", assert_error=True)
-            assert "File could not be fetched from origin 'http://fake/myfile.txt', trying with sources backups next" in client.out
-            assert "'http://fake/myfile.txt' could not be fetched from any of ['origin', 'http://extrafake/']" in client.out
+            assert "WARN: Sources for http://fake/myfile.txt failed in 'origin'" in client.out
+            assert "WARN: Checking backups" in client.out
+            assert "NotFoundException: File http://fake/myfile.txt not found " \
+                   "in ['origin', 'http://extrafake/']" in client.out
 
     def test_ok_when_origin_breaks_midway_list(self):
         client = TestClient(default_server_user=True)
@@ -520,7 +522,7 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
 
     def test_ok_when_origin_authorization_error(self):
         client = TestClient(default_server_user=True)
@@ -566,8 +568,9 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
-        assert "Authorization required for origin" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+        # TODO: Check better message with Authentication error message
+        assert "failed in 'origin'" in client.out
 
     def test_ok_when_origin_bad_sha256(self):
         client = TestClient(default_server_user=True)
@@ -615,6 +618,5 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .")
-        assert f"Sources from http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
-        assert "Signature missmatch for" in client.out
-
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
+        assert "sha256 signature failed for" in client.out
