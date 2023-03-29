@@ -14,6 +14,8 @@ class DownloadCache:
     - "locks": The LOCKS folder containing the file locks for concurrent access to the cache
     """
     _LOCKS = "locks"
+    _SOURCES = "s"
+    _CONAN = "c"
 
     def __init__(self, path: str):
         self._path: str = path
@@ -35,7 +37,7 @@ class DownloadCache:
 
     def get_files_to_upload(self, package_list):
         files_to_upload = []
-        path_backups = os.path.join(self._path, "s")
+        path_backups = os.path.join(self._path, self._SOURCES)
         all_refs = {str(k) for k, v in package_list.refs() if v.get("upload")}
         for f in os.listdir(path_backups):
             if f.endswith(".json"):

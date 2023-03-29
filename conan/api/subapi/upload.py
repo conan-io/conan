@@ -58,15 +58,14 @@ class UploadAPI:
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
         uploader = FileUploader(app.requester, verify=False, config=config)
-        # TODO: List files
+        # TODO: For Artifactory, we can list all files once and check from there instead
+        #  of 1 request per file, but this is more general
         for file in files:
-            # Check Artifactory's HEAD
             basename = os.path.basename(file)
             full_url = url + basename
             try:
-                upload = file.endswith(".json")
-                upload = upload or not uploader.exists(full_url, auth=None)
-                if upload:
+                # Always upload summary .json but only upload blob if it does not already exist
+                if file.endswith(".json") or not uploader.exists(full_url, auth=None):
                     ConanOutput().info(f"Uploading file '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
