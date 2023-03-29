@@ -148,3 +148,25 @@ def test_update_binaries_failed():
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("install --requires=pkg/0.1@lasote/testing --update")
     assert "WARN: Can't update, there are no remotes defined" in client.out
+
+
+def test_install_update_repeated_tool_requires():
+    """
+    Test that requiring the same thing multiple times, like a tool-requires, only
+    require checking the servers 1, so it is much faster
+
+    https://github.com/conan-io/conan/issues/13508
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "liba/conanfile.py": GenConanfile("liba", "0.1"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1"),
+            "profile": "[tool_requires]\ntool/0.1"
+            })
+    c.run("create tool")
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("install libc --update -pr=profile")
+    assert 1 == str(c.out).count("tool/0.1: Checking remote")

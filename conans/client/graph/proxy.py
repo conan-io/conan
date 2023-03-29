@@ -5,18 +5,24 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE
 from conans.errors import ConanException, NotFoundException
 
 
-class ConanProxy(object):
+class ConanProxy:
     def __init__(self, conan_app):
         # collaborators
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
+        self._resolved = {}  # Cache of the requested recipes to optimize calls
 
     def get_recipe(self, ref, remotes, update, check_update):
+        """
+        :return: Tuple (conanfile_path, status, remote, new_ref)
+        """
         # TODO: cache2.0 Check with new locks
         # with layout.conanfile_write_lock(self._out):
-        result = self._get_recipe(ref, remotes, update, check_update)
-        conanfile_path, status, remote, new_ref = result
-        return conanfile_path, status, remote, new_ref
+        resolved = self._resolved.get(ref)
+        if resolved is None:
+            resolved = self._get_recipe(ref, remotes, update, check_update)
+            self._resolved[ref] = resolved
+        return resolved
 
     # return the remote where the recipe was found or None if the recipe was not found
     def _get_recipe(self, reference, remotes, update, check_update):
