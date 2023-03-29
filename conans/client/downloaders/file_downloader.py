@@ -6,7 +6,7 @@ import time
 from conan.api.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
-    ForbiddenException, ConanConnectionError, RequestErrorException, InternalServerErrorException
+    ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util.sha import check_with_algorithm_sum
 
 
@@ -86,8 +86,6 @@ class FileDownloader:
                 raise ForbiddenException(response_to_str(response))
             elif response.status_code == 401:
                 raise AuthenticationException()
-            elif response.status_code == 500:
-                raise InternalServerErrorException()
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         def get_total_length():

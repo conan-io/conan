@@ -5,6 +5,7 @@ import shutil
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
+from conan.api.output import ConanOutput
 from conans.util.sha import sha256 as compute_sha256
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
@@ -98,7 +99,6 @@ def _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, he
     os.makedirs(os.path.dirname(file_path), exist_ok=True)  # filename in subfolder must exist
     if not isinstance(urls, (list, tuple)):
         urls = [urls]
-    messages = []
     for url in urls:
         try:
             if url.startswith("file:"):
@@ -111,11 +111,13 @@ def _download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, he
                                          headers=headers, md5=md5, sha1=sha1, sha256=sha256)
             return url
         except Exception as error:
-            messages.append(f"Could not download from the URL {url}: {error}.")
-    # If we didn't succeed, raise error
-    raise ConanException("\n".join(messages))
-
-
+            if url != urls[-1]:
+                msg = f"Could not download from the URL {url}: {error}."
+                ConanOutput().warning(msg)
+                ConanOutput().info("Trying another mirror.")
+            else:
+                error.args += (f"Could not download from the URL {url}",)
+                raise error
 
 
 class ConanInternalCacheDownloader:

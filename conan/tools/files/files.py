@@ -9,6 +9,7 @@ from fnmatch import fnmatch
 from shutil import which
 
 from conan.api.output import ConanOutput
+from conans.client.downloaders.caching_file_downloader import sources_caching_download
 from conans.errors import ConanException
 from conans.util.files import rmdir as _internal_rmdir
 from conans.util.sha import check_with_algorithm_sum
@@ -186,13 +187,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :param sha1: SHA-1 hash code to check the downloaded file
     :param sha256: SHA-256 hash code to check the downloaded file
     """
-    # TODO: Add all parameters to the new conf
-    requester = conanfile._conan_helpers.requester
-    global_conf = conanfile._conan_helpers.global_conf
-    cache = conanfile._conan_helpers.cache
     config = conanfile.conf
-    out = ConanOutput()
-    overwrite = True
 
     retry = retry if retry is not None else 2
     retry = config.get("tools.files.download:retry", check_type=int, default=retry)
@@ -200,7 +195,9 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
 
     filename = os.path.abspath(filename)
-
+    sources_caching_download(conanfile, url, filename,
+                             retry, retry_wait, verify, auth, headers,
+                             md5, sha1, sha256)
 
 
 def rename(conanfile, src, dst):

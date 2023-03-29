@@ -49,15 +49,12 @@ class UploadAPI:
     def upload_backup_sources(self, package_list):
         app = ConanApp(self.conan_api.cache_folder)
         config = app.cache.new_config
-        url = config.get("core.backup_sources:upload_url")
+        url = config.get("core.sources:upload_url")
         if url is None:
             return
         url = url if url.endswith("/") else url + "/"
-        download_cache_path = config.get("tools.files.download:download_cache")
-        download_cache_path = download_cache_path or config.get("core.backup_sources:download_cache")
-        download_cache_path = download_cache_path or config.get("core.download:download_cache")
-        if download_cache_path is None:
-            raise ConanException("Need to define 'core.download:download_cache'")
+        download_cache_path = config.get("core.sources:download_cache")
+        download_cache_path = download_cache_path or app.cache.default_sources_backup_folder
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
         uploader = FileUploader(app.requester, verify=False, config=config)

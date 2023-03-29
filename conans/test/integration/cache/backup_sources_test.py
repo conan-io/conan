@@ -21,8 +21,8 @@ class TestDownloadCacheBackupSources:
                         custom_download):
             client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
-            client.save({"global.conf": f"core.backup_sources:download_cache={tmp_folder}\n"
-                                        "core.backup_sources:download_urls=['origin', 'http://myback']"},
+            client.save({"global.conf": f"core.sources:download_cache={tmp_folder}\n"
+                                        "core.sources:download_urls=['origin', 'http://myback']"},
                         path=client.cache.cache_folder)
             sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
             conanfile = textwrap.dedent(f"""
@@ -111,9 +111,9 @@ class TestDownloadCacheBackupSources:
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
-                                    f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
@@ -167,9 +167,9 @@ class TestDownloadCacheBackupSources:
                                      sha256="{sha256}")
                     """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
-                                    f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
@@ -220,9 +220,9 @@ class TestDownloadCacheBackupSources:
                                      sha256="{sha256}")
                     """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/', 'origin']\n"
-                                    f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader/', 'origin']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
@@ -266,8 +266,8 @@ class TestDownloadCacheBackupSources:
                             sha256="{sha256}")
            """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/', "
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader/', "
                                     f"'http://localhost:{http_server.port}/downloader2/']\n"},
                     path=client.cache.cache_folder)
 
@@ -323,9 +323,9 @@ class TestDownloadCacheBackupSources:
                     self.output.info(f"CONTENT: {{load(self, 'myfile.txt')}}")
             """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader/', 'origin']\n"
-                                    f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader/', 'origin']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
@@ -419,9 +419,9 @@ class TestDownloadCacheBackupSources:
                              sha256="{sha256}")
             """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
-                                    f"core.backup_sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader1/', 'http://localhost:{http_server.port}/downloader2/']"},
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
+                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader1/', 'http://localhost:{http_server.port}/downloader2/']"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
@@ -468,8 +468,8 @@ class TestDownloadCacheBackupSources:
                         download(self, "http://fake/myfile.txt", "myfile.txt", sha256="{sha256}")
                 """)
 
-            client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                        f"core.backup_sources:download_urls=['origin', 'http://extrafake/']\n"},
+            client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                        f"core.sources:download_urls=['origin', 'http://extrafake/']\n"},
                         path=client.cache.cache_folder)
             client.save({"conanfile.py": conanfile})
             client.run("source .", assert_error=True)
@@ -513,8 +513,8 @@ class TestDownloadCacheBackupSources:
                             sha256="{sha256}")
            """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
                                     f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"},
                     path=client.cache.cache_folder)
 
@@ -559,8 +559,8 @@ class TestDownloadCacheBackupSources:
                             sha256="{sha256}")
            """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
                                     f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"},
                     path=client.cache.cache_folder)
 
@@ -608,8 +608,8 @@ class TestDownloadCacheBackupSources:
                             sha256="{sha256}")
            """)
 
-        client.save({"global.conf": f"core.backup_sources:download_cache={download_cache_folder}\n"
-                                    f"core.backup_sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', "
                                     f"'origin', 'http://localhost:{http_server.port}/downloader2/']\n"},
                     path=client.cache.cache_folder)
 
