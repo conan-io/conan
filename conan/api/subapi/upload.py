@@ -56,7 +56,7 @@ class UploadAPI:
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or app.cache.default_sources_backup_folder
 
-        files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
+        files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list)
         # TODO: verify might need a config to force it to False
         uploader = FileUploader(app.requester, verify=True, config=config)
         # TODO: For Artifactory, we can list all files once and check from there instead
