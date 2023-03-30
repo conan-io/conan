@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 
@@ -9,8 +8,7 @@ from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import NotFoundException, ConanException, AuthenticationException, \
     ForbiddenException
-from conans.util.dates import timestamp_now
-from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, load, save
+from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
 
 
 class SourcesCachingDownloader:
@@ -43,6 +41,11 @@ class SourcesCachingDownloader:
     def _caching_download(self, urls, file_path,
                           retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256,
                           download_cache_folder, backups_urls):
+        """
+        this download will first check in the local cache, if not there, it will go to the list
+        of backup_urls defined by user conf (by default ["origin"], and iterate it until
+        something is found.
+        """
         # We are going to use the download_urls definition for backups
         download_cache_folder = download_cache_folder or self._cache.default_sources_backup_folder
         # regular local shared download cache, not using Conan backup sources servers
@@ -71,13 +74,15 @@ class SourcesCachingDownloader:
                                                      urls, is_last):
                                 break
 
-            self._update_backup_sources_json(cached_path, urls)
+            download_cache.update_backup_sources_json(cached_path, self._conanfile, urls)
             # Everything good, file in the cache, just copy it to final destination
             mkdir(os.path.dirname(file_path))
             shutil.copy2(cached_path, file_path)
 
     def _origin_download(self, urls, cached_path, retry, retry_wait,
                          verify_ssl, auth, headers, md5, sha1, sha256, is_last):
+        """ download from the internet, the urls provided by the recipe (mirrors).
+        """
         try:
             self._download_from_urls(urls, cached_path, retry, retry_wait,
                                      verify_ssl, auth, headers, md5, sha1, sha256)
@@ -94,6 +99,10 @@ class SourcesCachingDownloader:
             return True
 
     def _backup_download(self, backup_url, backups_urls, sha256, cached_path, urls, is_last):
+        """ download from a Conan backup sources file server, like an Artifactory generic repo
+        All failures are bad, except NotFound. The server must be live, working and auth, we
+        don't want silently skipping a backup because it is down.
+        """
         try:
             self._file_downloader.download(backup_url + sha256, cached_path, sha256=sha256)
             self._file_downloader.download(backup_url + sha256 + ".json", cached_path + ".json")
@@ -109,43 +118,26 @@ class SourcesCachingDownloader:
                                  f"needs authentication: {e}. "
                                  f"Please provide 'source_credentials.json'")
 
-    def _update_backup_sources_json(self, cached_path, urls):
-        summary_path = cached_path + ".json"
-        if os.path.exists(summary_path):
-            summary = json.loads(load(summary_path))
-        else:
-            summary = {"references": {}, "timestamp": timestamp_now()}
-
-        try:
-            summary_key = str(self._conanfile.ref)
-        except AttributeError:
-            # The recipe path would be different between machines
-            # So best we can do is to set this as unknown
-            summary_key = "unknown"
-
-        if not isinstance(urls, (list, tuple)):
-            urls = [urls]
-        existing_urls = summary["references"].setdefault(summary_key, [])
-        existing_urls.extend(url for url in urls if url not in existing_urls)
-        save(summary_path, json.dumps(summary))
-
     def _download_from_urls(self, urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
                             md5, sha1, sha256):
+        """ iterate the recipe provided list of urls (mirrors, all with same checksum) until
+        one succeed
+        """
         os.makedirs(os.path.dirname(file_path), exist_ok=True)  # filename in subfolder must exist
         if not isinstance(urls, (list, tuple)):
             urls = [urls]
         for url in urls:
             try:
-                if url.startswith("file:"):
+                if url.startswith("file:"):  # plain copy from local disk, no real download
                     file_origin = url2pathname(urlparse(url).path)
                     shutil.copyfile(file_origin, file_path)
                     self._file_downloader.check_checksum(file_path, md5, sha1, sha256)
                 else:
                     self._file_downloader.download(url, file_path, retry, retry_wait, verify_ssl,
                                                    auth, True, headers, md5, sha1, sha256)
-                return
+                return  # Success! Return to caller
             except Exception as error:
-                if url != urls[-1]:
+                if url != urls[-1]:  # If it is not the last one, do not raise, warn and move to next
                     msg = f"Could not download from the URL {url}: {error}."
                     self._output.warning(msg)
                     self._output.info("Trying another mirror.")
@@ -154,7 +146,7 @@ class SourcesCachingDownloader:
 
 
 class ConanInternalCacheDownloader:
-    """ This is used for the download of Conan packages from server, not for sources
+    """ This is used for the download of Conan packages from server, not for sources/backup sources
     """
     def __init__(self, requester, config):
         self._download_cache = config.get("core.download:download_cache")

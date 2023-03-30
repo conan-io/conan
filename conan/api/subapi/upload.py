@@ -57,7 +57,8 @@ class UploadAPI:
         download_cache_path = download_cache_path or app.cache.default_sources_backup_folder
 
         files = DownloadCache(download_cache_path).get_files_to_upload(package_list)
-        uploader = FileUploader(app.requester, verify=False, config=config)
+        # TODO: verify might need a config to force it to False
+        uploader = FileUploader(app.requester, verify=True, config=config)
         # TODO: For Artifactory, we can list all files once and check from there instead
         #  of 1 request per file, but this is more general
         for file in files:
@@ -69,7 +70,8 @@ class UploadAPI:
                     ConanOutput().info(f"Uploading file '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
-                    ConanOutput().info(f"File '{basename}' already in backup sources server, skipping upload")
+                    ConanOutput().info(f"File '{basename}' already in backup sources server, "
+                                       "skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
                 raise ConanException(f"The source backup server '{url}' needs authentication"
                                      f"/permissions, please provide 'source_credentials.json': {e}")
