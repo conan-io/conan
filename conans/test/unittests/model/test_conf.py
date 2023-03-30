@@ -1,4 +1,3 @@
-import sys
 import textwrap
 
 import pytest
@@ -196,11 +195,19 @@ def test_compose_conf_complex():
         zlib:user.company.check:shared_str="False"
     """)
 
-    if sys.version_info.major == 2:  # problems with the order in Python 2.x
-        text = c.dumps()
-        assert all([line in text for line in expected_text.splitlines()])
-    else:
-        assert c.dumps() == expected_text
+    assert c.dumps() == expected_text
+
+
+def test_compose_conf_dict_updates():
+    c = ConfDefinition()
+    c.loads("user.company:mydict={'1': 'a'}\n"
+            "user.company:mydict2={'1': 'a'}")
+    c2 = ConfDefinition()
+    c2.loads("user.company:mydict={'2': 'b'}\n"
+             "user.company:mydict2*={'2': 'b'}")
+    c.update_conf_definition(c2)
+    assert c.dumps() == ("user.company:mydict={'2': 'b'}\n"
+                         "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
 
 def test_conf_get_check_type_and_default():

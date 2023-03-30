@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -43,3 +44,30 @@ def test_profile_cache_folder_priority():
 
     c.run("install . -pr=default")
     assert "os=AIX" in c.out
+
+
+def test_profile_cli_priority():
+    c = TestClient()
+    profile1 = textwrap.dedent("""\
+        [settings]
+        os=AIX
+        [conf]
+        user.myconf:myvalue1=1
+        user.myconf:myvalue2=[2]
+        user.myconf:myvalue3={"3": "4"}
+        """)
+    profile2 = textwrap.dedent("""\
+        [settings]
+        os=FreeBSD
+        [conf]
+        user.myconf:myvalue1=2
+        user.myconf:myvalue2+=4
+        user.myconf:myvalue3*={"3": "5"}
+        """)
+    c.save({"profile1": profile1,
+            "profile2": profile2})
+    c.run("profile show -pr=./profile1 -pr=./profile2")
+    assert "os=FreeBSD" in c.out
+    assert "user.myconf:myvalue1=2" in c.out
+    assert "user.myconf:myvalue2=[2, 4]" in c.out
+    assert "user.myconf:myvalue3={'3': '5'}" in c.out

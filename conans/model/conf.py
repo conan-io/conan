@@ -122,13 +122,14 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
-    def __init__(self, name, value, path=False):
+    def __init__(self, name, value, path=False, update=None):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._name = name
         self._value = value
         self._value_type = type(value)
         self._path = path
+        self._update = update
 
     def __repr__(self):
         return repr(self._value)
@@ -166,8 +167,9 @@ class _ConfValue(object):
         return {self._name: _value}
 
     def update(self, value):
-        if self._value_type is dict:
-            self._value.update(value)
+        assert self._value_type is dict, "Only dicts can be updated"
+        assert isinstance(value, dict), "Only dicts can update"
+        self._value.update(value)
 
     def remove(self, value):
         if self._value_type is list:
@@ -209,6 +211,13 @@ class _ConfValue(object):
             else:
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
+                self._value = new_value
+        elif v_type is dict and o_type is dict:
+            if self._update:
+                # only if the current one is marked as "*=" update, otherwise it remains
+                # as this is a "compose" operation, self has priority, it is the one updating
+                new_value = other._value.copy()
+                new_value.update(self._value)
                 self._value = new_value
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
@@ -361,11 +370,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        conf_value = _ConfValue(name, {})
+        # Placeholder trick is not good for dict update, so we need to explicitly update=True
+        conf_value = _ConfValue(name, {}, update=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def update_path(self, name, value):
-        conf_value = _ConfValue(name, {}, path=True)
+        conf_value = _ConfValue(name, {}, path=True, update=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def append(self, name, value):
@@ -469,8 +479,9 @@ class Conf:
 
 class ConfDefinition:
 
+    # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("=", "define"))
+               ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = OrderedDict()
