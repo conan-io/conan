@@ -128,6 +128,10 @@ class ClientCache(object):
         return self._store_folder
 
     @property
+    def default_sources_backup_folder(self):
+        return os.path.join(self.cache_folder, "sources")
+
+    @property
     def remotes_path(self):
         return os.path.join(self.cache_folder, REMOTES)
 

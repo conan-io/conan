@@ -28,10 +28,11 @@ class CmdWrapper:
 
 
 class ConanFileHelpers:
-    def __init__(self, requester, cmd_wrapper, global_conf):
+    def __init__(self, requester, cmd_wrapper, global_conf, cache):
         self.requester = requester
         self.cmd_wrapper = cmd_wrapper
         self.global_conf = global_conf
+        self.cache = cache
 
 
 class ConanApp(object):
@@ -56,5 +57,5 @@ class ConanApp(object):
 
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         cmd_wrap = CmdWrapper(self.cache)
-        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf)
+        conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
