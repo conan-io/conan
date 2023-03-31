@@ -51,6 +51,13 @@ class ClientCache(object):
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
 
+    @property
+    def temp_folder(self):
+        """ temporary folder where Conan puts exports and packages before the final revision
+        is computed"""
+        # TODO: Improve the path definitions, this is very hardcoded
+        return os.path.join(self.cache_folder, "p", "t")
+
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
 
