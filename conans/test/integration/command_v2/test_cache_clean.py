@@ -32,4 +32,14 @@ def test_cache_clean():
 def test_cache_clean_noargs_error():
     c = TestClient()
     c.run('cache clean "*"', assert_error=True)
-    assert "Define at least one argument among [--source, --build, --download]" in c.out
+    assert "Define at least one argument among [" in c.out
+
+
+def test_cache_clean_all():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package("error")})
+    c.run("create .", assert_error=True)
+    folder = os.path.join(c.cache_folder, "p", "t")
+    assert len(os.listdir(folder)) == 1
+    c.run('cache clean "*" -a')
+    assert not os.path.exists(folder)
