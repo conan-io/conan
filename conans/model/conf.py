@@ -143,7 +143,7 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path)
+        return _ConfValue(self._name, self._value, self._path, self._update)
 
     def dumps(self):
         if self._value is None:

@@ -54,7 +54,9 @@ def test_profile_cli_priority():
         [conf]
         user.myconf:myvalue1=1
         user.myconf:myvalue2=[2]
-        user.myconf:myvalue3={"3": "4"}
+        user.myconf:myvalue3={"3": "4", "a": "b"}
+        user.myconf:myvalue4={"1": "2"}
+        user.myconf:myvalue5={"6": "7"}
         """)
     profile2 = textwrap.dedent("""\
         [settings]
@@ -63,6 +65,7 @@ def test_profile_cli_priority():
         user.myconf:myvalue1=2
         user.myconf:myvalue2+=4
         user.myconf:myvalue3*={"3": "5"}
+        user.myconf:myvalue5={"6": "7"}
         """)
     c.save({"profile1": profile1,
             "profile2": profile2})
@@ -70,4 +73,6 @@ def test_profile_cli_priority():
     assert "os=FreeBSD" in c.out
     assert "user.myconf:myvalue1=2" in c.out
     assert "user.myconf:myvalue2=[2, 4]" in c.out
-    assert "user.myconf:myvalue3={'3': '5'}" in c.out
+    assert "user.myconf:myvalue3={'3': '5', 'a': 'b'}" in c.out
+    assert "user.myconf:myvalue4={'1': '2'}" in c.out
+    assert "user.myconf:myvalue5={'6': '7'}" in c.out
