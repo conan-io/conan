@@ -58,9 +58,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     Remove non-critical folders from the cache, like source, build and/or download
     (.tgz store) ones.
     """
-    subparser.add_argument("pattern", help="Selection pattern for references to clean")
-    subparser.add_argument("-a", "--all", action='store_true', default=False,
-                           help="Clean everything (source, build, download, temps")
+    subparser.add_argument("pattern", nargs="?", help="Selection pattern for references to clean")
     subparser.add_argument("-s", "--source", action='store_true', default=False,
                            help="Clean source folders")
     subparser.add_argument("-b", "--build", action='store_true', default=False,
@@ -74,14 +72,13 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
     args = parser.parse_args(*args)
 
-    if not args.all and not args.source and not args.build and not args.download and not args.temp:
-        raise ConanException("Define at least one argument among "
-                             "[--all, --source, --build, --download, --temp]")
-
-    ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
+    ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    conan_api.cache.clean(package_list, source=args.source or args.all, build=args.build or args.all,
-                          download=args.download or args.all, temp=args.temp or args.all)
+    if args.build or args.source or args.download or args.temp:
+        conan_api.cache.clean(package_list, source=args.source, build=args.build,
+                              download=args.download, temp=args.temp)
+    else:
+        conan_api.cache.clean(package_list)
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
