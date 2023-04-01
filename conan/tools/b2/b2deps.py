@@ -7,6 +7,10 @@ from hashlib import md5
 
 
 class B2Deps(object):
+    """
+    B2Deps generates files that are automatically loaded by the B2 build system.
+    The files define localized subprojects and targets for dependencies.
+    """
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -14,7 +18,7 @@ class B2Deps(object):
 
     def generate(self):
         """
-        This method will save the generated files to the conanfile.generators_folder
+        This method will save the generated files to the conanfile.source_folder
         """
         source_folder = self._conanfile.source_folder
         self._conanfile.output.highlight(f"Writing B2Deps to {source_folder}")
@@ -28,9 +32,11 @@ class B2Deps(object):
     def content(self):
         """
         Generates two content files: conanbuildinfo.jam and
-        conanbuildinfo-ID.jam which the former defines sub-projects for each
-        package and loads the other files and the latter define variables and
-        targets for the packages.
+        conanbuildinfo-ID.jam. The former defines common package definition
+        function and include the latter conanbuildinfo-ID.jam files. The
+        conanbuildinfo-IS.jam files define sub-projects and targets for each
+        settings variation. The generated files have stable names and content.
+        Hence they can be added to source control.
         """
         self._content = {}
         self._content_conanbuildinfo_jam()
