@@ -5,7 +5,7 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
-                           PackageNotFoundException, InvalidNameException)
+                           PackageNotFoundException)
 from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.files import decode_text
 from conans.util.log import logger
