@@ -5,8 +5,8 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from conans.client.rest import response_to_str
 from conans.errors import (EXCEPTION_CODE_MAPPING, ConanException,
                            AuthenticationException, RecipeNotFoundException,
-                           PackageNotFoundException)
-from conans.model.ref import ConanFileReference
+                           PackageNotFoundException, InvalidNameException)
+from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.files import decode_text
 from conans.util.log import logger
 
@@ -242,12 +242,19 @@ class RestCommonMethods(object):
         """
         url = self.router.search(pattern, ignorecase)
         response = self.get_json(url)["results"]
+        result = []
         try:
-            return [ConanFileReference.loads(reference) for reference in response]
-        except TypeError as te:
+            for reference in response:
+                name, version, user, channel, revision = get_reference_fields(reference)
+                # In Conan 2.0 it is possible to have user and not channel, skip it
+                if user and not channel:
+                    continue
+                result.append(ConanFileReference.loads(reference))
+        except TypeError:
             raise ConanException("Unexpected response from server.\n"
                                  "URL: `{}`\n"
                                  "Expected an iterable, but got {}.".format(url, type(response)))
+        return result
 
     def search_packages(self, ref):
         """Client is filtering by the query"""
