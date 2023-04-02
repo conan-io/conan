@@ -26,6 +26,7 @@ class B2Deps(object):
             check_duplicated_generator(self, self._conanfile)
             generator_files = self.content
             for generator_file, content in generator_files.items():
+                self._conanfile.output.info(f"Saved B2Deps file {generator_file}")
                 save(generator_file, content)
 
     @property
@@ -74,7 +75,8 @@ class B2Deps(object):
             # The settings the dependency requires, i.e. finds relevant.
             dep_settings = dependency.settings
             # The variant specific file to add this dependency to.
-            dep_variant_jam = B2Deps._conanbuildinfo_variation_jam(dep_settings)
+            dep_variant_jam = B2Deps._conanbuildinfo_variation_jam(
+                dep_name_b2, dep_settings)
             if not dep_variant_jam in self._content:
                 self._content[dep_variant_jam] = ""
             # Declare/define the local project for the dependency.
@@ -173,8 +175,9 @@ class B2Deps(object):
         return cbi_target
 
     @staticmethod
-    def _conanbuildinfo_variation_jam(settings):
-        return 'conanbuildinfo-%s.jam' % B2Deps._b2_variation_key(settings)
+    def _conanbuildinfo_variation_jam(name, settings):
+        return 'conanbuildinfo-{}-{}.jam'.format(
+            name, B2Deps._b2_variation_key(settings))
 
     @staticmethod
     def _b2_variation_key(settings):

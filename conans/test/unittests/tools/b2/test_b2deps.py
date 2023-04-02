@@ -47,7 +47,7 @@ def test_cpp_info_name_b2deps():
         files = b2deps.content
         for k in sorted(files.keys()):
             print("\n\n{}:\n---\n{}\n---".format(k, files[k]))
-        variation_filename = B2Deps._conanbuildinfo_variation_jam(conanfile.settings)
+        variation_filename = B2Deps._conanbuildinfo_variation_jam("originaldepname", conanfile.settings)
         assert "conanbuildinfo.jam" in files
         assert variation_filename in files
         variation_file = files[variation_filename]
