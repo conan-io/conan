@@ -34,7 +34,7 @@ class B2Deps(object):
         Generates two content files: conanbuildinfo.jam and
         conanbuildinfo-ID.jam. The former defines common package definition
         function and include the latter conanbuildinfo-ID.jam files. The
-        conanbuildinfo-IS.jam files define sub-projects and targets for each
+        conanbuildinfo-ID.jam files define sub-projects and targets for each
         settings variation. The generated files have stable names and content.
         Hence they can be added to source control.
         """
