@@ -123,7 +123,7 @@ class B2Deps(object):
     def _content_conanbuildinfo_variation_declare_libs(self, name, cpp_info, settings=None, options=None):
         name = name.lower()
         cbi_libs = []
-        variation = ' '.join(b2_features(B2Deps._b2_variation(settings, options)))
+        variation = ' '.join(b2_features(b2_variation(settings, options)))
         for lib in cpp_info.libs:
             search = ' '.join(
                 [f'<search>"{b2_path(d.replace(self._conanhome, "$(CONAN_HOME)"))}"' for d in cpp_info.libdirs+cpp_info.bindirs])
@@ -139,7 +139,7 @@ class B2Deps(object):
     def _content_conanbuildinfo_variation_declare_syslibs(self, name, systemlibs, settings=None, options=None):
         name = name.lower()
         cbi_libs = []
-        variation = ' '.join(b2_features(B2Deps._b2_variation(settings, options)))
+        variation = ' '.join(b2_features(b2_variation(settings, options)))
         for lib in systemlibs:
             # Although system libs won't collide in the names. We still prefix
             # the target names with "lib." for consistency and easier reference
@@ -158,7 +158,7 @@ class B2Deps(object):
             f'pkg-alias {name}//{target} : :']
         # Requirements:
         cbi_target += [
-            f'  {" ".join(b2_features(B2Deps._b2_variation(settings, options)))}']
+            f'  {" ".join(b2_features(b2_variation(settings, options)))}']
         cbi_target += [
             f'  <source>lib.{l}' for l in cpp_info.libs+cpp_info.system_libs]
         # No default-build:
@@ -178,79 +178,7 @@ class B2Deps(object):
     @staticmethod
     def _conanbuildinfo_variation_jam(name, settings, options=None):
         return 'conanbuildinfo-{}-{}.jam'.format(
-            name, B2Deps._b2_variation_key(settings, options))
-
-    @staticmethod
-    def _b2_variation_key(settings, options=None):
-        """
-        A hashed key of the variation to use a UID for the variation.
-        """
-        return md5(B2Deps._b2_variation_id(settings, options).encode('utf-8')).hexdigest()
-
-    @staticmethod
-    def _b2_variation_id(settings, options=None):
-        """
-        A compact single comma separated list of the variation where only the
-        values of the b2 variation are included in sorted by feature name order.
-        """
-        vid = []
-        b2_variation = B2Deps._b2_variation(settings, options)
-        for k in sorted(b2_variation.keys()):
-            if b2_variation[k]:
-                vid += [b2_variation[k]]
-        return ",".join(vid)
-
-    @staticmethod
-    def _setting(settings, name, default=None, optional=True):
-        result = settings.get_safe(name, default) if settings else None
-        if not result and not optional:
-            raise ConanException(
-                "B2Deps needs 'settings.{}', but it is not defined.".format(name))
-        return result
-
-    @staticmethod
-    def _option(options, name, default=None, optional=True):
-        result = options.get_safe(name, default) if options else None
-        if not result and not optional:
-            raise ConanException(
-                "B2Deps needs 'options.{}', but it is not defined.".format(name))
-        return result
-
-    @staticmethod
-    def _b2_variation(settings, options=None):
-        """
-        Returns a map of b2 features & values as translated from conan settings
-        that can affect the link compatibility of libraries.
-        """
-        _b2_variation_v = {
-            'toolset': b2_toolset(
-                B2Deps._setting(settings, "compiler"),
-                B2Deps._setting(settings, "compiler.version")),
-            'architecture': b2_architecture(
-                B2Deps._setting(settings, "arch")),
-            'instruction-set': b2_instruction_set(
-                B2Deps._setting(settings, "arch")),
-            'address-model': b2_address_model(
-                B2Deps._setting(settings, "arch")),
-            'target-os': b2_os(
-                B2Deps._setting(settings, "os"),
-                B2Deps._setting(settings, "os.subsystem")),
-            'variant': b2_variant(
-                B2Deps._setting(settings, "build_type")),
-            'cxxstd': b2_cxxstd(
-                B2Deps._setting(settings, "cppstd")),
-            'cxxstd:dialect': b2_cxxstd_dialect(
-                B2Deps._setting(settings, "cppstd")),
-            'threadapi': b2_threadapi(
-                B2Deps._setting(settings, 'compiler.threads')),
-            'runtime-link': b2_runtime_link(
-                B2Deps._setting(settings, 'compiler.runtime')),
-            'runtime-debugging': b2_runtime_debugging(
-                B2Deps._setting(settings, 'compiler.runtime_type')),
-            'link': b2_link(
-                B2Deps._option(options, 'shared')),
-        }
-        return _b2_variation_v
+            name, b2_variation_key(settings, options))
 
     _conanbuildinfo_header_text = """\
 #|

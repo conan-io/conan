@@ -1,3 +1,7 @@
+from conans.errors import ConanException
+from hashlib import md5
+from base64 import b32hexencode
+
 __all__ = [
     'b2_address_model',
     'b2_architecture',
@@ -13,6 +17,9 @@ __all__ = [
     'b2_threadapi',
     'b2_toolset',
     'b2_variant',
+    'b2_variation_id',
+    'b2_variation_key',
+    'b2_variation',
 ]
 
 
@@ -181,3 +188,75 @@ def b2_link(conan_options_shared):
     if conan_options_shared:
         return 'shared'
     return 'static'
+
+
+def _get_setting(settings, name, default=None, optional=True):
+    result = settings.get_safe(name, default) if settings else None
+    if not result and not optional:
+        raise ConanException(
+            "Need 'settings.{}', but it is not defined.".format(name))
+    return result
+
+
+def _get_option(options, name, default=None, optional=True):
+    result = options.get_safe(name, default) if options else None
+    if not result and not optional:
+        raise ConanException(
+            "Need 'options.{}', but it is not defined.".format(name))
+    return result
+
+
+def b2_variation(settings, options=None):
+    """
+    Returns a map of b2 features & values as translated from conan settings
+    and options that can affect the link compatibility of libraries.
+    """
+    _b2_variation_v = {
+        'toolset': b2_toolset(
+            _get_setting(settings, "compiler"),
+            _get_setting(settings, "compiler.version")),
+        'architecture': b2_architecture(
+            _get_setting(settings, "arch")),
+        'instruction-set': b2_instruction_set(
+            _get_setting(settings, "arch")),
+        'address-model': b2_address_model(
+            _get_setting(settings, "arch")),
+        'target-os': b2_os(
+            _get_setting(settings, "os"),
+            _get_setting(settings, "os.subsystem")),
+        'variant': b2_variant(
+            _get_setting(settings, "build_type")),
+        'cxxstd': b2_cxxstd(
+            _get_setting(settings, "cppstd")),
+        'cxxstd:dialect': b2_cxxstd_dialect(
+            _get_setting(settings, "cppstd")),
+        'threadapi': b2_threadapi(
+            _get_setting(settings, 'compiler.threads')),
+        'runtime-link': b2_runtime_link(
+            _get_setting(settings, 'compiler.runtime')),
+        'runtime-debugging': b2_runtime_debugging(
+            _get_setting(settings, 'compiler.runtime_type')),
+        'link': b2_link(
+            _get_option(options, 'shared')),
+    }
+    return _b2_variation_v
+
+
+def b2_variation_id(settings, options=None):
+    """
+    A compact single comma separated list of the variation are included in
+    sorted by feature name order.
+    """
+    vid = []
+    _b2_variation = b2_variation(settings, options)
+    for k in sorted(_b2_variation.keys()):
+        if _b2_variation[k] is not None:
+            vid += [k+'='+_b2_variation[k]]
+    return ",".join(vid)
+
+
+def b2_variation_key(settings, options=None):
+    """
+    A hashed key of the variation to use a UID for the variation.
+    """
+    return b32hexencode(md5(b2_variation_id(settings, options).encode('utf-8')).digest()).decode('utf-8').lower().replace('=', '')
