@@ -1,6 +1,6 @@
 from conans.errors import ConanException
 from hashlib import md5
-from base64 import b32hexencode
+from base64 import b32encode
 
 __all__ = [
     'b2_address_model',
@@ -259,4 +259,4 @@ def b2_variation_key(settings, options=None):
     """
     A hashed key of the variation to use a UID for the variation.
     """
-    return b32hexencode(md5(b2_variation_id(settings, options).encode('utf-8')).digest()).decode('utf-8').lower().replace('=', '')
+    return b32encode(md5(b2_variation_id(settings, options).encode('utf-8')).digest()).decode('utf-8').lower().replace('=', '')
