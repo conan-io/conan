@@ -3,57 +3,70 @@ from mock import Mock
 
 from conan.tools.b2 import B2Toolchain
 from conan.tools.b2 import utils as b2_utils
-from conans import (
-    ConanFile,
-    Settings,
-    tools,
-)
-from conans.client.conf import get_default_settings_yml
+from conan import ConanFile
 from conans.model.conf import Conf
-from conans.model.env_info import EnvValues
+from conans.model.settings import Settings
+from conans.model.conf import Conf
+from conans.model.layout import Infos
+from conan.tools.env.environment import Environment
+from conan.tools.env.virtualbuildenv import VirtualBuildEnv
 
 
 @pytest.fixture
 def conanfile():
-    c = ConanFile(Mock(), None)
-    c.initialize(Settings({}), EnvValues())
-    c.conf = Conf()
-    c.folders.set_base_package("/package")
-    c.folders.set_base_install("conan")
-    c.folders.set_base_generators(".")
-
-    settings = Settings.loads(get_default_settings_yml())
-    settings.arch = 'x86'
-    settings.os = 'Windows'
-    settings.compiler = 'gcc'
-    settings.compiler.version = '9.3'
-    settings.build_type = 'Release'
+    c = ConanFile()
+    settings = Settings({'os': ['Windows'],
+                         'compiler': {
+                             'clang': {
+                                 'libcxx': ['libstdc++'],
+                                 'version': ['14'],
+                             }
+                         },
+                         'build_type': ['Release'],
+                         'arch': ['x86'],})
     c.settings = settings
+    c.settings.build_type = 'Release'
+    c.settings.arch = 'x86'
+    c.settings.compiler = 'clang'
+    c.settings.compiler.libcxx = 'libstdc++'
+    c.settings.compiler.version = '14'
+    c.settings_build = c.settings
+    c.settings.os = 'Windows'
+
+    env = Environment()
+    env.define('CXX', '/no/such/path')
+    env.define('CXXFLAGS', '-foo=bar --bar=foo')
+    env.define('LDFLAGS', '-xyz -abc')
+    env.define('RC', '/no/such/rc')
+    c._conan_buildenv = env
+
+    c.folders.set_base_folders('.', 'conan')
+    c.folders.set_base_generators('conan')
+    c.folders.set_base_package('/package')
+    c.folders.set_base_package('/package')
+
+    c.cpp = Infos()
+    c.cpp.package.resdirs = ['share']
+
+    c._conan_node = Mock()
+    c._conan_node.transitive_deps = {}
 
     return c
 
 
 def test_b2_toolchain(conanfile):
-    with tools.environment_append({
-        'CXX': '/no/such/path',
-        'CPPFLAGS': '-foo=bar --bar=foo',
-        'LDFLAGS': '-xyz -abc',
-        'RC': '/no/such/rc',
-    }):
-        toolchain = B2Toolchain(conanfile)
-        toolchain.using('asciidoctor', 'my/asciidoctor')
+    toolchain = B2Toolchain(conanfile)
+    toolchain.using('asciidoctor', 'my/asciidoctor')
 
-        variation = b2_utils.variation(conanfile)
-        variation_id = b2_utils.variation_id(variation)
-        variation_key = b2_utils.variation_key(variation_id)
+    variation = b2_utils.variation(conanfile)
+    variation_id = b2_utils.variation_id(variation)
+    variation_key = b2_utils.variation_key(variation_id)
 
-        assert toolchain.filename is None
+    content = toolchain._content
 
-        content = toolchain.content
-
-        common = _common.format(variation_key=variation_key)
-        assert common == content['project-config.jam']
-        assert _variation == content['conan-config-%s.jam' % variation_key]
+    common = _common.format(variation_key=variation_key)
+    assert common == content['project-config.jam']
+    assert _variation == content['conan-config-%s.jam' % variation_key]
 
 
 _common = '''\
@@ -64,7 +77,7 @@ import path ;
 
 local location = [ path.make conan ] ;
 location = [ path.relative $(location) [ path.pwd ] ] ;
-for local pc in [ GLOB $(location) : project-config-*.jam : downcase ] {{
+for local pc in [ GLOB $(location) : conan-config-*.jam : downcase ] {{
     local __define_project__ ;
     if $(pc) = $(location)/conan-config-{variation_key}.jam {{
         __define_project__ = yes ;
@@ -79,21 +92,17 @@ _variation = '''\
 # Conan automatically generated config file
 # DO NOT EDIT MANUALLY, it will be overwritten
 
-import feature ;
-local all-toolsets = [ feature.values toolset ] ;
-if ! gcc in $(all-toolsets) ||
-   ! [ feature.is-subvalue toolset : gcc : version : 9.3 ]
-{ using gcc : 9.3 : /no/such/path : <cxxflags>"-foo=bar" <cxxflags>"--bar=foo" <ldflags>"-xyz" <ldflags>"-abc" <rc>"/no/such/rc" ; }
-if ! asciidoctor in $(all-toolsets)
-{ using asciidoctor : my/asciidoctor ; }
+using clang : 14 : /no/such/path : <cxxflags>"-foo=bar" <cxxflags>"--bar=foo" <linkflags>"-xyz" <linkflags>"-abc" <rc>"/no/such/rc" : <address-model>"32" <architecture>"x86" <stdlib>"gnu" <target-os>"windows" <variant>"release" ;
+using asciidoctor : my/asciidoctor ;
 
 if $(__define_project__) = yes {
     project
         : default-build
           <address-model>32
           <architecture>x86
+          <stdlib>gnu
           <target-os>windows
-          <toolset>gcc-9.3
+          <toolset>clang-14
           <variant>release
         ;
     import option ;
@@ -101,6 +110,6 @@ if $(__define_project__) = yes {
     option.set bindir : /package/bin ;
     option.set libdir : /package/lib ;
     option.set includedir : /package/include ;
-    option.set datarootdir : /package/res ;
+    option.set datarootdir : /package/share ;
 }
 '''

@@ -1,7 +1,5 @@
-import textwrap
-# import collections.abc
 import os
-# import six
+import textwrap
 
 from jinja2 import Template
 #
@@ -14,9 +12,10 @@ class B2Deps(object):
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
 
-    @property
-    def filename(self):
-        pass
+    def generate(self):
+        for filename, content in self._content.items():
+            path = os.path.join(self._conanfile.generators_folder, filename)
+            save(path, content)
 
     @property
     def content(self):
@@ -30,11 +29,6 @@ class B2Deps(object):
                 continue
             result.update(**self._dependency_content(dep))
         return result
-
-    def generate(self):
-        for filename, content in self.content.items():
-            path = os.path.join(self._conanfile.generators_folder, filename)
-            save(path, content)
 
     def _dependency_content(self, dep):
         variation = b2_utils.variation(dep)

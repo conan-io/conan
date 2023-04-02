@@ -148,6 +148,10 @@ def _toolset(conanfile):
     if not toolset:
         return
 
+    version = conanfile.settings.compiler.version
+    if not version:
+        return toolset
+
     if toolset == 'msvc':
         visual_studio_version = str(conanfile.settings.compiler.version)
         if compiler == 'msvc':
