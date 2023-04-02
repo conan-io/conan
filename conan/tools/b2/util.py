@@ -1,19 +1,23 @@
 __all__ = [
-    'b2_architecture',
-    'b2_instruction_set',
     'b2_address_model',
-    'b2_os',
-    'b2_variant',
-    'b2_cxxstd',
+    'b2_architecture',
     'b2_cxxstd_dialect',
-    'b2_toolset',
-    'b2_path',
+    'b2_cxxstd',
     'b2_features',
+    'b2_instruction_set',
+    'b2_link',
+    'b2_os',
+    'b2_path',
+    'b2_runtime_debugging',
+    'b2_runtime_link',
+    'b2_threadapi',
+    'b2_toolset',
+    'b2_variant',
 ]
 
 
 def b2_architecture(conan_arch):
-    if not conan_arch:
+    if conan_arch is None:
         return None
     elif conan_arch.startswith('x86'):
         return 'x86'
@@ -30,7 +34,7 @@ def b2_architecture(conan_arch):
 
 
 def b2_instruction_set(conan_arch):
-    if not conan_arch:
+    if conan_arch is None:
         return None
     elif conan_arch.startswith('armv6'):
         return 'armv6'
@@ -45,7 +49,7 @@ def b2_instruction_set(conan_arch):
 
 
 def b2_address_model(conan_arch):
-    if not conan_arch:
+    if conan_arch is None:
         return None
     elif '32' in conan_arch:
         return '32'
@@ -66,8 +70,8 @@ def b2_address_model(conan_arch):
         return None
 
 
-def b2_os(conan_os):
-    if not conan_os:
+def b2_os(conan_os, conan_os_subsystem=None):
+    if conan_os is None:
         return None
     conan_os = conan_os.lower()
     if conan_os.startswith('windows'):
@@ -78,24 +82,26 @@ def b2_os(conan_os):
         return 'solaris'
     elif conan_os in ['arduino']:
         return 'linux'
+    elif conan_os == 'windows' and conan_os_subsystem == 'cygwin':
+        return 'cygwin'
     else:
         return conan_os
 
 
 def b2_variant(conan_build_type):
-    if not conan_build_type:
+    if conan_build_type is None:
         return None
     return conan_build_type.lower()
 
 
 def b2_cxxstd(conan_cppstd):
-    if not conan_cppstd:
+    if conan_cppstd is None:
         return None
     return conan_cppstd.replace('gnu', '') if conan_cppstd else None
 
 
 def b2_cxxstd_dialect(conan_cppstd):
-    if not conan_cppstd:
+    if conan_cppstd is None:
         return None
     if conan_cppstd and 'gnu' in conan_cppstd:
         return 'gnu'
@@ -104,7 +110,7 @@ def b2_cxxstd_dialect(conan_cppstd):
 
 
 def b2_toolset(conan_compiler, conan_compiler_version):
-    if not conan_compiler:
+    if conan_compiler is None:
         return None
     toolset = conan_compiler.lower()
     if 'clang' in conan_compiler:
@@ -143,3 +149,35 @@ def b2_features(features):
         if v:
             result += ['<%s>%s' % (k, v)]
     return result
+
+
+def b2_threadapi(conan_compiler_threads):
+    if conan_compiler_threads is None:
+        return None
+    conan_compiler_threads = conan_compiler_threads.lower()
+    if conan_compiler_threads == 'posix':
+        return 'pthread'
+
+
+def b2_runtime_link(conan_compiler_runtime):
+    if conan_compiler_runtime is None:
+        return None
+    if conan_compiler_runtime in ['static', 'MT', 'MTd']:
+        return 'static'
+    return 'shared'
+
+
+def b2_runtime_debugging(conan_compiler_runtime):
+    if conan_compiler_runtime is None:
+        return None
+    if conan_compiler_runtime in ['Debug', 'MTd', 'MDd']:
+        return 'on'
+    return 'off'
+
+
+def b2_link(conan_options_shared):
+    if conan_options_shared is None:
+        return None
+    if conan_options_shared:
+        return 'shared'
+    return 'static'

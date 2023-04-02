@@ -72,11 +72,12 @@ class B2Deps(object):
             dep_cpp_info = dependency.cpp_info
             if '_'+dep_name in dep_cpp_info.components:
                 dep_cpp_info = dep_cpp_info.components['_'+dep_name]
-            # The settings the dependency requires, i.e. finds relevant.
+            # The settings and options the dependency requires, i.e. finds relevant.
             dep_settings = dependency.settings
+            dep_options = dependency.options
             # The variant specific file to add this dependency to.
             dep_variant_jam = B2Deps._conanbuildinfo_variation_jam(
-                dep_name_b2, dep_settings)
+                dep_name_b2, dep_settings, dep_options)
             if not dep_variant_jam in self._content:
                 self._content[dep_variant_jam] = ""
             # Declare/define the local project for the dependency.
@@ -88,11 +89,11 @@ class B2Deps(object):
             for name, component in dependency.cpp_info.get_sorted_components().items():
                 system_libs |= set(component.system_libs)
             cbiv += self._content_conanbuildinfo_variation_declare_syslibs(
-                dep_name_b2, system_libs, settings=dep_settings)
+                dep_name_b2, system_libs, settings=dep_settings, options=dep_options)
             # Declare any package libs for usage requirements. The first one is
             # the main/global dependency.
             cbiv += self._content_conanbuildinfo_variation_declare_libs(
-                dep_name_b2, dep_cpp_info, settings=dep_settings)
+                dep_name_b2, dep_cpp_info, settings=dep_settings, options=dep_options)
             # Followed by any components of the dependency. But skipping the
             # special _depname component. As that is already declare as the
             # main/global lib.
@@ -100,14 +101,14 @@ class B2Deps(object):
                 if name.lower() == '_'+dep_name_b2:
                     continue
                 cbiv += self._content_conanbuildinfo_variation_declare_libs(
-                    dep_name_b2, component, settings=dep_settings)
+                    dep_name_b2, component, settings=dep_settings, options=dep_options)
             # Declare the main target of the dependency. This is an alias that
             # refers to all the previous targets and adds all the defines,
             # flags, etc for consumers.
             cbiv += self._content_conanbuildinfo_variation_declare_target(
                 dep_name_b2, dep_name_b2,
                 dep_cpp_info,
-                settings=dep_settings)
+                settings=dep_settings, options=dep_options)
             # Similarly declare the component targets, if any.
             for name, component in dependency.cpp_info.get_sorted_components().items():
                 # Again, always skipping the kludge component as it's already
@@ -115,14 +116,14 @@ class B2Deps(object):
                 if "_"+dep_name_b2 == name.lower():
                     continue
                 cbiv += self._content_conanbuildinfo_variation_declare_target(
-                    dep_name_b2, name.lower(), component, settings=dep_settings)
+                    dep_name_b2, name.lower(), component, settings=dep_settings, options=dep_options)
             # Add the combined text.
             self._content[dep_variant_jam] += "\n".join(cbiv)+"\n"
 
-    def _content_conanbuildinfo_variation_declare_libs(self, name, cpp_info, settings=None):
+    def _content_conanbuildinfo_variation_declare_libs(self, name, cpp_info, settings=None, options=None):
         name = name.lower()
         cbi_libs = []
-        variation = ' '.join(b2_features(B2Deps._b2_variation(settings)))
+        variation = ' '.join(b2_features(B2Deps._b2_variation(settings, options)))
         for lib in cpp_info.libs:
             search = ' '.join(
                 [f'<search>"{b2_path(d.replace(self._conanhome, "$(CONAN_HOME)"))}"' for d in cpp_info.libdirs+cpp_info.bindirs])
@@ -135,10 +136,10 @@ class B2Deps(object):
                 f'  {search} ;']
         return cbi_libs
 
-    def _content_conanbuildinfo_variation_declare_syslibs(self, name, systemlibs, settings=None):
+    def _content_conanbuildinfo_variation_declare_syslibs(self, name, systemlibs, settings=None, options=None):
         name = name.lower()
         cbi_libs = []
-        variation = ' '.join(b2_features(self._b2_variation(settings)))
+        variation = ' '.join(b2_features(B2Deps._b2_variation(settings, options)))
         for lib in systemlibs:
             # Although system libs won't collide in the names. We still prefix
             # the target names with "lib." for consistency and easier reference
@@ -148,7 +149,7 @@ class B2Deps(object):
                 f'  {variation} ;']
         return cbi_libs
 
-    def _content_conanbuildinfo_variation_declare_target(self, name, target, cpp_info, settings=None):
+    def _content_conanbuildinfo_variation_declare_target(self, name, target, cpp_info, settings=None, options=None):
         cbi_target = []
         # Target, no sources. The empty target is to catch incompatible build
         # requirements matches by falling back to an unbuildable result.
@@ -157,7 +158,7 @@ class B2Deps(object):
             f'pkg-alias {name}//{target} : :']
         # Requirements:
         cbi_target += [
-            f'  {" ".join(b2_features(self._b2_variation(settings)))}']
+            f'  {" ".join(b2_features(B2Deps._b2_variation(settings, options)))}']
         cbi_target += [
             f'  <source>lib.{l}' for l in cpp_info.libs+cpp_info.system_libs]
         # No default-build:
@@ -175,25 +176,25 @@ class B2Deps(object):
         return cbi_target
 
     @staticmethod
-    def _conanbuildinfo_variation_jam(name, settings):
+    def _conanbuildinfo_variation_jam(name, settings, options=None):
         return 'conanbuildinfo-{}-{}.jam'.format(
-            name, B2Deps._b2_variation_key(settings))
+            name, B2Deps._b2_variation_key(settings, options))
 
     @staticmethod
-    def _b2_variation_key(settings):
+    def _b2_variation_key(settings, options=None):
         """
         A hashed key of the variation to use a UID for the variation.
         """
-        return md5(B2Deps._b2_variation_id(settings).encode('utf-8')).hexdigest()
+        return md5(B2Deps._b2_variation_id(settings, options).encode('utf-8')).hexdigest()
 
     @staticmethod
-    def _b2_variation_id(settings):
+    def _b2_variation_id(settings, options=None):
         """
         A compact single comma separated list of the variation where only the
         values of the b2 variation are included in sorted by feature name order.
         """
         vid = []
-        b2_variation = B2Deps._b2_variation(settings)
+        b2_variation = B2Deps._b2_variation(settings, options)
         for k in sorted(b2_variation.keys()):
             if b2_variation[k]:
                 vid += [b2_variation[k]]
@@ -208,7 +209,15 @@ class B2Deps(object):
         return result
 
     @staticmethod
-    def _b2_variation(settings):
+    def _option(options, name, default=None, optional=True):
+        result = options.get_safe(name, default) if options else None
+        if not result and not optional:
+            raise ConanException(
+                "B2Deps needs 'options.{}', but it is not defined.".format(name))
+        return result
+
+    @staticmethod
+    def _b2_variation(settings, options=None):
         """
         Returns a map of b2 features & values as translated from conan settings
         that can affect the link compatibility of libraries.
@@ -224,13 +233,22 @@ class B2Deps(object):
             'address-model': b2_address_model(
                 B2Deps._setting(settings, "arch")),
             'target-os': b2_os(
-                B2Deps._setting(settings, "os")),
+                B2Deps._setting(settings, "os"),
+                B2Deps._setting(settings, "os.subsystem")),
             'variant': b2_variant(
                 B2Deps._setting(settings, "build_type")),
             'cxxstd': b2_cxxstd(
                 B2Deps._setting(settings, "cppstd")),
             'cxxstd:dialect': b2_cxxstd_dialect(
                 B2Deps._setting(settings, "cppstd")),
+            'threadapi': b2_threadapi(
+                B2Deps._setting(settings, 'compiler.threads')),
+            'runtime-link': b2_runtime_link(
+                B2Deps._setting(settings, 'compiler.runtime')),
+            'runtime-debugging': b2_runtime_debugging(
+                B2Deps._setting(settings, 'compiler.runtime_type')),
+            'link': b2_link(
+                B2Deps._option(options, 'shared')),
         }
         return _b2_variation_v
 
