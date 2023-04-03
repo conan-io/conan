@@ -46,3 +46,8 @@ def test_cache_clean_all():
     assert not os.path.exists(ref_layout.download_export())
     assert not os.path.exists(pkg_layout.build())
     assert not os.path.exists(pkg_layout.download_package())
+
+    # A second clean like this used to crash
+    # as it tried to delete a folder that was not there and tripped shutils up
+    c.run('cache clean')
+    assert not os.path.exists(folder)

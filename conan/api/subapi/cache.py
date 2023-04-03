@@ -63,7 +63,7 @@ class CacheAPI:
 
         app = ConanApp(self.conan_api.cache_folder)
         if temp:
-            shutil.rmtree(app.cache.temp_folder)
+            rmdir(app.cache.temp_folder)
         for ref, ref_bundle in package_list.refs():
             ref_layout = app.cache.ref_layout(ref)
             if source:
