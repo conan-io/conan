@@ -14,10 +14,15 @@ def test_graph_overrides():
     c.run("create pkga --version=0.2")
     c.run("create pkgb")
     c.run("lock create pkgc")
+    print(c.out)
     lock = c.load("pkgc/conan.lock")
     assert "pkga/0.2" in lock
     assert "pkga/0.1" not in lock
     c.run("graph info pkgc --lockfile=pkgc/conan.lock")
+    assert "pkga/0.2" in c.out
+    assert "pkga/0.1" not in c.out
+    # apply the lockfile to pkgb, should it lock to pkga/0.2
+    c.run("graph info pkgb --lockfile=pkgc/conan.lock")
     assert "pkga/0.2" in c.out
     assert "pkga/0.1" not in c.out
 

@@ -234,6 +234,7 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
+        self.overrides = {}
         self.resolved_ranges = {}
         self.error = False
 

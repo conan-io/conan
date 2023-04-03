@@ -81,6 +81,7 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
+                graph.overrides[require.ref] = prev_ref
                 require.ref = prev_ref
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,

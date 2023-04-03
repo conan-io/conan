@@ -87,6 +87,7 @@ class Lockfile(object):
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
         self._alias = {}
+        self._overrides = {}
         self.partial = False
 
         if deps_graph is None:
@@ -112,6 +113,7 @@ class Lockfile(object):
                 self._requires.add(graph_node.ref, pids)
 
         self._alias.update(deps_graph.aliased)
+        self._overrides.update(deps_graph.overrides)
 
         self._requires.sort()
         self._build_requires.sort()
@@ -146,6 +148,9 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
+        # TODO: Check if this holds for merges
+        self._alias.update(other._alias)
+        self._overrides.update(other._overrides)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
         """ adding new things manually will trigger the sort() of the locked list, so lockfiles
@@ -184,6 +189,9 @@ class Lockfile(object):
         if "alias" in data:
             graph_lock._alias = {RecipeReference.loads(k): RecipeReference.loads(v)
                                  for k, v in data["alias"].items()}
+        if "overrides" in data:
+            graph_lock._overrides = {RecipeReference.loads(k): RecipeReference.loads(v)
+                                     for k, v in data["overrides"].items()}
         return graph_lock
 
     def serialize(self):
@@ -199,6 +207,8 @@ class Lockfile(object):
             result["python_requires"] = self._python_requires.serialize()
         if self._alias:
             result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
+        if self._overrides:
+            result["overrides"] = {repr(k): repr(v) for k, v in self._overrides.items()}
         return result
 
     def resolve_locked(self, node, require, resolve_prereleases):
