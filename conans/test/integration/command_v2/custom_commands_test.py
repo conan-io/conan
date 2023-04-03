@@ -161,6 +161,36 @@ class TestCustomCommands:
         client.run("complex sub1 myargument -f json")
         assert f'{{"argument1": "myargument"}}' in client.out
 
+    def test_custom_command_with_subcommands_with_underscore(self):
+        complex_command = textwrap.dedent("""
+            import json
+
+            from conan.cli.command import conan_command, conan_subcommand
+            from conan.api.output import cli_out_write
+
+            @conan_command()
+            def command_with_underscores(conan_api, parser, *args, **kwargs):
+                \"""
+                this is a command with subcommands
+                \"""
+
+            @conan_subcommand()
+            def command_with_underscores_subcommand_with_underscores_too(conan_api, parser, subparser, *args):
+                \"""
+                sub1 subcommand
+                \"""
+                subparser.add_argument("argument1", help="This is argument number 1")
+                args = parser.parse_args(*args)
+                cli_out_write(args.argument1)
+            """)
+
+        client = TestClient()
+        command_file_path = os.path.join(client.cache_folder, 'extensions',
+                                         'commands', 'cmd_command_with_underscores.py')
+        client.save({f"{command_file_path}": complex_command})
+        client.run("command-with-underscores subcommand-with-underscores-too myargument")
+        assert "myargument" in client.out
+
     def test_overwrite_builtin_command(self):
         complex_command = textwrap.dedent("""
             import json

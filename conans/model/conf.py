@@ -22,6 +22,10 @@ BUILT_IN_CONFS = {
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
+    # Sources backup
+    "core.sources:download_cache": "Folder to store the sources backup",
+    "core.sources:download_urls": "List of URLs to download backup sources from",
+    "core.sources:upload_url": "Remote URL to upload backup sources to",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
@@ -40,12 +44,15 @@ BUILT_IN_CONFS = {
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
     "tools.build:skip_test": "Do not execute CMake.test() and Meson.test() when enabled",
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
     "tools.build.cross_building:can_run": "Bool value that indicates whether is possible to run a non-native "
                                           "app on the same architecture. It's used by 'can_run' tool",
+    "tools.build:verbosity": "Verbosity of MSBuild and XCodeBuild build systems. "
+                             "Possible values are 'quiet', 'error', 'warning', 'notice', 'status', 'verbose', 'normal', 'debug', 'v', 'trace' and 'vv'",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
@@ -55,7 +62,6 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
-    "tools.files.download:download_cache": "Define the cache folder to store downloads from files.download()/get()",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.gnu:make_program": "Indicate path to make program",
@@ -66,7 +72,6 @@ BUILT_IN_CONFS = {
     "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
-    "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
@@ -81,7 +86,6 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
-    "tools.apple.xcodebuild:verbosity": "Verbosity level for xcodebuild: 'verbose' or 'quiet",
     "tools.apple:sdk_path": "Path to the SDK to be used",
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
@@ -121,13 +125,14 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
-    def __init__(self, name, value, path=False):
+    def __init__(self, name, value, path=False, update=None):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._name = name
         self._value = value
         self._value_type = type(value)
         self._path = path
+        self._update = update
 
     def __repr__(self):
         return repr(self._value)
@@ -141,7 +146,7 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path)
+        return _ConfValue(self._name, self._value, self._path, self._update)
 
     def dumps(self):
         if self._value is None:
@@ -165,8 +170,9 @@ class _ConfValue(object):
         return {self._name: _value}
 
     def update(self, value):
-        if self._value_type is dict:
-            self._value.update(value)
+        assert self._value_type is dict, "Only dicts can be updated"
+        assert isinstance(value, dict), "Only dicts can update"
+        self._value.update(value)
 
     def remove(self, value):
         if self._value_type is list:
@@ -208,6 +214,13 @@ class _ConfValue(object):
             else:
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
+                self._value = new_value
+        elif v_type is dict and o_type is dict:
+            if self._update:
+                # only if the current one is marked as "*=" update, otherwise it remains
+                # as this is a "compose" operation, self has priority, it is the one updating
+                new_value = other._value.copy()
+                new_value.update(self._value)
                 self._value = new_value
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
@@ -360,11 +373,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        conf_value = _ConfValue(name, {})
+        # Placeholder trick is not good for dict update, so we need to explicitly update=True
+        conf_value = _ConfValue(name, {}, update=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def update_path(self, name, value):
-        conf_value = _ConfValue(name, {}, path=True)
+        conf_value = _ConfValue(name, {}, path=True, update=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def append(self, name, value):
@@ -468,8 +482,9 @@ class Conf:
 
 class ConfDefinition:
 
+    # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("=", "define"))
+               ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = OrderedDict()
@@ -564,7 +579,7 @@ class ConfDefinition:
     def update(self, key, value, profile=False, method="define"):
         """
         Define/append/prepend/unset any Conf line
-        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+        >> update("tools.build:verbosity", "verbose")
         """
         pattern, name = self._split_pattern_name(key)
 

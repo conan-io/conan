@@ -6,22 +6,21 @@ from conans.model.conf import ConfDefinition
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 
 
-@pytest.mark.parametrize("mode", ["quiet", "verbose", "invalid"])
-def test_verbosity(mode):
+@pytest.mark.parametrize("mode", ["quiet", "error", "warning", "notice", "status", "verbose",
+                                  "normal", "debug", "v", "trace", "vv"])
+def test_verbosity_global(mode):
     conanfile = ConanFileMock()
     conf = ConfDefinition()
-    conf.loads("tools.apple.xcodebuild:verbosity={}".format(mode))
+    conf.loads(f"tools.build:verbosity={mode}")
     conanfile.conf = conf
     conanfile.settings = MockSettings({})
     xcodebuild = XcodeBuild(conanfile)
-    if mode != "invalid":
-        xcodebuild.build("app.xcodeproj")
-        assert "-{}".format(mode) in conanfile.command
+
+    xcodebuild.build("app.xcodeproj")
+    if mode not in ("status", "verbose", "normal"):
+        assert "-quiet" in conanfile.command or "-verbose" in conanfile.command
     else:
-        with pytest.raises(ConanException) as excinfo:
-            xcodebuild.build("app.xcodeproj")
-        assert "Value {} for 'tools.apple.xcodebuild:verbosity' is not valid".format(mode) == str(
-            excinfo.value)
+        assert "-quiet" not in conanfile.command and "-verbose" not in conanfile.command
 
 
 def test_sdk_path():

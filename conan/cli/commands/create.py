@@ -61,7 +61,11 @@ def create(conan_api, parser, *args):
         # TODO: This section might be overlapping with ``graph_compute()``
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
-
+        # FIXME: Dirty: package type still raw, not processed yet
+        # TODO: Why not for package_type = "application" like cmake to be used as build-require?
+        if conanfile.package_type == "build-scripts" and not args.build_require:
+            # swap them
+            requires, tool_requires = tool_requires, requires
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,

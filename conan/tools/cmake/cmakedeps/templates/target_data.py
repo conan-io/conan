@@ -47,7 +47,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         dependency_filenames = self._get_dependency_filenames()
         # Get the nodes that have the property cmake_find_mode=None (no files to generate)
         dependency_find_modes = self._get_dependencies_find_modes()
-        root_folder = self._root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+
+        # Make the root_folder relative to the generated xxx-data.cmake file
+        root_folder = self._root_folder
+        generators_folder = self.cmakedeps._conanfile.generators_folder
+        if os.path.commonpath([root_folder, generators_folder]) == generators_folder:
+            rel_path = os.path.relpath(root_folder, generators_folder)
+            rel_path = rel_path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+            root_folder = f"${{CMAKE_CURRENT_LIST_DIR}}/{rel_path}"
+        else:
+            root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,
@@ -322,8 +331,9 @@ class _TargetDataContext(object):
             # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
             #                      NOT REALLY LINKING LIB
             self.libs = ""
-            self.system_libs = ""
-            self.frameworks = ""
+            if cpp_info.frameworkdirs:  # Only invalidate for in-package frameworks
+                # FIXME: The mix of in-package frameworks + system ones is broken
+                self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""

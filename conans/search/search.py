@@ -4,7 +4,6 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
@@ -115,8 +114,8 @@ def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
-            ConanOutput().error("There is no conaninfo.txt: %s" % str(info_path))
-            continue
+            raise ConanException(f"Corrupted package '{pkg_layout.reference}' "
+                                 f"without conaninfo.txt in: {info_path}")
         conan_info_content = load(info_path)
 
         info = load_binary_info(conan_info_content)

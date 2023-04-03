@@ -39,6 +39,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     # TODO: cache2.0 move this creation to other place
     mkdir(export_folder)
     mkdir(export_src_folder)
+    conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
     export_recipe(conanfile, export_folder)
     export_source(conanfile, export_src_folder)
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
@@ -54,10 +55,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     manifest.report_summary(scoped_output)
 
     # Compute the revision for the recipe
-    revision = calc_revision(scoped_output=conanfile.output,
-                             path=os.path.dirname(conanfile_path),
-                             manifest=manifest,
-                             revision_mode=conanfile.revision_mode)
+    revision = _calc_revision(scoped_output=conanfile.output,
+                              path=os.path.dirname(conanfile_path),
+                              manifest=manifest,
+                              revision_mode=conanfile.revision_mode)
 
     ref.revision = revision
     recipe_layout.reference = ref
@@ -82,7 +83,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     return ref, conanfile
 
 
-def calc_revision(scoped_output, path, manifest, revision_mode):
+def _calc_revision(scoped_output, path, manifest, revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 

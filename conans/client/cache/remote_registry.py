@@ -45,12 +45,21 @@ class _Remotes(object):
     def add(self, new_remote: Remote, index=None, force=False):
         assert isinstance(new_remote, Remote)
         current = self.get_by_name(new_remote.name)
-        if current:
-            if force:
-                ConanOutput().warning(f"Remote '{new_remote.name}' already exists in remotes")
-            else:
+        if current:  # same name remote existing!
+            if not force:
                 raise ConanException(f"Remote '{new_remote.name}' already exists in remotes "
                                      "(use --force to continue)")
+
+            ConanOutput().warning(f"Remote '{new_remote.name}' already exists in remotes")
+            if current.url != new_remote.url:
+                ConanOutput().warning("Updating existing remote with new url")
+            current_index = self._remotes.index(current)
+            self._remotes.remove(current)
+            index = index or current_index
+            self._remotes.insert(index, new_remote)
+            return
+
+        # The remote name doesn't exist
         for r in self._remotes:
             if r.url == new_remote.url:
                 msg = f"Remote url already existing in remote '{r.name}'. " \

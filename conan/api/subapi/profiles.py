@@ -8,14 +8,15 @@ from conans.model.profile import Profile
 class ProfilesAPI:
 
     def __init__(self, conan_api):
-        self._cache = ClientCache(conan_api.cache_folder)
+        self._conan_api = conan_api
 
     def get_default_host(self):
         """
         :return: the path to the default "host" profile, either in the cache or as defined
             by the user in configuration
         """
-        loader = ProfileLoader(self._cache)
+        cache = ClientCache(self._conan_api.cache_folder)
+        loader = ProfileLoader(cache)
         return loader.get_default_host()
 
     def get_default_build(self):
@@ -23,7 +24,8 @@ class ProfilesAPI:
         :return: the path to the default "build" profile, either in the cache or as
             defined by the user in configuration
         """
-        loader = ProfileLoader(self._cache)
+        cache = ClientCache(self._conan_api.cache_folder)
+        loader = ProfileLoader(cache)
         return loader.get_default_build()
 
     def get_profiles_from_args(self, args):
@@ -41,12 +43,13 @@ class ProfilesAPI:
         finally adding the individual settings, options (priority over the profiles)
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
-        loader = ProfileLoader(self._cache)
+        cache = ClientCache(self._conan_api.cache_folder)
+        loader = ProfileLoader(cache)
         profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
         profile.conf.validate()
-        self._cache.new_config.validate()
+        cache.new_config.validate()
         # Apply the new_config to the profiles the global one, so recipes get it too
-        profile.conf.rebase_conf_definition(self._cache.new_config)
+        profile.conf.rebase_conf_definition(cache.new_config)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
@@ -54,7 +57,9 @@ class ProfilesAPI:
         :return: the resolved path of the given profile name, that could be in the cache,
             or local, depending on the "cwd"
         """
-        loader = ProfileLoader(self._cache)
+        cache = ClientCache(self._conan_api.cache_folder)
+        loader = ProfileLoader(cache)
+        cwd = cwd or os.getcwd()
         profile_path = loader.get_profile_path(profile, cwd, exists=exists)
         return profile_path
 
@@ -67,7 +72,8 @@ class ProfilesAPI:
         paths_to_ignore = ['.DS_Store']
 
         profiles = []
-        profiles_path = self._cache.profiles_path
+        cache = ClientCache(self._conan_api.cache_folder)
+        profiles_path = cache.profiles_path
         if os.path.exists(profiles_path):
             for current_directory, _, files in os.walk(profiles_path, followlinks=True):
                 files = filter(lambda file: os.path.relpath(

@@ -145,6 +145,7 @@ class _PackageBuilder(object):
                 conanfile.folders.set_base_package(base_package)
                 # In local cache, generators folder always in build_folder
                 conanfile.folders.set_base_generators(base_build)
+                conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
 
                 if not skip_build:
                     # In local cache, install folder always is build_folder
@@ -187,6 +188,7 @@ class BinaryInstaller:
 
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_export_sources(source_folder)
+        conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
         config_source(export_source_folder, conanfile, self._hook_manager)
 
     @staticmethod
