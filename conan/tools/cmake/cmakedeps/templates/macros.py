@@ -76,6 +76,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                         set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_IMPLIB ${CONAN_FOUND_LIBRARY})
                         message(DEBUG "Found DLL and STATIC at ${CONAN_SHARED_FOUND_LIBRARY}, ${CONAN_FOUND_LIBRARY}")
                      endif()
+                     unset(CONAN_SHARED_FOUND_LIBRARY CACHE)
                    else()
                      if(NOT TARGET ${_LIB_NAME})
                          # library_type can be STATIC, still UNKNOWN (if no package type available in the recipe) or SHARED (but no windows)

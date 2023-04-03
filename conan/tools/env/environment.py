@@ -414,7 +414,7 @@ class EnvVars:
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
-        location = os.path.dirname(file_location)
+        location = os.path.abspath(os.path.dirname(file_location))
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
             # To make the script relocatable
