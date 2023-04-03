@@ -171,3 +171,12 @@ def _generate_aggregated_env(conanfile):
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
+
+
+def relativize_generated_file(content, conanfile, placeholder):
+    generators_folder = conanfile.generators_folder
+    abs_base_path = conanfile.folders._base_generators
+    rel_path = os.path.relpath(abs_base_path, generators_folder)
+    new_path = placeholder + rel_path
+    content = content.replace(generators_folder, new_path)
+    return content

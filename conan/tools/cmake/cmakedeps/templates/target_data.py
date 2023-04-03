@@ -4,6 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
+from conan.tools.cmake.utils import relativize_cmake_path
 from conans.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
@@ -50,13 +51,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
         # Make the root_folder relative to the generated xxx-data.cmake file
         root_folder = self._root_folder
-        generators_folder = self.cmakedeps._conanfile.generators_folder
-        if os.path.commonpath([root_folder, generators_folder]) == generators_folder:
-            rel_path = os.path.relpath(root_folder, generators_folder)
-            rel_path = rel_path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-            root_folder = f"${{CMAKE_CURRENT_LIST_DIR}}/{rel_path}"
-        else:
-            root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        root_folder = relativize_cmake_path(root_folder, self.cmakedeps._conanfile)
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,
