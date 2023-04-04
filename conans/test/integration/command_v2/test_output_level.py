@@ -41,7 +41,7 @@ def test_output_level():
     t.run("create . --name foo --version 1.0 -v")
     assert "This is a trace" not in t.out
     assert "This is a debug" not in t.out
-    assert "This is a verbose" in t.out
+    assert "This is a verbose" not in t.out
     assert "This is a info" in t.out
     assert "This is a highlight" in t.out
     assert "This is a success" in t.out
