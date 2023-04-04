@@ -31,7 +31,7 @@ class BasicConanfile(ConanFile):
 
     # The build_requirements() method is functionally equivalent to the requirements() one,
     # being executed just after it. It's a good place to define tool requirements,
-    # dependencies necessary at build time, but at application runtime
+    # dependencies necessary at build time, not at application runtime
     def build_requirements(self):
         # Each call to self.tool_requires() will add the corresponding build requirement
         {% if tool_requires is defined -%}
