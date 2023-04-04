@@ -116,10 +116,13 @@ class ProfileLoader:
         if hasattr(mod, "profile_plugin"):
             return mod.profile_plugin
 
-    def from_cli_args(self, profiles, settings, options, conf, cwd):
+    def from_cli_args(self, profiles, settings, options, globalconf, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
+        if globalconf and any(not CORE_CONF_PATTERN.match(c) for c in globalconf):
+            raise ConanException("[global conf] configurations should be of the form 'core.*'")
+
         if conf and any(CORE_CONF_PATTERN.match(c) for c in conf):
             raise ConanException("[conf] 'core.*' configurations are not allowed in profiles.")
 
@@ -128,7 +131,7 @@ class ProfileLoader:
             tmp = self.load_profile(p, cwd)
             result.compose_profile(tmp)
 
-        args_profile = _profile_parse_args(settings, options, conf)
+        args_profile = _profile_parse_args(settings, options, globalconf, conf)
         result.compose_profile(args_profile)
         # Only after everything has been aggregated, try to complete missing settings
         profile_plugin = self._load_profile_plugin()
@@ -348,7 +351,7 @@ class _ProfileValueParser(object):
         return settings, package_settings
 
 
-def _profile_parse_args(settings, options, conf):
+def _profile_parse_args(settings, options, globalconf, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -384,9 +387,13 @@ def _profile_parse_args(settings, options, conf):
     result = Profile()
     result.options = Options.loads("\n".join(options or []))
     result.settings = OrderedDict(settings)
-    if conf:
+    if globalconf:
         result.conf = ConfDefinition()
-        result.conf.loads("\n".join(conf))
+        result.conf.loads("\n".join(globalconf))
+    if conf:
+        confs = ConfDefinition()
+        confs.loads("\n".join(conf))
+        result.conf.rebase_conf_definition(confs)
 
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)

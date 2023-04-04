@@ -88,11 +88,20 @@ def add_profiles_args(parser):
                                  'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
                                                                                      short_suffix))
 
+    def global_conf_args():
+        parser.add_argument("-gc",
+                            "--global-conf",
+                            action="append",
+                            dest="global_conf",
+                            help="Global configuration for Conan")
+
     for item_fn in [options_args, profile_args, settings_args, conf_args]:
         item_fn("host", "",
                 "")  # By default it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")
+
+    global_conf_args()
 
 
 def add_reference_args(parser):
