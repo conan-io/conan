@@ -75,7 +75,6 @@ def test_install_deploy(client):
            clean_first=True)
     c.run("install . -o *:shared=True "
           "--deploy=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
-    print(c.current_folder)
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
     deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")
@@ -123,9 +122,11 @@ def test_install_full_deploy_layout(client):
     c.run("install . -o *:shared=True --deploy=full_deploy.py")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
-    deps = c.load(f"build/generators/hello-release-{arch}-data.cmake")
+    folder = "/Release" if platform.system() != "Windows" else ""
+    rel_path = "../../" if platform.system() == "Windows" else "../../../"
+    deps = c.load(f"build{folder}/generators/hello-release-{arch}-data.cmake")
     assert 'set(hello_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/' \
-           '../../host/hello/0.1/Release/x86_64")' in deps
+           f'{rel_path}host/hello/0.1/Release/x86_64")' in deps
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/include")' in deps
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
 
@@ -134,13 +135,14 @@ def test_install_full_deploy_layout(client):
     shutil.copytree(c.current_folder, tmp)
     shutil.rmtree(c.current_folder)
     c2 = TestClient(current_folder=tmp)
-    with c2.chdir("build"):
+    with c2.chdir(f"build{folder}"):
         # I can totally build without errors with deployed
-        c2.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake "
+        cmakelist = "../.." if platform.system() != "Windows" else ".."
+        c2.run_command(f"cmake {cmakelist} -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake "
                        "-DCMAKE_BUILD_TYPE=Release")
         assert "MY_TOOL_VARIABLE=Hello world!!" in c2.out
         c2.run_command("cmake --build . --config Release")
-        if platform.system() == "Windows":  # Only the .bat env-generators are relocatable
+        if platform.system() == "Windows":  # Only the .bat env-generators are relocatable atm
             cmd = r"generators\conanrun.bat && Release\my_app.exe"
             # For Lunux: cmd = ". mydeploy/conanrun.sh && ./my_app"
             c2.run_command(cmd)
