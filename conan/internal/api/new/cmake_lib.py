@@ -56,6 +56,14 @@ class {{package_name}}Recipe(ConanFile):
         self.requires("{{ require }}")
         {% endfor %}
     {%- endif %}
+
+    {% if tool_requires is defined -%}
+    def build_requirements(self):
+        {% for require in tool_requires -%}
+        self.tool_requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+
 '''
 
 cmake_v2 = """cmake_minimum_required(VERSION 3.15)
