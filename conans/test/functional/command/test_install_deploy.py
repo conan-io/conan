@@ -85,7 +85,6 @@ def test_install_deploy(client):
 
     # We can fully move it to another folder, and still works
     tmp = os.path.join(temp_folder(), "relocated")
-    print(tmp)
     shutil.copytree(c.current_folder, tmp)
     shutil.rmtree(c.current_folder)
     c2 = TestClient(current_folder=tmp)
@@ -132,7 +131,6 @@ def test_install_full_deploy_layout(client):
 
     # We can fully move it to another folder, and still works
     tmp = os.path.join(temp_folder(), "relocated")
-    print(tmp)
     shutil.copytree(c.current_folder, tmp)
     shutil.rmtree(c.current_folder)
     c2 = TestClient(current_folder=tmp)
