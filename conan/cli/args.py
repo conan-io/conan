@@ -97,7 +97,7 @@ def add_profiles_args(parser):
 
     for item_fn in [options_args, profile_args, settings_args, conf_args]:
         item_fn("host", "",
-                "")  # By default it is the HOST, the one we are building binaries for
+                "")  # By default, it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")
 
