@@ -2,7 +2,7 @@ import json
 import os
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, GraphOverrides
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
@@ -87,7 +87,7 @@ class Lockfile(object):
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
         self._alias = {}
-        self._overrides = {}
+        self._overrides = GraphOverrides()
         self.partial = False
 
         if deps_graph is None:
@@ -190,8 +190,7 @@ class Lockfile(object):
             graph_lock._alias = {RecipeReference.loads(k): RecipeReference.loads(v)
                                  for k, v in data["alias"].items()}
         if "overrides" in data:
-            graph_lock._overrides = {RecipeReference.loads(k): RecipeReference.loads(v)
-                                     for k, v in data["overrides"].items()}
+            graph_lock._overrides = GraphOverrides.deserialize(data["overrides"])
         return graph_lock
 
     def serialize(self):
@@ -208,7 +207,7 @@ class Lockfile(object):
         if self._alias:
             result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
         if self._overrides:
-            result["overrides"] = {repr(k): repr(v) for k, v in self._overrides.items()}
+            result["overrides"] = self._overrides.serialize()
         return result
 
     def resolve_locked(self, node, require, resolve_prereleases):
@@ -216,7 +215,32 @@ class Lockfile(object):
             locked_refs = self._build_requires.refs()
         else:
             locked_refs = self._requires.refs()
+        self._resolve_overrides(require, node)
         self._resolve(require, locked_refs, resolve_prereleases)
+
+    def _resolve_overrides(self, require, node):
+        existing = self._overrides.get(require.ref)
+        if existing is None:
+            return
+        if len(existing) == 1:
+            require.ref = next(iter(existing))
+            return
+        # FIXME: what if more than 1 override
+        print("EXISTING OVERRIDES", existing)
+        solutions = set()
+        for override, info in existing.items():
+            print("    Checking", override, info)
+            for item in info:
+                base_ref, context = item
+                print("        Item", base_ref, context)
+                print("        compared", node.ref, node.context)
+                if node.ref == base_ref and node.context == context:
+                    print("        MATCH!!")
+                    solutions.add(override)
+        if len(solutions) == 1:
+            return solutions[0]
+        raise ConanException(f"Override for {node.ref}->{require.ref} cannot be resolved."
+                             f"Possible overrides: {existing}. Matching: {solutions}")
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:

@@ -64,7 +64,12 @@ def print_graph_basic(graph):
                        "it might be removed in 3.0.")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
-    _format_resolved("Overrides", graph.overrides)
+    if graph.overrides:
+        output.info("Overrides", Color.BRIGHT_YELLOW)
+        for req, override_info in graph.overrides.items():
+            for override, info in override_info.items():
+                bases = ", ".join(str(item[0]) for item in info)
+                output.info("    {}: {} - {}".format(req, override, bases), Color.BRIGHT_CYAN)
 
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)
