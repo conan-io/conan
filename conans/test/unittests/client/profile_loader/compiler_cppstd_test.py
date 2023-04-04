@@ -52,12 +52,12 @@ class SettingsCppStdTests(unittest.TestCase):
         profile_loader = ProfileLoader(self.cache)
         with self.assertRaisesRegex(ConanException,
                                     "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
-            profile_loader.from_cli_args(["default"], None, None, None, None)
+            profile_loader.from_cli_args(["default"], None, None, None, None, None)
 
     def test_no_value(self):
         self._save_profile()
         profile_loader = ProfileLoader(self.cache)
-        r = profile_loader.from_cli_args(["default"], None, None, None, None)
+        r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
         self.assertNotIn("compiler.cppstd", r.settings)
 
     def test_value_none(self):
@@ -65,12 +65,12 @@ class SettingsCppStdTests(unittest.TestCase):
         profile_loader = ProfileLoader(self.cache)
         # It is incorrect to assign compiler.cppstd=None in the profile
         with self.assertRaisesRegex(ConanException, "Invalid setting"):
-            r = profile_loader.from_cli_args(["default"], None, None, None, None)
+            r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
 
     def test_value_valid(self):
         self._save_profile(compiler_cppstd="11")
         profile_loader = ProfileLoader(self.cache)
-        r = profile_loader.from_cli_args(["default"], None, None, None, None)
+        r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertNotIn("cppstd", r.settings)
 
@@ -79,4 +79,4 @@ class SettingsCppStdTests(unittest.TestCase):
         profile_loader = ProfileLoader(self.cache)
         with self.assertRaisesRegex(ConanException, "Invalid setting '13' is not a valid "
                                                     "'settings.compiler.cppstd' value"):
-            r = profile_loader.from_cli_args(["default"], None, None, None, None)
+            r = profile_loader.from_cli_args(["default"], None, None, None, None, None)
