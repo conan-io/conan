@@ -61,6 +61,7 @@ def _evaluate(prop_name, prop_value, binary_info):
     if not prop_name.startswith("options."):
         return compatible_prop(info_settings.get(prop_name, None), prop_value)
     else:
+        prop_name = prop_name[len("options."):]
         return compatible_prop(info_options.get(prop_name, None), prop_value)
 
 
