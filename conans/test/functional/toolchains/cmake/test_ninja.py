@@ -5,7 +5,6 @@ import pytest
 
 from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.presets import load_cmake_presets
-from conan.tools.build import load_toolchain_args
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
@@ -113,7 +112,7 @@ def test_locally_build_msvc(build_type, shared, client):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run(f"install --requires=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
-    client.run_command(fr"full_deploy\mydeploy\host\hello\1.0\{build_type}\x86_64\bin\myapp.exe")
+    client.run_command(fr"mydeploy\full_deploy\host\hello\1.0\{build_type}\x86_64\bin\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
 
 
