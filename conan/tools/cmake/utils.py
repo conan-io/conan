@@ -1,5 +1,3 @@
-import os
-
 
 def is_multi_configuration(generator):
     if not generator:
