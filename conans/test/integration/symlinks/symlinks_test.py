@@ -58,7 +58,7 @@ def test_complete_round_trip():
     c.run("remove * -c")
     c.save({}, clean_first=True)
     c.run("install --requires=hello/0.1 --deploy=full_deploy")
-    checker(os.path.join(c.current_folder, "host", "hello", "0.1"))
+    checker(os.path.join(c.current_folder, "full_deploy", "host", "hello", "0.1"))
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
@@ -90,7 +90,7 @@ def test_complete_round_trip_broken_link():
     c.run("remove * -c")
     c.save({}, clean_first=True)
     c.run("install --requires=hello/0.1 --deploy=full_deploy")
-    checker(os.path.join(c.current_folder, "host", "hello", "0.1"))
+    checker(os.path.join(c.current_folder, "full_deploy", "host", "hello", "0.1"))
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
@@ -127,7 +127,7 @@ def test_complete_round_trip_external_link():
     c.run("remove * -c")
     c.save({}, clean_first=True)
     c.run("install --requires=hello/0.1 --deploy=full_deploy")
-    checker(os.path.join(c.current_folder, "host", "hello", "0.1"))
+    checker(os.path.join(c.current_folder, "full_deploy", "host", "hello", "0.1"))
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
@@ -172,7 +172,7 @@ def test_complete_round_trip_folders():
     c.run("remove * -c")
     c.save({}, clean_first=True)
     c.run("install --requires=hello/0.1 --deploy=full_deploy")
-    checker(os.path.join(c.current_folder, "host", "hello", "0.1"))
+    checker(os.path.join(c.current_folder, "full_deploy", "host", "hello", "0.1"))
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
@@ -232,7 +232,7 @@ def test_package_with_symlinks(package_files):
     # Check package files are there
     package_folder = client2.get_latest_pkg_layout(pref).package()
     assert_folder_symlinks(package_folder)
-    assert_folder_symlinks(os.path.join(client2.current_folder, "host", "hello", "0.1"))
+    assert_folder_symlinks(os.path.join(client2.current_folder, "full_deploy", "host", "hello", "0.1"))
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")

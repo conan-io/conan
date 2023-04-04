@@ -58,7 +58,7 @@ def full_deploy(graph, output_folder):
     for dep in conanfile.dependencies.values():
         if dep.package_folder is None:
             continue
-        folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
+        folder_name = os.path.join("full_deploy", dep.context, dep.ref.name, str(dep.ref.version))
         build_type = dep.info.settings.get_safe("build_type")
         arch = dep.info.settings.get_safe("arch")
         if build_type:

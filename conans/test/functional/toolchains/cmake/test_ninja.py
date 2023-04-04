@@ -79,7 +79,7 @@ def test_locally_build_linux(build_type, shared, client):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run(f"install --requires=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
-    deploy_path = os.path.join(client.current_folder, "mydeploy", "host", "hello", "1.0",
+    deploy_path = os.path.join(client.current_folder, "mydeploy", "full_deploy", "host", "hello", "1.0",
                                build_type, "x86_64")
     client.run_command(f"LD_LIBRARY_PATH='{deploy_path}/lib' {deploy_path}/bin/myapp")
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
@@ -113,7 +113,7 @@ def test_locally_build_msvc(build_type, shared, client):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run(f"install --requires=hello/1.0@ --deploy=full_deploy -of=mydeploy {settings}")
-    client.run_command(fr"mydeploy\host\hello\1.0\{build_type}\x86_64\bin\myapp.exe")
+    client.run_command(fr"full_deploy\mydeploy\host\hello\1.0\{build_type}\x86_64\bin\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
 
 
