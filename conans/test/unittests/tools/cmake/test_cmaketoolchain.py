@@ -32,7 +32,7 @@ def conanfile():
     c.settings.os = "Windows"
     c.conf = Conf()
     c.conf.define("tools.cmake.cmaketoolchain:system_name", "potato")
-    c.folders.set_base_generators(".")
+    c.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
     c._conan_node = Mock()
     c._conan_node.transitive_deps = {}
     return c
@@ -146,7 +146,7 @@ def conanfile_apple():
     c.settings.os.version = "10.15"
     c.settings_build = c.settings
     c.conf = Conf()
-    c.folders.set_base_generators(".")
+    c.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
