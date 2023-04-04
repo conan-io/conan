@@ -177,6 +177,7 @@ def relativize_generated_file(content, conanfile, placeholder):
     generators_folder = conanfile.generators_folder
     abs_base_path = conanfile.folders._base_generators
     rel_path = os.path.relpath(abs_base_path, generators_folder)
-    new_path = placeholder + rel_path
+    new_path = os.path.normpath(os.path.join(placeholder, rel_path))
     content = content.replace(generators_folder, new_path)
+    content = content.replace(generators_folder.replace("\\", "/"), new_path.replace("\\", "/"))
     return content

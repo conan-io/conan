@@ -12,7 +12,6 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import relativize_cmake_path
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
@@ -450,8 +449,11 @@ class FindFiles(Block):
         {% endif %}
     """)
 
-    def _join_paths(self, paths):
-        return " ".join(['"{}"'.format(relativize_cmake_path(p, self._conanfile)) for p in paths])
+    @staticmethod
+    def _join_paths(paths):
+        return " ".join(['"{}"'.format(p.replace('\\', '/')
+                                        .replace('$', '\\$')
+                                        .replace('"', '\\"')) for p in paths])
 
     def context(self):
         # To find the generated cmake_find_package finders

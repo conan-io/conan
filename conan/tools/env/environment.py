@@ -3,6 +3,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conans.client.generators import relativize_generated_file
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
@@ -414,14 +415,13 @@ class EnvVars:
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
-        location = os.path.abspath(os.path.dirname(file_location))
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
             # To make the script relocatable
-            value = value.replace(location, "%~dp0")
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "%~dp0")
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
         open(file_location, "w", encoding="utf-8").write(content)

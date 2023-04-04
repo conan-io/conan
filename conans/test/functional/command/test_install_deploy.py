@@ -75,6 +75,7 @@ def test_install_deploy(client):
            clean_first=True)
     c.run("install . -o *:shared=True "
           "--deploy=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
+    print(c.current_folder)
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
     deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")
