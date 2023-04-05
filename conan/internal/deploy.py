@@ -80,6 +80,7 @@ def direct_deploy(graph, output_folder):
     import os
     import shutil
 
+    output_folder = os.path.join(output_folder, "direct_deploy")
     conanfile = graph.root.conanfile
     conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
     # If the argument is --requires, the current conanfile is a virtual one with 1 single
