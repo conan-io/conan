@@ -331,6 +331,7 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
 
 def test_package_query_no_package_ref(populated_client):
     populated_client.run("remove * -p 'compiler=clang'", assert_error=True)
+    assert "--package-query supplied but the pattern does not match packages" in populated_client.out
 
 
 def _get_all_recipes(client, with_remote):
