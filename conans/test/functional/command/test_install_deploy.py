@@ -126,7 +126,7 @@ def test_install_full_deploy_layout(client):
     rel_path = "../../" if platform.system() == "Windows" else "../../../"
     deps = c.load(f"build{folder}/generators/hello-release-{arch}-data.cmake")
     assert 'set(hello_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/' \
-           f'{rel_path}host/hello/0.1/Release/{arch}")' in deps
+           f'{rel_path}full_deploy/host/hello/0.1/Release/{arch}")' in deps
     assert 'set(hello_INCLUDE_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/include")' in deps
     assert 'set(hello_LIB_DIRS_RELEASE "${hello_PACKAGE_FOLDER_RELEASE}/lib")' in deps
 
