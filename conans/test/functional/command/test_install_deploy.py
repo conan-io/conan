@@ -173,18 +173,18 @@ def test_builtin_full_deploy():
           "-s build_type=Debug -s arch=x86")
 
     host_arch = c.get_default_host_profile().settings['arch']
-    release = c.load(f"output/host/dep/0.1/Release/{host_arch}/include/hello.h")
+    release = c.load(f"output/full_deploy/host/dep/0.1/Release/{host_arch}/include/hello.h")
     assert f"Release-{host_arch}" in release
-    debug = c.load("output/host/dep/0.1/Debug/x86/include/hello.h")
+    debug = c.load("output/full_deploy/host/dep/0.1/Debug/x86/include/hello.h")
     assert "Debug-x86" in debug
     cmake_release = c.load(f"output/dep-release-{host_arch}-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in cmake_release
-    assert f"${{CMAKE_CURRENT_LIST_DIR}}/host/dep/0.1/Release/{host_arch}" in cmake_release
+    assert f"${{CMAKE_CURRENT_LIST_DIR}}/full_deploy/host/dep/0.1/Release/{host_arch}" in cmake_release
     assert 'set(dep_BUILD_MODULES_PATHS_RELEASE ' \
            '"${dep_PACKAGE_FOLDER_RELEASE}/build/my_tools_host.cmake")' in cmake_release
     cmake_debug = c.load("output/dep-debug-x86-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_DEBUG "${dep_PACKAGE_FOLDER_DEBUG}/include")' in cmake_debug
-    assert "${CMAKE_CURRENT_LIST_DIR}/host/dep/0.1/Debug/x86" in cmake_debug
+    assert "${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/dep/0.1/Debug/x86" in cmake_debug
     assert 'set(dep_BUILD_MODULES_PATHS_DEBUG ' \
            '"${dep_PACKAGE_FOLDER_DEBUG}/build/my_tools_host.cmake")' in cmake_debug
 
@@ -198,14 +198,14 @@ def test_deploy_reference():
 
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
-    header = c.load("output/host/pkg/1.0/include/hi.h")
+    header = c.load("output/full_deploy/host/pkg/1.0/include/hi.h")
     assert "hi" in header
 
     # Testing that we can deploy to the current folder too
     c.save({}, clean_first=True)
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy")
     # NOTE: Full deployer always use build_type/arch, even if None/None in the path, same structure
-    header = c.load("host/pkg/1.0/include/hi.h")
+    header = c.load("full_deploy/host/pkg/1.0/include/hi.h")
     assert "hi" in header
 
 
@@ -217,14 +217,14 @@ def test_deploy_overwrite():
     c.run("create .")
 
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/include/hi.h")
+    header = c.load("output/full_deploy/host/pkg/1.0/include/hi.h")
     assert "hi" in header
 
     # modify the package
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "bye")})
     c.run("create .")
     c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-    header = c.load("output/host/pkg/1.0/include/hi.h")
+    header = c.load("output/full_deploy/host/pkg/1.0/include/hi.h")
     assert "bye" in header
 
 
@@ -241,12 +241,12 @@ def test_deploy_editable():
     # If we don't change to another folder, the full_deploy will be recursive and fail
     with c.chdir(temp_folder()):
         c.run("install  --requires=pkg/1.0 --deploy=full_deploy --output-folder=output")
-        header = c.load("output/host/pkg/1.0/src/include/hi.h")
+        header = c.load("output/full_deploy/host/pkg/1.0/src/include/hi.h")
         assert "hi" in header
 
 
 def test_deploy_single_package():
-    """ Lets try a deploy that executes on a single package reference
+    """ Let's try a deploy that executes on a single package reference
     """
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("include/hi.h", "hi"),
@@ -255,10 +255,10 @@ def test_deploy_single_package():
 
     # if we deploy one --requires, we get that package
     c.run("install  --requires=pkg/1.0 --deploy=direct_deploy --output-folder=output")
-    header = c.load("output/pkg/include/hi.h")
+    header = c.load("output/direct_deploy/pkg/include/hi.h")
     assert "hi" in header
 
     # If we deploy a local conanfile.txt, we get deployed its direct dependencies
     c.run("install consumer/conanfile.txt --deploy=direct_deploy --output-folder=output2")
-    header = c.load("output2/pkg/include/hi.h")
+    header = c.load("output2/direct_deploy/pkg/include/hi.h")
     assert "hi" in header
