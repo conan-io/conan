@@ -50,13 +50,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
         # Make the root_folder relative to the generated xxx-data.cmake file
         root_folder = self._root_folder
-        generators_folder = self.cmakedeps._conanfile.generators_folder
-        if os.path.commonpath([root_folder, generators_folder]) == generators_folder:
-            rel_path = os.path.relpath(root_folder, generators_folder)
-            rel_path = rel_path.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-            root_folder = f"${{CMAKE_CURRENT_LIST_DIR}}/{rel_path}"
-        else:
-            root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+        root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,
