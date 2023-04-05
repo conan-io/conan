@@ -132,6 +132,9 @@ class _PCContentGenerator:
         {% for path in includedirs %}
         {{ "includedir%d=%s" % (loop.index, path) }}
         {% endfor %}
+        {% for path in bindirs %}
+        {{ f"bindir{loop.index}={path}" }}
+        {% endfor %}
         {% if pkg_config_custom_content %}
         # Custom PC content
         {{ pkg_config_custom_content }}
@@ -171,12 +174,14 @@ class _PCContentGenerator:
         prefix_path = root_folder.replace("\\", "/")
         libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
         includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
+        bindirs = _get_formatted_dirs(info.cpp_info.bindirs, prefix_path)
         custom_content = info.cpp_info.get_property("pkg_config_custom_content")
 
         context = {
             "prefix_path": prefix_path,
             "libdirs": libdirs,
             "includedirs": includedirs,
+            "bindirs": bindirs,
             "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
@@ -308,7 +313,7 @@ class _PCGenerator:
         Get all the PC files and contents for any dependency:
 
         * If the given dependency does not have components:
-            The PC file will be the depency one.
+            The PC file will be the dependency one.
 
         * If the given dependency has components:
             The PC files will be saved in this order:
