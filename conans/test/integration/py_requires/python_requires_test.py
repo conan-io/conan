@@ -74,7 +74,7 @@ class PyRequiresExtendTest(unittest.TestCase):
     def test_with_alias(self):
         client = TestClient()
         self._define_base(client)
-        client.alias("base/latest@user/testing",  "base/1.1@user/testing")
+        client.alias("base/latest@user/testing", "base/1.1@user/testing")
 
         reuse = textwrap.dedent("""
             from conan import ConanFile
@@ -377,7 +377,8 @@ class PyRequiresExtendTest(unittest.TestCase):
                                                           self.settings.arch))
             """)
         client.save({"conanfile.py": reuse})
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows -s arch=armv7")
+        client.run(
+            "create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows -s arch=armv7")
         self.assertIn("pkg/0.1@user/testing: License! MyLicense", client.out)
         self.assertIn("pkg/0.1@user/testing: Author! frodo", client.out)
         self.assertIn("pkg/0.1@user/testing: os: Windows arch: armv7", client.out)
@@ -547,13 +548,14 @@ class PyRequiresExtendTest(unittest.TestCase):
                 python_requires = "pyreq/1.0@user/channel", "pyreq/2.0@user/channel"
         """)
         t.save({"conanfile.py": conanfile})
-        t.run("create . --name=name --version=version --user=user --channel=channel", assert_error=True)
+        t.run("create . --name=name --version=version --user=user --channel=channel",
+              assert_error=True)
         self.assertIn("ERROR: Error loading conanfile", t.out)
         self.assertIn("The python_require 'pyreq' already exists", t.out)
 
     def test_local_build(self):
         client = TestClient()
-        client.save({"conanfile.py": "var=42\n"+str(GenConanfile())})
+        client.save({"conanfile.py": "var=42\n" + str(GenConanfile())})
         client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -1134,3 +1136,31 @@ class TestTransitiveExtend:
         client.run("install consumer")
         assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
         assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+
+
+def test_multi_top_missing_from_remote():
+    """
+    https://github.com/conan-io/conan/issues/13656
+    """
+    tc = TestClient(default_server_user=True)
+    tc.save({"conanfile.py": GenConanfile("base", "1.1")})
+    tc.run("create . --user=user --channel=testing")
+
+    tc.save({"conanfile.py": GenConanfile("dep", "1.0")
+            .with_python_requires("base/1.1@user/testing")})
+    tc.run("create . --user=user --channel=testing -r default")
+
+    tc.run("upload * -c -r default")
+    tc.run("remove * -c")
+
+    tc.save({"conanfile.py": GenConanfile("pkg", "1.0")
+            .with_python_requires("dep/1.0@user/testing")})
+
+    # This used to crash, with errors about not defining remotes
+    tc.run("create . --name=pkg --version=1.0 -r default")
+
+    # Ensure we found them in the remote
+    assert "dep/1.0@user/testing: Not found in local cache, looking in remotes..." in tc.out
+    assert "dep/1.0@user/testing: Downloaded recipe revision" in tc.out
+    assert "base/1.1@user/testing: Not found in local cache, looking in remotes..." in tc.out
+    assert "base/1.1@user/testing: Downloaded recipe revision" in tc.out
