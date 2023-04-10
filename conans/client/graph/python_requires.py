@@ -112,11 +112,12 @@ class PyRequireLoader(object):
         except ConanException as e:
             raise ConanException(f"Cannot resolve python_requires '{ref}': {str(e)}")
         path, recipe_status, remote, new_ref = recipe
-        conanfile, module = loader.load_basic_module(path, graph_lock, update, check_update)
+        conanfile, module = loader.load_basic_module(path, graph_lock, remotes=remotes,
+                                                     update=update, check_update=check_update)
         conanfile.name = new_ref.name
         conanfile.version = str(new_ref.version)
         conanfile.user = new_ref.user
-        # TODO: Is tihs really necessary?
+        # TODO: Is this really necessary?
         conanfile.channel = new_ref.channel
 
         if getattr(conanfile, "alias", None):
