@@ -68,6 +68,73 @@ class TestToolRequires:
         client.run("graph info . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
 
+    def test_consumer_resolved_version(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                tool_requires = "tool/[>=1.0]"
+
+                def generate(self):
+                    for r, _ in self.dependencies.items():
+                        self.output.info(f"DEPENDENCY {r.ref}")
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[system_tools]\ntool/1.1"})
+        client.run("install . -pr=profile")
+        assert "tool/1.1 - System tool" in client.out
+        assert "conanfile.py: DEPENDENCY tool/1.1" in client.out
+
+    def test_consumer_resolved_revision(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                tool_requires = "tool/1.1"
+
+                def generate(self):
+                    for r, _ in self.dependencies.items():
+                        self.output.info(f"DEPENDENCY {repr(r.ref)}")
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[system_tools]\ntool/1.1#rev1"})
+        client.run("install . -pr=profile")
+        assert "tool/1.1 - System tool" in client.out
+        assert "conanfile.py: DEPENDENCY tool/1.1#rev1" in client.out
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+               tool_requires = "tool/1.1#rev1"
+
+               def generate(self):
+                   for r, _ in self.dependencies.items():
+                       self.output.info(f"DEPENDENCY {repr(r.ref)}")
+               """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -pr=profile")
+        assert "tool/1.1 - System tool" in client.out
+        assert "conanfile.py: DEPENDENCY tool/1.1#rev1" in client.out
+
+    def test_consumer_unresolved_revision(self):
+        """ if a recipe specifies an exact revision and so does the profiñe
+        and it doesn't match, it is an error
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                tool_requires = "tool/1.1#rev2"
+
+                def generate(self):
+                    for r, _ in self.dependencies.items():
+                        self.output.info(f"DEPENDENCY {repr(r.ref)}")
+                """)
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[system_tools]\ntool/1.1#rev1"})
+        client.run("install . -pr=profile", assert_error=True)
+        assert "ERROR: Package 'tool/1.1' not resolved" in client.out
+
 
 class TestToolRequiresLock:
 
