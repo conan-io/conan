@@ -44,7 +44,7 @@ class GraphMissingError(GraphError):
         return f"Package '{self.require.ref}' not resolved: {self.missing_error}."
 
 
-class GraphProvidesError(ConanException):
+class GraphProvidesError(GraphError):
 
     def __init__(self, node, conflicting_node):
         self.node = node
@@ -56,7 +56,7 @@ class GraphProvidesError(ConanException):
                f"provide '{self.node.conanfile.provides}'."
 
 
-class GraphRuntimeError(ConanException):
+class GraphRuntimeError(GraphError):
 
     def __init__(self, node, conflicting_node):
         self.node = node
