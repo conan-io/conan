@@ -1,4 +1,4 @@
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphProvidesError
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -18,7 +18,7 @@ def check_graph_provides(dep_graph):
             for provide in dep_provides:
                 # First check if collides with current node
                 if current_provides is not None and provide in current_provides:
-                    raise GraphError.provides(node, dep_node)
+                    raise GraphProvidesError(node, dep_node)
 
                 # Then, check if collides with other requirements
                 new_req = dep_require.copy_requirement()
@@ -26,10 +26,10 @@ def check_graph_provides(dep_graph):
                                               new_req.ref.channel)
                 existing = node.transitive_deps.get(new_req)
                 if existing is not None:
-                    raise GraphError.provides(existing.node, dep_node)
+                    raise GraphProvidesError(existing.node, dep_node)
                 else:
                     existing_provide = provides.get(new_req)
                     if existing_provide is not None:
-                        raise GraphError.provides(existing_provide, dep_node)
+                        raise GraphProvidesError(existing_provide, dep_node)
                     else:
                         provides[new_req] = dep_node

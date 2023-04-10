@@ -2,7 +2,7 @@ import textwrap
 
 from parameterized import parameterized
 
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphProvidesError
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive
 from conans.test.utils.tools import GenConanfile, TestClient
@@ -17,7 +17,7 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
@@ -34,7 +34,7 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
@@ -60,7 +60,7 @@ class TestProvidesTest(GraphManagerTest):
                                                with_requires("libb/0.1", "libc/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
@@ -105,7 +105,7 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -131,7 +131,7 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         deps_graph = self.build_consumer(consumer, install=False)
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(4, len(deps_graph.nodes))
 
@@ -200,7 +200,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(path, install=False)
 
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(3, len(deps_graph.nodes))
 
@@ -221,7 +221,7 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                        .with_tool_requires("br1/0.1", "br2/0.1"))
         deps_graph = self.build_consumer(path, install=False)
 
-        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
+        assert type(deps_graph.error) == GraphProvidesError
 
         self.assertEqual(3, len(deps_graph.nodes))
 
@@ -256,5 +256,4 @@ def test_conditional():
     t.run("create requires.py")
     t.run("install app.py --name=app --version=version")
     t.run("install app.py --name=app --version=version -o app/*:conflict=True", assert_error=True)
-    # TODO: Improve the error diagnostics
-    assert "ERROR: provide conflict" in t.out
+    assert "ERROR: Provide Conflict: Both 'app/version' and 'req/v1' provide 'libjpeg'" in t.out
