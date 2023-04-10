@@ -40,8 +40,8 @@ class ConanApiAuthManager(object):
         try:
             ret = getattr(rest_client, method_name)(*args, **kwargs)
             return ret
-        except ForbiddenException:
-            raise ForbiddenException("Permission denied for user: '%s'" % user)
+        except ForbiddenException as e:
+            raise ForbiddenException(f"Permission denied for user: '{user}': {e}")
         except AuthenticationException:
             # User valid but not enough permissions
             if user is None or token is None:
