@@ -5,7 +5,8 @@ from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
+    GraphRuntimeError, GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
@@ -77,7 +78,7 @@ class DepsGraphBuilder(object):
             # print("  Existing previous requirements from ", base_previous, "=>", prev_require)
 
             if prev_require is None:
-                raise GraphError.loop(node, require, prev_node)
+                raise GraphLoopError(node, require, prev_node)
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
@@ -112,12 +113,12 @@ class DepsGraphBuilder(object):
                 if version_range.contains(prev_ref.version, resolve_prereleases):
                     require.ref = prev_ref
                 else:
-                    raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
+                    raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
 
         elif prev_version_range is not None:
             # TODO: Check user/channel conflicts first
             if not prev_version_range.contains(require.ref.version, resolve_prereleases):
-                raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
+                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
         else:
             def _conflicting_refs(ref1, ref2):
                 ref1_norev = copy.copy(ref1)
@@ -135,7 +136,7 @@ class DepsGraphBuilder(object):
             # As we are closing a diamond, there can be conflicts. This will raise if so
             conflict = _conflicting_refs(prev_ref, require.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
-                raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
+                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, down_options):
@@ -194,7 +195,7 @@ class DepsGraphBuilder(object):
                                                 self._check_update)
                 conanfile_path, recipe_status, remote, new_ref = result
             except ConanException as e:
-                raise GraphError.missing(node, require, str(e))
+                raise GraphMissingError(node, require, str(e))
 
             dep_conanfile = self._loader.load_basic(conanfile_path)
             try:
@@ -244,7 +245,7 @@ class DepsGraphBuilder(object):
                 self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
                 resolved = self._resolve_recipe(require.ref, graph_lock)
             except ConanException as e:
-                raise GraphError.missing(node, require, str(e))
+                raise GraphMissingError(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
         # If the node is virtual or a test package, the require is also "root"
@@ -280,12 +281,12 @@ class DepsGraphBuilder(object):
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
         if node.propagate_downstream(require, new_node):
-            raise GraphError.runtime(node, new_node)
+            raise GraphRuntimeError(node, new_node)
 
         # This is necessary to prevent infinite loops even when visibility is False
         ancestor = node.check_loops(new_node)
         if ancestor is not None:
-            raise GraphError.loop(new_node, require, ancestor)
+            raise GraphLoopError(new_node, require, ancestor)
 
         return new_node
 
