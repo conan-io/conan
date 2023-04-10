@@ -233,7 +233,7 @@ class Edge(object):
 
 class GraphOverrides:
     def __init__(self):
-        self._overrides = {}
+        self._overrides = {}  # {require_ref: {overrided_ref: overriden list-[(ref, context), ...]}
 
     def __bool__(self):
         return bool(self._overrides)
@@ -242,6 +242,9 @@ class GraphOverrides:
         return self._overrides.get(require)
 
     def reduce(self):
+        """ eliminate those overrides definitions that only override to None, that is, not
+        really an override
+        """
         result = {}
         for require, override_info in self._overrides.items():
             if len(override_info) != 1 or None not in override_info:
@@ -272,6 +275,12 @@ class GraphOverrides:
         self._overrides.setdefault(require.ref, {}).setdefault(override, set()).add(data)
 
     def regular(self, node, require):
+        """
+        Define a regular, non-overriden dependency. This is necessary to differentiate when same
+        require is sometimes overriding and sometimes not overriden
+        @param node: the package requiring something
+        @param require: the required dependency
+        """
         data = node.ref, node.context
         self._overrides.setdefault(require.ref, {}).setdefault(None, set()).add(data)
 
