@@ -29,6 +29,21 @@ class BasicConanfile(ConanFile):
         pass
         {%- endif %}
 
+    # The build_requirements() method is functionally equivalent to the requirements() one,
+    # being executed just after it. It's a good place to define tool requirements,
+    # dependencies necessary at build time, not at application runtime
+    def build_requirements(self):
+        # Each call to self.tool_requires() will add the corresponding build requirement
+        {% if tool_requires is defined -%}
+        {% for require in tool_requires -%}
+        self.tool_requires("{{ require }}")
+        {% endfor %}
+        {% else -%}
+        # Uncommenting this line will add the cmake >=3.15 build dependency to your project
+        # self.requires("cmake/[>=3.15]")
+        pass
+        {%- endif %}
+
     # The purpose of generate() is to prepare the build, generating the necessary files, such as
     # Files containing information to locate the dependencies, environment activation scripts,
     # and specific build system files among others

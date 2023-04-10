@@ -161,6 +161,8 @@ class RestV2Methods(RestCommonMethods):
                                     verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
         for t in threads:
             t.join()
+        for t in threads:  # Need to join all before raising errors
+            t.raise_errors()
 
     def remove_all_packages(self, ref):
         """ Remove all packages from the specified reference"""

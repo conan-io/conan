@@ -520,12 +520,9 @@ class PkgConfigBlock(Block):
         pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str)
         if pkg_config:
             pkg_config = pkg_config.replace("\\", "/")
-        pkg_config_path = self._conanfile.generators_folder
-        if pkg_config_path:
-            # hardcoding scope as "build"
-            subsystem = deduce_subsystem(self._conanfile, "build")
-            pathsep = ":" if subsystem != WINDOWS else ";"
-            pkg_config_path = pkg_config_path.replace("\\", "/") + pathsep
+        subsystem = deduce_subsystem(self._conanfile, "build")
+        pathsep = ":" if subsystem != WINDOWS else ";"
+        pkg_config_path = "${CMAKE_CURRENT_LIST_DIR}" + pathsep
         return {"pkg_config": pkg_config,
                 "pkg_config_path": pkg_config_path}
 

@@ -329,6 +329,11 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
         assert data.get("error_msg") in populated_client.out
 
 
+def test_package_query_no_package_ref(populated_client):
+    populated_client.run("remove * -p 'compiler=clang'", assert_error=True)
+    assert "--package-query supplied but the pattern does not match packages" in populated_client.out
+
+
 def _get_all_recipes(client, with_remote):
     api = ConanAPI(client.cache_folder)
     remote = api.remotes.get("default") if with_remote else None

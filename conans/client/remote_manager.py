@@ -52,19 +52,25 @@ class RemoteManager(object):
         layout.export_remove()
 
         download_export = layout.download_export()
-        zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
-        remote_refs = self._call_remote(remote, "get_recipe_revisions_references", ref)
-        ref_time = remote_refs[0].timestamp
-        ref.timestamp = ref_time
-        # filter metadata files
-        # This could be also optimized in the download, avoiding downloading them, for performance
-        zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
-        # quick server package integrity check:
-        if "conanfile.py" not in zipped_files:
-            raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: no conanfile.py")
-        if "conanmanifest.txt" not in zipped_files:
-            raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: no conanmanifest.txt")
-        self._signer.verify(ref, download_export)
+        try:
+            zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
+            remote_refs = self._call_remote(remote, "get_recipe_revisions_references", ref)
+            ref_time = remote_refs[0].timestamp
+            ref.timestamp = ref_time
+            # filter metadata files
+            # This could be also optimized in download, avoiding downloading them, for performance
+            zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
+            # quick server package integrity check:
+            if "conanfile.py" not in zipped_files:
+                raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: no conanfile.py")
+            if "conanmanifest.txt" not in zipped_files:
+                raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: "
+                                     f"no conanmanifest.txt")
+            self._signer.verify(ref, download_export)
+        except BaseException:  # So KeyboardInterrupt also cleans things
+            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'")
+            self._cache.remove_recipe_layout(layout)
+            raise
         export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
@@ -126,7 +132,8 @@ class RemoteManager(object):
             scoped_output.info("Downloaded package revision %s" % pref.revision)
         except NotFoundException:
             raise PackageNotFoundException(pref)
-        except BaseException as e:
+        except BaseException as e:  # So KeyboardInterrupt also cleans things
+            self._cache.remove_package_layout(layout)
             scoped_output.error("Exception while getting package: %s" % str(pref.package_id))
             scoped_output.error("Exception: %s %s" % (type(e), str(e)))
             raise

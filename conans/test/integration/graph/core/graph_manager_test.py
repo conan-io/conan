@@ -1,7 +1,7 @@
 import pytest
 from parameterized import parameterized
 
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conans.errors import ConanException
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
@@ -56,7 +56,7 @@ class TestLinear(GraphManagerTest):
         deps_graph = self.build_consumer(consumer, install=False)
 
         # TODO: Better error handling
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -1402,7 +1402,7 @@ class TestDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -1426,7 +1426,7 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -1455,7 +1455,7 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -1636,7 +1636,7 @@ class TestDiamondMultiple(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
         # TODO: Better error modeling
-        assert deps_graph.error.kind == GraphError.LOOP
+        assert type(deps_graph.error) == GraphLoopError
 
         self.assertEqual(4, len(deps_graph.nodes))
 
@@ -1686,7 +1686,7 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
         assert deps_graph.error is not False
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
@@ -1757,7 +1757,7 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["dep1/2.0", "dep2/1.0"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
@@ -1991,7 +1991,7 @@ class TestProjectApp(GraphManagerTest):
                                                         build=False, run=True),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
     def test_project_require_apps_transitive(self):
         # project -> app1 (app type) -> lib
@@ -2040,7 +2040,7 @@ class TestProjectApp(GraphManagerTest):
                                                                                    "app2/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
     def test_project_require_private(self):
         # project -(!visible)-> app1 -> lib1

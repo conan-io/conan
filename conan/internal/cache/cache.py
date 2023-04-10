@@ -170,6 +170,7 @@ class DataCache:
 
     def remove_recipe(self, layout: RecipeLayout):
         layout.remove()
+        # FIXME: This is clearing package binaries from DB, but not from disk/layout
         self._db.remove_recipe(layout.reference)
 
     def remove_package(self, layout: RecipeLayout):
