@@ -160,13 +160,14 @@ def test_graph_different_overrides():
     c.run("create pkgb")
     c.run("lock create pkgc")
     lock = json.loads(c.load("pkgc/conan.lock"))
-    print(json.dumps(lock, indent=4))
     requires = "\n".join(lock["build_requires"])
     assert "toolc/0.3" in requires
     assert "toolc/0.2" in requires
     assert "toolc/0.1" in requires
 
     c.run("graph info toolb --build-require --version=0.1 --lockfile=pkgc/conan.lock --format=json")
+    c.assert_listed_require({"toolc/0.2": "Cache"}, build=True)
     c.run("graph info toolb --build-require --version=0.2 --lockfile=pkgc/conan.lock --format=json")
+    c.assert_listed_require({"toolc/0.3": "Cache"}, build=True)
     c.run("graph info toolb --build-require --version=0.3 --lockfile=pkgc/conan.lock --format=json")
-
+    c.assert_listed_require({"toolc/0.1": "Cache"}, build=True)

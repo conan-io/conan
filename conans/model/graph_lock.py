@@ -238,7 +238,11 @@ class Lockfile(object):
                     print("        MATCH!!")
                     solutions.add(override)
         if len(solutions) == 1:
-            return solutions[0]
+            override = next(iter(solutions))
+            print("OVERRIDE SINGLE!!!!!!", override, type(override))
+            if override is not None:
+                require.ref = override
+            return
         raise ConanException(f"Override for {node.ref}->{require.ref} cannot be resolved."
                              f"Possible overrides: {existing}. Matching: {solutions}")
 
