@@ -36,10 +36,6 @@ class DepsGraphBuilder(object):
         # print("Loading graph")
         dep_graph = DepsGraph()
 
-        # TODO: Why assign here the settings_build and settings_target?
-        root_node.conanfile.settings_build = profile_build.processed_settings.copy()
-        root_node.conanfile.settings_target = None
-
         self._prepare_node(root_node, profile_host, profile_build, Options())
         self._initialize_requires(root_node, dep_graph, graph_lock)
         dep_graph.add_node(root_node)
