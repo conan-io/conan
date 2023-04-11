@@ -94,6 +94,7 @@ class Node(object):
                 return True
             require.aggregate(existing.require)
 
+        assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
