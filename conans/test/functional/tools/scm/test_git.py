@@ -561,7 +561,7 @@ class TestGitMonorepoSCMFlow:
         assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c2.out
         assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c2.out
 
-    @pytest.mark.tool_cmake
+    @pytest.mark.tool("cmake")
     def test_exports_sources_common_code_layout(self):
         """ This is a copy of test_exports_sources_common_code_layout in test_in_subfolder.py
         but instead of using "exports", trying to implement it with Git features
@@ -630,7 +630,7 @@ class TestGitMonorepoSCMFlow:
         assert "MYDEFINE: MYDEFINEVALUE" in c.out
 
         c.run("install pkg -s build_type=Debug")
-        c.run("build pkg")
+        c.run("build pkg -s build_type=Debug")
         assert "MYUTILS.CMAKE!" in c.out
         assert "main: Debug!" in c.out
         assert "MYDEFINE: MYDEFINEVALUE" in c.out
