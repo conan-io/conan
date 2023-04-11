@@ -1,4 +1,4 @@
-from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
+from conans.client.graph.graph import CONTEXT_BUILD
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
@@ -28,12 +28,8 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     conanfile.settings_build = profile_build.processed_settings.copy()
     # profile target
     conanfile.settings_target = None
-    if base_context == CONTEXT_HOST:
-        if is_build_require:
-            conanfile.settings_target = profile_host.processed_settings.copy()
-    else:
-        if not is_build_require:
-            conanfile.settings_target = profile_build.processed_settings.copy()
+    if is_build_require or base_context == CONTEXT_BUILD:
+        conanfile.settings_target = profile_host.processed_settings.copy()
 
 
 def _initialize_conanfile(conanfile, profile, ref):
@@ -65,7 +61,7 @@ def _initialize_conanfile(conanfile, profile, ref):
     conanfile.conf = profile.conf.get_conanfile_conf(ref, conanfile._conan_is_consumer)  # Maybe this can be done lazy too
 
 
-def consumer_definer(conanfile, profile_host):
+def consumer_definer(conanfile, profile_host, profile_build):
     """ conanfile.txt does not declare settings, but it assumes it uses all the profile settings
     These settings are very necessary for helpers like generators to produce the right output
     """
@@ -76,7 +72,16 @@ def consumer_definer(conanfile, profile_host):
         if ref_matches(ref=None, pattern=pattern, is_consumer=True):
             tmp_settings.update_values(settings)
 
+    tmp_settings_build = profile_build.processed_settings.copy()
+    package_settings_values_build = profile_build.package_settings_values
+
+    for pattern, settings in package_settings_values_build.items():
+        if ref_matches(ref=None, pattern=pattern, is_consumer=True):
+            tmp_settings_build.update_values(settings)
+
     conanfile.settings = tmp_settings
+    conanfile.settings_build = tmp_settings_build
+    conanfile.settings_target = None
     conanfile.settings._frozen = True
     conanfile._conan_buildenv = profile_host.buildenv
     conanfile._conan_runenv = profile_host.runenv

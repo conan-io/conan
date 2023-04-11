@@ -118,6 +118,8 @@ def graph_info(conan_api, parser, subparser, *args):
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("--deploy", action="append",
                            help='Deploy using the provided deployer to the output folder')
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -141,7 +143,8 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         check_updates=args.check_updates)
+                                                         check_updates=args.check_updates,
+                                                         is_build_require=args.build_require)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,

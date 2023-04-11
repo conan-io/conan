@@ -80,6 +80,8 @@ class Node(object):
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
+            if transitive.require.override:
+                continue
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
     def propagate_downstream(self, require, node, src_node=None):
@@ -95,6 +97,7 @@ class Node(object):
                 return True
             require.aggregate(existing.require)
 
+        assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)

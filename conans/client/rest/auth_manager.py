@@ -48,7 +48,7 @@ class ConanApiAuthManager(object):
                 # token is None when you change user with user command
                 # Anonymous is not enough, ask for a user
                 ConanOutput().info('Please log in to "%s" to perform this action. '
-                                   'Execute "conan user" command.' % remote.name)
+                                   'Execute "conan remote login" command.' % remote.name)
                 return self._retry_with_new_token(user, remote, method_name, *args, **kwargs)
             elif token and refresh_token:
                 # If we have a refresh token try to refresh the access token
@@ -80,7 +80,7 @@ class ConanApiAuthManager(object):
                     out.error('Wrong user or password')
                 else:
                     out.error('Wrong password for user "%s"' % user)
-                    out.info('You can change username with "conan user <username>"')
+                    out.info('You can change username with "conan remote login <remote> <username>"')
             else:
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 

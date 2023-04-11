@@ -36,10 +36,6 @@ class DepsGraphBuilder(object):
         # print("Loading graph")
         dep_graph = DepsGraph()
 
-        # TODO: Why assign here the settings_build and settings_target?
-        root_node.conanfile.settings_build = profile_build.processed_settings.copy()
-        root_node.conanfile.settings_target = None
-
         self._prepare_node(root_node, profile_host, profile_build, Options())
         self._initialize_requires(root_node, dep_graph, graph_lock)
         dep_graph.add_node(root_node)
@@ -225,7 +221,7 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _resolved_system_tool(node, require, profile_build, profile_host, resolve_prereleases):
-        if node.context == CONTEXT_HOST and not require.build:  # Only for tool_requires
+        if node.context == CONTEXT_HOST and not require.build:  # Only for DIRECT tool_requires
             return
         system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
             else profile_host.system_tools
@@ -235,9 +231,13 @@ class DepsGraphBuilder(object):
                 if require.ref.name == d.name:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
+                            require.ref.version = d.version  # resolved range is replaced by exact
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
                     elif require.ref.version == d.version:
-                        return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                        if d.revision is None or require.ref.revision is None or \
+                                d.revision == require.ref.revision:
+                            require.ref.revision = d.revision
+                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
