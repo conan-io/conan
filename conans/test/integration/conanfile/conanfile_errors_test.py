@@ -191,4 +191,4 @@ def test_requirements_change_options():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .", assert_error=True)
-    assert "Dependencies options were defined incorrectly." in c.out
+    assert "ERROR: hello/0.1: Dependencies options were defined incorrectly." in c.out
