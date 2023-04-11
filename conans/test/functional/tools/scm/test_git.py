@@ -5,6 +5,8 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -485,8 +487,7 @@ class TestGitMonorepoSCMFlow:
         import os, shutil
         from conan import ConanFile
         from conan.tools.scm import Git
-        from conan.tools.files import load, update_conandata
-        from conan.tools.files.files import swap_child_folder
+        from conan.tools.files import load, update_conandata, move_folder_contents
 
         class Pkg(ConanFile):
             name = "{pkg}"
@@ -510,7 +511,8 @@ class TestGitMonorepoSCMFlow:
                 sources = self.conan_data["sources"]
                 git.clone(url=sources["url"], target=".")
                 git.checkout(commit=sources["commit"])
-                swap_child_folder(self.source_folder, sources["folder"])
+                move_folder_contents(os.path.join(self.source_folder, sources["folder"]),
+                                    self.source_folder)
 
             def build(self):
                 cmake = os.path.join(self.source_folder, "CMakeLists.txt")
@@ -558,6 +560,80 @@ class TestGitMonorepoSCMFlow:
         assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out
         assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c2.out
         assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c2.out
+
+    @pytest.mark.tool_cmake
+    def test_exports_sources_common_code_layout(self):
+        """ This is a copy of test_exports_sources_common_code_layout in test_in_subfolder.py
+        but instead of using "exports", trying to implement it with Git features
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout, CMake
+            from conan.tools.files import load, copy, save, update_conandata, move_folder_contents
+            from conan.tools.scm import Git
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "CMakeToolchain"
+
+                def export(self):
+                    git = Git(self)
+                    scm_url, scm_commit = git.get_url_and_commit()
+                    update_conandata(self, {"sources": {"commit": scm_commit, "url": scm_url}})
+
+                def layout(self):
+                    self.folders.root = ".."
+                    self.folders.subproject = "pkg"
+                    cmake_layout(self)
+
+                def source(self):
+                    git = Git(self)
+                    sources = self.conan_data["sources"]
+                    git.clone(url=sources["url"], target=".")
+                    git.checkout(commit=sources["commit"])
+                    # Layout is pkg/pkg/<files> and pkg/common/<files>
+                    # Final we want is pkg/<files> and common/<files>
+                    # NOTE: This abs_path is IMPORTANT to avoid the trailing "."
+                    src_folder = os.path.abspath(self.source_folder)
+                    move_folder_contents(src_folder, os.path.dirname(src_folder))
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    self.run(os.path.join(self.cpp.build.bindirs[0], "myapp"))
+                """)
+        cmake_include = "include(${CMAKE_CURRENT_LIST_DIR}/../common/myutils.cmake)"
+        c.save({"pkg/conanfile.py": conanfile,
+                "pkg/app.cpp": gen_function_cpp(name="main", includes=["../common/myheader"],
+                                                preprocessor=["MYDEFINE"]),
+                "pkg/CMakeLists.txt": gen_cmakelists(appsources=["app.cpp"],
+                                                     custom_content=cmake_include),
+                "common/myutils.cmake": 'message(STATUS "MYUTILS.CMAKE!")',
+                "common/myheader.h": '#define MYDEFINE "MYDEFINEVALUE"'})
+        c.init_git_repo()
+
+        c.run("create pkg")
+        assert "MYUTILS.CMAKE!" in c.out
+        assert "main: Release!" in c.out
+        assert "MYDEFINE: MYDEFINEVALUE" in c.out
+
+        # Local flow
+        c.run("install pkg")
+        c.run("build pkg")
+        assert "MYUTILS.CMAKE!" in c.out
+        assert "main: Release!" in c.out
+        assert "MYDEFINE: MYDEFINEVALUE" in c.out
+
+        c.run("install pkg -s build_type=Debug")
+        c.run("build pkg")
+        assert "MYUTILS.CMAKE!" in c.out
+        assert "main: Debug!" in c.out
+        assert "MYDEFINE: MYDEFINEVALUE" in c.out
 
 
 class TestConanFileSubfolder:
