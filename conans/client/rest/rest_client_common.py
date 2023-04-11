@@ -154,7 +154,7 @@ class RestCommonMethods(object):
         url = self.router.ping()
         # logger.debug("REST: ping: %s" % url)
         if user and password:
-            # This can happen in "conan user" cmd. Instead of empty token, use HttpBasic
+            # This can happen in "conan remote login" cmd. Instead of empty token, use HttpBasic
             auth = HTTPBasicAuth(user, password)
         else:
             auth = self.auth
