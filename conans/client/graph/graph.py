@@ -79,6 +79,8 @@ class Node(object):
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
+            if transitive.require.override:
+                continue
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
     def propagate_downstream(self, require, node, src_node=None):

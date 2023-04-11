@@ -1470,6 +1470,38 @@ class TestDiamond(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libd])
         self._check_node(liba1, "liba/0.1#123", dependents=[libb])
 
+    def test_diamond_transitive_private(self):
+        # https://github.com/conan-io/conan/issues/13630
+        # libc0.1 ----------> liba0.1 --(private) -> zlib/1.0
+        #      \-> --(libb---->/
+
+        self.recipe_cache("zlib/0.1")
+        self.recipe_conanfile("liba/0.1", GenConanfile("liba", "0.1")
+                              .with_requirement("zlib/0.1", visible=False))
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.1", "libb/0.1"])
+        consumer = self.consumer_conanfile(GenConanfile("libc", "0.1")
+                                           .with_requires("liba/0.1", "libb/0.1"))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        libc = deps_graph.root
+        liba = libc.dependencies[0].dst
+        libb = libc.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        zlib = liba.dependencies[0].dst
+
+        assert liba is liba1
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(libc, "libc/0.1", deps=[liba, libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc], deps=[zlib])
+        self._check_node(zlib, "zlib/0.1#123", dependents=[liba])
+
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, True, True, False, False)])
+
 
 class TestDiamondMultiple(GraphManagerTest):
 
@@ -1897,6 +1929,35 @@ class PureOverrideTest(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[libb, liba], dependents=[app])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
         self._check_node(liba, "liba/0.3#123", dependents=[libb, libc])
+
+    def test_override_not_used(self):
+        # https://github.com/conan-io/conan/issues/13630
+        # libc0.1 ----------> liba0.1 --(override) -> zlib/1.0
+        #      \-> --(libb---->/
+
+        self.recipe_conanfile("liba/0.1", GenConanfile("liba", "0.1")
+                              .with_requirement("zlib/0.1", override=True))
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.1", "libb/0.1"])
+        consumer = self.consumer_conanfile(GenConanfile("libc", "0.1")
+                                           .with_requires("liba/0.1", "libb/0.1"))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        libc = deps_graph.root
+        liba = libc.dependencies[0].dst
+        libb = libc.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+
+        assert liba is liba1
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(libc, "libc/0.1", deps=[liba, libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, True, True, False, False)])
 
 
 class PackageIDDeductions(GraphManagerTest):
