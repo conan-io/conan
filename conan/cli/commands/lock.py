@@ -23,6 +23,8 @@ def lock_create(conan_api, parser, subparser, *args):
     Create a lockfile from a conanfile or a reference.
     """
     common_graph_args(subparser)
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -39,7 +41,8 @@ def lock_create(conan_api, parser, subparser, *args):
         graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                     args.user, args.channel,
                                                     profile_host, profile_build, lockfile,
-                                                    remotes, args.build, args.update)
+                                                    remotes, args.build, args.update,
+                                                    is_build_require=args.build_require)
     else:
         graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                     profile_host, profile_build, lockfile,
