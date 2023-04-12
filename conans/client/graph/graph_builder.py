@@ -160,9 +160,11 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires.values():
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
+                resolved = False
                 if graph_lock is not None:
-                    graph_lock.replace_alias(require, alias)
-                else:
+                    resolved = graph_lock.replace_alias(require, alias)
+                # if partial, we might still need to resolve the alias
+                if not resolved:
                     self._resolve_alias(node, require, alias, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 

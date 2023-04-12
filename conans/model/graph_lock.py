@@ -247,6 +247,7 @@ class Lockfile(object):
         locked_alias = self._alias.get(alias)
         if locked_alias is not None:
             require.ref = locked_alias
+            return True
         elif not self.partial:
             raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 
