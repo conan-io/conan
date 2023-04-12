@@ -230,13 +230,6 @@ class Lockfile(object):
                 if not self.partial:
                     raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
-            alias = require.alias
-            if alias:
-                locked_alias = self._alias.get(alias)
-                if locked_alias is not None:
-                    require.ref = locked_alias
-                elif not self.partial:
-                    raise ConanException(f"Requirement alias '{alias}' not in lockfile")
             ref = require.ref
             if ref.revision is None:
                 for m in matches:
@@ -249,6 +242,14 @@ class Lockfile(object):
             else:
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
+
+    def replace_alias(self, require, alias):
+        locked_alias = self._alias.get(alias)
+        if locked_alias is not None:
+            require.ref = locked_alias
+            return True
+        elif not self.partial:
+            raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE
