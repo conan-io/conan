@@ -78,7 +78,7 @@ class DepsGraphBuilder(object):
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
-                require.overriden_ref = require.ref
+                require.overriden_ref = require.ref  # Store that the require has been overriden
                 require.ref = prev_ref
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
@@ -158,21 +158,18 @@ class DepsGraphBuilder(object):
                                                          raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock):
-        # Only resolve alias
-        if graph_lock is not None:
-            for require in node.conanfile.requires.values():
-                if require.alias:
-                    graph_lock.resolve_locked(node, require, self._resolve_prereleases)
-
         for require in node.conanfile.requires.values():
-            self._resolve_alias(node, require, graph)
+            # Alias need to be resolved at this point
+            alias = require.alias
+            if alias is not None:
+                if graph_lock is not None:
+                    graph_lock.resolve_alias(require, alias)
+                    graph.aliased[alias] = require.ref  # Caching the alias
+                else:
+                    self._resolve_alias(node, require, alias, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
-    def _resolve_alias(self, node, require, graph):
-        alias = require.alias
-        if alias is None:
-            return
-
+    def _resolve_alias(self, node, require, alias, graph):
         # First try cached
         cached = graph.aliased.get(alias)
         if cached is not None:

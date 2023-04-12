@@ -217,20 +217,25 @@ class Lockfile(object):
         else:
             locked_refs = self._requires.refs()
         self._resolve_overrides(require)
-        self._resolve(require, locked_refs, resolve_prereleases)
+        try:
+            self._resolve(require, locked_refs, resolve_prereleases)
+        except ConanException:
+            overrides = self._overrides.get(require.ref)
+            if overrides is not None and len(overrides) > 1:
+                msg = f"Override defined for {require.ref}, but multiple possible overrides" \
+                      f" {overrides}. You might need to apply the 'conan graph build-order'" \
+                      f" overrides for correctly building this package with this lockfile"
+                ConanOutput().error(msg)
+            raise
 
     def _resolve_overrides(self, require):
         existing = self._overrides.get(require.ref)
         if existing is None:
             return
         if len(existing) == 1:
-            require.overriden_ref = require.ref
+            require.overriden_ref = require.ref  # Store that the require has been overriden
             require.ref = next(iter(existing))
             return
-        ConanOutput().warning(f"Override defined for {require.ref}, but multiple possible overrides"
-                              f" {existing}")
-        ConanOutput().warning("You might need to apply the 'conan graph build-order' overrides for"
-                              " building this element in the graph with this lockfile")
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:
@@ -254,13 +259,6 @@ class Lockfile(object):
                 if not self.partial:
                     raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
-            alias = require.alias
-            if alias:
-                locked_alias = self._alias.get(alias)
-                if locked_alias is not None:
-                    require.ref = locked_alias
-                elif not self.partial:
-                    raise ConanException(f"Requirement alias '{alias}' not in lockfile")
             ref = require.ref
             if ref.revision is None:
                 for m in matches:
@@ -273,6 +271,13 @@ class Lockfile(object):
             else:
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
+
+    def resolve_alias(self, require, alias):
+        locked_alias = self._alias.get(alias)
+        if locked_alias is not None:
+            require.ref = locked_alias
+        elif not self.partial:
+            raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE

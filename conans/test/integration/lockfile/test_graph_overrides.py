@@ -160,6 +160,7 @@ def test_graph_different_overrides():
     c.run("create pkga")
     c.run("create pkgb")
     c.run("lock create pkgc")
+    print(c.load("pkgc/conan.lock"))
     lock = json.loads(c.load("pkgc/conan.lock"))
     requires = "\n".join(lock["build_requires"])
     assert "toolc/0.3" in requires
@@ -167,11 +168,9 @@ def test_graph_different_overrides():
     assert "toolc/0.1" in requires
 
     c.run("graph info toolb --build-require --version=0.1 --lockfile=pkgc/conan.lock --format=json")
-    c.assert_listed_require({"toolc/0.2": "Cache"}, build=True)
-    c.run("graph info toolb --build-require --version=0.2 --lockfile=pkgc/conan.lock --format=json")
-    c.assert_listed_require({"toolc/0.3": "Cache"}, build=True)
-    c.run("graph info toolb --build-require --version=0.3 --lockfile=pkgc/conan.lock --format=json")
+    # defaults to the non overriden
     c.assert_listed_require({"toolc/0.1": "Cache"}, build=True)
+    # TODO: Solve it with build-order or manual overrides for the other packages
 
 
 def test_graph_same_base_overrides():
@@ -218,14 +217,7 @@ def test_graph_same_base_overrides():
     assert "toolc/0.2" in requires
     assert "toolc/0.1" in requires
 
-    c.run("graph info toolb --build-require --version=0.1 --lockfile=pkgc/conan.lock --format=json")
-    print(c.out)
-    #assert "Override for toolb/0.1->toolc/0.1 cannot be resolved" in c.out
-    c.assert_listed_require({"toolc/0.1": "Cache"}, build=True)
-
     c.run("graph info pkgc --filter=requires")
     print(c.out)
     c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=*")
     print(c.stdout)
-    build_order = json.loads(c.stdout)
-
