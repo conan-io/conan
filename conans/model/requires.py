@@ -28,6 +28,7 @@ class Requirement:
         self._override = override
         self._direct = direct
         self.options = options
+        self.overriden_ref = None
 
     @property
     def skip(self):

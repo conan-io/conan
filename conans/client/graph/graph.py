@@ -226,6 +226,29 @@ class Node(object):
         result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
+    def overrides(self):
+
+        def transitive_subgraph():
+            result = set()
+            opened = {self}
+            while opened:
+                new_opened = set()
+                for o in opened:
+                    result.add(o)
+                    new_opened.update(set(o.neighbors()).difference(result))
+                opened = new_opened
+
+            return result
+
+        subgraph = transitive_subgraph()
+        result_overrides = Overrides()
+        for node in subgraph:
+            reqs = node.conanfile.requires.values()
+            for r in reqs:
+                result_overrides.add(r)
+        result_overrides.reduce()
+        return result_overrides
+
 
 class Edge(object):
     def __init__(self, src, dst, require):
@@ -234,12 +257,18 @@ class Edge(object):
         self.require = require
 
 
-class GraphOverrides:
+class Overrides:
     def __init__(self):
-        self._overrides = {}  # {require_ref: {overrided_ref: overriden list-[(ref, context), ...]}
+        self._overrides = {}  # {require_ref: {override_ref1, override_ref2}}
 
     def __bool__(self):
         return bool(self._overrides)
+
+    def add(self, require):
+        if require.overriden_ref:
+            self._overrides.setdefault(require.overriden_ref, set()).add(require.ref)
+        else:
+            self._overrides.setdefault(require.ref, set()).add(None)
 
     def get(self, require):
         return self._overrides.get(require)
@@ -256,59 +285,23 @@ class GraphOverrides:
 
     def update(self, other):
         """
-        @type other: GraphOverrides
+        @type other: Overrides
         """
         for require, override_info in other._overrides.items():
-            existing = self._overrides.get(require)
-            if existing is None:
-                self._overrides[require] = override_info
-            else:
-                for override, info in override_info.items():
-                    existing_override = existing.get(override)
-                    if existing_override is None:
-                        existing[existing_override] = info
-                    else:
-                        existing_override.update(info)
+            self._overrides.setdefault(require, set()).update(override_info)
 
     def items(self):
         return self._overrides.items()
 
-    def override(self, node, require, override):
-        data = node.ref, node.context
-        self._overrides.setdefault(require.ref, {}).setdefault(override, set()).add(data)
-
-    def regular(self, node, require):
-        """
-        Define a regular, non-overriden dependency. This is necessary to differentiate when same
-        require is sometimes overriding and sometimes not overriden
-        @param node: the package requiring something
-        @param require: the required dependency
-        """
-        data = node.ref, node.context
-        self._overrides.setdefault(require.ref, {}).setdefault(None, set()).add(data)
-
     def serialize(self):
-        result = {}
-        for require, override_info in self._overrides.items():
-            serialized_override_info = {}
-            for override, info in override_info.items():
-                serial_info = [(inforef.repr_notime(), infocontext) for inforef, infocontext in info]
-                ref = override.repr_notime() if override is not None else "None"
-                serialized_override_info[ref] = serial_info
-            result[require.repr_notime()] = serialized_override_info
-        return result
+        return {repr(k): [repr(e) if e else None for e in v] for k, v in self._overrides.items()}
 
     @staticmethod
-    def deserialize( data):
-        result = GraphOverrides()
-        for require, override_info in data.items():
-            serialized_override_info = {}
-            for override, info in override_info.items():
-                serial_info = set([(RecipeReference.loads(inforef), infocontext)
-                                   for inforef, infocontext in info])
-                ref = RecipeReference.loads(override) if override != "None" else None
-                serialized_override_info[ref] = serial_info
-            result._overrides[RecipeReference.loads(require)] = serialized_override_info
+    def deserialize(data):
+        result = Overrides()
+        result._overrides = {RecipeReference.loads(k):
+                             set([RecipeReference.loads(e) if e else None for e in v])
+                             for k, v in data.items()}
         return result
 
 
@@ -316,7 +309,6 @@ class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
-        self.overrides = GraphOverrides()
         self.resolved_ranges = {}
         self.error = False
 
