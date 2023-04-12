@@ -133,7 +133,7 @@ class _PCContentGenerator:
         {{ "includedir%d=%s" % (loop.index, path) }}
         {% endfor %}
         {% for path in bindirs %}
-        {{ f"bindir{loop.index}={path}" }}
+        {{ "bindir{}={}".format(loop.index, path) }}
         {% endfor %}
         {% if pkg_config_custom_content %}
         # Custom PC content
