@@ -262,7 +262,9 @@ class Overrides:
         overrides = {}
         for n in nodes:
             for r in n.conanfile.requires.values():
-                if r.overriden_ref:
+                if r.override:
+                    continue
+                if r.overriden_ref and not r.force:
                     overrides.setdefault(r.overriden_ref, set()).add(r.ref)
                 else:
                     overrides.setdefault(r.ref, set()).add(None)
@@ -289,7 +291,8 @@ class Overrides:
         return self._overrides.items()
 
     def serialize(self):
-        return {repr(k): [repr(e) if e else None for e in v] for k, v in self._overrides.items()}
+        return {k.repr_notime(): [e.repr_notime() if e else None for e in v]
+                for k, v in self._overrides.items()}
 
     @staticmethod
     def deserialize(data):

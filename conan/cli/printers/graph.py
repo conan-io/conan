@@ -68,8 +68,8 @@ def print_graph_basic(graph):
     overrides = graph.overrides()
     if overrides:
         output.info("Overrides", Color.BRIGHT_YELLOW)
-        for req, override_info in overrides.items():
-            output.info("    {}: {} ".format(req, list(override_info)), Color.BRIGHT_CYAN)
+        for req, override_info in overrides.serialize().items():
+            output.info("    {}: {}".format(req, override_info), Color.BRIGHT_CYAN)
 
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)
