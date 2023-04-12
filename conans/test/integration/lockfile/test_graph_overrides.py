@@ -261,59 +261,9 @@ def test_graph_different_overrides():
     # TODO: Solve it with build-order or manual overrides for the other packages
 
 
-def test_graph_same_base_overrides():
-    r"""
-    pkga -> toola/0.1 -> toolb/0.1 -> toolc/0.1
-                \------override-----> toolc/0.2
-    pkgb -> toola/0.2 -> toolb/0.1 -> toolc/0.1
-                \------override-----> toolc/0.3
-    pkgc -> toola/0.3 -> toolb/0.1 -> toolc/0.1
-    """
-    c = TestClient()
-    c.save({"toolc/conanfile.py": GenConanfile("toolc"),
-            "toolb/conanfile.py": GenConanfile("toolb").with_requires("toolc/0.1"),
-            "toola/conanfile.py": GenConanfile("toola", "0.1").with_requirement("toolb/0.1")
-                                                              .with_requirement("toolc/0.2",
-                                                                                override=True),
-            "toola2/conanfile.py": GenConanfile("toola", "0.2").with_requirement("toolb/0.1")
-                                                               .with_requirement("toolc/0.3",
-                                                                                 override=True),
-            "toola3/conanfile.py": GenConanfile("toola", "0.3").with_requirement("toolb/0.1"),
-            "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_tool_requires("toola/0.1"),
-            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")
-                                                            .with_tool_requires("toola/0.2"),
-            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")
-                                                            .with_tool_requires("toola/0.3"),
-            })
-    c.run("create toolc --version=0.1")
-    c.run("create toolc --version=0.2")
-    c.run("create toolc --version=0.3")
-
-    c.run("create toolb --version=0.1")
-
-    c.run("create toola --build=missing")
-    c.run("create toola2 --build=missing")
-    c.run("create toola3 --build=missing")
-
-    c.run("create pkga")
-    c.run("create pkgb")
-    c.run("lock create pkgc")
-    lock = json.loads(c.load("pkgc/conan.lock"))
-    print(c.load("pkgc/conan.lock"))
-    requires = "\n".join(lock["build_requires"])
-    assert "toolc/0.3" in requires
-    assert "toolc/0.2" in requires
-    assert "toolc/0.1" in requires
-
-    c.run("graph info pkgc --filter=requires")
-    print(c.out)
-    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=*")
-    print(c.stdout)
-
-
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
 def test_introduced_conflict(override, force):
-    r"""
+    """
     Using --lockfile-partial we can evaluate and introduce a new conflict
     pkgd -----> pkgb/[*] --> pkga/[>=0.1 <0.2]
     """

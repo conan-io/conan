@@ -272,10 +272,11 @@ class Lockfile(object):
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
-    def resolve_alias(self, require, alias):
+    def replace_alias(self, require, alias):
         locked_alias = self._alias.get(alias)
         if locked_alias is not None:
             require.ref = locked_alias
+            return True
         elif not self.partial:
             raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 

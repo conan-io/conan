@@ -240,14 +240,8 @@ class Node(object):
 
             return result
 
-        subgraph = transitive_subgraph()
-        result_overrides = Overrides()
-        for node in subgraph:
-            reqs = node.conanfile.requires.values()
-            for r in reqs:
-                result_overrides.add(r)
-        result_overrides.reduce()
-        return result_overrides
+        nodes = transitive_subgraph()
+        return Overrides.create(nodes)
 
 
 class Edge(object):
@@ -264,24 +258,28 @@ class Overrides:
     def __bool__(self):
         return bool(self._overrides)
 
-    def add(self, require):
-        if require.overriden_ref:
-            self._overrides.setdefault(require.overriden_ref, set()).add(require.ref)
-        else:
-            self._overrides.setdefault(require.ref, set()).add(None)
+    @staticmethod
+    def create(nodes):
+        overrides = {}
+        for n in nodes:
+            for r in n.conanfile.requires.values():
+                if r.override:
+                    continue
+                if r.overriden_ref and not r.force:
+                    overrides.setdefault(r.overriden_ref, set()).add(r.ref)
+                else:
+                    overrides.setdefault(r.ref, set()).add(None)
+
+        # reduce, eliminate those overrides definitions that only override to None, that is, not
+        # really an override
+        result = Overrides()
+        for require, override_info in overrides.items():
+            if len(override_info) != 1 or None not in override_info:
+                result._overrides[require] = override_info
+        return result
 
     def get(self, require):
         return self._overrides.get(require)
-
-    def reduce(self):
-        """ eliminate those overrides definitions that only override to None, that is, not
-        really an override
-        """
-        result = {}
-        for require, override_info in self._overrides.items():
-            if len(override_info) != 1 or None not in override_info:
-                result[require] = override_info
-        self._overrides = result
 
     def update(self, other):
         """
@@ -294,7 +292,8 @@ class Overrides:
         return self._overrides.items()
 
     def serialize(self):
-        return {repr(k): [repr(e) if e else None for e in v] for k, v in self._overrides.items()}
+        return {k.repr_notime(): [e.repr_notime() if e else None for e in v]
+                for k, v in self._overrides.items()}
 
     @staticmethod
     def deserialize(data):
@@ -311,6 +310,9 @@ class DepsGraph(object):
         self.aliased = {}
         self.resolved_ranges = {}
         self.error = False
+
+    def overrides(self):
+        return Overrides.create(self.nodes)
 
     def __repr__(self):
         return "\n".join((repr(n) for n in self.nodes))

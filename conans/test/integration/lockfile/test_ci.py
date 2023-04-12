@@ -4,6 +4,7 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -448,3 +449,77 @@ def test_multi_config_decentralized(client_setup):
 
     # Just to make sure that the for-loops have been executed
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in c.out
+
+
+def test_single_config_decentralized_overrides():
+    r""" same scenario as "test_single_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    Now with overrides
+
+    pkga -> toola/0.1 -> toolb/0.1 -> toolc/0.1
+                \------override-----> toolc/0.2
+    pkgb -> toola/0.2 -> toolb/0.1 -> toolc/0.1
+                \------override-----> toolc/0.3
+    pkgc -> toola/0.3 -> toolb/0.1 -> toolc/0.1
+    """
+    c = TestClient()
+    c.save({"toolc/conanfile.py": GenConanfile("toolc"),
+            "toolb/conanfile.py": GenConanfile("toolb").with_requires("toolc/0.1"),
+            "toola/conanfile.py": GenConanfile("toola", "0.1").with_requirement("toolb/0.1")
+                                                              .with_requirement("toolc/0.2",
+                                                                                override=True),
+            "toola2/conanfile.py": GenConanfile("toola", "0.2").with_requirement("toolb/0.1")
+                                                               .with_requirement("toolc/0.3",
+                                                                                 override=True),
+            "toola3/conanfile.py": GenConanfile("toola", "0.3").with_requirement("toolb/0.1"),
+            "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_tool_requires("toola/0.1"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")
+                                                            .with_tool_requires("toola/0.2"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")
+                                                            .with_tool_requires("toola/0.3"),
+            })
+    c.run("create toolc --version=0.1")
+    c.run("create toolc --version=0.2")
+    c.run("create toolc --version=0.3")
+
+    c.run("create toolb --version=0.1")
+
+    c.run("create toola --build=missing")
+    c.run("create toola2 --build=missing")
+    c.run("create toola3 --build=missing")
+
+    c.run("create pkga")
+    c.run("create pkgb")
+    c.run("lock create pkgc")
+    lock = json.loads(c.load("pkgc/conan.lock"))
+    print(c.load("pkgc/conan.lock"))
+    requires = "\n".join(lock["build_requires"])
+    assert "toolc/0.3" in requires
+    assert "toolc/0.2" in requires
+    assert "toolc/0.1" in requires
+
+    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=*")
+    print(c.stdout)
+
+    to_build = json.loads(c.stdout)
+    for level in to_build:
+        for elem in level:
+            ref = RecipeReference.loads(elem["ref"])
+            print("BUILDING REF", ref)
+            for package in elem["packages"][0]:  # assumes no dependencies between packages
+                binary = package["binary"]
+                if binary != "Build":
+                    continue
+                overrides = package["overrides"]
+                c.save({"overrides.json": json.dumps(overrides, indent=4)})
+                c.run("lock overrides overrides.json "
+                      "--lockfile=pkgc/conan.lock --lockfile-out=tmp.lock")
+                print(c.load("tmp.lock"))
+                context = package["context"]
+                require = "tool-requires" if context == "build" else "requires"
+                print("")
+                print("*-+"*20)
+                cmd = f"install --{require}={ref} --build={ref} --lockfile=tmp.lock"
+                print(cmd)
+                c.run(cmd)
+                print(c.out)

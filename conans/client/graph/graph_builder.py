@@ -159,13 +159,13 @@ class DepsGraphBuilder(object):
 
     def _initialize_requires(self, node, graph, graph_lock):
         for require in node.conanfile.requires.values():
-            # Alias need to be resolved at this point
-            alias = require.alias
+            alias = require.alias  # alias needs to be processed this early
             if alias is not None:
+                resolved = False
                 if graph_lock is not None:
-                    graph_lock.resolve_alias(require, alias)
-                    graph.aliased[alias] = require.ref  # Caching the alias
-                else:
+                    resolved = graph_lock.replace_alias(require, alias)
+                # if partial, we might still need to resolve the alias
+                if not resolved:
                     self._resolve_alias(node, require, alias, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
@@ -235,6 +235,7 @@ class DepsGraphBuilder(object):
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)
+
         resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
                                               self._resolve_prereleases)
 
