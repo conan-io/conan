@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -225,6 +226,22 @@ class Node(object):
         result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
+    def overrides(self):
+        def transitive_subgraph():
+            result = set()
+            opened = {self}
+            while opened:
+                new_opened = set()
+                for o in opened:
+                    result.add(o)
+                    new_opened.update(set(o.neighbors()).difference(result))
+                opened = new_opened
+
+            return result
+
+        nodes = transitive_subgraph()
+        return Overrides.create(nodes)
+
 
 class Edge(object):
     def __init__(self, src, dst, require):
@@ -233,12 +250,65 @@ class Edge(object):
         self.require = require
 
 
+class Overrides:
+    def __init__(self):
+        self._overrides = {}  # {require_ref: {override_ref1, override_ref2}}
+
+    def __bool__(self):
+        return bool(self._overrides)
+
+    @staticmethod
+    def create(nodes):
+        overrides = {}
+        for n in nodes:
+            for r in n.conanfile.requires.values():
+                if r.overriden_ref:
+                    overrides.setdefault(r.overriden_ref, set()).add(r.ref)
+                else:
+                    overrides.setdefault(r.ref, set()).add(None)
+
+        # reduce, eliminate those overrides definitions that only override to None, that is, not
+        # really an override
+        result = Overrides()
+        for require, override_info in overrides.items():
+            if len(override_info) != 1 or None not in override_info:
+                result._overrides[require] = override_info
+        return result
+
+    def get(self, require):
+        return self._overrides.get(require)
+
+    def update(self, other):
+        """
+        @type other: Overrides
+        """
+        for require, override_info in other._overrides.items():
+            self._overrides.setdefault(require, set()).update(override_info)
+
+    def items(self):
+        return self._overrides.items()
+
+    def serialize(self):
+        return {repr(k): [repr(e) if e else None for e in v] for k, v in self._overrides.items()}
+
+    @staticmethod
+    def deserialize(data):
+        result = Overrides()
+        result._overrides = {RecipeReference.loads(k):
+                             set([RecipeReference.loads(e) if e else None for e in v])
+                             for k, v in data.items()}
+        return result
+
+
 class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
         self.resolved_ranges = {}
         self.error = False
+
+    def overrides(self):
+        return Overrides.create(self.nodes)
 
     def __repr__(self):
         return "\n".join((repr(n) for n in self.nodes))

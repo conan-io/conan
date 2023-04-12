@@ -34,6 +34,7 @@ class InstallMissingDependency(unittest.TestCase):
                                               .with_require("dep2/1.0@lasote/testing")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --user=lasote --channel=testing", assert_error=True)
+        print(client.out)
 
         self.assertIn("Can't find a 'dep2/1.0@lasote/testing' package", client.out)
         self.assertIn("dep1/2.Y.Z", client.out)
