@@ -157,21 +157,18 @@ class DepsGraphBuilder(object):
                                                          raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock):
-        # Introduce the current requires to define overrides
-        # This is the first pass over one recipe requires
-        if graph_lock is not None:
-            for require in node.conanfile.requires.values():
-                graph_lock.resolve_locked(node, require, self._resolve_prereleases)
-
         for require in node.conanfile.requires.values():
-            self._resolve_alias(node, require, graph)
+            alias = require.alias  # alias needs to be processed this early
+            if alias is not None:
+                resolved = False
+                if graph_lock is not None:
+                    resolved = graph_lock.replace_alias(require, alias)
+                # if partial, we might still need to resolve the alias
+                if not resolved:
+                    self._resolve_alias(node, require, alias, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
-    def _resolve_alias(self, node, require, graph):
-        alias = require.alias
-        if alias is None:
-            return
-
+    def _resolve_alias(self, node, require, alias, graph):
         # First try cached
         cached = graph.aliased.get(alias)
         if cached is not None:
@@ -234,6 +231,10 @@ class DepsGraphBuilder(object):
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+        if graph_lock is not None:
+            # Here is when the ranges and revisions are resolved
+            graph_lock.resolve_locked(node, require, self._resolve_prereleases)
+
         resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
                                               self._resolve_prereleases)
 
