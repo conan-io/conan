@@ -158,7 +158,7 @@ class DepsGraphBuilder(object):
 
     def _initialize_requires(self, node, graph, graph_lock):
         for require in node.conanfile.requires.values():
-            alias = require.alias
+            alias = require.alias  # alias needs to be processed this early
             if alias is not None:
                 if graph_lock is not None:
                     graph_lock.replace_alias(require, alias)
@@ -167,7 +167,6 @@ class DepsGraphBuilder(object):
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
-
         # First try cached
         cached = graph.aliased.get(alias)
         if cached is not None:
