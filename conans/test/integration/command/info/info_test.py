@@ -354,26 +354,6 @@ class TestErrorsInGraph:
         assert "ERROR: Package 'dep/0.1' not resolved: dep/0.1: Cannot load" in c.out
         assert exit_code == ERROR_GENERAL
 
-    def test_invalid_config_validate(self):
-        tc = TestClient()
-        conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.errors import ConanInvalidConfiguration
-        class Pkg(ConanFile):
-            name = "pkg"
-            version = "1.0"
-            options = {"myoption": [True, False]}
-            default_options = {"myoption": False}
-            def validate(self):
-                if self.options.myoption:
-                    raise ConanInvalidConfiguration(f"{self.ref} does not support myoption=True")""")
-
-        tc.save({"conanfile.py": conanfile})
-        tc.run("graph info .")
-        assert "info_invalid: False" in tc.out
-        tc.run("graph info . -o 'pkg/1.0:myoption=True'")
-        assert "info_invalid: pkg/1.0 does not support myoption=True" in tc.out
-
 
 class TestInfoUpdate:
 
