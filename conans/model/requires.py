@@ -28,6 +28,7 @@ class Requirement:
         self._override = override
         self._direct = direct
         self.options = options
+        self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
 
     @property
     def skip(self):
