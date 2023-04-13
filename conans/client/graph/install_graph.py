@@ -169,6 +169,15 @@ class InstallGraph:
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
 
+    def find_build(self, ref, package_id):
+        install_node = self._nodes.get(ref)
+        if install_node is None:
+            raise ConanException(f"Cannot find {ref} in build-order file")
+        packages = install_node.packages.get(package_id)
+        if packages is None:
+            raise ConanException(f"Cannot find {ref} - {package_id} in build-order file")
+        return packages.serialize()
+
     @staticmethod
     def load(filename):
         data = json.loads(load(filename))

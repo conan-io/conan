@@ -4,13 +4,15 @@ import os
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
-from conan.cli.command import conan_command, conan_subcommand
+from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conans.client.graph.install_graph import InstallGraph
 from conan.errors import ConanException
+from conans.model.graph_lock import Lockfile
+from conans.model.recipe_ref import RecipeReference
 
 
 @conan_command(group="Consumer")
@@ -81,6 +83,37 @@ def graph_build_order(conan_api, parser, subparser, *args):
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, conanfile_path)
 
     return install_order_serialized
+
+
+@conan_subcommand(formatters={"text": cli_out_write})
+def graph_build_order_prepare(conan_api, parser, subparser, *args):
+    """
+    Compute the build order of a dependency graph.
+    """
+    subparser.add_argument("build_order_file", help="build-order json file")
+    subparser.add_argument("ref", help="recipe to build")
+    subparser.add_argument("package_id", help="package to build")
+    subparser.add_argument("-l", "--lockfile", action=OnceArgument,
+                           help="Path to a lockfile")
+    args = parser.parse_args(*args)
+
+    f = make_abs_path(args.build_order_file)
+    install_graph = InstallGraph.load(f)
+    ref = RecipeReference.loads(args.ref)
+    pkg = install_graph.find_build(ref, args.package_id)
+    context = pkg["context"]
+    cmd = f"--require={ref}" if context == "host" else f"--tool-require={ref}"
+    cmd += f" --build={ref}"
+    options = pkg["options"]
+    if options:
+        cmd += " " + " ".join(f"-o {o}" for o in options)
+
+    if args.lockfile:
+        lockfile_path = make_abs_path(args.lockfile)
+        graph_lock = Lockfile.load(lockfile_path)
+        # TODO: Replace here the overrides and save a new lockfile
+        cmd += f" --lockfile={args.lockfile}"
+    return cmd
 
 
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})

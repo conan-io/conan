@@ -346,9 +346,10 @@ def test_single_config_decentralized(client_setup):
                 package_id = package["package_id"]
                 if binary != "Build":
                     continue
-                # TODO: The options are completely missing
-                c.run("install --requires=%s@ --build=%s@ --lockfile=app1_b_changed.lock  -s os=Windows"
-                      % (ref, ref))
+                c.run(f"graph build-order-prepare build_order.json {repr(ref)} {package_id} "
+                      "--lockfile=app1_b_changed.lock")
+                cmd = c.stdout
+                c.run(f"install {cmd} -s os=Windows")
                 c.assert_listed_binary(
                     {str(ref): (package_id, "Build"),
                      "pkgawin/0.1": (pkgawin_01_id, "Cache"),
