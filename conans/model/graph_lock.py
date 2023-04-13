@@ -114,7 +114,7 @@ class Lockfile(object):
                 self._requires.add(graph_node.ref, pids)
 
         self._alias.update(deps_graph.aliased)
-        self._overrides.update(deps_graph.root.overrides())
+        self._overrides.update(deps_graph.overrides())
 
         self._requires.sort()
         self._build_requires.sort()
