@@ -512,8 +512,7 @@ def test_single_config_decentralized_overrides():
                     continue
                 overrides = package["overrides"]
                 c.save({"overrides.json": json.dumps(overrides, indent=4)})
-                c.run("lock overrides overrides.json "
-                      "--lockfile=pkgc/conan.lock --lockfile-out=tmp.lock")
+
                 print(c.load("tmp.lock"))
                 context = package["context"]
                 require = "tool-requires" if context == "build" else "requires"

@@ -1,4 +1,3 @@
-import json
 import os
 
 from conan.api.output import ConanOutput
@@ -7,10 +6,8 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.client.graph.graph import Overrides
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load
 
 
 @conan_command(group="Consumer")
@@ -117,24 +114,4 @@ def lock_add(conan_api, parser, subparser, *args):
                                                requires=requires,
                                                python_requires=python_requires,
                                                build_requires=build_requires)
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
-
-
-@conan_subcommand()
-def lock_overrides(conan_api, parser, subparser, *args):
-    """
-    Add overrides
-    """
-    subparser.add_argument('overrides', help='json file containing overrides')
-    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
-                           help="Filename of the created lockfile")
-    subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
-    args = parser.parse_args(*args)
-
-    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
-
-    path = make_abs_path(args.overrides)
-    overrides = json.loads(load(path))
-    lockfile._overrides = Overrides.deserialize(overrides)
-
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)

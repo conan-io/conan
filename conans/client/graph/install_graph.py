@@ -4,7 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, Overrides
+    BINARY_MISSING, BINARY_INVALID
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -29,7 +29,6 @@ class _InstallPackageReference:
         # to cross compile, there will be a dependency from the current "self" (host context)
         # to that "build" package_id.
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
-        self.overrides = None
 
     @staticmethod
     def create(node):
@@ -41,7 +40,6 @@ class _InstallPackageReference:
         # self_options are the minimum to reproduce state
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
-        result.overrides = node.overrides()
         return result
 
     def add(self, node):
@@ -59,8 +57,7 @@ class _InstallPackageReference:
                 "binary": self.binary,
                 "options": self.options,
                 "filenames": self.filenames,
-                "depends": self.depends,
-                "overrides": self.overrides.serialize()}
+                "depends": self.depends}
 
     @staticmethod
     def deserialize(data, filename):
@@ -72,7 +69,6 @@ class _InstallPackageReference:
         result.options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
-        result.overrides = Overrides.deserialize(data["overrides"])
         return result
 
 

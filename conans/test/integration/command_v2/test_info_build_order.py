@@ -28,8 +28,7 @@ def test_info_build_order():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -48,8 +47,7 @@ def test_info_build_order():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -81,8 +79,7 @@ def test_info_build_order_build_require():
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -101,8 +98,7 @@ def test_info_build_order_build_require():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -134,10 +130,10 @@ def test_info_build_order_options():
              'depends': [],
              'packages': [[
                  {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
-                  'context': 'build', 'depends': [], 'overrides': {},
+                  'context': 'build', 'depends': [],
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': []},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
-                  'context': 'build', 'depends': [], 'overrides': {},
+                  'context': 'build', 'depends': [],
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': []}
              ]]}
@@ -148,74 +144,17 @@ def test_info_build_order_options():
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': [], 'overrides': {}}
+                  'filenames': []}
              ]]},
             {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
              'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': [], 'overrides': {}}
+                  'filenames': []}
              ]]}
         ]
     ]
-    assert bo_json == result
-
-
-def test_info_build_order_overrides():
-    c = TestClient()
-    c.save({"dep/conanfile.py": GenConanfile(),
-            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
-            "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
-                                                   .with_requirement("dep/0.2",
-                                                                     override=True)})
-    c.run("export dep --name=dep --version=0.1")
-    c.run("export dep --name=dep --version=0.2")
-    c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --build=missing --format=json")
-    bo_json = json.loads(c.stdout)
-
-    result = [
-        [
-            {
-                "ref": "dep/0.2#4d670581ccb765839f2239cc8dff8fbd",
-                "depends": [],
-                "packages": [[
-                    {
-                        "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "host",
-                        'depends': [],
-                        "binary": "Build",
-                        "options": [],
-                        'overrides': {}
-                    }
-                ]]
-            }
-        ],
-        [
-            {
-                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
-                "depends": [
-                    "dep/0.2#4d670581ccb765839f2239cc8dff8fbd"
-                ],
-                "packages": [[
-                    {
-                        "package_id": "77a47ad3ac4949d2a8dbb85f46a1939e16996022",
-                        'prev': None,
-                        'filenames': [],
-                        "context": "host",
-                        'depends': [],
-                        "binary": "Build",
-                        "options": [],
-                        "overrides": {"dep/0.1": ["dep/0.2"]}
-                    }
-                ]]
-            }
-        ]
-    ]
-
     assert bo_json == result
 
 
@@ -248,8 +187,7 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -268,8 +206,7 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             },
@@ -286,8 +223,7 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -337,8 +273,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             },
@@ -353,8 +288,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
@@ -374,8 +308,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     },
                     {
                         "package_id": "dc29fa55ec82fab6bd820398c7a152ae5f7d4e28",
@@ -384,8 +317,7 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": [],
-                        'overrides': {}
+                        "options": []
                     }
                 ]]
             }
