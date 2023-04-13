@@ -9,6 +9,7 @@ from conan.cli.formatters.graph import format_graph_html, format_graph_json, for
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
+from conans.client.graph.graph import Overrides
 from conans.client.graph.install_graph import InstallGraph
 from conan.errors import ConanException
 from conans.model.graph_lock import Lockfile
@@ -108,11 +109,21 @@ def graph_build_order_prepare(conan_api, parser, subparser, *args):
     if options:
         cmd += " " + " ".join(f"-o {o}" for o in options)
 
-    if args.lockfile:
-        lockfile_path = make_abs_path(args.lockfile)
-        graph_lock = Lockfile.load(lockfile_path)
-        # TODO: Replace here the overrides and save a new lockfile
-        cmd += f" --lockfile={args.lockfile}"
+    overrides = pkg["overrides"]
+    if overrides:
+        if args.lockfile:
+            lockfile_path = make_abs_path(args.lockfile)
+            graph_lock = Lockfile.load(lockfile_path)
+            # TODO: Replace here the overrides and save a new lockfile
+            graph_lock._overrides = Overrides.deserialize(overrides)
+            graph_lock.save(args.lockfile + ".tmp")
+            cmd += f" --lockfile={args.lockfile}.tmp"
+        else:
+            raise ConanException("No lockfile defined, but there are overrides in build-order")
+    else:
+        if args.lockfile:
+            cmd += f" --lockfile={args.lockfile}"
+
     return cmd
 
 
