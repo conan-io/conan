@@ -226,22 +226,6 @@ class Node(object):
         result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
-    def overrides(self):
-        def transitive_subgraph():
-            result = set()
-            opened = {self}
-            while opened:
-                new_opened = set()
-                for o in opened:
-                    result.add(o)
-                    new_opened.update(set(o.neighbors()).difference(result))
-                opened = new_opened
-
-            return result
-
-        nodes = transitive_subgraph()
-        return Overrides.create(nodes)
-
 
 class Edge(object):
     def __init__(self, src, dst, require):
