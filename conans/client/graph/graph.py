@@ -219,6 +219,7 @@ class Node(object):
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
         result["invalid_build"] = self.cant_build
+        result["info_invalid"] = self.conanfile.info.invalid if self.conanfile.info is not None and self.conanfile.info.invalid is not None else False
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
         result["context"] = self.context
