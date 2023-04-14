@@ -259,6 +259,9 @@ class Overrides:
     def __bool__(self):
         return bool(self._overrides)
 
+    def __repr__(self):
+        return repr(self.serialize())
+
     @staticmethod
     def create(nodes):
         overrides = {}

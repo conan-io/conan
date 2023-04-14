@@ -2,6 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
+from conans.client.graph.graph import Overrides
 from conans.errors import ConanException
 from conans.model.graph_lock import Lockfile, LOCKFILE
 
@@ -12,7 +13,7 @@ class LockfileAPI:
         self.conan_api = conan_api
 
     @staticmethod
-    def get_lockfile(lockfile=None, conanfile_path=None, cwd=None, partial=False):
+    def get_lockfile(lockfile=None, conanfile_path=None, cwd=None, partial=False, overrides=None):
         """ obtain a lockfile, following this logic:
         - If lockfile is explicitly defined, it would be either absolute or relative to cwd and
           the lockfile file must exist. If lockfile="" (empty string) the default "conan.lock"
@@ -45,6 +46,11 @@ class LockfileAPI:
 
         graph_lock = Lockfile.load(lockfile_path)
         graph_lock.partial = partial
+
+        if overrides:
+            if isinstance(overrides, str):
+                overrides = eval(overrides)
+            graph_lock._overrides = Overrides.deserialize(overrides)
         ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
         return graph_lock
 

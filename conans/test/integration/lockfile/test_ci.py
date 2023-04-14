@@ -347,10 +347,9 @@ def test_single_config_decentralized(client_setup):
                 package_id = package["package_id"]
                 if binary != "Build":
                     continue
-                c.run(f"graph build-order-prepare build_order.json {repr(ref)} {package_id} "
-                      "--lockfile=app1_b_changed.lock")
-                cmd = c.stdout
-                c.run(f"install {cmd} -s os=Windows")
+                build_args = package["build_args"]
+                c.run(f"install {build_args} --lockfile=app1_b_changed.lock -s os=Windows")
+
                 c.assert_listed_binary(
                     {str(ref): (package_id, "Build"),
                      "pkgawin/0.1": (pkgawin_01_id, "Cache"),
@@ -506,15 +505,11 @@ def test_single_config_decentralized_overrides():
     for level in to_build:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])
-            print("BUILDING REF", ref)
+            print("------------------BUILDING REF", ref)
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
-                package_id = package["package_id"]
                 if binary != "Build":
                     continue
-                c.run(f"graph build-order-prepare bo.json {repr(ref)} {package_id} "
-                      "--lockfile=pkgc/conan.lock")
-                cmd = c.stdout
-                print("CMD ", cmd)
-                c.run(f"install {cmd}")
+                build_args = package["build_args"]
+                c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
                 print(c.out)

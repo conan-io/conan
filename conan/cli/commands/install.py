@@ -59,7 +59,8 @@ def install(conan_api, parser, *args):
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=args.lockfile_overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
     if path:
