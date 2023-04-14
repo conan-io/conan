@@ -498,10 +498,9 @@ def test_single_config_decentralized_overrides():
     assert "toolc/2.0" in requires
     assert "toolc/1.0" in requires
 
-    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing",
-          redirect_stdout="bo.json")
-    bojson = c.load("bo.json")
-    to_build = json.loads(bojson)
+    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
+    print(c.stdout)
+    to_build = json.loads(c.stdout)
     for level in to_build:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])

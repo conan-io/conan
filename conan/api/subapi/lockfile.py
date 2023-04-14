@@ -27,6 +27,7 @@ class LockfileAPI:
         :param cwd: the current working dir, if None, os.getcwd() will be used
         :param conanfile_path: The full path to the conanfile, if existing
         :param lockfile: the name of the lockfile file
+        :param overrides: Dictionary or string contaning dictionary {overriden: [new_ref1, new_ref2]}
         """
         if lockfile == "":
             # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
@@ -38,6 +39,8 @@ class LockfileAPI:
             base_path = os.path.dirname(conanfile_path) if conanfile_path else cwd
             lockfile_path = make_abs_path(LOCKFILE, base_path)
             if not os.path.isfile(lockfile_path):
+                if overrides:
+                    raise ConanException("Cannot define overrides without a lockfile")
                 return
         else:  # explicit lockfile given
             lockfile_path = make_abs_path(lockfile, cwd)

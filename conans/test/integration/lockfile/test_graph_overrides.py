@@ -286,21 +286,54 @@ def test_introduced_conflict(override, force):
     assert "pkga/0.3" not in requires
     # This will not be used thanks to the lockfile
     c.run("create pkgb --version=0.2")
+
+    """
+    This change in pkgd introduce a conflict
+        Using --lockfile-partial we can evaluate and introduce a new conflict
+        pkgd -----> pkgb/[*] --> pkga/[>=0.1 <0.2]
+          |-------> pkgc/0.1 --> pkga/[>=0.2 <0.3]
+    """
     c.save({"pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requirement("pkgb/0.1")
                                                             .with_requirement("pkgc/0.1")
             })
 
     c.run("graph info pkgd --lockfile=pkgd/conan.lock --lockfile-partial", assert_error=True)
     assert "Version conflict: pkgc/0.1->pkga/[>=0.2 <0.3], pkgd/0.1->pkga/0.1" in c.out
+    # Resolve the conflict with an override or force
     c.save({"pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requirement("pkgb/0.1")
                                                             .with_requirement("pkgc/0.1")
                                                             .with_requirement("pkga/0.3",
                                                                               override=override,
                                                                               force=force)
             })
-    c.run("graph info pkgd --lockfile=pkgd/conan.lock --lockfile-partial --lockfile-out=pkgd/conan2.lock")
+    c.run("graph info pkgd --lockfile=pkgd/conan.lock --lockfile-partial "
+          "--lockfile-out=pkgd/conan2.lock --lockfile-clean")
     assert "pkgb/0.2" not in c.out
     assert "pkgb/0.1" in c.out
     lock = json.loads(c.load("pkgd/conan2.lock"))
-    print(c.load("pkgd/conan2.lock"))
     requires = "\n".join(lock["requires"])
+    assert "pkga/0.3" in requires
+    assert "pkga/0.1" not in requires
+    assert "pkga/0.2" not in requires
+    assert "pkgb/0.2" not in requires
+
+
+def test_command_line_lockfile_overrides():
+    """
+    --lockfile-overrides cannot be abused to inject new overrides, only existing ones
+    """
+    c = TestClient()
+    c.save({
+            "pkga/conanfile.py": GenConanfile("pkga"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1"),
+            })
+
+    c.run("create pkga --version=0.1")
+    c.run("create pkga --version=0.2")
+    c.run("create pkgb")
+    c.run('install pkgc --lockfile-overrides="{pkga/0.1: [\'pkga/0.2\']}"', assert_error=True)
+    assert "Cannot define overrides without a lockfile" in c.out
+    c.run('lock create pkgc')
+    c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"', assert_error=True)
+    assert "Requirement 'pkga/0.2' not in lockfile" in c.out
