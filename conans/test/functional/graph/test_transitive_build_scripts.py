@@ -54,7 +54,7 @@ def test_transitive_build_scripts():
 
         class App(ConanFile):
             package_type = "application"
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeToolchain"
             settings = "os", "compiler", "arch", "build_type"
 
             def build_requirements(self):
@@ -71,9 +71,9 @@ def test_transitive_build_scripts():
         myfunctionB()
     """)
     c.save({"scriptsa/conanfile.py": scriptsa,
-            "scriptsa/findscriptsa.cmake": scriptsa_cmake,
+            "scriptsa/Findscriptsa.cmake": scriptsa_cmake,
             "scriptsb/conanfile.py": scriptsb,
-            "scriptsb/findscriptsb.cmake": scriptsb_cmake,
+            "scriptsb/Findscriptsb.cmake": scriptsb_cmake,
             "app/conanfile.py": app,
             "app/CMakeLists.txt": app_cmake})
 
