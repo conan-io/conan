@@ -97,8 +97,6 @@ class TestBasicCliOutput:
         assert recipe["provides"] == ["bar"]
 
 
-
-
 class TestConanfilePath:
     def test_cwd(self):
         # Check the first positional argument is a relative path
