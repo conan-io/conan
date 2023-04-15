@@ -185,7 +185,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :param headers: A dictionary with additional headers
     :param md5: MD5 hash code to check the downloaded file
     :param sha1: SHA-1 hash code to check the downloaded file
-    :param sha256: SHA-256 hash code to check the downloaded file
+    :param sha256: SHA-256 hash code to check the downloaded file. If set, the download is cached.
     """
     config = conanfile.conf
 
