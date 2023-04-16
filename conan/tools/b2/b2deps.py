@@ -197,7 +197,7 @@ import os ;
 rule pkg-project ( id )
 {
     local id-mod = [ project.find $(id:L) : . ] ;
-    if ! $(id-mode)
+    if ! $(id-mod)
     {
         local parent-prj = [ project.current ] ;
         local parent-mod = [ $(parent-prj).project-module ] ;
