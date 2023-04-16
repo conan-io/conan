@@ -40,8 +40,8 @@ def conanfile_exception_formatter(conanfile_name, func_name):
     """
 
     def _raise_conanfile_exc(e):
-        from conan.api.output import LEVEL_DEBUG, conan_output_level
-        if conan_output_level <= LEVEL_DEBUG:
+        from conan.api.output import LEVEL_DEBUG, ConanOutput
+        if ConanOutput.level_allowed(LEVEL_DEBUG):
             import traceback
             raise ConanExceptionInUserConanfileMethod(traceback.format_exc())
         m = _format_conanfile_exception(conanfile_name, func_name, e)

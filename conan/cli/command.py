@@ -1,6 +1,7 @@
 import argparse
 import textwrap
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 
@@ -103,32 +104,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        self._process_log_level_args(args)
+        ConanOutput.define_log_level(args.v)
         return args
-
-    @staticmethod
-    def _process_log_level_args(args):
-        from conan.api import output
-        from conan.api.output import LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
-            LEVEL_STATUS, LEVEL_VERBOSE, LEVEL_DEBUG, LEVEL_TRACE
-
-        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                  "error": LEVEL_ERROR,  # -verror 70
-                  "warning": LEVEL_WARNING,  # -vwaring 60
-                  "notice": LEVEL_NOTICE,  # -vnotice 50
-                  "status": LEVEL_STATUS,  # -vstatus 40
-                  None: LEVEL_STATUS,  # -v 40
-                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                  "debug": LEVEL_DEBUG,  # -vdebug 20
-                  "v": LEVEL_DEBUG,  # -vv 20
-                  "trace": LEVEL_TRACE,  # -vtrace 10
-                  "vv": LEVEL_TRACE,  # -vvv 10
-                  }
-
-        level = levels.get(args.v)
-        if not level:
-            raise ConanException(f"Invalid argument '-v{args.v}'")
-        output.conan_output_level = level
 
 
 class ConanCommand(BaseConanCommand):

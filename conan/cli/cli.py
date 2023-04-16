@@ -171,8 +171,7 @@ class Cli:
             command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
         except Exception as e:
             # must be a local-import to get updated value
-            from conan.api.output import conan_output_level
-            if conan_output_level <= LEVEL_TRACE:
+            if ConanOutput.level_allowed(LEVEL_TRACE):
                 print(traceback.format_exc())
             self._conan2_migrate_recipe_msg(e)
             raise
