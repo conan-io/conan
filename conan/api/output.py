@@ -48,8 +48,9 @@ if get_env("CONAN_COLOR_DARK", 0):
 
 
 class ConanOutput:
-    # Singleton
+    # Class "global" info
     _conan_output_level = LEVEL_STATUS
+    _silent_warn_ids = []
 
     def __init__(self, scope=""):
         self.stream = sys.stderr
@@ -57,6 +58,10 @@ class ConanOutput:
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = color_enabled(self.stream)
+
+    @classmethod
+    def define_silence_warnings(cls, warnings):
+        cls._silent_warn_ids = warnings or []
 
     @classmethod
     def define_log_level(cls, v):
@@ -191,9 +196,12 @@ class ConanOutput:
             self._write_message(msg, fg=Color.BRIGHT_GREEN)
         return self
 
-    def warning(self, msg):
+    def warning(self, msg, warn_id=None):
         if self._conan_output_level <= LEVEL_WARNING:
-            self._write_message("WARN: {}".format(msg), Color.YELLOW)
+            if warn_id is not None and warn_id in self._silent_warn_ids:
+                return self
+            warn_id_msg = "" if warn_id is None else f"{warn_id}: "
+            self._write_message(f"WARN: {warn_id_msg}{msg}", Color.YELLOW)
         return self
 
     def error(self, msg):

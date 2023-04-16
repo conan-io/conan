@@ -33,8 +33,15 @@ def test_legacy_names_filenames():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
+    print(c.out)
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
         assert f"'{name}' used in: pkg/1.0" in c.out
+
+    save(c.cache.new_config_path, 'core:skip_warns=["deprecated"}')
+    c.run("create .")
+    for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info",
+                 "cpp_info.build_modules"]:
+        assert f"'{name}' used in: pkg/1.0" not in c.out
 
 
 class TestLegacy1XRecipes:
