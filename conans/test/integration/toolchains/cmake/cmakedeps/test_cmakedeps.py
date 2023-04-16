@@ -549,3 +549,19 @@ def test_system_libs_transitivity():
     app = c.load("app/header-release-data.cmake")
     assert "set(header_SYSTEM_LIBS_RELEASE dl)" in app
     assert "set(header_FRAMEWORKS_RELEASE CoreDriver)" in app
+
+
+def test_header_no_libpaths():
+    """
+    https://github.com/conan-io/conan/issues/13702
+    """
+    c = TestClient()
+    header = GenConanfile("header", "0.1").with_package_type("header-library")
+    app = GenConanfile().with_requires("header/0.1").with_settings("build_type")\
+                        .with_generator("CMakeDeps")
+    c.save({"header/conanfile.py": header,
+            "app/conanfile.py": app})
+    c.run("create header")
+    c.run("install app")
+    dep = c.load("app/header-release-data.cmake")
+    assert "set(header_LIB_DIRS_RELEASE )" in dep

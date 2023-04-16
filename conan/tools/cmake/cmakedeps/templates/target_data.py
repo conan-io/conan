@@ -6,7 +6,7 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conans.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
-
+from conans.model.pkg_type import PackageType
 
 """
 
@@ -62,11 +62,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 "components_cpp": components_cpp,
                 "dependency_filenames": " ".join(dependency_filenames),
                 "dependency_find_modes": dependency_find_modes}
-
-    @property
-    def cmake_package_type(self):
-        return {"shared-library": "SHARED",
-                "static-library": "STATIC"}.get(str(self.conanfile.package_type), "UNKNOWN")
 
     @property
     def is_host_windows(self):
@@ -176,7 +171,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         return _TargetDataContext(global_cppinfo, pfolder_var_name, self._root_folder,
-                                  self.require, self.cmake_package_type, self.is_host_windows)
+                                  self.require, self.conanfile.package_type, self.is_host_windows)
 
     @property
     def _root_folder(self):
@@ -191,7 +186,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
-                                                self.require, self.cmake_package_type,
+                                                self.require, self.conanfile.package_type,
                                                 self.is_host_windows)
 
             public_comp_deps = []
@@ -252,7 +247,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
 class _TargetDataContext(object):
 
-    def __init__(self, cpp_info, pfolder_var_name, package_folder, require, library_type,
+    def __init__(self, cpp_info, pfolder_var_name, package_folder, require, package_type,
                  is_host_windows):
 
         def join_paths(paths):
@@ -299,7 +294,8 @@ class _TargetDataContext(object):
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
-        self.library_type = library_type
+        self.library_type = {"shared-library": "SHARED",
+                             "static-library": "STATIC"}.get(str(package_type), "UNKNOWN")
         self.is_host_windows = "1" if is_host_windows else "0"
 
         # For modern CMake targets we need to prepare a list to not
@@ -324,6 +320,8 @@ class _TargetDataContext(object):
         if require and not require.libs:
             # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
             #                      NOT REALLY LINKING LIB
+            if package_type == PackageType.HEADER:
+                self.lib_paths = ""
             self.libs = ""
             if cpp_info.frameworkdirs:  # Only invalidate for in-package frameworks
                 # FIXME: The mix of in-package frameworks + system ones is broken
