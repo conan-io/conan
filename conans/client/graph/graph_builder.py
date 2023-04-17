@@ -232,6 +232,11 @@ class DepsGraphBuilder(object):
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+        if require.track_host:
+            req = Requirement(require.ref, headers=True, libs=True, visible=True)
+            transitive = node.transitive_deps.get(req)
+            require.ref.version = transitive.require.ref.version
+
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)

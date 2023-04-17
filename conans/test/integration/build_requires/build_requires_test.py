@@ -773,3 +773,28 @@ def test_overriden_host_but_not_build():
     c.run("install app")
     c.assert_listed_require({"protobuf/1.1": "Cache"})
     c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+
+
+def test_overriden_host_but_not_build_invisible():
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class ProtoBuf(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            def requirements(self):
+                self.requires("protobuf/1.0")
+            def build_requirements(self):
+                self.tool_requires("protobuf/1.0", track_host=True)
+        """)
+    c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+            "pkg/conanfile.py": pkg,
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                              .with_requirement("protobuf/1.1", override=True)})
+    c.run("create protobuf --version=1.0")
+    c.run("create protobuf --version=1.1")
+    c.run("create pkg")
+    c.run("install app")
+    print(c.out)
+    c.assert_listed_require({"protobuf/1.1": "Cache"})
+    c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)

@@ -11,7 +11,7 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None):
+                 force=None, override=None, direct=None, options=None, track_host=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -29,6 +29,7 @@ class Requirement:
         self._direct = direct
         self.options = options
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
+        self.track_host = track_host
 
     @property
     def skip(self):
@@ -399,10 +400,10 @@ class ToolRequirements:
         self._requires = requires
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None,
-                 override=None):
+                 override=None, track_host=None):
         # TODO: Check which arguments could be user-defined
         self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                    options=options, override=override)
+                                    options=options, override=override, track_host=track_host)
 
 
 class TestRequirements:
@@ -534,7 +535,7 @@ class Requirements:
         self._requires[req] = req
 
     def tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                     run=True, options=None, override=None):
+                     run=True, options=None, override=None, track_host=None):
         """
          Represent a build tool like "cmake".
 
@@ -548,7 +549,8 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options, override=override)
+                          package_id_mode=package_id_mode, options=options, override=override,
+                          track_host=track_host)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
