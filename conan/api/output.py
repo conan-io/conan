@@ -48,7 +48,7 @@ if get_env("CONAN_COLOR_DARK", 0):
 
 
 class ConanOutput:
-    # Class "global" info
+    # Singleton
     _conan_output_level = LEVEL_STATUS
     _silent_warn_ids = []
 
