@@ -747,3 +747,29 @@ def test_conditional_require_context():
     c.assert_listed_require({"dep/1.0": "Cache"})
     c.run("create consumer --build-require")
     assert "dep/1.0" not in c.out
+
+
+def test_overriden_host_but_not_build():
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class ProtoBuf(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            def requirements(self):
+                self.requires("protobuf/1.0")
+            def build_requirements(self):
+                self.tool_requires("protobuf/1.0", visible=True)
+        """)
+    c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+            "pkg/conanfile.py": pkg,
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                              .with_requirement("protobuf/1.1", override=True)
+                                              .with_build_requirement("protobuf/1.1",
+                                                                      override=True)})
+    c.run("create protobuf --version=1.0")
+    c.run("create protobuf --version=1.1")
+    c.run("create pkg")
+    c.run("install app")
+    c.assert_listed_require({"protobuf/1.1": "Cache"})
+    c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
