@@ -121,7 +121,7 @@ def _generate_aggregated_env(conanfile):
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed
         result = []
-        for s in filenames:
+        for s in reversed(filenames):
             folder, f = os.path.split(s)
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
