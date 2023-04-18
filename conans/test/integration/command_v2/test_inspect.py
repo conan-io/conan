@@ -51,3 +51,38 @@ def test_dot_and_folder_conanfile():
     t.save({"foo/conanfile.py": GenConanfile().with_name("foo")}, clean_first=True)
     t.run("inspect foo")
     assert 'name: foo' in t.out
+
+
+def test_setname():
+    tc = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        settings = "os", "arch"
+        def set_name(self):
+            self.name = "foo"
+
+        def set_version(self):
+            self.version = "1.0"
+    """)
+
+    tc.save({"conanfile.py": conanfile})
+    tc.run("inspect .")
+    assert "foo" in tc.out
+    assert "1.0" in tc.out
+
+
+def test_normal_inspect():
+    tc = TestClient()
+    tc.run("new basic -d name=pkg -d version=1.0")
+    tc.run("inspect .")
+    assert tc.out == textwrap.dedent("""
+    description: A basic recipe
+    generators: []
+    homepage: <Your project homepage goes here>
+    license: <Your project license goes here>
+    name: pkg
+    no_copy_source: False
+    revision_mode: hash
+    version: 1.0""")

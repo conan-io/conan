@@ -11,6 +11,7 @@ from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
 
 from conans.model.requires import Requirements
+from conans.model.settings import Settings
 
 
 class ConanFile:
@@ -129,7 +130,9 @@ class ConanFile:
                 result[a] = v
 
         result["package_type"] = str(self.package_type)
-        result["settings"] = self.settings.serialize()
+
+        settings = self.settings
+        result["settings"] = settings.serialize() if isinstance(settings, Settings) else settings
         result["options"] = self.options.serialize()
 
         if hasattr(self, "python_requires"):

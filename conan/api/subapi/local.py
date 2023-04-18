@@ -103,3 +103,24 @@ class LocalAPI:
         with conanfile_exception_formatter(conanfile, "test"):
             with chdir(conanfile.build_folder):
                 conanfile.test()
+
+    def inspect(self, conanfile_path, remotes, lockfile):
+        app = ConanApp(self._conan_api.cache_folder)
+        conanfile = app.loader.load_named(conanfile_path, name=None, version=None,
+                                          user=None, channel=None, remotes=remotes)
+        result = {}
+        # Load the class itself, we fetch members from here so we don't show instantiated conanfile's
+        conanfile_class = self._conan_api.graph.load_conanfile_class(conanfile_path)
+        import inspect as python_inspect
+        for name, value in python_inspect.getmembers(conanfile_class):
+            # If the value is none in the class, don't fetch it from the instantiated object
+            if value is None or name.startswith('_') or python_inspect.ismethod(value) or\
+                    python_inspect.isfunction(value) or isinstance(value, property):
+                continue
+            try:
+                result[name] = getattr(conanfile, name)
+            except:
+                # Some accesses might be asserted out
+                continue
+        return result
+
