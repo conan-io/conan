@@ -122,12 +122,13 @@ class ConanFile:
     def serialize(self):
         result = {}
 
-        for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
-                  "upload_policy",
-                  "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run"):
+        for a in ("name", "version", "user", "channel", "url", "license",
+                  "author", "description", "topics", "homepage", "build_policy", "upload_policy",
+                  "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run",
+                  "default_options", "options_description"):
             v = getattr(self, a)
             if v is not None:
-                result[a] = v
+                result[a] = str(v)
 
         result["package_type"] = str(self.package_type)
 
