@@ -33,3 +33,37 @@ def inspect(conan_api, parser, *args):
     args = parser.parse_args(*args)
     path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
     return conan_api.local.inspect(path, remotes=None, lockfile=None)
+
+
+@conan_command(group="Consumer", formatters={"text": inspect_text_formatter, "json": default_json_formatter})
+def inspect_proper(conan_api, parser, *args):
+    """
+    Inspect a conanfile.py to return its public fields.
+    """
+    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("-r", "--remote", default=None, action="append",
+                        help="Remote names. Accepts wildcards ('*' means all the remotes available)")
+    parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                        help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                             "existing 'conan.lock' file")
+
+    args = parser.parse_args(*args)
+    path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
+    return conan_api.local.inspect2(path, remotes=None, lockfile=None)
+
+
+@conan_command(group="Consumer", formatters={"text": inspect_text_formatter, "json": default_json_formatter})
+def inspect_serialize(conan_api, parser, *args):
+    """
+    Inspect a conanfile.py to return its public fields.
+    """
+    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("-r", "--remote", default=None, action="append",
+                        help="Remote names. Accepts wildcards ('*' means all the remotes available)")
+    parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                        help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                             "existing 'conan.lock' file")
+
+    args = parser.parse_args(*args)
+    path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
+    return conan_api.local.inspect3(path, remotes=None, lockfile=None)

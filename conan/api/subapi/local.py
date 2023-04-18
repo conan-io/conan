@@ -124,3 +124,28 @@ class LocalAPI:
                 continue
         return result
 
+    def inspect2(self, conanfile_path, remotes, lockfile):
+        app = ConanApp(self._conan_api.cache_folder)
+        conanfile = app.loader.load_named(conanfile_path, name=None, version=None,
+                                          user=None, channel=None, remotes=remotes)
+        result = {}
+        import inspect as python_inspect
+        for name in dir(conanfile):
+            try:
+                value = getattr(conanfile, name)
+            except:
+                # Some accesses might be asserted out
+                continue
+            # If the value is none in the class, don't fetch it from the instantiated object
+            if name.startswith('_') or python_inspect.ismethod(value) or\
+                    python_inspect.isfunction(value) or isinstance(value, property):
+                continue
+            result[name] = value
+        return result
+
+    def inspect3(self, conanfile_path, remotes, lockfile):
+        app = ConanApp(self._conan_api.cache_folder)
+        conanfile = app.loader.load_named(conanfile_path, name=None, version=None,
+                                          user=None, channel=None, remotes=remotes)
+        return conanfile.serialize()
+
