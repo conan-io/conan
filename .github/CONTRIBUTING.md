@@ -25,7 +25,7 @@ To contribute follow the next steps:
 3. Fork the [Conan main repository](https://github.com/conan-io/conan) and create a `feature/xxx` branch from the `develop` branch and develop
    your fix/feature as discussed in previous step.
 4. Try to keep your branch updated with the `develop` branch to avoid conflicts.
-5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``release/xxx`` branches.
+5. Open a pull request, and select `develop` as the base branch. Never open a pull request to ``release/xxx`` branches, unless the branch is to be part of the next 2.0.X patch. In that case, the PR should be targeted to release/2.0.
 6. Add the text (besides other comments): "fixes #IssueNumber" in the body of the PR, referring to the issue of step 1.
 7. Submit a PR to the Conan documentation about the changes done providing examples if needed.
 
