@@ -529,6 +529,49 @@ def test_multiple_deactivate():
         assert "VAR2=!!" in out
 
 
+def test_multiple_deactivate_order():
+    """
+    https://github.com/conan-io/conan/issues/13693
+    """
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def generate(self):
+                e1 = Environment()
+                e1.define("MYVAR", "Value1")
+                e1.vars(self).save_script("mybuild1")
+                e2 = Environment()
+                e2.define("MYVAR", "Value2")
+                e2.vars(self).save_script("mybuild2")
+        """)
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo MYVAR=%MYVAR%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo MYVAR=$MYVAR!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run("install .")
+
+    for _ in range(2):  # Just repeat it, so we can check things keep working
+        if platform.system() == "Windows":
+            cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+        else:
+            cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  shell=True, cwd=client.current_folder).communicate()
+        out = out.decode()
+        assert "MYVAR=Value2!!" in out
+        assert 3 == str(out).count("Restoring environment")
+        assert "MYVAR=!!" in out
+
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
 @pytest.mark.parametrize("num_deps", [3, ])
 def test_massive_paths(num_deps):
