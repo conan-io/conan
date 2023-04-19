@@ -785,7 +785,7 @@ class TestBuildTrackHost:
 
     def test_overriden_host_version(self):
         """
-        Make the tool_requires follow the regular require with the expression "{host_version}"
+        Make the tool_requires follow the regular require with the expression "<host_version>"
         """
         c = TestClient()
         pkg = textwrap.dedent("""
@@ -796,7 +796,7 @@ class TestBuildTrackHost:
                 def requirements(self):
                     self.requires("protobuf/1.0")
                 def build_requirements(self):
-                    self.tool_requires("protobuf/{host_version}")
+                    self.tool_requires("protobuf/<host_version>")
             """)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg,
@@ -832,7 +832,7 @@ class TestBuildTrackHost:
                 def requirements(self):
                     self.requires("protobuf/[*]")
                 def build_requirements(self):
-                    self.tool_requires("protobuf/{host_version}")
+                    self.tool_requires("protobuf/<host_version>")
             """)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg,
@@ -869,12 +869,12 @@ class TestBuildTrackHost:
             class ProtoBuf(ConanFile):
                 name = "protobuf"
                 def build_requirements(self):
-                    self.tool_requires("protobuf/{host_version}")
+                    self.tool_requires("protobuf/<host_version>")
             """)
 
         c.save({"pkg/conanfile.py": pkg})
         c.run("install pkg", assert_error=True)
-        assert "ERROR: protobuf/None require 'protobuf/{host_version}': " \
+        assert "ERROR: protobuf/None require 'protobuf/<host_version>': " \
                "didn't find a matching host dependency" in c.out
 
     def test_track_host_errors_trait(self):
@@ -887,9 +887,9 @@ class TestBuildTrackHost:
             class ProtoBuf(ConanFile):
                 name = "protobuf"
                 def requirements(self):
-                   self.tool_requires("other/{host_version}", visible=True)
+                   self.tool_requires("other/<host_version>", visible=True)
             """)
         c.save({"pkg/conanfile.py": pkg})
         c.run("install pkg", assert_error=True)
-        assert "ERROR: protobuf/None require 'other/{host_version}': 'host_version' " \
+        assert "ERROR: protobuf/None require 'other/<host_version>': 'host_version' " \
                "can only be used for non-visible tool_requires" in c.out

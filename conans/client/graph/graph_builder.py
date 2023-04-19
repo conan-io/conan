@@ -232,7 +232,7 @@ class DepsGraphBuilder(object):
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        if require.ref.version == "{host_version}":
+        if require.ref.version == "<host_version>":
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
