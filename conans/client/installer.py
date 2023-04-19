@@ -88,7 +88,7 @@ class _PackageBuilder(object):
                 raise ConanException("%s\nError copying sources to build folder" % msg)
 
     def _build(self, conanfile, pref):
-        write_generators(conanfile, self._hook_manager)
+        write_generators(conanfile, self._app)
 
         try:
             run_build_method(conanfile, self._hook_manager)
@@ -351,7 +351,7 @@ class BinaryInstaller:
         output = conanfile.output
         output.info("Rewriting files of editable package "
                     "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-        write_generators(conanfile, self._hook_manager)
+        write_generators(conanfile, self._app)
 
         if node.binary == BINARY_EDITABLE_BUILD:
             run_build_method(conanfile, self._hook_manager)

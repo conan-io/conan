@@ -189,6 +189,10 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
 
     @property
+    def custom_generators_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "generators")
+
+    @property
     def plugins_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, PLUGINS_FOLDER)
 
