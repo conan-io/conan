@@ -122,19 +122,21 @@ class ConanFile:
     def serialize(self):
         result = {}
 
-        for a in ("name", "version", "user", "channel", "url", "license",
+        for a in ("name", "user", "channel", "url", "license",
                   "author", "description", "topics", "homepage", "build_policy", "upload_policy",
                   "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run",
-                  "default_options", "options_description"):
-            v = getattr(self, a)
+                  "default_options", "options_description", "generators", "requires"):
+            v = getattr(self, a, None)
             if v is not None:
-                result[a] = str(v)
-
+                result[a] = v
+        if self.version is not None:
+            result["version"] = str(self.version)
         result["package_type"] = str(self.package_type)
 
         settings = self.settings
         result["settings"] = settings.serialize() if isinstance(settings, Settings) else settings
         result["options"] = self.options.serialize()
+        result["options_definitions"] = self.options.possible_values
 
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]

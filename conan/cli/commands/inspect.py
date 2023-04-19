@@ -38,12 +38,10 @@ def inspect(conan_api, parser, *args):
     remotes = conan_api.remotes.list(args.remote) if args.remote else []
     conanfile = conan_api.local.inspect(path, remotes=remotes, lockfile=lockfile)
     result = conanfile.serialize()
-    possible_options = conanfile.options.possible_values
-    result["options"] = {k: {"value": v,
-                             "possible_values": possible_options.get(k, None)}
-                         for k, v in result["options"].items()}
-    # Get default_options, and possible options values in conanfile serialization
+    # Some of the serialization info is not initialized so it's pointless to show it to the user
     for item in ("cpp_info", "system_requires", "recipe_folder"):
         if item in result:
             del result[item]
+    if "requires" in result:
+        result["requires"] = [req.ref for req in result["requires"].values()]
     return result
