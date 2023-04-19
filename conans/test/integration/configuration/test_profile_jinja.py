@@ -6,6 +6,7 @@ from conan import conan_version
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
+from conan.tools.files import save
 
 
 def test_profile_template():
@@ -117,6 +118,18 @@ def test_profile_template_profile_name():
         [conf]
         user.profile:name = {{ profile_name }}
         """)
+    tpl2 = textwrap.dedent("""
+        include(default)
+        [conf]
+        user.profile:name = {{ profile_name }}
+        """)
+    default = textwrap.dedent("""
+        [settings]
+        os=Windows
+        [conf]
+        user.profile:name = {{ profile_name }}
+        """)
+
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -126,7 +139,9 @@ def test_profile_template_profile_name():
     client.save({"conanfile.py": conanfile,
                  "profile_folder/foobar": tpl1,
                  "another_folder/foo.profile": tpl1,
-                 os.path.join(client.cache_folder, "profiles", "baz"): tpl1})
+                 "include_folder/include_default": tpl2,
+                 os.path.join(client.cache.profiles_path, "baz"): tpl1,
+                 os.path.join(client.cache.profiles_path, "default"): default})
 
     # show only file name as profile name
     client.run("install . -pr=profile_folder/foobar")
@@ -136,10 +151,14 @@ def test_profile_template_profile_name():
     client.run("install . -pr=another_folder/foo.profile")
     assert "conanfile.py: PROFILE NAME: foo.profile" in client.out
 
-    # default profile should not compute profile_name by default
+    # default profile should compute profile_name by default too
     client.run("install . -pr=default")
-    assert "conanfile.py: PROFILE NAME: None" in client.out
+    assert "conanfile.py: PROFILE NAME: default" in client.out
 
     # profile names should show only their names
     client.run("install . -pr=baz")
     assert "conanfile.py: PROFILE NAME: baz" in client.out
+
+    # included profiles should respect the inherited profile name
+    client.run("install . -pr=include_folder/include_default")
+    assert "conanfile.py: PROFILE NAME: include_default" in client.out
