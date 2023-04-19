@@ -44,4 +44,5 @@ def inspect(conan_api, parser, *args):
             del result[item]
     if "requires" in result:
         result["requires"] = [req.ref for req in result["requires"].values()]
+
     return result
