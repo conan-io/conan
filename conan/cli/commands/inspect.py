@@ -28,13 +28,15 @@ def inspect(conan_api, parser, *args):
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                              "existing 'conan.lock' file")
+    parser.add_argument("--lockfile-partial", action="store_true",
+                        help="Do not raise an error if some dependency is not found in lockfile")
 
     args = parser.parse_args(*args)
     path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=os.getcwd(),
-                                               partial=None)
+                                               partial=args.lockfile_partial)
     remotes = conan_api.remotes.list(args.remote) if args.remote else []
     conanfile = conan_api.local.inspect(path, remotes=remotes, lockfile=lockfile)
     result = conanfile.serialize()
