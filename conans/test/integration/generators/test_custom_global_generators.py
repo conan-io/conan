@@ -41,6 +41,18 @@ def test_custom_global_generator():
     assert "conanfile.txt: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
     assert "conanfile.txt: DEP: pkg/0.1!!" in c.out
 
+    # In conanfile.py also works
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class MyPkg(ConanFile):
+            requires = "pkg/0.1"
+            generators = "MyCustomGenerator"
+            """)
+    c.save({"conanfile.py": conanfile}, clean_first=True)
+    c.run("install . ")
+    assert "conanfile.py: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
+    assert "conanfile.py: DEP: pkg/0.1!!" in c.out
+
 
 def test_custom_global_generator_imports():
     """
