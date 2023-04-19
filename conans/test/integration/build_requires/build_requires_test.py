@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 import unittest
@@ -527,3 +528,101 @@ def test_tool_requires_conanfile_txt():
     client.save({"conanfile.txt": consumer}, clean_first=True)
     client.run("install . --build=missing")
     assert "Applying build-requirement: build_req/1.0@test/test" in client.out
+
+
+class TestBuildTrackHost:
+
+    def test_overriden_host_version(self):
+        """
+        Make the tool_requires follow the regular require with the expression "<host_version>"
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("protobuf/1.0")
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>")
+            """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg,
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                  .with_requirement("protobuf/1.1", override=True)})
+        c.run("create protobuf 1.0@")
+        c.run("create protobuf 1.1@")
+        c.run("create pkg")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        assert "protobuf/1.1" in c.out
+        assert "protobuf/1.0:" not in c.out
+
+        # verify locks work
+        c.run("lock create app/conanfile.py")
+        lock = c.load("conan.lock")
+        assert "protobuf/1.1" in lock
+        assert "protobuf/1.0" not in lock
+        # lock can be used
+        c.run("install app --lockfile=conan.lock")
+        assert "protobuf/1.1" in c.out
+        assert "protobuf/1.0:" not in c.out
+
+    def test_overriden_host_version_version_range(self):
+        """
+        same as above, but using version ranges instead of overrides
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("protobuf/[*]")
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>")
+            """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg,
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+        c.run("create protobuf 1.0@")
+        c.run("create pkg")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        assert "protobuf/1.0" in c.out
+        assert "protobuf/1.1" not in c.out
+
+        c.run("create protobuf 1.1@")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        assert "protobuf/1.1" in c.out
+        assert "protobuf/1.0" not in c.out
+
+        # verify locks work
+        c.run("lock create app/conanfile.py")
+        lock = c.load("conan.lock")
+        assert "protobuf/1.1" in lock
+        assert "protobuf/1.0" not in lock
+        # lock can be used
+        c.run("install app --lockfile=conan.lock")
+        assert "protobuf/1.1" in c.out
+        assert "protobuf/1.0:" not in c.out
+
+    def test_track_host_error_nothost(self):
+        """
+        if no host requirement is defined, it will be an error
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "protobuf"
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>")
+            """)
+
+        c.save({"pkg/conanfile.py": pkg})
+        c.run("install pkg", assert_error=True)
+        assert "ERROR: Loop detected" in c.out

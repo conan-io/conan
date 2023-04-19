@@ -404,6 +404,16 @@ class DepsGraphBuilder(object):
 
     def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
                         update, remotes, profile, graph_lock, original_ref=None):
+
+        ref = requirement.ref
+        if ref.version == "<host_version>":
+            transitive = current_node._public_deps.get(ref.name, context="host")
+            if transitive is None:
+                raise ConanException(
+                    f"{current_node.ref} require '{ref}': didn't find a matching "
+                    "host dependency")
+            requirement.ref = transitive.ref
+
         try:
             result = self._proxy.get_recipe(requirement.ref, check_updates, update,
                                             remotes, self._recorder)
