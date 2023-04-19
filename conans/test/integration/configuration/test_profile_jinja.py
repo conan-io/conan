@@ -124,6 +124,7 @@ def test_profile_template_profile_name():
         """)
     default = textwrap.dedent("""
         [settings]
+        os=Windows
         [conf]
         user.profile:name = {{ profile_name }}
         """)
