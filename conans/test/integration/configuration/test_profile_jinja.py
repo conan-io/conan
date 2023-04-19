@@ -6,7 +6,6 @@ from conan import conan_version
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
-from conan.tools.files import save
 
 
 def test_profile_template():
@@ -125,7 +124,6 @@ def test_profile_template_profile_name():
         """)
     default = textwrap.dedent("""
         [settings]
-        os=Windows
         [conf]
         user.profile:name = {{ profile_name }}
         """)
