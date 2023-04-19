@@ -103,3 +103,39 @@ def test_requiremens_inspect():
     tc.save({"conanfile.py": conanfile})
     tc.run("inspect .")
     assert "requires: [zlib/1.2.13]" in tc.out
+
+
+def test_pythonrequires_remote():
+    tc = TestClient(default_server_user=True)
+    pyrequires = textwrap.dedent("""
+    from conan import ConanFile
+
+    class MyBase:
+        def set_name(self):
+            self.name = "my_company_package"
+
+    class PyReq(ConanFile):
+        name = "pyreq"
+        version = "1.0"
+        package_type = "python-require"
+    """)
+    tc.save({"pyreq/conanfile.py": pyrequires})
+    tc.run("create pyreq/")
+    tc.run("upload pyreq/1.0 -r default")
+    tc.run("search * -r default")
+    assert "pyreq/1.0" in tc.out
+    tc.run("remove * -c")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        python_requires = "pyreq/1.0"
+        python_requires_extend = "pyreq.MyBase"
+
+        def set_version(self):
+            self.version = "1.0"
+    """)
+    tc.save({"conanfile.py": conanfile})
+    tc.run("inspect . -r default")
+    assert "name: my_company_package" in tc.out
+    assert "version: 1.0" in tc.out
