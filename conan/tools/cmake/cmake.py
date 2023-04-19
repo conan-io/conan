@@ -104,6 +104,10 @@ class CMake(object):
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
+        verbosity = self._verbosity
+        if verbosity is not None:
+            arg_list.append(f"--log-level={verbosity}")
+
         if cli_args:
             arg_list.extend(cli_args)
 
@@ -209,3 +213,19 @@ class CMake(object):
         env = ["conanbuild", "conanrun"] if env == "" else env
         self._build(build_type=build_type, target=target, cli_args=cli_args,
                     build_tool_args=build_tool_args, env=env)
+
+    @property
+    def _verbosity(self):
+        verbosity = self._conanfile.conf.get("tools.build:verbosity")
+        if verbosity:
+            # ERROR, WARNING, NOTICE, STATUS (default), VERBOSE, DEBUG, or TRACE
+            verbosities = {
+
+            }
+            if verbosity not in ("quiet", "error", "warning", "notice", "status", "normal",
+                                 "verbose", "debug", "v", "trace", "vv"):
+                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
+            else:
+                # We map 1:1 to CMake's log levels
+                return verbosity
+        return None
