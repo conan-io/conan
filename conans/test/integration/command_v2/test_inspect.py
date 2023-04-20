@@ -10,16 +10,18 @@ def test_basic_inspect():
     t.save({"foo/conanfile.py": GenConanfile().with_name("foo").with_shared_option()})
     t.run("inspect foo/conanfile.py")
     lines = t.out.splitlines()
-    assert lines == ["default_options:",
-                     "    shared: False",
-
+    assert lines == ['default_options:',
+                     '    shared: False',
                      'generators: []',
+                     'label: ',
                      'name: foo',
-                     'no_copy_source: False',
-                     "options:",
-                     "    shared: [True, False]",
-                     'revision_mode: hash',
-                     ]
+                     'options:',
+                     '    shared: False',
+                     'options_definitions:',
+                     "    shared: ['True', 'False']",
+                     'package_type: None',
+                     'requires: []',
+                     'revision_mode: hash']
 
 
 def test_options_description():
@@ -77,19 +79,18 @@ def test_normal_inspect():
     tc = TestClient()
     tc.run("new basic -d name=pkg -d version=1.0")
     tc.run("inspect .")
-    assert tc.out == textwrap.dedent("""
-    description: A basic recipe
-    generators: []
-    homepage: <Your project homepage goes here>
-    label:
-    license: <Your project license goes here>
-    name: pkg
-    options:
-    options_definitions:
-    package_type: None
-    requires: []
-    revision_mode: hash
-    version: 1.0""")
+    assert tc.out.splitlines() == ['description: A basic recipe',
+                                   'generators: []',
+                                   'homepage: <Your project homepage goes here>',
+                                   'label: ',
+                                   'license: <Your project license goes here>',
+                                   'name: pkg',
+                                   'options:',
+                                   'options_definitions:',
+                                   'package_type: None',
+                                   'requires: []',
+                                   'revision_mode: hash',
+                                   'version: 1.0']
 
 
 def test_requiremens_inspect():
