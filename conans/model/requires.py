@@ -144,11 +144,10 @@ class Requirement:
         return "{}, Traits: {}".format(self.ref, traits)
 
     def serialize(self):
-        return {attribute: getattr(self, attribute) for attribute in ("run", "libs", "skip",
-                                                                      "test", "force", "direct",
-                                                                      "transitive_headers", "build",
-                                                                      "transitive_libs", "headers",
-                                                                      "package_id_mode", "visible")}
+        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+                        "transitive_headers", "transitive_libs", "headers",
+                        "package_id_mode", "visible")
+        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,

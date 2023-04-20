@@ -93,6 +93,26 @@ def test_normal_inspect():
                                    'version: 1.0']
 
 
+def test_empty_inspect():
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Pkg(ConanFile):
+        pass""")
+    tc = TestClient()
+    tc.save({"conanfile.py": conanfile})
+    tc.run("inspect . -f json")
+
+
+def test_basic_new_inspect():
+    tc = TestClient()
+    tc.run("new basic")
+    tc.run("inspect . -f json")
+
+    tc.run("new cmake_lib -d name=pkg -d version=1.0 -f")
+    tc.run("inspect . -f json")
+
+
 def test_requiremens_inspect():
     tc = TestClient()
     conanfile = textwrap.dedent("""
@@ -100,18 +120,20 @@ def test_requiremens_inspect():
 
     class Pkg(ConanFile):
         requires = "zlib/1.2.13"
+        license = "MIT", "Apache"
     """)
     tc.save({"conanfile.py": conanfile})
     tc.run("inspect .")
     assert ['generators: []',
             'label: ',
+            "license: ['MIT', 'Apache']",
             'options:',
             'options_definitions:',
             'package_type: None',
-            "requires: [{'ref': zlib/1.2.13, 'run': False, 'libs': True, 'skip': False, "
-            "'test': False, 'force': False, 'direct': True, 'transitive_headers': None, "
-            "'build': False, 'transitive_libs': None, 'headers': True, 'package_id_mode': "
-            "None, 'visible': True}]",
+            "requires: [{'ref': 'zlib/1.2.13', 'run': 'False', 'libs': 'True', 'skip': "
+            "'False', 'test': 'False', 'force': 'False', 'direct': 'True', 'build': "
+            "'False', 'transitive_headers': 'None', 'transitive_libs': 'None', 'headers': "
+            "'True', 'package_id_mode': 'None', 'visible': 'True'}]",
             'revision_mode: hash'] == tc.out.splitlines()
 
 
