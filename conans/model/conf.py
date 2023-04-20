@@ -276,7 +276,7 @@ class Conf:
         for k, v in self._values.items():
             yield k, v.value
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None, choices=None):
         """
         Get all the values of the given configuration name.
 
@@ -293,6 +293,8 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
+            if choices is not None and v not in choices:
+                raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
@@ -495,13 +497,13 @@ class ConfDefinition:
     def __bool__(self):
         return bool(self._pattern_confs)
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None, choices=None):
         """
         Get the value of the conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
         return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
-                                                            check_type=check_type)
+                                                            check_type=check_type, choices=choices)
 
     def show(self, fnpattern):
         """

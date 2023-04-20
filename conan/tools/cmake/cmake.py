@@ -216,16 +216,15 @@ class CMake(object):
 
     @property
     def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build:verbosity")
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "error",
+                                                                               "warning", "notice",
+                                                                               "status", "normal",
+                                                                               "verbose", "debug",
+                                                                               "v", "trace", "vv"))
         if verbosity:
-            # ERROR, WARNING, NOTICE, STATUS (default), VERBOSE, DEBUG, or TRACE
-            verbosities = {
-
-            }
-            if verbosity not in ("quiet", "error", "warning", "notice", "status", "normal",
-                                 "verbose", "debug", "v", "trace", "vv"):
-                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
-            else:
-                # We map 1:1 to CMake's log levels
-                return verbosity
+            # Our verbosity maps to CMake's in most except for these 4
+            return {"quiet": "ERROR",
+                    "normal": "STATUS",
+                    "v": "DEBUG",
+                    "vv": "TRACE"}.get(verbosity, verbosity).upper()
         return None

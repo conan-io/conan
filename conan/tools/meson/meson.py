@@ -101,25 +101,25 @@ class Meson(object):
 
     @property
     def _build_verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build:verbosity")
-        if verbosity:
-            if verbosity not in ("quiet", "error", "warning", "notice", "status", "normal",
-                                 "verbose", "debug", "v", "trace", "vv"):
-                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
-            elif verbosity in ("verbose", "debug", "v", "trace", "vv"):
-                return "--verbose"
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "error",
+                                                                               "warning", "notice",
+                                                                               "status", "normal",
+                                                                               "verbose", "debug",
+                                                                               "v", "trace", "vv"))
+        if verbosity in ("verbose", "debug", "v", "trace", "vv"):
+            return "--verbose"
         return ""
 
     @property
     def _install_verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build:verbosity")
-        if verbosity:
-            if verbosity not in ("quiet", "error", "warning", "notice", "status", "normal",
-                                 "verbose", "debug", "v", "trace", "vv"):
-                raise ConanException(f"Unknown value '{verbosity}' for 'tools.build:verbosity'")
-            elif verbosity == "quiet":
-                # https://github.com/mesonbuild/meson/blob/master/mesonbuild/minstall.py
-                # Errors are always logged, and status about installed files is controlled by this flag,
-                # so it's a bit backwards
-                return "--quiet"
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "error",
+                                                                               "warning", "notice",
+                                                                               "status", "normal",
+                                                                               "verbose", "debug",
+                                                                               "v", "trace", "vv"))
+        if verbosity == "quiet":
+            # https://github.com/mesonbuild/meson/blob/master/mesonbuild/minstall.py
+            # Errors are always logged, and status about installed files is controlled by this flag,
+            # so it's a bit backwards
+            return "--quiet"
         return ""

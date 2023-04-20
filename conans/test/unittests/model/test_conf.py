@@ -256,3 +256,24 @@ def test_conf_pop():
     assert c.pop("user.microsoft.msbuild:missing") is None
     assert c.pop("user.microsoft.msbuild:missing", default="fake") == "fake"
     assert c.pop("zlib:user.company.check:shared_str") == '"False"'
+
+
+def test_conf_choices():
+    confs = textwrap.dedent("""
+    user.category:option1=1
+    user.category:option2=3""")
+    c = ConfDefinition()
+    c.loads(confs)
+    assert c.get("user.category:option1", choices=[1, 2]) == 1
+    with pytest.raises(ConanException):
+        c.get("user.category:option2", choices=[1, 2])
+
+
+def test_conf_choices_default():
+    # Does not conflict with the default value
+    confs = textwrap.dedent("""
+        user.category:option1=1""")
+    c = ConfDefinition()
+    c.loads(confs)
+    assert c.get("user.category:option1", choices=[1, 2], default=7) == 1
+    assert c.get("user.category:option2", choices=[1, 2], default=7) == 7
