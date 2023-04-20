@@ -7,20 +7,22 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
                                                                      "status", "normal",
                                                                      "verbose", "debug",
                                                                      "v", "trace", "vv"))
-    verbosity = {
-        "quiet": "Quiet",
-        "error": "Minimal",
-        "warning": "Minimal",
-        "notice": "Minimal",
-        "status": "Normal",
-        "verbose": "Normal",
-        "normal": "Normal",
-        "debug": "Detailed",
-        "v": "Detailed",
-        "trace": "Diagnostic",
-        "vv": "Diagnostic"
-    }.get(verbosity)
-    return f'/verbosity:{verbosity}'
+    if verbosity is not None:
+        verbosity = {
+            "quiet": "Quiet",
+            "error": "Minimal",
+            "warning": "Minimal",
+            "notice": "Minimal",
+            "status": "Normal",
+            "verbose": "Normal",
+            "normal": "Normal",
+            "debug": "Detailed",
+            "v": "Detailed",
+            "trace": "Diagnostic",
+            "vv": "Diagnostic"
+        }.get(verbosity)
+        return f'/verbosity:{verbosity}'
+    return ""
 
 
 def msbuild_arch(arch):
