@@ -103,7 +103,16 @@ def test_requiremens_inspect():
     """)
     tc.save({"conanfile.py": conanfile})
     tc.run("inspect .")
-    assert "requires: [zlib/1.2.13]" in tc.out
+    assert ['generators: []',
+            'label: ',
+            'options:',
+            'options_definitions:',
+            'package_type: None',
+            "requires: [{'ref': zlib/1.2.13, 'run': False, 'libs': True, 'skip': False, "
+            "'test': False, 'force': False, 'direct': True, 'transitive_headers': None, "
+            "'build': False, 'transitive_libs': None, 'headers': True, 'package_id_mode': "
+            "None, 'visible': True}]",
+            'revision_mode: hash'] == tc.out.splitlines()
 
 
 def test_pythonrequires_remote():
@@ -140,3 +149,14 @@ def test_pythonrequires_remote():
     tc.run("inspect . -r default")
     assert "name: my_company_package" in tc.out
     assert "version: 1.0" in tc.out
+
+
+def test_serializable_inspect():
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("a", "1.0")
+            .with_requires("b/2.0")
+            .with_setting("os")
+            .with_option("shared", [True, False])
+            .with_generator("CMakeDeps")})
+    tc.run("inspect . --format=json")
+    assert json.loads(tc.out)["name"] == "a"

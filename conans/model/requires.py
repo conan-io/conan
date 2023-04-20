@@ -143,6 +143,13 @@ class Requirement:
                                              self.visible)
         return "{}, Traits: {}".format(self.ref, traits)
 
+    def serialize(self):
+        return {attribute: getattr(self, attribute) for attribute in ("run", "libs", "skip",
+                                                                      "test", "force", "direct",
+                                                                      "transitive_headers", "build",
+                                                                      "transitive_libs", "headers",
+                                                                      "package_id_mode", "visible")}
+
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
                            run=self.run, visible=self.visible,
@@ -554,3 +561,6 @@ class Requirements:
 
     def __repr__(self):
         return repr(self._requires.values())
+
+    def serialize(self):
+        return [v.serialize() for v in self._requires.values()]

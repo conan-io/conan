@@ -140,6 +140,7 @@ class ConanFile:
         result["options"] = self.options.serialize()
         result["options_definitions"] = self.options.possible_values
 
+        result["requires"] = self.requires.serialize()
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result["system_requires"] = self.system_requires
