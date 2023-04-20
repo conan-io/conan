@@ -64,8 +64,8 @@ class ClientCache(object):
     def assign_rrev(self, layout: RecipeLayout):
         return self._data_cache.assign_rrev(layout)
 
-    def create_build_pkg_layout(self, ref):
-        return self._data_cache.create_build_pkg_layout(ref)
+    def create_build_pkg_layout(self, ref, skip_upload):
+        return self._data_cache.create_build_pkg_layout(ref, skip_upload)
 
     def assign_prev(self, layout: PackageLayout):
         return self._data_cache.assign_prev(layout)

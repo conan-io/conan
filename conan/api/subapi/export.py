@@ -30,11 +30,13 @@ class ExportAPI:
         out.info("Exporting binary from user folder to Conan cache")
         conanfile = pkg_node.conanfile
 
+        skip_upload = conanfile.upload_policy == "skip"
+
         package_id = pkg_node.package_id
         assert package_id is not None
         out.info("Packaging to %s" % package_id)
         pref = PkgReference(ref, package_id)
-        pkg_layout = cache.create_build_pkg_layout(pref)
+        pkg_layout = cache.create_build_pkg_layout(pref, skip_upload)
 
         conanfile.folders.set_base_folders(source_folder, output_folder)
         dest_package_folder = pkg_layout.package()

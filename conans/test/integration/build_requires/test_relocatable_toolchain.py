@@ -47,9 +47,13 @@ def test_relocatable_toolchain():
                 pkg_folder = self.dependencies.build["base"].package_folder
                 sdk = load(self, os.path.join(pkg_folder, "sdk.txt"))
                 save(self, os.path.join(self.package_folder, "sdk.txt"), "CUSTOM PATH: " + sdk)
+                # CAPTURES CURRENT CWD
+                save(self, os.path.join(self.package_folder, "cwd.txt"), self.package_folder)
 
             def package_info(self):
                 self.output.info(f"SDK INFO: {load(self, 'sdk.txt')}!!!")
+                # THE CWD HAS NOT BEEN MODIFIED!!
+                assert load(self, "cwd.txt") == self.package_folder
         """)
     c.save({"linux": "[settings]\nos=Linux\narch=x86_64",
             "embedded": "[settings]\narch=armv8",

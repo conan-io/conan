@@ -302,7 +302,8 @@ class BinaryInstaller:
 
         if pref.revision is None:
             assert package.binary == BINARY_BUILD
-            package_layout = self._cache.create_build_pkg_layout(pref)
+            skip_upload = package.nodes[0].conanfile.upload_policy == "skip"
+            package_layout = self._cache.create_build_pkg_layout(pref, skip_upload)
         else:
             package_layout = self._cache.get_or_create_pkg_layout(pref)
 

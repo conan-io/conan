@@ -54,10 +54,11 @@ class DataCache:
         return os.path.join("t", h)
 
     @staticmethod
-    def _get_tmp_path_pref(pref):
+    def _get_tmp_path_pref(pref, skip_upload):
         # The reference will not have revision, but it will be always constant
         h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime())
-        return os.path.join("t", h)
+        folder = "t" if not skip_upload else "c"
+        return os.path.join(folder, h)
 
     @staticmethod
     def _get_path(ref: RecipeReference):
@@ -76,13 +77,13 @@ class DataCache:
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
-    def create_build_pkg_layout(self, pref: PkgReference):
+    def create_build_pkg_layout(self, pref: PkgReference, skip_upload: bool):
         # Temporary layout to build a new package, when we don't know the package revision yet
         assert pref.ref.revision, "Recipe revision must be known to get or create the package layout"
         assert pref.package_id, "Package id must be known to get or create the package layout"
         assert pref.revision is None, "Package revision should be None"
         assert pref.timestamp is None
-        package_path = self._get_tmp_path_pref(pref)
+        package_path = self._get_tmp_path_pref(pref, skip_upload)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
@@ -179,14 +180,16 @@ class DataCache:
 
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
-
-        new_path = self._get_path_pref(pref)
-
-        full_path = self._full_path(new_path)
-        rmdir(full_path)
-
-        renamedir(self._full_path(layout.base_folder), full_path)
-        layout._base_folder = os.path.join(self.base_folder, new_path)
+        base_folder = layout.base_folder
+        skip_upload = os.path.basename(os.path.dirname(base_folder)) == "c"
+        if not skip_upload:
+            new_path = self._get_path_pref(pref)
+            full_path = self._full_path(new_path)
+            rmdir(full_path)
+            renamedir(self._full_path(layout.base_folder), full_path)
+            layout._base_folder = os.path.join(self.base_folder, new_path)
+        else:
+            new_path = base_folder
 
         build_id = layout.build_id
         pref.timestamp = revision_timestamp_now()
