@@ -6,6 +6,7 @@ import yaml
 from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
+from conan.api.output import ConanOutput
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -27,8 +28,6 @@ PROFILES_FOLDER = "profiles"
 EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
 PLUGINS_FOLDER = "plugins"
-DEPLOYERS_EXTENSION_FOLDER = "deploy"
-CUSTOM_COMMANDS_FOLDER = "commands"
 
 
 # TODO: Rename this to ClientHome
@@ -186,7 +185,7 @@ class ClientCache(object):
 
     @property
     def custom_commands_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "commands")
 
     @property
     def custom_generators_path(self):
@@ -203,14 +202,16 @@ class ClientCache(object):
 
     @property
     def hooks_path(self):
-        """
-        :return: Hooks folder in client cache
-        """
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
 
     @property
     def deployers_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, DEPLOYERS_EXTENSION_FOLDER)
+        deploy = os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deploy")
+        if os.path.exists(deploy):
+            ConanOutput().warning("Use 'deployers' cache folder for deployers instead of 'deploy'",
+                                  warn_tag="deprecated")
+            return deploy
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deployers")
 
     @property
     def settings(self):
