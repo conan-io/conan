@@ -2,6 +2,7 @@
 
 import itertools
 import os
+import platform
 import unittest
 
 import pytest
@@ -140,9 +141,12 @@ int main() {
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp})
 
+        # FIXME: this is a hack to force VS2017 for tests
+        settings = "-s compiler.version=15" if platform.system() == "Windows" else ""
+
         # Build consumer project
         client.run("create . pkg/0.0@user/testing "
-                   "-s build_type={} -o MyLib:shared={}".format(build_type, str(shared)))
+                   "-s build_type={} -o MyLib:shared={} {}".format(build_type, str(shared), settings))
         self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("Hello {}!".format(build_type), client.out)
         self.assertIn(" - options.shared: {}".format(shared), client.out)

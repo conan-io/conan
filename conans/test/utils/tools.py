@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 import shlex
 import shutil
 import socket
@@ -333,6 +334,11 @@ def _copy_cache_folder(target_folder):
         cache.initialize_config()
         cache.registry.initialize_remotes()
         cache.initialize_default_profile()
+        # FIXME: this is a hack to force VS2017 for tests
+        if platform.system() == "Windows":
+            replace_in_file(os.path.join(master_folder, "profiles", "default"),
+                            "compiler.version=17", "compiler.version=15")
+
         cache.initialize_settings()
     shutil.copytree(master_folder, target_folder)
 
