@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 from typing import List
 
 import yaml
@@ -167,8 +168,16 @@ class ClientCache(object):
                 content = template.render({"platform": platform, "os": os, "distro": distro,
                                            "conan_version": conan_version,
                                            "conan_home_folder": self.cache_folder})
-
                 self._new_config.loads(content)
+            else:  # creation of a blank global.conf file for user convenience
+                default_global_conf = textwrap.dedent("""\
+                    # Core configuration (type 'conan config list' to list possible values)
+                    # e.g, for CI systems, to raise if user input would block
+                    # core:non_interactive = True
+                    # some tools.xxx config also possible, though generally better in profiles
+                    # tools.android:ndk_path = my/path/to/android/ndk
+                    """)
+                save(self.new_config_path, default_global_conf)
         return self._new_config
 
     @property
