@@ -6,7 +6,7 @@ from conan.cli.formatters import default_json_formatter
 
 
 def inspect_text_formatter(data):
-    for name, value in sorted(data.items(), key=lambda x: x[0]):
+    for name, value in sorted(data.items()):
         if value is None:
             continue
         if isinstance(value, dict):
