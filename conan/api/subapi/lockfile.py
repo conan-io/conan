@@ -27,7 +27,7 @@ class LockfileAPI:
         :param cwd: the current working dir, if None, os.getcwd() will be used
         :param conanfile_path: The full path to the conanfile, if existing
         :param lockfile: the name of the lockfile file
-        :param overrides: Dictionary or string contaning dictionary {overriden: [new_ref1, new_ref2]}
+        :param overrides: Dictionary of overrides {overriden: [new_ref1, new_ref2]}
         """
         if lockfile == "":
             # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
@@ -51,8 +51,6 @@ class LockfileAPI:
         graph_lock.partial = partial
 
         if overrides:
-            if isinstance(overrides, str):
-                overrides = eval(overrides)
             graph_lock._overrides = Overrides.deserialize(overrides)
         ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
         return graph_lock

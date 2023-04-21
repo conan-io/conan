@@ -332,7 +332,7 @@ def test_command_line_lockfile_overrides():
     c.run("create pkga --version=0.1")
     c.run("create pkga --version=0.2")
     c.run("create pkgb")
-    c.run('install pkgc --lockfile-overrides="{pkga/0.1: [\'pkga/0.2\']}"', assert_error=True)
+    c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"', assert_error=True)
     assert "Cannot define overrides without a lockfile" in c.out
     c.run('lock create pkgc')
     c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"', assert_error=True)
