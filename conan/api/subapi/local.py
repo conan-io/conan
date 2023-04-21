@@ -103,3 +103,10 @@ class LocalAPI:
         with conanfile_exception_formatter(conanfile, "test"):
             with chdir(conanfile.build_folder):
                 conanfile.test()
+
+    def inspect(self, conanfile_path, remotes, lockfile):
+        app = ConanApp(self._conan_api.cache_folder)
+        conanfile = app.loader.load_named(conanfile_path, name=None, version=None,
+                                          user=None, channel=None, remotes=remotes, graph_lock=lockfile)
+        return conanfile
+

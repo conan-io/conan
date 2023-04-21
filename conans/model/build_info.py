@@ -47,9 +47,9 @@ class MockInfoProperty:
         if not MockInfoProperty.counter:
             return
         ConanOutput().warning("Usage of deprecated Conan 1.X features that will be removed in "
-                              "Conan 2.X:")
+                              "Conan 2.X:", warn_tag="deprecated")
         for k, v in MockInfoProperty.counter.items():
-            ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}")
+            ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}", warn_tag="deprecated")
         MockInfoProperty.counter = {}
 
     def __getitem__(self, key):

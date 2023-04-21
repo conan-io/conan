@@ -34,7 +34,7 @@ def install(conan_api, parser, *args):
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("--deploy", action="append",
+    parser.add_argument("-d", "--deployer", action="append",
                         help='Deploy using the provided deployer to the output folder')
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided reference is a build-require')
@@ -87,7 +87,7 @@ def install(conan_api, parser, *args):
                                        generators=args.generator,
                                        output_folder=output_folder,
                                        source_folder=source_folder,
-                                       deploy=args.deploy
+                                       deploy=args.deployer
                                        )
 
     out.success("Install finished successfully")
