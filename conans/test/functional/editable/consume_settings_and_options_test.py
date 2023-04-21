@@ -142,8 +142,7 @@ int main() {
                      "src/main.cpp": main_cpp})
 
         # FIXME: this is a hack to force VS2017 for tests
-        if platform.system() == "Windows":
-            settings = "-s compiler.version=15"
+        settings = "-s compiler.version=15" if platform.system() == "Windows" else ""
 
         # Build consumer project
         client.run("create . pkg/0.0@user/testing "

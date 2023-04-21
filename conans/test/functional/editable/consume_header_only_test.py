@@ -148,8 +148,8 @@ int main() {
 
         # Build consumer project
         # FIXME: this is a hack to force VS2017 for tests
-        if platform.system() == "Windows":
-            settings = "-s compiler.version=15"
+        settings = "-s compiler.version=15" if platform.system() == "Windows" else ""
+        
         client.run(f"create . pkg/0.0@user/testing {settings}")
         self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("    MyLib/0.1@user/editable:"
