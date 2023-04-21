@@ -256,10 +256,7 @@ class ClientCache(object):
 
             appending_recursive_dict_update(settings, settings_user)
 
-        try:
-            return Settings(settings)
-        except AttributeError as e:
-            raise ConanException("Invalid settings.yml format: {}".format(e))
+        return Settings(settings)
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?
