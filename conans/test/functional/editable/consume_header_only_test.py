@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import platform
 import textwrap
 import unittest
 
@@ -9,6 +10,7 @@ from parameterized import parameterized
 
 from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
 from conans.test.utils.tools import TestClient
+from conans.tools import replace_in_file
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 
@@ -145,7 +147,10 @@ int main() {
                      "src/main.cpp": main_cpp})
 
         # Build consumer project
-        client.run("create . pkg/0.0@user/testing")
+        # FIXME: this is a hack to force VS2017 for tests
+        if platform.system() == "Windows":
+            settings = "-s compiler.version=15"
+        client.run(f"create . pkg/0.0@user/testing {settings}")
         self.assertIn("    MyLib/0.1@user/editable from user folder - Editable", client.out)
         self.assertIn("    MyLib/0.1@user/editable:"
                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Editable", client.out)
@@ -165,7 +170,7 @@ int main() {
 
         # Modify editable and build again
         client_editable.update_hello_word(hello_word="EDITED")
-        client.run("create . pkg/0.0@user/testing")
+        client.run(f"create . pkg/0.0@user/testing {settings}")
         self.assertIn("Hello EDITED!", client.out)
         if use_repo_file:  # Repo file will override folders from cache
             self.assertIn("...using inrepo", client.out)
