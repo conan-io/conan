@@ -11,6 +11,7 @@ from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conans.client.graph.install_graph import InstallGraph
 from conan.errors import ConanException
+from conans.util.files import mkdir
 
 
 @conan_command(group="Consumer")
@@ -118,6 +119,8 @@ def graph_info(conan_api, parser, subparser, *args):
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("-d", "--deployer", action="append",
                            help='Deploy using the provided deployer to the output folder')
+    subparser.add_argument("--output-deployer",
+                           help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
@@ -166,7 +169,8 @@ def graph_info(conan_api, parser, subparser, *args):
                                                       clean=args.lockfile_clean)
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
         if args.deployer:
-            base_folder = os.getcwd()
+            base_folder = args.output_deployer or os.getcwd()
+            mkdir(base_folder)
             do_deploys(conan_api, deps_graph, args.deployer, base_folder)
 
     return {"graph": deps_graph,
