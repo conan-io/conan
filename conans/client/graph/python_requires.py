@@ -101,8 +101,8 @@ class PyRequireLoader(object):
                                  "Please use version ranges instead")
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
-        else:
-            self._range_resolver.resolve(requirement, "py_require", remotes, update)
+        # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
+        self._range_resolver.resolve(requirement, "py_require", remotes, update)
         ref = requirement.ref
         return ref
 
