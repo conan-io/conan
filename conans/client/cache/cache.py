@@ -7,7 +7,6 @@ import yaml
 from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
-from conan.api.output import ConanOutput
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -193,10 +192,6 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
-    def custom_commands_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "commands")
-
-    @property
     def custom_generators_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "generators")
 
@@ -212,15 +207,6 @@ class ClientCache(object):
     @property
     def hooks_path(self):
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
-
-    @property
-    def deployers_path(self):
-        deploy = os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deploy")
-        if os.path.exists(deploy):
-            ConanOutput().warning("Use 'deployers' cache folder for deployers instead of 'deploy'",
-                                  warn_tag="deprecated")
-            return deploy
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deployers")
 
     @property
     def settings(self):
