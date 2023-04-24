@@ -146,6 +146,7 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
+        self._alias.update(other._alias)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
         """ adding new things manually will trigger the sort() of the locked list, so lockfiles
