@@ -177,7 +177,6 @@ def test_relative_paths():
             cmd = "test.bat && myhello.bat"
         else:
             test_sh = load("test.sh")
-
             assert 'export PATH="$script_folder/myscripts"' in test_sh
             cmd = ". ./test.sh && myhello.sh"
         result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -189,6 +188,7 @@ def test_relative_paths():
     shutil.move(folder, new_folder)
     with chdir(new_folder):
         if platform.system() != "Windows":
+            # It is NOT possible to fully relativize shell scripts for sh (not bash)
             # https://stackoverflow.com/questions/29832037/
             # how-to-get-script-directory-in-posix-sh/29835459#29835459
             script = load("test.sh").replace(folder, new_folder)
