@@ -1,5 +1,6 @@
 import os
 import platform
+import shutil
 import subprocess
 import textwrap
 
@@ -9,7 +10,7 @@ from conan.tools.env import Environment
 from conans.client.subsystems import WINDOWS
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save, chdir
+from conans.util.files import save, chdir, load
 
 
 @pytest.fixture
@@ -150,3 +151,49 @@ def test_env_files_sh(env, prevenv):
         # We include the "set -e" to test it is robust against errors
         cmd = 'set -e && . ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
         check_env_files_output(cmd, prevenv)
+
+
+def test_relative_paths():
+    folder = temp_folder()
+    scripts_folder = os.path.join(folder, "myscripts")
+    display = textwrap.dedent("""\
+        echo Hello MyWorld!!!
+        """)
+    save(os.path.join(scripts_folder, "myhello.bat"), display)
+    save(os.path.join(scripts_folder, "myhello.sh"), display)
+    os.chmod(os.path.join(scripts_folder, "myhello.sh"), 0o777)
+
+    with chdir(folder):
+        env = Environment()
+        env.define_path("PATH", scripts_folder)
+        conanfile = ConanFileMock()
+        conanfile.folders._base_generators = folder
+        env = env.vars(conanfile)
+        env.save_bat("test.bat")
+        env.save_sh("test.sh")
+        if platform.system() == "Windows":
+            test_bat = load("test.bat")
+            assert r'set "PATH=%~dp0\myscripts"' in test_bat
+            cmd = "test.bat && myhello.bat"
+        else:
+            test_sh = load("test.sh")
+
+            assert 'export PATH="$script_folder/myscripts"' in test_sh
+            cmd = ". ./test.sh && myhello.sh"
+        result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     shell=True).communicate()
+        out = result.decode()
+        assert 'Hello MyWorld!!!' in out
+
+    new_folder = os.path.join(temp_folder(), "new_folder")
+    shutil.move(folder, new_folder)
+    with chdir(new_folder):
+        if platform.system() != "Windows":
+            # https://stackoverflow.com/questions/29832037/
+            # how-to-get-script-directory-in-posix-sh/29835459#29835459
+            script = load("test.sh").replace(folder, new_folder)
+            save("test.sh", script)
+        result, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     shell=True).communicate()
+        out = result.decode()
+        assert 'Hello MyWorld!!!' in out
