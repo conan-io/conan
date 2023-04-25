@@ -149,7 +149,6 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
-        # TODO: Check if this holds for merges
         self._alias.update(other._alias)
         self._overrides.update(other._overrides)
 
