@@ -407,11 +407,13 @@ class DepsGraphBuilder(object):
 
         ref = requirement.ref
         if ref.version == "<host_version>":
+            if not requirement.build_require:
+                raise ConanException(f"{current_node.ref} uses '<host_version>' in requires, "
+                                     "it is only allowed in tool_requires")
             transitive = current_node._public_deps.get(ref.name, context="host")
             if transitive is None:
                 raise ConanException(
-                    f"{current_node.ref} require '{ref}': didn't find a matching "
-                    "host dependency")
+                    f"{current_node.ref} require '{ref}': didn't find a matching host dependency")
             requirement.ref = transitive.ref
 
         try:

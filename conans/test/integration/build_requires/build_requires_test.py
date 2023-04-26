@@ -3,6 +3,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -532,7 +533,8 @@ def test_tool_requires_conanfile_txt():
 
 class TestBuildTrackHost:
 
-    def test_overriden_host_version(self):
+    @pytest.mark.parametrize("build_profile", [False, True])
+    def test_overriden_host_version(self, build_profile):
         """
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
@@ -553,55 +555,49 @@ class TestBuildTrackHost:
                                                   .with_requirement("protobuf/1.1", override=True)})
         c.run("create protobuf 1.0@")
         c.run("create protobuf 1.1@")
-        c.run("create pkg")
-        c.run("install pkg")  # make sure it doesn't crash
-        c.run("install app")
+        build_profile = "-pr:b default" if build_profile else ""
+        c.run(f"create pkg {build_profile}")
+        c.run(f"install pkg {build_profile}")  # make sure it doesn't crash
+        c.run(f"install app {build_profile}")
         assert "protobuf/1.1" in c.out
         assert "protobuf/1.0:" not in c.out
 
         # verify locks work
-        c.run("lock create app/conanfile.py")
+        c.run(f"lock create app/conanfile.py {build_profile}")
         lock = c.load("conan.lock")
         assert "protobuf/1.1" in lock
         assert "protobuf/1.0" not in lock
         # lock can be used
-        c.run("install app --lockfile=conan.lock")
+        c.run(f"install app --lockfile=conan.lock")
         assert "protobuf/1.1" in c.out
         assert "protobuf/1.0:" not in c.out
 
-    def test_overriden_host_version_version_range(self):
+    @pytest.mark.parametrize("build_profile", [False, True])
+    def test_overriden_host_version_version_range(self, build_profile):
         """
         same as above, but using version ranges instead of overrides
         """
+        build_profile = "-pr:b default" if build_profile else ""
         c = TestClient()
-        pkg = textwrap.dedent("""
-            from conan import ConanFile
-            class ProtoBuf(ConanFile):
-                name = "pkg"
-                version = "0.1"
-                def requirements(self):
-                    self.requires("protobuf/[*]")
-                def build_requirements(self):
-                    self.tool_requires("protobuf/<host_version>")
-            """)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
-                "pkg/conanfile.py": pkg,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requirement("protobuf/[*]")
+               .with_build_requirement("protobuf/<host_version>"),
                 "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
         c.run("create protobuf 1.0@")
-        c.run("create pkg")
-        c.run("install pkg")  # make sure it doesn't crash
-        c.run("install app")
+        c.run(f"create pkg {build_profile}")
+        c.run(f"install pkg {build_profile}")  # make sure it doesn't crash
+        c.run(f"install app {build_profile}")
         assert "protobuf/1.0" in c.out
         assert "protobuf/1.1" not in c.out
 
         c.run("create protobuf 1.1@")
-        c.run("install pkg")  # make sure it doesn't crash
-        c.run("install app")
+        c.run(f"install pkg {build_profile}")  # make sure it doesn't crash
+        c.run(f"install app {build_profile}")
         assert "protobuf/1.1" in c.out
         assert "protobuf/1.0" not in c.out
 
         # verify locks work
-        c.run("lock create app/conanfile.py")
+        c.run(f"lock create app/conanfile.py {build_profile}")
         lock = c.load("conan.lock")
         assert "protobuf/1.1" in lock
         assert "protobuf/1.0" not in lock
@@ -610,19 +606,25 @@ class TestBuildTrackHost:
         assert "protobuf/1.1" in c.out
         assert "protobuf/1.0:" not in c.out
 
-    def test_track_host_error_nothost(self):
+    @pytest.mark.parametrize("build_profile", [False, True])
+    def test_track_host_error_nothost(self, build_profile):
         """
         if no host requirement is defined, it will be an error
         """
+        build_profile = "-pr:b default" if build_profile else ""
         c = TestClient()
-        pkg = textwrap.dedent("""
-            from conan import ConanFile
-            class ProtoBuf(ConanFile):
-                name = "protobuf"
-                def build_requirements(self):
-                    self.tool_requires("protobuf/<host_version>")
-            """)
+        c.save({"conanfile.py":
+                GenConanfile("pkg").with_build_requirement("protobuf/<host_version>")})
+        c.run(f"install . {build_profile}", assert_error=True)
+        assert "'protobuf/<host_version>': didn't find a matching host dependency" in c.out
 
-        c.save({"pkg/conanfile.py": pkg})
-        c.run("install pkg", assert_error=True)
-        assert "ERROR: Loop detected" in c.out
+    @pytest.mark.parametrize("build_profile", [False, True])
+    def test_track_host_error_wrong_context(self, build_profile):
+        """
+        it can only be used by tool_requires, not regular requires
+        """
+        build_profile = "-pr:b default" if build_profile else ""
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg").with_requirement("protobuf/<host_version>")})
+        c.run(f"install . {build_profile}", assert_error=True)
+        assert "uses '<host_version>' in requires" in c.out
