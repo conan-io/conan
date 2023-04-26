@@ -24,12 +24,30 @@ def test_cache_clean():
     assert os.path.exists(ref_layout.download_export())
     assert os.path.exists(pkg_layout.download_package())
 
-    c.run('cache clean "*" -d')
+    c.run('cache clean -d')
     assert not os.path.exists(ref_layout.download_export())
     assert not os.path.exists(pkg_layout.download_package())
 
 
-def test_cache_clean_noargs_error():
+def test_cache_clean_all():
     c = TestClient()
-    c.run('cache clean "*"', assert_error=True)
-    assert "Define at least one argument among [--source, --build, --download]" in c.out
+    c.save({"pkg1/conanfile.py": GenConanfile("pkg", "0.1").with_package("error"),
+            "pkg2/conanfile.py": GenConanfile("pkg", "0.2")})
+    c.run("create pkg1", assert_error=True)
+    c.run("create pkg2")
+    pref = c.created_package_reference("pkg/0.2")
+    folder = os.path.join(c.cache_folder, "p", "t")
+    assert len(os.listdir(folder)) == 1
+    c.run('cache clean')
+    assert not os.path.exists(folder)
+    ref_layout = c.get_latest_ref_layout(pref.ref)
+    pkg_layout = c.get_latest_pkg_layout(pref)
+    assert not os.path.exists(ref_layout.source())
+    assert not os.path.exists(ref_layout.download_export())
+    assert not os.path.exists(pkg_layout.build())
+    assert not os.path.exists(pkg_layout.download_package())
+
+    # A second clean like this used to crash
+    # as it tried to delete a folder that was not there and tripped shutils up
+    c.run('cache clean')
+    assert not os.path.exists(folder)

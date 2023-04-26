@@ -116,8 +116,10 @@ def graph_info(conan_api, parser, subparser, *args):
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", action="append",
                            help='Print information only for packages that match the patterns')
-    subparser.add_argument("--deploy", action="append",
+    subparser.add_argument("-d", "--deployer", action="append",
                            help='Deploy using the provided deployer to the output folder')
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -141,7 +143,8 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         check_updates=args.check_updates)
+                                                         check_updates=args.check_updates,
+                                                         is_build_require=args.build_require)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
@@ -162,9 +165,9 @@ def graph_info(conan_api, parser, subparser, *args):
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
-        if args.deploy:
+        if args.deployer:
             base_folder = os.getcwd()
-            do_deploys(conan_api, deps_graph, args.deploy, base_folder)
+            do_deploys(conan_api, deps_graph, args.deployer, base_folder)
 
     return {"graph": deps_graph,
             "field_filter": args.filter,

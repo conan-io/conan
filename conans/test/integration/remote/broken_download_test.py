@@ -1,6 +1,9 @@
+import json
 import os
 
 import pytest
+from requests import Response
+
 from requests.exceptions import ConnectionError
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -127,3 +130,77 @@ def test_client_retries():
                                 "core.download:retry=11"}, path=client.cache.cache_folder)
     client.run("install --requires=lib/1.0@lasote/stable")
     assert 10 == str(client.out).count("Waiting 0 seconds to retry...")
+
+
+def test_forbidden_blocked_conanmanifest():
+    """ this is what happens when a server blocks downloading a specific file
+    """
+    server = TestServer()
+    servers = {"default": server}
+    client = TestClient(servers=servers, inputs=["admin", "password"])
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . --name=lib --version=1.0")
+    client.run("upload lib/1.0* -c -r default")
+
+    class DownloadForbidden(TestRequester):
+        def get(self, url, **kwargs):
+            if "conanmanifest.txt" in url:
+                r = Response()
+                r._content = "Forbidden because of security!!!"
+                r.status_code = 403
+                return r
+            else:
+                return super(DownloadForbidden, self).get(url, **kwargs)
+
+    client = TestClient(servers=servers, inputs=["admin", "password"],
+                        requester_class=DownloadForbidden)
+    client.run("download lib/1.0 -r=default", assert_error=True)
+    assert "Forbidden because of security!!!" in client.out
+
+    client.run("list *")
+    assert "lib/1.0" not in client.out
+
+    client.run("install --requires=lib/1.0", assert_error=True)
+    assert "Forbidden because of security!!!" in client.out
+
+    client.run("list *")
+    assert "lib/1.0" not in client.out
+
+
+def test_forbidden_blocked_package_conanmanifest():
+    """ this is what happens when a server blocks downloading a specific file
+    """
+    server = TestServer()
+    servers = {"default": server}
+    client = TestClient(servers=servers, inputs=["admin", "password"])
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . --name=lib --version=1.0")
+    client.run("upload lib/1.0* -c -r default")
+
+    class DownloadForbidden(TestRequester):
+        def get(self, url, **kwargs):
+            if "packages/" in url and "conanmanifest.txt" in url:
+                r = Response()
+                r._content = "Forbidden because of security!!!"
+                r.status_code = 403
+                return r
+            else:
+                return super(DownloadForbidden, self).get(url, **kwargs)
+
+    client = TestClient(servers=servers, inputs=["admin", "password"],
+                        requester_class=DownloadForbidden)
+    client.run("download lib/1.0 -r=default", assert_error=True)
+
+    def check_cache():
+        assert "Forbidden because of security!!!" in client.out
+        client.run("list *:* --format=json")
+        listjson = json.loads(client.stdout)
+        revisions = listjson["Local Cache"]["lib/1.0"]["revisions"]
+        packages = revisions["4d670581ccb765839f2239cc8dff8fbd"]["packages"]
+        assert packages == {}  # No binaries"
+
+    check_cache()
+
+    client.run("install --requires=lib/1.0", assert_error=True)
+    assert "Forbidden because of security!!!" in client.out
+    check_cache()

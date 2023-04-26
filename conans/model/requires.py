@@ -28,6 +28,7 @@ class Requirement:
         self._override = override
         self._direct = direct
         self.options = options
+        self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
 
     @property
     def skip(self):
@@ -141,6 +142,12 @@ class Requirement:
                  'run={}, visible={}'.format(self.build, self.headers, self.libs, self.run,
                                              self.visible)
         return "{}, Traits: {}".format(self.ref, traits)
+
+    def serialize(self):
+        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+                        "transitive_headers", "transitive_libs", "headers",
+                        "package_id_mode", "visible")
+        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
@@ -553,3 +560,6 @@ class Requirements:
 
     def __repr__(self):
         return repr(self._requires.values())
+
+    def serialize(self):
+        return [v.serialize() for v in self._requires.values()]

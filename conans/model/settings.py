@@ -175,6 +175,9 @@ class Settings(object):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
         definition = definition or {}
+        if not isinstance(definition, dict):
+            val = "" if parent_value == "settings" else f"={parent_value}"
+            raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
         self._data = {k: SettingsItem(v, "%s.%s" % (name, k))

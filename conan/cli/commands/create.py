@@ -49,6 +49,7 @@ def create(conan_api, parser, *args):
                                              user=args.user, channel=args.channel,
                                              lockfile=lockfile,
                                              remotes=remotes)
+
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
@@ -76,6 +77,9 @@ def create(conan_api, parser, *args):
 
         # Not specified, force build the tested library
         build_modes = [ref.repr_notime()] if args.build is None else args.build
+        if args.build is None and conanfile.build_policy == "never":
+            raise ConanException(
+                "This package cannot be created, 'build_policy=never', it can only be 'export-pkg'")
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)

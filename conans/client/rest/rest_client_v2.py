@@ -3,7 +3,7 @@ import os
 
 from conan.api.output import ConanOutput
 
-from conans.client.downloaders.caching_file_downloader import CachingFileDownloader
+from conans.client.downloaders.caching_file_downloader import ConanInternalCacheDownloader
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
@@ -142,10 +142,7 @@ class RestV2Methods(RestCommonMethods):
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
-        download_cache = self._config.get("core.download:download_cache")
-        if download_cache and not os.path.isabs(download_cache):
-            raise ConanException("core.download:download_cache must be an absolute path")
-        downloader = CachingFileDownloader(self.requester, download_cache=download_cache)
+        downloader = ConanInternalCacheDownloader(self.requester, self._config)
         threads = []
 
         for filename in sorted(files, reverse=True):
@@ -164,6 +161,8 @@ class RestV2Methods(RestCommonMethods):
                                     verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
         for t in threads:
             t.join()
+        for t in threads:  # Need to join all before raising errors
+            t.raise_errors()
 
     def remove_all_packages(self, ref):
         """ Remove all packages from the specified reference"""

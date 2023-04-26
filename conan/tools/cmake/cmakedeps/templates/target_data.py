@@ -47,7 +47,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         dependency_filenames = self._get_dependency_filenames()
         # Get the nodes that have the property cmake_find_mode=None (no files to generate)
         dependency_find_modes = self._get_dependencies_find_modes()
-        root_folder = self._root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+
+        # Make the root_folder relative to the generated xxx-data.cmake file
+        root_folder = self._root_folder
+        root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,

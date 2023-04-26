@@ -47,9 +47,9 @@ class MockInfoProperty:
         if not MockInfoProperty.counter:
             return
         ConanOutput().warning("Usage of deprecated Conan 1.X features that will be removed in "
-                              "Conan 2.X:")
+                              "Conan 2.X:", warn_tag="deprecated")
         for k, v in MockInfoProperty.counter.items():
-            ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}")
+            ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}", warn_tag="deprecated")
         MockInfoProperty.counter = {}
 
     def __getitem__(self, key):
@@ -447,28 +447,30 @@ class CppInfo(object):
                 origin = getattr(component, varname)
                 if origin is not None:
                     origin[:] = [os.path.join(folder, el) for el in origin]
-            if component._generator_properties is not None:
-                updates = {}
-                for prop_name, value in component._generator_properties.items():
-                    if prop_name == "cmake_build_modules":
-                        if isinstance(value, list):
-                            updates[prop_name] = [os.path.join(folder, v) for v in value]
-                        else:
-                            updates[prop_name] = os.path.join(folder, value)
-                component._generator_properties.update(updates)
+            properties = component._generator_properties
+            if properties is not None:
+                modules = properties.get("cmake_build_modules")  # Only this prop at this moment
+                if modules is not None:
+                    assert isinstance(modules, list), "cmake_build_modules must be a list"
+                    properties["cmake_build_modules"] = [os.path.join(folder, v) for v in modules]
 
     def deploy_base_folder(self, package_folder, deploy_folder):
         """Prepend the folder to all the directories"""
+        def relocate(el):
+            rel_path = os.path.relpath(el, package_folder)
+            return os.path.join(deploy_folder, rel_path)
+
         for component in self.components.values():
             for varname in _DIRS_VAR_NAMES:
                 origin = getattr(component, varname)
                 if origin is not None:
-                    new_ = []
-                    for el in origin:
-                        rel_path = os.path.relpath(el, package_folder)
-                        new_.append(os.path.join(deploy_folder, rel_path))
-                    origin[:] = new_
-                # TODO: Missing properties
+                    origin[:] = [relocate(f) for f in origin]
+            properties = component._generator_properties
+            if properties is not None:
+                modules = properties.get("cmake_build_modules")  # Only this prop at this moment
+                if modules is not None:
+                    assert isinstance(modules, list), "cmake_build_modules must be a list"
+                    properties["cmake_build_modules"] = [relocate(f) for f in modules]
 
     def _raise_circle_components_requires_error(self):
         """

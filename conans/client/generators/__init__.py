@@ -1,3 +1,4 @@
+import inspect
 import os
 import traceback
 import importlib
@@ -45,10 +46,30 @@ def _get_generator_class(generator_name):
                              f"inside module {generator_class}") from e
 
 
-def write_generators(conanfile, hook_manager):
+def load_cache_generators(path):
+    from conans.client.loader import load_python_file
+    result = {}  # Name of the generator: Class
+    if not os.path.isdir(path):
+        return result
+    for f in os.listdir(path):
+        if not f.endswith(".py") or f.startswith("_"):
+            continue
+        full_path = os.path.join(path, f)
+        mod, _ = load_python_file(full_path)
+        for name, value in inspect.getmembers(mod):
+            if inspect.isclass(value) and not name.startswith("_"):
+                result = {name: value}
+    return result
+
+
+def write_generators(conanfile, app):
     new_gen_folder = conanfile.generators_folder
     _receive_conf(conanfile)
 
+    hook_manager = app.hook_manager
+    cache = app.cache
+    # TODO: Optimize this, so the global generators are not loaded every call to write_generators
+    global_generators = load_cache_generators(cache.custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
     if conanfile.generators:
@@ -60,7 +81,8 @@ def write_generators(conanfile, hook_manager):
     conanfile.generators = []
     try:
         for generator_name in old_generators:
-            generator_class = _get_generator_class(generator_name)
+            global_generator = global_generators.get(generator_name)
+            generator_class = global_generator or _get_generator_class(generator_name)
             if generator_class:
                 try:
                     generator = generator_class(conanfile)
@@ -121,7 +143,7 @@ def _generate_aggregated_env(conanfile):
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed
         result = []
-        for s in filenames:
+        for s in reversed(filenames):
             folder, f = os.path.split(s)
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
@@ -171,3 +193,15 @@ def _generate_aggregated_env(conanfile):
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
+
+
+def relativize_generated_file(content, conanfile, placeholder):
+    abs_base_path = conanfile.folders._base_generators
+    if not abs_base_path or not os.path.isabs(abs_base_path):
+        return content
+    generators_folder = conanfile.generators_folder
+    rel_path = os.path.relpath(abs_base_path, generators_folder)
+    new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
+    content = content.replace(abs_base_path, new_path)
+    content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
+    return content

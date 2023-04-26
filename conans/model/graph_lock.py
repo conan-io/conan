@@ -146,6 +146,7 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
+        self._alias.update(other._alias)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
         """ adding new things manually will trigger the sort() of the locked list, so lockfiles
@@ -230,13 +231,6 @@ class Lockfile(object):
                 if not self.partial:
                     raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
-            alias = require.alias
-            if alias:
-                locked_alias = self._alias.get(alias)
-                if locked_alias is not None:
-                    require.ref = locked_alias
-                elif not self.partial:
-                    raise ConanException(f"Requirement alias '{alias}' not in lockfile")
             ref = require.ref
             if ref.revision is None:
                 for m in matches:
@@ -249,6 +243,14 @@ class Lockfile(object):
             else:
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
+
+    def replace_alias(self, require, alias):
+        locked_alias = self._alias.get(alias)
+        if locked_alias is not None:
+            require.ref = locked_alias
+            return True
+        elif not self.partial:
+            raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE

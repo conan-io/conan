@@ -55,10 +55,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     manifest.report_summary(scoped_output)
 
     # Compute the revision for the recipe
-    revision = calc_revision(scoped_output=conanfile.output,
-                             path=os.path.dirname(conanfile_path),
-                             manifest=manifest,
-                             revision_mode=conanfile.revision_mode)
+    revision = _calc_revision(scoped_output=conanfile.output,
+                              path=os.path.dirname(conanfile_path),
+                              manifest=manifest,
+                              revision_mode=conanfile.revision_mode)
 
     ref.revision = revision
     recipe_layout.reference = ref
@@ -83,7 +83,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     return ref, conanfile
 
 
-def calc_revision(scoped_output, path, manifest, revision_mode):
+def _calc_revision(scoped_output, path, manifest, revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
