@@ -624,12 +624,11 @@ class TestDownloadCacheBackupSources:
     def test_upload_after_export(self):
         client = TestClient(default_server_user=True)
         download_cache_folder = temp_folder()
-        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
-                                    f"core.sources:download_urls=['origin']\n"
-                                    f"core.sources:upload_url=foo"},
+        client.save({"global.conf": "core.sources:upload_url=foo"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
         client.run("export .")
+        # This used to crash because we were trying to list a missing dir if only exports were made
         client.run("upload * -c -r=default")
         assert "[Errno 2] No such file or directory" not in client.out
