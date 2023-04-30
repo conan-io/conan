@@ -408,7 +408,7 @@ class CppInfo:
         return getattr(self._package, attr)
 
     def __setattr__(self, attr, value):
-        if attr == "components":
+        if attr in ("components", "_package", "_aggregated"):
             super(CppInfo, self).__setattr__(attr, value)
         else:
             setattr(self._package, attr, value)
@@ -474,7 +474,7 @@ class CppInfo:
         """
         processed = []  # Names of the components ordered
         # TODO: Cache the sort
-        while (len(self.components) - 1) > len(processed):
+        while len(self.components) > len(processed):
             cached_processed = processed[:]
             for name, c in self.components.items():
                 req_processed = [n for n in c.required_component_names if n not in processed]
