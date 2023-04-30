@@ -513,11 +513,11 @@ class CppInfo:
         - Check that every internal component require actually exist
         It doesn't check that external components do exist
         """
-        if not self.has_components and not self.requires:
+        if not self.has_components and not self._package.requires:
             return
         # Accumulate all external requires
-        external = set()
-        internal = set()
+        external = set(r.split("::")[0] for r in self._package.requires if "::" in r)
+        internal = set(r for r in self._package.requires if "::" not in r)
         # TODO: Cache this, this is computed in different places
         for key, comp in self.components.items():
             external.update(r.split("::")[0] for r in comp.requires if "::" in r)
@@ -549,7 +549,7 @@ class CppInfo:
         If the require is internal (to another component), the require will be None"""
         # FIXME: Cache the value
         # First aggregate without repetition, respecting the order
-        ret = []
+        ret = [r for r in self._package.requires]
         for comp in self.components.values():
             for r in comp.requires:
                 if r not in ret:
