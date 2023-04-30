@@ -42,9 +42,9 @@ class AutoPackager(object):
     def run(self):
         cf = self._conanfile
         # Check that the components declared in source/build are in package
-        cnames = set(cf.cpp.source.component_names)
-        cnames = cnames.union(set(cf.cpp.build.component_names))
-        if cnames.difference(set(cf.cpp.package.component_names)):
+        cnames = set(cf.cpp.source.components)
+        cnames = cnames.union(set(cf.cpp.build.components))
+        if cnames.difference(set(cf.cpp.package.components)):
             # TODO: Raise? Warning? Ignore?
             raise ConanException("There are components declared in cpp.source.components"
                                  " or in cpp.build.components that are not declared in"

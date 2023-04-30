@@ -50,7 +50,7 @@ class MockInfoProperty:
         return super(MockInfoProperty, self).__setattr__(attr, value)
 
 
-class _Component(object):
+class _Component:
 
     def __init__(self, set_defaults=False):
         # ###### PROPERTIES
@@ -334,51 +334,18 @@ class _Component(object):
             pass
 
     def get_init(self, attribute, default):
+        # Similar to dict.setdefault
         item = getattr(self, attribute)
         if item is not None:
             return item
         setattr(self, attribute, default)
         return default
 
-
-class CppInfo(object):
-
-    def __init__(self, set_defaults=False):
-        self.components = defaultdict(lambda: _Component(set_defaults))
-        # Main package is a component with None key
-        self.components[None] = _Component(set_defaults)
-        self._aggregated = None  # A _NewComponent object with all the components aggregated
-
-    def __getattr__(self, attr):
-        return getattr(self.components[None], attr)
-
-    def __setattr__(self, attr, value):
-        if attr == "components":
-            super(CppInfo, self).__setattr__(attr, value)
-        else:
-            setattr(self.components[None], attr, value)
-
-    def serialize(self):
-        ret = {}
-        for component_name, info in self.components.items():
-            _name = "root" if component_name is None else component_name
-            ret[_name] = info.serialize()
-        return ret
-
-    @property
-    def has_components(self):
-        return len(self.components) > 1
-
-    @property
-    def component_names(self):
-        return filter(None, self.components.keys())
-
     def merge(self, other, overwrite=False):
-        """Merge 'other' into self. 'other' can be an old cpp_info object
-        Used to merge Layout source + build cpp objects info (editables)
-        :type other: CppInfo
         """
-
+        @param overwrite:
+        @type other: _Component
+        """
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
 
@@ -386,72 +353,102 @@ class CppInfo(object):
             other_values = getattr(other, varname)
             if other_values is not None:
                 if not overwrite:
-                    current_values = self.components[None].get_init(varname, [])
+                    current_values = self.get_init(varname, [])
                     merge_list(other_values, current_values)
                 else:
                     setattr(self, varname, other_values)
-        if not self.sysroot and other.sysroot:
-            self.sysroot = other.sysroot
 
         if other.requires:
-            current_values = self.components[None].get_init("requires", [])
+            current_values = self.get_init("requires", [])
             merge_list(other.requires, current_values)
 
         if other._generator_properties:
-            current_values = self.components[None].get_init("_generator_properties", {})
+            current_values = self.get_init("_generator_properties", {})
             current_values.update(other._generator_properties)
 
-        # COMPONENTS
-        for cname, c in other.components.items():
-            if cname is None:
-                continue
-            for varname in _ALL_NAMES:
-                other_values = getattr(c, varname)
-                if other_values is not None:
-                    if not overwrite:
-                        current_values = self.components[cname].get_init(varname, [])
-                        merge_list(other_values, current_values)
-                    else:
-                        setattr(self.components[cname], varname, other_values)
-            if c.requires:
-                current_values = self.components[cname].get_init("requires", [])
-                merge_list(c.requires, current_values)
-
-            if c._generator_properties:
-                current_values = self.components[cname].get_init("_generator_properties", {})
-                current_values.update(c._generator_properties)
-
     def set_relative_base_folder(self, folder):
-        """Prepend the folder to all the directories"""
-        for component in self.components.values():
-            for varname in _DIRS_VAR_NAMES:
-                origin = getattr(component, varname)
-                if origin is not None:
-                    origin[:] = [os.path.join(folder, el) for el in origin]
-            properties = component._generator_properties
-            if properties is not None:
-                modules = properties.get("cmake_build_modules")  # Only this prop at this moment
-                if modules is not None:
-                    assert isinstance(modules, list), "cmake_build_modules must be a list"
-                    properties["cmake_build_modules"] = [os.path.join(folder, v) for v in modules]
+        for varname in _DIRS_VAR_NAMES:
+            origin = getattr(self, varname)
+            if origin is not None:
+                origin[:] = [os.path.join(folder, el) for el in origin]
+        properties = self._generator_properties
+        if properties is not None:
+            modules = properties.get("cmake_build_modules")  # Only this prop at this moment
+            if modules is not None:
+                assert isinstance(modules, list), "cmake_build_modules must be a list"
+                properties["cmake_build_modules"] = [os.path.join(folder, v) for v in modules]
 
     def deploy_base_folder(self, package_folder, deploy_folder):
-        """Prepend the folder to all the directories"""
         def relocate(el):
             rel_path = os.path.relpath(el, package_folder)
             return os.path.join(deploy_folder, rel_path)
 
+        for varname in _DIRS_VAR_NAMES:
+            origin = getattr(self, varname)
+            if origin is not None:
+                origin[:] = [relocate(f) for f in origin]
+        properties = self._generator_properties
+        if properties is not None:
+            modules = properties.get("cmake_build_modules")  # Only this prop at this moment
+            if modules is not None:
+                assert isinstance(modules, list), "cmake_build_modules must be a list"
+                properties["cmake_build_modules"] = [relocate(f) for f in modules]
+
+
+class CppInfo:
+
+    def __init__(self, set_defaults=False):
+        self.components = defaultdict(lambda: _Component(set_defaults))
+        # Main package is a component with None key
+        self._package = _Component(set_defaults)
+        self._aggregated = None  # A _NewComponent object with all the components aggregated
+
+    def __getattr__(self, attr):
+        # all cpp_info.xxx of not defined things will go to the global package
+        return getattr(self._package, attr)
+
+    def __setattr__(self, attr, value):
+        if attr == "components":
+            super(CppInfo, self).__setattr__(attr, value)
+        else:
+            setattr(self._package, attr, value)
+
+    def serialize(self):
+        ret = {"root": self._package.serialize()}
+        for component_name, info in self.components.items():
+            ret[component_name] = info.serialize()
+        return ret
+
+    @property
+    def has_components(self):
+        return len(self.components) > 0
+
+    def merge(self, other, overwrite=False):
+        """Merge 'other' into self. 'other' can be an old cpp_info object
+        Used to merge Layout source + build cpp objects info (editables)
+        @type other: CppInfo
+        @param other: The other CppInfo to merge
+        @param overwrite: New values from other overwrite the existing ones
+        """
+        # Global merge
+        self._package.merge(other._package, overwrite)
+        # sysroot only of package, not components, first defined wins
+        self._package.sysroot = self._package.sysroot or other._package.sysroot
+        # COMPONENTS
+        for cname, c in other.components.items():
+            self.components[cname].merge(c, overwrite)
+
+    def set_relative_base_folder(self, folder):
+        """Prepend the folder to all the directories definitions, that are relative"""
+        self._package.set_relative_base_folder(folder)
         for component in self.components.values():
-            for varname in _DIRS_VAR_NAMES:
-                origin = getattr(component, varname)
-                if origin is not None:
-                    origin[:] = [relocate(f) for f in origin]
-            properties = component._generator_properties
-            if properties is not None:
-                modules = properties.get("cmake_build_modules")  # Only this prop at this moment
-                if modules is not None:
-                    assert isinstance(modules, list), "cmake_build_modules must be a list"
-                    properties["cmake_build_modules"] = [relocate(f) for f in modules]
+            component.set_relative_base_folder(folder)
+
+    def deploy_base_folder(self, package_folder, deploy_folder):
+        """Prepend the folder to all the directories"""
+        self._package.deploy_base_folder(package_folder, deploy_folder)
+        for component in self.components.values():
+            component.deploy_base_folder(package_folder, deploy_folder)
 
     def _raise_circle_components_requires_error(self):
         """
@@ -476,12 +473,10 @@ class CppInfo(object):
         :return: ``OrderedDict`` {component_name: component}
         """
         processed = []  # Names of the components ordered
-        # FIXME: Cache the sort
+        # TODO: Cache the sort
         while (len(self.components) - 1) > len(processed):
             cached_processed = processed[:]
             for name, c in self.components.items():
-                if name is None:
-                    continue
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
@@ -496,28 +491,18 @@ class CppInfo(object):
         if self._aggregated is None:
             if self.has_components:
                 result = _Component()
-                for n in _ALL_NAMES:  # Initialize all values, from None => []
-                    setattr(result, n, [])  # TODO: This is a bit dirty
                 # Reversed to make more dependant first
-                for name, component in reversed(self.get_sorted_components().items()):
-                    for n in _ALL_NAMES:
-                        if getattr(component, n):
-                            dest = result.get_init(n, [])
-                            dest.extend([i for i in getattr(component, n) if i not in dest])
-
-                    # NOTE: The properties are not aggregated because they might refer only to the
-                    # component like "cmake_target_name" describing the target name FOR THE component
-                    # not the namespace.
-                    if component.requires:
-                        current_values = result.get_init("requires", [])
-                        current_values.extend(component.requires)
-
+                for component in reversed(self.get_sorted_components().values()):
+                    result.merge(component)
+                # NOTE: The properties are not aggregated because they might refer only to the
+                # component like "cmake_target_name" describing the target name FOR THE component
+                # not the namespace.
                 # FIXME: What to do about sysroot?
-                result._generator_properties = copy.copy(self._generator_properties)
+                result._generator_properties = copy.copy(self._package._generator_properties)
             else:
-                result = copy.copy(self.components[None])
+                result = copy.copy(self._package)
             self._aggregated = CppInfo()
-            self._aggregated.components[None] = result
+            self._aggregated._package = result
         return self._aggregated
 
     def check_component_requires(self, conanfile):
@@ -572,12 +557,3 @@ class CppInfo(object):
         # Then split the names
         ret = [r.split("::") if "::" in r else (None, r) for r in ret]
         return ret
-
-    def __str__(self):
-        ret = []
-        for cname, c in self.components.items():
-            for n in _ALL_NAMES:
-                ret.append("Component: '{}' "
-                           "Var: '{}' "
-                           "Value: '{}'".format(cname, n, getattr(c, n)))
-        return "\n".join(ret)
