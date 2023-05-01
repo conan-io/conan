@@ -41,10 +41,19 @@ def test_settings_definitions_compiler():
                 self.output.info("HOST: " + ", ".join(definition))
                 definition = self.settings_build.compiler.version.get_definition()
                 self.output.info("BUILD: " + ", ".join(definition))
+                cppstds = self.settings.compiler.cppstd.get_definition()
+                self.output.info("CPPSTDS: " + str(cppstds))
             """)
-    c.save({"conanfile.py": conanfile})
+    profile = textwrap.dedent("""\
+        [settings]
+        compiler=msvc
+        compiler.version=192
+        compiler.runtime=dynamic
+        """)
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
     # New settings are there
-    c.run("install . -s compiler=msvc -s compiler.version=192 -s compiler.runtime=dynamic"
-          " -s:b compiler=gcc")
+    c.run("install . -pr=profile -s:b compiler=gcc")
     assert "conanfile.py: HOST: 170, 180, 190, 191, 192" in c.out
     assert "conanfile.py: BUILD: 4.1, 4.4, 4.5, 4.6, 4.7," in c.out
+    assert "conanfile.py: CPPSTDS: [None, '14', '17', '20', '23']" in c.out
