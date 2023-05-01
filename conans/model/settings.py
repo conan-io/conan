@@ -154,7 +154,7 @@ class SettingsItem(object):
 
     def get_definition(self):
         if isinstance(self._definition, list):
-            return [e if e != 'None' else None for e in self.values_range]
+            return self.values_range.copy()
         ret = {}
         for key, value in self._definition.items():
             ret[key] = value.get_definition()
