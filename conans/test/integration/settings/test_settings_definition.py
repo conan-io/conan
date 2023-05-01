@@ -44,6 +44,7 @@ def test_settings_definitions_compiler():
             """)
     c.save({"conanfile.py": conanfile})
     # New settings are there
-    c.run("install . -s compiler=msvc -s compiler.version=192 -s:b compiler=gcc")
+    c.run("install . -s compiler=msvc -s compiler.version=192 -s compiler.runtime=dynamic"
+          " -s:b compiler=gcc")
     assert "conanfile.py: HOST: 170, 180, 190, 191, 192" in c.out
     assert "conanfile.py: BUILD: 4.1, 4.4, 4.5, 4.6, 4.7," in c.out
