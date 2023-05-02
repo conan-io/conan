@@ -107,7 +107,8 @@ def test_list_skip_printing():
             "app/conanfile.py": GenConanfile().with_requires("pkgb/0.1")})
     c.run("create tool")
     c.run("create pkga")
-    c.run("export pkgb")
+    c.run("create pkgb")
+    c.run("remove pkga:* -c")
     c.run("install app --build=missing")
     c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
                            build=True)
