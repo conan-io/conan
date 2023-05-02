@@ -46,10 +46,6 @@ def test_editable_cmake_components():
                                  dst=join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
-               self.cpp_info.components["hello"].includedirs = ["include"]
-               self.cpp_info.components["hello"].libdirs = ["lib"]
-               self.cpp_info.components["bye"].includedirs = ["include"]
-               self.cpp_info.components["bye"].libdirs = ["lib"]
                self.cpp_info.components["hello"].libs = ["hello"]
                self.cpp_info.components["bye"].libs = ["bye"]
 
