@@ -63,7 +63,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
-def apply_conandata_patches(conanfile):
+def apply_conandata_patches(conanfile, version=None):
     """
     Applies patches stored in 'conanfile.conan_data' (read from 'conandata.yml' file). It will apply
     all the patches under 'patches' entry that matches the given 'conanfile.version'. If versions are
@@ -103,8 +103,9 @@ def apply_conandata_patches(conanfile):
         return
 
     if isinstance(patches, dict):
-        assert conanfile.version, "Can only be applied if conanfile.version is already defined"
-        entries = patches.get(conanfile.version, [])
+        assert version or conanfile.version, "Can only be applied if version or conanfile.version is already defined"
+        version = version if version else conanfile.version
+        entries = patches.get(version, [])
     elif isinstance(patches, list):
         entries = patches
     else:
@@ -122,7 +123,7 @@ def apply_conandata_patches(conanfile):
                                  " entry for every patch to be applied")
 
 
-def export_conandata_patches(conanfile):
+def export_conandata_patches(conanfile, version=None):
     """
     Exports patches stored in 'conanfile.conan_data' (read from 'conandata.yml' file). It will export
     all the patches under 'patches' entry that matches the given 'conanfile.version'. If versions are
@@ -137,8 +138,9 @@ def export_conandata_patches(conanfile):
         return
 
     if isinstance(patches, dict):
-        assert conanfile.version, "Can only be exported if conanfile.version is already defined"
-        entries = patches.get(conanfile.version, [])
+        assert version or conanfile.version, "Can only be exported if version or conanfile.version is already defined"
+        version = version if version else conanfile.version
+        entries = patches.get(version, [])
     elif isinstance(patches, list):
         entries = patches
     else:
