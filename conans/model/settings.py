@@ -152,12 +152,12 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
-    def get_definition(self):
+    def possible_values(self):
         if isinstance(self._definition, list):
             return self.values_range.copy()
         ret = {}
         for key, value in self._definition.items():
-            ret[key] = value.get_definition()
+            ret[key] = value.possible_values()
         return ret
 
     def rm_safe(self, name):
@@ -341,11 +341,10 @@ class Settings(object):
                 result.append("%s=%s" % (name, value))
         return '\n'.join(result)
 
-    def get_definition(self):
-        """Check the range of values of the definition of a setting. e.g:
-           get_definition_values("compiler.gcc.version") """
-
+    def possible_values(self):
+        """Check the range of values of the definition of a setting
+        """
         ret = {}
         for key, element in self._data.items():
-            ret[key] = element.get_definition()
+            ret[key] = element.possible_values()
         return ret

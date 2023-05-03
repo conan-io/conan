@@ -10,7 +10,7 @@ def test_settings_definitions():
         class Pkg(ConanFile):
             settings = "os"
             def generate(self):
-                definition = self.settings.get_definition()
+                definition = self.settings.possible_values()
                 assert "os" in definition
                 assert "compiler" not in definition
                 assert "arch" not in definition
@@ -18,7 +18,7 @@ def test_settings_definitions():
                 ios = definition["os"]["iOS"]["version"]
                 self.output.info(f"iOS: {ios}")
 
-                os_definition = self.settings.os.get_definition()
+                os_definition = self.settings.os.possible_values()
                 ios = os_definition["iOS"]["version"]
                 self.output.info(f"iOS2: {ios}")
             """)
@@ -37,11 +37,11 @@ def test_settings_definitions_compiler():
         class Pkg(ConanFile):
             settings = "compiler"
             def generate(self):
-                definition = self.settings.compiler.version.get_definition()
+                definition = self.settings.compiler.version.possible_values()
                 self.output.info("HOST: " + ", ".join(definition))
-                definition = self.settings_build.compiler.version.get_definition()
+                definition = self.settings_build.compiler.version.possible_values()
                 self.output.info("BUILD: " + ", ".join(definition))
-                cppstds = self.settings.compiler.cppstd.get_definition()
+                cppstds = self.settings.compiler.cppstd.possible_values()
                 self.output.info("CPPSTDS: " + str(cppstds))
             """)
     profile = textwrap.dedent("""\
