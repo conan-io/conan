@@ -229,12 +229,9 @@ class Lockfile(object):
 
     def _resolve_overrides(self, require):
         existing = self._overrides.get(require.ref)
-        if existing is None:
-            return
-        if len(existing) == 1:
+        if existing is not None and len(existing) == 1:
             require.overriden_ref = require.ref  # Store that the require has been overriden
             require.ref = next(iter(existing))
-            return
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:
