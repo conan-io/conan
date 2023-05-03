@@ -3,7 +3,7 @@ import os
 import textwrap
 from unittest import mock
 from bottle import static_file, request, HTTPError
-
+from conans.test.assets.genconanfile import GenConanfile
 from conans.errors import NotFoundException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -620,3 +620,15 @@ class TestDownloadCacheBackupSources:
         client.run("create .")
         assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
         assert "sha256 signature failed for" in client.out
+
+    def test_upload_after_export(self):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+        client.save({"global.conf": "core.sources:upload_url=foo"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        client.run("export .")
+        # This used to crash because we were trying to list a missing dir if only exports were made
+        client.run("upload * -c -r=default")
+        assert "[Errno 2] No such file or directory" not in client.out
