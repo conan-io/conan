@@ -1,4 +1,4 @@
-import shutil
+import os
 
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
@@ -34,8 +34,11 @@ class CacheAPI:
     def build_path(self, pref: PkgReference):
         app = ConanApp(self.conan_api.cache_folder)
         pref = _resolve_latest_pref(app, pref)
-        ref_layout = app.cache.pkg_layout(pref)
-        return ref_layout.build()
+        pref = PkgReference.loads(repr(pref))  # do a copy
+        pref.revision = None
+        pref.timestamp = None
+        package_path = app.cache._data_cache._get_tmp_path_pref(pref)
+        return os.path.join(app.cache_folder, package_path, "b")
 
     def package_path(self, pref: PkgReference):
         app = ConanApp(self.conan_api.cache_folder)

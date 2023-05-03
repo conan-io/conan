@@ -1,7 +1,8 @@
 import hashlib
 import os
 
-from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
+from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout, PACKAGES_FOLDER, \
+    DOWNLOAD_EXPORT_FOLDER
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
@@ -185,7 +186,11 @@ class DataCache:
         full_path = self._full_path(new_path)
         rmdir(full_path)
 
-        renamedir(self._full_path(layout.base_folder), full_path)
+        # Do not relocate the temporary "build" folder, only the "package" one
+        for p in PACKAGES_FOLDER, DOWNLOAD_EXPORT_FOLDER:
+            existing = os.path.join(self._full_path(layout.base_folder), p)
+            if os.path.isdir(existing):
+                renamedir(existing, os.path.join(full_path, p))
         layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
