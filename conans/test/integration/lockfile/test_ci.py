@@ -492,23 +492,25 @@ def test_single_config_decentralized_overrides():
     c.run("export pkgb")
     c.run("lock create pkgc")
     lock = json.loads(c.load("pkgc/conan.lock"))
-    print(c.load("pkgc/conan.lock"))
     requires = "\n".join(lock["build_requires"])
     assert "toolc/3.0" in requires
     assert "toolc/2.0" in requires
     assert "toolc/1.0" in requires
+    assert len(lock["overrides"]) == 1
+    assert set(lock["overrides"]["toolc/1.0"]) == {"toolc/3.0", "toolc/2.0", None}
 
     c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
-    print(c.stdout)
     to_build = json.loads(c.stdout)
     for level in to_build:
         for elem in level:
-            ref = RecipeReference.loads(elem["ref"])
-            print("------------------BUILDING REF", ref)
             for package in elem["packages"][0]:  # assumes no dependencies between packages
                 binary = package["binary"]
                 if binary != "Build":
                     continue
                 build_args = package["build_args"]
                 c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
-                print(c.out)
+
+    c.run("install pkgc --lockfile=pkgc/conan.lock")
+    # All works, all binaries exist now
+    assert "pkga/1.0: Already installed!" in c.out
+    assert "pkgb/1.0: Already installed!" in c.out
