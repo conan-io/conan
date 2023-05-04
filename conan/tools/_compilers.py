@@ -165,7 +165,7 @@ def build_type_flags(settings):
                      "MinSizeRel": ["-xO2", "-xspace"],
                      }.get(build_type, [])
             return flags
-    return ""
+    return []
 
 
 def use_win_mingw(conanfile):
