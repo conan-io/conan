@@ -62,10 +62,11 @@ class SourcesCachingDownloader:
                 self._output.info(f"Source {urls} retrieved from local download cache")
             else:
                 with set_dirty_context_manager(cached_path):
+                    if None in backups_urls:
+                        raise ConanException("Trying to download sources from None backup remote."
+                                             f" Remotes were: {backups_urls}")
                     for backup_url in backups_urls:
-                        if backup_url is None:
-                            raise ConanException("Trying to download sources from None backup remote"
-                                                 f". Remotes were: {backups_urls}")
+
                         is_last = backup_url is backups_urls[-1]
                         if backup_url == "origin":  # recipe defined URLs
                             if self._origin_download(urls, cached_path, retry, retry_wait,
