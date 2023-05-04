@@ -84,7 +84,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
 
 def _calc_revision(scoped_output, path, manifest, revision_mode):
-    if revision_mode not in ["scm", "hash"]:
+    if revision_mode not in ["scm", "scm_folder", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
     # Use the proper approach depending on 'revision_mode'
@@ -93,7 +93,8 @@ def _calc_revision(scoped_output, path, manifest, revision_mode):
     else:
         try:
             with chdir(path):
-                rev_detected = check_output_runner('git rev-list HEAD -n 1 --full-history').strip()
+                f = '-- "."' if revision_mode == "scm_folder" else ""
+                revision = check_output_runner(f'git rev-list HEAD -n 1 --full-history {f}').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
@@ -103,8 +104,6 @@ def _calc_revision(scoped_output, path, manifest, revision_mode):
             if bool(check_output_runner('git status -s').strip()):
                 raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
                                      " 'conan export', please commit the changes and run again.")
-
-        revision = rev_detected
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 
