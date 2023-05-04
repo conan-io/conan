@@ -153,7 +153,7 @@ class ConanName(object):
     @staticmethod
     def validate_version(version, pkg_name):
         ConanName.validate_string(version)
-        if version == "*":
+        if version == "*" or version == "<host_version>":
             return
         if ConanName._validation_pattern.match(version) is None:
             if (
