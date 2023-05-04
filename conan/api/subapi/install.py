@@ -69,4 +69,4 @@ class InstallAPI:
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         app = ConanApp(self.conan_api.cache_folder)
-        write_generators(conanfile, app.hook_manager)
+        write_generators(conanfile, app)

@@ -417,7 +417,6 @@ class EnvVars:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
-            # To make the script relocatable
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
@@ -501,6 +500,8 @@ class EnvVars:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "$script_folder")
+        content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
     def save_script(self, filename):

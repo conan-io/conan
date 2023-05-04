@@ -7,7 +7,7 @@ from mock import patch
 
 from conan import conan_version
 from conans.errors import ConanException
-from conans.util.files import save
+from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
 
@@ -270,3 +270,10 @@ def test_nonexisting_conf_global_conf():
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
     assert "ERROR: Unknown conf 'tools.unknown:conf'" in c.out
+
+
+def test_global_conf_auto_created():
+    c = TestClient()
+    c.run("config list")  # all commands will trigger
+    global_conf = load(c.cache.new_config_path)
+    assert "# core:non_interactive = True" in global_conf

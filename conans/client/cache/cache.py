@@ -1,11 +1,13 @@
 import os
 import platform
+import textwrap
 from typing import List
 
 import yaml
 from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
+from conan.api.output import ConanOutput
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -27,8 +29,6 @@ PROFILES_FOLDER = "profiles"
 EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
 PLUGINS_FOLDER = "plugins"
-DEPLOYERS_EXTENSION_FOLDER = "deploy"
-CUSTOM_COMMANDS_FOLDER = "commands"
 
 
 # TODO: Rename this to ClientHome
@@ -167,8 +167,16 @@ class ClientCache(object):
                 content = template.render({"platform": platform, "os": os, "distro": distro,
                                            "conan_version": conan_version,
                                            "conan_home_folder": self.cache_folder})
-
                 self._new_config.loads(content)
+            else:  # creation of a blank global.conf file for user convenience
+                default_global_conf = textwrap.dedent("""\
+                    # Core configuration (type 'conan config list' to list possible values)
+                    # e.g, for CI systems, to raise if user input would block
+                    # core:non_interactive = True
+                    # some tools.xxx config also possible, though generally better in profiles
+                    # tools.android:ndk_path = my/path/to/android/ndk
+                    """)
+                save(self.new_config_path, default_global_conf)
         return self._new_config
 
     @property
@@ -186,7 +194,11 @@ class ClientCache(object):
 
     @property
     def custom_commands_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, CUSTOM_COMMANDS_FOLDER)
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "commands")
+
+    @property
+    def custom_generators_path(self):
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "generators")
 
     @property
     def plugins_path(self):
@@ -199,14 +211,16 @@ class ClientCache(object):
 
     @property
     def hooks_path(self):
-        """
-        :return: Hooks folder in client cache
-        """
         return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
 
     @property
     def deployers_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, DEPLOYERS_EXTENSION_FOLDER)
+        deploy = os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deploy")
+        if os.path.exists(deploy):
+            ConanOutput().warning("Use 'deployers' cache folder for deployers instead of 'deploy'",
+                                  warn_tag="deprecated")
+            return deploy
+        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deployers")
 
     @property
     def settings(self):
@@ -242,10 +256,7 @@ class ClientCache(object):
 
             appending_recursive_dict_update(settings, settings_user)
 
-        try:
-            return Settings(settings)
-        except AttributeError as e:
-            raise ConanException("Invalid settings.yml format: {}".format(e))
+        return Settings(settings)
 
     def initialize_settings(self):
         # TODO: This is called by ConfigAPI.init(), maybe move everything there?

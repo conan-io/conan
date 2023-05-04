@@ -11,6 +11,7 @@ from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
 
 from conans.model.requires import Requirements
+from conans.model.settings import Settings
 
 
 class ConanFile:
@@ -121,17 +122,32 @@ class ConanFile:
     def serialize(self):
         result = {}
 
-        for a in ("url", "license", "author", "description", "topics", "homepage", "build_policy",
-                  "upload_policy",
-                  "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run"):
-            v = getattr(self, a)
+        for a in ("name", "user", "channel", "url", "license",
+                  "author", "description", "homepage", "build_policy", "upload_policy",
+                  "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run",
+                  "default_options", "options_description",):
+            v = getattr(self, a, None)
             if v is not None:
                 result[a] = v
-
+        if self.version is not None:
+            result["version"] = str(self.version)
+        if self.topics is not None:
+            result["topics"] = list(self.topics)
         result["package_type"] = str(self.package_type)
-        result["settings"] = self.settings.serialize()
-        result["options"] = self.options.serialize()
 
+        settings = self.settings
+        if settings is not None:
+            result["settings"] = settings.serialize() if isinstance(settings, Settings) else list(settings)
+
+        result["options"] = self.options.serialize()
+        result["options_definitions"] = self.options.possible_values
+
+        if self.generators is not None:
+            result["generators"] = list(self.generators)
+        if self.license is not None:
+            result["license"] = list(self.license) if not isinstance(self.license, str) else self.license
+
+        result["requires"] = self.requires.serialize()
         if hasattr(self, "python_requires"):
             result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
         result["system_requires"] = self.system_requires

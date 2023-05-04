@@ -90,12 +90,15 @@ def print_graph_packages(graph):
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
-            build_requires[node.pref] = node.binary, node.binary_remote
+            existing = build_requires.setdefault(node.pref, [node.binary, node.binary_remote])
         else:
             if node.test:
-                test_requires[node.pref] = node.binary, node.binary_remote
+                existing = test_requires.setdefault(node.pref, [node.binary, node.binary_remote])
             else:
-                requires[node.pref] = node.binary, node.binary_remote
+                existing = requires.setdefault(node.pref, [node.binary, node.binary_remote])
+        # TO avoid showing as "skip" something that is used in other node of the graph
+        if existing[0] == BINARY_SKIP:
+            existing[0] = node.binary
 
     def _format_requires(title, reqs_to_print):
         if not reqs_to_print:

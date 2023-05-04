@@ -718,6 +718,7 @@ class GenericSystemBlock(Block):
         arch_build = self._conanfile.settings_build.get_safe("arch")
         cmake_system_name_map = {"Neutrino": "QNX",
                                  "": "Generic",
+                                 "baremetal": "Generic",
                                  None: "Generic"}
         if os_host != os_build:
             return cmake_system_name_map.get(os_host, os_host)

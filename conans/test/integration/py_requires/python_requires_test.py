@@ -1164,3 +1164,20 @@ def test_multi_top_missing_from_remote():
     assert "dep/1.0@user/testing: Downloaded recipe revision" in tc.out
     assert "base/1.1@user/testing: Not found in local cache, looking in remotes..." in tc.out
     assert "base/1.1@user/testing: Downloaded recipe revision" in tc.out
+
+
+def test_transitive_range_not_found_in_cache():
+    """
+    https://github.com/conan-io/conan/issues/13761
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pr", "1.0")})
+    c.run("create .")
+
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_python_requires("pr/[>0]")})
+    c.run("create .")
+
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0")})
+    c.run("create . ")
+    c.assert_listed_require({"pr/1.0": "Cache"}, python=True)
+    assert "pr/[>0]: pr/1.0" in c.out
