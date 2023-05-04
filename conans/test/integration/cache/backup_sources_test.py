@@ -112,11 +112,18 @@ class TestDownloadCacheBackupSources:
             """)
 
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
-                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
+                                    f"core.sources:download_urls=[None, 'origin', 'http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
+        client.run("create .", assert_error=True)
+        assert "Trying to download sources from None backup remote" in client.out
+
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                    path=client.cache.cache_folder)
         client.run("create .")
         client.run("upload * -c -r=default")
 
