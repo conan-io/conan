@@ -392,10 +392,11 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
+                 override=None):
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                     options=options)
+                                     options=options, override=override)
 
 
 class ToolRequirements:
@@ -485,7 +486,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None, options=None):
+                      run=None, options=None, override=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -501,7 +502,7 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options)
+                          package_id_mode=package_id_mode, options=options, override=override)
 
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
