@@ -337,3 +337,21 @@ def test_command_line_lockfile_overrides():
     c.run('lock create pkgc')
     c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"', assert_error=True)
     assert "Requirement 'pkga/0.2' not in lockfile" in c.out
+
+
+def test_consecutive_installs():
+    c = TestClient()
+    c.save({
+        "pkga/conanfile.py": GenConanfile("pkga"),
+        "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+        "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")
+                                                        .with_requirement("pkga/0.2", override=True),
+    })
+    c.run("export pkga --version=0.1")
+    c.run("export pkga --version=0.2")
+    c.run("export pkgb")
+    c.run("install pkgc --build=missing --lockfile-out=conan.lock")
+    c.assert_overrides({"pkga/0.1": ["pkga/0.2"]})
+    # This used to crash when overrides were not managed
+    c.run("install pkgc --build=missing --lockfile=conan.lock --lockfile-out=conan.lock")
+    c.assert_overrides({"pkga/0.1": ["pkga/0.2"]})

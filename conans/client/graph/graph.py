@@ -270,7 +270,7 @@ class Overrides:
                 if r.override:
                     continue
                 if r.overriden_ref and not r.force:
-                    overrides.setdefault(r.overriden_ref, set()).add(r.ref)
+                    overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
                 else:
                     overrides.setdefault(r.ref, set()).add(None)
 
