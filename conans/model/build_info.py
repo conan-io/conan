@@ -1,6 +1,6 @@
 import copy
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
@@ -10,25 +10,6 @@ _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs
 _FIELD_VAR_NAMES = ["_system_libs", "_frameworks", "_libs", "_defines", "_cflags", "_cxxflags",
                     "_sharedlinkflags", "_exelinkflags"]
 _ALL_NAMES = _DIRS_VAR_NAMES + _FIELD_VAR_NAMES
-
-
-class DefaultOrderedDict(OrderedDict):
-
-    def __init__(self, factory):
-        self.factory = factory
-        super(DefaultOrderedDict, self).__init__()
-
-    def __getitem__(self, key):
-        if key not in self.keys():
-            super(DefaultOrderedDict, self).__setitem__(key, self.factory())
-            super(DefaultOrderedDict, self).__getitem__(key).name = key
-        return super(DefaultOrderedDict, self).__getitem__(key)
-
-    def __copy__(self):
-        the_copy = DefaultOrderedDict(self.factory)
-        for key, value in super(DefaultOrderedDict, self).items():
-            the_copy[key] = value
-        return the_copy
 
 
 class MockInfoProperty:
@@ -363,7 +344,7 @@ class _Component(object):
 class CppInfo(object):
 
     def __init__(self, set_defaults=False):
-        self.components = DefaultOrderedDict(lambda: _Component(set_defaults))
+        self.components = defaultdict(lambda: _Component(set_defaults))
         # Main package is a component with None key
         self.components[None] = _Component(set_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
@@ -576,15 +557,6 @@ class CppInfo(object):
             if e not in external:
                 raise ConanException(
                     f"{conanfile}: Required package '{e}' not in component 'requires'")
-
-    def copy(self):
-        # Only used at the moment by layout() editable merging build+source .cpp data
-        ret = CppInfo()
-        ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _Component())
-        for comp_name in self.components:
-            ret.components[comp_name] = copy.copy(self.components[comp_name])
-        return ret
 
     @property
     def required_components(self):
