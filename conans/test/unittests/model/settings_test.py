@@ -393,27 +393,28 @@ os: [Windows, Linux]
         self.sut.compiler.arch.speed = "D"
         self.assertEqual(self.sut.compiler.arch.speed, "D")
 
-    def test_get_definition(self):
-        settings = Settings.loads(default_settings_yml)
-        settings.compiler = "gcc"
-        sot = settings.compiler.cppstd.get_definition()
-        assert sot == [None, '98', 'gnu98', '11', 'gnu11', '14', 'gnu14', '17', 'gnu17', '20',
-                       'gnu20', '23', 'gnu23']
 
-        # We cannot access the child definition of a non declared setting
-        with pytest.raises(Exception) as e:
-            settings.os.version.get_definition()
+def test_possible_values():
+    settings = Settings.loads(default_settings_yml)
+    settings.compiler = "gcc"
+    sot = settings.compiler.cppstd.possible_values()
+    assert sot == [None, '98', 'gnu98', '11', 'gnu11', '14', 'gnu14', '17', 'gnu17', '20',
+                   'gnu20', '23', 'gnu23']
 
-        assert "'settings.os' value not defined" in str(e.value)
+    # We cannot access the child definition of a non declared setting
+    with pytest.raises(Exception) as e:
+        settings.os.version.possible_values()
 
-        # But if we have it declared, we can
-        settings.os = "watchOS"
-        sot = settings.os.version.get_definition()
-        assert "4.0" in sot
+    assert "'settings.os' value not defined" in str(e.value)
 
-        # We can get the whole settings definition and explore the dict
-        sot = settings.get_definition()
-        assert [None, "cygwin", "msys", "msys2", "wsl"] == sot["os"]["Windows"]["subsystem"]
+    # But if we have it declared, we can
+    settings.os = "watchOS"
+    sot = settings.os.version.possible_values()
+    assert "4.0" in sot
+
+    # We can get the whole settings definition and explore the dict
+    sot = settings.possible_values()
+    assert [None, "cygwin", "msys", "msys2", "wsl"] == sot["os"]["Windows"]["subsystem"]
 
 
 def test_rm_safe():
