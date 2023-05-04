@@ -227,6 +227,23 @@ class Node(object):
         result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
+    def overrides(self):
+
+        def transitive_subgraph():
+            result = set()
+            opened = {self}
+            while opened:
+                new_opened = set()
+                for o in opened:
+                    result.add(o)
+                    new_opened.update(set(o.neighbors()).difference(result))
+                opened = new_opened
+
+            return result
+
+        nodes = transitive_subgraph()
+        return Overrides.create(nodes)
+
 
 class Edge(object):
     def __init__(self, src, dst, require):
@@ -242,6 +259,9 @@ class Overrides:
     def __bool__(self):
         return bool(self._overrides)
 
+    def __repr__(self):
+        return repr(self.serialize())
+
     @staticmethod
     def create(nodes):
         overrides = {}
@@ -250,7 +270,7 @@ class Overrides:
                 if r.override:
                     continue
                 if r.overriden_ref and not r.force:
-                    overrides.setdefault(r.overriden_ref, set()).add(r.ref)
+                    overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
                 else:
                     overrides.setdefault(r.ref, set()).add(None)
 

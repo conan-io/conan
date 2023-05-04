@@ -25,10 +25,12 @@ def test(conan_api, parser, *args):
     cwd = os.getcwd()
     ref = RecipeReference.loads(args.reference)
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 

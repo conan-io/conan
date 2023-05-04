@@ -29,11 +29,12 @@ def build(conan_api, parser, *args):
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     folder = os.path.dirname(path)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
