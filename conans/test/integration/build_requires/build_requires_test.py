@@ -893,3 +893,12 @@ class TestBuildTrackHost:
         c.run("install pkg", assert_error=True)
         assert "ERROR: protobuf/None require 'other/<host_version>': 'host_version' " \
                "can only be used for non-visible tool_requires" in c.out
+
+    def test_track_host_error_wrong_context(self):
+        """
+        it can only be used by tool_requires, not regular requires
+        """
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg").with_requirement("protobuf/<host_version>")})
+        c.run(f"install .", assert_error=True)
+        assert " 'host_version' can only be used for non-visible tool_requires" in c.out
