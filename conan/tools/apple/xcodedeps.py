@@ -288,8 +288,8 @@ class XcodeDeps(object):
                     _transitive_components(comp_cpp_info)
 
                     # remove duplicates
-                    transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
-                    transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
+                    transitive_internal = list(set(transitive_internal))
+                    transitive_external = list(set(transitive_external))
 
                     # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
@@ -300,9 +300,10 @@ class XcodeDeps(object):
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
+                public_transitive_requires = [dep.ref.name for dep, _ in get_transitive_requires(self._conanfile, dep).items()]
                 public_deps = []
                 for r, d in dep.dependencies.direct_host.items():
-                    if not r.visible:
+                    if not r.visible or r.skip:
                         continue
                     if d.cpp_info.has_components:
                         sorted_components = d.cpp_info.get_sorted_components().items()
@@ -312,6 +313,8 @@ class XcodeDeps(object):
                         public_deps.append((_format_name(d.ref.name),) * 2)
 
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
+                required_components = [req for req in required_components if req[0] in public_transitive_requires]
+
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
                 root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder, [dep.cpp_info],
