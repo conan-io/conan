@@ -6,7 +6,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.toolchains.apple.test_xcodetoolchain import _get_filename
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 _expected_dep_xconfig = [
     "HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{name}_{name})",
@@ -456,3 +456,23 @@ def test_dependency_of_dependency_components():
     assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
     assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
     assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_skipped_not_included():
+    # https://github.com/conan-io/conan/issues/13818
+    client = TestClient()
+    pkg_info = {"components": {"cmp": {"requires": ["dep::dep"]}}}
+
+    client.save({"dep/conanfile.py": GenConanfile().with_package_type("header-library"),
+                 "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1")
+                                                   .with_package_type("library")
+                                                   .with_shared_option()
+                                                   .with_package_info(cpp_info=pkg_info,
+                                                                      env_info={}),
+                 "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                        .with_settings("os", "build_type", "arch")})
+    client.run("create dep --name=dep --version=0.1")
+    client.run("create pkg --name=pkg --version=0.1")
+    client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release -of=.")
+    client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
