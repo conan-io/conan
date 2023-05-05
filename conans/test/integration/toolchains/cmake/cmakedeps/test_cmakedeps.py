@@ -402,7 +402,7 @@ def test_props_from_consumer_build_context_activated():
 def test_skip_transitive_components():
     """ when a transitive depenency is skipped, because its binary is not necessary
     (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
-    was erroring with KeyError, as the dependency info was not there
+    was failing with KeyError, as the dependency info was not there
     """
     c = TestClient()
     pkg = textwrap.dedent("""
