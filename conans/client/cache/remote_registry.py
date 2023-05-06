@@ -70,38 +70,37 @@ class _Remotes:
             if not force:
                 raise ConanException(f"Remote '{new_remote.name}' already exists in remotes "
                                      "(use --force to continue)")
-
             ConanOutput().warning(f"Remote '{new_remote.name}' already exists in remotes")
             if current.url != new_remote.url:
                 ConanOutput().warning("Updating existing remote with new url")
-            current_index = self._remotes.index(current)
-            self._remotes.remove(current)
-            index = index or current_index
-            self._remotes.insert(index, new_remote)
-            return
 
+        self._check_urls(new_remote.url, force, current)
+        if index is None:
+            self._remotes[new_remote.name] = new_remote
+        else:
+            self._remotes.append(new_remote)
+
+    def _check_urls(self, url, force, current):
         # The remote name doesn't exist
-        for r in self._remotes:
-            if r.url == new_remote.url:
+        for r in self._remotes.values():
+            if r is not current and r.url == url:
                 msg = f"Remote url already existing in remote '{r.name}'. " \
                       f"Having different remotes with same URL is not recommended."
                 if not force:
                     raise ConanException(msg + " Use '--force' to override.")
                 else:
-                    ConanOutput().warning(msg + " Adding duplicated remote because '--force'.")
-        if index:
-            self._remotes.insert(index, new_remote)
-        else:
-            self._remotes.append(new_remote)
+                    ConanOutput().warning(msg + " Adding duplicated remote url because '--force'.")
 
-    def update(self, remote_name, url=None, secure=None, index=None):
+    def update(self, remote_name, url=None, secure=None, index=None, force=False):
         remote = self[remote_name]
         if url is not None:
+            self._check_urls(url, force, remote)
             remote.url = url
         if secure is not None:
             remote.verify_ssl = secure
 
-        self._remotes[remote.name] = remote
+        if index is not None:
+            self._remotes.append(new_remote)
 
     def items(self):
         return list(self._remotes.values())
