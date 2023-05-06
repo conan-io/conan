@@ -92,6 +92,8 @@ class UploadTest(unittest.TestCase):
         if platform.system() == "Linux":
             client.run("remove '*' -c")
             client.run("install --requires={}".format(ref))
+            package_folder = client.get_latest_pkg_layout(pref).package()
+            package_file_path = os.path.join(package_folder, "myfile.sh")
             # Owner with execute permissions
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
