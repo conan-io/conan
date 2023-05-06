@@ -187,8 +187,9 @@ class DataCache:
         build_id = layout.build_id
         pref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
+        relpath = os.path.relpath(layout.base_folder, self.base_folder)
         try:
-            self._db.create_package(layout.base_folder, pref, build_id)
+            self._db.create_package(relpath, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
             self._db.update_package_timestamp(pref)
