@@ -17,5 +17,6 @@ def test_fail_rmdir():
     build_folder = client.get_latest_pkg_layout(pref).build()
     f = open(os.path.join(build_folder, "myfile"), "wb")
     f.write(b"Hello world")
-    client.run("install --requires=mypkg/0.1@lasote/testing --build=*", assert_error=True)
-    assert "ERROR: Couldn't remove folder" in client.out
+    client.run("install --requires=mypkg/0.1@lasote/testing --build=*")
+    # This used to fail, because the build folder was busy, couldn't be removed.
+    # But now, every build folder gets a new UUID, so it doesn't reuse the previous one.

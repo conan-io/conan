@@ -155,7 +155,8 @@ bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
 bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
-@pytest.fixture(scope="module")
+# FIXME: Add back scope=module optimization
+@pytest.fixture()
 def _populated_client_base():
     """
     foo/1.0@ (one revision) no packages

@@ -47,6 +47,10 @@ def test_package_python_files():
     client.run("remove * -c")
     client.run("download pkg/0.1#*:* -r default")
 
+    # The download will be in a different pkg folder now.
+    pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
+    pkg_folder = client.get_latest_pkg_layout(pref).package()
+
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyo"))
     assert not os.path.isfile(os.path.join(export_sources, ".DS_Store"))

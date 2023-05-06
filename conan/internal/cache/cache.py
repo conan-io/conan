@@ -1,5 +1,6 @@
 import hashlib
 import os
+import uuid
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
@@ -56,7 +57,10 @@ class DataCache:
     @staticmethod
     def _get_tmp_path_pref(pref):
         # The reference will not have revision, but it will be always constant
-        h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime())
+        assert pref.revision is None
+        assert pref.timestamp is None
+        random_id = str(uuid.uuid4())
+        h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime() + random_id)
         return os.path.join("t", h)
 
     @staticmethod
@@ -180,24 +184,22 @@ class DataCache:
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
 
-        new_path = self._get_path_pref(pref)
+        #new_path = self._get_path_pref(pref)
 
-        full_path = self._full_path(new_path)
-        rmdir(full_path)
+        #full_path = self._full_path(new_path)
+        #rmdir(full_path)
 
-        renamedir(self._full_path(layout.base_folder), full_path)
-        layout._base_folder = os.path.join(self.base_folder, new_path)
+        #renamedir(self._full_path(layout.base_folder), full_path)
+        #layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
         pref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
         try:
-            self._db.create_package(new_path, pref, build_id)
+            self._db.create_package(layout.base_folder, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
             # This was exported before, making it latest again, update timestamp
             self._db.update_package_timestamp(pref)
-
-        return new_path
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it
