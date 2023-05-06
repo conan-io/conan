@@ -78,7 +78,10 @@ class _Remotes:
         if index is None:
             self._remotes[new_remote.name] = new_remote
         else:
-            self._remotes.append(new_remote)
+            self._remotes.pop(new_remote.name, None)
+            remotes = list(self._remotes.values())
+            remotes.insert(index, new_remote)
+            self._remotes = {r.name: r for r in remotes}
 
     def _check_urls(self, url, force, current):
         # The remote name doesn't exist
@@ -91,16 +94,21 @@ class _Remotes:
                 else:
                     ConanOutput().warning(msg + " Adding duplicated remote url because '--force'.")
 
-    def update(self, remote_name, url=None, secure=None, index=None, force=False):
+    def update(self, remote_name, url=None, secure=None, disabled=None, index=None, force=False):
         remote = self[remote_name]
         if url is not None:
             self._check_urls(url, force, remote)
             remote.url = url
         if secure is not None:
             remote.verify_ssl = secure
+        if disabled is not None:
+            remote.disabled = disabled
 
         if index is not None:
-            self._remotes.append(new_remote)
+            self._remotes.pop(remote.name, None)
+            remotes = list(self._remotes.values())
+            remotes.insert(index, remote)
+            self._remotes = {r.name: r for r in remotes}
 
     def items(self):
         return list(self._remotes.values())
@@ -164,15 +172,11 @@ class RemoteRegistry(object):
         remotes.remove(remote_name)
         self.save_remotes(remotes)
 
-    def update(self, remote):
-        self._validate_url(remote.url)
+    def update(self, remote_name, url, secure, disabled, index):
+        if url is not None:
+            self._validate_url(url)
         remotes = self._load_remotes()
-        remotes.update(remote)
-        self.save_remotes(remotes)
-
-    def move(self, remote, index):
-        remotes = self._load_remotes()
-        remotes.move(remote, new_index=index)
+        remotes.update(remote_name, url, secure, disabled, index)
         self.save_remotes(remotes)
 
     def rename(self, remote, new_name):

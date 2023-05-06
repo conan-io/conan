@@ -48,14 +48,14 @@ class RemotesAPI:
         remotes = self.list(pattern, only_enabled=False)
         for r in remotes:
             r.disabled = True
-            self.update(r)
+            self.update(r.name, disabled=True)
         return remotes
 
     def enable(self, pattern):
         remotes = self.list(pattern, only_enabled=False)
         for r in remotes:
             r.disabled = False
-            self.update(r)
+            self.update(r.name, disabled=False)
         return remotes
 
     def get(self, remote_name):
@@ -73,9 +73,10 @@ class RemotesAPI:
             app.cache.remotes_registry.remove(remote.name)
             users_clean(app.cache.localdb, remote.url)
 
-    def update(self, remote_name, url=None, secure=None, index=None):
+    def update(self, remote_name, url=None, secure=None, disabled=None, index=None):
         app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.update(remote_name, url, secure, index)
+        app.cache.remotes_registry.update(remote_name, url, secure, disabled=disabled,
+                                          index=index)
 
     def rename(self, remote_name: str, new_name: str):
         app = ConanApp(self.conan_api.cache_folder)

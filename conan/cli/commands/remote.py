@@ -106,14 +106,7 @@ def remote_update(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     if args.url is None and args.secure is None and args.index is None:
         subparser.error("Please add at least one argument to update")
-    r = conan_api.remotes.get(args.remote)
-    if args.url is not None:
-        r.url = args.url
-    if args.secure is not None:
-        r.verify_ssl = args.secure
-    conan_api.remotes.update(args.remote, args.url, args.secure)
-    if args.index is not None:
-        conan_api.remotes.move(r, args.index)
+    conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index)
 
 
 @conan_subcommand()
