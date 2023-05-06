@@ -61,7 +61,7 @@ class DataCache:
         assert pref.timestamp is None
         random_id = str(uuid.uuid4())
         h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime() + random_id)
-        return os.path.join("t", h)
+        return os.path.join("b", h)
 
     @staticmethod
     def _get_path(ref: RecipeReference):
@@ -183,14 +183,6 @@ class DataCache:
 
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
-
-        #new_path = self._get_path_pref(pref)
-
-        #full_path = self._full_path(new_path)
-        #rmdir(full_path)
-
-        #renamedir(self._full_path(layout.base_folder), full_path)
-        #layout._base_folder = os.path.join(self.base_folder, new_path)
 
         build_id = layout.build_id
         pref.timestamp = revision_timestamp_now()

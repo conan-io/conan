@@ -31,15 +31,21 @@ def test_cache_clean():
 
 def test_cache_clean_all():
     c = TestClient()
-    c.save({"pkg1/conanfile.py": GenConanfile("pkg", "0.1").with_package("error"),
-            "pkg2/conanfile.py": GenConanfile("pkg", "0.2")})
+    c.save({"pkg1/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("revision_mode='scm'"),
+            "pkg2/conanfile.py": GenConanfile("pkg", "0.2").with_package("error"),
+            "pkg3/conanfile.py": GenConanfile("pkg", "0.3")})
     c.run("create pkg1", assert_error=True)
-    c.run("create pkg2")
-    pref = c.created_package_reference("pkg/0.2")
-    folder = os.path.join(c.cache_folder, "p", "t")
-    assert len(os.listdir(folder)) == 1
+    c.run("create pkg2", assert_error=True)
+    c.run("create pkg3")
+    pref = c.created_package_reference("pkg/0.3")
+    temp_folder = os.path.join(c.cache_folder, "p", "t")
+    assert len(os.listdir(temp_folder)) == 1  # Failed export was here
+    builds_folder = os.path.join(c.cache_folder, "p", "b")
+    assert len(os.listdir(builds_folder)) == 2  # both builds are here
     c.run('cache clean')
-    assert not os.path.exists(folder)
+    assert not os.path.exists(temp_folder)
+    assert len(os.listdir(builds_folder)) == 1  # only correct pkg/0.3 remains
+    # Check correct package removed all
     ref_layout = c.get_latest_ref_layout(pref.ref)
     pkg_layout = c.get_latest_pkg_layout(pref)
     assert not os.path.exists(ref_layout.source())
@@ -50,4 +56,4 @@ def test_cache_clean_all():
     # A second clean like this used to crash
     # as it tried to delete a folder that was not there and tripped shutils up
     c.run('cache clean')
-    assert not os.path.exists(folder)
+    assert not os.path.exists(temp_folder)

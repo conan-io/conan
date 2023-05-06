@@ -58,6 +58,10 @@ class ClientCache(object):
         # TODO: Improve the path definitions, this is very hardcoded
         return os.path.join(self.cache_folder, "p", "t")
 
+    @property
+    def builds_folder(self):
+        return os.path.join(self.cache_folder, "p", "b")
+
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
 
