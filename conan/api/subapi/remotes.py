@@ -62,28 +62,24 @@ class RemotesAPI:
         app = ConanApp(self.conan_api.cache_folder)
         return app.cache.remotes_registry.read(remote_name)
 
-    def add(self, remote: Remote, force=False):
+    def add(self, remote: Remote, force=False, index=None):
         app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.add(remote, force=force)
+        app.cache.remotes_registry.add(remote, force=force, index=index)
 
-    def remove(self, remote_name):
+    def remove(self, pattern: str):
         app = ConanApp(self.conan_api.cache_folder)
-        remotes = self.list(remote_name, only_enabled=False)
+        remotes = self.list(pattern, only_enabled=False)
         for remote in remotes:
             app.cache.remotes_registry.remove(remote.name)
             users_clean(app.cache.localdb, remote.url)
 
-    def update(self, remote: Remote):
+    def update(self, remote_name, url=None, secure=None, index=None):
         app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.update(remote)
+        app.cache.remotes_registry.update(remote_name, url, secure, index)
 
-    def move(self, remote: Remote, index: int):
+    def rename(self, remote_name: str, new_name: str):
         app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.move(remote, index)
-
-    def rename(self, remote: Remote, new_name: str):
-        app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.rename(remote, new_name)
+        app.cache.remotes_registry.rename(remote_name, new_name)
 
     def user_info(self, remote: Remote):
         app = ConanApp(self.conan_api.cache_folder)

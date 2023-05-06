@@ -75,9 +75,7 @@ def remote_add(conan_api, parser, subparser, *args):
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
     r = Remote(args.name, args.url, args.secure, disabled=False)
-    conan_api.remotes.add(r, force=args.force)
-    if args.index is not None:
-        conan_api.remotes.move(r, args.index)
+    conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
 @conan_subcommand()
@@ -113,7 +111,7 @@ def remote_update(conan_api, parser, subparser, *args):
         r.url = args.url
     if args.secure is not None:
         r.verify_ssl = args.secure
-    conan_api.remotes.update(r)
+    conan_api.remotes.update(args.remote, args.url, args.secure)
     if args.index is not None:
         conan_api.remotes.move(r, args.index)
 
@@ -126,8 +124,7 @@ def remote_rename(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Current name of the remote")
     subparser.add_argument("new_name", help="New name for the remote")
     args = parser.parse_args(*args)
-    r = conan_api.remotes.get(args.remote)
-    conan_api.remotes.rename(r, args.new_name)
+    conan_api.remotes.rename(args.remote, args.new_name)
 
 
 @conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})
