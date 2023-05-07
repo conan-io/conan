@@ -33,8 +33,9 @@ def lock_create(conan_api, parser, subparser, *args):
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
-                                               cwd=cwd, partial=True)
+                                               cwd=cwd, partial=True, overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:

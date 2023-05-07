@@ -267,10 +267,7 @@ class Conf:
 
     def validate(self):
         for conf in self._values:
-            if conf.startswith("tools") or conf.startswith("core"):
-                if conf not in BUILT_IN_CONFS:
-                    raise ConanException(f"Unknown conf '{conf}'. Use 'conan config list' to "
-                                         "display existing configurations")
+            self._check_conf_name(conf)
 
     def items(self):
         # FIXME: Keeping backward compatibility
@@ -287,9 +284,7 @@ class Conf:
                            There are two default smart conversions for bool and str types.
         """
         # Skipping this check only the user.* configurations
-        if USER_CONF_PATTERN.match(conf_name) is None and conf_name not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] '{conf_name}' does not exist in configuration list. "
-                                 f" Run 'conan config list' to see all the available confs.")
+        self._check_conf_name(conf_name)
 
         conf_value = self._values.get(conf_name)
         if conf_value:
@@ -479,6 +474,12 @@ class Conf:
     def set_relative_base_folder(self, folder):
         for v in self._values.values():
             v.set_relative_base_folder(folder)
+
+    @staticmethod
+    def _check_conf_name(conf):
+        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 f" Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:

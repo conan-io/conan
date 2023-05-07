@@ -2,6 +2,7 @@ import textwrap
 
 from conans.test.utils.tools import TestClient
 
+
 def assert_vars_file(client, configuration):
     contents = client.load(f"conan_pkg.name-more+_vars_{configuration}_x86_64.premake5.lua")
     assert f'include "conanutils.premake5.lua"' in contents
@@ -22,10 +23,10 @@ def assert_vars_file(client, configuration):
     assert f'if conandeps == nil then conandeps = {{}} end' in contents
     assert f'conan_premake_tmerge(conandeps, t_conandeps)' in contents
 
+
 def test_premakedeps():
     # Create package
     client = TestClient()
-    print(client.current_folder)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):

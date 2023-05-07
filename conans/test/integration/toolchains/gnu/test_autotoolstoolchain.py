@@ -4,7 +4,7 @@ import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
+from conans.util.files import save, load
 
 
 def test_extra_flags_via_conf():
@@ -146,3 +146,15 @@ def test_set_prefix():
     conanbuild = client.load(os.path.join(client.current_folder, "build", "conan", "conanbuild.conf"))
     assert "--prefix=/somefolder" in conanbuild
     assert conanbuild.count("--prefix") == 1
+
+
+def test_unknown_compiler():
+    client = TestClient()
+    settings = load(client.cache.settings_path)
+    settings = settings.replace("gcc:", "xlc:\n    gcc:", 1)
+    save(client.cache.settings_path, settings)
+    client.save({"conanfile.py": GenConanfile().with_settings("compiler", "build_type")
+                                               .with_generator("AutotoolsToolchain")})
+    # this used to crash, because of build_type_flags in AutotoolsToolchain returning empty string
+    client.run("install . -s compiler=xlc")
+    assert "conanfile.py: Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
