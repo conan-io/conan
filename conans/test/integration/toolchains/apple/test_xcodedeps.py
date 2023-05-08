@@ -462,18 +462,19 @@ def test_dependency_of_dependency_components():
 def test_skipped_not_included():
     # https://github.com/conan-io/conan/issues/13818
     client = TestClient()
-    pkg_info = {"components": {"cmp": {"requires": ["dep::dep"]}}}
+    pkg_info = {"components": {"component": {"defines": ["SOMEDEFINE"]}}}
 
-    client.save({"dep/conanfile.py": GenConanfile().with_package_type("header-library"),
-                 "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1")
-                                                   .with_package_type("library")
-                                                   .with_shared_option()
+    client.save({"dep/conanfile.py": GenConanfile().with_package_type("header-library")
                                                    .with_package_info(cpp_info=pkg_info,
                                                                       env_info={}),
+                 "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1")
+                                                   .with_package_type("library")
+                                                   .with_shared_option(),
                  "consumer/conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-
+    dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
+    assert "conan_dep.xcconfig" not in dep_xconfig
