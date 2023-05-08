@@ -12,7 +12,7 @@ def test_private_skip():
     client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0 -vv")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
 
@@ -61,7 +61,7 @@ def test_shared_link_static_skip():
     client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0 -vv")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (package_id, "Skip")})
 
 
@@ -78,7 +78,7 @@ def test_test_requires():
     client.run("remove gtest/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0 -vv")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
 
 

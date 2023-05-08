@@ -422,7 +422,7 @@ def test_skip_transitive_components():
                                                    .with_requires("pkg/0.1")})
     c.run("create dep")
     c.run("create pkg")
-    c.run("install consumer -g CMakeDeps -vv")
+    c.run("install consumer -g CMakeDeps -v")
     c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
     # This used to error, as CMakeDeps was raising a KeyError
     assert "'CMakeDeps' calling 'generate()'" in c.out
