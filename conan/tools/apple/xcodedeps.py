@@ -131,7 +131,7 @@ class XcodeDeps(object):
         """
         def _merged_vars(name):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
-            return list(OrderedDict.fromkeys(merged).keys())
+            return list(set(merged))
 
         # TODO: Investigate if paths can be made relative to "root" folder
         fields = {
@@ -206,9 +206,10 @@ class XcodeDeps(object):
         """
         content_multi = content or self._all_xconfig
 
-        for req, dep in deps.items():
-            dep_name = _format_name(dep.ref.name)
-            content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
+        for dep in deps.values():
+            include_file = f'conan_{_format_name(dep.ref.name)}.xcconfig'
+            if include_file not in content_multi:
+                content_multi = content_multi + f'\n#include "{include_file}"\n'
         return content_multi
 
     def _pkg_xconfig_file(self, components):
