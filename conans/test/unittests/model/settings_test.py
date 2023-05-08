@@ -436,3 +436,10 @@ def test_rm_safe():
     with pytest.raises(Exception) as e:
         settings.compiler.libcxx = "libstdc++"
     assert "'settings.compiler.libcxx' doesn't exist for 'clang'" in str(e.value)
+
+
+def test_settings_intel_cppstd_03():
+    settings = Settings.loads(default_settings_yml)
+    settings.compiler = "intel-cc"
+    # This doesn't crash, it used to crash due to "03" not quoted in setting.yml
+    settings.compiler.cppstd = "03"
