@@ -88,9 +88,11 @@ def test_editable_cmake_components():
                 cmake.configure()
                 cmake.build()
                 self.run(os.path.join(self.cpp.build.bindirs[0], "example"))
+                self.run(os.path.join(self.cpp.build.bindirs[0], "example2"))
             """)
     app_cpp = gen_function_cpp(name="main", includes=["hello/hello", "bye/bye"],
                                calls=["hello", "bye"])
+    app_cpp2 = gen_function_cpp(name="main", includes=["hello/hello"], calls=["hello"])
 
     app_cmakelists = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -102,6 +104,9 @@ def test_editable_cmake_components():
 
         add_executable(example example.cpp)
         target_link_libraries(example MyGreetings::MyGreetings)
+
+        add_executable(example2 example2.cpp)
+        target_link_libraries(example2 MyGreetings::MyHello)
         """)
 
     client = TestClient()
@@ -113,6 +118,7 @@ def test_editable_cmake_components():
                  "greetings/src/bye.cpp": bye_cpp,
                  "app/conanfile.py": app_conanfile,
                  "app/example.cpp": app_cpp,
+                 "app/example2.cpp": app_cpp2,
                  "app/CMakeLists.txt": app_cmakelists})
     client.run("create greetings")
     client.run("build app")
@@ -124,5 +130,13 @@ def test_editable_cmake_components():
     client.run("editable add greetings")
     client.run("build greetings")
     client.run("build app")
-    assert "hello: Release!" in client.out
-    assert "bye: Release!" in client.out
+    assert str(client.out).count("hello: Release!") == 2
+    assert str(client.out).count("bye: Release!") == 1
+
+    # Do a modification to one component, to verify it is used correctly
+    bye_cpp = gen_function_cpp(name="bye", includes=["bye"], msg="Adios")
+    client.save({"greetings/src/bye.cpp": bye_cpp})
+    client.run("build greetings")
+    client.run("build app")
+    assert str(client.out).count("hello: Release!") == 2
+    assert str(client.out).count("Adios: Release!") == 1
