@@ -334,7 +334,7 @@ def _detected_architecture():
 
 
 def _detect_os_arch(result):
-    from conans.client.conf import get_default_settings_yml
+    from conans.client.conf import default_settings_yml
     from conans.model.settings import Settings
 
     the_os = platform.system()
@@ -346,7 +346,7 @@ def _detect_os_arch(result):
 
     if arch:
         if arch.startswith('arm'):
-            settings = Settings.loads(get_default_settings_yml())
+            settings = Settings.loads(default_settings_yml)
             defined_architectures = settings.arch.values_range
             defined_arm_architectures = [v for v in defined_architectures if v.startswith("arm")]
 

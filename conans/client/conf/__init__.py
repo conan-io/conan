@@ -104,7 +104,7 @@ compiler:
         update: [null, ANY]
         mode: ["icx", "classic", "dpcpp"]
         libcxx: [null, libstdc++, libstdc++11, libc++]
-        cppstd: [null, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        cppstd: [null, 98, gnu98, "03", gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
     qcc:
@@ -128,4 +128,4 @@ def migrate_settings_file(cache):
     from conans.client.migrations import update_file
 
     settings_path = cache.settings_path
-    update_file(settings_path, get_default_settings_yml())
+    update_file(settings_path, default_settings_yml)
