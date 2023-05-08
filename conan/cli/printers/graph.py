@@ -1,4 +1,4 @@
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
     BINARY_SYSTEM_TOOL
 
@@ -39,17 +39,12 @@ def print_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for ref, (status, remote, test_package) in sorted(reqs_to_print.items()):
-            orig_status = status
+        for ref, (recipe, remote, test_package) in sorted(reqs_to_print.items()):
             if remote is not None:
-                status = "{} ({})".format(status, remote.name)
+                recipe = "{} ({})".format(recipe, remote.name)
             if test_package:
-                status = f"(tp) {status}"
-            msg = "    {} - {}".format(ref.repr_notime(), status)
-            if orig_status == BINARY_SKIP:
-                output.verbose(msg, Color.BRIGHT_CYAN)
-            else:
-                output.info(msg, Color.BRIGHT_CYAN)
+                recipe = f"(tp) {recipe}"
+            output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)
@@ -91,6 +86,8 @@ def print_graph_packages(graph):
     requires = {}
     build_requires = {}
     test_requires = {}
+    skipped_requires = []
+    tab = "    "
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
@@ -110,12 +107,12 @@ def print_graph_packages(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            orig_status = status
-            if remote is not None and orig_status != BINARY_SKIP:
-                status = "{} ({})".format(status, remote.name)
             name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
-            msg = "    {} - {}".format(name, status)
-            if orig_status == BINARY_SKIP:
+            msg = f"{tab}{name} - {status}"
+            if remote is not None and status != BINARY_SKIP:
+                msg += f" ({remote.name})"
+            if status == BINARY_SKIP:
+                skipped_requires.append(str(pref.ref))
                 output.verbose(msg, Color.BRIGHT_CYAN)
             else:
                 output.info(msg, Color.BRIGHT_CYAN)
@@ -123,3 +120,7 @@ def print_graph_packages(graph):
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)
     _format_requires("Build requirements", build_requires)
+
+    if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
+        output.info("Skipped binaries from", Color.BRIGHT_YELLOW)
+        output.info(f"{tab}{skipped_requires}", Color.BRIGHT_CYAN)
