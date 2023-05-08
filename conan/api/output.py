@@ -51,6 +51,17 @@ class ConanOutput:
     # Singleton
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
+    _output_levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
+                      "error": LEVEL_ERROR,  # -verror 70
+                      "warning": LEVEL_WARNING,  # -vwaring 60
+                      "notice": LEVEL_NOTICE,  # -vnotice 50
+                      "status": LEVEL_STATUS,  # -vstatus 40
+                      None: LEVEL_VERBOSE,  # -v 30
+                      "verbose": LEVEL_VERBOSE,  # -vverbose 30
+                      "debug": LEVEL_DEBUG,  # -vdebug 20
+                      "v": LEVEL_DEBUG,  # -vv 20
+                      "trace": LEVEL_TRACE,  # -vtrace 10
+                      "vv": LEVEL_TRACE}  # -vvv 10
 
     def __init__(self, scope=""):
         self.stream = sys.stderr
@@ -65,23 +76,18 @@ class ConanOutput:
 
     @classmethod
     def define_log_level(cls, v):
-        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                  "error": LEVEL_ERROR,  # -verror 70
-                  "warning": LEVEL_WARNING,  # -vwaring 60
-                  "notice": LEVEL_NOTICE,  # -vnotice 50
-                  "status": LEVEL_STATUS,  # -vstatus 40
-                  None: LEVEL_STATUS,  # -v 40
-                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                  "debug": LEVEL_DEBUG,  # -vdebug 20
-                  "v": LEVEL_DEBUG,  # -vv 20
-                  "trace": LEVEL_TRACE,  # -vtrace 10
-                  "vv": LEVEL_TRACE,  # -vvv 10
-                  }
+        """
+        Translates the verbosity level entered by a Conan command. If it's `None` (-v),
+        it will be defaulted to `verbose` level.
 
-        level = levels.get(v)
-        if not level:
+        :param v: `str` or `None`, where `None` is the same as `verbose`.
+        """
+        try:
+            level = cls._output_levels[v]
+        except KeyError:
             raise ConanException(f"Invalid argument '-v{v}'")
-        cls._conan_output_level = level
+        else:
+            cls._conan_output_level = level
 
     @classmethod
     def level_allowed(cls, level):
