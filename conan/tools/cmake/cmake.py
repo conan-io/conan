@@ -106,7 +106,7 @@ class CMake(object):
 
         verbosity = self._verbosity
         if verbosity is not None:
-            arg_list.append(f'--log-level="{verbosity}"')
+            arg_list.append(f'--loglevel={verbosity}')
 
         if cli_args:
             arg_list.extend(cli_args)
