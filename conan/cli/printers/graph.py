@@ -122,5 +122,5 @@ def print_graph_packages(graph):
     _format_requires("Build requirements", build_requires)
 
     if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
-        output.info("Skipped binaries from", Color.BRIGHT_YELLOW)
+        output.info("Skipped binaries", Color.BRIGHT_YELLOW)
         output.info(f"{tab}{skipped_requires}", Color.BRIGHT_CYAN)
