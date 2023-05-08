@@ -474,6 +474,6 @@ def test_skipped_not_included():
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
-    client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release -of=.")
+    client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
