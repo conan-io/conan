@@ -48,11 +48,18 @@ class DownloadCache:
         """ from a package_list of packages to upload, collect from the backup-sources cache
         the matching references to upload those backups too
         """
+        def should_upload_sources(package):
+            return any(prev["upload"] for prev in package["revisions"].values())
+
         files_to_upload = []
         path_backups = os.path.join(self._path, self._SOURCE_BACKUP)
+
         if not os.path.exists(path_backups):
             return []
-        all_refs = {str(k) for k, v in package_list.refs() if v.get("upload")}
+
+        all_refs = {str(k) for k, ref in package_list.refs()
+                    if ref.get("upload") or any(should_upload_sources(p)
+                                                for p in ref["packages"].values())}
         for f in os.listdir(path_backups):
             if f.endswith(".json"):
                 f = os.path.join(path_backups, f)
@@ -85,4 +92,7 @@ class DownloadCache:
             urls = [urls]
         existing_urls = summary["references"].setdefault(summary_key, [])
         existing_urls.extend(url for url in urls if url not in existing_urls)
+        conanfile.output.verbose(f"Updating ${summary_path} summary file")
+        summary_dump = json.dumps(summary)
+        conanfile.output.debug(f"New summary: ${summary_dump}")
         save(summary_path, json.dumps(summary))
