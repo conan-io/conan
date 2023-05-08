@@ -205,7 +205,7 @@ class BuildRequiresTest(unittest.TestCase):
         t.run("create . --name=LibA --version=0.1 --user=user --channel=testing")
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
                                               .with_tool_requires(catch_ref)})
-        t.run("install .")
+        t.run("install . -vv")
         self.assertIn("catch/0.1@user/testing from local cache", t.out)
         self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
                       t.out)
