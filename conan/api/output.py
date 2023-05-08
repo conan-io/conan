@@ -51,17 +51,6 @@ class ConanOutput:
     # Singleton
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
-    _output_levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                      "error": LEVEL_ERROR,  # -verror 70
-                      "warning": LEVEL_WARNING,  # -vwaring 60
-                      "notice": LEVEL_NOTICE,  # -vnotice 50
-                      "status": LEVEL_STATUS,  # -vstatus 40
-                      None: LEVEL_VERBOSE,  # -v 30
-                      "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                      "debug": LEVEL_DEBUG,  # -vdebug 20
-                      "v": LEVEL_DEBUG,  # -vv 20
-                      "trace": LEVEL_TRACE,  # -vtrace 10
-                      "vv": LEVEL_TRACE}  # -vvv 10
 
     def __init__(self, scope=""):
         self.stream = sys.stderr
@@ -83,7 +72,18 @@ class ConanOutput:
         :param v: `str` or `None`, where `None` is the same as `verbose`.
         """
         try:
-            level = cls._output_levels[v]
+            level = {"quiet": LEVEL_QUIET,  # -vquiet 80
+                     "error": LEVEL_ERROR,  # -verror 70
+                     "warning": LEVEL_WARNING,  # -vwaring 60
+                     "notice": LEVEL_NOTICE,  # -vnotice 50
+                     "status": LEVEL_STATUS,  # -vstatus 40
+                     None: LEVEL_VERBOSE,  # -v 30
+                     "verbose": LEVEL_VERBOSE,  # -vverbose 30
+                     "debug": LEVEL_DEBUG,  # -vdebug 20
+                     "v": LEVEL_DEBUG,  # -vv 20
+                     "trace": LEVEL_TRACE,  # -vtrace 10
+                     "vv": LEVEL_TRACE  # -vvv 10
+                     }[v]
         except KeyError:
             raise ConanException(f"Invalid argument '-v{v}'")
         else:
