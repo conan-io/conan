@@ -40,7 +40,7 @@ def test(conan_api, parser, *args):
                           args.update, build_modes=args.build)
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.path.dirname(path))
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,
