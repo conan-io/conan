@@ -74,7 +74,8 @@ compiler:
                     "9", "9.1", "9.2", "9.3", "9.4", "9.5",
                     "10", "10.1", "10.2", "10.3", "10.4",
                     "11", "11.1", "11.2", "11.3",
-                    "12", "12.1", "12.2"]
+                    "12", "12.1", "12.2", "12.3",
+                    "13", "13.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [null, posix, win32]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW
