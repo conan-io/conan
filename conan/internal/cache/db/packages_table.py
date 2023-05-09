@@ -82,11 +82,11 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
-    def update_timestamp(self, pref: PkgReference):
+    def update_timestamp(self, pref: PkgReference, path: str):
         assert pref.revision
         assert pref.timestamp
         where_clause = self._where_clause(pref)
-        set_clause = self._set_clause(pref)
+        set_clause = self._set_clause(pref, path=path)
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
                 f"WHERE {where_clause};"

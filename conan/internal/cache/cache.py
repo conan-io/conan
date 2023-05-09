@@ -177,7 +177,7 @@ class DataCache:
         # FIXME: This is clearing package binaries from DB, but not from disk/layout
         self._db.remove_recipe(layout.reference)
 
-    def remove_package(self, layout: RecipeLayout):
+    def remove_package(self, layout: PackageLayout):
         layout.remove()
         self._db.remove_package(layout.reference)
 
@@ -191,8 +191,11 @@ class DataCache:
         try:
             self._db.create_package(relpath, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
+            # TODO: Optimize this into 1 single UPSERT operation
             # This was exported before, making it latest again, update timestamp
-            self._db.update_package_timestamp(pref)
+            pkg_layout = self.get_package_layout(pref)
+            pkg_layout.remove()
+            self._db.update_package_timestamp(pref, path=relpath)
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it

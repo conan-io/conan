@@ -57,3 +57,60 @@ def test_cache_clean_all():
     # as it tried to delete a folder that was not there and tripped shutils up
     c.run('cache clean')
     assert not os.path.exists(temp_folder)
+
+
+def test_cache_multiple_builds_same_prev_clean():
+    """
+    Different consecutive builds will create different folders, even if for the
+    same exact prev, leaving trailing non-referenced folders
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create .")
+    create_out = c.out
+    c.run("cache path pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    path1 = str(c.stdout)
+    assert path1 in create_out
+    c.run("create .")
+    create_out = c.out
+    c.run("cache path pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    path2 = str(c.stdout)
+    assert path2 in create_out
+    assert path1 != path2
+
+    builds_folder = os.path.join(c.cache_folder, "p", "b")
+    assert len(os.listdir(builds_folder)) == 1  # only one build
+    c.run('cache clean')
+    assert len(os.listdir(builds_folder)) == 1  # one build not cleaned
+    c.run('remove * -c')
+    assert len(os.listdir(builds_folder)) == 0  # no folder remain
+
+
+def test_cache_multiple_builds_diff_prev_clean():
+    """
+    Different consecutive builds will create different folders, even if for the
+    same exact prev, leaving trailing non-referenced folders
+    """
+    c = TestClient()
+    package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), str(time.time()))'
+    gen = GenConanfile("pkg", "0.1").with_package(package_lines).with_import("import os, time") \
+                                    .with_import("from conan.tools.files import save")
+    c.save({"conanfile.py": gen})
+    c.run("create .")
+    create_out = c.out
+    c.run("cache path pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    path1 = str(c.stdout)
+    assert path1 in create_out
+    c.run("create .")
+    create_out = c.out
+    c.run("cache path pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    path2 = str(c.stdout)
+    assert path2 in create_out
+    assert path1 != path2
+
+    builds_folder = os.path.join(c.cache_folder, "p", "b")
+    assert len(os.listdir(builds_folder)) == 2  # both builds are here
+    c.run('cache clean')
+    assert len(os.listdir(builds_folder)) == 2  # two builds will remain, both are valid
+    c.run('remove * -c')
+    assert len(os.listdir(builds_folder)) == 0  # no folder remain
