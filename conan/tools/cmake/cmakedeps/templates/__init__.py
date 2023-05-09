@@ -44,8 +44,15 @@ class CMakeDepsFileTemplate(object):
             raise ConanException("error generating context for '{}': {}".format(self.conanfile, e))
         if context is None:
             return
-        return Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                        undefined=jinja2.StrictUndefined).render(context)
+
+        # Cache the template instance as a class attribute to greatly speed up the rendering
+        # NOTE: this assumes that self.template always returns the same string
+        template_instance = getattr(type(self), "template_instance", None)
+        if template_instance is None:
+            template_instance = Template(self.template, trim_blocks=True, lstrip_blocks=True,
+                                         undefined=jinja2.StrictUndefined)
+            setattr(type(self), "template_instance", template_instance)
+        return template_instance.render(context)
 
     def context(self):
         raise NotImplementedError()
