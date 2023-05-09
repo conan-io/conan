@@ -508,66 +508,55 @@ class TestMultipleOptionsPatterns:
 
 
 class TestTransitiveOptionsShared:
-    def test_transitive_options_shared_cli(self):
+    """
+    https://github.com/conan-io/conan/issues/13854
+    """
+    @pytest.fixture()
+    def client(self):
         c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False),
+        c.save({"dep2/conanfile.py": GenConanfile("dep2", "0.1").with_shared_option(False),
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1").with_shared_option(False)
+                                                                .with_requires("dep2/0.1"),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
-                                                              .with_requires("dep/0.1"),
+                                                              .with_requires("dep1/0.1"),
                 "app/conanfile.txt": "[requires]\npkg/0.1"})
-        c.run("export dep")
+        c.run("export dep2")
+        c.run("export dep1")
         c.run("export pkg")
-        c.run("install app --build=missing -o *:shared=True")
-        c.run("list dep*:*")
-        assert "shared: True" in c.out
+        return c
 
-    def test_transitive_options_shared_profile(self):
-        c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False),
-                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
-                                                              .with_requires("dep/0.1"),
-                "app/conanfile.txt": "[requires]\npkg/0.1",
-                "profile": "[options]\n*:shared=True"})
-        c.run("export dep")
-        c.run("export pkg")
-        c.run("install app --build=missing -pr=profile")
-        c.run("list dep*:*")
-        assert "shared: True" in c.out
+    @staticmethod
+    def check(client):
+        client.run("list dep1/*:*")
+        assert "shared: True" in client.out
+        client.run("list dep2/*:*")
+        assert "shared: True" in client.out
+        client.run("list pkg/*:*")
+        assert "shared: True" in client.out
 
-    def test_transitive_options_conanfile_txt(self):
-        c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False),
-                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
-                                                              .with_requires("dep/0.1"),
-                "app/conanfile.txt": "[requires]\npkg/0.1\n[options]\n*:shared=True\n"})
-        c.run("export dep")
-        c.run("export pkg")
-        c.run("install app --build=missing")
-        c.run("list dep*:*")
-        assert "shared: True" in c.out
+    def test_transitive_options_shared_cli(self, client):
+        client.run("install app --build=missing -o *:shared=True")
+        self.check(client)
 
-    def test_transitive_options_conanfile_py(self):
-        c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False),
-                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
-                                                              .with_requires("dep/0.1"),
-                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
-                                                  .with_default_option("*:shared", True)})
-        c.run("export dep")
-        c.run("export pkg")
-        c.run("install app --build=missing")
-        c.run("list dep*:*")
-        assert "shared: True" in c.out
+    def test_transitive_options_shared_profile(self, client):
+        client.save({"profile": "[options]\n*:shared=True"})
+        client.run("install app --build=missing -pr=profile")
+        self.check(client)
 
-    def test_transitive_options_conanfile_py_create(self):
-        c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False),
-                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
-                                                              .with_requires("dep/0.1"),
-                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1")
-                                                              .with_default_option("*:shared",
-                                                                                   True)})
-        c.run("export dep")
-        c.run("export pkg")
-        c.run("create app --build=missing")
-        c.run("list dep*:*")
-        assert "shared: True" in c.out
+    def test_transitive_options_conanfile_txt(self, client):
+        client.save({"app/conanfile.txt": "[requires]\npkg/0.1\n[options]\n*:shared=True\n"})
+        client.run("install app --build=missing")
+        self.check(client)
+
+    def test_transitive_options_conanfile_py(self, client):
+        client.save({"app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                       .with_default_option("*:shared", True)})
+        client.run("install app/conanfile.py --build=missing")
+        self.check(client)
+
+    def test_transitive_options_conanfile_py_create(self, client):
+        conanfile = GenConanfile("app", "0.1").with_requires("pkg/0.1") \
+                                              .with_default_option("*:shared", True)
+        client.save({"app/conanfile.py": conanfile})
+        client.run("create app --build=missing")
+        self.check(client)
