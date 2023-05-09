@@ -478,3 +478,35 @@ def test_skipped_not_included():
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
     assert "conan_dep.xcconfig" not in dep_xconfig
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_transitive_components():
+    """
+    liba -> 2 components, c1, c2
+    libb -> 2 components, c1, c2 -> [liba::c1, c2]
+    libc -> no component, requires libb
+    consumer -> libb
+    """
+
+    client = TestClient()
+    liba_comp = {"components": {"c1": {"defines": ["SOMEDEFINE"]},
+                                "c2": {"defines": ["SOMEDEFINE"]}}}
+    libb_comp = {"components": {"c1": {"defines": ["SOMEDEFINE"]},
+                                "c2": {"defines": ["SOMEDEFINE"], "requires": ["liba::c1", "c2"]}}}
+
+    client.save({"liba/conanfile.py": GenConanfile().with_package_type("header-library")
+                                                    .with_package_info(cpp_info=liba_comp,
+                                                                       env_info={}),
+                 "libb/conanfile.py": GenConanfile().with_package_type("library")
+                                                    .with_package_info(cpp_info=libb_comp,
+                                                                       env_info={}),
+                 "libc/conanfile.py": GenConanfile().with_package_type("library").with_requirement("libb/0.1"),
+                 "consumer/conanfile.py": GenConanfile().with_requires("consumer/0.1")
+                                                        .with_settings("os", "build_type", "arch")})
+    client.run("create liba --name=dep --version=0.1")
+    client.run("create pkg --name=pkg --version=0.1")
+    client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release")
+    client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
+    dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
+    assert "conan_dep.xcconfig" not in dep_xconfig
