@@ -390,9 +390,11 @@ class Options:
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
-            if ref_matches(own_ref, pattern, is_consumer=is_consumer) and "*" not in pattern:
-                # Remove the exact match to this package, don't further propagate up
-                continue
+            if ref_matches(own_ref, pattern, is_consumer=is_consumer):
+                # Remove the exact match-name to this package, don't further propagate up
+                pattern_name = pattern.split("/", 1)[0]
+                if "*" not in pattern_name:
+                    continue
             self._deps_package_options.setdefault(pattern, _PackageOptions()).update_options(options)
 
         upstream_options._deps_package_options = self._deps_package_options

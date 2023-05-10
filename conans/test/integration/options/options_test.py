@@ -514,12 +514,18 @@ class TestTransitiveOptionsShared:
     @pytest.fixture()
     def client(self):
         c = TestClient()
-        c.save({"dep2/conanfile.py": GenConanfile("dep2", "0.1").with_shared_option(False),
+        c.save({"toollib/conanfile.py": GenConanfile("toollib", "0.1").with_shared_option(False),
+                "tool/conanfile.py": GenConanfile("tool", "0.1").with_shared_option(False)
+                                                                .with_requires("toollib/0.1"),
+                "dep2/conanfile.py": GenConanfile("dep2", "0.1").with_shared_option(False)
+                                                                .with_tool_requires("tool/0.1"),
                 "dep1/conanfile.py": GenConanfile("dep1", "0.1").with_shared_option(False)
                                                                 .with_requires("dep2/0.1"),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
                                                               .with_requires("dep1/0.1"),
                 "app/conanfile.txt": "[requires]\npkg/0.1"})
+        c.run("export toollib")
+        c.run("export tool")
         c.run("export dep2")
         c.run("export dep1")
         c.run("export pkg")
@@ -527,12 +533,14 @@ class TestTransitiveOptionsShared:
 
     @staticmethod
     def check(client):
-        client.run("list dep1/*:*")
-        assert "shared: True" in client.out
-        client.run("list dep2/*:*")
-        assert "shared: True" in client.out
-        client.run("list pkg/*:*")
-        assert "shared: True" in client.out
+        # tools and libs in build context do not get propagated the options
+        for dep in ("toollib", "tool"):
+            client.run(f"list {dep}/*:*")
+            assert "shared: False" in client.out
+        # But the whole host context does
+        for dep in ("dep1", "dep2", "pkg"):
+            client.run(f"list {dep}/*:*")
+            assert "shared: True" in client.out
 
     def test_transitive_options_shared_cli(self, client):
         client.run("install app --build=missing -o *:shared=True")
@@ -560,3 +568,61 @@ class TestTransitiveOptionsShared:
         client.save({"app/conanfile.py": conanfile})
         client.run("create app --build=missing")
         self.check(client)
+
+
+class TestTransitiveOptionsSharedInvisible:
+    """
+    https://github.com/conan-io/conan/issues/13854
+    When a requirement is visible=False
+    """
+    @pytest.fixture()
+    def client(self):
+        c = TestClient()
+        c.save({"dep2/conanfile.py": GenConanfile("dep2", "0.1").with_shared_option(False),
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1").with_shared_option(False)
+                                                                .with_requirement("dep2/0.1",
+                                                                                  visible=False),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_shared_option(False)
+                                                              .with_requires("dep1/0.1"),
+                "app/conanfile.txt": "[requires]\npkg/0.1"})
+        c.run("export dep2")
+        c.run("export dep1")
+        c.run("export pkg")
+        return c
+
+    @staticmethod
+    def check(client, value):
+        for dep in ("dep1", "pkg"):
+            client.run(f"list {dep}/*:*")
+            assert f"shared: True" in client.out
+
+        # dep2 cannot be affected from downstream conanfile consumers options, only from profile
+        client.run(f"list dep2/*:*")
+        assert f"shared: {value}" in client.out
+
+    def test_transitive_options_shared_cli(self, client):
+        client.run("install app --build=missing -o *:shared=True")
+        self.check(client, True)
+
+    def test_transitive_options_shared_profile(self, client):
+        client.save({"profile": "[options]\n*:shared=True"})
+        client.run("install app --build=missing -pr=profile")
+        self.check(client, True)
+
+    def test_transitive_options_conanfile_txt(self, client):
+        client.save({"app/conanfile.txt": "[requires]\npkg/0.1\n[options]\n*:shared=True\n"})
+        client.run("install app --build=missing")
+        self.check(client, False)
+
+    def test_transitive_options_conanfile_py(self, client):
+        client.save({"app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                       .with_default_option("*:shared", True)})
+        client.run("install app/conanfile.py --build=missing")
+        self.check(client, False)
+
+    def test_transitive_options_conanfile_py_create(self, client):
+        conanfile = GenConanfile("app", "0.1").with_requires("pkg/0.1") \
+                                              .with_default_option("*:shared", True)
+        client.save({"app/conanfile.py": conanfile})
+        client.run("create app --build=missing")
+        self.check(client, False)
