@@ -493,19 +493,27 @@ def test_transitive_components():
     liba_comp = {"components": {"c1": {"defines": ["SOMEDEFINE"]},
                                 "c2": {"defines": ["SOMEDEFINE"]}}}
     libb_comp = {"components": {"c1": {"defines": ["SOMEDEFINE"]},
-                                "c2": {"defines": ["SOMEDEFINE"], "requires": ["liba::c1", "c2"]}}}
+                                "c2": {"defines": ["SOMEDEFINE"], "requires": ["liba::c2", "c1"]}}}
 
-    client.save({"liba/conanfile.py": GenConanfile().with_package_type("header-library")
+    client.save({"liba/conanfile.py": GenConanfile().with_package_type("library").with_shared_option()
                                                     .with_package_info(cpp_info=liba_comp,
                                                                        env_info={}),
                  "libb/conanfile.py": GenConanfile().with_package_type("library")
+                                                    .with_shared_option()
+                                                    .with_requires("liba/0.1")
                                                     .with_package_info(cpp_info=libb_comp,
                                                                        env_info={}),
-                 "libc/conanfile.py": GenConanfile().with_package_type("library").with_requirement("libb/0.1"),
-                 "consumer/conanfile.py": GenConanfile().with_requires("consumer/0.1")
+                 "libd/conanfile.py": GenConanfile().with_package_type("library")
+                                                    .with_shared_option(),
+                 "libc/conanfile.py": GenConanfile().with_package_type("library")
+                                                    .with_requires("libb/0.1", "libd/0.1")
+                                                    .with_shared_option(),
+                 "consumer/conanfile.py": GenConanfile().with_requires("libc/0.1")
                                                         .with_settings("os", "build_type", "arch")})
-    client.run("create liba --name=dep --version=0.1")
-    client.run("create pkg --name=pkg --version=0.1")
+    client.run("create liba --name=liba --version=0.1")
+    client.run("create libb --name=libb --version=0.1")
+    client.run("create libd --name=libd --version=0.1")
+    client.run("create libc --name=libc --version=0.1")
     client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
