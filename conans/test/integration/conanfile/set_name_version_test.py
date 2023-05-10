@@ -4,6 +4,7 @@ import unittest
 
 from parameterized import parameterized
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import mkdir
 
@@ -150,3 +151,42 @@ class SetVersionNameTest(unittest.TestCase):
             client.save({"version.txt": "2.1"}, clean_first=True)
             client.run("export .. ")
             self.assertIn("pkg/2.1: Exported", client.out)
+
+
+def test_set_version_forbidden_chars():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "$$$")})
+    c.run("export .", assert_error=True)
+    assert "ERROR: Invalid package version '$$$'" in c.out
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Lib(ConanFile):
+            name = "pkg"
+            def set_version(self):
+                self.version = "$$$"
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("export .", assert_error=True)
+    assert "ERROR: Invalid package version '$$$'" in c.out
+
+
+def test_set_version_carriage_return():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", r"1.0\n")})
+    c.run("export .", assert_error=True)
+    assert "ERROR: Invalid package version '1.0" in c.out
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import load
+        class Lib(ConanFile):
+            name = "pkg"
+            def set_version(self):
+                self.version = load(self, "version.txt")
+        """)
+    c.save({"conanfile.py": conanfile,
+            "version.txt": "1.0\n"})
+    c.run("export .", assert_error=True)
+    assert "ERROR: Invalid package version '1.0" in c.out
