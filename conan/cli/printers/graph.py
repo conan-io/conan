@@ -1,4 +1,4 @@
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
     BINARY_SYSTEM_TOOL
 
@@ -86,6 +86,8 @@ def print_graph_packages(graph):
     requires = {}
     build_requires = {}
     test_requires = {}
+    skipped_requires = []
+    tab = "    "
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
@@ -105,11 +107,20 @@ def print_graph_packages(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            if remote is not None and status != BINARY_SKIP:
-                status = "{} ({})".format(status, remote.name)
             name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
-            output.info("    {} - {}".format(name, status), Color.BRIGHT_CYAN)
+            msg = f"{tab}{name} - {status}"
+            if remote is not None and status != BINARY_SKIP:
+                msg += f" ({remote.name})"
+            if status == BINARY_SKIP:
+                skipped_requires.append(str(pref.ref))
+                output.verbose(msg, Color.BRIGHT_CYAN)
+            else:
+                output.info(msg, Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)
     _format_requires("Build requirements", build_requires)
+
+    if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
+        output.info("Skipped binaries", Color.BRIGHT_YELLOW)
+        output.info(f"{tab}{skipped_requires}", Color.BRIGHT_CYAN)

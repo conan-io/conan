@@ -1,3 +1,5 @@
+import re
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -12,7 +14,7 @@ def test_private_skip():
     client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
 
@@ -61,7 +63,7 @@ def test_shared_link_static_skip():
     client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (package_id, "Skip")})
 
 
@@ -78,7 +80,11 @@ def test_test_requires():
     client.run("remove gtest/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
+    # Checking list of skipped binaries
     client.run("create . --name=app --version=1.0")
+    assert re.search(r"Skipped binaries(\s*)\['gtest/1.0'\]", client.out)
+    # Showing the complete information about the skipped binary
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
 
 

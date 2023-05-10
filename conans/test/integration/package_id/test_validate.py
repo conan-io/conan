@@ -560,10 +560,10 @@ class TestValidateCppstd:
         client.run(f"create engine {settings} -s compiler.cppstd=17")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
-        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.run(f"install app {settings} -s compiler.cppstd=17 -v")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
-        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.run(f"install app {settings} -s compiler.cppstd=14 -v")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
         # No binary for engine exist for cppstd=11
@@ -635,18 +635,18 @@ class TestValidateCppstd:
                                                     "Build")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
-        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.run(f"install app {settings} -s compiler.cppstd=17 -v")
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
                                                     "Cache")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
-        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.run(f"install app {settings} -s compiler.cppstd=14 -v")
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
                                                     "Cache")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
         # No binary for engine exist for cppstd=11
-        client.run(f"install app {settings} -s compiler.cppstd=11")
+        client.run(f"install app {settings} -s compiler.cppstd=11 -v")
         client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
                                                  "Skip")})
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",

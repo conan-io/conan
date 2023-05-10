@@ -248,7 +248,6 @@ def test_graph_different_overrides():
     c.run("create pkga")
     c.run("create pkgb")
     c.run("lock create pkgc")
-    print(c.load("pkgc/conan.lock"))
     lock = json.loads(c.load("pkgc/conan.lock"))
     requires = "\n".join(lock["build_requires"])
     assert "toolc/0.3" in requires
