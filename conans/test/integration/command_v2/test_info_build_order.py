@@ -1,4 +1,5 @@
 import json
+import os
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -351,3 +352,17 @@ def test_info_build_order_merge_conditionals():
     ]
 
     assert bo_json == result
+
+
+def test_info_build_order_lockfile_location():
+    """ the lockfile should be in the caller cwd
+    https://github.com/conan-io/conan/issues/13850
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
+    c.run("create dep")
+    c.run("lock create pkg --lockfile-out=myconan.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
+    c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
