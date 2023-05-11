@@ -543,7 +543,7 @@ def collect_libs(conanfile, folder=None):
     return result
 
 
-def move_folder_contents(self, src_folder, dst_folder):
+def move_folder_contents(conanfile, src_folder, dst_folder):
     """ replaces the dst_folder contents with the contents of the src_folder, which can be a
     child folder of dst_folder. This is used in the SCM monorepo flow, when it is necessary
     to use one subproject subfolder to replace the whole cloned git repo
