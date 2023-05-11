@@ -510,7 +510,7 @@ class TestGitMonorepoSCMFlow:
                 sources = self.conan_data["sources"]
                 git.clone(url=sources["url"], target=".")
                 git.checkout(commit=sources["commit"])
-                move_folder_contents(os.path.join(self.source_folder, sources["folder"]),
+                move_folder_contents(self, os.path.join(self.source_folder, sources["folder"]),
                                     self.source_folder)
 
             def build(self):
@@ -598,7 +598,7 @@ class TestGitMonorepoSCMFlow:
                     # Final we want is pkg/<files> and common/<files>
                     # NOTE: This abs_path is IMPORTANT to avoid the trailing "."
                     src_folder = os.path.abspath(self.source_folder)
-                    move_folder_contents(src_folder, os.path.dirname(src_folder))
+                    move_folder_contents(self, src_folder, os.path.dirname(src_folder))
 
                 def build(self):
                     cmake = CMake(self)
