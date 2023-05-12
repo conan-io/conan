@@ -131,7 +131,7 @@ class XcodeDeps(object):
         """
         def _merged_vars(name):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
-            return list(set(merged))
+            return list(OrderedDict.fromkeys(merged).keys())
 
         # TODO: Investigate if paths can be made relative to "root" folder
         fields = {
