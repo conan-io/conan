@@ -661,7 +661,7 @@ def test_map_imported_config():
     assert "talk: Release!" in client.out
     assert "main: Debug!" in client.out
 
-@pytest.mark.tool("cmake", "3.21")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows DLL specific")
 def test_cmake_target_runtime_dlls():
     # https://github.com/conan-io/conan/issues/13504
