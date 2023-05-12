@@ -7,7 +7,7 @@ from mock import patch
 
 from conan import conan_version
 from conans.errors import ConanException
-from conans.util.files import save
+from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
 
@@ -113,7 +113,6 @@ def test_new_config_file(client):
         tools.build:verbosity=notice
         user.mycompany.myhelper:myconfig=myvalue
         *:tools.cmake.cmaketoolchain:generator=X
-        cache:read_only=True
         """)
     save(client.cache.new_config_path, conf)
     client.run("install .")
@@ -121,6 +120,16 @@ def test_new_config_file(client):
     assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
     assert "tools.cmake.cmaketoolchain:generator$X" in client.out
     assert "read_only" not in client.out
+
+    conf = textwrap.dedent("""\
+            tools.build:verbosity=notice
+            user.mycompany.myhelper:myconfig=myvalue
+            *:tools.cmake.cmaketoolchain:generator=X
+            cache:read_only=True
+            """)
+    save(client.cache.new_config_path, conf)
+    client.run("install .", assert_error=True)
+    assert "[conf] 'cache:read_only' does not exist in configuration list" in client.out
 
 
 @patch("conans.client.conf.required_version.client_version", "1.26.0")
@@ -260,8 +269,10 @@ def test_nonexisting_conf():
     c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run("install . -c tools.unknown:conf=value", assert_error=True)
-    assert "ERROR: Unknown conf 'tools.unknown:conf'" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
     c.run("install . -c user.some:var=value")  # This doesn't fail
+    c.run("install . -c tool.build:verbosity=v", assert_error=True)
+    assert "ERROR: [conf] 'tool.build:verbosity' does not exist in configuration list" in c.out
 
 
 def test_nonexisting_conf_global_conf():
@@ -269,4 +280,11 @@ def test_nonexisting_conf_global_conf():
     save(c.cache.new_config_path, "tools.unknown:conf=value")
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
-    assert "ERROR: Unknown conf 'tools.unknown:conf'" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
+
+
+def test_global_conf_auto_created():
+    c = TestClient()
+    c.run("config list")  # all commands will trigger
+    global_conf = load(c.cache.new_config_path)
+    assert "# core:non_interactive = True" in global_conf

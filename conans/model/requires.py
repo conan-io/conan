@@ -28,6 +28,8 @@ class Requirement:
         self._override = override
         self._direct = direct
         self.options = options
+        self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
+        self.override_ref = None  # to store if the requirement has been overriden (store new ref)
 
     @property
     def skip(self):
@@ -141,6 +143,12 @@ class Requirement:
                  'run={}, visible={}'.format(self.build, self.headers, self.libs, self.run,
                                              self.visible)
         return "{}, Traits: {}".format(self.ref, traits)
+
+    def serialize(self):
+        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+                        "transitive_headers", "transitive_libs", "headers",
+                        "package_id_mode", "visible")
+        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
@@ -385,10 +393,11 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
+                 override=None):
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                     options=options)
+                                     options=options, override=override)
 
 
 class ToolRequirements:
@@ -478,7 +487,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None, options=None):
+                      run=None, options=None, override=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -494,7 +503,7 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options)
+                          package_id_mode=package_id_mode, options=options, override=override)
 
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
@@ -553,3 +562,6 @@ class Requirements:
 
     def __repr__(self):
         return repr(self._requires.values())
+
+    def serialize(self):
+        return [v.serialize() for v in self._requires.values()]

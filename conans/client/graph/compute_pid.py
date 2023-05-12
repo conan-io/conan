@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    conanfile_remove_attr
+    conanfile_remove_attr, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
 
 
@@ -39,9 +39,13 @@ def compute_package_id(node, new_config):
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
+    try:
+        copied_options = conanfile.options.copy_conaninfo_options()
+    except ConanException as e:
+        raise ConanException(f"{conanfile}: {e}")
 
     conanfile.info = ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
-                               options=conanfile.options.copy_conaninfo_options(),
+                               options=copied_options,
                                reqs_info=reqs_info,
                                build_requires_info=build_requires_info,
                                python_requires=python_requires,

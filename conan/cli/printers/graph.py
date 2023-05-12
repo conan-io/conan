@@ -1,4 +1,4 @@
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
     BINARY_SYSTEM_TOOL
 
@@ -65,6 +65,12 @@ def print_graph_basic(graph):
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
 
+    overrides = graph.overrides()
+    if overrides:
+        output.info("Overrides", Color.BRIGHT_YELLOW)
+        for req, override_info in overrides.serialize().items():
+            output.info("    {}: {}".format(req, override_info), Color.BRIGHT_CYAN)
+
     if deprecated:
         output.info("Deprecated", Color.BRIGHT_YELLOW)
         for d, reason in deprecated.items():
@@ -80,27 +86,41 @@ def print_graph_packages(graph):
     requires = {}
     build_requires = {}
     test_requires = {}
+    skipped_requires = []
+    tab = "    "
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
-            build_requires[node.pref] = node.binary, node.binary_remote
+            existing = build_requires.setdefault(node.pref, [node.binary, node.binary_remote])
         else:
             if node.test:
-                test_requires[node.pref] = node.binary, node.binary_remote
+                existing = test_requires.setdefault(node.pref, [node.binary, node.binary_remote])
             else:
-                requires[node.pref] = node.binary, node.binary_remote
+                existing = requires.setdefault(node.pref, [node.binary, node.binary_remote])
+        # TO avoid showing as "skip" something that is used in other node of the graph
+        if existing[0] == BINARY_SKIP:
+            existing[0] = node.binary
 
     def _format_requires(title, reqs_to_print):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            if remote is not None and status != BINARY_SKIP:
-                status = "{} ({})".format(status, remote.name)
             name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
-            output.info("    {} - {}".format(name, status), Color.BRIGHT_CYAN)
+            msg = f"{tab}{name} - {status}"
+            if remote is not None and status != BINARY_SKIP:
+                msg += f" ({remote.name})"
+            if status == BINARY_SKIP:
+                skipped_requires.append(str(pref.ref))
+                output.verbose(msg, Color.BRIGHT_CYAN)
+            else:
+                output.info(msg, Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)
     _format_requires("Build requirements", build_requires)
+
+    if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
+        output.info("Skipped binaries", Color.BRIGHT_YELLOW)
+        output.info(f"{tab}{skipped_requires}", Color.BRIGHT_CYAN)

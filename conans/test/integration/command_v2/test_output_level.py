@@ -37,7 +37,7 @@ def test_output_level():
     assert "This is a warning" in t.out
     assert "This is a error" in t.out
 
-    # Print also verbose traces
+    # Check if -v argument is equal to VERBOSE level
     t.run("create . --name foo --version 1.0 -v")
     assert "This is a trace" not in t.out
     assert "This is a debug" not in t.out

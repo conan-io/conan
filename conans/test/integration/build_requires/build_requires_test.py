@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -204,7 +205,7 @@ class BuildRequiresTest(unittest.TestCase):
         t.run("create . --name=LibA --version=0.1 --user=user --channel=testing")
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
                                               .with_tool_requires(catch_ref)})
-        t.run("install .")
+        t.run("install . -v")
         self.assertIn("catch/0.1@user/testing from local cache", t.out)
         self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Skip",
                       t.out)
@@ -747,3 +748,157 @@ def test_conditional_require_context():
     c.assert_listed_require({"dep/1.0": "Cache"})
     c.run("create consumer --build-require")
     assert "dep/1.0" not in c.out
+
+
+class TestBuildTrackHost:
+
+    def test_overriden_host_but_not_build(self):
+        """
+        Making the ``tool_requires(..., visible=True)`` works, and allows overriding, but
+        propagates the build-requirement to protobuf/protoc down the graph, and VirtualBuildEnv
+        will put ``protoc`` from it in the PATH. Not a problem in majority of cases, but not the
+        cleanest
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("protobuf/1.0")
+                def build_requirements(self):
+                    self.tool_requires("protobuf/1.0", visible=True)
+            """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg,
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                  .with_requirement("protobuf/1.1", override=True)
+                                                  .with_build_requirement("protobuf/1.1",
+                                                                          override=True)})
+        c.run("create protobuf --version=1.0")
+        c.run("create protobuf --version=1.1")
+        c.run("create pkg")
+        c.run("install app")
+        c.assert_listed_require({"protobuf/1.1": "Cache"})
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+
+    def test_overriden_host_version(self):
+        """
+        Make the tool_requires follow the regular require with the expression "<host_version>"
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("protobuf/1.0")
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>")
+            """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg,
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                  .with_requirement("protobuf/1.1", override=True)})
+        c.run("create protobuf --version=1.0")
+        c.run("create protobuf --version=1.1")
+        c.run("create pkg")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        c.assert_listed_require({"protobuf/1.1": "Cache"})
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+        # verify locks work
+        c.run("lock create app")
+        lock = json.loads(c.load("app/conan.lock"))
+        build_requires = lock["build_requires"]
+        assert len(build_requires) == 1
+        assert "protobuf/1.1" in build_requires[0]
+        # lock can be used
+        c.run("install app --lockfile=app/conan.lock")
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+
+    def test_overriden_host_version_version_range(self):
+        """
+        same as above, but using version ranges instead of overrides
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("protobuf/[*]")
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>")
+            """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg,
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+        c.run("create protobuf --version=1.0")
+        c.run("create pkg")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        c.assert_listed_require({"protobuf/1.0": "Cache"})
+        c.assert_listed_require({"protobuf/1.0": "Cache"}, build=True)
+
+        c.run("create protobuf --version=1.1")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        c.assert_listed_require({"protobuf/1.1": "Cache"})
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+        # verify locks work
+        c.run("lock create app")
+        lock = json.loads(c.load("app/conan.lock"))
+        build_requires = lock["build_requires"]
+        assert len(build_requires) == 1
+        assert "protobuf/1.1" in build_requires[0]
+        # lock can be used
+        c.run("install app --lockfile=app/conan.lock")
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+
+    def test_track_host_error_nothost(self):
+        """
+        if no host requirement is defined, it will be an error
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "protobuf"
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>")
+            """)
+
+        c.save({"pkg/conanfile.py": pkg})
+        c.run("install pkg", assert_error=True)
+        assert "ERROR: protobuf/None require 'protobuf/<host_version>': " \
+               "didn't find a matching host dependency" in c.out
+
+    def test_track_host_errors_trait(self):
+        """
+        It is not possible to make host_version visible too
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "protobuf"
+                def requirements(self):
+                   self.tool_requires("other/<host_version>", visible=True)
+            """)
+        c.save({"pkg/conanfile.py": pkg})
+        c.run("install pkg", assert_error=True)
+        assert "ERROR: protobuf/None require 'other/<host_version>': 'host_version' " \
+               "can only be used for non-visible tool_requires" in c.out
+
+    def test_track_host_error_wrong_context(self):
+        """
+        it can only be used by tool_requires, not regular requires
+        """
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg").with_requirement("protobuf/<host_version>")})
+        c.run(f"install .", assert_error=True)
+        assert " 'host_version' can only be used for non-visible tool_requires" in c.out

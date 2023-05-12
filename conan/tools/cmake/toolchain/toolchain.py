@@ -16,6 +16,7 @@ from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, G
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
+from conans.client.generators import relativize_generated_file
 from conans.errors import ConanException
 from conans.model.options import _PackageOption
 from conans.util.files import save
@@ -171,6 +172,7 @@ class CMakeToolchain(object):
     def content(self):
         context = self._context()
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
+        content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
 
     def generate(self):

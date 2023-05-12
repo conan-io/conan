@@ -4,7 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID
+    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -29,10 +29,13 @@ class _InstallPackageReference:
         # to cross compile, there will be a dependency from the current "self" (host context)
         # to that "build" package_id.
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
+        self.overrides = Overrides()
+        self.ref = None
 
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
+        result.ref = node.ref
         result.package_id = node.pref.package_id
         result.prev = node.pref.revision
         result.binary = node.binary
@@ -40,6 +43,7 @@ class _InstallPackageReference:
         # self_options are the minimum to reproduce state
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
+        result.overrides = node.overrides()
         return result
 
     def add(self, node):
@@ -50,6 +54,17 @@ class _InstallPackageReference:
         # assert self.context == node.context
         self.nodes.append(node)
 
+    def _build_args(self):
+        if self.binary != BINARY_BUILD:
+            return None
+        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd += f" --build={self.ref}"
+        if self.options:
+            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+        if self.overrides:
+            cmd += f' --lockfile-overrides="{self.overrides}"'
+        return cmd
+
     def serialize(self):
         return {"package_id": self.package_id,
                 "prev": self.prev,
@@ -57,11 +72,14 @@ class _InstallPackageReference:
                 "binary": self.binary,
                 "options": self.options,
                 "filenames": self.filenames,
-                "depends": self.depends}
+                "depends": self.depends,
+                "overrides": self.overrides.serialize(),
+                "build_args": self._build_args()}
 
     @staticmethod
-    def deserialize(data, filename):
+    def deserialize(data, filename, ref):
         result = _InstallPackageReference()
+        result.ref = ref
         result.package_id = data["package_id"]
         result.prev = data["prev"]
         result.binary = data["binary"]
@@ -69,6 +87,7 @@ class _InstallPackageReference:
         result.options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
+        result.overrides = Overrides.deserialize(data["overrides"])
         return result
 
 
@@ -154,7 +173,7 @@ class _InstallRecipeReference:
             result.depends.append(RecipeReference.loads(d))
         for level in data["packages"]:
             for p in level:
-                install_node = _InstallPackageReference.deserialize(p, filename)
+                install_node = _InstallPackageReference.deserialize(p, filename, result.ref)
                 result.packages[install_node.package_id] = install_node
         return result
 

@@ -7,6 +7,8 @@ class TestConflictDiamondTest:
         """
         test that we obtain a version conflict with a diamond, and that we can fix it by
         defining an override in the "game" consumer
+        game -> engine/1.0 -> math/1.0
+          |---> ai/1.0 -----> math/1.0.1 (conflict)
         """
         c = TestClient()
         c.save({"math/conanfile.py": GenConanfile("math"),
@@ -29,11 +31,21 @@ class TestConflictDiamondTest:
 
         def _game_conanfile(version, reverse=False):
             if reverse:
+                """
+                 game ---(override)--_> math/newversion
+                    |---> engine/1.0 -> math/1.0
+                    |---> ai/1.0 -----> math/1.0.1 (conflict solved by override)
+                """
                 return GenConanfile("game", "1.0")\
                     .with_requirement(f"math/{version}", override=True)\
                     .with_requirement("engine/1.0")\
                     .with_requirement("ai/1.0")
             else:
+                """
+                game --> engine/1.0 -> math/1.0
+                   |---> ai/1.0 -----> math/1.0.1 (conflict solved by override)
+                   |---(override)--_> math/newversion
+                """
                 return GenConanfile("game", "1.0").with_requirement("engine/1.0") \
                     .with_requirement("ai/1.0") \
                     .with_requirement(f"math/{version}", override=True)
@@ -41,10 +53,14 @@ class TestConflictDiamondTest:
         for v in ("1.0", "1.0.1", "1.0.2"):
             c.save({"game/conanfile.py": _game_conanfile(v)})
             c.run("install game")
+            c.assert_overrides({"math/1.0": [f"math/{v}"],
+                                "math/1.0.1": [f"math/{v}#8e1a7a5ce869d8c54ae3d33468fd657c"]})
             c.assert_listed_require({f"math/{v}": "Cache"})
 
         # Check that order of requirements doesn't affect
         for v in ("1.0", "1.0.1", "1.0.2"):
             c.save({"game/conanfile.py": _game_conanfile(v, reverse=True)})
             c.run("install game")
+            c.assert_overrides({"math/1.0": [f"math/{v}"],
+                                "math/1.0.1": [f"math/{v}#8e1a7a5ce869d8c54ae3d33468fd657c"]})
             c.assert_listed_require({f"math/{v}": "Cache"})

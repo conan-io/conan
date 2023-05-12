@@ -40,39 +40,42 @@ def test_source_download_password():
 
     http_server.run_server()
 
+    server_url = f"http://localhost:{http_server.port}"
+
     c = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.files import download, load
         class Pkg(ConanFile):
             def source(self):
-                download(self, "http://localhost:{http_server.port}/myfile.txt", "myfile.txt")
+                download(self, "{server_url}/myfile.txt", "myfile.txt")
                 self.output.info(f"Content: {{load(self, 'myfile.txt')}}")
             """)
     c.save({"conanfile.py": conanfile})
-    content = {f"http://localhost:{http_server.port}": {"token": "mytoken"}}
+    content = {"credentials": [{"url": server_url, "token": "mytoken"}]}
     save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .")
     assert "Content: hello world!" in c.out
-    content = {f"http://localhost:{http_server.port}": {
-        "auth": {"user": "myuser", "password": "mypassword"}}
-    }
+    content = {"credentials": [{"url": server_url,
+                                "user": "myuser", "password": "mypassword"}]}
     save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .")
     assert "Content: hello world!" in c.out
 
-    content = {f"http://localhost:{http_server.port}": {"token": "{{mytk}}"}}
+    content = {"credentials": [{"url": server_url, "token": "{{mytk}}"}]}
     content = "{% set mytk = 'mytoken' %}\n" + json.dumps(content)
     save(os.path.join(c.cache_folder, "source_credentials.json"), content)
     c.run("source .")
     assert "Content: hello world!" in c.out
 
     # Errors
-    for invalid in [{"token": "mytoken2"},
+    for invalid in [{"token": "mytoken"},
+                    {"url": server_url, "token": "mytoken2"},  # Unauthorized
                     {},
+                    {"url": server_url},
                     {"auth": {}},
-                    {"auth": {"user": "other", "password": "pass"}}]:
-        content = {f"http://localhost:{http_server.port}": invalid}
+                    {"user": "other", "password": "pass"}]:
+        content = {"credentials": [invalid]}
         save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
         c.run("source .", assert_error=True)
-        assert "Authentication" in c.out
+        assert "Authentication" in c.out or "Unknown credentials" in c.out

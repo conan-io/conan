@@ -358,3 +358,45 @@ class TestNewCompatibility:
         assert "pkg/0.1: PackageInfo!: Gcc version: 4.8!" in c.out
         c.assert_listed_binary({"pkg/0.1": (f"{package_id}", "Cache")})
         assert "pkg/0.1: Already installed!" in c.out
+
+    def test_compatibility_remove_package_id(self):
+        # https://github.com/conan-io/conan/issues/13727
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PdfiumConan(ConanFile):
+                name = "pdfium"
+                version = "2020.9"
+                settings = "os", "compiler", "arch", "build_type"
+                build_policy = "never"
+
+                def compatibility(self):
+                    result = []
+                    if self.info.settings.build_type == "Debug":
+                        result.append({"settings": [("build_type", "Release")]})
+                    return result
+
+                def package_id(self):
+                    del self.info.settings.compiler.runtime
+                    del self.info.settings.compiler.runtime_type
+            """)
+        profile = textwrap.dedent("""
+            [settings]
+            os = Windows
+            compiler=msvc
+            compiler.version=192
+            compiler.runtime=dynamic
+            build_type=Release
+            arch=x86_64
+            """)
+        c.save({"conanfile.py": conanfile,
+                "myprofile": profile})
+        c.run("create .  -pr=myprofile", assert_error=True)
+        assert "ERROR: This package cannot be created, 'build_policy=never', " \
+               "it can only be 'export-pkg'" in c.out
+        c.run("export-pkg . -pr=myprofile")
+        c.run("list pdfium/2020.9:*")
+
+        c.run("install --requires=pdfium/2020.9 -pr=myprofile -s build_type=Debug")
+        assert "missing. Using compatible package" in c.out

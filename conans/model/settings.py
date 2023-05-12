@@ -152,12 +152,12 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
-    def get_definition(self):
+    def possible_values(self):
         if isinstance(self._definition, list):
-            return [e if e != 'None' else None for e in self.values_range]
+            return self.values_range.copy()
         ret = {}
         for key, value in self._definition.items():
-            ret[key] = value.get_definition()
+            ret[key] = value.possible_values()
         return ret
 
     def rm_safe(self, name):
@@ -175,6 +175,9 @@ class Settings(object):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
         definition = definition or {}
+        if not isinstance(definition, dict):
+            val = "" if parent_value == "settings" else f"={parent_value}"
+            raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
         self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
@@ -338,11 +341,10 @@ class Settings(object):
                 result.append("%s=%s" % (name, value))
         return '\n'.join(result)
 
-    def get_definition(self):
-        """Check the range of values of the definition of a setting. e.g:
-           get_definition_values("compiler.gcc.version") """
-
+    def possible_values(self):
+        """Check the range of values of the definition of a setting
+        """
         ret = {}
         for key, element in self._data.items():
-            ret[key] = element.get_definition()
+            ret[key] = element.possible_values()
         return ret

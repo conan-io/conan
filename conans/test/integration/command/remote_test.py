@@ -255,7 +255,7 @@ class RemoteTest(unittest.TestCase):
 
     def test_errors(self):
         self.client.run("remote update origin --url http://foo.com", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
+        self.assertIn("ERROR: Remote 'origin' doesn't exist", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
@@ -308,3 +308,21 @@ def test_add_duplicated_url():
     c.run("remote list")
     assert "remote1" in c.out
     assert "remote2" in c.out
+    # make sure we can remove both
+    # https://github.com/conan-io/conan/issues/13569
+    c.run("remote remove *")
+    c.run("remote list")
+    assert "remote1" not in c.out
+    assert "remote2" not in c.out
+
+
+def test_add_duplicated_name_url():
+    """ do not add extra remote with same name and same url
+        # https://github.com/conan-io/conan/issues/13569
+    """
+    c = TestClient()
+    c.run("remote add remote1 http://url")
+    c.run("remote add remote1 http://url --force")
+    assert "WARN: Remote 'remote1' already exists in remotes" in c.out
+    c.run("remote list")
+    assert 1 == str(c.out).count("remote1")

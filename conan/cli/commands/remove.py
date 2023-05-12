@@ -2,6 +2,7 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
+from conans.errors import ConanException
 
 
 @conan_command(group="Consumer")
@@ -36,6 +37,8 @@ def remove(conan_api: ConanAPI, parser, *args):
     select_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
 
     if ref_pattern.package_id is None:
+        if args.package_query is not None:
+            raise ConanException('--package-query supplied but the pattern does not match packages')
         for ref, _ in select_bundle.refs():
             if confirmation("Remove the recipe and all the packages of '{}'?"
                             "".format(ref.repr_notime())):

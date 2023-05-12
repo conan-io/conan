@@ -58,7 +58,7 @@ def full_deploy(graph, output_folder):
     for dep in conanfile.dependencies.values():
         if dep.package_folder is None:
             continue
-        folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
+        folder_name = os.path.join("full_deploy", dep.context, dep.ref.name, str(dep.ref.version))
         build_type = dep.info.settings.get_safe("build_type")
         arch = dep.info.settings.get_safe("arch")
         if build_type:
@@ -80,6 +80,7 @@ def direct_deploy(graph, output_folder):
     import os
     import shutil
 
+    output_folder = os.path.join(output_folder, "direct_deploy")
     conanfile = graph.root.conanfile
     conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
     # If the argument is --requires, the current conanfile is a virtual one with 1 single

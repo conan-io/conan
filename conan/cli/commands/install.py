@@ -34,8 +34,10 @@ def install(conan_api, parser, *args):
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("--deploy", action="append",
+    parser.add_argument("-d", "--deployer", action="append",
                         help='Deploy using the provided deployer to the output folder')
+    parser.add_argument("--build-require", action='store_true', default=False,
+                        help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     validate_common_graph_args(args)
@@ -54,17 +56,20 @@ def install(conan_api, parser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
-                                                         remotes, args.update)
+                                                         remotes, args.update,
+                                                         is_build_require=args.build_require)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
@@ -83,7 +88,7 @@ def install(conan_api, parser, *args):
                                        generators=args.generator,
                                        output_folder=output_folder,
                                        source_folder=source_folder,
-                                       deploy=args.deploy
+                                       deploy=args.deployer
                                        )
 
     out.success("Install finished successfully")

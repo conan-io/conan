@@ -32,6 +32,8 @@ def add_lockfile_args(parser):
                         help="Lock package-id and package-revision information")
     parser.add_argument("--lockfile-clean", action="store_true",
                         help="Remove unused entries from the lockfile")
+    parser.add_argument("--lockfile-overrides",
+                        help="Overwrite lockfile overrides")
 
 
 def add_common_install_arguments(parser):
