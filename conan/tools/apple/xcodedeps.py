@@ -289,8 +289,8 @@ class XcodeDeps(object):
                     _transitive_components(comp_cpp_info)
 
                     # remove duplicates
-                    transitive_internal = list(set(transitive_internal))
-                    transitive_external = list(set(transitive_external))
+                    transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
+                    transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
 
                     # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
