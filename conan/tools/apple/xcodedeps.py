@@ -303,7 +303,10 @@ class XcodeDeps(object):
                     result.update(component_content)
             else:
                 public_deps = []
-                for r, d in get_transitive_requires(self._conanfile, dep).items():
+                transitive_requires = [r for r, _ in get_transitive_requires(self._conanfile, dep).items()]
+                for r, d in dep.dependencies.direct_host.items():
+                    if r not in transitive_requires:
+                        continue
                     if d.cpp_info.has_components:
                         sorted_components = d.cpp_info.get_sorted_components().items()
                         for comp_name, comp_cpp_info in sorted_components:
