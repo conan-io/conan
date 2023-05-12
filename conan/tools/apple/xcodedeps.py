@@ -207,7 +207,6 @@ class XcodeDeps(object):
         content_multi = content or self._all_xconfig
 
         for dep in deps.values():
-            # This solves the issue of repeated includes
             include_file = f'conan_{_format_name(dep.ref.name)}.xcconfig'
             if include_file not in content_multi:
                 content_multi = content_multi + f'\n#include "{include_file}"\n'
