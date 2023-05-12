@@ -314,7 +314,6 @@ class XcodeDeps(object):
                         public_deps.append((_format_name(d.ref.name),) * 2)
 
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
                 root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder, [dep.cpp_info],
