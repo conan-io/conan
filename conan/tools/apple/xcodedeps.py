@@ -207,6 +207,7 @@ class XcodeDeps(object):
         content_multi = content or self._all_xconfig
 
         for dep in deps.values():
+            # This solves the issue of repeated includes
             include_file = f'conan_{_format_name(dep.ref.name)}.xcconfig'
             if include_file not in content_multi:
                 content_multi = content_multi + f'\n#include "{include_file}"\n'
@@ -301,11 +302,8 @@ class XcodeDeps(object):
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                public_transitive_requires = [dep.ref.name for dep, _ in get_transitive_requires(self._conanfile, dep).items()]
                 public_deps = []
-                for r, d in dep.dependencies.direct_host.items():
-                    if not r.visible:
-                        continue
+                for r, d in get_transitive_requires(self._conanfile, dep).items():
                     if d.cpp_info.has_components:
                         sorted_components = d.cpp_info.get_sorted_components().items()
                         for comp_name, comp_cpp_info in sorted_components:
@@ -314,7 +312,6 @@ class XcodeDeps(object):
                         public_deps.append((_format_name(d.ref.name),) * 2)
 
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                required_components = [req for req in required_components if req[0] in public_transitive_requires]
 
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
