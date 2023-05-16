@@ -29,12 +29,14 @@ class ConanRunner(object):
         self._log_run_to_output = log_run_to_output
         self._output = output
 
-    def __call__(self, command, output=True, log_filepath=None, cwd=None, subprocess=False):
+    def __call__(self, command, output=True, log_filepath=None, cwd=None, subprocess=False,
+                 timeout=None):
         """
         @param command: Command to execute
         @param output: Instead of print to sys.stdout print to that stream. Could be None
         @param log_filepath: If specified, also log to a file
         @param cwd: Move to directory to execute
+        @param timeout: Time in seconds until timeout
         """
         if output and isinstance(output, io.StringIO) and six.PY2:
             # in py2 writing to a StringIO requires unicode, otherwise it fails
@@ -72,7 +74,7 @@ class ConanRunner(object):
                 else:
                     return self._pipe_os_call(command, stream_output, None, cwd, user_output)
 
-    def _pipe_os_call(self, command, stream_output, log_handler, cwd, user_output):
+    def _pipe_os_call(self, command, stream_output, log_handler, cwd, user_output, timeout=None):
 
         try:
             # piping both stdout, stderr and then later only reading one will hang the process
@@ -111,13 +113,14 @@ class ConanRunner(object):
         if capture_output:
             get_stream_lines(proc.stdout)
 
-        proc.communicate()
+        proc.communicate(timeout=timeout)
         ret = proc.returncode
         return ret
 
     @staticmethod
-    def _simple_os_call(command, cwd):
+    def _simple_os_call(command, cwd, timeout=None):
         try:
-            return subprocess.call(command, cwd=cwd, shell=isinstance(command, six.string_types))
+            return subprocess.call(command, cwd=cwd, shell=isinstance(command, six.string_types),
+                                   timeout=timeout)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))

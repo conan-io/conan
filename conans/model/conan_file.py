@@ -425,7 +425,8 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="", scope="build"):
+            ignore_errors=False, run_environment=False, with_login=True, env="", scope="build",
+            timeout=None):
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
@@ -437,13 +438,15 @@ class ConanFile(object):
             if platform.system() == "Windows":
                 if win_bash:
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
-                                                     msys_mingw=msys_mingw, with_login=with_login)
+                                                     msys_mingw=msys_mingw, with_login=with_login,
+                                                     timeout=timeout)
             envfiles_folder = self.generators_folder or os.getcwd()
             _env = [_env] if _env and isinstance(_env, str) else (_env or [])
             assert isinstance(_env, list)
             wrapped_cmd = command_env_wrapper(self, cmd, _env, envfiles_folder=envfiles_folder,
                                               scope=scope)
-            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
+            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd,
+                                      timeout=timeout)
 
         if run_environment:
             # When using_build_profile the required environment is already applied through

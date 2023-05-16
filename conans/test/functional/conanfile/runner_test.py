@@ -248,3 +248,16 @@ class ConanFileToolsTest(ConanFile):
             else:
                 self.assertIn("key: --", client.out)
             self.assertIn("var: other_var--", client.out)
+
+
+def test_run_method_timeout():
+    conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    def source(self):
+                        self.run('sleep 10', timeout=0.1)
+                """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("source .", assert_error=True)
+    assert "TimeoutExpired: Command 'sleep 10' timed out after 0.1 seconds" in client.out
