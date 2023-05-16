@@ -198,7 +198,7 @@ class Requirement:
             set_if_none("_libs", False)
             set_if_none("_headers", True)
         elif pkg_type is PackageType.BUILD_SCRIPTS:
-            set_if_none("_run", False)
+            set_if_none("_run", True)
             set_if_none("_libs", False)
             set_if_none("_headers", False)
             set_if_none("_visible", False)  # Conflicts might be allowed for this kind of package

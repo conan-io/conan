@@ -365,7 +365,7 @@ class TestLinear(GraphManagerTest):
             cmake = app.dependencies[0].dst
 
             # node, headers, lib, build, run
-            run = package_type in ("application", "shared-library")
+            run = package_type in ("application", "shared-library", "build-scripts")
             _check_transitive(app, [(cmake, False, False, True, run)])
 
     def test_direct_header_only(self):
