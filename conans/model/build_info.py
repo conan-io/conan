@@ -528,11 +528,10 @@ class CppInfo:
             raise ConanException(f"{conanfile}: Internal components not found: {missing_internal}")
         if not external:
             return
-        # Only direct host dependencies can be used with components
-        direct_dependencies = [d.ref.name
-                               for d, _ in conanfile.dependencies.filter({"direct": True,
-                                                                          "build": False,
-                                                                          "test": False}).items()]
+        # Only direct host (not test) dependencies can define required components
+        direct_dependencies = [d.ref.name for d in conanfile.requires.values()
+                               if not d.build and not d.is_test and d.visible]
+
         for e in external:
             if e not in direct_dependencies:
                 raise ConanException(
