@@ -206,9 +206,10 @@ class XcodeDeps(object):
         """
         content_multi = content or self._all_xconfig
 
-        for req, dep in deps.items():
-            dep_name = _format_name(dep.ref.name)
-            content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
+        for dep in deps.values():
+            include_file = f'conan_{_format_name(dep.ref.name)}.xcconfig'
+            if include_file not in content_multi:
+                content_multi = content_multi + f'\n#include "{include_file}"\n'
         return content_multi
 
     def _pkg_xconfig_file(self, components):
@@ -301,8 +302,9 @@ class XcodeDeps(object):
                     result.update(component_content)
             else:
                 public_deps = []
+                transitive_requires = [r for r, _ in get_transitive_requires(self._conanfile, dep).items()]
                 for r, d in dep.dependencies.direct_host.items():
-                    if not r.visible:
+                    if r not in transitive_requires:
                         continue
                     if d.cpp_info.has_components:
                         sorted_components = d.cpp_info.get_sorted_components().items()
