@@ -56,3 +56,16 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         self.assertIn('conanfile.py: Buffer got msgs Hello', client.out)
+
+
+def test_run_method_timeout():
+    conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    def source(self):
+                        self.run('sleep 10', timeout=1)
+                """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("source .")
+    assert "TimeoutExpired: Command 'sleep 10' timed out after 1 seconds" in client.out
