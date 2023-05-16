@@ -32,7 +32,7 @@ else:
         yield
 
 
-def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
+def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True, timeout=None):
     """
     @param shell:
     @param stderr:
@@ -52,7 +52,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-        proc_stdout, proc_stderr = proc.communicate()
+        proc_stdout, proc_stderr = proc.communicate(timeout=timeout)
         # If the output is piped, like user provided a StringIO or testing, the communicate
         # will capture and return something when thing finished
         if proc_stdout:

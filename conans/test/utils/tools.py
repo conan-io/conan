@@ -539,14 +539,14 @@ class TestClient(object):
                     if redirect_stderr:
                         save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
-    def run_command(self, command, cwd=None, assert_error=False):
+    def run_command(self, command, cwd=None, assert_error=False, timeout=None):
         from conans.test.utils.mocks import RedirectedTestOutput
         self.stdout = RedirectedTestOutput()  # Initialize each command
         self.stderr = RedirectedTestOutput()
         try:
             with redirect_output(self.stderr, self.stdout):
                 from conans.util.runners import conan_run
-                ret = conan_run(command, cwd=cwd or self.current_folder)
+                ret = conan_run(command, cwd=cwd or self.current_folder, timeout=timeout)
         finally:
             self.stdout = str(self.stdout)
             self.stderr = str(self.stderr)
