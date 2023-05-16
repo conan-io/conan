@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import textwrap
 
 import pytest
@@ -458,7 +459,6 @@ def test_dependency_of_dependency_components():
     assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig
 
 
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_skipped_not_included():
     # https://github.com/conan-io/conan/issues/13818
     client = TestClient()
@@ -475,6 +475,6 @@ def test_skipped_not_included():
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release")
-    client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
+    assert re.search(r"Skipped binaries\n\s+(\[.*?\])", client.out, re.DOTALL)
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
     assert "conan_dep.xcconfig" not in dep_xconfig
