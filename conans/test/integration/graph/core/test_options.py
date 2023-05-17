@@ -1,4 +1,3 @@
-from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive

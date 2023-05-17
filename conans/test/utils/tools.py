@@ -178,6 +178,14 @@ class TestRequester:
         else:
             return requests.put(url, **kwargs)
 
+    def head(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
+        if app:
+            response = app.head(url, **kwargs)
+            return TestingResponse(response)
+        else:
+            return requests.head(url, **kwargs)
+
     def delete(self, url, **kwargs):
         app, url = self._prepare_call(url, kwargs)
         if app:
@@ -694,6 +702,22 @@ class TestClient(object):
                     break
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
+
+    def assert_overrides(self, overrides):
+        """ parses the current command output, and extract the first "Requirements" section
+        """
+        lines = self.out.splitlines()
+        header = "Overrides"
+        line_req = lines.index(header)
+        reqs = []
+        for line in lines[line_req+1:]:
+            if not line.startswith("    "):
+                break
+            reqs.append(line.strip())
+        for r, o in overrides.items():
+            msg = f"{r}: {o}"
+            if msg not in reqs:
+                raise AssertionError(f"Cant find {msg} in {reqs}")
 
     def assert_listed_binary(self, requires, build=False, test=False, test_package=False):
         """ parses the current command output, and extract the second "Requirements" section

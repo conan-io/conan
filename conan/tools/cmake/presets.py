@@ -151,9 +151,9 @@ class _CMakePresets:
         if is_consumer:
             conanfile.output.info(
                 f"Preset '{name}' added to CMakePresets.json. Invoke it manually using "
-                f"'cmake --preset {name}'")
+                f"'cmake --preset {name}' if using CMake>=3.23")
             conanfile.output.info(f"If your CMake version is not compatible with "
-                                  f"CMakePresets (<3.19) call cmake like: 'cmake <path> "
+                                  f"CMakePresets (<3.23) call cmake like: 'cmake <path> "
                                   f"-G {_format_val(generator)} {add_toolchain_cache}"
                                   f"{cache_variables_info}'")
         return ret

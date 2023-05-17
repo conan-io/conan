@@ -40,15 +40,15 @@ class ConanApiAuthManager(object):
         try:
             ret = getattr(rest_client, method_name)(*args, **kwargs)
             return ret
-        except ForbiddenException:
-            raise ForbiddenException("Permission denied for user: '%s'" % user)
+        except ForbiddenException as e:
+            raise ForbiddenException(f"Permission denied for user: '{user}': {e}")
         except AuthenticationException:
             # User valid but not enough permissions
             if user is None or token is None:
                 # token is None when you change user with user command
                 # Anonymous is not enough, ask for a user
                 ConanOutput().info('Please log in to "%s" to perform this action. '
-                                   'Execute "conan user" command.' % remote.name)
+                                   'Execute "conan remote login" command.' % remote.name)
                 return self._retry_with_new_token(user, remote, method_name, *args, **kwargs)
             elif token and refresh_token:
                 # If we have a refresh token try to refresh the access token
@@ -80,7 +80,7 @@ class ConanApiAuthManager(object):
                     out.error('Wrong user or password')
                 else:
                     out.error('Wrong password for user "%s"' % user)
-                    out.info('You can change username with "conan user <username>"')
+                    out.info('You can change username with "conan remote login <remote> <username>"')
             else:
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 

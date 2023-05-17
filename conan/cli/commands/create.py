@@ -36,11 +36,12 @@ def create(conan_api, parser, *args):
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
-
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
@@ -49,6 +50,7 @@ def create(conan_api, parser, *args):
                                              user=args.user, channel=args.channel,
                                              lockfile=lockfile,
                                              remotes=remotes)
+
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
@@ -76,6 +78,9 @@ def create(conan_api, parser, *args):
 
         # Not specified, force build the tested library
         build_modes = [ref.repr_notime()] if args.build is None else args.build
+        if args.build is None and conanfile.build_policy == "never":
+            raise ConanException(
+                "This package cannot be created, 'build_policy=never', it can only be 'export-pkg'")
         conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes,
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)

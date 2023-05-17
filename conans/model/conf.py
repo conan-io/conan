@@ -11,6 +11,7 @@ from conans.model.recipe_ref import ref_matches
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
+    "core:skip_warnings": "Do not show warnings in this list",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile (None by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
@@ -22,6 +23,10 @@ BUILT_IN_CONFS = {
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
+    # Sources backup
+    "core.sources:download_cache": "Folder to store the sources backup",
+    "core.sources:download_urls": "List of URLs to download backup sources from",
+    "core.sources:upload_url": "Remote URL to upload backup sources to",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
@@ -58,7 +63,6 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
-    "tools.files.download:download_cache": "Define the cache folder to store downloads from files.download()/get() (defaults to core.download:download_cache)",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.gnu:make_program": "Indicate path to make program",
@@ -122,13 +126,14 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue(object):
 
-    def __init__(self, name, value, path=False):
+    def __init__(self, name, value, path=False, update=None):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._name = name
         self._value = value
         self._value_type = type(value)
         self._path = path
+        self._update = update
 
     def __repr__(self):
         return repr(self._value)
@@ -142,7 +147,7 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path)
+        return _ConfValue(self._name, self._value, self._path, self._update)
 
     def dumps(self):
         if self._value is None:
@@ -166,8 +171,9 @@ class _ConfValue(object):
         return {self._name: _value}
 
     def update(self, value):
-        if self._value_type is dict:
-            self._value.update(value)
+        assert self._value_type is dict, "Only dicts can be updated"
+        assert isinstance(value, dict), "Only dicts can update"
+        self._value.update(value)
 
     def remove(self, value):
         if self._value_type is list:
@@ -209,6 +215,13 @@ class _ConfValue(object):
             else:
                 new_value = self._value[:]  # do a copy
                 new_value[index:index + 1] = other._value  # replace the placeholder
+                self._value = new_value
+        elif v_type is dict and o_type is dict:
+            if self._update:
+                # only if the current one is marked as "*=" update, otherwise it remains
+                # as this is a "compose" operation, self has priority, it is the one updating
+                new_value = other._value.copy()
+                new_value.update(self._value)
                 self._value = new_value
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
@@ -254,10 +267,7 @@ class Conf:
 
     def validate(self):
         for conf in self._values:
-            if conf.startswith("tools") or conf.startswith("core"):
-                if conf not in BUILT_IN_CONFS:
-                    raise ConanException(f"Unknown conf '{conf}'. Use 'conan config list' to "
-                                         "display existing configurations")
+            self._check_conf_name(conf)
 
     def items(self):
         # FIXME: Keeping backward compatibility
@@ -274,9 +284,7 @@ class Conf:
                            There are two default smart conversions for bool and str types.
         """
         # Skipping this check only the user.* configurations
-        if USER_CONF_PATTERN.match(conf_name) is None and conf_name not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] '{conf_name}' does not exist in configuration list. "
-                                 f" Run 'conan config list' to see all the available confs.")
+        self._check_conf_name(conf_name)
 
         conf_value = self._values.get(conf_name)
         if conf_value:
@@ -361,11 +369,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        conf_value = _ConfValue(name, {})
+        # Placeholder trick is not good for dict update, so we need to explicitly update=True
+        conf_value = _ConfValue(name, {}, update=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def update_path(self, name, value):
-        conf_value = _ConfValue(name, {}, path=True)
+        conf_value = _ConfValue(name, {}, path=True, update=True)
         self._values.setdefault(name, conf_value).update(value)
 
     def append(self, name, value):
@@ -466,11 +475,18 @@ class Conf:
         for v in self._values.values():
             v.set_relative_base_folder(folder)
 
+    @staticmethod
+    def _check_conf_name(conf):
+        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 f" Run 'conan config list' to see all the available confs.")
+
 
 class ConfDefinition:
 
+    # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("=", "define"))
+               ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = OrderedDict()

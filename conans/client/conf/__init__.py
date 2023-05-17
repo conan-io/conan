@@ -7,7 +7,7 @@ os:
     WindowsStore:
         version: ["8.1", "10.0"]
     WindowsCE:
-        platform: ANY
+        platform: [ANY]
         version: ["5.0", "6.0", "7.0", "8.0"]
     Linux:
     iOS:
@@ -36,7 +36,7 @@ os:
                         "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2", "15.4", "16.0", "16.1"]
     Macos:
         version: [null, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
-        sdk_version: [null, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3", "13.0"]
+        sdk_version: [null, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3", "13.0", "13.1"]
         subsystem:
             null:
             catalyst:
@@ -74,7 +74,8 @@ compiler:
                     "9", "9.1", "9.2", "9.3", "9.4", "9.5",
                     "10", "10.1", "10.2", "10.3", "10.4",
                     "11", "11.1", "11.2", "11.3",
-                    "12", "12.1", "12.2"]
+                    "12", "12.1", "12.2", "12.3",
+                    "13", "13.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [null, posix, win32]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW
@@ -104,7 +105,7 @@ compiler:
         update: [null, ANY]
         mode: ["icx", "classic", "dpcpp"]
         libcxx: [null, libstdc++, libstdc++11, libc++]
-        cppstd: [null, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        cppstd: [null, 98, gnu98, "03", gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
     qcc:
@@ -128,4 +129,4 @@ def migrate_settings_file(cache):
     from conans.client.migrations import update_file
 
     settings_path = cache.settings_path
-    update_file(settings_path, get_default_settings_yml())
+    update_file(settings_path, default_settings_yml)

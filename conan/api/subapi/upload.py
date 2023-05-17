@@ -1,8 +1,13 @@
+import os
+
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conan.internal.upload_metadata import gather_metadata
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
+from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
+from conans.client.rest.file_uploader import FileUploader
+from conans.errors import ConanException, AuthenticationException, ForbiddenException
 
 
 class UploadAPI:
@@ -42,3 +47,34 @@ class UploadAPI:
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
+
+    def upload_backup_sources(self, package_list):
+        app = ConanApp(self.conan_api.cache_folder)
+        config = app.cache.new_config
+        url = config.get("core.sources:upload_url")
+        if url is None:
+            return
+        url = url if url.endswith("/") else url + "/"
+        download_cache_path = config.get("core.sources:download_cache")
+        download_cache_path = download_cache_path or app.cache.default_sources_backup_folder
+
+        files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list)
+        # TODO: verify might need a config to force it to False
+        uploader = FileUploader(app.requester, verify=True, config=config)
+        # TODO: For Artifactory, we can list all files once and check from there instead
+        #  of 1 request per file, but this is more general
+        for file in files:
+            basename = os.path.basename(file)
+            full_url = url + basename
+            try:
+                # Always upload summary .json but only upload blob if it does not already exist
+                if file.endswith(".json") or not uploader.exists(full_url, auth=None):
+                    ConanOutput().info(f"Uploading file '{basename}' to backup sources server")
+                    uploader.upload(full_url, file, dedup=False, auth=None)
+                else:
+                    ConanOutput().info(f"File '{basename}' already in backup sources server, "
+                                       "skipping upload")
+            except (AuthenticationException, ForbiddenException) as e:
+                raise ConanException(f"The source backup server '{url}' needs authentication"
+                                     f"/permissions, please provide 'source_credentials.json': {e}")
+        return files

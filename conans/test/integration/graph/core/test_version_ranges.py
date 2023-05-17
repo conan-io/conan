@@ -3,7 +3,7 @@ from collections import OrderedDict
 import pytest
 
 from conan.api.model import Remote
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
@@ -55,7 +55,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -68,7 +68,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -82,7 +82,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -96,7 +96,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -178,7 +178,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -201,7 +201,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -279,7 +279,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[>1.0]"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
@@ -335,7 +335,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[<0.3]"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root

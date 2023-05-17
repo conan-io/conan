@@ -168,12 +168,15 @@ list_packages_html_template = r"""
                     packageList += `<h6 class="mb-1">${package}</h6>`;
                     packageList += `${getInfoFieldsBadges(packageInfo["info"])}`;
 
-                    packageList += `<br><br><b>Package revisions:</>`;
-                    packageList += `<ul>`;
-                    for (const [packageRev, packageRevInfo] of Object.entries(packageInfo["revisions"])) {
-                        packageList += `<li>${packageRev}&nbsp(${formatDate(packageRevInfo["timestamp"])})</li>`;
+                    packageList += `<br><br>`;
+                    if ("revisions" in packageInfo) {
+                        packageList += `<br><br><b>Package revisions:</>`;
+                        packageList += `<ul>`;
+                        for (const [packageRev, packageRevInfo] of Object.entries(packageInfo["revisions"])) {
+                            packageList += `<li>${packageRev}&nbsp(${formatDate(packageRevInfo["timestamp"])})</li>`;
+                        }
+                        packageList += `</ul>`;
                     }
-                    packageList += `</ul>`;
                     packageList += `</div>`;
                     packageList += `<br>`;
                 }

@@ -4,7 +4,7 @@ import pytest
 
 from parameterized import parameterized
 
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphConflictError, GraphLoopError, GraphRuntimeError
 from conans.model.recipe_ref import RecipeReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestClient
@@ -203,7 +203,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.RUNTIME
+        assert type(deps_graph.error) == GraphRuntimeError
 
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
@@ -508,7 +508,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
                                                                                "libc/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
@@ -617,7 +617,7 @@ class TestLoops(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_build_requires("cmake/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.LOOP
+        assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))
@@ -636,7 +636,7 @@ class TestLoops(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile().with_build_requires("cmake/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.LOOP
+        assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))

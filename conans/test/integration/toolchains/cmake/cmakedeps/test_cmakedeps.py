@@ -402,7 +402,7 @@ def test_props_from_consumer_build_context_activated():
 def test_skip_transitive_components():
     """ when a transitive depenency is skipped, because its binary is not necessary
     (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
-    was erroring with KeyError, as the dependency info was not there
+    was failing with KeyError, as the dependency info was not there
     """
     c = TestClient()
     pkg = textwrap.dedent("""
@@ -422,7 +422,7 @@ def test_skip_transitive_components():
                                                    .with_requires("pkg/0.1")})
     c.run("create dep")
     c.run("create pkg")
-    c.run("install consumer -g CMakeDeps")
+    c.run("install consumer -g CMakeDeps -v")
     c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
     # This used to error, as CMakeDeps was raising a KeyError
     assert "'CMakeDeps' calling 'generate()'" in c.out

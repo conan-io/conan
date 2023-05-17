@@ -3,6 +3,7 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conans.client.generators import relativize_generated_file
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
@@ -419,6 +420,7 @@ class EnvVars:
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "%~dp0")
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
         open(file_location, "w", encoding="utf-8").write(content)
@@ -498,6 +500,8 @@ class EnvVars:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "$script_folder")
+        content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
     def save_script(self, filename):

@@ -11,5 +11,7 @@ class ExceptionThread(Thread):
 
     def join(self, timeout=None):
         super().join(timeout=timeout)
+
+    def raise_errors(self):
         if self._exc:
             raise self._exc

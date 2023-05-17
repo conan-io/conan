@@ -84,9 +84,14 @@ class NewAPI:
         result = {}
         name = definitions.get("name", "Pkg")
         definitions["conan_version"] = __version__
-        requires = definitions.get("requires")  # Convert to list, and forget about it
-        if requires:
-            definitions["requires"] = [requires] if isinstance(requires, str) else requires
+
+        def ensure_list(key):
+            value = definitions.get(key)  # Convert to list, and forget about it
+            if value:
+                definitions[key] = [value] if isinstance(value, str) else value
+
+        ensure_list("requires")
+        ensure_list("tool_requires")
 
         def as_package_name(n):
             return n.replace("-", "_").replace("+", "_").replace(".", "_")

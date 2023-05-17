@@ -222,6 +222,8 @@ def test_export_pkg_local():
 
     # Doing a conan create: Same as export-pkg, there is "my_package" in the cache
     client.run("create . ")
+    pref = client.get_latest_package_reference(ref)
+    pf = client.get_latest_pkg_layout(pref).package()
     assert "my_package" not in pf
     assert os.path.exists(os.path.join(pf, "downloaded.h"))
     assert os.path.exists(os.path.join(pf, "generated.h"))

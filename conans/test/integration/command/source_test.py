@@ -242,7 +242,7 @@ class TestSourceWithoutDefaultProfile:
     def client(self):
         c = TestClient()
         # The ``source()`` should still receive necessary configuration
-        save(c.cache.new_config_path, "tools.files.download:download_cache=MYCACHE")
+        save(c.cache.new_config_path, "tools.files.download:retry=MYCACHE")
         # Make sure we don't have default profile
         os.remove(c.cache.default_profile_path)
         return c
@@ -253,7 +253,7 @@ class TestSourceWithoutDefaultProfile:
 
             class Pkg(ConanFile):
                 def source(self):
-                    c = self.conf.get("tools.files.download:download_cache")
+                    c = self.conf.get("tools.files.download:retry")
                     self.output.info("CACHE:{}!!".format(c))
                 """)
         client.save({"conanfile.py": conanfile})
@@ -270,7 +270,7 @@ class TestSourceWithoutDefaultProfile:
                 def layout(self):
                     cmake_layout(self)
                 def source(self):
-                    c = self.conf.get("tools.files.download:download_cache")
+                    c = self.conf.get("tools.files.download:retry")
                     self.output.info("CACHE:{}!!".format(c))
                 """)
         client.save({"conanfile.py": conanfile})

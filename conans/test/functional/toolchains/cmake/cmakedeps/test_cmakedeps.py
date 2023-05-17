@@ -474,7 +474,7 @@ def test_private_transitive():
                                                         .with_settings("os", "build_type", "arch")})
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
-    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release -of=.")
+    client.run("install consumer -g CMakeDeps -s arch=x86_64 -s build_type=Release -of=. -v")
     client.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     data_cmake = client.load("pkg-release-x86_64-data.cmake")
     assert 'set(pkg_FIND_DEPENDENCY_NAMES "")' in data_cmake
@@ -660,6 +660,37 @@ def test_map_imported_config():
     assert "hello/1.0: Hello World Release!" in client.out
     assert "talk: Release!" in client.out
     assert "main: Debug!" in client.out
+
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Windows DLL specific")
+def test_cmake_target_runtime_dlls():
+    # https://github.com/conan-io/conan/issues/13504
+
+    client = TestClient()
+    client.run("new cmake_lib -d name=hello -d version=1.0")
+    client.run('create . -tf="" -s build_type=Release -o "hello/*":shared=True')
+
+    client.run("new cmake_exe -d name=foo -d version=1.0 -d requires=hello/1.0 -f")
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(foo CXX)
+    find_package(hello CONFIG REQUIRED)
+    add_executable(foo src/foo.cpp src/main.cpp)
+    target_link_libraries(foo PRIVATE hello::hello)
+    # Make sure CMake copies DLLs from dependencies, next to the executable
+    # in this case it should copy hello.dll
+    add_custom_command(TARGET foo POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:foo> $<TARGET_FILE_DIR:foo>
+        COMMAND_EXPAND_LISTS)
+    """)
+    client.save({"CMakeLists.txt": cmakelists})
+    client.run('install . -s build_type=Release -o "hello/*":shared=True')
+    client.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
+    client.run_command("cmake --build build --config Release")
+    client.run_command("build\\Release\\foo.exe")
+    
+    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "hello.dll"))
+    assert "hello/1.0: Hello World Release!" in client.out # if the DLL wasn't copied, the application would not run and show output
 
 
 @pytest.mark.tool("cmake")

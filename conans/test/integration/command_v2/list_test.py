@@ -10,7 +10,7 @@ import pytest
 
 from conans.errors import ConanException, ConanConnectionError
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.env import environment_update
 from conans.util.files import load, save
 
@@ -582,6 +582,55 @@ def test_list_prefs_query_custom_settings():
     assert "newsetting: value2" in c.out
     assert "newsetting.subsetting: 1" in c.out
     assert "newsetting.subsetting: 2" not in c.out
+
+
+def test_list_query_options():
+    """
+    Make sure query works for custom settings
+    https://github.com/conan-io/conan/issues/13617
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_option("myoption", [1, 2, 3])})
+    c.run("create . -o myoption=1")
+    c.run("create . -o myoption=2")
+    c.run("create . -o myoption=3")
+
+    c.run("list pkg/1.0:* -p options.myoption=1")
+    assert "myoption: 1" in c.out
+    assert "myoption: 2" not in c.out
+    assert "myoption: 3" not in c.out
+    c.run("list pkg/1.0:* -p options.myoption=2")
+    assert "myoption: 1" not in c.out
+    assert "myoption: 2" in c.out
+    assert "myoption: 3" not in c.out
+
+    c.run("upload * -r=default -c")
+    c.run("list pkg/1.0:* -p options.myoption=1 -r=default")
+    assert "myoption: 1" in c.out
+    assert "myoption: 2" not in c.out
+    assert "myoption: 3" not in c.out
+    c.run("list pkg/1.0:* -p options.myoption=2 -r=default")
+    assert "myoption: 1" not in c.out
+    assert "myoption: 2" in c.out
+    assert "myoption: 3" not in c.out
+
+
+def test_list_empty_settings():
+    """
+    If settings are empty, do not crash
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    c.run("create .")
+
+    c.run("list pkg/1.0:* -p os=Windows -f=json")
+    revisions = json.loads(c.stdout)["Local Cache"]["pkg/1.0"]["revisions"]
+    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+    assert pkgs == {}
+    c.run("list pkg/1.0:* -p os=None -f=json")
+    revisions = json.loads(c.stdout)["Local Cache"]["pkg/1.0"]["revisions"]
+    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+    assert pkgs == {NO_SETTINGS_PACKAGE_ID: {"info": {}}}
 
 
 class TestListNoUserChannel:

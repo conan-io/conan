@@ -101,8 +101,8 @@ class PyRequireLoader(object):
                                  "Please use version ranges instead")
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
-        else:
-            self._range_resolver.resolve(requirement, "py_require", remotes, update)
+        # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
+        self._range_resolver.resolve(requirement, "py_require", remotes, update)
         ref = requirement.ref
         return ref
 
@@ -112,11 +112,12 @@ class PyRequireLoader(object):
         except ConanException as e:
             raise ConanException(f"Cannot resolve python_requires '{ref}': {str(e)}")
         path, recipe_status, remote, new_ref = recipe
-        conanfile, module = loader.load_basic_module(path, graph_lock, update, check_update)
+        conanfile, module = loader.load_basic_module(path, graph_lock, remotes=remotes,
+                                                     update=update, check_update=check_update)
         conanfile.name = new_ref.name
         conanfile.version = str(new_ref.version)
         conanfile.user = new_ref.user
-        # TODO: Is tihs really necessary?
+        # TODO: Is this really necessary?
         conanfile.channel = new_ref.channel
 
         if getattr(conanfile, "alias", None):

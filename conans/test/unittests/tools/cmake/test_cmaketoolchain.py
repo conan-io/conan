@@ -32,7 +32,7 @@ def conanfile():
     c.settings.os = "Windows"
     c.conf = Conf()
     c.conf.define("tools.cmake.cmaketoolchain:system_name", "potato")
-    c.folders.set_base_generators(".")
+    c.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
     c._conan_node = Mock()
     c._conan_node.transitive_deps = {}
     return c
@@ -146,7 +146,7 @@ def conanfile_apple():
     c.settings.os.version = "10.15"
     c.settings_build = c.settings
     c.conf = Conf()
-    c.folders.set_base_generators(".")
+    c.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
     c._conan_node = Mock()
     c._conan_node.dependencies = []
     c._conan_node.transitive_deps = {}
@@ -527,3 +527,33 @@ def test_linker_scripts_block(conanfile):
     toolchain = CMakeToolchain(conanfile)
     content = toolchain.content
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS -T"path_to_first_linker_script" -T"path_to_second_linker_script")' in content
+
+
+class TestCrossBuild:
+    @pytest.fixture
+    def conanfile_cross(self):
+        c = ConanFile()
+        c.settings = Settings({"os": ["baremetal", "Linux"],
+                               "compiler": {"gcc": {"version": ["11"], "cppstd": ["20"]}},
+                               "build_type": ["Release"],
+                               "arch": ["armv8", "x86_64"]})
+        c.settings.build_type = "Release"
+        c.settings.arch = "armv8"
+        c.settings.compiler = "gcc"
+        c.settings.compiler.version = "11"
+        c.settings.compiler.cppstd = "20"
+        c.settings.os = "baremetal"
+        c.settings_build = c.settings.copy()
+        c.settings_build.os = "Linux"
+        c.settings_build.arch = "x86_64"
+        c.conf = Conf()
+        c.folders.set_base_generators(".")
+        c._conan_node = Mock()
+        c._conan_node.dependencies = []
+        c._conan_node.transitive_deps = {}
+        return c
+
+    def test_cmake_system_name(self, conanfile_cross):
+        toolchain = CMakeToolchain(conanfile_cross)
+        content = toolchain.content
+        assert 'set(CMAKE_SYSTEM_NAME Generic)' in content

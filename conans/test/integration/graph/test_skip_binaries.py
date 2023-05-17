@@ -1,3 +1,5 @@
+import re
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
@@ -12,7 +14,7 @@ def test_private_skip():
     client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
 
@@ -61,7 +63,7 @@ def test_shared_link_static_skip():
     client.run("remove dep/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
-    client.run("create . --name=app --version=1.0")
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (package_id, "Skip")})
 
 
@@ -78,7 +80,11 @@ def test_test_requires():
     client.run("remove gtest/1.0:* -c")  # Dep binary is removed not used at all
 
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
+    # Checking list of skipped binaries
     client.run("create . --name=app --version=1.0")
+    assert re.search(r"Skipped binaries(\s*)\['gtest/1.0'\]", client.out)
+    # Showing the complete information about the skipped binary
+    client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
 
 
@@ -91,4 +97,24 @@ def test_build_scripts_no_skip():
                            build=True)
     c.run("install app")
     c.assert_listed_binary({"script/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
+                           build=True)
+
+
+def test_list_skip_printing():
+    """ make sure that when a package is required in the graph, it is not marked as SKIP, just
+    because some other part of the graph is skipping it. In this case, a tool_require might be
+    necessary for some packages building from soures, but not for others
+    """
+    c = TestClient()
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_tool_requires("tool/0.1"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")
+                                                            .with_tool_requires("tool/0.1"),
+            "app/conanfile.py": GenConanfile().with_requires("pkgb/0.1")})
+    c.run("create tool")
+    c.run("create pkga")
+    c.run("create pkgb")
+    c.run("remove pkga:* -c")
+    c.run("install app --build=missing")
+    c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
                            build=True)

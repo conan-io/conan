@@ -20,7 +20,7 @@ class FileDownloader:
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
         """ in order to make the download concurrent, the folder for file_path MUST exist
         """
-        assert file_path, "Conan 2.0 always download files to disk, not to memory"
+        assert file_path, "Conan 2.0 always downloads files to disk, not to memory"
         assert os.path.isabs(file_path), "Target file_path must be absolute"
 
         if os.path.exists(file_path):
@@ -47,14 +47,14 @@ class FileDownloader:
                         self._output.info(f"Waiting {retry_wait} seconds to retry...")
                         time.sleep(retry_wait)
 
-            self._check_checksum(file_path, md5, sha1, sha256)
+            self.check_checksum(file_path, md5, sha1, sha256)
         except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)
             raise
 
     @staticmethod
-    def _check_checksum(file_path, md5, sha1, sha256):
+    def check_checksum(file_path, md5, sha1, sha256):
         if md5 is not None:
             check_with_algorithm_sum("md5", file_path, md5)
         if sha1 is not None:
@@ -104,7 +104,7 @@ class FileDownloader:
             total_length = get_total_length()
             if total_length > 100000:
                 action = "Downloading" if range_start == 0 else "Continuing download of"
-                description = "{} {}".format(action, os.path.basename(file_path))
+                description = f"${action} {os.path.basename(file_path)} from {url}"
                 self._output.info(description)
 
             chunk_size = 1024 * 100

@@ -1,6 +1,7 @@
 import argparse
 import textwrap
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 
@@ -103,32 +104,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        self._process_log_level_args(args)
+        ConanOutput.define_log_level(args.v)
         return args
-
-    @staticmethod
-    def _process_log_level_args(args):
-        from conan.api import output
-        from conan.api.output import LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, LEVEL_NOTICE, \
-            LEVEL_STATUS, LEVEL_VERBOSE, LEVEL_DEBUG, LEVEL_TRACE
-
-        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                  "error": LEVEL_ERROR,  # -verror 70
-                  "warning": LEVEL_WARNING,  # -vwaring 60
-                  "notice": LEVEL_NOTICE,  # -vnotice 50
-                  "status": LEVEL_STATUS,  # -vstatus 40
-                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                  None: LEVEL_VERBOSE,  # -v 30
-                  "debug": LEVEL_DEBUG,  # -vdebug 20
-                  "v": LEVEL_DEBUG,  # -vv 20
-                  "trace": LEVEL_TRACE,  # -vtrace 10
-                  "vv": LEVEL_TRACE,  # -vvv 10
-                  }
-
-        level = levels.get(args.v)
-        if not level:
-            raise ConanException(f"Invalid argument '-v{args.v}'")
-        output.conan_output_level = level
 
 
 class ConanCommand(BaseConanCommand):
@@ -149,6 +126,7 @@ class ConanCommand(BaseConanCommand):
             self._subcommand_parser = self._parser.add_subparsers(dest='subcommand',
                                                                   help='sub-command help')
             self._subcommand_parser.required = True
+        subcommand.set_name(self.name)
         subcommand.set_parser(self._parser, self._subcommand_parser)
         self._subcommands[subcommand.name] = subcommand
 
@@ -174,12 +152,15 @@ class ConanSubCommand(BaseConanCommand):
         super().__init__(method, formatters=formatters)
         self._parent_parser = None
         self._parser = None
-        self._name = "-".join(method.__name__.split("_")[1:])
+        self._subcommand_name = method.__name__.replace('_', '-')
 
     def run(self, conan_api, *args):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         # It is necessary to do it after calling the "method" otherwise parser not complete
         self._format(self._parent_parser, info, *args)
+
+    def set_name(self, parent_name):
+        self._name = self._subcommand_name.replace(f'{parent_name}-', '', 1)
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
