@@ -33,7 +33,9 @@ class UploadAPI:
     def prepare(self, package_list, enabled_remotes, metadata):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
-        if the recipe is still there"""
+        if the recipe is still there
+        :@param metadata: A list of patterns of metadata that should be uploaded
+        """
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)
         preparator.prepare(package_list, enabled_remotes)
