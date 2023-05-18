@@ -39,7 +39,7 @@ class RemoteManager(object):
         assert pref.revision, "upload_package requires PREV"
         self._call_remote(remote, "upload_package", pref, files_to_upload)
 
-    def get_recipe(self, ref, remote):
+    def get_recipe(self, ref, remote, metadata=None):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
@@ -53,7 +53,9 @@ class RemoteManager(object):
 
         download_export = layout.download_export()
         try:
-            zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
+            zipped_files = self._call_remote(remote, "get_recipe", ref, download_export, metadata,
+                                             only_metadata=False)
+            # TODO: Optimize this call, it is slow to always query all revisions
             remote_refs = self._call_remote(remote, "get_recipe_revisions_references", ref)
             ref_time = remote_refs[0].timestamp
             ref.timestamp = ref_time
@@ -83,6 +85,20 @@ class RemoteManager(object):
         # Make sure that the source dir is deleted
         rmdir(layout.source())
 
+    def get_recipe_metadata(self, ref, remote, metadata):
+        """
+        Get only the metadata for a locally existing recipe in Cache
+        """
+        assert ref.revision, "get_recipe without revision specified"
+        layout = self._cache.ref_layout(ref)
+        download_export = layout.download_export()
+        try:
+            self._call_remote(remote, "get_recipe", ref, download_export, metadata,
+                              only_metadata=True)
+        except BaseException:  # So KeyboardInterrupt also cleans things
+            ConanOutput(scope=str(ref)).error(f"Error downloading metadata from remote '{remote.name}'")
+            raise
+
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
 
@@ -96,7 +112,7 @@ class RemoteManager(object):
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder)
 
-    def get_package(self, conanfile, pref, remote):
+    def get_package(self, conanfile, pref, remote, metadata=None):
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
                                                                            remote.name))
 
@@ -105,15 +121,33 @@ class RemoteManager(object):
         pkg_layout = self._cache.get_or_create_pkg_layout(pref)
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
-            self._get_package(pkg_layout, pref, remote, conanfile.output)
+            self._get_package(pkg_layout, pref, remote, conanfile.output, metadata)
 
-    def _get_package(self, layout, pref, remote, scoped_output):
+    def get_package_metadata(self, pref, remote, metadata):
+        output = ConanOutput(scope=str(pref))
+        output.info("Retrieving package metadata %s from remote '%s' "
+                    % (pref.package_id, remote.name))
+
+        assert pref.revision is not None
+        pkg_layout = self._cache.pkg_layout(pref)
+        try:
+            download_pkg_folder = pkg_layout.download_package()
+            # Download files to the pkg_tgz folder, not to the final one
+            self._call_remote(remote, "get_package", pref, download_pkg_folder,
+                              metadata, only_metadata=True)
+        except BaseException as e:  # So KeyboardInterrupt also cleans things
+            output.error("Exception while getting package metadata: %s" % str(pref.package_id))
+            output.error("Exception: %s %s" % (type(e), str(e)))
+            raise
+
+    def _get_package(self, layout, pref, remote, scoped_output, metadata):
         try:
             assert pref.revision is not None
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
-            zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
+            zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder,
+                                             metadata, only_metadata=False)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             # quick server package integrity check:
             for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):

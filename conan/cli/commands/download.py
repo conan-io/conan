@@ -27,6 +27,8 @@ def download(conan_api: ConanAPI, parser, *args):
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", action=OnceArgument, required=True,
                         help='Download from this specific remote')
+    parser.add_argument("--metadata", action='append',
+                        help='Upload the metadata, even if the package is not uploaded')
 
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
@@ -42,9 +44,9 @@ def download(conan_api: ConanAPI, parser, *args):
 
     if parallel <= 1:
         for ref in refs:
-            conan_api.download.recipe(ref, remote)
+            conan_api.download.recipe(ref, remote, args.metadata)
         for pref in prefs:
-            conan_api.download.package(pref, remote)
+            conan_api.download.package(pref, remote, args.metadata)
     else:
         _download_parallel(parallel, conan_api, refs, prefs, remote)
 

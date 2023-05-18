@@ -33,6 +33,8 @@ def upload(conan_api: ConanAPI, parser, *args):
                         help='Perform an integrity check, using the manifests, before upload')
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Upload all matching recipes without confirmation')
+    parser.add_argument("--metadata", action='append',
+                        help='Upload the metadata, even if the package is not uploaded')
 
     args = parser.parse_args(*args)
 
@@ -54,7 +56,7 @@ def upload(conan_api: ConanAPI, parser, *args):
     if not args.confirm and "*" in args.reference:
         _ask_confirm_upload(conan_api, package_list)
 
-    conan_api.upload.prepare(package_list, enabled_remotes)
+    conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
     conan_api.upload.upload(package_list, remote)
 
     conan_api.upload.upload_backup_sources(package_list)

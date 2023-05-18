@@ -285,7 +285,8 @@ class BinaryInstaller:
         node = package.nodes[0]
         assert node.pref.revision is not None
         assert node.pref.timestamp is not None
-        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
+        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
+                                         metadata=None)
 
     def _handle_package(self, package, install_reference, remotes, handled_count, total_count):
         if package.binary == BINARY_SYSTEM_TOOL:

@@ -30,7 +30,7 @@ class UploadAPI:
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 
-    def prepare(self, package_list, enabled_remotes):
+    def prepare(self, package_list, enabled_remotes, metadata=None):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there"""
@@ -40,7 +40,8 @@ class UploadAPI:
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
-        gather_metadata(package_list, app.cache)
+        # gather metadata happens after the package is created and signed
+        gather_metadata(package_list, app.cache, metadata)
 
     def upload(self, package_list, remote):
         app = ConanApp(self.conan_api.cache_folder)
