@@ -59,14 +59,3 @@ class TestMetadataCommands:
             assert os.path.isfile(os.path.join(metadata_path, f))
         for f in "logs/mybuildlogs.txt", "logs/mybuildlogs2.txt":
             assert os.path.isfile(os.path.join(pkg_metadata_path, f))
-
-        """# Regular install can also fetch metadata
-        c.run("remove * -c")  # If done cleanly, not incrementally
-        assert not os.path.exists(metadata_path)
-        assert not os.path.exists(pkg_metadata_path)
-        c.run("install --requires=pkg/0.1 --metadata=*")
-        for f in "logs/mylogs.txt", "logs/mylogs2.txt":
-            assert os.path.isfile(os.path.join(metadata_path, f))
-        for f in "logs/mybuildlogs.txt", "logs/mybuildlogs2.txt":
-            assert os.path.isfile(os.path.join(pkg_metadata_path, f))
-        """

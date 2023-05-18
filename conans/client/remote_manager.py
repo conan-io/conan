@@ -90,13 +90,16 @@ class RemoteManager(object):
         Get only the metadata for a locally existing recipe in Cache
         """
         assert ref.revision, "get_recipe without revision specified"
+        output = ConanOutput(scope=str(ref))
+        output.info("Retrieving recipe metadata from remote '%s' " % remote.name)
         layout = self._cache.ref_layout(ref)
         download_export = layout.download_export()
         try:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                               only_metadata=True)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            ConanOutput(scope=str(ref)).error(f"Error downloading metadata from remote '{remote.name}'")
+
+            output.error(f"Error downloading metadata from remote '{remote.name}'")
             raise
 
     def get_recipe_sources(self, ref, layout, remote):
@@ -124,7 +127,10 @@ class RemoteManager(object):
             self._get_package(pkg_layout, pref, remote, conanfile.output, metadata)
 
     def get_package_metadata(self, pref, remote, metadata):
-        output = ConanOutput(scope=str(pref))
+        """
+        only download the metadata, not the packge itself
+        """
+        output = ConanOutput(scope=str(pref.ref))
         output.info("Retrieving package metadata %s from remote '%s' "
                     % (pref.package_id, remote.name))
 
@@ -132,7 +138,6 @@ class RemoteManager(object):
         pkg_layout = self._cache.pkg_layout(pref)
         try:
             download_pkg_folder = pkg_layout.download_package()
-            # Download files to the pkg_tgz folder, not to the final one
             self._call_remote(remote, "get_package", pref, download_pkg_folder,
                               metadata, only_metadata=True)
         except BaseException as e:  # So KeyboardInterrupt also cleans things

@@ -68,7 +68,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     subparser.add_argument("-b", "--build", action='store_true', default=False,
                            help="Clean build folders")
     subparser.add_argument("-d", "--download", action='store_true', default=False,
-                           help="Clean download folders")
+                           help="Clean download and metadata folders")
     subparser.add_argument("-t", "--temp", action='store_true', default=False,
                            help="Clean temporary folders")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
