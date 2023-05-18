@@ -30,11 +30,14 @@ class UploadAPI:
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 
-    def prepare(self, package_list, enabled_remotes, metadata):
+    def prepare(self, package_list, enabled_remotes, metadata=None):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there
-        :@param metadata: A list of patterns of metadata that should be uploaded
+        :param package_list:
+        :param enabled_remotes:
+        :param metadata: A list of patterns of metadata that should be uploaded. Default None
+                         means all metadata will be uploaded together with the pkg artifacts
         """
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)

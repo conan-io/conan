@@ -20,7 +20,6 @@ def gather_metadata(upload_data, cache, metadata):
     for rref, recipe_bundle in upload_data.refs():
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.ref_layout(rref).metadata()
-            assert metadata_folder
             files = _metadata_files(metadata_folder, metadata)
             if files:
                 recipe_bundle.setdefault("files", {}).update(files)
@@ -29,7 +28,6 @@ def gather_metadata(upload_data, cache, metadata):
         for pref, pkg_bundle in upload_data.prefs(rref, recipe_bundle):
             if metadata or pkg_bundle["upload"]:
                 metadata_folder = cache.pkg_layout(pref).metadata()
-                assert metadata_folder
                 files = _metadata_files(metadata_folder, metadata)
                 if files:
                     pkg_bundle.setdefault("files", {}).update(files)
