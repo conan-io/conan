@@ -530,7 +530,7 @@ class CppInfo:
             return
         # Only direct host (not test) dependencies can define required components
         direct_dependencies = [d.ref.name for d in conanfile.requires.values()
-                               if not d.build and not d.is_test and d.visible]
+                               if not d.build and not d.is_test and d.visible and not d.override]
 
         for e in external:
             if e not in direct_dependencies:

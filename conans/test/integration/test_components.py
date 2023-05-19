@@ -113,3 +113,36 @@ def test_components_not_required():
     c.run("create expat")
     c.run("create wayland")
     assert "wayland/1.0: Created package" in c.out
+
+
+def test_components_overrides():
+    """
+    overrides are not direct dependencies, and as such, they don't need to be mandatory
+    to specify in the components requires
+
+    https://github.com/conan-io/conan/issues/13922
+    """
+    c = TestClient()
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class ConanRecipe(ConanFile):
+            name = "app"
+            version = "0.1"
+
+            def requirements(self):
+                self.requires("libffi/3.4.4", override=True)
+                self.requires("glib/2.76.2")
+
+            def package_info(self):
+                self.cpp_info.requires = ["glib::glib"]
+        """)
+    c.save({"libffi/conanfile.py": GenConanfile("libffi"),
+           "glib/conanfile.py": GenConanfile("glib", "2.76.2").with_requires("libffi/3.0"),
+            "app/conanfile.py": consumer})
+    c.run("create libffi --version=3.0")
+    c.run("create libffi --version=3.4.4")
+    c.run("create glib")
+    # This used to crash, because override was not correctly excluded
+    c.run("create app")
+    assert "app/0.1: Created package" in c.out
