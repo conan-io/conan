@@ -86,9 +86,18 @@ def print_list_json(data):
     cli_out_write(myjson)
 
 
+def print_pkg_list(data):
+    # FIXME: Workaround, to serialize only the 1st thing, 1 pkg-list, not the full
+    #  remote-pkglist dict
+    results = next(iter(data["results"].items()))[1]
+    myjson = json.dumps(results, indent=4)
+    cli_out_write(myjson)
+
+
 @conan_command(group="Consumer", formatters={"text": print_list_text,
                                              "json": print_list_json,
-                                             "html": list_packages_html})
+                                             "html": list_packages_html,
+                                             "pkglist": print_pkg_list})
 def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions, or packages in the cache (by default) or the remotes.

@@ -1,8 +1,10 @@
 import fnmatch
+import json
 
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.files import load
 
 
 class Remote:
@@ -91,6 +93,16 @@ class PackagesList:
 
     def serialize(self):
         return self.recipes
+
+    @staticmethod
+    def load(file):
+        return PackagesList.loads(load(file))
+
+    @staticmethod
+    def loads(content):
+        result = PackagesList()
+        result.recipes = json.loads(content)
+        return result
 
 
 class ListPattern:
