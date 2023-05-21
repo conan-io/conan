@@ -86,7 +86,7 @@ def test_cpp_info_editable():
     assert "**includedirs:['package_include']**" in out
     assert "**libdirs:['lib']**" in out
     assert "**builddirs:[]**" in out
-    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in out
+    assert "**frameworkdirs:['package_frameworks_path']**" in out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in out
     assert "**objects:['myobject.o']**" in out
     assert "**build_modules:['mymodules/mybuildmodule']**" in out
@@ -95,7 +95,7 @@ def test_cpp_info_editable():
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . --name=lib --version=1.0")
@@ -217,8 +217,9 @@ def test_cpp_info_components_editable():
 
     out = str(client2.out).replace(r"\\", "/").replace(package_folder, "")
     assert "**FOO includedirs:['package_include_foo']**" in out
-    assert "**FOO libdirs:[]**" in out  # The components don't have default dirs
-    assert "**FOO builddirs:[]**" in out  # The components don't have default dirs
+    assert "**FOO libdirs:['lib']**" in out  # The components does have default dirs
+    assert "**FOO builddirs:[]**" in out  # The components don't have default dirs for builddirs
+
     assert "**FOO libs:['lib_when_package_foo', 'lib_when_package2_foo']**" in out
     assert "**FOO objects:['myobject.o']**" in out
     assert "**FOO build_modules:['mymodules/mybuildmodule']**" in out
@@ -226,15 +227,16 @@ def test_cpp_info_components_editable():
     assert "**FOO cflags:['my_c_flag_foo']**" in out
 
     assert "**VAR includedirs:['package_include_var']**" in out
-    assert "**VAR libdirs:[]**" in out  # The components don't have default dirs
+    assert "**VAR libdirs:['lib']**" in out  # The components does have default dirs
     assert "**VAR builddirs:[]**" in out  # The components don't have default dirs
+
     assert "**VAR libs:['lib_when_package_var', 'lib_when_package2_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag2_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . --name=lib --version=1.0")
@@ -258,3 +260,30 @@ def test_cpp_info_components_editable():
     assert "**VAR libs:['hello_var']**" in out
     assert "**VAR cxxflags:['my_cxx_flag_var']**" in out
     assert "**VAR cflags:['my_c_flag_var']**" in out
+
+
+def test_editable_package_folder():
+    """ This test checks the behavior that self.package_folder is NOT defined (i.e = None)
+    for editable packages, so it cannot be used in ``package_info()`` method
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "arch", "build_type"
+
+            def package_info(self):
+                self.output.info("PKG FOLDER={}!!!".format(self.package_folder))
+
+            def layout(self):
+                cmake_layout(self)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    c.run("editable add .")
+    c.run("install --requires=pkg/0.1@")
+    assert "pkg/0.1: PKG FOLDER=None!!!"

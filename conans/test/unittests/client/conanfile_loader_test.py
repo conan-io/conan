@@ -4,16 +4,15 @@ import textwrap
 import unittest
 
 import pytest
-from mock import Mock, call
+from mock.mock import Mock
 from parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
-from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.options import Options
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_profile
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 class ConanLoaderTest(unittest.TestCase):
@@ -52,14 +51,6 @@ OpenCV/2.4.10@phil/stable # My requirement for CV
         file_content = '{hello}'
         with self.assertRaisesRegex(ConanException, "Unexpected line"):
             ConanFileTextLoader(file_content)
-
-        file_content = '[imports]\nhello'
-        with self.assertRaisesRegex(ConanException, "Invalid imports line: hello"):
-            ConanFileTextLoader(file_content).imports_method(None)
-
-        file_content = '[imports]\nbin, * -> bin @ kk=3 '
-        with self.assertRaisesRegex(ConanException, "Unknown argument kk"):
-            ConanFileTextLoader(file_content).imports_method(None)
 
     def test_plain_text_parser(self):
         # Valid content
@@ -102,9 +93,6 @@ Mypkg/1.0.0@phil/stable
 [generators]
 one
 two
-[imports]
-OpenCV/bin, * -> ./bin # I need this binaries
-OpenCV/lib, * -> ./lib
 [options]
 OpenCV:use_python=True
 OpenCV:other_option=False
@@ -125,12 +113,6 @@ OpenCV2:other_option=Cosa""")
         self.assertEqual(ret.generators, ["one", "two"])
         self.assertEqual(ret.options.dumps(), options1.dumps())
 
-        ret.copy = Mock()
-        ret.imports()
-
-        self.assertTrue(ret.copy.call_args_list, [('*', './bin', 'OpenCV/bin'),
-                                                  ('*', './lib', 'OpenCV/lib')])
-
         # Now something that fails
         file_content = '''[requires]
 OpenCV/2.4.104phil/stable
@@ -144,8 +126,6 @@ OpenCV/2.4.104phil/stable
 
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable111111111111111111111111111111111111111111111111111111111111111
-[imports]
-OpenCV/bin/* - ./bin
 '''
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
@@ -153,31 +133,6 @@ OpenCV/bin/* - ./bin
         loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException, "is too long. Valid names must contain"):
             loader.load_conanfile_txt(file_path, create_profile())
-
-    def test_load_imports_arguments(self):
-        file_content = '''
-[imports]
-OpenCV/bin, * -> ./bin # I need this binaries
-OpenCV/lib, * -> ./lib @ root_package=Pkg
-OpenCV/data, * -> ./data @ root_package=Pkg, folder=True # Irrelevant
-docs, * -> ./docs @ root_package=Pkg, folder=True, ignore_case=False, excludes="a b c" # Other
-licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, excludes="a b c", keep_path=False # Other
-'''
-        tmp_dir = temp_folder()
-        file_path = os.path.join(tmp_dir, "file.txt")
-        save(file_path, file_content)
-        loader = ConanFileLoader(None, None)
-        ret = loader.load_conanfile_txt(file_path)
-
-        ret.copy = Mock()
-        ret.imports()
-        expected = [call(u'*', u'./bin', u'OpenCV/bin', None, False, True, None, True),
-                    call(u'*', u'./lib', u'OpenCV/lib', u'Pkg', False, True, None, True),
-                    call(u'*', u'./data', u'OpenCV/data', u'Pkg', True, True, None, True),
-                    call(u'*', u'./docs', u'docs', u'Pkg', True, False, [u'"a', u'b', u'c"'], True),
-                    call(u'*', u'./licenses', u'licenses', u'Pkg', True, False, [u'"a', u'b', u'c"'],
-                         False)]
-        self.assertEqual(ret.copy.call_args_list, expected)
 
     def test_load_options_error(self):
         conanfile_txt = textwrap.dedent("""
@@ -189,9 +144,37 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         save(file_path, conanfile_txt)
         loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException,
-                                   r"Error while parsing \[options\] in conanfile\n"
-                                   "Options should be specified as 'pkg:option=value'"):
+                                   r"Error while parsing \[options\] in conanfile.txt\n"
+                                   "Options should be specified as 'pkg/\*:option=value'"):
             loader.load_conanfile_txt(file_path)
+
+    def test_layout_not_predefined(self):
+        txt = textwrap.dedent("""
+                    [layout]
+                    missing
+                """)
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "conanfile.txt")
+        save(file_path, txt)
+        with pytest.raises(ConanException) as exc:
+            loader = ConanFileLoader(None, None)
+            loader.load_conanfile_txt(file_path)
+        assert "Unknown predefined layout 'missing'" in str(exc.value)
+
+    def test_layout_multiple(self):
+        txt = textwrap.dedent("""
+                    [layout]
+                    cmake_layout
+                    vs_layout
+                """)
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "conanfile.txt")
+        save(file_path, txt)
+        with pytest.raises(ConanException) as exc:
+            loader = ConanFileLoader(None, None)
+            loader.load_conanfile_txt(file_path)
+        assert "Only one layout can be declared in the [layout] section of the conanfile.txt" \
+               in str(exc.value)
 
 
 class ImportModuleLoaderTest(unittest.TestCase):

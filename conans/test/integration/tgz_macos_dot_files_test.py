@@ -60,6 +60,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
 
         conanfile = textwrap.dedent("""\
             from conan import ConanFile
+            from conan.tools.files import copy
 
             class Lib(ConanFile):
                 name = "lib"
@@ -67,7 +68,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
                 exports_sources = "file.txt"
 
                 def package(self):
-                    self.copy("file.txt")
+                    copy(self, "file.txt", self.source_folder, self.package_folder)
             """)
 
         t = TestClient(path_with_spaces=False, default_server_user=True)

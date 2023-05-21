@@ -1,18 +1,35 @@
 import os
 import shutil
+import fnmatch
 
 from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
-
-from conans.cli.output import ConanOutput
-from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt
+from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
-from conans.client.tools import Git
-from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, load
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir
+from conans.util.runners import detect_runner
+
+
+class ConanIgnoreMatcher:
+    def __init__(self, conanignore_path):
+        self.conanignore_path = os.path.abspath(conanignore_path)
+        self._ignored_entries = {".conanignore"}
+        self._parse_conanignore()
+
+    def _parse_conanignore(self):
+        with open(self.conanignore_path, 'r') as conanignore:
+            for line in conanignore:
+                line_content = line.strip()
+                if line_content != "":
+                    self._ignored_entries.add(line_content)
+
+    def matches(self, path):
+        for ignore_entry in self._ignored_entries:
+            if fnmatch.fnmatch(path, ignore_entry):
+                return True
+        return False
 
 
 def _hide_password(resource):
@@ -24,12 +41,6 @@ def _hide_password(resource):
     """
     password = urlparse(resource).password
     return resource.replace(password, "<hidden>") if password else resource
-
-
-def _handle_remotes(cache, remote_file):
-    # FIXME: Should we encourage to pass the remotes in json?
-    remotes, _ = load_registry_txt(load(remote_file))
-    cache.remotes_registry.save_remotes(remotes)
 
 
 @contextmanager
@@ -49,14 +60,12 @@ def _process_git_repo(config, cache):
     output = ConanOutput()
     output.info("Trying to clone repo: %s" % config.uri)
     with tmp_config_install_folder(cache) as tmp_folder:
-        with tools.chdir(tmp_folder):
-            try:
-                args = config.args or ""
-                git = Git(verify_ssl=config.verify_ssl)
-                git.clone(config.uri, args=args)
-                output.info("Repo cloned!")
-            except Exception as e:
-                raise ConanException("Can't clone repo: %s" % str(e))
+        with chdir(tmp_folder):
+            args = config.args or ""
+            ret, out = detect_runner('git clone "{}" . {}'.format(config.uri, args))
+            if ret != 0:
+                raise ConanException("Can't clone repo: {}".format(out))
+            output.info("Repo cloned!")
         _process_folder(config, tmp_folder, cache)
 
 
@@ -65,12 +74,6 @@ def _process_zip_file(config, zippath, cache, tmp_folder, first_remove=False):
     if first_remove:
         os.unlink(zippath)
     _process_folder(config, tmp_folder, cache)
-
-
-def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
-    current_conan_conf.read(new_conan_conf_path)
-    with open(current_conan_conf.filename, "w") as f:
-        current_conan_conf.write(f)
 
 
 def _filecopy(src, filename, dst):
@@ -93,34 +96,23 @@ def _process_file(directory, filename, config, cache, folder):
     if filename == "settings.yml":
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
-    elif filename == "conan.conf":
-        output.info("Processing conan.conf")
-        _handle_conan_conf(cache.config, os.path.join(directory, filename))
-    elif filename == "remotes.txt":
-        output.info("Defining remotes from remotes.txt")
-        _handle_remotes(cache, os.path.join(directory, filename))
     elif filename == "remotes.json":
-        # Fix for Conan 2.0
-        raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
+        output.info("Defining remotes from remotes.json")
+        _filecopy(directory, filename, cache.cache_folder)
     else:
-        # This is ugly, should be removed in Conan 2.0
-        if filename in ("README.md", "LICENSE.txt"):
-            output.info("Skip %s" % filename)
+        relpath = os.path.relpath(directory, folder)
+        if config.target_folder:
+            target_folder = os.path.join(cache.cache_folder, config.target_folder, relpath)
         else:
-            relpath = os.path.relpath(directory, folder)
-            if config.target_folder:
-                target_folder = os.path.join(cache.cache_folder, config.target_folder,
-                                             relpath)
-            else:
-                target_folder = os.path.join(cache.cache_folder, relpath)
+            target_folder = os.path.join(cache.cache_folder, relpath)
 
-            if os.path.exists(target_folder):
-                if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
-                    remove(target_folder)
+        if os.path.exists(target_folder):
+            if os.path.isfile(target_folder):  # Existed as a file and now should be a folder
+                remove(target_folder)
 
-            mkdir(target_folder)
-            output.info("Copying file %s to %s" % (filename, target_folder))
-            _filecopy(directory, filename, target_folder)
+        mkdir(target_folder)
+        output.info("Copying file %s to %s" % (filename, target_folder))
+        _filecopy(directory, filename, target_folder)
 
 
 def _process_folder(config, folder, cache):
@@ -128,10 +120,17 @@ def _process_folder(config, folder, cache):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
+    conanignore_path = os.path.join(folder, '.conanignore')
+    conanignore = None
+    if os.path.exists(conanignore_path):
+        conanignore = ConanIgnoreMatcher(conanignore_path)
     for root, dirs, files in os.walk(folder):
+        # .git is always ignored by default, even if not present in .conanignore
         dirs[:] = [d for d in dirs if d != ".git"]
         for f in files:
-            _process_file(root, f, config, cache, folder)
+            rel_path = os.path.relpath(os.path.join(root, f), folder)
+            if conanignore is None or not conanignore.matches(rel_path):
+                _process_file(root, f, config, cache, folder)
 
 
 def _process_download(config, cache, requester):
@@ -142,9 +141,9 @@ def _process_download(config, cache, requester):
         filename = os.path.basename(path)
         zippath = os.path.join(tmp_folder, filename)
         try:
-            downloader = FileDownloader(requester=requester, verify=config.verify_ssl,
-                                        config_retry=None, config_retry_wait=None)
-            downloader.download(url=config.uri, file_path=zippath)
+            downloader = FileDownloader(requester=requester)
+            downloader.download(url=config.uri, file_path=zippath, verify_ssl=config.verify_ssl,
+                                retry=1)
             _process_zip_file(config, zippath, cache, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))

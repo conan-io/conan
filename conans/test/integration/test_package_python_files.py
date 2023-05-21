@@ -11,10 +11,11 @@ def test_package_python_files():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
+        from conan.tools.files import copy
         class Pkg(ConanFile):
             exports_sources = "*"
             def package(self):
-                self.copy("*")
+                copy(self, "*", self.source_folder, self.package_folder)
         """)
     client.save({"conanfile.py": conanfile,
                  "myfile.pyc": "",
@@ -43,8 +44,12 @@ def test_package_python_files():
     assert ".DS_Store" not in manifest
 
     client.run("upload * -r=default --confirm")
-    client.run("remove * -f")
-    client.run("download pkg/0.1@")
+    client.run("remove * -c")
+    client.run("download pkg/0.1#*:* -r default")
+
+    # The download will be in a different pkg folder now.
+    pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
+    pkg_folder = client.get_latest_pkg_layout(pref).package()
 
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyo"))

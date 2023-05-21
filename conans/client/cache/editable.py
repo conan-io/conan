@@ -1,4 +1,5 @@
 import copy
+import fnmatch
 import json
 import os
 from os.path import join, normpath
@@ -34,19 +35,33 @@ class EditablePackages:
         _tmp.revision = None
         return self._edited_refs.get(_tmp)
 
-    def add(self, ref, path, source_folder=None, output_folder=None):
+    def get_path(self, ref):
+        editable = self.get(ref)
+        if editable is not None:
+            return editable["path"]
+
+    def add(self, ref, path, output_folder=None):
         assert isinstance(ref, RecipeReference)
         _tmp = copy.copy(ref)
         _tmp.revision = None
-        self._edited_refs[_tmp] = {"path": path, "source_folder": source_folder,
-                                   "output_folder": output_folder}
+        self._edited_refs[ref] = {"path": path, "output_folder": output_folder}
         self.save()
 
-    def remove(self, ref):
-        assert isinstance(ref, RecipeReference)
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        if self._edited_refs.pop(_tmp, None):
-            self.save()
-            return True
-        return False
+    def remove(self, path, requires):
+        removed = {}
+        kept = {}
+        for ref, info in self._edited_refs.items():
+            to_remove = False
+            if path and info["path"] == path:
+                to_remove = True
+            else:
+                for r in requires or []:
+                    if fnmatch.fnmatch(str(ref), r):
+                        to_remove = True
+            if to_remove:
+                removed[ref] = info
+            else:
+                kept[ref] = info
+        self._edited_refs = kept
+        self.save()
+        return removed

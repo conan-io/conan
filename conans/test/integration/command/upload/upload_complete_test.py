@@ -1,22 +1,16 @@
 import json
 import os
-import platform
-import stat
 import textwrap
 import unittest
 
 import pytest
 from requests import ConnectionError
 
-from conans.client.tools.files import untargz
-from conans.model.manifest import FileTreeManifest
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
-                                     GenConanfile, TurboTestClient)
-from conans.util.files import load, mkdir, save
+                                     GenConanfile)
+from conans.util.files import load, save
 
 
 class BadConnectionUploader(TestRequester):
@@ -68,10 +62,10 @@ def test_upload_with_pattern():
 
     client.run("upload hello* --confirm -r default")
     for num in range(3):
-        assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
+        assert "Uploading recipe 'hello%s/1.2.1@frodo/stable" % num in client.out
 
     client.run("upload hello0* --confirm -r default")
-    assert f"hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7 "\
+    assert f"'hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7' "\
            "already in server, skipping upload" in client.out
     assert "hello1" not in client.out
     assert "hello2" not in client.out
@@ -84,13 +78,13 @@ def test_check_upload_confirm_question():
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
-    assert "Uploading hello1/1.2.1@frodo/stable" in client.out
+    assert "Uploading recipe 'hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
-    assert "Uploading hello2/1.2.1@frodo/stable" not in client.out
+    assert "Uploading recipe 'hello2/1.2.1@frodo/stable" not in client.out
 
 
 class UploadTest(unittest.TestCase):
@@ -103,7 +97,6 @@ class UploadTest(unittest.TestCase):
         servers["default"] = self.test_server
         test_client = TestClient(servers=servers, inputs=["lasote", "mypass"],
                                  requester_class=requester)
-        save(test_client.cache.default_profile_path, "")
         return test_client
 
     def test_upload_error(self):
@@ -156,7 +149,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("install --reference=hello0/1.2.1@frodo/stable --build -r default")
+        client.run("install --requires=hello0/1.2.1@frodo/stable --build='*' -r default")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
@@ -213,7 +206,7 @@ class UploadTest(unittest.TestCase):
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("install --reference=hello0/1.2.1@frodo/stable --build")
+        client.run("install --requires=hello0/1.2.1@frodo/stable --build='*'")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
@@ -237,13 +230,14 @@ class UploadTest(unittest.TestCase):
     def test_upload_json(self):
         conanfile = textwrap.dedent("""
             from conan import ConanFile
+            from conan.tools.files import copy
 
             class TestConan(ConanFile):
                 name = "test"
                 version = "0.1"
 
                 def package(self):
-                    self.copy("mylib.so", dst="lib")
+                    copy(self, "mylib.so", self.build_folder, os.path.join(self.package_folder, "lib"))
             """)
 
         client = self._get_client()

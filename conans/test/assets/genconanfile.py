@@ -15,9 +15,8 @@ class GenConanfile(object):
         with_package_file("file2.txt", "hola")
     """
 
-    def __init__(self, name=None, version=None, new_import=False):
-        self._imports = ["from conan import ConanFile" if not new_import
-                         else "from conan import ConanFile"]
+    def __init__(self, name=None, version=None):
+        self._imports = ["from conan import ConanFile"]
         self._name = name
         self._version = version
         self._package_type = None
@@ -32,9 +31,9 @@ class GenConanfile(object):
         self._package_files_env = None
         self._package_files_link = None
         self._build_messages = None
-        self._scm = None
         self._requires = None
         self._requirements = None
+        self._python_requires = None
         self._build_requires = None
         self._build_requirements = None
         self._tool_requires = None
@@ -74,10 +73,6 @@ class GenConanfile(object):
         self._revision_mode = revision_mode
         return self
 
-    def with_scm(self, scm):
-        self._scm = scm
-        return self
-
     def with_generator(self, generator):
         self._generators = self._generators or []
         self._generators.append(generator)
@@ -95,10 +90,10 @@ class GenConanfile(object):
             self._exports.append(export)
         return self
 
-    def with_require(self, ref, private=False, override=False):
+    def with_require(self, ref):
         self._requires = self._requires or []
         ref_str = self._get_full_ref_str(ref)
-        self._requires.append((ref_str, private, override))
+        self._requires.append(ref_str)
         return self
 
     def with_requires(self, *refs):
@@ -125,6 +120,13 @@ class GenConanfile(object):
         for ref in refs:
             ref_str = self._get_full_ref_str(ref)
             self._build_requires.append(ref_str)
+        return self
+
+    def with_python_requires(self, *refs):
+        self._python_requires = self._python_requires or []
+        for ref in refs:
+            ref_str = self._get_full_ref_str(ref)
+            self._python_requires.append(ref_str)
         return self
 
     def with_tool_requires(self, *refs):
@@ -188,7 +190,7 @@ class GenConanfile(object):
         self._package_files_link = self._package_files_link or {}
         self._package_files_env = self._package_files_env or {}
         self.with_import("import os")
-        self.with_import("from conans import tools")
+        self.with_import("from conan.tools.files import save, chdir")
         if contents:
             self._package_files[file_name] = contents
         if link:
@@ -265,11 +267,6 @@ class GenConanfile(object):
         return "deprecated = {}".format(self._deprecated)
 
     @property
-    def _scm_render(self):
-        line = ", ".join('"%s": "%s"' % (k, v) for k, v in self._scm.items())
-        return "scm = {%s}" % line
-
-    @property
     def _generators_render(self):
         line = ", ".join('"{}"'.format(generator) for generator in self._generators)
         return "generators = {}".format(line)
@@ -312,6 +309,12 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _python_requires_render(self):
+        line = ", ".join(['"{}"'.format(r) for r in self._python_requires])
+        tmp = "python_requires = %s" % line
+        return tmp
+
+    @property
     def _tool_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._tool_requires])
         tmp = "tool_requires = %s" % line
@@ -320,13 +323,8 @@ class GenConanfile(object):
     @property
     def _requires_render(self):
         items = []
-        for ref, private, override in self._requires:
-            if private or override:
-                private_str = ", 'private'" if private else ""
-                override_str = ", 'override'" if override else ""
-                items.append('("{}"{}{})'.format(ref, private_str, override_str))
-            else:
-                items.append('"{}"'.format(ref))
+        for ref in self._requires:
+            items.append('"{}"'.format(ref))
         return "requires = ({}, )".format(", ".join(items))
 
     @property
@@ -366,16 +364,16 @@ class GenConanfile(object):
         if self._package_lines:
             lines.extend("        {}".format(line) for line in self._package_lines)
         if self._package_files:
-            lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
+            lines = ['        save(self, os.path.join(self.package_folder, "{}"), "{}")'
                      ''.format(key, value)
                      for key, value in self._package_files.items()]
 
         if self._package_files_env:
-            lines.extend(['        tools.save(os.path.join(self.package_folder, "{}"), '
+            lines.extend(['        save(self, os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
         if self._package_files_link:
-            lines.extend(['        with tools.chdir(os.path.dirname('
+            lines.extend(['        with chdir(self, os.path.dirname('
                           'os.path.join(self.package_folder, "{}"))):\n'
                           '            os.symlink(os.path.basename("{}"), '
                           'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
@@ -461,7 +459,7 @@ class GenConanfile(object):
 
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
-                       "tool_requires", "test_requires", "requirements", "scm",
+                       "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines"
                        ):

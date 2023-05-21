@@ -5,10 +5,8 @@ import tempfile
 from contextlib import contextmanager
 from io import StringIO
 
-from conans.client.tools.files import load
-from conans.errors import CalledProcessErrorWithStderr, ConanException
-from conans.util.env import environment_update
-from conans.util.log import logger
+from conans.errors import ConanException
+from conans.util.files import load
 
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
@@ -21,8 +19,6 @@ if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
     @contextmanager
     def pyinstaller_bundle_env_cleaned():
         """Removes the pyinstaller bundle directory from LD_LIBRARY_PATH
-
-        :return: None
         """
         ld_library_path = os.environ['LD_LIBRARY_PATH']
         os.environ['LD_LIBRARY_PATH'] = ld_library_path.replace(pyinstaller_bundle_dir,
@@ -51,42 +47,19 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     err = subprocess.PIPE if isinstance(stderr, StringIO) else stderr
 
     with pyinstaller_bundle_env_cleaned():
-        # Remove credentials before running external application
-        with environment_update({'CONAN_LOGIN_ENCRYPTION_KEY': None}):
-            try:
-                proc = subprocess.Popen(command, shell=shell, stdout=out, stderr=err, cwd=cwd)
-            except Exception as e:
-                raise ConanException("Error while running cmd\nError: %s" % (str(e)))
+        try:
+            proc = subprocess.Popen(command, shell=shell, stdout=out, stderr=err, cwd=cwd)
+        except Exception as e:
+            raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-            proc_stdout, proc_stderr = proc.communicate()
-            # If the output is piped, like user provided a StringIO or testing, the communicate
-            # will capture and return something when thing finished
-            if proc_stdout:
-                stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
-            if proc_stderr:
-                stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
-            return proc.returncode
-
-
-def version_runner(cmd, shell=False):
-    # Used by build subapi like CMake and Meson and MSBuild to get the version
-    out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=shell).communicate()
-    return out
-
-
-def muted_runner(cmd, folder=None):
-    # Used by tools/scm check_repo only (see if repo ok with status)
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=folder)
-    process.communicate()
-    return process.returncode
-
-
-def input_runner(cmd, run_input, folder):
-    # used in git excluded files from .gitignore
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                         stderr=subprocess.STDOUT, cwd=folder)
-    out, _ = p.communicate(input=run_input)
-    return out
+        proc_stdout, proc_stderr = proc.communicate()
+        # If the output is piped, like user provided a StringIO or testing, the communicate
+        # will capture and return something when thing finished
+        if proc_stdout:
+            stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
+        if proc_stderr:
+            stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
+        return proc.returncode
 
 
 def detect_runner(command):
@@ -108,27 +81,22 @@ def detect_runner(command):
 
 def check_output_runner(cmd, stderr=None):
     # Used to run several utilities, like Pacman detect, AIX version, uname, SCM
+    assert isinstance(cmd, str)
     d = tempfile.mkdtemp()
     tmp_file = os.path.join(d, "output")
     try:
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or subprocess.PIPE
-        cmd = cmd if isinstance(cmd, str) else subprocess.list2cmdline(cmd)
         command = '{} > "{}"'.format(cmd, tmp_file)
-        logger.info("Calling command: {}".format(command))
         process = subprocess.Popen(command, shell=True, stderr=stderr)
         stdout, stderr = process.communicate()
-        logger.info("Return code: {}".format(int(process.returncode)))
 
         if process.returncode:
             # Only in case of error, we print also the stderr to know what happened
-            raise CalledProcessErrorWithStderr(process.returncode, cmd, output=stderr)
+            msg = f"Command '{cmd}' failed with errorcode '{process.returncode}'\n{stderr}"
+            raise ConanException(msg)
 
         output = load(tmp_file)
-        try:
-            logger.info("Output: in file:{}\nstdout: {}\nstderr:{}".format(output, stdout, stderr))
-        except Exception as exc:
-            logger.error("Error logging command output: {}".format(exc))
         return output
     finally:
         try:

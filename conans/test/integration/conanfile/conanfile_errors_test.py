@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
@@ -21,7 +23,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
         self.assertIn('self.copy2("*.h", dst="include", src=["include","platform"]', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
@@ -41,7 +43,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in package() method, line 9", client.out)
         self.assertIn('self.copy("*.h", dst="include", src=["include","platform"]', client.out)
         # It results that the error is different in different Python2/3 and OSs
@@ -62,7 +64,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in package_info() method, line 9", client.out)
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
@@ -82,7 +84,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
 
         self.assertIn("ERROR: hello/0.1@lasote/stable: Error in configure() method, line 9",
                       client.out)
@@ -104,7 +106,7 @@ class ConanfileErrorsTest(unittest.TestCase):
         files = {"conanfile.py": conanfile, "test.txt": "Hello world"}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --reference=hello/0.1@lasote/stable --build", assert_error=True)
+        client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
         self.assertIn("hello/0.1@lasote/stable: Error in source() method, line 9", client.out)
         self.assertIn('self.copy2()', client.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'", client.out)
@@ -118,7 +120,7 @@ class ConanfileErrorsTest(unittest.TestCase):
             ''')
         files = {"conanfile.txt": conanfile}
         client.save(files)
-        client.run("install . --build", assert_error=True)
+        client.run("install . --build='*'", assert_error=True)
         self.assertIn("ERROR: Duplicated requirement", client.out)
 
     def test_duplicate_requires_py(self):
@@ -137,6 +139,27 @@ class ConanfileErrorsTest(unittest.TestCase):
         self.assertIn("Duplicated requirement", client.out)
 
 
+class TestWrongMethods:
+    # https://github.com/conan-io/conan/issues/12961
+    @pytest.mark.parametrize("requires", ["requires", "tool_requires",
+                                          "test_requires", "build_requires"])
+    def test_wrong_method_requires(self, requires):
+        """ this is expected to be a relatively frequent user error, and the trace was
+        very ugly and debugging complicated
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def {requires}(self):
+                    pass
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .", assert_error=True)
+        expected = "requirements" if requires == "requires" else "build_requirements"
+        assert f" Wrong '{requires}' definition, did you mean '{expected}()'?" in c.out
+
+
 def test_notduplicate_requires_py():
     client = TestClient()
     conanfile = textwrap.dedent('''
@@ -152,3 +175,20 @@ def test_notduplicate_requires_py():
     client.save(files)
     client.run("export .")
     assert "hello/0.1: Exported" in client.out
+
+
+def test_requirements_change_options():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+
+            def requirements(self):
+                self.options["mydep"].myoption = 3
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert "ERROR: hello/0.1: Dependencies options were defined incorrectly." in c.out

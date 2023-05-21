@@ -12,11 +12,13 @@ class CollectLibsTest(unittest.TestCase):
     @pytest.mark.xfail(reason="cache2.0")
     def test_collect_libs(self):
         conanfile = textwrap.dedent("""
+            import os
             from conan import ConanFile
+            from conan.tools.files import copy
             class Pkg(ConanFile):
                 exports_sources = "*"
                 def package(self):
-                    self.copy("*", dst="lib")
+                    copy(self, "*", self.source_folder, dst=os.path.join(self.package_folder, "lib"))
                 def package_info(self):
                     from conans import tools
                     self.cpp_info.libs = tools.collect_libs(self)
@@ -36,7 +38,7 @@ class CollectLibsTest(unittest.TestCase):
         self.assertIn("set(mylib_LIBS_RELEASE mylibname)", conanbuildinfo)
 
         # rebuilding the binary in cache
-        client.run('remove "*" -p -f')
+        client.run('remove "*" -p -c')
         client.run('install . --build -g cmake')
         conanbuildinfo = client.load("mylib-release-data.cmake")
         self.assertIn("set(mylib_LIBS_RELEASE mylibname)", conanbuildinfo)

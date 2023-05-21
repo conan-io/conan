@@ -2,11 +2,14 @@ import os
 from collections import namedtuple
 from io import StringIO
 
+
 from conan import ConanFile
-from conans.model.conf import ConfDefinition, Conf
-from conans.model.layout import Folders
+from conan.internal.conan_app import ConanFileHelpers
+from conans.model.conf import Conf
+from conans.model.layout import Folders, Infos
 from conans.model.options import Options
-from conans.util.log import logger
+from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 
 
 class LocalDBMock(object):
@@ -43,7 +46,6 @@ class RedirectedInputStream:
                             "There are no more inputs to be returned.\n"
                             "CHECK THE 'inputs=[]' ARGUMENT OF THE TESTCLIENT\n**********+*\n\n\n")
         ret = self.answers.pop(0)
-        logger.info("Testing: Reading fake input={}".format(ret))
         return ret
 
 
@@ -52,8 +54,14 @@ class MockSettings(object):
     def __init__(self, values):
         self.values = values
 
-    def get_safe(self, value):
-        return self.values.get(value, None)
+    def get_safe(self, value, default=None):
+        return self.values.get(value, default)
+
+    def __getattr__(self, name):
+        try:
+            return self.values[name]
+        except KeyError:
+            raise ConanException("'%s' value not defined" % name)
 
 
 class MockCppInfo(object):
@@ -82,6 +90,11 @@ class MockConanfile(ConanFile):
         self.generators = []
         self.conf = Conf()
 
+        class MockConanInfo:
+            pass
+        self.info = MockConanInfo()
+        self.info.settings = settings  # Incomplete, only settings for Cppstd Min/Max tests
+
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -90,13 +103,15 @@ class MockConanfile(ConanFile):
 
 class ConanFileMock(ConanFile):
 
-    def __init__(self, shared=None, ):
+    def __init__(self, shared=None):
         self.display_name = ""
         self._conan_node = None
         self.command = None
+        self._commands = []
         self.path = None
         self.settings = None
-        self.settings_build = MockSettings({})
+        self.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
+        self.settings_target = None
         self.options = Options()
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
@@ -104,21 +119,33 @@ class ConanFileMock(ConanFile):
         self.captured_env = {}
         self.folders = Folders()
         self.folders.set_base_source(".")
+        self.folders.set_base_export_sources(".")
         self.folders.set_base_build(".")
-        self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
+        self.cpp = Infos()
         self._conan_user = None
         self._conan_channel = None
         self.env_scripts = {}
+        self.system_requires = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
+        self._conan_helpers = ConanFileHelpers(None, None, self.conf, None)
+        self.cpp = Infos()
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
         assert win_bash is False
         assert subsystem is None
         self.command = command
+        self._commands.append(command)
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
+        return 0
+
+    @property
+    def commands(self):
+        result = self._commands
+        self._commands = []
+        return result
 
 
 MockOptions = MockSettings

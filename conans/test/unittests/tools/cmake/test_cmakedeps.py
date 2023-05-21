@@ -22,6 +22,7 @@ def test_cpp_info_name_cmakedeps():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo(set_defaults=True)
     cpp_info.set_property("cmake_target_name", "MySuperPkg1::MySuperPkg1")
@@ -32,10 +33,13 @@ def test_cpp_info_name_cmakedeps():
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep.folders.set_base_package("/path/to/folder_dep")
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
@@ -59,15 +63,17 @@ def test_cpp_info_name_cmakedeps_components():
                                    "arch": ["x86", "x64"]})
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo()
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
-    cpp_info.set_property("cmake_target_name", "GlobakPkgName1::GlobakPkgName1")
+    cpp_info.set_property("cmake_target_name", "GlobalPkgName1::GlobalPkgName1")
     cpp_info.components["mycomp"].includedirs = ["include"]
-    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobakPkgName1::MySuperPkg1")
+    cpp_info.components["mycomp"].set_property("cmake_target_name", "GlobalPkgName1::MySuperPkg1")
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = RecipeReference.loads("OriginalDepName/1.0")
     conanfile_dep._conan_node.context = "host"
@@ -75,17 +81,22 @@ def test_cpp_info_name_cmakedeps_components():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
         cmakedeps = CMakeDeps(conanfile)
         files = cmakedeps.content
-        assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
+        assert "TARGET GlobalPkgName1::MySuperPkg1" in files["ComplexFileName1-Target-debug.cmake"]
+        # Global variables for the packages
+        # https://github.com/conan-io/conan/issues/11862
         assert 'set(OriginalDepName_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
-        assert 'set(OriginalDepName_GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
+        # AND components
+        assert 'set(OriginalDepName_GlobalPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
                '"${OriginalDepName_PACKAGE_FOLDER_DEBUG}/include")' \
                in files["ComplexFileName1-debug-x64-data.cmake"]
 
@@ -102,6 +113,7 @@ def test_cmake_deps_links_flags():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo()
     # https://github.com/conan-io/conan/issues/8811 regression, fix with explicit - instead of /
@@ -110,6 +122,7 @@ def test_cmake_deps_links_flags():
     conanfile_dep = ConanFile(None)
     cpp_info.objects = ["myobject.o"]
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.ref = RecipeReference.loads("mypkg/1.0")
     conanfile_dep._conan_node.context = "host"
@@ -117,6 +130,9 @@ def test_cmake_deps_links_flags():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
@@ -145,6 +161,7 @@ def test_component_name_same_package():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo(set_defaults=True)
 
@@ -153,6 +170,7 @@ def test_component_name_same_package():
 
     conanfile_dep = ConanFile(None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.settings = conanfile.settings
     conanfile_dep._conan_node = Mock()
     conanfile_dep._conan_node.context = "host"
     conanfile_dep._conan_node.ref = RecipeReference.loads("mypkg/1.0")
@@ -160,6 +178,8 @@ def test_component_name_same_package():
     # necessary, as the interface doesn't do it now automatically
     conanfile_dep.cpp_info.set_relative_base_folder("/path/to/folder_dep")
 
+    # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
+    #  Move to integration test
     with mock.patch('conan.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(RecipeReference.loads("mypkg/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})

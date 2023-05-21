@@ -1,14 +1,10 @@
 import copy
-import json
 from collections import OrderedDict, defaultdict
 
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client import settings_preprocessor
-from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference
-from conans.model.values import Values
 
 
 class Profile(object):
@@ -21,16 +17,29 @@ class Profile(object):
         self.package_settings = defaultdict(OrderedDict)
         self.options = Options()
         self.tool_requires = OrderedDict()  # ref pattern: list of ref
+        self.system_tools = []
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
+        self.runenv = ProfileEnvironment()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
         self._package_settings_values = None
-        self.dev_reference = None  # Reference of the package being develop
 
     def __repr__(self):
         return self.dumps()
+
+    def serialize(self):
+        # TODO: Remove it seems dead
+        return {
+            "settings": self.settings,
+            "package_settings": self.package_settings,
+            "options": self.options.serialize(),
+            "tool_requires": self.tool_requires,
+            "conf": self.conf.serialize(),
+            # FIXME: Perform a serialize method for ProfileEnvironment
+            "build_env": self.buildenv.dumps()
+        }
 
     @property
     def package_settings_values(self):
@@ -43,31 +52,29 @@ class Profile(object):
     def process_settings(self, cache):
         assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
-        self.processed_settings.values = Values.from_list(list(self.settings.items()))
-
-        settings_preprocessor.preprocess(self.processed_settings)
-        # Redefine the profile settings values with the preprocessed ones
-        # FIXME: Simplify the values.as_list()
-        self.settings = OrderedDict(self.processed_settings.values.as_list())
-        # Per-package settings cannot be processed here, until composed not possible
+        self.processed_settings.update_values(list(self.settings.items()))
 
     def dumps(self):
         result = ["[settings]"]
-        for name, value in self.settings.items():
+        for name, value in sorted(self.settings.items()):
             result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():
-            for name, value in values.items():
+            for name, value in sorted(values.items()):
                 result.append("%s:%s=%s" % (package, name, value))
 
-        result.append("[options]")
-        result.append(self.options.dumps())
+        options_str = self.options.dumps()
+        if options_str:
+            result.append("[options]")
+            result.append(options_str)
 
-        result.append("[tool_requires]")
-        for pattern, req_list in self.tool_requires.items():
-            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
+        if self.tool_requires:
+            result.append("[tool_requires]")
+            for pattern, req_list in self.tool_requires.items():
+                result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
 
-        result.append("[env]")
-        result.append("")
+        if self.system_tools:
+            result.append("[system_tools]")
+            result.extend(str(t) for t in self.system_tools)
 
         if self.conf:
             result.append("[conf]")
@@ -76,6 +83,13 @@ class Profile(object):
         if self.buildenv:
             result.append("[buildenv]")
             result.append(self.buildenv.dumps())
+
+        if self.runenv:
+            result.append("[runenv]")
+            result.append(self.runenv.dumps())
+
+        if result and result[-1] != "":
+            result.append("")
 
         return "\n".join(result).replace("\n\n", "\n")
 
@@ -99,8 +113,12 @@ class Profile(object):
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
 
+        current_system_tools = {r.name: r for r in self.system_tools}
+        current_system_tools.update({r.name: r for r in other.system_tools})
+        self.system_tools = list(current_system_tools.values())
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
+        self.runenv.update_profile_env(other.runenv)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

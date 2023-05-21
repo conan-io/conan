@@ -1,7 +1,9 @@
+import json
+import textwrap
 import unittest
 from collections import OrderedDict
 
-
+from conan.tools.env.environment import ProfileEnvironment
 from conans.model.profile import Profile
 
 
@@ -72,11 +74,10 @@ arch=x86_64
 compiler=Visual Studio
 compiler.version=12
 zlib:compiler=gcc
-[options]
 [tool_requires]
 *: zlib/1.2.8@lasote/testing
 zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
-[env]""".splitlines(), profile.dumps().splitlines())
+""".splitlines(), profile.dumps().splitlines())
 
     def test_apply(self):
         # Settings
@@ -88,10 +89,7 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
-                         '\ncompiler.version=14\n'
-                         '[options]\n'
-                         '[tool_requires]\n'
-                         '[env]\n',
+                         '\ncompiler.version=14\n',
                          profile.dumps())
 
 
@@ -117,3 +115,20 @@ def test_update_build_requires():
 
     profile.compose_profile(profile4)
     assert profile.tool_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]
+
+
+def test_profile_serialize():
+    profile = Profile()
+    profile.options.loads("zlib*:aoption=1\nzlib*:otheroption=1")
+    profile.buildenv = ProfileEnvironment.loads("VAR1=1\nVAR2=2")
+    profile.conf.update("user.myfield:value", "MyVal")
+    profile.settings["arch"] = "x86_64"
+    profile.settings["compiler"] = "Visual Studio"
+    profile.settings["compiler.version"] = "12"
+    profile.tool_requires["*"] = ["zlib/1.2.8"]
+    profile.update_package_settings({"MyPackage": [("os", "Windows")]})
+    expected_json = '{"settings": {"arch": "x86_64", "compiler": "Visual Studio", "compiler.version": "12"}, ' \
+                    '"package_settings": {"MyPackage": {"os": "Windows"}}, ' \
+                    '"options": {}, "tool_requires": {"*": ["zlib/1.2.8"]}, ' \
+                    '"conf": {"user.myfield:value": "MyVal"}, "build_env": "VAR1=1\\nVAR2=2\\n"}'
+    assert expected_json == json.dumps(profile.serialize())

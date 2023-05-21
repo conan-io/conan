@@ -7,12 +7,12 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conan.tools.microsoft.subsystems import WINDOWS
-from conans.client.tools import chdir
+from conans.client.subsystems import WINDOWS
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.env import environment_update
-from conans.util.files import save
+from conans.util.files import save, chdir
 
 
 def test_compose():
@@ -160,7 +160,7 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_profile_env("")
+    env = profile_env.get_profile_env("", is_consumer=True)
     env = env.vars(ConanFileMock())
     with environment_update({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",
@@ -172,7 +172,7 @@ def test_profile():
         assert env.get("MyVar4") == ""
         assert env.get("MyVar5") == ''
 
-        env = profile_env.get_profile_env("mypkg1/1.0")
+        env = profile_env.get_profile_env(RecipeReference.loads("mypkg1/1.0"))
         env = env.vars(ConanFileMock())
         assert env.get("MyVar1") == "MyValue1"
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
@@ -188,7 +188,9 @@ def env():
     env.append("MYVAR1", "MyValue1B")
     env.define("MyVar2", "MyNewValue2")
 
-    env = env.vars(ConanFileMock())
+    conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Windows", "arch": "x86_64"})
+    env = env.vars(conanfile)
     env._subsystem = WINDOWS
 
     return env
@@ -302,7 +304,7 @@ def test_env_win_bash():
     conanfile = ConanFileMock()
     conanfile.settings_build = MockSettings({"os": "Windows"})
     conanfile.win_bash = True
-    conanfile.conf = {"tools.microsoft.bash:subsystem": "msys2"}
+    conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
     folder = temp_folder()
     conanfile.folders.generators = folder
     env = Environment()
@@ -413,3 +415,14 @@ class TestProfileEnvRoundTrip:
             MyPath1=+(path)/my/path12
             MyPath1+=(path)/my/path11
             """)
+
+
+def test_custom_placeholder():
+    # https://github.com/conan-io/conan/issues/12427
+    env = Environment()
+    env.append_path("MyVar", "MyValue")
+    env = env.vars(ConanFileMock())
+    assert env.get("MyVar", variable_reference="$penv{{{name}}}") == \
+           f"$penv{{MyVar}}:MyValue"
+    items = {k: v for k, v in env.items(variable_reference="$penv{{{name}}}")}
+    assert items == {"MyVar": f"$penv{{MyVar}}:MyValue"}

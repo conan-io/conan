@@ -5,8 +5,8 @@ import zipfile
 
 import pytest
 
-from conans.client import tools
-from conans.test.utils.mocks import RedirectedTestOutput
+from conan.tools.files import unzip
+from conans.test.utils.mocks import RedirectedTestOutput, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.files import load, save
@@ -20,7 +20,7 @@ class OutputTest(unittest.TestCase):
 # -*- coding: utf-8 -*-
 
 from conan import ConanFile
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 class PkgConan(ConanFile):
     def source(self):
@@ -47,7 +47,7 @@ class PkgConan(ConanFile):
         output_dir = os.path.join(tmp_dir, "output_dir")
         captured_output = RedirectedTestOutput()
         with redirect_output(captured_output):
-            tools.unzip(zip_path, output_dir)
+            unzip(ConanFileMock(), zip_path, output_dir)
 
         output = captured_output.getvalue()
         self.assertRegex(output, r"Unzipping [\d]+B")
@@ -70,7 +70,7 @@ class PkgConan(ConanFile):
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
         captured_output = RedirectedTestOutput()
         with redirect_output(captured_output):
-            tools.unzip(zip_path, output_dir)
+            unzip(ConanFileMock(), zip_path, output_dir)
 
         output = captured_output.getvalue()
         self.assertIn("ERROR: Error extract src/src", output)

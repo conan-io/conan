@@ -1,5 +1,9 @@
+
+import fnmatch
+import re
 from functools import total_ordering
 
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.dates import timestamp_to_str
 
@@ -62,22 +66,28 @@ class RecipeReference:
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
         # In theory this is enough for sorting
-        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp,
-                self.revision) \
-               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp,
-                  ref.revision)
+        # When no timestamp is given, it will always have lower priority, to avoid comparison
+        # errors float <> None
+        return (self.name, self.version, self.user or "", self.channel or "", self.timestamp or 0,
+                self.revision or "") \
+               < (ref.name, ref.version, ref.user or "", ref.channel or "", ref.timestamp or 0,
+                  ref.revision or "")
 
     def __eq__(self, ref):
         # Timestamp doesn't affect equality.
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
         if ref is None:
             return False
-        return (self.name, self.version, self.user, self.channel, self.revision) == \
-               (ref.name, ref.version, ref.user, ref.channel, ref.revision)
+        # If one revision is not defined, they are equal
+        if self.revision is not None and ref.revision is not None:
+            return (self.name, self.version, self.user, self.channel, self.revision) == \
+                   (ref.name, ref.version, ref.user, ref.channel, ref.revision)
+        return (self.name, self.version, self.user, self.channel) == \
+               (ref.name, ref.version, ref.user, ref.channel)
 
     def __hash__(self):
         # This is necessary for building an ordered list of UNIQUE recipe_references for Lockfile
-        return hash((self.name, self.version, self.user, self.channel, self.revision))
+        return hash((self.name, self.version, self.user, self.channel))
 
     @staticmethod
     def loads(rref):  # TODO: change this default to validate only on end points
@@ -109,3 +119,60 @@ class RecipeReference:
             raise ConanException(
                 f"{rref} is not a valid recipe reference, provide a reference"
                 f" in the form name/version[@user/channel]")
+
+    def validate_ref(self, allow_uppercase=False):
+        """ at the moment only applied to exported (exact) references, but not for requires
+        that could contain version ranges
+        """
+        from conan.api.output import ConanOutput
+        self_str = str(self)
+        if self_str != self_str.lower():
+            if not allow_uppercase:
+                raise ConanException(f"Conan packages names '{self_str}' must be all lowercase")
+            else:
+                ConanOutput().warning(f"Package name '{self_str}' has uppercase, and has been "
+                                      "allowed by temporary config. This will break in later 2.X")
+        if len(self_str) > 200:
+            raise ConanException(f"Package reference too long >200 {self_str}")
+        if not allow_uppercase:
+            validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}\Z")
+        else:
+            validation_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,100}\Z")
+        if validation_pattern.match(self.name) is None:
+            raise ConanException(f"Invalid package name '{self.name}'")
+        if validation_pattern.match(str(self.version)) is None:
+            raise ConanException(f"Invalid package version '{self.version}'")
+        if self.user and validation_pattern.match(self.user) is None:
+            raise ConanException(f"Invalid package user '{self.user}'")
+        if self.channel and validation_pattern.match(self.channel) is None:
+            raise ConanException(f"Invalid package channel '{self.channel}'")
+
+        # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
+        pattern = re.compile(r'[.+-]')
+        if pattern.search(self.name):
+            ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
+        if self.user and pattern.search(self.user):
+            ConanOutput().warning(f"User containing special chars is discouraged '{self.user}'")
+        if self.channel and pattern.search(self.channel):
+            ConanOutput().warning(f"Channel containing special chars is discouraged "
+                                  f"'{self.channel}'")
+
+    def matches(self, pattern, is_consumer):
+        negate = False
+        if pattern.startswith("!"):
+            pattern = pattern[1:]
+            negate = True
+
+        condition = ((pattern == "&" and is_consumer) or
+                      fnmatch.fnmatchcase(str(self), pattern) or
+                      fnmatch.fnmatchcase(self.repr_notime(), pattern))
+        if negate:
+            return not condition
+        return condition
+
+
+def ref_matches(ref, pattern, is_consumer):
+    if not ref or not str(ref):
+        assert is_consumer
+        ref = RecipeReference.loads("*/*")  # FIXME: ugly
+    return ref.matches(pattern, is_consumer=is_consumer)

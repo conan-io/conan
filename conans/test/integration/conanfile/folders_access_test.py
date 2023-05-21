@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -16,7 +14,6 @@ class parentLib(ConanFile):
 
     def package_info(self):
         self.cpp_info.cxxflags.append("-myflag")
-        self.user_info.MyVar = "MyVarValue"
         self.buildenv_info.define("MyEnvVar", "MyEnvVarValue")
 """
 
@@ -24,6 +21,7 @@ class parentLib(ConanFile):
 conanfile = """
 import os
 from conan import ConanFile
+from pathlib import Path
 
 class AConan(ConanFile):
     name = "lib"
@@ -42,6 +40,8 @@ class AConan(ConanFile):
 
     def source(self):
         assert(self.source_folder == os.getcwd())
+        assert(isinstance(self.source_path, Path))
+        assert(str(self.source_path) == self.source_folder)
 
         # Prevented to use them, it's dangerous, because the source is run only for the first
         # config, so only the first build_folder/package_folder would be modified
@@ -53,20 +53,23 @@ class AConan(ConanFile):
 
     def build(self):
         assert(self.build_folder == os.getcwd())
+        assert(isinstance(self.build_path, Path))
+        assert(str(self.build_path) == self.build_folder)
 
         if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
-            assert(self.install_folder == self.build_folder)
         else:
             assert(self.source_folder == self.build_folder)
-            self.install_folder
 
         assert(self.package_folder is not None)
+        assert(isinstance(self.package_path, Path))
+        assert(str(self.package_path) == self.package_folder)
         self.copy_build_folder = self.build_folder
 
     def package(self):
-        assert(self.install_folder is not None)
         assert(self.build_folder == os.getcwd())
+        assert(isinstance(self.build_path, Path))
+        assert(str(self.build_path) == self.build_folder)
 
         if self.no_copy_source:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
@@ -77,16 +80,10 @@ class AConan(ConanFile):
 
     def package_info(self):
         assert(self.package_folder == os.getcwd())
-
+        assert(isinstance(self.package_path, Path))
+        assert(str(self.package_path) == self.package_folder)
         assert(self.source_folder is None)
         assert(self.build_folder is None)
-        assert(self.install_folder is None)
-
-    def imports(self):
-        assert(self.imports_folder == os.getcwd())
-
-    def deploy(self):
-        assert(self.install_folder == os.getcwd())
 """
 
 
@@ -101,43 +98,38 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.run("export . --user=conan --channel=stable")
 
     def test_source_local_command(self):
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
+        c1 = conanfile % {"no_copy_source": False,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("source .")
 
-        c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
+        c1 = conanfile % {"no_copy_source": True,
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("source .")
 
     def test_deploy(self):
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
+        c1 = conanfile % {"no_copy_source": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . --user=user --channel=testing --build missing")
-        self.client.run("install --reference=lib/1.0@user/testing")  # Checks deploy
+        self.client.run("install --requires=lib/1.0@user/testing")  # Checks deploy
 
     def test_full_install(self):
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
+        c1 = conanfile % {"no_copy_source": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . --user=conan --channel=stable --build")
+        self.client.run("create . --user=conan --channel=stable --build='*'")
 
-        c1 = conanfile % {"no_copy_source": True, "source_with_infos": False,
+        c1 = conanfile % {"no_copy_source": True,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . --user=conan --channel=stable --build")
+        self.client.run("create . --user=conan --channel=stable --build='*'")
 
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
+        c1 = conanfile % {"no_copy_source": False,
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . --user=conan --channel=stable --build")
-
-        c1 = conanfile % {"no_copy_source": True, "source_with_infos": True,
-                          "local_command": False}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("create . --user=conan --channel=stable --build")
+        self.client.run("create . --user=conan --channel=stable --build='*'")
 
 
 class RecipeFolderTest(unittest.TestCase):
@@ -175,7 +167,7 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("INIT: MYFILE!", client.out)
         self.assertIn("SET_NAME: MYFILE!", client.out)
         client.save({}, clean_first=True)
-        client.run("install --reference=pkg/0.1@user/testing --build")
+        client.run("install --requires=pkg/0.1@user/testing --build='*'")
         self.assertIn("pkg/0.1@user/testing: INIT: MYFILE!", client.out)
         self.assertNotIn("SET_NAME", client.out)
         self.assertIn("pkg/0.1@user/testing: CONFIGURE: MYFILE!", client.out)
@@ -193,18 +185,17 @@ class RecipeFolderTest(unittest.TestCase):
         self.assertIn("conanfile.py: CONFIGURE: MYFILE!", client.out)
         self.assertIn("conanfile.py: REQUIREMENTS: MYFILE!", client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_editable(self):
         client = TestClient()
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
                      "pkg/file.txt": "MYFILE!",
                      "consumer/conanfile.py":
                          GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("editable add pkg pkg/0.1@user/stable")
+        client.run("editable add pkg --name=pkg --version=0.1 --user=user --channel=stable")
 
         client.run("install consumer")
+        client.assert_listed_require({"pkg/0.1@user/stable": "Editable"})
         self.assertIn("pkg/0.1@user/stable: INIT: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/stable: CONFIGURE: MYFILE!", client.out)
         self.assertIn("pkg/0.1@user/stable: REQUIREMENTS: MYFILE!", client.out)
-        self.assertIn("pkg/0.1@user/stable from user folder - Editable", client.out)
         self.assertIn("pkg/0.1@user/stable: PACKAGE_INFO: MYFILE!", client.out)

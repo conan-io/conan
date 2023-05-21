@@ -46,7 +46,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
         self.t.save({"conanfile.py": conanfile})
 
     def test_value_invalid(self):
-        self.t.run("create . --name=hh --version=0.1 --user=user --channel=channel -shh:compiler=apple-clang "
-                   "-shh:compiler.cppstd=144", assert_error=True)
+        self.t.run("create . --name=hh --version=0.1 --user=user --channel=channel -shh*:compiler=apple-clang "
+                   "-shh*:compiler.cppstd=144", assert_error=True)
         self.assertIn("Invalid setting '144' is not a valid 'settings.compiler.cppstd' value",
                       self.t.out)

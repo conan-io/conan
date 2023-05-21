@@ -96,15 +96,13 @@ class ConanServiceTest(unittest.TestCase):
         ref3_norev.revision = None
         self.assertEqual(info, [ref3_norev])
 
-        info = self.search_service.search_packages(ref2)
-        self.assertEqual(info, {'12345587754': {'requires': [],
-                                                'options': {'use_Qt': 'False'},
-                                                'settings': {}}})
+        info = self.search_service.search_packages(ref2, None)
+        self.assertEqual(info, {'12345587754': {'content': '\n[options]\n    use_Qt=False\n',
+                                                }})
 
-        info = self.search_service.search_packages(ref3)
-        self.assertEqual(info, {'77777777777': {'requires': [],
-                                                'options': {'use_Qt': 'True'},
-                                                'settings': {}}})
+        info = self.search_service.search_packages(ref3, None)
+        self.assertEqual(info, {'77777777777': {'content': '\n[options]\n    use_Qt=True\n'}
+                                })
 
     def test_remove(self):
         ref2 = RecipeReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION)

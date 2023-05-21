@@ -2,9 +2,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
-from conans.client import tools
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
@@ -18,8 +15,7 @@ class TestPackageTest(unittest.TestCase):
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Created package", client.out)
 
     def test_test_only(self):
         test_conanfile = GenConanfile().with_test("pass")
@@ -38,7 +34,7 @@ class TestPackageTest(unittest.TestCase):
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
         client.run("test test_package hello/0.1@lasote/stable")
         self.assertNotIn("hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertNotIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertNotIn("hello/0.1@lasote/stable: Created package", client.out)
         self.assertIn("hello/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("hello/0.1@lasote/stable (test package): Running test()", client.out)
 
@@ -57,17 +53,15 @@ class TestPackageTest(unittest.TestCase):
         other_conanfile = GenConanfile().with_name("other").with_version("0.2")
         client.save({CONANFILE: other_conanfile})
         client.run("export . --user=user2 --channel=channel2")
-        client.run("install --reference=other/0.2@user2/channel2 --build")
+        client.run("install --requires=other/0.2@user2/channel2 --build='*'")
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --user=user --channel=channel")
-        self.assertIn("hello/0.1@user/channel: Configuring sources", client.out)
-        self.assertIn("hello/0.1@user/channel: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@user/channel: Created package", client.out)
 
         # explicit override of user/channel works
         client.run("create . --user=lasote --channel=stable")
-        self.assertIn("hello/0.1@lasote/stable: Configuring sources", client.out)
-        self.assertIn("hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
+        self.assertIn("hello/0.1@lasote/stable: Created package", client.out)
 
     def test_test_with_path_errors(self):
         client = TestClient()
@@ -85,45 +79,6 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("Conanfile not found at %s"
                       % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
                       client.out)
-
-    @pytest.mark.xfail(reason="conan.conf deprecation")
-    def test_build_folder_handling(self):
-        # FIXME: Decide what to do with CONAN_TEMP_TEST_FOLDER
-        test_conanfile = GenConanfile().with_test("pass")
-        # Create a package which can be tested afterwards.
-        client = TestClient()
-        client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1")},
-                    clean_first=True)
-        client.run("create . --user=lasote --channel=stable")
-
-        # Test the default behavior.
-        default_build_dir = os.path.join(client.current_folder, "test_package", "build")
-        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test test_package hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(default_build_dir))
-
-        # Test if the specified build folder is respected.
-        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test -tbf=build_folder test_package hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
-        self.assertFalse(os.path.exists(default_build_dir))
-
-        # Test if using a temporary test folder can be enabled via the environment variable.
-        client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        with tools.environment_update({"CONAN_TEMP_TEST_FOLDER": "True"}):
-            client.run("test test_package hello/0.1@lasote/stable")
-        self.assertFalse(os.path.exists(default_build_dir))
-
-        # Test if using a temporary test folder can be enabled via the config file.
-        client.run("test test_package hello/0.1@lasote/stable")
-        self.assertFalse(os.path.exists(default_build_dir))
-
-        # Test if the specified build folder is respected also when the use of
-        # temporary test folders is enabled in the config file.
-        client.run("test -tbf=test_package/build_folder test_package hello/0.1@lasote/stable")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package",
-                                                    "build_folder")))
-        self.assertFalse(os.path.exists(default_build_dir))
 
     def test_check_version(self):
         client = TestClient()
@@ -157,6 +112,46 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("hello/0.1 (test package): TEST HELLO VERSION 0.1", client.out)
 
 
+class TestPackageBuild:
+    def test_build_all(self):
+        c = TestClient()
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1"),
+                "pkg/test_package/conanfile.py": GenConanfile().with_tool_requires("tool/0.1")
+                                                               .with_test("pass")})
+        c.run("export tool")
+        c.run("export dep")
+        c.run("create pkg --build=*")
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build"),
+                                "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
+        c.assert_listed_require({"tool/0.1": "(tp) Cache"}, build=True, test_package=True)
+        c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")},
+                               build=True, test_package=True)
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                                "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Cache")},
+                               test_package=True)
+
+    def test_build_missing(self):
+        c = TestClient()
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1"),
+                "pkg/test_package/conanfile.py": GenConanfile().with_tool_requires("tool/0.1")
+                                                               .with_test("pass")})
+        c.run("export tool")
+        c.run("create dep")
+        c.run("create pkg --build=missing")
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                                "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
+        c.assert_listed_require({"tool/0.1": "(tp) Cache"}, build=True, test_package=True)
+        c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")},
+                               build=True, test_package=True)
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                                "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Cache")},
+                               test_package=True)
+
+
 class ConanTestTest(unittest.TestCase):
 
     def test_partial_reference(self):
@@ -184,6 +179,8 @@ class HelloConan(ConanFile):
 from conan import ConanFile
 
 class HelloTestConan(ConanFile):
+    def requirements(self):
+        self.requires(self.tested_reference_str)
     def test(self):
         self.output.warning("Tested ok!")
 ''', "hello/0.1@conan/stable")
@@ -231,14 +228,15 @@ class HelloTestConan(ConanFile):
         client = TestClient()
         conanfile = """
 from conan import ConanFile
+from conan.tools.files import copy
 
 class HelloConan(ConanFile):
     name = "hello"
     version = "0.1"
-    exports = "*"
+    exports_sources = "*"
 
     def package(self):
-        self.copy("*")
+        copy(self, "*", self.source_folder, self.package_folder)
 """
         test_conanfile = """
 from conan import ConanFile
@@ -267,6 +265,23 @@ class HelloReuseConan(ConanFile):
         pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
+
+
+def test_no_reference_in_test_package():
+    client = TestClient()
+    test_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        import os
+
+        class HelloReuseConan(ConanFile):
+            def test(self):
+                self.output.warning("At test: {}".format(self.tested_reference_str))
+        """)
+
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": test_conanfile})
+    client.run("create . --name=foo --version=1.0", assert_error=True)
+    assert "doesn't declare any requirement, use `self.tested_reference_str` to require the " \
+           "package being created" in client.out
 
 
 def test_tested_reference_str():
@@ -308,3 +323,59 @@ def test_tested_reference_str():
     client.run("create . --name=foo --version=1.0")
     for method in ("generate", "build", "build_requirements", "test"):
         assert "At {}: foo/1.0".format(method) in client.out
+
+
+def test_folder_output():
+    """ the "conan test" command should also follow the test_output layout folder
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("create .")
+    c.save({"test_package/conanfile.py": GenConanfile().with_test("pass").with_settings("build_type")
+                                                       .with_generator("CMakeDeps")})
+    # c.run("create .")
+    c.run("test test_package hello/0.1@")
+    assert os.path.exists(os.path.join(c.current_folder,
+                                       "test_package/hello-config.cmake"))
+
+
+def test_removing_test_package_build_folder():
+    """ The test_package could crash if not cleaning correctly the test_package
+    output folder. This will still crassh if the layout is not creating different build folders
+    """
+    client = TestClient()
+    test_package = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Test(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def generate(self):
+                assert not os.path.exists("myfile.txt")
+                save(self, "myfile.txt", "")
+            def layout(self):
+                self.folders.build = "mybuild"
+                self.folders.generators = "mybuild"
+            def test(self):
+                pass
+            """)
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                 "test_package/conanfile.py": test_package})
+    client.run("create .")
+    # This was crashing because not cleaned
+    client.run("create .")
+    assert "Removing previously existing 'test_package' build folder" in client.out
+
+
+def test_test_package_lockfile_location():
+    """ the lockfile should be in the caller cwd
+    https://github.com/conan-io/conan/issues/13850
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "0.1"),
+            "test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("create . --lockfile-out=myconan.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
+    c.run("test test_package dep/0.1 --lockfile=myconan.lock --lockfile-out=myconan2.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))

@@ -6,9 +6,11 @@ import pytest
 
 from conans.errors import ConanConnectionError, ConanException
 from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
+# FIXME: we could remove this whenever @conan_alias_command will be implemented
 class TestSearch:
 
     @pytest.fixture
@@ -24,13 +26,13 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search", assert_error=True)
-        assert "error: the following arguments are required: query" in self.client.out
+        assert "error: the following arguments are required: reference" in self.client.out
 
     def test_search_no_matching_recipes(self, remotes):
-        expected_output = ("remote1:\n"
-                           "  There are no matching recipe references\n"
-                           "remote2:\n"
-                           "  There are no matching recipe references\n")
+        expected_output = ("remote1\n"
+                           "  ERROR: Recipe 'whatever' not found\n"
+                           "remote2\n"
+                           "  ERROR: Recipe 'whatever' not found\n")
 
         self.client.run("search whatever")
         assert expected_output == self.client.out
@@ -40,12 +42,12 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search whatever", assert_error=True)
-        assert "ERROR: Remotes for pattern '*' can't be found or are disabled" in self.client.out
+        assert "There are no remotes to search from" in self.client.out
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
         self.client.run("search whatever -r remote1", assert_error=True)
-        expected_output = "ERROR: Remotes for pattern 'remote1' can't be found or are disabled"
+        expected_output = "ERROR: Remote 'remote1' can't be found or is disabled"
         assert expected_output in self.client.out
 
 
@@ -82,19 +84,19 @@ class TestRemotes:
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
         self._add_remote("remote2")
-        with patch("conans.cli.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
+        with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
             self.client.run("search whatever")
         expected_output = textwrap.dedent(f"""\
-        remote1:
+        remote1
           {output}
-        remote2:
+        remote2
           {output}
         """)
         assert expected_output == self.client.out
 
     def test_no_remotes(self):
         self.client.run("search something", assert_error=True)
-        expected_output = "Remotes for pattern '*' can't be found or are disabled"
+        expected_output = "There are no remotes to search from"
         assert expected_output in self.client.out
 
     def test_search_by_name(self):
@@ -106,7 +108,7 @@ class TestRemotes:
         self.client.run("search -r {} {}".format(remote_name, "test_recipe"))
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    {}\n".format(recipe_name)
         )
@@ -123,11 +125,11 @@ class TestRemotes:
         remote2_recipe2 = "test_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
-            "remote2:\n"
+            "remote2\n"
             "  test_recipe\n"
             "    test_recipe/2.0.0@user/channel\n"
             "    test_recipe/2.1.0@user/channel\n"
@@ -154,7 +156,7 @@ class TestRemotes:
         remote2_recipe2 = "test_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
@@ -182,12 +184,12 @@ class TestRemotes:
         remote2_recipe2 = "another_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_recipe\n"
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
-            "remote2:\n"
-            "  There are no matching recipe references\n"
+            "remote2\n"
+            "  ERROR: Recipe 'test_recipe' not found\n"
         )
 
         self._add_remote(remote1)
@@ -212,7 +214,7 @@ class TestRemotes:
         self._add_recipe(remote1, remote1_recipe2)
 
         self.client.run("search -r wrong_remote test_recipe", assert_error=True)
-        expected_output = "Remote 'wrong_remote' not found in remotes"
+        expected_output = "ERROR: Remote 'wrong_remote' can't be found or is disabled"
         assert expected_output in self.client.out
 
     def test_search_wildcard(self):
@@ -224,7 +226,7 @@ class TestRemotes:
         remote1_recipe4 = "test_another/4.1.0@user/channel"
 
         expected_output = (
-            "remote1:\n"
+            "remote1\n"
             "  test_another\n"
             "    test_another/2.1.0@user/channel\n"
             "    test_another/4.1.0@user/channel\n"
@@ -241,3 +243,27 @@ class TestRemotes:
 
         self.client.run("search test_*")
         assert expected_output in self.client.out
+
+
+def test_no_user_channel_error():
+    # https://github.com/conan-io/conan/issues/13170
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    c.run("export . --version=1.0")
+    c.run("export . --version=1.0 --user=user --channel=channel")
+    c.run("list *")
+    assert "pkg/1.0" in [s.strip() for s in str(c.out).splitlines()]
+    assert "pkg/1.0@user/channel" in c.out
+    # I want to list only those without user/channel
+    c.run("list pkg/*@")
+    assert "pkg/1.0" in c.out
+    assert "user/channel" not in c.out
+
+    # The same underlying logic is used in upload
+    c.run("upload pkg/*@ -r=default -c")
+    assert "Uploading recipe 'pkg/1.0" in c.out
+    assert "user/channel" not in c.out
+
+    c.run("search pkg/*@ -r=default")
+    assert "pkg/1.0" in c.out
+    assert "user/channel" not in c.out

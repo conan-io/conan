@@ -19,7 +19,7 @@ class TestSystemReqs:
         client.save({'conanfile.py': base_conanfile})
         client.run("create . ")
         assert "*+Running system requirements+*" in client.out
-        client.run("install --reference=test/0.1")
+        client.run("install --requires=test/0.1")
         assert "*+Running system requirements+*" in client.out
 
     def test_local_system_requirements(self):

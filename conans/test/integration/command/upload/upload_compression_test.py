@@ -39,7 +39,7 @@ def test_reuse_downloaded_tgz():
     # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
     # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
     other_client = TestClient(servers=client.servers, inputs=["admin", "password"])
-    other_client.run("download hello0/0.1@user/stable")
+    other_client.run("download hello0/0.1@user/stable -r default")
     other_client.run("upload hello0/0.1@user/stable -r default")
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
@@ -80,7 +80,7 @@ def test_upload_only_tgz_if_needed():
     assert "Compressing package" not in client.out
 
     # If we install the package again will be removed and re tgz
-    client.run("install --reference=%s --build missing" % str(ref))
+    client.run("install --requires=%s --build missing" % str(ref))
     # Upload package
     client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
     assert "Compressing package" not in client.out

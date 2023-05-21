@@ -4,10 +4,9 @@ import textwrap
 
 import pytest
 
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import _to_apple_arch
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
-from conans.test.utils.apple import XCRun
 from conans.test.utils.tools import TestClient
 
 makefile = gen_makefile(apps=["app"], libs=["hello"])
@@ -24,7 +23,11 @@ conanfile_py = textwrap.dedent("""
 
         def config_options(self):
             if self.settings.os == "Windows":
-                del self.options.fPIC
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
 
         def build(self):
             env_build = Autotools(self)
@@ -43,9 +46,6 @@ conanfile_py = textwrap.dedent("""
 def test_makefile_arch(config):
     arch, os_, os_version, os_sdk = config
 
-    xcrun = XCRun(None, os_sdk)
-    sdk_path = xcrun.sdk_path
-
     profile = textwrap.dedent("""
                 include(default)
                 [settings]
@@ -53,12 +53,8 @@ def test_makefile_arch(config):
                 {os_sdk}
                 os.version = {os_version}
                 arch = {arch}
-
-                [conf]
-                tools.apple:sdk_path={sdk_path}
                 """).format(os=os_, arch=arch,
-                            os_version=os_version, os_sdk="os.sdk = " + os_sdk if os_sdk else "",
-                            sdk_path=sdk_path)
+                            os_version=os_version, os_sdk="os.sdk = " + os_sdk if os_sdk else "")
 
     t = TestClient()
     hello_h = gen_function_h(name="hello")
@@ -80,7 +76,7 @@ def test_makefile_arch(config):
     assert os.path.isfile(libhello)
     assert os.path.isfile(app)
 
-    expected_arch = to_apple_arch(arch)
+    expected_arch = _to_apple_arch(arch)
 
     t.run_command('lipo -info "%s"' % libhello)
     assert "architecture: %s" % expected_arch in t.out
@@ -92,20 +88,15 @@ def test_makefile_arch(config):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("arch", ["x86_64", "armv8"])
 def test_catalyst(arch):
-    xcrun = XCRun(None)
-    sdk_path = xcrun.sdk_path
-
     profile = textwrap.dedent("""
         include(default)
         [settings]
         os = Macos
         os.version = 13.0
         os.subsystem = catalyst
+        os.subsystem.ios_version = 13.1
         arch = {arch}
-
-        [conf]
-        tools.apple:sdk_path={sdk_path}
-        """).format(arch=arch, sdk_path=sdk_path)
+        """).format(arch=arch)
 
     t = TestClient()
     hello_h = gen_function_h(name="hello")
@@ -140,7 +131,7 @@ def test_catalyst(arch):
     assert os.path.isfile(libhello)
     assert os.path.isfile(app)
 
-    expected_arch = to_apple_arch(arch)
+    expected_arch = _to_apple_arch(arch)
 
     t.run_command('lipo -info "%s"' % libhello)
     assert "architecture: %s" % expected_arch in t.out
@@ -150,4 +141,4 @@ def test_catalyst(arch):
 
     if arch == "x86_64":
         t.run_command('"%s"' % app)
-        assert "running catalyst 130000" in t.out
+        assert "running catalyst 130100" in t.out

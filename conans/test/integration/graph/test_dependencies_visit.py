@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -32,15 +33,17 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    assert "DefRef: openssl/0.1#705df323569bee67454c0ecb5929806f!!!" in client.out
-    assert "DefPRef: openssl/0.1#705df323569bee67454c0ecb5929806f:"\
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
+    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.1"))
+    pkgs = client.cache.get_package_references(refs)
+    prev1 = client.cache.get_latest_package_reference(pkgs[0])
+    assert f"DefRef: {repr(prev1.ref)}!!!" in client.out
+    assert f"DefPRef: {prev1.repr_notime()}!!!" in client.out
 
-    assert "DefRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f!!!" in client.out
-    assert "DefPRefBuild: openssl/0.2#705df323569bee67454c0ecb5929806f:" \
-           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
-           "2c6e0edc67e611f1acc542dd3c74dd59!!!" in client.out
+    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.2"))
+    pkgs = client.cache.get_package_references(refs)
+    prev2 = client.cache.get_latest_package_reference(pkgs[0])
+    assert f"DefRefBuild: {repr(prev2.ref)}!!!" in client.out
+    assert f"DefPRefBuild: {prev2.repr_notime()}!!!" in client.out
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
@@ -100,7 +103,7 @@ def test_cmake_zlib(generates_line, assert_error, output_text):
     client.run("create . --name=zlib --version=0.2")
 
     client.save({"conanfile.py": GenConanfile().with_tool_requirement("zlib/0.1",
-                                                                            visible=True)})
+                                                                      visible=True)})
     client.run("create . --name=cmake --version=0.1")
 
     client.save({"conanfile.py": GenConanfile()})
@@ -182,10 +185,162 @@ def test_dependencies_visit_build_requires_profile():
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": "[tool_requires]\ncmake/0.1"})
-    client.run("install . -pr:b=default -pr:h=profile --build")  # Use 2 contexts
+    client.run("install . -pr:b=default -pr:h=profile --build='*'")  # Use 2 contexts
 
     # Validate time, build-requires available
     assert "conanfile.py: VALIDATE DEPS: 1!!!" in client.out
     # generate time, build-requires already available
     assert "conanfile.py: GENERATE REQUIRE: cmake/0.1!!!" in client.out
     assert "conanfile.py: GENERATE CMAKE: cmake/0.1!!!" in client.out
+
+
+def test_dependencies_package_type():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library")})
+    c.run("create .")
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            requires = "lib/0.1"
+            def generate(self):
+                is_app = self.dependencies["lib"].package_type == "static-library"
+                self.output.info(f"APP: {is_app}!!")
+                assert is_app
+                self.dependencies["lib"].package_type == "not-exist-type"
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .", assert_error=True)
+    assert "APP: True!!" in c.out
+    assert "conanfile.py: Error in generate() method, line 9" in c.out
+    assert "ValueError: 'not-exist-type' is not a valid PackageType" in c.out
+
+
+def test_dependency_interface():
+    """
+    Quick test for the ConanFileInterface exposed
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            homepage = "myhome"
+            url = "myurl"
+            license = "MIT"
+        """)
+    user = textwrap.dedent("""
+        from conan import ConanFile
+        class User(ConanFile):
+            requires = "dep/1.0"
+            def generate(self):
+                self.output.info("HOME: {}".format(self.dependencies["dep"].homepage))
+                self.output.info("URL: {}".format(self.dependencies["dep"].url))
+                self.output.info("LICENSE: {}".format(self.dependencies["dep"].license))
+                self.output.info("RECIPE: {}".format(self.dependencies["dep"].recipe_folder))
+                self.output.info("CONANDATA: {}".format(self.dependencies["dep"].conan_data))
+
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "dep/conandata.yml": "",
+            "user/conanfile.py": user})
+    c.run("create dep")
+    c.run("install user")
+    assert "conanfile.py: HOME: myhome" in c.out
+    assert "conanfile.py: URL: myurl" in c.out
+    assert "conanfile.py: LICENSE: MIT" in c.out
+    assert "conanfile.py: RECIPE:" in c.out
+    assert "conanfile.py: CONANDATA: {}" in c.out
+
+
+def test_dependency_interface_validate():
+    """
+    In the validate() method, there is no access to dep.package_folder, because the packages are
+    not there. validate() operates at the graph level, without binaries, before they are installed,
+    and we want to keep it that way
+    https://github.com/conan-io/conan/issues/11959
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "1.0"
+            homepage = "myhome"
+        """)
+    user = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class User(ConanFile):
+            requires = "dep/1.0"
+            def validate(self):
+                dep = self.dependencies["dep"]
+                self.output.info("HOME: {}".format(dep.homepage))
+                self.output.info("PKG FOLDER: {}".format(dep.package_folder is None))
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "user/conanfile.py": user})
+    c.run("create dep")
+    c.run("install user")
+    assert "conanfile.py: HOME: myhome" in c.out
+    assert "conanfile.py: PKG FOLDER: True" in c.out
+
+
+def test_validate_visibility():
+    # https://github.com/conan-io/conan/issues/12027
+    c = TestClient()
+    t1 = textwrap.dedent("""
+        from conan import ConanFile
+        class t1Conan(ConanFile):
+            name = "t1"
+            version = "0.1"
+            package_type = "static-library"
+
+            def package_info(self):
+                self.cpp_info.libs = ["mylib"]
+        """)
+    t2 = textwrap.dedent("""
+        from conan import ConanFile
+        class t2Conan(ConanFile):
+            name = "t2"
+            version = "0.1"
+            requires = "t1/0.1"
+            package_type = "shared-library"
+
+            def validate(self):
+                self.output.info("VALID: {}".format(self.dependencies["t1"]))
+        """)
+    t3 = textwrap.dedent("""
+        from conan import ConanFile
+        class t3Conan(ConanFile):
+            name = "t3"
+            version = "0.1"
+            requires = "t2/0.1"
+            package_type = "application"
+
+            def validate(self):
+                self.output.info("VALID: {}".format(self.dependencies["t1"]))
+                self.output.info("VALID: {}".format(self.dependencies["t2"]))
+
+            def generate(self):
+                self.output.info("GENERATE: {}".format(self.dependencies["t1"]))
+                self.output.info("GENERATE: {}".format(self.dependencies["t2"]))
+        """)
+
+    c.save({"t1/conanfile.py": t1,
+            "t2/conanfile.py": t2,
+            "t3/conanfile.py": t3})
+    c.run("create t1")
+    c.run("create t2")
+    c.run("install t3")
+    assert "t2/0.1: VALID: t1/0.1" in c.out
+    assert "conanfile.py (t3/0.1): VALID: t1/0.1" in c.out
+    assert "conanfile.py (t3/0.1): VALID: t2/0.1" in c.out
+    assert "conanfile.py (t3/0.1): GENERATE: t1/0.1" in c.out
+    assert "conanfile.py (t3/0.1): GENERATE: t2/0.1" in c.out
+    c.run("create t3")
+    assert "t2/0.1: VALID: t1/0.1" in c.out
+    assert "t3/0.1: VALID: t1/0.1" in c.out
+    assert "t3/0.1: VALID: t2/0.1" in c.out
+    assert "t3/0.1: GENERATE: t1/0.1" in c.out
+    assert "t3/0.1: GENERATE: t2/0.1" in c.out

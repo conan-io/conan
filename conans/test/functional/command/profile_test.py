@@ -10,7 +10,7 @@ from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.env import environment_update
-from conans.util.files import load, save
+from conans.util.files import save
 from conans.util.runners import check_output_runner
 
 
@@ -60,8 +60,7 @@ class TestProfile(unittest.TestCase):
             [options]
             MyOption=32
             [conf]
-            tools.ninja:jobs=10
-            tools.gnu.make:jobs=20
+            tools.build:jobs=20
             """)
         save(os.path.join(client.cache.profiles_path, "profile1"), profile1)
 
@@ -71,8 +70,7 @@ class TestProfile(unittest.TestCase):
         # self.assertIn("CC=/path/tomy/gcc_build", client.out)
         # self.assertIn("CXX=/path/tomy/g++_build", client.out)
         # self.assertIn("package:VAR=value", client.out)
-        self.assertIn("tools.ninja:jobs=10", client.out)
-        self.assertIn("tools.gnu.make:jobs=20", client.out)
+        self.assertIn("tools.build:jobs=20", client.out)
 
     def test_missing_subarguments(self):
         client = TestClient()
@@ -85,7 +83,7 @@ class DetectCompilersTest(unittest.TestCase):
         platform_default_compilers = {
             "Linux": "gcc",
             "Darwin": "apple-clang",
-            "Windows": "Visual Studio"
+            "Windows": "msvc"
         }
 
         result = detect_defaults_settings()
@@ -95,14 +93,14 @@ class DetectCompilersTest(unittest.TestCase):
         if platform_compiler is not None:
             self.assertEqual(result.get("compiler", None), platform_compiler)
 
-    @pytest.mark.tool_gcc
+    @pytest.mark.tool("gcc")
     @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
     def test_detect_default_in_mac_os_using_gcc_as_default(self):
         """
         Test if gcc in Mac OS X is using apple-clang as frontend
         """
         # See: https://github.com/conan-io/conan/issues/2231
-        output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
+        output = check_output_runner("gcc --version", stderr=subprocess.STDOUT)
 
         if "clang" not in output:
             # Not test scenario gcc should display clang in output
@@ -120,12 +118,13 @@ class DetectCompilersTest(unittest.TestCase):
         self.assertIn("gcc detected as a frontend using apple-clang", output)
 
     def test_profile_new(self):
-        client = TestClient()
+        c = TestClient()
+        c.run("profile detect --name=./MyProfile2")
+        profile = c.load("MyProfile2")
+        assert "os=" in profile
+        assert "compiler.runtime_type" not in profile  # Even in Windows
 
-        client.run("profile detect --name=./MyProfile2")
-        pr_path = os.path.join(client.current_folder, "MyProfile2")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "MyProfile2")))
-        self.assertIn("os=", load(pr_path))
+        c.run("profile detect --name=./MyProfile2", assert_error=True)
+        assert "MyProfile2' already exists" in c.out
 
-        client.run("profile detect --name=./MyProfile2", assert_error=True)
-        self.assertIn("MyProfile2' already exists", client.out)
+        c.run("profile detect --name=./MyProfile2 --force")  # will not raise error

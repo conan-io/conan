@@ -4,6 +4,7 @@ import os
 from bottle import FileUpload, static_file
 
 from conans.errors import RecipeNotFoundException, PackageNotFoundException, NotFoundException
+from conans.paths import CONAN_MANIFEST
 from conans.model.package_ref import PkgReference
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
@@ -30,20 +31,21 @@ class ConanServiceV2:
         # Send speculative metadata (empty) for files (non breaking future changes)
         return {"files": {key: {} for key in file_list}}
 
-    def get_conanfile_file(self, reference, filename, auth_user):
+    def get_recipe_file(self, reference, filename, auth_user):
         self._authorizer.check_read_conan(auth_user, reference)
-        path = self._server_store.get_conanfile_file_path(reference, filename)
+        path = self._server_store.get_recipe_file_path(reference, filename)
         return static_file(os.path.basename(path), root=os.path.dirname(path),
                            mimetype=get_mime_type(path))
 
     def upload_recipe_file(self, body, headers, reference, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, reference)
         # FIXME: Check that reference contains revision (MANDATORY TO UPLOAD)
-        path = self._server_store.get_conanfile_file_path(reference, filename)
+        path = self._server_store.get_recipe_file_path(reference, filename)
         self._upload_to_path(body, headers, path)
 
-        # If the upload was ok, update the pointer to the latest
-        self._server_store.update_last_revision(reference)
+        # If the upload was ok, of the manifest, update the pointer to the latest
+        if filename == CONAN_MANIFEST:
+            self._server_store.update_last_revision(reference)
 
     def get_recipe_revisions_references(self, ref, auth_user):
         self._authorizer.check_read_conan(auth_user, ref)
@@ -96,7 +98,6 @@ class ConanServiceV2:
 
     def upload_package_file(self, body, headers, pref, filename, auth_user):
         self._authorizer.check_write_conan(auth_user, pref.ref)
-        # FIXME: Check that reference contains revisions (MANDATORY TO UPLOAD)
 
         # Check if the recipe exists
         recipe_path = self._server_store.export(pref.ref)
@@ -105,8 +106,9 @@ class ConanServiceV2:
         path = self._server_store.get_package_file_path(pref, filename)
         self._upload_to_path(body, headers, path)
 
-        # If the upload was ok, update the pointer to the latest
-        self._server_store.update_last_package_revision(pref)
+        # If the upload was ok, of the manifest, update the pointer to the latest
+        if filename == CONAN_MANIFEST:
+            self._server_store.update_last_package_revision(pref)
 
     # Misc
     @staticmethod

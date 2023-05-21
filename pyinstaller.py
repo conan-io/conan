@@ -1,3 +1,20 @@
+"""
+This file is able to create a self contained Conan executable that contains all it needs,
+including the Python interpreter, so it wouldnt be necessary to have Python installed
+in the system
+It is important to install the dependencies and the project first with "pip install -e ."
+which configures the project as "editable", that is, to run from the current source folder
+After creating the executable, it can be pip uninstalled
+
+$ pip install -e .
+$ python pyinstaller.py
+
+This has to run in the same platform that will be using the executable, pyinstaller does
+not cross-build
+
+The resulting executable can be put in the system PATH of the running machine
+"""
+
 import os
 import platform
 import shutil
@@ -85,19 +102,21 @@ def pyinstall(source_folder):
         print("Unable to remove old folder", e)
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
-    conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     hidden = ("--hidden-import=glob "  # core stdlib
               "--hidden-import=pathlib "
               "--hidden-import=distutils.dir_util "
-              # The conan.tools integration
+              # Modules that can be imported in ConanFile conan.tools and errors
+              "--collect-submodules=conan.cli.commands "
+              "--hidden-import=conan.errors "
               "--hidden-import=conan.tools.microsoft "
               "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
               "--hidden-import=conan.tools.meson --hidden-import=conan.tools.apple "
               "--hidden-import=conan.tools.build --hidden-import=conan.tools.env "
-              "--hidden-import=conan.tools.files --hidden-import=conan.tools.gnu "
+              "--hidden-import=conan.tools.files "
               "--hidden-import=conan.tools.google --hidden-import=conan.tools.intel "
               "--hidden-import=conan.tools.layout --hidden-import=conan.tools.premake "
-              "--hidden-import=conan.tools.qbs")
+              "--hidden-import=conan.tools.qbs --hidden-import=conan.tools.scm "
+              "--hidden-import=conan.tools.system --hidden-import=conan.tools.system.package_manager")
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
         win_ver = ""
@@ -113,16 +132,6 @@ def pyinstall(source_folder):
                     % (command, source_folder, conan_path, hidden, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
-    _run_bin(pyinstaller_path)
-
-    subprocess.call('%s -y -p "%s" --console "%s" %s'
-                    % (command, source_folder, conan_server_path, win_ver),
-                    cwd=pyinstaller_path, shell=True)
-
-    conan_bin = os.path.join(pyinstaller_path, 'dist', 'conan')
-    conan_server_folder = os.path.join(pyinstaller_path, 'dist', 'conan_server')
-
-    dir_util.copy_tree(conan_server_folder, conan_bin)
     _run_bin(pyinstaller_path)
 
     return os.path.abspath(os.path.join(pyinstaller_path, 'dist', 'conan'))

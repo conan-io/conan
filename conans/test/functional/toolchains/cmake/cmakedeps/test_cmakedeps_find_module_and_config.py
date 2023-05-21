@@ -18,6 +18,7 @@ def client():
         import os
         from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "mydep"
@@ -32,12 +33,17 @@ def client():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.dll", dst="bin", keep_path=False)
-                self.copy("*.dylib*", dst="lib", keep_path=False)
-                self.copy("*.so", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                copy(self, "*.lib", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.dll", self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*.dylib*", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.so", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
 
@@ -67,7 +73,7 @@ def client():
     return t
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_reuse_with_modules_and_config(client):
     cpp = gen_function_cpp(name="main")
 
@@ -101,8 +107,8 @@ def test_reuse_with_modules_and_config(client):
                  "main.cpp": cpp,
                  "CMakeLists.txt": cmake.format(cmake_exe_config)})
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
     # test modules
     conanfile = GenConanfile().with_name("myapp")\
@@ -111,12 +117,23 @@ def test_reuse_with_modules_and_config(client):
                  "main.cpp": cpp,
                  "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
 
-@pytest.mark.parametrize("find_mode", ["both", "config", "module"])
-def test_transitive_modules_found(find_mode):
+find_modes = [
+    ("both", "both", ""),
+    ("both", "both", "MODULE"),
+    ("config", "config", ""),
+    ("module", "module", ""),
+    (None, "both", ""),
+    (None, "both", "MODULE")
+]
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.parametrize("find_mode_PKGA, find_mode_PKGB, find_mode_consumer", find_modes)
+def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_consumer):
     """
     related to https://github.com/conan-io/conan/issues/10224
     modules files variables were set with the pkg_name_FOUND or pkg_name_VERSION
@@ -129,8 +146,10 @@ def test_transitive_modules_found(find_mode):
         class Pkg(ConanFile):
             {requires}
             def package_info(self):
-                self.cpp_info.set_property("cmake_find_mode", "{mode}")
+                if "{mode}" != "None":
+                    self.cpp_info.set_property("cmake_find_mode", "{mode}")
                 self.cpp_info.set_property("cmake_file_name", "{filename}")
+                self.cpp_info.set_property("cmake_module_file_name", "{module_filename}")
                 self.cpp_info.defines.append("DEFINE_{filename}")
             """)
 
@@ -151,19 +170,28 @@ def test_transitive_modules_found(find_mode):
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.1)
         project(test_package CXX)
-        find_package(MYPKGB REQUIRED)
-        message("MYPKGB_VERSION: ${MYPKGB_VERSION}")
-        message("MYPKGB_VERSION_STRING: ${MYPKGB_VERSION_STRING}")
-        message("MYPKGB_INCLUDE_DIRS: ${MYPKGB_INCLUDE_DIRS}")
-        message("MYPKGB_INCLUDE_DIR: ${MYPKGB_INCLUDE_DIR}")
-        message("MYPKGB_LIBRARIES: ${MYPKGB_LIBRARIES}")
-        message("MYPKGB_DEFINITIONS: ${MYPKGB_DEFINITIONS}")
+        find_package(MYPKGB REQUIRED {find_mode})
+        message("MYPKGB_VERSION: ${{MYPKGB_VERSION}}")
+        message("MYPKGB_VERSION_STRING: ${{MYPKGB_VERSION_STRING}}")
+        message("MYPKGB_INCLUDE_DIRS: ${{MYPKGB_INCLUDE_DIRS}}")
+        message("MYPKGB_INCLUDE_DIR: ${{MYPKGB_INCLUDE_DIR}}")
+        message("MYPKGB_LIBRARIES: ${{MYPKGB_LIBRARIES}}")
+
+        get_target_property(linked_libs pkgb::pkgb INTERFACE_LINK_LIBRARIES)
+        message("MYPKGB_LINKED_LIBRARIES: '${{linked_libs}}'")
+
+        get_target_property(linked_deps pkgb_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        message("MYPKGB_DEPS_LIBRARIES: '${{linked_deps}}'")
+
+        message("MYPKGB_DEFINITIONS: ${{MYPKGB_DEFINITIONS}}")
         """)
 
-    client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', mode=find_mode),
-                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', mode=find_mode),
+    client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', module_filename='MYPKGB',
+                                             mode=find_mode_PKGB),
+                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='unicorns', mode=find_mode_PKGA),
                  "consumer.py": consumer,
-                 "CMakeLists.txt": cmakelist})
+                 "CMakeLists.txt": cmakelist.format(find_mode=find_mode_consumer)})
+
     client.run("create pkga.py --name=pkga --version=1.0")
     client.run("create pkgb.py --name=pkgb --version=1.0")
     client.run("create consumer.py --name=consumer --version=1.0")
@@ -172,10 +200,16 @@ def test_transitive_modules_found(find_mode):
     assert "MYPKGB_VERSION_STRING: 1.0" in client.out
     assert "MYPKGB_INCLUDE_DIRS:" in client.out
     assert "MYPKGB_INCLUDE_DIR:" in client.out
-    assert "MYPKGB_LIBRARIES: pkga::pkga" in client.out
+    # The MYPKG_LIBRARIES contains the target for the current package, but the target is linked
+    # with the dependencies also:
+    assert "MYPKGB_LIBRARIES: pkgb::pkgb" in client.out
+    assert "MYPKGB_LINKED_LIBRARIES: '$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;pkgb_DEPS_TARGET'" in client.out
+    assert "MYPKGB_DEPS_LIBRARIES: '$<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;" \
+           "$<$<CONFIG:Release>:pkga::pkga>'" in client.out
+
     assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
     assert "Conan: Target declared 'pkga::pkga'"
-    if find_mode == "module":
-        assert 'Found MYPKGA: 1.0 (found version "1.0")' in client.out
 
+    if find_mode_PKGA == "module":
+        assert 'Found unicorns: 1.0 (found version "1.0")' in client.out
 

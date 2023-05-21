@@ -1,4 +1,5 @@
 from datetime import datetime
+from calendar import timegm
 
 import jwt
 
@@ -20,7 +21,7 @@ class JWTManager(object):
         profile_fields = profile_fields or {}
 
         if self.expire_time:
-            profile_fields["exp"] = datetime.utcnow() + self.expire_time
+            profile_fields["exp"] = timegm((datetime.utcnow() + self.expire_time).timetuple())
 
         return jwt.encode(profile_fields, self.secret, algorithm="HS256")
 

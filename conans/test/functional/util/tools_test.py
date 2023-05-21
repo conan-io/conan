@@ -1,18 +1,17 @@
 import os
 import platform
 import unittest
+from shutil import which
 
 import pytest
 
-from conans.client import tools
 from conans.client.conf.detect_vs import vswhere
-from conans.client.tools.files import which
 from conans.errors import ConanException
 from conans.util.env import get_env, environment_update
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
-@pytest.mark.tool_visual_studio
+@pytest.mark.tool("visual_studio")
 class VisualStudioToolsTest(unittest.TestCase):
 
     def test_vswhere_path(self):

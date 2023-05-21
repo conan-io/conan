@@ -1,6 +1,5 @@
 import os
 
-from conans.client.file_copier import FileCopier
 from conans.errors import ConanException
 
 
@@ -26,6 +25,9 @@ class _Patterns(object):
 class AutoPackager(object):
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self.patterns = _Patterns()
 
@@ -40,9 +42,9 @@ class AutoPackager(object):
     def run(self):
         cf = self._conanfile
         # Check that the components declared in source/build are in package
-        cnames = set(cf.cpp.source.component_names)
-        cnames = cnames.union(set(cf.cpp.build.component_names))
-        if cnames.difference(set(cf.cpp.package.component_names)):
+        cnames = set(cf.cpp.source.components)
+        cnames = cnames.union(set(cf.cpp.build.components))
+        if cnames.difference(set(cf.cpp.package.components)):
             # TODO: Raise? Warning? Ignore?
             raise ConanException("There are components declared in cpp.source.components"
                                  " or in cpp.build.components that are not declared in"
@@ -58,7 +60,6 @@ class AutoPackager(object):
         else:  # No components declared
            self._package_cppinfo("source", cf.cpp.source, cf.cpp.package)
            self._package_cppinfo("build", cf.cpp.build, cf.cpp.package)
-
 
     def _package_cppinfo(self, origin_name, origin_cppinfo, dest_cppinfo):
         """
@@ -87,9 +88,9 @@ class AutoPackager(object):
                 err_msg = "The package has more than 1 cpp_info.{}, cannot package automatically"
                 raise ConanException(err_msg.format(dirs_var_name))
 
+            dst_folder = os.path.join(self._conanfile.folders.base_package, destinations[0])
+            from conan.tools.files import copy
             for d in origin_paths:
-                copier = FileCopier([os.path.join(base_folder, d)],
-                                    self._conanfile.folders.base_package)
+                src_folder = os.path.join(base_folder, d)
                 for pattern in patterns:
-                    copier(pattern, dst=destinations[0])
-
+                    copy(self._conanfile, pattern, src_folder, dst_folder)

@@ -8,12 +8,13 @@ from conans.util.files import md5sum, rmdir
 from conans.server.utils.files import path_exists, relative_dirs
 
 
+
 class ServerDiskAdapter(object):
     """Manage access to disk files with common methods required
     for conan operations"""
     def __init__(self, base_url, base_storage_path):
         """
-        :param: base_url Base url for generate urls to download and upload operations"""
+        :param base_url Base url for generate urls to download and upload operations"""
 
         self.base_url = base_url
         # URLs are generated removing this base path

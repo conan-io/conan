@@ -28,6 +28,14 @@ class Requirement:
         self._override = override
         self._direct = direct
         self.options = options
+        # Meta and auxiliary information
+        self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
+        self.override_ref = None  # to store if the requirement has been overriden (store new ref)
+        self.is_test = test  # to store that it was a test, even if used as regular requires too
+
+    @property
+    def skip(self):
+        return not (self.headers or self.libs or self.run or self.build)
 
     @staticmethod
     def _default_if_none(field, default_value):
@@ -138,6 +146,12 @@ class Requirement:
                                              self.visible)
         return "{}, Traits: {}".format(self.ref, traits)
 
+    def serialize(self):
+        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+                        "transitive_headers", "transitive_libs", "headers",
+                        "package_id_mode", "visible")
+        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
+
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
                            run=self.run, visible=self.visible,
@@ -160,7 +174,7 @@ class Requirement:
             return RecipeReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
                                    self.ref.revision)
 
-    def process_package_type(self, node):
+    def process_package_type(self, src_node, node):
         """If the requirement traits have not been adjusted, then complete them with package type
         definition"""
 
@@ -184,10 +198,15 @@ class Requirement:
             set_if_none("_libs", False)
             set_if_none("_headers", True)
         elif pkg_type is PackageType.BUILD_SCRIPTS:
-            set_if_none("_run", False)
+            set_if_none("_run", True)
             set_if_none("_libs", False)
             set_if_none("_headers", False)
             set_if_none("_visible", False)  # Conflicts might be allowed for this kind of package
+
+        src_pkg_type = src_node.conanfile.package_type
+        if src_pkg_type is PackageType.HEADER:
+            set_if_none("_transitive_headers", True)
+            set_if_none("_transitive_libs", True)
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
@@ -197,26 +216,41 @@ class Requirement:
         propagating includes or libs or run info or both are visible or the reference is the same,
         we consider the requires equal, so they can conflict"""
         return (self.ref.name == other.ref.name and self.build == other.build and
-                ((self.headers and other.headers) or
+                (self.override or  # an override with same name and context, always match
+                 (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
                  (self.visible and other.visible) or
-                 (self.ref == other.ref)))
+                 (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
         """ when closing loop and finding the same dependency on a node, the information needs
         to be aggregated
+        :param other: is the existing Require that the current node has, which information has to be
+        appended to "self", which is the requires that is being propagated to the current node
+        from upstream
         """
         assert self.build == other.build
+        if other.override:
+            # If the other aggregated is an override, it shouldn't add information
+            # it already did override upstream, and the actual information used in this node is
+            # the propagated one.
+            self.force = True
+            return
         self.headers |= other.headers
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
+        self.force |= other.force
+        self.direct |= other.direct
+        self.transitive_headers = self.transitive_headers or other.transitive_headers
+        self.transitive_libs = self.transitive_libs or other.transitive_libs
+        if not other.test:
+            self.test = False  # it it was previously a test, but also required by non-test
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type):
         """
-
         consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
         Compute new Requirement to be applied to "consumer" translating the effect of the dependency
@@ -244,28 +278,32 @@ class Requirement:
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=True, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
+            elif pkg_type is PackageType.HEADER:
+                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type is PackageType.UNKNOWN
+                assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=True, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
+            elif pkg_type is PackageType.HEADER:
+                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type is PackageType.UNKNOWN
+                assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
-            downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
+            downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
         else:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
@@ -278,20 +316,25 @@ class Requirement:
         assert require.visible, "at this point require should be visible"
 
         if require.transitive_headers is not None:
-            downstream_require.headers = require.transitive_headers
+            downstream_require.headers = require.headers and require.transitive_headers
+        if self.transitive_headers is not None:
+            downstream_require.transitive_headers = self.transitive_headers
 
         if require.transitive_libs is not None:
-            downstream_require.libs = require.transitive_libs
+            downstream_require.libs = require.libs and require.transitive_libs
+        if self.transitive_libs is not None:
+            downstream_require.transitive_libs = self.transitive_libs
 
-        # If non-default, then the consumer requires has priority
-        if self.visible is False:
-            downstream_require.visible = False
+        if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
+            # If non-default, then the consumer requires has priority
+            if self.visible is False:
+                downstream_require.visible = False
 
-        if self.headers is False:
-            downstream_require.headers = False
+            if self.headers is False:
+                downstream_require.headers = False
 
-        if self.libs is False:
-            downstream_require.libs = False
+            if self.libs is False:
+                downstream_require.libs = False
 
         # TODO: Automatic assignment invalidates user possibility of overriding default
         # if required.run is not None:
@@ -300,26 +343,51 @@ class Requirement:
         if self.test:
             downstream_require.test = True
 
+        # If the current one is resolving conflicts, the downstream one will be too
+        downstream_require.force = require.force
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_pkg_type):
-        # If the requirement doesn't declare package_id, try to guess it with the types
-        if self.package_id_mode is not None:
+    def deduce_package_id_mode(self, pkg_type, dep_node, non_embed_mode, embed_mode, build_mode,
+                               unknown_mode):
+        # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
+        # The "conf" values are defaults, no hard overrides
+        if self.package_id_mode:
             return
 
+        dep_conanfile = dep_node.conanfile
+        dep_pkg_type = dep_conanfile.package_type
+        if self.build:
+            build_mode = getattr(dep_conanfile, "build_mode", build_mode)
+            if build_mode and self.direct:
+                self.package_id_mode = build_mode
+            return  # At the moment no defaults
+
+        if pkg_type is PackageType.HEADER:
+            self.package_id_mode = "unrelated_mode"
+            return
+
+        # If the dependency defines the mode, that has priority over default
+        embed_mode = getattr(dep_conanfile, "package_id_embed_mode", embed_mode)
+        non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
+        unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
         if self.headers or self.libs:  # only if linked
             if pkg_type in (PackageType.SHARED, PackageType.APP):
                 if dep_pkg_type is PackageType.SHARED:
-                    self.package_id_mode = "minor_mode"
+                    self.package_id_mode = non_embed_mode
                 else:
-                    self.package_id_mode = "recipe_revision_mode"
+                    self.package_id_mode = embed_mode
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
-                    self.package_id_mode = "recipe_revision_mode"
+                    self.package_id_mode = embed_mode
                 else:
-                    self.package_id_mode = "minor_mode"
-            # HEADER-ONLY is automatically cleared in compute_package_id()
+                    self.package_id_mode = non_embed_mode
+
+            if self.package_id_mode is None:
+                self.package_id_mode = unknown_mode
+
+        # For cases like Application->Application, without headers or libs, package_id_mode=None
+        # It will be independent by default
 
 
 class BuildRequirements:
@@ -327,10 +395,11 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
+                 override=None):
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                     options=options)
+                                     options=options, override=override)
 
 
 class ToolRequirements:
@@ -338,10 +407,11 @@ class ToolRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None,
+                 override=None):
         # TODO: Check which arguments could be user-defined
         self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                    options=options)
+                                    options=options, override=override)
 
 
 class TestRequirements:
@@ -349,8 +419,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None):
-        self._requires.test_require(ref, run=run)
+    def __call__(self, ref, run=None, options=None):
+        self._requires.test_require(ref, run=run, options=options)
 
 
 class Requirements:
@@ -362,31 +432,55 @@ class Requirements:
         # Construct from the class definitions
         if declared is not None:
             if isinstance(declared, str):
-                declared = [declared, ]
-            for item in declared:
-                # FIXME: Conan 2.0 Deprecate Conan 1.X definition of tuples, force to use method
-                self.__call__(item)
+                self.__call__(declared)
+            else:
+                try:
+                    for item in declared:
+                        if not isinstance(item, str):
+                            # TODO (2.X): Remove protection after transition from 1.X
+                            raise ConanException(f"Incompatible 1.X requires declaration '{item}'")
+                        self.__call__(item)
+                except TypeError:
+                    raise ConanException("Wrong 'requires' definition, "
+                                         "did you mean 'requirements()'?")
         if declared_build is not None:
             if isinstance(declared_build, str):
-                declared_build = [declared_build, ]
-            for item in declared_build:
-                self.build_require(item)
+                self.build_require(declared_build)
+            else:
+                try:
+                    for item in declared_build:
+                        self.build_require(item)
+                except TypeError:
+                    raise ConanException("Wrong 'build_requires' definition, "
+                                         "did you mean 'build_requirements()'?")
         if declared_test is not None:
             if isinstance(declared_test, str):
-                declared_test = [declared_test, ]
-            for item in declared_test:
-                self.test_require(item)
+                self.test_require(declared_test)
+            else:
+                try:
+                    for item in declared_test:
+                        self.test_require(item)
+                except TypeError:
+                    raise ConanException("Wrong 'test_requires' definition, "
+                                         "did you mean 'build_requirements()'?")
         if declared_build_tool is not None:
             if isinstance(declared_build_tool, str):
-                declared_build_tool = [declared_build_tool, ]
-            for item in declared_build_tool:
-                self.build_require(item, run=True)
+                self.build_require(declared_build_tool, run=True)
+            else:
+                try:
+                    for item in declared_build_tool:
+                        self.build_require(item, run=True)
+                except TypeError:
+                    raise ConanException("Wrong 'tool_requires' definition, "
+                                         "did you mean 'build_requirements()'?")
 
     def values(self):
         return self._requires.values()
 
     # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
+        if str_ref is None:
+            return
         assert isinstance(str_ref, str)
         ref = RecipeReference.loads(str_ref)
         req = Requirement(ref, **kwargs)
@@ -395,7 +489,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None, options=None):
+                      run=None, options=None, override=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -406,10 +500,12 @@ class Requirements:
              headers = False => We won't include headers, is a tool, no propagate the includes.
              run = None => It will be determined by the package_type of the ref
         """
+        if ref is None:
+            return
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options)
+                          package_id_mode=package_id_mode, options=options, override=override)
 
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
@@ -447,7 +543,7 @@ class Requirements:
         self._requires[req] = req
 
     def tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                     run=True, options=None):
+                     run=True, options=None, override=None):
         """
          Represent a build tool like "cmake".
 
@@ -456,13 +552,18 @@ class Requirements:
          libs = False => We won't link with it, is a tool, no propagate the libs.
          headers = False => We won't include headers, is a tool, no propagate the includes.
         """
+        if ref is None:
+            return
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options)
+                          package_id_mode=package_id_mode, options=options, override=override)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
     def __repr__(self):
         return repr(self._requires.values())
+
+    def serialize(self):
+        return [v.serialize() for v in self._requires.values()]

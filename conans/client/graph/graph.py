@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -12,8 +13,9 @@ RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (onl
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
-RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
+RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
 RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
+RECIPE_SYSTEM_TOOL = "System tool"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -22,9 +24,9 @@ BINARY_BUILD = "Build"
 BINARY_MISSING = "Missing"
 BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
-BINARY_UNKNOWN = "Unknown"
+BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
-BINARY_ERROR = "ConfigurationError"
+BINARY_SYSTEM_TOOL = "System tool"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -40,7 +42,7 @@ class TransitiveRequirement:
 
 
 class Node(object):
-    def __init__(self, ref, conanfile, context, recipe=None, path=None):
+    def __init__(self, ref, conanfile, context, recipe=None, path=None, test=False):
         self.ref = ref
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
@@ -55,16 +57,19 @@ class Node(object):
         self.remote = None
         self.binary_remote = None
         self.context = context
+        self.test = test
+        self.test_package = False  # True if it is a test_package only package
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
+        self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
+        self.should_build = False  # If the --build or policy wants to build this binary
 
     def __lt__(self, other):
         """
-
         @type other: Node
         """
         # TODO: Remove this order, shouldn't be necessary
@@ -75,6 +80,8 @@ class Node(object):
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
+            if transitive.require.override:
+                continue
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
     def propagate_downstream(self, require, node, src_node=None):
@@ -90,6 +97,7 @@ class Node(object):
                 return True
             require.aggregate(existing.require)
 
+        assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
@@ -116,8 +124,9 @@ class Node(object):
         # This is equivalent as the Requirement hash and eq methods
         # TODO: Make self.ref always exist, but with name=None if name not defined
         if self.ref is not None and require.ref.name == self.ref.name:
-            if require.build and require.ref.version != self.ref.version:
-                pass  # Allow bootstrapping
+            if require.build and (self.context == CONTEXT_HOST or  # switch context
+                                  require.ref.version != self.ref.version):  # or different version
+                pass
             else:
                 return None, self, self  # First is the require, as it is a loop => None
 
@@ -126,8 +135,11 @@ class Node(object):
         # print("    Transitive deps", self.transitive_deps)
         # ("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
         # Overrides: The existing require could be itself, that was just added
+        result = None
         if prev and (prev.require is not require or prev.node is not None):
-            return prev.require, prev.node, self
+            result = prev.require, prev.node, self
+            # Do not return yet, keep checking downstream, because downstream overrides or forces
+            # have priority
 
         # Check if need to propagate downstream
         # Then propagate downstream
@@ -135,7 +147,7 @@ class Node(object):
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
         if not self.dependants:
-            return
+            return result
         assert len(self.dependants) == 1
         dependant = self.dependants[0]
 
@@ -146,13 +158,13 @@ class Node(object):
 
         if down_require is None:
             # print("    No need to check downstream more")
-            return
+            return result
 
         source_node = dependant.src
-        return source_node.check_downstream_exists(down_require)
+        return source_node.check_downstream_exists(down_require) or result
 
     def check_loops(self, new_node):
-        if self.ref == new_node.ref:
+        if self.ref == new_node.ref and self.context == new_node.context:
             return self
         if not self.dependants:
             return
@@ -189,9 +201,6 @@ class Node(object):
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
 
-    def private_neighbors(self):
-        return [edge.dst for edge in self.dependencies if edge.private]
-
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
 
@@ -204,13 +213,36 @@ class Node(object):
         result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
+        result["prev"] = self.prev
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
+        # TODO: This doesn't match the model, check it
+        result["invalid_build"] = self.cant_build
+        result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
+        # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
         result["context"] = self.context
+        result["test"] = self.test
         result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
+
+    def overrides(self):
+
+        def transitive_subgraph():
+            result = set()
+            opened = {self}
+            while opened:
+                new_opened = set()
+                for o in opened:
+                    result.add(o)
+                    new_opened.update(set(o.neighbors()).difference(result))
+                opened = new_opened
+
+            return result
+
+        nodes = transitive_subgraph()
+        return Overrides.create(nodes)
 
 
 class Edge(object):
@@ -220,12 +252,71 @@ class Edge(object):
         self.require = require
 
 
+class Overrides:
+    def __init__(self):
+        self._overrides = {}  # {require_ref: {override_ref1, override_ref2}}
+
+    def __bool__(self):
+        return bool(self._overrides)
+
+    def __repr__(self):
+        return repr(self.serialize())
+
+    @staticmethod
+    def create(nodes):
+        overrides = {}
+        for n in nodes:
+            for r in n.conanfile.requires.values():
+                if r.override:
+                    continue
+                if r.overriden_ref and not r.force:
+                    overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
+                else:
+                    overrides.setdefault(r.ref, set()).add(None)
+
+        # reduce, eliminate those overrides definitions that only override to None, that is, not
+        # really an override
+        result = Overrides()
+        for require, override_info in overrides.items():
+            if len(override_info) != 1 or None not in override_info:
+                result._overrides[require] = override_info
+        return result
+
+    def get(self, require):
+        return self._overrides.get(require)
+
+    def update(self, other):
+        """
+        @type other: Overrides
+        """
+        for require, override_info in other._overrides.items():
+            self._overrides.setdefault(require, set()).update(override_info)
+
+    def items(self):
+        return self._overrides.items()
+
+    def serialize(self):
+        return {k.repr_notime(): [e.repr_notime() if e else None for e in v]
+                for k, v in self._overrides.items()}
+
+    @staticmethod
+    def deserialize(data):
+        result = Overrides()
+        result._overrides = {RecipeReference.loads(k):
+                             set([RecipeReference.loads(e) if e else None for e in v])
+                             for k, v in data.items()}
+        return result
+
+
 class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
         self.resolved_ranges = {}
         self.error = False
+
+    def overrides(self):
+        return Overrides.create(self.nodes)
 
     def __repr__(self):
         return "\n".join((repr(n) for n in self.nodes))
@@ -250,31 +341,28 @@ class DepsGraph(object):
                 yield node
 
     def by_levels(self):
-        return self._order_levels(True)
-
-    def inverse_levels(self):
-        return self._order_levels(False)
-
-    def _order_levels(self, direct):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = set(self.nodes)
+        # We make it a dict to preserve insertion order and be deterministic, s
+        # sets are not deterministic order. dict is fast for look up operations
+        opened = dict.fromkeys(self.nodes)
         while opened:
             current_level = []
             for o in opened:
-                o_neighs = o.neighbors() if direct else o.inverse_neighbors()
+                o_neighs = o.neighbors()
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
 
             # TODO: SORTING seems only necessary for test order
             current_level.sort()
             result.append(current_level)
-            # now initialize new level
-            opened = opened.difference(current_level)
+            # now start new level, removing the current level items
+            for item in current_level:
+                opened.pop(item)
 
         return result
 
@@ -296,4 +384,3 @@ class DepsGraph(object):
         result["nodes"] = [n.serialize() for n in self.nodes]
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
         return result
-

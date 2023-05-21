@@ -4,6 +4,7 @@ import unittest
 from collections import OrderedDict
 
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.env import environment_update
 
 
 class UserTest(unittest.TestCase):
@@ -18,7 +19,7 @@ class UserTest(unittest.TestCase):
 
         with self.assertRaises(Exception):
             client.run("remote login wrong_remote foo -p bar")
-        self.assertIn("ERROR: Remote 'wrong_remote' not found in remotes", client.out)
+        self.assertIn("ERROR: Remote 'wrong_remote' can't be found or is disabled", client.out)
 
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
@@ -31,7 +32,7 @@ class UserTest(unittest.TestCase):
         # Test with wrong remote right error is reported
         with self.assertRaises(Exception):
             client.run("remote login Test_Wrong_Remote foo")
-        self.assertIn("ERROR: Remote 'Test_Wrong_Remote' not found in remotes", client.out)
+        self.assertIn("ERROR: Remote 'Test_Wrong_Remote' can't be found or is disabled", client.out)
 
         # Test user list for all remotes is reported
         client.run("remote list-users")
@@ -337,3 +338,48 @@ def test_user_removed_remote_removed():
     c.run("remote remove default")
     login = c.cache.localdb.get_login(server_url)
     assert login == (None, None, None)
+
+
+class TestRemoteAuth:
+    def test_remote_auth(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["other_server"] = TestServer(users={"lasote": "mypass"})
+        c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
+                                                "lasote", "mypass"])
+        c.run("remote auth *")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: lasote""")
+        assert text in c.out
+
+    def test_remote_auth_with_user(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass"})
+        servers["other_server"] = TestServer()
+        c = TestClient(servers=servers, inputs=["lasote", "mypass"])
+        c.run("remote set-user default lasote")
+        c.run("remote auth * --with-user")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: None""")
+        assert text in c.out
+
+    def test_remote_auth_with_user_env_var(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass"})
+        servers["other_server"] = TestServer()
+        c = TestClient(servers=servers)
+        with environment_update({"CONAN_LOGIN_USERNAME_DEFAULT": "lasote",
+                                 "CONAN_PASSWORD_DEFAULT": "mypass"}):
+            c.run("remote auth * --with-user")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: None""")
+        assert text in c.out

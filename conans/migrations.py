@@ -1,6 +1,6 @@
 import os
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.errors import ConanException, ConanMigrationError
 from conans.model.version import Version
 from conans.util.files import load, save
@@ -21,6 +21,7 @@ class Migrator(object):
             old_version = self._load_old_version()
             if old_version != self.current_version:
                 self._update_version_file()
+                self._apply_migrations(old_version)
         except Exception as e:
             ConanOutput().error(str(e))
             raise ConanMigrationError(e)
@@ -39,3 +40,11 @@ class Migrator(object):
         except Exception:
             old_version = None
         return old_version
+
+    def _apply_migrations(self, old_version):
+        """
+        Apply any migration script.
+
+        :param old_version: ``str`` previous Conan version.
+        """
+        pass

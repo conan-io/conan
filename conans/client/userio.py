@@ -11,29 +11,36 @@ def is_terminal(stream):
 
 def color_enabled(stream):
     """
-    NO_COLOR: No colors and no colorama
-    CLICOLOR: When 1, colors if is_terminal
-    CLICOLOR_FORCE: When 1, always colors (except if NO_COLOR)
+    NO_COLOR: No colors
+
+    https://no-color.org/
+
+    Command-line software which adds ANSI color to its output by default should check for the
+    presence of a NO_COLOR environment variable that, when present (**regardless of its value**),
+    prevents the addition of ANSI color.
+
+    CLICOLOR_FORCE: Force color
+
+    https://bixense.com/clicolors/
     """
-    if os.getenv("NO_COLOR") == "1":
-        return False
-    elif os.getenv("CLICOLOR_FORCE") == "1" or (os.getenv("CLICOLOR", "1") != "0"
-                                                and is_terminal(stream)):
+
+    if os.getenv("CLICOLOR_FORCE", "0") != "0":
+        # CLICOLOR_FORCE != 0, ANSI colors should be enabled no matter what.
         return True
-    else:
+
+    if os.getenv("NO_COLOR") is not None:
         return False
+    return is_terminal(stream)
 
 
 def init_colorama(stream):
     import colorama
-
-    if not color_enabled(stream):
-        if os.getenv("NO_COLOR") != "1":
-            colorama.init(strip=True)
-        return False
-    else:
-        colorama.init(convert=False, strip=False)
-        return True
+    if color_enabled(stream):
+        if os.getenv("CLICOLOR_FORCE", "0") != "0":
+            # Otherwise it is not really forced if colorama doesn't feel it
+            colorama.init(strip=False, convert=False)
+        else:
+            colorama.init()
 
 
 class UserInput(object):
@@ -47,7 +54,7 @@ class UserInput(object):
         """
         self._ins = sys.stdin
         # FIXME: circular include, move "color_enabled" function to better location
-        from conans.cli.output import ConanOutput
+        from conan.api.output import ConanOutput
         self._out = ConanOutput()
         self._interactive = not non_interactive
 
@@ -59,12 +66,9 @@ class UserInput(object):
         self._raise_if_non_interactive()
         return input()
 
-    def get_pass(self, remote_name):
-        self._raise_if_non_interactive()
-        return getpass.getpass("")
-
     def request_login(self, remote_name, username=None):
         """Request user to input their name and password
+        :param remote_name:
         :param username If username is specified it only request password"""
 
         if not username:
@@ -73,7 +77,7 @@ class UserInput(object):
             username = self._get_env_username(remote_name)
             if not username:
                 self._raise_if_non_interactive()
-                username = self.get_username(remote_name)
+                username = self.get_username()
 
         if self._interactive:
             self._out.write('Please enter a password for "%s" account: ' % username)
@@ -81,23 +85,28 @@ class UserInput(object):
             pwd = self._get_env_password(remote_name)
             if not pwd:
                 self._raise_if_non_interactive()
-                pwd = self.get_password(remote_name)
+                pwd = self.get_password()
         except ConanException:
             raise
         except Exception as e:
             raise ConanException('Cancelled pass %s' % e)
         return username, pwd
 
-    def get_username(self, remote_name):
+    def get_username(self):
         """Overridable for testing purpose"""
         return self.raw_input()
 
-    def get_password(self, remote_name):
+    def get_password(self):
         """Overridable for testing purpose"""
-        return self.get_pass(remote_name)
+        self._raise_if_non_interactive()
+        try:
+            return getpass.getpass("")
+        except BaseException:  # For KeyboardInterrupt too
+            raise ConanException("Interrupted interactive password input")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg
+        :param default_value:
         :param msg Name of the msg
         """
         self._raise_if_non_interactive()

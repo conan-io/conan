@@ -7,7 +7,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
-@pytest.mark.tool_pkg_config
+@pytest.mark.tool("pkg_config")
 class MesonPkgConfigTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
     from conan import ConanFile
@@ -40,7 +40,7 @@ class MesonPkgConfigTest(TestMesonBase):
 
     def test_reuse(self):
         self.t.run("new cmake_lib -d name=hello -d version=0.1")
-        self.t.run("create . -tf=None")
+        self.t.run("create . -tf=\"\"")
 
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
         # Prepare the actual consumer package

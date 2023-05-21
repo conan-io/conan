@@ -6,53 +6,30 @@ import pytest
 from conans.client.profile_loader import _ProfileParser, ProfileLoader
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
 def test_profile_parser():
-    txt = textwrap.dedent("""
+    txt = textwrap.dedent(r"""
         include(a/path/to\profile.txt)
-        VAR=2
         include(other/path/to/file.txt)
-        OTHERVAR=thing
 
         [settings]
         os=2
         """)
     a = _ProfileParser(txt)
-    assert a.vars == {"VAR": "2", "OTHERVAR": "thing"}
-    assert a.includes == ["a/path/to\profile.txt", "other/path/to/file.txt"]
+    assert a.includes == [r"a/path/to\profile.txt", "other/path/to/file.txt"]
     assert a.profile_text == textwrap.dedent("""[settings]
 os=2""")
 
     txt = ""
     a = _ProfileParser(txt)
-    assert a.vars == {}
     assert a.includes == []
     assert a.profile_text == ""
 
-    txt = textwrap.dedent("""
-        include(a/path/to\profile.txt)
-        VAR=$REPLACE_VAR
-        include(other/path/to/$FILE)
-        OTHERVAR=thing
-
-        [settings]
-        os=$OTHERVAR
-        """)
-
-    a = _ProfileParser(txt)
-    a.update_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
-    a.apply_vars()
-    assert a.vars == {"VAR": "22", "OTHERVAR": "thing",
-                      "REPLACE_VAR": "22", "FILE": "MyFile",}
-    assert [i for i in a.get_includes()] == ["a/path/to\profile.txt", "other/path/to/MyFile"]
-    assert a.profile_text == textwrap.dedent("""[settings]
-os=thing""")
-
-    txt = textwrap.dedent("""
+    txt = textwrap.dedent(r"""
         includes(a/path/to\profile.txt)
         """)
 
@@ -74,40 +51,38 @@ def test_profiles_includes():
     os.mkdir(os.path.join(tmp, "subdir"))
 
     profile0 = textwrap.dedent("""
-            ROOTVAR=0
+            {% set ROOTVAR=0 %}
 
 
             [tool_requires]
-            one/1.$ROOTVAR@lasote/stable
+            one/1.{{ROOTVAR}}@lasote/stable
             two/1.2@lasote/stable
         """)
     save_profile(profile0, "subdir/profile0.txt")
 
     profile1 = textwrap.dedent("""
             # Include in subdir, curdir
-            MYVAR=1
             include(./profile0.txt)
 
             [settings]
             os=Windows
             [options]
-            zlib:aoption=1
-            zlib:otheroption=1
+            zlib*:aoption=1
+            zlib*:otheroption=1
         """)
 
     save_profile(profile1, "subdir/profile1.txt")
 
     profile2 = textwrap.dedent("""
             #  Include in subdir
+            {% set MYVAR=1 %}
             include(./subdir/profile1.txt)
             [settings]
-            os=$MYVAR
+            os={{MYVAR}}
         """)
 
     save_profile(profile2, "profile2.txt")
     profile3 = textwrap.dedent("""
-            OTHERVAR=34
-
             [tool_requires]
             one/1.5@lasote/stable
         """)
@@ -119,7 +94,7 @@ def test_profiles_includes():
             include(./profile3.txt)
 
             [options]
-            zlib:otheroption=12
+            zlib*:otheroption=12
         """)
 
     save_profile(profile4, "profile4.txt")
@@ -128,22 +103,63 @@ def test_profiles_includes():
     profile = profile_loader.load_profile("./profile4.txt", tmp)
 
     assert profile.settings == {"os": "1"}
-    assert profile.options["zlib"].aoption == 1
-    assert profile.options["zlib"].otheroption == 12
+    assert profile.options["zlib*"].aoption == 1
+    assert profile.options["zlib*"].otheroption == 12
     assert profile.tool_requires == {"*": [RecipeReference.loads("one/1.5@lasote/stable"),
-                                                 RecipeReference.loads("two/1.2@lasote/stable")]}
+                                           RecipeReference.loads("two/1.2@lasote/stable")]}
+
+
+def test_profile_compose_system_tools():
+    tmp = temp_folder()
+    save(os.path.join(tmp, "profile0"), "[system_tools]\ntool1/1.0")
+    save(os.path.join(tmp, "profile1"), "[system_tools]\ntool2/2.0")
+    save(os.path.join(tmp, "profile2"), "include(./profile0)\n[system_tools]\ntool3/3.0")
+    save(os.path.join(tmp, "profile3"), "include(./profile0)\n[system_tools]\ntool1/1.1")
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile2 = profile_loader.load_profile("./profile2", tmp)
+    assert profile2.system_tools == [RecipeReference.loads("tool1/1.0"),
+                                     RecipeReference.loads("tool3/3.0")]
+    profile3 = profile_loader.load_profile("./profile3", tmp)
+    assert profile3.system_tools == [RecipeReference.loads("tool1/1.1")]
+    profile0 = profile_loader.load_profile("./profile0", tmp)
+    profile1 = profile_loader.load_profile("./profile1", tmp)
+    profile0.compose_profile(profile1)
+    assert profile0.system_tools == [RecipeReference.loads("tool1/1.0"),
+                                     RecipeReference.loads("tool2/2.0")]
+
+
+def test_profile_compose_tool_requires():
+    tmp = temp_folder()
+    save(os.path.join(tmp, "profile0"), "[tool_requires]\ntool1/1.0")
+    save(os.path.join(tmp, "profile1"), "[tool_requires]\ntool2/2.0")
+    save(os.path.join(tmp, "profile2"), "include(./profile0)\n[tool_requires]\ntool3/3.0")
+    save(os.path.join(tmp, "profile3"), "include(./profile0)\n[tool_requires]\ntool1/1.1")
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile2 = profile_loader.load_profile("./profile2", tmp)
+    assert profile2.tool_requires == {"*": [RecipeReference.loads("tool1/1.0"),
+                                            RecipeReference.loads("tool3/3.0")]}
+    profile3 = profile_loader.load_profile("./profile3", tmp)
+    assert profile3.tool_requires == {"*": [RecipeReference.loads("tool1/1.1")]}
+
+    profile0 = profile_loader.load_profile("./profile0", tmp)
+    profile1 = profile_loader.load_profile("./profile1", tmp)
+    profile0.compose_profile(profile1)
+    assert profile0.tool_requires == {"*": [RecipeReference.loads("tool1/1.0"),
+                                            RecipeReference.loads("tool2/2.0")]}
 
 
 def test_profile_include_order():
     tmp = temp_folder()
 
-    save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")
+    save(os.path.join(tmp, "profile1.txt"), '{% set MYVAR="fromProfile1" %}')
 
     profile2 = textwrap.dedent("""
             include(./profile1.txt)
-            MYVAR=fromProfile2
+            {% set MYVAR="fromProfile2" %}
             [settings]
-            os=$MYVAR
+            os={{MYVAR}}
         """)
     save(os.path.join(tmp, "profile2.txt"), profile2)
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
@@ -212,7 +228,27 @@ def test_profile_buildenv():
     buildenv = profile.buildenv
     env = buildenv.get_profile_env(None)
     conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
     env_vars = env.vars(conanfile)
     assert env_vars.get("MyVar1") == "My Value; 11 MyValue12"
-    # Mock is never Windows path
     assert env_vars.get("MyPath1") == "/some/path11:/other path/path12"
+
+    conanfile.settings_build = MockSettings({"os": "Windows", "arch": "x86_64"})
+    env_vars = env.vars(conanfile)
+    assert env_vars.get("MyPath1") == "/some/path11;/other path/path12"
+
+
+@pytest.mark.parametrize("conf_name", [
+    "core.gzip:compresslevel=5",
+    "core.gzip:compresslevel"
+])
+def test_profile_core_confs_error(conf_name):
+    tmp = temp_folder()
+    current_profile_path = os.path.join(tmp, "default")
+    save(current_profile_path, "")
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+
+    with pytest.raises(ConanException) as exc:
+        profile_loader.from_cli_args([], [], [], [conf_name], None)
+    assert "[conf] 'core.*' configurations are not allowed in profiles" in str(exc.value)

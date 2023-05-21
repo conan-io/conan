@@ -2,6 +2,7 @@ import os
 from os.path import join, normpath, relpath
 
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
+from conans.paths import CONAN_MANIFEST
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
@@ -54,7 +55,7 @@ class ServerStore(object):
     def export(self, ref):
         return join(self.base_folder(ref), SERVER_EXPORT_FOLDER)
 
-    def get_conanfile_file_path(self, ref, filename):
+    def get_recipe_file_path(self, ref, filename):
         abspath = join(self.export(ref), filename)
         return abspath
 
@@ -66,27 +67,22 @@ class ServerStore(object):
     def path_exists(self, path):
         return self._storage_adapter.path_exists(path)
 
-    # ############ SNAPSHOTS (APIv1)
-    def get_recipe_snapshot(self, ref):
-        """Returns a {filepath: md5} """
-        assert isinstance(ref, RecipeReference)
-        return self._get_snapshot_of_files(self.export(ref))
-
-    def _get_snapshot_of_files(self, relative_path):
-        snapshot = self._storage_adapter.get_snapshot(relative_path)
-        snapshot = self._relativize_keys(snapshot, relative_path)
-        return snapshot
-
     # ############ ONLY FILE LIST SNAPSHOTS (APIv2)
     def get_recipe_file_list(self, ref):
-        """Returns a {filepath: md5} """
+        """Returns a  [filepath] """
         assert isinstance(ref, RecipeReference)
-        return self._get_file_list(self.export(ref))
+        files = self._get_file_list(self.export(ref))
+        if CONAN_MANIFEST not in files:
+            raise RecipeNotFoundException(ref)
+        return files
 
     def get_package_file_list(self, pref):
-        """Returns a {filepath: md5} """
+        """Returns a  [filepath] """
         assert isinstance(pref, PkgReference)
-        return self._get_file_list(self.package(pref))
+        files = self._get_file_list(self.package(pref))
+        if CONAN_MANIFEST not in files:
+            raise PackageNotFoundException(pref)
+        return files
 
     def _get_file_list(self, relative_path):
         file_list = self._storage_adapter.get_file_list(relative_path)
@@ -94,7 +90,7 @@ class ServerStore(object):
         return file_list
 
     def _delete_empty_dirs(self, ref):
-        lock_files = set([REVISIONS_FILE, "%s.lock" % REVISIONS_FILE])
+        lock_files = {REVISIONS_FILE, "%s.lock" % REVISIONS_FILE}
 
         ref_path = normpath(join(self.store, ref_dir_repr(ref)))
         if ref.revision:
@@ -148,12 +144,6 @@ class ServerStore(object):
         assert isinstance(ref, RecipeReference)
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
-
-    def remove_recipe_files(self, ref, files):
-        subpath = self.export(ref)
-        for filepath in files:
-            path = join(subpath, filepath)
-            self._storage_adapter.delete_file(path)
 
     def remove_package_files(self, pref, files):
         subpath = self.package(pref)

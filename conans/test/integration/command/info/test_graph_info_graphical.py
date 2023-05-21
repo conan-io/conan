@@ -1,3 +1,4 @@
+import os
 import textwrap
 import unittest
 from datetime import datetime
@@ -147,7 +148,7 @@ class InfoTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
 
         # Topics as tuple
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html")
+        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
         html_content = client.stdout
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
@@ -156,7 +157,23 @@ class InfoTest(unittest.TestCase):
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=testing")
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html")
+        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
         html_content = client.stdout
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
+
+
+def test_user_templates():
+    """ Test that a user can override the builtin templates putting templates/graph.html and
+    templates/graph.dot in the home
+    """
+    c = TestClient()
+    c.save({'lib.py': GenConanfile("lib", "0.1")})
+    c.run("create lib.py")
+    template_folder = os.path.join(c.cache_folder, 'templates')
+    c.save({"graph.html": '{{ base_template_path }}',
+            "graph.dot": '{{ base_template_path }}'}, path=template_folder)
+    c.run("graph info --requires=lib/0.1 --format=html")
+    assert template_folder in c.stdout
+    c.run("graph info --requires=lib/0.1 --format=dot")
+    assert template_folder in c.stdout

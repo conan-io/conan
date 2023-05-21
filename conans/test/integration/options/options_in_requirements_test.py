@@ -24,7 +24,6 @@ class ConanLib(ConanFile):
         client.run("export . --user=lasote --channel=testing")
 
         boost = """from conan import ConanFile
-from conans import tools
 import platform, os, sys
 
 class BoostConan(ConanFile):
@@ -34,14 +33,14 @@ class BoostConan(ConanFile):
     default_options ={"shared": False}
 
     def configure(self):
-        self.options["zlib"].shared = self.options.shared
+        self.options["zlib/*"].shared = self.options.shared
 
     def requirements(self):
         self.requires("zlib/0.1@lasote/testing")
 """
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
-        client.run("create . --user=lasote --channel=testing -o boostdbg:shared=True --build=missing")
+        client.run("create . --user=lasote --channel=testing -o boostdbg/*:shared=True --build=missing")
         ref = RecipeReference.loads("zlib/0.1@lasote/testing")
         pref = client.get_latest_package_reference(ref)
         pkg_folder = client.get_latest_pkg_layout(pref).package()

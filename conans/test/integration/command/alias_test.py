@@ -46,9 +46,10 @@ class ConanAliasTest(unittest.TestCase):
         self.assertNotIn("hello/0.x", conaninfo)
 
         client.run('upload "*" --confirm -r default')
-        client.run('remove "*" -f')
+        client.run('remove "*" -c')
 
         client.run("install .")
+        assert "'alias' is a Conan 1.X legacy feature" in client.out
         client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})
         self.assertNotIn("hello/0.x@lasote/channel from", client.out)
 

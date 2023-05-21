@@ -1,13 +1,12 @@
 import json
 import os
-import subprocess
 from shutil import which
 
-from conans.cli.output import ConanOutput
+from conan.tools.build import cmd_args_to_string
+from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.env import get_env
-
 
 
 def _visual_compiler(version):
@@ -16,9 +15,8 @@ def _visual_compiler(version):
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
         if path:
-            compiler = "Visual Studio"
-            ConanOutput().success("Found %s %s" % (compiler, version))
-            return compiler, version
+            ConanOutput().success("Found msvc %s" % version)
+            return version
     return None
 
 
@@ -27,7 +25,7 @@ def latest_visual_studio_version_installed():
     for version in msvc_sersions:
         vs = _visual_compiler(version)
         if vs:
-            return vs[1]
+            return {"17": "193", "16": "192", "15": "191"}.get(vs)
     return None
 
 
@@ -86,7 +84,7 @@ def vs_installation_path(version):
     return result_vs_installation_path
 
 
-def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
+def vswhere(all_=False, prerelease=True, products=None, requires=None, version="", latest=False,
             legacy=False, property_="", nologo=True):
 
     # 'version' option only works if Visual Studio 2017 is installed:
@@ -116,6 +114,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     arguments.append(vswhere_path)
 
     # Output json format
+    arguments.append("-utf8")
     arguments.append("-format")
     arguments.append("json")
 
@@ -152,13 +151,14 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         from conans.util.runners import check_output_runner
-        output = check_output_runner(arguments).strip()
+        cmd = cmd_args_to_string(arguments)
+        output = check_output_runner(cmd).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
         output = "\n".join([line for line in output.splitlines()
                             if not line.strip().startswith('"description"')])
 
-    except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+    except (ValueError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
     return json.loads(output)

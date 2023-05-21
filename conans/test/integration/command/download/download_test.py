@@ -3,40 +3,14 @@ import unittest
 from collections import OrderedDict
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import (TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, TurboTestClient,
-                                     GenConanfile)
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load
 
 
 class DownloadTest(unittest.TestCase):
 
-    def test_download_recipe(self):
-        client = TurboTestClient(default_server_user=True)
-        # Test download of the recipe only
-        conanfile = str(GenConanfile().with_name("pkg").with_version("0.1"))
-        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
-        client.create(ref, conanfile)
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1@lasote/stable --recipe")
-
-        self.assertIn("Downloading conanfile.py", client.out)
-        self.assertNotIn("Downloading conan_package.tgz", client.out)
-        ref_layout = client.get_latest_ref_layout(ref)
-        export = ref_layout.export()
-        conan = ref_layout.base_folder
-        self.assertTrue(os.path.exists(os.path.join(export, "conanfile.py")))
-        self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
-        self.assertFalse(os.path.exists(os.path.join(conan, "package")))
-
     def test_download_with_sources(self):
-        server = TestServer()
-        servers = OrderedDict()
-        servers["default"] = server
-        servers["other"] = TestServer()
-
-        client = TestClient(servers=servers, inputs=["admin", "password"])
+        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
         conanfile = """from conan import ConanFile
 class Pkg(ConanFile):
     name = "pkg"
@@ -50,139 +24,13 @@ class Pkg(ConanFile):
 
         ref = RecipeReference.loads("pkg/0.1@lasote/stable")
         client.run("upload pkg/0.1@lasote/stable -r default")
-        client.run("remove pkg/0.1@lasote/stable -f")
+        client.run("remove pkg/0.1@lasote/stable -c")
 
-        client.run("download pkg/0.1@lasote/stable")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
+        client.run("download pkg/0.1@lasote/stable -r default")
+        self.assertIn("pkg/0.1@lasote/stable: Sources downloaded from 'default'", client.out)
         source = client.get_latest_ref_layout(ref).export_sources()
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))
-
-    def test_download_reference_without_packages(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
-        client.run("export . --user=user --channel=stable")
-        client.run("upload pkg/0.1@user/stable -r default")
-        client.run("remove pkg/0.1@user/stable -f")
-
-        client.run("download pkg/0.1@user/stable")
-        # Check 'No remote binary packages found' warning
-        self.assertIn("WARN: No remote binary packages found in remote", client.out)
-        # Check at least conanfile.py is downloaded
-        ref = RecipeReference.loads("pkg/0.1@user/stable")
-        self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).conanfile()))
-
-    def test_download_reference_with_packages(self):
-        client = TurboTestClient(default_server_user=True)
-        conanfile = """from conan import ConanFile
-class Pkg(ConanFile):
-    name = "pkg"
-    version = "0.1"
-    settings = "os"
-"""
-        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
-
-        client.create(ref, conanfile)
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1@lasote/stable")
-        pref = client.get_latest_package_reference(ref)
-        ref_layout = client.get_latest_ref_layout(ref)
-        pkg_layout = client.get_latest_pkg_layout(pref)
-
-        package_folder = pkg_layout.package()
-        # Check not 'No remote binary packages found' warning
-        self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
-        # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(ref_layout.conanfile()))
-        # Check package folder created
-        self.assertTrue(os.path.exists(package_folder))
-
-    def test_download_wrong_id(self):
-        client = TurboTestClient(default_server_user=True)
-        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
-        client.export(ref)
-        rrev = client.exported_recipe_revision()
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1@lasote/stable:wrong", assert_error=True)
-        self.assertIn("ERROR: Binary package not found: "
-                      f"'pkg/0.1@lasote/stable#{rrev}:wrong'",
-                      client.out)
-
-    def test_download_pattern(self):
-        client = TestClient()
-        client.run("download pkg/*@user/channel", assert_error=True)
-        self.assertIn("Provide a valid full reference without wildcards", client.out)
-
-    def test_download_full_reference(self):
-        server = TestServer()
-        servers = {"default": server}
-
-        client = TurboTestClient(servers=servers, inputs=["admin", "password"])
-
-        ref = RecipeReference.loads("pkg/0.1")
-        client.create(ref)
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1:{}".format(NO_SETTINGS_PACKAGE_ID))
-
-        rrev = client.cache.get_latest_recipe_reference(ref)
-        pkgids = client.cache.get_package_references(rrev)
-        prev = client.cache.get_latest_package_reference(pkgids[0])
-        package_folder = client.cache.pkg_layout(prev).package()
-
-        # Check not 'No remote binary packages found' warning
-        self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
-        # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(client.cache.ref_layout(rrev).conanfile()))
-        # Check package folder created
-        self.assertTrue(os.path.exists(package_folder))
-
-    def test_download_with_full_reference_and_p(self):
-        client = TestClient()
-        client.run("download pkg/0.1@user/channel:{package_id} -p {package_id}".
-                   format(package_id="dupqipa4tog2ju3pncpnrzbim1fgd09g"),
-                   assert_error=True)
-        self.assertIn("Use a full package reference (preferred) or the `--package`"
-                      " command argument, but not both.", client.out)
-
-    def test_download_with_package_and_recipe_args(self):
-        client = TestClient()
-        client.run("download eigen/3.3.4@conan/stable --recipe --package fake_id",
-                   assert_error=True)
-
-        self.assertIn("ERROR: recipe parameter cannot be used together with package", client.out)
-
-    def test_download_package_argument(self):
-        client = TurboTestClient(default_server_user=True)
-
-        ref = RecipeReference.loads("pkg/0.1@lasote/stable")
-        client.create(ref)
-        client.upload_all(ref)
-        client.remove_all()
-
-        client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
-
-        rrev = client.cache.get_latest_recipe_reference(ref)
-        pkgids = client.cache.get_package_references(rrev)
-        prev = client.cache.get_latest_package_reference(pkgids[0])
-        package_folder = client.cache.pkg_layout(prev).package()
-
-        # Check not 'No remote binary packages found' warning
-        self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
-        # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(client.cache.ref_layout(rrev).conanfile()))
-        # Check package folder created
-        self.assertTrue(os.path.exists(package_folder))
-
-    def test_download_not_found_reference(self):
-        client = TurboTestClient(default_server_user=True)
-        client.run("download pkg/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'pkg/0.1@lasote/stable'", client.out)
 
     def test_no_user_channel(self):
         # https://github.com/conan-io/conan/issues/6009
@@ -190,14 +38,46 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkg --version=1.0")
         client.run("upload * --confirm -r default")
-        client.run("remove * -f")
+        client.run("remove * -c")
 
-        client.run("download pkg/1.0:{}".format(NO_SETTINGS_PACKAGE_ID))
-        self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.run("download pkg/1.0:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
+        self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
+                      NO_SETTINGS_PACKAGE_ID, client.out)
 
         # All
-        client.run("remove * -f")
-        client.run("download pkg/1.0@")
-        self.assertIn("pkg/1.0: Downloading pkg/1.0:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkg/1.0: Package installed %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.run("remove * -c")
+        client.run("download pkg/1.0#*:* -r default")
+        self.assertIn("Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:%s" %
+                      NO_SETTINGS_PACKAGE_ID, client.out)
+
+    def test_download_with_python_requires(self):
+        """ when having a python_require in a different repo, it cannot be ``conan download``
+        as the download runs from a single repo. This test captures the failures
+        """
+        # https://github.com/conan-io/conan/issues/9548
+        servers = OrderedDict([("tools", TestServer()),
+                               ("pkgs", TestServer())])
+        c = TestClient(servers=servers, inputs=["admin", "password", "admin", "password"])
+
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
+        c.run("export tool")
+        c.run("create pkg")
+        c.run("upload tool* -r tools -c")
+        c.run("upload pkg* -r pkgs -c")
+        c.run("remove * -c")
+
+        c.run("install --requires=pkg/0.1 -r pkgs -r tools")
+        self.assertIn("Downloading", c.out)
+        c.run("remove * -c")
+
+        # This fails, as it won't allow 2 remotes
+        c.run("download pkg/0.1 -r pkgs -r tools", assert_error=True)
+        self.assertIn("-r can only be specified once", c.out)
+        # This fails, because the python_requires is not in the "pkgs" repo
+        c.run("download pkg/0.1 -r pkgs", assert_error=True)
+        self.assertIn("Unable to find 'tool/0.1' in remotes", c.out)
+        # solution, install first the python_requires
+        c.run("download tool/0.1 -r tools")
+        c.run("download pkg/0.1 -r pkgs")
+        # it doesn't fail anymore
