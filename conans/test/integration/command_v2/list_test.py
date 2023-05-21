@@ -20,16 +20,16 @@ class TestParamErrors:
     def test_query_param_is_required(self):
         c = TestClient()
         c.run("list", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run("list -c", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run('list -r="*"', assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run("list --remote remote1 --cache", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
 
 @pytest.fixture(scope="module")
