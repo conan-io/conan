@@ -1,13 +1,19 @@
 import json
 
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern
+from conan.api.model import ListPattern, PackagesList
 from conan.api.output import Color, cli_out_write
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
+from conans.client.graph.graph import BINARY_BUILD
+from conans.errors import ConanException
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import timestamp_to_str
+from conans.util.files import load
 
 remote_color = Color.BRIGHT_BLUE
 recipe_name_color = Color.GREEN
@@ -104,15 +110,48 @@ def list(conan_api: ConanAPI, parser, *args):
     """
     parser.add_argument('reference', help="Recipe reference or package reference. "
                                           "Both can contain * as wildcard at any reference field. "
-                                          "If revision is not specified, it is assumed latest one.")
+                                          "If revision is not specified, it is assumed latest one.",
+                        nargs="?")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
+    parser.add_argument("-g", "--graph", help="Graph json file")
 
     args = parser.parse_args(*args)
+
+    if args.reference is None and args.graph is None:
+        raise ConanException("Missing pattern or graph json file")
+    if args.reference and args.graph:
+        raise ConanException("Cannot define both the pattern and the graph json file")
+
+    if args.graph:
+        graphfile = make_abs_path(args.graph)
+        graph = json.loads(load(graphfile))
+        pkglist = PackagesList()
+        for n in graph["graph"]["nodes"]:
+            ref = n["ref"]
+            if ref == "conanfile":
+                continue
+            ref = RecipeReference.loads(ref)
+            ref.timestamp = "1"  # FIXME
+            binary = n["binary"]
+            if binary == BINARY_BUILD:
+                pkglist.add_refs([ref])
+
+                pref = PkgReference(ref, n["package_id"], n["prev"])
+                pref.timestamp = "1"  # FIXME
+                pkglist.add_prefs(ref, [pref])
+
+        return {
+            "results": {"Local Cache": pkglist.serialize()},
+            "conan_api": conan_api,
+            "cli_args": " ".join(
+                [f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg)])
+        }
+
     ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
     # If neither remote nor cache are defined, show results only from cache
     remotes = []
