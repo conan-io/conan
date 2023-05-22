@@ -134,10 +134,11 @@ class CMake(object):
         cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator)
         if build_tool_args:
             cmd_line_args.extend(build_tool_args)
-        if cmd_line_args:
-            args += ['--'] + cmd_line_args
 
         args.extend(self._compilation_verbosity_arg)
+
+        if cmd_line_args:
+            args += ['--'] + cmd_line_args
 
         arg_list = ['"{}"'.format(bf), build_config, cmd_args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))

@@ -730,3 +730,13 @@ class TestCMakeFindPackagePreferConfig:
 
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_cmake_verbosity():
+    tc = TestClient()
+    tc.run("new cmake_exe -d name=pkg -d version=1.0")
+    tc.run("create . -c tools.build:verbosity=trace -c tools.compilation:verbosity=trace")
+    assert "--loglevel=TRACE --trace" in tc.out
+    assert "unrecognized option" not in tc.out
+    assert "--verbose" in tc.out
