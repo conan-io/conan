@@ -7,6 +7,7 @@ from requests.exceptions import ConnectionError
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.cache.remote_registry import Remote
+from conans.client.remote_manager_git import GitRemoteManager
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
@@ -18,13 +19,17 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_N
 from conans.util.files import mkdir, tar_extract
 
 
-class RemoteManager(object):
+class RemoteManager:
     """ Will handle the remotes to get recipes, packages etc """
-
     def __init__(self, cache, auth_manager):
         self._cache = cache
         self._auth_manager = auth_manager
         self._signer = PkgSignaturesPlugin(cache)
+
+    @staticmethod
+    def _git_remote(remote):
+        if remote.url.startswith("file://"):  # FIXME: remote type?
+            return GitRemoteManager(remote)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -88,6 +93,10 @@ class RemoteManager(object):
 
         download_folder = layout.download_export()
         export_sources_folder = layout.export_sources()
+        git_remote = self._git_remote(remote)
+        if git_remote is not None:
+            return git_remote.get_recipe_sources(ref, export_sources_folder)
+
         zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
         if not zipped_files:
             mkdir(export_sources_folder)  # create the folder even if no source files
@@ -201,6 +210,9 @@ class RemoteManager(object):
         enforce_disabled = kwargs.pop("enforce_disabled", True)
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
+        git_remote = self._git_remote(remote)
+        if git_remote is not None:
+            return git_remote.call_method(method, *args, **kwargs)
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
