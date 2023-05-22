@@ -208,15 +208,6 @@ class Node(object):
         return repr(self.conanfile)
 
     def serialize(self):
-        def _topics():
-            ret = self.conanfile.topics
-            if ret and isinstance(ret, (list, tuple)):
-                return ret
-            elif ret:
-                return [ret]
-            else:
-                return None
-
         result = OrderedDict()
         result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
         result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
@@ -225,11 +216,11 @@ class Node(object):
         result["prev"] = self.prev
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
-        result['url'] = self.conanfile.url,
-        result['homepage'] = self.conanfile.homepage,
-        result['license'] = self.conanfile.license,
-        result['author'] = self.conanfile.author,
-        result['topics'] = _topics()
+        result['url'] = self.conanfile.url
+        result['homepage'] = self.conanfile.homepage
+        result['license'] = self.conanfile.license
+        result['author'] = self.conanfile.author
+        result['topics'] = self.conanfile.topics
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
         result["invalid_build"] = self.cant_build
@@ -238,8 +229,8 @@ class Node(object):
         result.update(self.conanfile.serialize())
         result["context"] = self.context
         result["test"] = self.test
-        result["transitive_deps"] = {d.node.id: d.require.serialize()
-                                     for d in self.transitive_deps.values() if d.node is not None}
+        result["requires"] = {d.node.id: d.require.serialize()
+                              for d in self.transitive_deps.values() if d.node is not None}
         return result
 
     def overrides(self):
