@@ -65,7 +65,7 @@ def c3i_folder():
 class TestSearchList:
     def test_basic_search(self, c3i_folder):
         client = TestClient()
-        client.run("remote add ccifork 'file://{}'".format(c3i_folder))
+        client.run("remote add ccifork 'file:///{}'".format(c3i_folder))
         client.run("search *")
         assert textwrap.dedent("""\
             ccifork
@@ -82,7 +82,7 @@ class TestSearchList:
 
     def test_list_refs(self, c3i_folder):
         client = TestClient()
-        client.run("remote add ccifork 'file://{}'".format(c3i_folder))
+        client.run("remote add ccifork 'file:///{}'".format(c3i_folder))
         client.run("list *#* -r=ccifork --format=json")
         listjson = json.loads(client.stdout)
         revs = listjson["ccifork"]["libcurl/1.0"]["revisions"]
@@ -100,7 +100,7 @@ class TestSearchList:
 
     def test_list_rrevs(self, c3i_folder):
         client = TestClient()
-        client.run("remote add ccifork 'file://{}'".format(c3i_folder))
+        client.run("remote add ccifork 'file:///{}'".format(c3i_folder))
         client.run("list libcurl/1.0#* -r=ccifork --format=json")
         listjson = json.loads(client.stdout)
         revs = listjson["ccifork"]["libcurl/1.0"]["revisions"]
@@ -108,7 +108,7 @@ class TestSearchList:
 
     def test_list_binaries(self, c3i_folder):
         client = TestClient()
-        client.run("remote add ccifork 'file://{}'".format(c3i_folder))
+        client.run("remote add ccifork 'file:///{}'".format(c3i_folder))
         client.run("list libcurl/1.0:* -r=ccifork --format=json")
         listjson = json.loads(client.stdout)
         rev = listjson["ccifork"]["libcurl/1.0"]["revisions"]["e468388f0e4e098d5b62ad68979aebd5"]
@@ -118,7 +118,7 @@ class TestSearchList:
 class TestInstall:
     def test_install(self, c3i_folder):
         c = TestClient()
-        c.run("remote add ccifork 'file://{}'".format(c3i_folder))
+        c.run("remote add ccifork 'file:///{}'".format(c3i_folder))
         c.run("install --requires=libcurl/1.0 --build missing")
         assert "zlib/1.2.11: CONANDATA: {}" in c.out
         assert "zlib/1.2.11: BUILDING: //myheader" in c.out

@@ -16,7 +16,7 @@ class GitRemoteManager:
 
     def __init__(self, remote):
         self._remote = remote
-        cache_folder = self._remote.url.replace("file://", "")
+        cache_folder = self._remote.url.replace("file:///", "")
         self._remote_cache_dir = "{}/.cache".format(cache_folder)
         from conan.internal.conan_app import ConanApp
         self._app = ConanApp(self._remote_cache_dir)
