@@ -35,6 +35,39 @@ class Remote:
         return str(self)
 
 
+class MultiPackagesList:
+    def __init__(self):
+        self.lists = {}
+
+    def __getitem__(self, name):
+        try:
+            return self.lists[name]
+        except KeyError:
+            raise ConanException(f"'{name}' doesn't exist is package list")
+
+    def add(self, name, pkg_list):
+        self.lists[name] = pkg_list
+
+    def add_error(self, remote_name, error):
+        self.lists[remote_name] = {"error": error}
+
+    def serialize(self):
+        return {k: v.serialize() for k, v in self.lists.items()}
+
+    @staticmethod
+    def load(file):
+        content = json.loads(load(file))
+        result = {}
+        for remote, pkglist in content.items():
+            if "error" in pkglist:
+                result[remote] = pkglist
+            else:
+                result[remote] = PackagesList.deserialize(pkglist)
+        pkglist = MultiPackagesList()
+        pkglist.lists = result
+        return result
+
+
 class PackagesList:
     def __init__(self):
         self.recipes = {}
@@ -95,13 +128,9 @@ class PackagesList:
         return self.recipes
 
     @staticmethod
-    def load(file):
-        return PackagesList.loads(load(file))
-
-    @staticmethod
-    def loads(content):
+    def deserialize(data):
         result = PackagesList()
-        result.recipes = json.loads(content)
+        result.recipes = data
         return result
 
 

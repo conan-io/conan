@@ -1,7 +1,7 @@
 import json
 
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, PackagesList
+from conan.api.model import ListPattern, PackagesList, MultiPackagesList
 from conan.api.output import Color, cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
@@ -92,18 +92,9 @@ def print_list_json(data):
     cli_out_write(myjson)
 
 
-def print_pkg_list(data):
-    # FIXME: Workaround, to serialize only the 1st thing, 1 pkg-list, not the full
-    #  remote-pkglist dict
-    results = next(iter(data["results"].items()))[1]
-    myjson = json.dumps(results, indent=4)
-    cli_out_write(myjson)
-
-
 @conan_command(group="Consumer", formatters={"text": print_list_text,
                                              "json": print_list_json,
-                                             "html": list_packages_html,
-                                             "pkglist": print_pkg_list})
+                                             "html": list_packages_html})
 def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions, or packages in the cache (by default) or the remotes.
@@ -154,23 +145,22 @@ def list(conan_api: ConanAPI, parser, *args):
 
     ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
     # If neither remote nor cache are defined, show results only from cache
-    remotes = []
+    pkglist = MultiPackagesList()
     if args.cache or not args.remote:
-        remotes.append(None)
+        cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
+        pkglist.add("Local Cache", cache_list)
     if args.remote:
-        remotes.extend(conan_api.remotes.list(args.remote))
-    results = {}
-    for remote in remotes:
-        name = getattr(remote, "name", "Local Cache")
-        try:
-            list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
-        except Exception as e:
-            results[name] = {"error": str(e)}
-        else:
-            results[name] = list_bundle.serialize()
+        remotes = conan_api.remotes.list(args.remote)
+        for remote in remotes:
+            try:
+                remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+            except Exception as e:
+                pkglist.add_error(remote.name, str(e))
+            else:
+                pkglist.add(remote.name, remote_list)
 
     return {
-        "results": results,
+        "results": pkglist.serialize(),
         "conan_api": conan_api,
         "cli_args": " ".join([f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg)])
     }

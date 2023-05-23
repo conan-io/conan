@@ -42,7 +42,7 @@ class TestListUpload:
 
     def test_list_upload_recipes(self, client):
         pattern = "z*#latest"
-        client.run(f"list {pattern} --format=pkglist", redirect_stdout="pkglist.json")
+        client.run(f"list {pattern} --format=json", redirect_stdout="pkglist.json")
         client.run("upload --list=pkglist.json -r=default")
         for r in self.refs:
             assert f"Uploading recipe '{r}'" in client.out
@@ -50,7 +50,7 @@ class TestListUpload:
 
     def test_list_upload_packages(self, client):
         pattern = "z*#latest:*#latest"
-        client.run(f"list {pattern} --format=pkglist", redirect_stdout="pkglist.json")
+        client.run(f"list {pattern} --format=json", redirect_stdout="pkglist.json")
         client.run("upload --list=pkglist.json -r=default")
         for r in self.refs:
             assert f"Uploading recipe '{r}'" in client.out
@@ -64,10 +64,8 @@ class TestGraphCreatedUpload:
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
         c.run("create zlib")
         c.run("create app --format=json", redirect_stdout="graph.json")
-        c.run("list --graph=graph.json --format=pkglist", redirect_stdout="pkglist.json")
-        print(c.load("pkglist.json"))
+        c.run("list --graph=graph.json --format=json", redirect_stdout="pkglist.json")
         c.run("upload --list=pkglist.json -r=default")
-        print(c.out)
         assert "Uploading recipe 'app/1.0#0fa1ff1b90576bb782600e56df642e19'" in c.out
         assert "zlib" not in c.out
         assert "Uploading package 'app" in c.out

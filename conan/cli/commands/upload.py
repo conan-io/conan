@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, PackagesList
+from conan.api.model import ListPattern, MultiPackagesList
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conans.client.userio import UserInput
@@ -48,7 +48,8 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.list:
         listfile = make_abs_path(args.list)
-        package_list = PackagesList.load(listfile)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
     else:
         ref_pattern = ListPattern(args.reference, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
