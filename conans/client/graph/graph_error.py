@@ -15,8 +15,18 @@ class GraphConflictError(GraphError):
         self.base_previous = base_previous
 
     def __str__(self):
-        return f"Version conflict: {self.node.ref}->{self.require.ref}, "\
-               f"{self.base_previous.ref}->{self.prev_require.ref}."
+        if self.node.ref is not None and self.base_previous.ref is not None:
+            return f"Version conflict: {self.node.ref}->{self.require.ref}, " \
+                   f"{self.base_previous.ref}->{self.prev_require.ref}."
+        else:
+            conflicting_node = self.node.ref or self.base_previous.ref
+            conflicting_node_msg = ""
+            if conflicting_node is not None:
+                conflicting_node_msg = f"\nConflict originates from {conflicting_node}\n"
+            return f"Version conflict: " \
+                   f"Conflict between {self.require.ref} and {self.prev_require.ref} in the graph." \
+                   f"{conflicting_node_msg}" \
+                   f"\nRun conan graph info ... --format=html to inspect the graph errors."
 
 
 class GraphLoopError(GraphError):
@@ -27,7 +37,7 @@ class GraphLoopError(GraphError):
         self.ancestor = ancestor
 
     def __str__(self):
-        return "There is a cycle/loop in the graph:\n"\
+        return "There is a cycle/loop in the graph:\n" \
                f"    Initial ancestor: {self.ancestor}\n" \
                f"    Require: {self.require.ref}\n" \
                f"    Dependency: {self.node}"
