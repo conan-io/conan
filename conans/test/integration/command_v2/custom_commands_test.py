@@ -244,13 +244,13 @@ class TestCustomCommands:
 
         client = TestClient()
         mycommand_file_path = os.path.join(client.cache_folder, 'extensions',
-                                           'commands', 'cmd_mycommand.py')
+                                           'commands', 'danimtb', 'cmd_mycommand.py')
         mycode_file_path = os.path.join(client.cache_folder, 'extensions',
-                                        'commands', 'mycode.py')
+                                        'commands', 'danimtb', 'mycode.py')
         client.save({
             mycode_file_path: mycode,
             mycommand_file_path: mycommand
         })
-        client.run("mycommand")
+        client.run("danimtb:mycommand")
         foldername = os.path.basename(client.cache_folder)
         assert f'Conan cache folder from cmd_mycode: {foldername}' in client.out
