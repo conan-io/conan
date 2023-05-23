@@ -8,7 +8,7 @@ import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 class CreateTest(unittest.TestCase):
@@ -369,7 +369,7 @@ def test_create_format_json():
                  ....
                 },
                 {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
-                 'dependencies': {'2': 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'},
+                 'dependencies': {'1': {'ref': 'hello/0.1', 'visible': 'True', ...}},
                  ....
                 },
                 {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
