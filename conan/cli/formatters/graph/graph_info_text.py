@@ -31,7 +31,7 @@ def format_graph_info(result):
     out.title("Basic graph information")
     serial = graph.serialize()
     serial = filter_graph(serial, package_filter, field_filter)
-    for _, n in serial["nodes"].items():
+    for n in serial["nodes"].values():
         out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
         _serial_pretty_printer(n, indent="  ")
     if graph.error:
