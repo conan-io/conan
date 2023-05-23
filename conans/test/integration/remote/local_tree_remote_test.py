@@ -133,11 +133,12 @@ class TestInstall:
         assert "openssl/2.0: Already installed!" in c.out
         assert "libcurl/1.0: Already installed!" in c.out
 
-        # Can update
+        # Update doesn't fail, but doesn't update revision time
         c.run("install --requires libcurl/1.0 --update")
-        bins = {"libcurl/1.0": "Cache (Updated date) (ccifork)",
-                "openssl/2.0": "Cache (Updated date) (ccifork)",
-                "zlib/1.2.11": "Cache (Updated date) (ccifork)"}
+        bins = {"libcurl/1.0": "Cache (ccifork)",
+                "openssl/2.0": "Cache (ccifork)",
+                "zlib/1.2.11": "Cache (ccifork)"}
+
         c.assert_listed_require(bins)
         assert "zlib/1.2.11: Already installed!" in c.out
         assert "openssl/2.0: Already installed!" in c.out
@@ -148,4 +149,9 @@ class TestInstall:
         save(os.path.join(c3i_folder, "recipes", "zlib", "all", "conanfile.py"),
              str(GenConanfile()) + "\n")
         c.run("install --requires=libcurl/1.0 --build missing --update")
-        assert "lib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (ccifork)" in c.out
+        # it is not updated
+        assert "zlib/1.2.11#6f5c31bb1219e9393743d1fbf2ee1b52 - Cache (ccifork)" in c.out
+        # We could remove the cached exported to force its re-creation
+        os.remove(os.path.join(c3i_folder, ".cache", "exported.json"))
+        c.run("install --requires=libcurl/1.0 --build missing --update")
+        assert "zlib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (ccifork)" in c.out
