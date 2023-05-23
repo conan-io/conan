@@ -12,8 +12,8 @@ from conans.util.sha import check_with_algorithm_sum
 
 class FileDownloader:
 
-    def __init__(self, requester):
-        self._output = ConanOutput()
+    def __init__(self, requester, scope=None):
+        self._output = ConanOutput(scope=scope)
         self._requester = requester
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
@@ -102,9 +102,11 @@ class FileDownloader:
 
         try:
             total_length = get_total_length()
-            if total_length > 100000:
+            if total_length > 1000000:  # 10 Mb
+                from conan.tools.files.files import _human_size
+                hs = _human_size(total_length)
                 action = "Downloading" if range_start == 0 else "Continuing download of"
-                description = f"${action} {os.path.basename(file_path)} from {url}"
+                description = f"{action} {hs} {os.path.basename(file_path)}"
                 self._output.info(description)
 
             chunk_size = 1024 * 100

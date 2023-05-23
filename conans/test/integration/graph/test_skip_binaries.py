@@ -82,7 +82,7 @@ def test_test_requires():
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     # Checking list of skipped binaries
     client.run("create . --name=app --version=1.0")
-    assert re.search(r"Skipped binaries(\s*)\['gtest/1.0'\]", client.out)
+    assert re.search(r"Skipped binaries(\s*)gtest/1.0", client.out)
     # Showing the complete information about the skipped binary
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
