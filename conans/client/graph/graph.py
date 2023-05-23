@@ -386,5 +386,5 @@ class DepsGraph(object):
         result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
         result["overrides"] = self.overrides().serialize()
-        result["resolved-ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
+        result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
         return result
