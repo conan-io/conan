@@ -123,4 +123,4 @@ def print_graph_packages(graph):
 
     if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
         output.info("Skipped binaries", Color.BRIGHT_YELLOW)
-        output.info(f"{tab}{skipped_requires}", Color.BRIGHT_CYAN)
+        output.info(f"{tab}{', '.join(skipped_requires)}", Color.BRIGHT_CYAN)

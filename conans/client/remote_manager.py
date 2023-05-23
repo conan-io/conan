@@ -6,6 +6,7 @@ from requests.exceptions import ConnectionError
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
+from conan.tools.files.files import _human_size
 from conans.client.cache.remote_registry import Remote
 from conans.client.remote_manager_git import GitRemoteManager
 from conans.client.pkg_sign import PkgSignaturesPlugin
@@ -80,7 +81,7 @@ class RemoteManager:
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
 
         if tgz_file:
-            uncompress_file(tgz_file, export_folder)
+            uncompress_file(tgz_file, export_folder, scope=str(ref))
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -103,7 +104,7 @@ class RemoteManager:
             return
 
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        uncompress_file(tgz_file, export_sources_folder)
+        uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
     def get_package(self, conanfile, pref, remote):
         conanfile.output.info("Retrieving package %s from remote '%s' " % (pref.package_id,
@@ -132,7 +133,7 @@ class RemoteManager:
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
-            uncompress_file(tgz_file, package_folder)
+            uncompress_file(tgz_file, package_folder, scope=str(pref.ref))
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -228,9 +229,13 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(src_path, dest_folder):
+def uncompress_file(src_path, dest_folder, scope=None):
     try:
-        ConanOutput().info("Decompressing %s" % os.path.basename(src_path))
+        filesize = os.path.getsize(src_path)
+        big_file = filesize > 1000000  # 10 Mb
+        if big_file:
+            hs = _human_size(filesize)
+            ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
         with open(src_path, mode='rb') as file_handler:
             tar_extract(file_handler, dest_folder)
     except Exception as e:

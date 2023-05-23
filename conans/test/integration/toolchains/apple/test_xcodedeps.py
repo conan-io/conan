@@ -475,6 +475,6 @@ def test_skipped_not_included():
     client.run("create dep --name=dep --version=0.1")
     client.run("create pkg --name=pkg --version=0.1")
     client.run("install consumer -g XcodeDeps -s arch=x86_64 -s build_type=Release")
-    assert re.search(r"Skipped binaries\n\s+(\[.*?\])", client.out, re.DOTALL)
+    assert re.search(r"Skipped binaries\n\s+(.*?)", client.out, re.DOTALL)
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
     assert "conan_dep.xcconfig" not in dep_xconfig
