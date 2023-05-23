@@ -229,8 +229,8 @@ class Node(object):
         result.update(self.conanfile.serialize())
         result["context"] = self.context
         result["test"] = self.test
-        result["requires"] = {d.node.id: d.require.serialize()
-                              for d in self.transitive_deps.values() if d.node is not None}
+        result["dependencies"] = {d.node.id: d.require.serialize()
+                                  for d in self.transitive_deps.values() if d.node is not None}
         return result
 
     def overrides(self):
