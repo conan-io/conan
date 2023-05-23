@@ -218,30 +218,19 @@ class TestCustomCommands:
         client.run("install")
         assert "Hello world" in client.out
 
-    def test_custom_command_import_from_other_commands(self):
+    def test_custom_command_local_import(self):
         mycode = textwrap.dedent("""
-            from conan.cli.command import conan_command
             from conan.api.output import cli_out_write
 
 
             def write_output(folder):
                 cli_out_write(f"Conan cache folder from cmd_mycode: {folder}")
-
-
-            @conan_command(group="custom commands")
-            def mycode(conan_api, parser, *args, **kwargs):
-                \"""
-                this is my code custom command, it will print mycode folder
-                \"""
-                folder = "mycode folder"
-                write_folder(folder)
-
         """)
         mycommand = textwrap.dedent("""
             import os
 
             from conan.cli.command import conan_command
-            from cmd_mycode import write_output
+            from mycode import write_output
 
 
             @conan_command(group="custom commands")
@@ -257,7 +246,7 @@ class TestCustomCommands:
         mycommand_file_path = os.path.join(client.cache_folder, 'extensions',
                                            'commands', 'cmd_mycommand.py')
         mycode_file_path = os.path.join(client.cache_folder, 'extensions',
-                                        'commands', 'cmd_mycode.py')
+                                        'commands', 'mycode.py')
         client.save({
             mycode_file_path: mycode,
             mycommand_file_path: mycommand
