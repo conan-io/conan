@@ -125,14 +125,16 @@ def test_overrides_diamond(override, force):
     assert "pkga/0.2" not in requires
     assert "pkga/0.1" not in requires
     c.run("graph info pkgd --lockfile=pkgd/conan.lock --format=json")
-    assert "pkga/0.3" in c.stdout
-    assert "pkga/0.2" not in c.stdout
-    assert "pkga/0.1" not in c.stdout
+    dependencies = json.loads(c.stdout)["nodes"]["0"]["dependencies"]
+    assert "pkga/0.3" in str(dependencies)
+    assert "pkga/0.2" not in str(dependencies)
+    assert "pkga/0.1" not in str(dependencies)
     # apply the lockfile to pkgb, should it lock to pkga/0.3
     c.run("graph info pkgb --lockfile=pkgd/conan.lock --format=json")
-    assert "pkga/0.3" in c.stdout
-    assert "pkga/0.2" not in c.stdout
-    assert "pkga/0.1" not in c.stdout
+    dependencies = json.loads(c.stdout)["nodes"]["0"]["dependencies"]
+    assert "pkga/0.3" in str(dependencies)
+    assert "pkga/0.2" not in str(dependencies)
+    assert "pkga/0.1" not in str(dependencies)
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -164,14 +166,16 @@ def test_overrides_diamond_ranges(override, force):
     assert "pkga/0.2" not in requires
     assert "pkga/0.1" not in requires
     c.run("graph info pkgd --lockfile=pkgd/conan.lock --format=json")
-    assert "pkga/0.3" in c.stdout
-    assert "pkga/0.2" not in c.stdout
-    assert "pkga/0.1" not in c.stdout
+    dependencies = json.loads(c.stdout)["nodes"]["0"]["dependencies"]
+    assert "pkga/0.3" in str(dependencies)
+    assert "pkga/0.2" not in str(dependencies)
+    assert "pkga/0.1" not in str(dependencies)
     # apply the lockfile to pkgb, should it lock to pkga/0.3
     c.run("graph info pkgb --lockfile=pkgd/conan.lock --format=json")
-    assert "pkga/0.3" in c.stdout
-    assert "pkga/0.2" not in c.stdout
-    assert "pkga/0.1" not in c.stdout
+    dependencies = json.loads(c.stdout)["nodes"]["0"]["dependencies"]
+    assert "pkga/0.3" in str(dependencies)
+    assert "pkga/0.2" not in str(dependencies)
+    assert "pkga/0.1" not in str(dependencies)
 
 
 @pytest.mark.parametrize("override1, force1", [(True, False), (False, True)])

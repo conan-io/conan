@@ -216,21 +216,17 @@ class Node(object):
         result["prev"] = self.prev
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
-        result['url'] = self.conanfile.url
-        result['homepage'] = self.conanfile.homepage
-        result['license'] = self.conanfile.license
-        result['author'] = self.conanfile.author
-        result['topics'] = self.conanfile.topics
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
         result["invalid_build"] = self.cant_build
         result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
-        result["context"] = self.context
-        result["test"] = self.test
+        result.pop("requires", None)  # superseded by "dependencies" (graph.transitive_deps)
         result["dependencies"] = {d.node.id: d.require.serialize()
                                   for d in self.transitive_deps.values() if d.node is not None}
+        result["context"] = self.context
+        result["test"] = self.test
         return result
 
     def overrides(self):
