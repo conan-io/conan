@@ -56,6 +56,7 @@ class Cli:
         # layers
         for folder in os.listdir(custom_commands_path):
             layer_folder = os.path.join(custom_commands_path, folder)
+            sys.path.append(layer_folder)
             if not os.path.isdir(layer_folder):
                 continue
             for module in pkgutil.iter_modules([layer_folder]):
