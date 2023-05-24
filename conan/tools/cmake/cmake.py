@@ -104,7 +104,8 @@ class CMake(object):
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
-        arg_list.extend(self._cmake_log_levels_args)
+        if not cli_args or ("--log-level" not in cli_args and "--loglevel" not in cli_args):
+            arg_list.extend(self._cmake_log_levels_args)
 
         if cli_args:
             arg_list.extend(cli_args)
@@ -223,15 +224,8 @@ class CMake(object):
         See https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-build-v
         """
         verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
-                                             choices=("quiet", "error",
-                                                      "warning", "notice",
-                                                      "status", "normal",
-                                                      "verbose", "debug",
-                                                      "v", "trace", "vv"))
-        args = []
-        if verbosity and verbosity in ("verbose", "debug", "v", "trace", "vv"):
-            args.append("--verbose")
-        return args
+                                             choices=("quiet", "verbose"))
+        return ["--verbose"] if verbosity == "verbose" else []
 
     @property
     def _cmake_log_levels_args(self):
@@ -240,20 +234,5 @@ class CMake(object):
         See https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-log-level
         :return:
         """
-        args = []
-        log_level = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "error",
-                                                                               "warning", "notice",
-                                                                               "status", "normal",
-                                                                               "verbose", "debug",
-                                                                               "v", "trace", "vv"))
-        if log_level:
-            # Our verbosity maps to CMake's in most except for these 4.
-            # Use --loglevel instead of log-level for backwards compatibility
-            args.append("--loglevel=" + {"quiet": "ERROR",
-                                         "normal": "STATUS",
-                                         "v": "DEBUG",
-                                         "vv": "TRACE"}.get(log_level, log_level).upper())
-            if log_level in ("trace", "vv"):
-                args.append("--trace")
-
-        return args
+        log_level = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        return ["--loglevel=" + log_level.upper()] if log_level is not None else []
