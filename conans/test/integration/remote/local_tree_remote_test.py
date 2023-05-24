@@ -155,3 +155,15 @@ class TestInstall:
         os.remove(os.path.join(c3i_folder, ".cache", "exported.json"))
         c.run("install --requires=libcurl/1.0 --build missing --update")
         assert "zlib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (ccifork)" in c.out
+
+
+class TestRestrictedOperations:
+    def test_upload(self):
+        folder = temp_folder()
+        c3i_folder = os.path.join(folder, "recipes")
+        c = TestClient()
+        c.run("remote add ccifork 'file:///{}'".format(c3i_folder))
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run("upload pkg/0.1 -r=ccifork", assert_error=True)
+        assert "ERROR: Git remote 'ccifork' doesn't support upload" in c.out

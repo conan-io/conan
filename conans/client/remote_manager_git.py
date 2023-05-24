@@ -49,7 +49,7 @@ class GitRemoteManager:
         raise ConanException(f"Git remote '{self._remote.name}' doesn't support authentication")
 
     def check_credentials(self):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support check credentials")
+        raise ConanException(f"Git remote '{self._remote.name}' doesn't support upload")
 
     def search(self, pattern=None, ignorecase=True):
         return self.layout.get_recipes_references(pattern)
@@ -133,7 +133,10 @@ class _ConanCenterIndexLayout:
         return os.path.join(self._base_folder, "recipes", recipe_name)
 
     def _load_config_yml(self, recipe_name):
-        content = load(os.path.join(self._get_base_folder(recipe_name), "config.yml"))
+        config = os.path.join(self._get_base_folder(recipe_name), "config.yml")
+        if not os.path.isfile(config):
+            return None
+        content = load(config)
         return yaml.safe_load(content)
 
     def get_recipes_references(self, pattern):
@@ -144,6 +147,8 @@ class _ConanCenterIndexLayout:
         excluded = set()
         for r in recipes:
             config_yml = self._load_config_yml(r)
+            if config_yml is None:
+                raise ConanException(f"Corrupted repo, folder {r} without 'config.yml'")
             versions = config_yml["versions"]
             for v in versions:
                 # TODO: Check the search pattern is the same as remotes and cache
@@ -164,6 +169,8 @@ class _ConanCenterIndexLayout:
 
     def get_recipe_folder(self, ref):
         data = self._load_config_yml(ref.name)
+        if data is None:
+            raise RecipeNotFoundException(ref)
         versions = data["versions"]
         if str(ref.version) not in versions:
             raise RecipeNotFoundException(ref)
