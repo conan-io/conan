@@ -83,11 +83,11 @@ end
 
 # Helper class that expands cpp_info meta information in lua readable string sequences
 class _PremakeTemplate(object):
-    def __init__(self, dep_cpp_info, pkg_folder):
+    def __init__(self, dep_cpp_info):
         def _format_paths(paths):
             if not paths:
                 return ""
-            return ",\n".join(f'"{pkg_folder}/{p}"'.replace("\\", "/") for p in paths)
+            return ",\n".join(f'"{p}"'.replace("\\", "/") for p in paths)
 
         def _format_flags(flags):
             if not flags:
@@ -106,7 +106,7 @@ class _PremakeTemplate(object):
         self.exelinkflags = _format_flags(dep_cpp_info.exelinkflags)
         self.frameworks = ", ".join('"%s.framework"' % p.replace('"', '\\"') for p in
                                     dep_cpp_info.frameworks) if dep_cpp_info.frameworks else ""
-        self.sysroot = f"{pkg_folder}/{dep_cpp_info.sysroot}".replace("\\", "/") \
+        self.sysroot = f"{dep_cpp_info.sysroot}".replace("\\", "/") \
             if dep_cpp_info.sysroot else ""
 
 
@@ -211,7 +211,7 @@ class PremakeDeps(object):
             var_filename = PREMAKE_VAR_FILE.format(pkgname=dep_name, config=conf_suffix)
             self._output_lua_file(var_filename, [
                 PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name,
-                    config=conf_name, deps=_PremakeTemplate(dep_aggregate, dep.package_folder))
+                    config=conf_name, deps=_PremakeTemplate(dep_aggregate))
             ])
 
             # Create list of all available profiles by searching on disk

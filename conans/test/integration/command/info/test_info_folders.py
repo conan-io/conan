@@ -48,11 +48,11 @@ def test_basic():
     client.run(f"export . --user=user --channel=testing")
     client.run(f"graph info --requires=package/0.1.0@user/testing --format=json")
     nodes = json.loads(client.stdout)["nodes"]
-    assert client.cache_folder in nodes[1]["recipe_folder"]
-    assert os.path.basename(nodes[1]["recipe_folder"]).strip() == EXPORT_FOLDER
-    assert nodes[1]["source_folder"] is None
-    assert nodes[1]["build_folder"] is None
-    assert nodes[1]["package_folder"] is None
+    assert client.cache_folder in nodes["1"]["recipe_folder"]
+    assert os.path.basename(nodes["1"]["recipe_folder"]).strip() == EXPORT_FOLDER
+    assert nodes["1"]["source_folder"] is None
+    assert nodes["1"]["build_folder"] is None
+    assert nodes["1"]["package_folder"] is None
 
 
 def test_build_id():
@@ -86,7 +86,7 @@ def test_deps_basic(client_deps):
         found_ref = False
         assert len(nodes["nodes"]) == 3
 
-        for node in nodes["nodes"]:
+        for _, node in nodes["nodes"].items():
             if node["ref"] == "conanfile":
                 assert node["source_folder"] is None
             else:
@@ -103,22 +103,22 @@ def test_deps_specific_information(client_deps):
     client_deps.run("graph info . --package-filter package/* --format=json")
     nodes = json.loads(client_deps.stdout)["nodes"]
     assert len(nodes) == 1
-    assert "package/0.1.0@user/testing" in nodes[0]["ref"]
-    assert nodes[0]["source_folder"] is None
-    assert nodes[0]["build_folder"] is None
-    assert nodes[0]["package_folder"] is None
+    assert "package/0.1.0@user/testing" in nodes["2"]["ref"]
+    assert nodes["2"]["source_folder"] is None
+    assert nodes["2"]["build_folder"] is None
+    assert nodes["2"]["package_folder"] is None
 
     client_deps.run("graph info . --package-filter package* --format=json")
     nodes = json.loads(client_deps.stdout)["nodes"]
     assert len(nodes) == 2
-    assert "package2/0.2.0@user/testing" in nodes[0]["ref"]
-    assert nodes[0]["source_folder"] is None
-    assert nodes[0]["build_folder"] is None
-    assert nodes[0]["package_folder"] is None
-    assert "package/0.1.0@user/testing" in nodes[1]["ref"]
-    assert nodes[1]["source_folder"] is None
-    assert nodes[1]["build_folder"] is None
-    assert nodes[1]["package_folder"] is None
+    assert "package2/0.2.0@user/testing" in nodes["1"]["ref"]
+    assert nodes["1"]["source_folder"] is None
+    assert nodes["1"]["build_folder"] is None
+    assert nodes["1"]["package_folder"] is None
+    assert "package/0.1.0@user/testing" in nodes["2"]["ref"]
+    assert nodes["2"]["source_folder"] is None
+    assert nodes["2"]["build_folder"] is None
+    assert nodes["2"]["package_folder"] is None
 
 
 def test_single_field():
@@ -128,10 +128,10 @@ def test_single_field():
     client.run(f"graph info --requires package/0.1.0@user/testing --format=json")
     nodes = json.loads(client.stdout)["nodes"]
     assert len(nodes) == 2
-    assert "package/0.1.0@user/testing" in nodes[1]["ref"]
-    assert nodes[1]["source_folder"] is None
-    assert nodes[1]["build_folder"] is None
-    assert nodes[1]["package_folder"] is None
+    assert "package/0.1.0@user/testing" in nodes["1"]["ref"]
+    assert nodes["1"]["source_folder"] is None
+    assert nodes["1"]["build_folder"] is None
+    assert nodes["1"]["package_folder"] is None
 
 
 def test_direct_conanfile():

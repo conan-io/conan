@@ -222,9 +222,11 @@ class Node(object):
         result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
+        result.pop("requires", None)  # superseded by "dependencies" (graph.transitive_deps)
+        result["dependencies"] = {d.node.id: d.require.serialize()
+                                  for d in self.transitive_deps.values() if d.node is not None}
         result["context"] = self.context
         result["test"] = self.test
-        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
 
     def overrides(self):
@@ -381,6 +383,8 @@ class DepsGraph(object):
         for i, n in enumerate(self.nodes):
             n.id = i
         result = OrderedDict()
-        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        result["overrides"] = self.overrides().serialize()
+        result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
         return result
