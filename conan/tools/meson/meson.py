@@ -104,25 +104,13 @@ class Meson(object):
         # verbosity of build tools. This passes -v to ninja, for example.
         # See https://github.com/mesonbuild/meson/blob/master/mesonbuild/mcompile.py#L156
         verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
-                                             choices=("quiet", "error",
-                                                      "warning", "notice",
-                                                      "status", "normal",
-                                                      "verbose", "debug",
-                                                      "v", "trace", "vv"))
-        if verbosity in ("verbose", "debug", "v", "trace", "vv"):
-            return "--verbose"
-        return ""
+                                             choices=("quiet", "verbose"))
+        return "--verbose" if verbosity == "verbose" else ""
 
     @property
     def _install_verbosity(self):
         # https://github.com/mesonbuild/meson/blob/master/mesonbuild/minstall.py#L81
         # Errors are always logged, and status about installed files is controlled by this flag,
         # so it's a bit backwards
-        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "error",
-                                                                               "warning", "notice",
-                                                                               "status", "normal",
-                                                                               "verbose", "debug",
-                                                                               "v", "trace", "vv"))
-        if verbosity == "quiet":
-            return "--quiet"
-        return ""
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        return "--quiet" if verbosity else ""

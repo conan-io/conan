@@ -162,7 +162,12 @@ class MesonToolchainTest(TestMesonBase):
                      "conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
                      "src/file1.txt": "", "src/file2.txt": ""})
-        self.t.run("create .")
+        self.t.run("create . -c tools.build:verbosity=quiet -c tools.compilation:verbosity=verbose")
+        # Check verbosity control
+        assert "unrecognized arguments" not in self.t.out
+        assert re.search("meson compile .*? --verbose", self.t.out)
+        assert re.search("meson install .*? --quiet", self.t.out)
+
         # Check if all the files are in the final directories
         ref = RecipeReference.loads("hello/1.0")
         pref = self.t.get_latest_package_reference(ref)
