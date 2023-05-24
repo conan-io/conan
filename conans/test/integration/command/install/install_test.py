@@ -429,7 +429,7 @@ def test_install_json_formatter():
     hello_pkg_ref = 'hello/0.1'  # no revision available
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for n in nodes:
+    for _, n in nodes.items():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] is None
@@ -438,7 +438,7 @@ def test_install_json_formatter():
             assert n['binary'] == "Cache"
             pkg_cpp_info = n['cpp_info']
 
-    hello = nodes[0]
+    hello = nodes["0"]
     assert hello["ref"] == hello_pkg_ref
     assert hello["recipe_folder"] == client.current_folder
     assert hello["build_folder"] == client.current_folder
