@@ -2,24 +2,16 @@ from conans.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    verbosity = conanfile.conf.get("tools.build:verbosity", choices=("quiet", "error",
-                                                                     "warning", "notice",
-                                                                     "status", "normal",
-                                                                     "verbose", "debug",
-                                                                     "v", "trace", "vv"))
+    """
+    Controls msbuild verbosity.
+    See https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-command-line-reference
+    :return:
+    """
+    verbosity = conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
     if verbosity is not None:
         verbosity = {
             "quiet": "Quiet",
-            "error": "Minimal",
-            "warning": "Minimal",
-            "notice": "Minimal",
-            "status": "Normal",
-            "verbose": "Normal",
-            "normal": "Normal",
-            "debug": "Detailed",
-            "v": "Detailed",
-            "trace": "Diagnostic",
-            "vv": "Diagnostic"
+            "verbose": "Detailed",
         }.get(verbosity)
         return f'/verbosity:{verbosity}'
     return ""
