@@ -557,7 +557,10 @@ class CMakeInstallTest(unittest.TestCase):
                      "header.h": "# my header file"})
 
         # The create flow must work
-        client.run("create . --name=pkg --version=0.1")
+        client.run("create . --name=pkg --version=0.1 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+        assert "--loglevel=VERBOSE" in client.out
+        assert "unrecognized option" not in client.out
+        assert "--verbose" in client.out
         self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
         ref = RecipeReference.loads("pkg/0.1")
         pref = client.get_latest_package_reference(ref)
@@ -731,12 +734,3 @@ class TestCMakeFindPackagePreferConfig:
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
 
-
-@pytest.mark.tool("cmake")
-def test_cmake_verbosity():
-    tc = TestClient()
-    tc.run("new cmake_exe -d name=pkg -d version=1.0")
-    tc.run("create . -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
-    assert "--loglevel=VERBOSE" in tc.out
-    assert "unrecognized option" not in tc.out
-    assert "--verbose" in tc.out
