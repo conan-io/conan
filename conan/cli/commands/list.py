@@ -107,6 +107,7 @@ def list(conan_api: ConanAPI, parser, *args):
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
     parser.add_argument("-g", "--graph", help="Graph json file")
+    parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
 
     args = parser.parse_args(*args)
 
@@ -118,7 +119,7 @@ def list(conan_api: ConanAPI, parser, *args):
     if args.graph:
         graphfile = make_abs_path(args.graph)
         graph = json.loads(load(graphfile))
-        pkglist = MultiPackagesList.from_graph(graph)
+        pkglist = MultiPackagesList.from_graph(graph, args.graph_binaries)
         return {
             "results": pkglist.serialize(),
             "conan_api": conan_api,

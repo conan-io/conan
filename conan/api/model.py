@@ -1,7 +1,6 @@
 import fnmatch
 import json
 
-from conans.client.graph.graph import BINARY_BUILD
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -70,21 +69,20 @@ class MultiPackagesList:
         return result
 
     @staticmethod
-    def from_graph(graph):
+    def from_graph(graph, graph_binaries=None):
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
+        graph_binaries = ["*"] if graph_binaries is None else graph_binaries
         pkglist.lists["Local Cache"] = cache_list
-        for id_, node in graph["graph"]["nodes"].items():
+        for node in graph["graph"]["nodes"].values():
             ref = node["ref"]
             if ref == "conanfile":
                 continue
             ref = RecipeReference.loads(ref)
-            ref.timestamp = "1"  # FIXME
             binary = node["binary"]
-            if binary == BINARY_BUILD:
+            if any(fnmatch.fnmatch(binary, b) for b in graph_binaries):
                 cache_list.add_refs([ref])
                 pref = PkgReference(ref, node["package_id"], node["prev"])
-                pref.timestamp = "1"  # FIXME
                 cache_list.add_prefs(ref, [pref])
         return pkglist
 
@@ -130,7 +128,9 @@ class PackagesList:
         for ref, ref_dict in self.recipes.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
                 t = rrev_dict.get("timestamp")
-                recipe = RecipeReference.loads(f"{ref}#{rrev}%{t}")  # TODO: optimize this
+                recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
+                if t is not None:
+                    recipe.timestamp = t
                 result[recipe] = rrev_dict
         return result.items()
 
