@@ -111,7 +111,7 @@ def format_graph_html(result):
         error = {
             "label": graph.error.require.ref,
             "type": "conflict",
-            "from": graph.error.node.ref or graph.error.base_previous.ref,
+            "from": graph.error.node.id or graph.error.base_previous.id,
             "prev_require": graph.error.prev_require.ref
         }
     cli_out_write(_render_graph(graph, error, template, template_folder))

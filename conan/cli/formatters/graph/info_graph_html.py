@@ -88,13 +88,7 @@ graph_info_html = """
                 })
 
                 {% if error["from"] is not none %}
-                    var i = nodes.findIndex(e => e["label"] === "{{ error["from"] }}")
-                    if (i !== -1) {
-                        var conflictOriginId = nodes[i]["id"];
-                        edges.push({from: conflictOriginId, to: "{{ error["type"] }}", color: "red", dashes: true, title: "Conflict"})
-                    }
-
-
+                    edges.push({from: {{ error["from"] }}, to: "{{ error["type"] }}", color: "red", dashes: true, title: "Conflict"})
                 {% endif %}
             {% endif %}
 
