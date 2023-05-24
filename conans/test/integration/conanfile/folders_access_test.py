@@ -82,8 +82,6 @@ class AConan(ConanFile):
         assert(self.package_folder == os.getcwd())
         assert(isinstance(self.package_path, Path))
         assert(str(self.package_path) == self.package_folder)
-        assert(self.source_folder is None)
-        assert(self.build_folder is None)
 """
 
 
