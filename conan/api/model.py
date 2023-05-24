@@ -52,7 +52,8 @@ class MultiPackagesList:
         self.lists[remote_name] = {"error": error}
 
     def serialize(self):
-        return {k: v.serialize() for k, v in self.lists.items()}
+        return {k: v.serialize() if isinstance(v, PackagesList) else v
+                for k, v in self.lists.items()}
 
     @staticmethod
     def load(file):

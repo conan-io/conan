@@ -147,8 +147,12 @@ def list(conan_api: ConanAPI, parser, *args):
     # If neither remote nor cache are defined, show results only from cache
     pkglist = MultiPackagesList()
     if args.cache or not args.remote:
-        cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
-        pkglist.add("Local Cache", cache_list)
+        try:
+            cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
+        except Exception as e:
+            pkglist.add_error("Local Cache", str(e))
+        else:
+            pkglist.add("Local Cache", cache_list)
     if args.remote:
         remotes = conan_api.remotes.list(args.remote)
         for remote in remotes:
