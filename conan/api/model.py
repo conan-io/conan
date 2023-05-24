@@ -1,6 +1,7 @@
 import fnmatch
 import json
 
+from conans.client.graph.graph import BINARY_BUILD
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -67,6 +68,25 @@ class MultiPackagesList:
         pkglist = MultiPackagesList()
         pkglist.lists = result
         return result
+
+    @staticmethod
+    def from_graph(graph):
+        pkglist = MultiPackagesList()
+        cache_list = PackagesList()
+        pkglist.lists["Local Cache"] = cache_list
+        for id_, node in graph["graph"]["nodes"].items():
+            ref = node["ref"]
+            if ref == "conanfile":
+                continue
+            ref = RecipeReference.loads(ref)
+            ref.timestamp = "1"  # FIXME
+            binary = node["binary"]
+            if binary == BINARY_BUILD:
+                cache_list.add_refs([ref])
+                pref = PkgReference(ref, node["package_id"], node["prev"])
+                pref.timestamp = "1"  # FIXME
+                cache_list.add_prefs(ref, [pref])
+        return pkglist
 
 
 class PackagesList:
