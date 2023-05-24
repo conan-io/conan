@@ -14,6 +14,8 @@ from conans.client.installer import build_id
 from conans.util.files import load
 
 
+# FIXME: Check all this code when format_graph_[html/dot] use serialized graph
+
 class _PrinterGraphItem(object):
     def __init__(self, _id, node, is_build_time_node):
         self.id = _id
@@ -39,19 +41,13 @@ class _PrinterGraphItem(object):
         return self._is_build_time_node
 
     def data(self):
-
-        def ensure_iterable(value):
-            if isinstance(value, (list, tuple)):
-                return value
-            return value,
-
         return {
             'build_id': build_id(self._conanfile),
             'url': self._conanfile.url,
             'homepage': self._conanfile.homepage,
             'license': self._conanfile.license,
             'author': self._conanfile.author,
-            'topics': ensure_iterable(self._conanfile.topics) if self._conanfile.topics else None
+            'topics': self._conanfile.topics
         }
 
 
