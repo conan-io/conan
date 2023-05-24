@@ -10,6 +10,7 @@ from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
 from conan.cli.formatters.graph.info_graph_html import graph_info_html
 from conans.client.graph.graph import BINARY_CACHE, \
     BINARY_DOWNLOAD, BINARY_BUILD, BINARY_MISSING, BINARY_UPDATE
+from conans.client.graph.graph_error import GraphConflictError
 from conans.client.installer import build_id
 from conans.util.files import load
 
@@ -86,11 +87,12 @@ class _Grapher(object):
         return color
 
 
-def _render_graph(graph, template, template_folder):
+def _render_graph(graph, error, template, template_folder):
     graph = _Grapher(graph)
     from conans import __version__ as client_version
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
-    return template.render(graph=graph, base_template_path=template_folder, version=client_version)
+    return template.render(graph=graph, error=error, base_template_path=template_folder,
+                           version=client_version)
 
 
 def format_graph_html(result):
@@ -104,7 +106,15 @@ def format_graph_html(result):
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
-    cli_out_write(_render_graph(graph, template, template_folder))
+    error = None
+    if isinstance(graph.error, GraphConflictError):
+        error = {
+            "label": graph.error.require.ref,
+            "type": "conflict",
+            "from": graph.error.node.ref or graph.error.base_previous.ref,
+            "prev_require": graph.error.prev_require.ref
+        }
+    cli_out_write(_render_graph(graph, error, template, template_folder))
     if graph.error:
         raise graph.error
 
@@ -120,7 +130,7 @@ def format_graph_dot(result):
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
-    cli_out_write(_render_graph(graph, template, template_folder))
+    cli_out_write(_render_graph(graph, None, template, template_folder))
     if graph.error:
         raise graph.error
 

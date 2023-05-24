@@ -45,7 +45,7 @@ graph_info_html = """
         <div style="clear:both"></div>
 
         <script type="text/javascript">
-            var nodes = new vis.DataSet([
+            var nodes = [
                 {%- for node in graph.nodes %}
                     {
                         id: {{ node.id }},
@@ -69,12 +69,37 @@ graph_info_html = """
                                    '</ul>'
                     }{%- if not loop.last %},{% endif %}
                 {%- endfor %}
-            ]);
-            var edges = new vis.DataSet([
+            ]
+            var edges = [
                 {%- for src, dst in graph.edges %}
                     { from: {{ src.id }}, to: {{ dst.id }} }{%- if not loop.last %},{% endif %}
                 {%- endfor %}
-            ]);
+            ]
+
+            {% if error is not none and error["type"] == "conflict" %}
+                nodes.push({
+                    id: "{{ error["type"] }}",
+                    label: "{{ error["label"] }}",
+                    shape: "circle",
+                    font: { color: "white" },
+                    color: "red",
+                    fulllabel: '<h3>{{ error["label"] }}</h3><p>This node creates a conflict in the dependency graph with {{ error["prev_require"] }}</p>',
+                    shapeProperties: { borderDashes: [5, 5] }
+                })
+
+                {% if error["from"] is not none %}
+                    var i = nodes.findIndex(e => e["label"] === "{{ error["from"] }}")
+                    if (i !== -1) {
+                        var conflictOriginId = nodes[i]["id"];
+                        edges.push({from: conflictOriginId, to: "{{ error["type"] }}", color: "red", dashes: true, title: "Conflict"})
+                    }
+
+
+                {% endif %}
+            {% endif %}
+
+            var nodes = new vis.DataSet(nodes);
+            var edges = new vis.DataSet(edges);
 
             var container = document.getElementById('mynetwork');
             var controls = document.getElementById('controls');
