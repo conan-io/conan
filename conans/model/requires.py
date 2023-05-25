@@ -355,13 +355,15 @@ class Requirement:
         if self.package_id_mode:
             return
 
+        if self.test:
+            return  # test_requires never affect the binary_id
         dep_conanfile = dep_node.conanfile
         dep_pkg_type = dep_conanfile.package_type
         if self.build:
             build_mode = getattr(dep_conanfile, "build_mode", build_mode)
             if build_mode and self.direct:
                 self.package_id_mode = build_mode
-            return  # At the moment no defaults
+            return
 
         if pkg_type is PackageType.HEADER:
             self.package_id_mode = "unrelated_mode"
