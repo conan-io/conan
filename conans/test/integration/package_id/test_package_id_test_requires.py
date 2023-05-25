@@ -33,9 +33,7 @@ def test_package_id_not_affected_test_requires_transitive():
     c.run("create zlib")
     c.run("create gtest")
     c.run("create engine")
-    print(c.out)
     c.run("list engine:*")
-    print(c.out)
     assert "engine/1.0" in c.out
     assert "gtest" not in c.out
     assert "zlib" not in c.out
