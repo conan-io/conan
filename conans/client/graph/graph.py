@@ -210,7 +210,7 @@ class Node(object):
     def serialize(self):
         result = OrderedDict()
         result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
-        result["id"] = str(getattr(self, "id"))  # Must be assigned by graph.serialize()
+        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
@@ -381,7 +381,7 @@ class DepsGraph(object):
 
     def serialize(self):
         for i, n in enumerate(self.nodes):
-            n.id = i
+            n.id = str(i)
         result = OrderedDict()
         result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
