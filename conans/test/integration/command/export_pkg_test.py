@@ -297,7 +297,7 @@ class TestConan(ConanFile):
         # Wrong folders
         client.run("export-pkg . --format=json", redirect_stdout="file.json")
         graph = json.loads(client.load("file.json"))
-        assert "pkg/0.1" in graph["graph"]["nodes"]["0"]["ref"]
+        assert "pkg/0.1" in graph["nodes"]["0"]["ref"]
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
@@ -399,7 +399,7 @@ def test_export_pkg_json_formatter():
                 .with_require("pkg/0.2")}, clean_first=True)
     client.run("export-pkg . -f json")
     info = json.loads(client.stdout)
-    nodes = info["graph"]["nodes"]
+    nodes = info["nodes"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None

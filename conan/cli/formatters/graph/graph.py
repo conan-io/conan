@@ -127,10 +127,10 @@ def format_graph_dot(result):
 
 def format_graph_json(result):
     graph = result["graph"]
-    field_filter = result["field_filter"]
-    package_filter = result["package_filter"]
+    field_filter = result.get("field_filter")
+    package_filter = result.get("package_filter")
     serial = graph.serialize()
-    serial = filter_graph(serial, package_filter, field_filter)
+    serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
     json_result = json.dumps(serial, indent=4)
     cli_out_write(json_result)
     if graph.error:

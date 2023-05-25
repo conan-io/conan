@@ -178,7 +178,7 @@ def test_collect_system_requirements():
                    redirect_stdout="graph.json")
     graph = json.loads(client.load("graph.json"))
     assert {"apt-get": {"install": ["pkg1", "pkg2"], "missing": []}} == \
-           graph["graph"]["nodes"]["0"]["system_requires"]
+           graph["nodes"]["0"]["system_requires"]
 
     # plain report, do not check
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "
