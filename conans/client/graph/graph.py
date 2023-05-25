@@ -210,7 +210,7 @@ class Node(object):
     def serialize(self):
         result = OrderedDict()
         result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
-        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
+        result["id"] = str(getattr(self, "id"))  # Must be assigned by graph.serialize()
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
