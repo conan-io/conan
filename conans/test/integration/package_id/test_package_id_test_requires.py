@@ -19,3 +19,23 @@ def test_package_id_not_affected_test_requires(build_mode):
     c.run("list engine:*")
     assert "engine/1.0" in c.out
     assert "gtest" not in c.out
+
+
+def test_package_id_not_affected_test_requires_transitive():
+    """
+    By default, transitive deps of test_requires do not affect the package_id
+    """
+    c = TestClient()
+
+    c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+            "gtest/conanfile.py": GenConanfile("gtest", "1.0").with_requires("zlib/1.0"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_test_requires("gtest/1.0")})
+    c.run("create zlib")
+    c.run("create gtest")
+    c.run("create engine")
+    print(c.out)
+    c.run("list engine:*")
+    print(c.out)
+    assert "engine/1.0" in c.out
+    assert "gtest" not in c.out
+    assert "zlib" not in c.out
