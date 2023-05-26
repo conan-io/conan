@@ -69,7 +69,8 @@ class MultiPackagesList:
         return result
 
     @staticmethod
-    def from_graph(graph, graph_recipes=None, graph_binaries=None):
+    def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
+        graph = json.loads(load(graphfile))
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:

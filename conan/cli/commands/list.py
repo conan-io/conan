@@ -8,7 +8,6 @@ from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
 from conans.errors import ConanException
 from conans.util.dates import timestamp_to_str
-from conans.util.files import load
 
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
@@ -121,8 +120,7 @@ def list(conan_api: ConanAPI, parser, *args):
 
     if args.graph:
         graphfile = make_abs_path(args.graph)
-        graph = json.loads(load(graphfile))
-        pkglist = MultiPackagesList.from_graph(graph, args.graph_recipes, args.graph_binaries)
+        pkglist = MultiPackagesList.load_graph(graphfile, args.graph_recipes, args.graph_binaries)
     else:
         ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
         # If neither remote nor cache are defined, show results only from cache
