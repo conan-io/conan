@@ -436,7 +436,7 @@ def test_create_format_json():
     pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
     consumer_info = hello_pkg_info = pkg_pkg_info = None
 
-    for _, n in nodes.items():
+    for n in nodes.values():
         ref = n["ref"]
         if ref == consumer_ref:
             consumer_info = n
@@ -586,7 +586,7 @@ def test_create_format_json_and_deps_cpp_info():
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for _, n in nodes.items():
+    for n in nodes.values():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] == "Build"
