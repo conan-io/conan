@@ -32,12 +32,12 @@ def test_install(client):
     client.run("install --requires=dep/0.1 -c tools.build:download_source=True --format=json")
     assert "RUNNING SOURCE" in client.out
     graph = json.loads(client.stdout)
-    zlib = graph["nodes"]["1"]
+    zlib = graph["graph"]["nodes"]["1"]
     assert os.path.exists(zlib["source_folder"])
     client.run("install --requires=dep/0.1 -c tools.build:download_source=True --format=json")
     assert "RUNNING SOURCE" not in client.out
     graph = json.loads(client.stdout)
-    zlib = graph["nodes"]["1"]
+    zlib = graph["graph"]["nodes"]["1"]
     assert os.path.exists(zlib["source_folder"])
 
 

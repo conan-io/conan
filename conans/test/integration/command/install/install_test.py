@@ -425,7 +425,7 @@ def test_install_json_formatter():
                 .with_require("pkg/0.2")}, clean_first=True)
     client.run("install . -f json")
     info = json.loads(client.stdout)
-    nodes = info["nodes"]
+    nodes = info["graph"]["nodes"]
     hello_pkg_ref = 'hello/0.1'  # no revision available
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None

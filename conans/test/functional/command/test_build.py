@@ -64,8 +64,8 @@ def test_build_dots_names():
     client.save({"conanfile.py": conanfile_scope_env}, clean_first=True)
     client.run("build conanfile.py --build=missing")
 
-    assert hellopkg_result["nodes"]["1"]["package_folder"] in client.out
-    assert hellotools_result["nodes"]["1"]["package_folder"] in client.out
+    assert hellopkg_result["graph"]["nodes"]["1"]["package_folder"] in client.out
+    assert hellotools_result["graph"]["nodes"]["1"]["package_folder"] in client.out
 
 
 def test_build_with_deps_env_info():

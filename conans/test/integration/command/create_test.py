@@ -307,7 +307,7 @@ class MyPkg(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --format=json")
         data = json.loads(self.client.stdout)
-        cpp_info_data = data["nodes"]["1"]["cpp_info"]
+        cpp_info_data = data["graph"]["nodes"]["1"]["cpp_info"]
         self.assertIn("libpkg1", cpp_info_data["pkg1"]["libs"])
         self.assertListEqual([], cpp_info_data["pkg1"]["requires"])
         self.assertIn("libpkg2", cpp_info_data["pkg2"]["libs"])
@@ -362,21 +362,22 @@ def test_create_format_json():
     The result should be something like:
 
     {
-        'nodes': [
-            {'ref': '',  # consumer
-             'recipe': 'Virtual',
-             ....
-            },
-            {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
-             'dependencies': {'1': {'ref': 'hello/0.1', 'visible': 'True', ...}},
-             ....
-            },
-            {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
-             ....
-            }
-        ],
-        'root': {'0': 'None'}
-    }
+        'graph': {
+            'nodes': [
+                {'ref': '',  # consumer
+                 'recipe': 'Virtual',
+                 ....
+                },
+                {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
+                 'dependencies': {'1': {'ref': 'hello/0.1', 'visible': 'True', ...}},
+                 ....
+                },
+                {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
+                 ....
+                }
+            ],
+            'root': {'0': 'None'}
+        }
     }
     """
     client = TestClient()
@@ -429,13 +430,13 @@ def test_create_format_json():
                  "host": profile_host, "build": profile_build}, clean_first=True)
     client.run("create . -f json -pr:h host -pr:b build")
     info = json.loads(client.stdout)
-    nodes = info['nodes']
+    nodes = info["graph"]['nodes']
     consumer_ref = 'conanfile'
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
     consumer_info = hello_pkg_info = pkg_pkg_info = None
 
-    for _, n in nodes.items():
+    for n in nodes.values():
         ref = n["ref"]
         if ref == consumer_ref:
             consumer_info = n
@@ -581,11 +582,11 @@ def test_create_format_json_and_deps_cpp_info():
                                                .with_require("pkg/0.2")}, clean_first=True)
     client.run("create . -f json")
     info = json.loads(client.stdout)
-    nodes = info["nodes"]
+    nodes = info["graph"]["nodes"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for _, n in nodes.items():
+    for n in nodes.values():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] == "Build"
