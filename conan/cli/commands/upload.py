@@ -16,10 +16,10 @@ def upload(conan_api: ConanAPI, parser, *args):
     binary packages, unless --only-recipe is specified. You can use the "latest" placeholder at the
     "reference" argument to specify the latest revision of the recipe or the package.
     """
-    parser.add_argument('reference', help="Recipe reference or package reference, can contain * as "
-                                          "wildcard at any reference field. If no revision is "
-                                          "specified, it is assumed to be the latest",
-                        nargs="?")
+    parser.add_argument('pattern', nargs="?",
+                        help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="Only upload packages matching a specific query. e.g: os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
@@ -42,20 +42,20 @@ def upload(conan_api: ConanAPI, parser, *args):
     remote = conan_api.remotes.get(args.remote)
     enabled_remotes = conan_api.remotes.list()
 
-    if args.reference is None and args.list is None:
+    if args.pattern is None and args.list is None:
         raise ConanException("Missing pattern or package list file")
-    if args.reference and args.list:
+    if args.pattern and args.list:
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
     else:
-        ref_pattern = ListPattern(args.reference, package_id="*", only_recipe=args.only_recipe)
+        ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     if not package_list.recipes:
-        raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
+        raise ConanException("No recipes found matching pattern '{}'".format(args.pattern))
 
     if args.check:
         conan_api.cache.check_integrity(package_list)
@@ -63,7 +63,7 @@ def upload(conan_api: ConanAPI, parser, *args):
     conan_api.upload.check_upstream(package_list, remote, args.force)
 
     # If only if search with "*" we ask for confirmation
-    if not args.list and not args.confirm and "*" in args.reference:
+    if not args.list and not args.confirm and "*" in args.pattern:
         _ask_confirm_upload(conan_api, package_list)
 
     conan_api.upload.prepare(package_list, enabled_remotes)

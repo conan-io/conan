@@ -17,9 +17,10 @@ def download(conan_api: ConanAPI, parser, *args):
     queries over the package binaries.
     """
 
-    parser.add_argument('reference', help="Recipe reference or package reference, can contain * as "
-                                          "wildcard at any reference field. If revision is not "
-                                          "specified, it is assumed latest one.")
+    parser.add_argument('pattern',
+                        help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "If revision is not specified, it is assumed latest one.")
     parser.add_argument("--only-recipe", action='store_true', default=False,
                         help='Download only the recipe/s, not the binary packages.')
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
@@ -31,7 +32,7 @@ def download(conan_api: ConanAPI, parser, *args):
     args = parser.parse_args(*args)
     remote = conan_api.remotes.get(args.remote)
     parallel = conan_api.config.get("core.download:parallel", default=1, check_type=int)
-    ref_pattern = ListPattern(args.reference, package_id="*", only_recipe=args.only_recipe)
+    ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
     select_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
     refs = []
     prefs = []

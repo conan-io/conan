@@ -96,10 +96,10 @@ def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions, or packages in the cache (by default) or the remotes.
     """
-    parser.add_argument('reference', help="Recipe reference or package reference. "
-                                          "Both can contain * as wildcard at any reference field. "
-                                          "If revision is not specified, it is assumed latest one.",
-                        nargs="?")
+    parser.add_argument('pattern', nargs="?",
+                        help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
@@ -112,9 +112,9 @@ def list(conan_api: ConanAPI, parser, *args):
 
     args = parser.parse_args(*args)
 
-    if args.reference is None and args.graph is None:
+    if args.pattern is None and args.graph is None:
         raise ConanException("Missing pattern or graph json file")
-    if args.reference and args.graph:
+    if args.pattern and args.graph:
         raise ConanException("Cannot define both the pattern and the graph json file")
     if (args.graph_recipes or args.graph_binaries) and not args.graph:
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
@@ -124,7 +124,7 @@ def list(conan_api: ConanAPI, parser, *args):
         graph = json.loads(load(graphfile))
         pkglist = MultiPackagesList.from_graph(graph, args.graph_recipes, args.graph_binaries)
     else:
-        ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
+        ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
         if args.cache or not args.remote:

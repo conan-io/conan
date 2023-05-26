@@ -16,8 +16,10 @@ def remove(conan_api: ConanAPI, parser, *args):
       will be removed.
     - If a package reference is specified, it will remove only the package.
     """
-    parser.add_argument('reference', help="Recipe reference or package reference, can contain * as"
-                                          "wildcard at any reference field. e.g: lib/*")
+    parser.add_argument('pattern',
+                        help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Remove without requesting a confirmation')
     parser.add_argument('-p', '--package-query', action=OnceArgument,
@@ -33,7 +35,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     def confirmation(message):
         return args.confirm or ui.request_boolean(message)
 
-    ref_pattern = ListPattern(args.reference, rrev="*", prev="*")
+    ref_pattern = ListPattern(args.pattern, rrev="*", prev="*")
     select_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
 
     if ref_pattern.package_id is None:
