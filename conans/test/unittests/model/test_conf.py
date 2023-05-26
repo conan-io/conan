@@ -53,7 +53,7 @@ def test_conf_update(conf_definition):
     c2.loads(text)
     c.update_conf_definition(c2)
     result = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=newvalue
         user.something:key=value
     """)
