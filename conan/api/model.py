@@ -69,19 +69,30 @@ class MultiPackagesList:
         return result
 
     @staticmethod
-    def from_graph(graph, graph_binaries=None):
+    def from_graph(graph, graph_recipes=None, graph_binaries=None):
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
-        graph_binaries = ["*"] if graph_binaries is None else graph_binaries
+        if graph_recipes is None and graph_binaries is None:
+            recipes = ["*"]
+            binaries = ["*"]
+        else:
+            recipes = [r.lower() for r in graph_recipes or []]
+            binaries = [b.lower() for b in graph_binaries or []]
+
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
             ref = node["ref"]
             if ref == "conanfile":
                 continue
             ref = RecipeReference.loads(ref)
-            binary = node["binary"]
-            if any(fnmatch.fnmatch(binary, b) for b in graph_binaries):
+            recipe = node["recipe"].lower()
+            if any(r == recipe or r == "*" for r in recipes):
                 cache_list.add_refs([ref])
+
+            binary = node["binary"].lower()
+            if any(b == binary or b == "*" for b in binaries):
+                # TODO: Improve add_prefs so it automatically add_ref
+                cache_list.add_refs([ref])  # Binary listed forces recipe listed
                 pref = PkgReference(ref, node["package_id"], node["prev"])
                 cache_list.add_prefs(ref, [pref])
         return pkglist

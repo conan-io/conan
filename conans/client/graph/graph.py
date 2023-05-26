@@ -14,7 +14,6 @@ RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
-RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
 RECIPE_SYSTEM_TOOL = "System tool"
 
 BINARY_CACHE = "Cache"

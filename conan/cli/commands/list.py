@@ -1,7 +1,7 @@
 import json
 
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, PackagesList, MultiPackagesList
+from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import Color, cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
@@ -108,6 +108,7 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
     parser.add_argument("-g", "--graph", help="Graph json file")
     parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
+    parser.add_argument("-gr", "--graph-recipes", help="Which recipes are listed", action="append")
 
     args = parser.parse_args(*args)
 
@@ -119,7 +120,7 @@ def list(conan_api: ConanAPI, parser, *args):
     if args.graph:
         graphfile = make_abs_path(args.graph)
         graph = json.loads(load(graphfile))
-        pkglist = MultiPackagesList.from_graph(graph, args.graph_binaries)
+        pkglist = MultiPackagesList.from_graph(graph, args.graph_recipes, args.graph_binaries)
         return {
             "results": pkglist.serialize(),
             "conan_api": conan_api,

@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -49,17 +51,33 @@ class TestGraphCreatedUpload:
         assert "Uploading recipe 'app/1.0#0fa1ff1b90576bb782600e56df642e19'" in c.out
         assert "Uploading recipe 'zlib/1.0#c570d63921c5f2070567da4bf64ff261'" in c.out
         assert "Uploading package 'app" in c.out
+        assert "Uploading package 'zlib" in c.out
 
 
 class TestGraphPkgList:
-    def test_graph_pkg_list(self):
+    def test_graph_pkg_list_only_built(self):
         c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
         c.run("create zlib")
         c.run("create app --format=json", redirect_stdout="graph.json")
-        c.run("list --graph=graph.json --graph-binaries=build --format=json",
-              redirect_stdout="pkglist.json")
-        pkglist = c.load("pkglist.json")
-        assert "app/1.0" in pkglist
-        assert "zlib" not in pkglist
+        c.run("list --graph=graph.json --graph-binaries=build --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 1
+        assert len(pkglist["app/1.0"]["revisions"]
+                   ["0fa1ff1b90576bb782600e56df642e19"]["packages"]) == 1
+
+    def test_graph_pkg_list_all_recipes_only(self):
+        """
+        --graph-recipes=* selects all the recipes in the graph
+        """
+        c = TestClient()
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create zlib")
+        c.run("create app --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --graph-recipes=* --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 2
+        assert len(pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]) == 0
+        assert len(pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]) == 0
