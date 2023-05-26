@@ -47,7 +47,7 @@ def test_basic_composition(client):
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
 
     client.run("install . -pr=profile1 -pr=profile2")
-    assert "tools.build:verbosity$notice" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
