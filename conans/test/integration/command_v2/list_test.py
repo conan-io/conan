@@ -31,6 +31,15 @@ class TestParamErrors:
         c.run("list --remote remote1 --cache", assert_error=True)
         assert "ERROR: Missing pattern or graph json file" in c.out
 
+        c.run("list * --graph=myjson", assert_error=True)
+        assert "ERROR: Cannot define both the pattern and the graph json file" in c.out
+
+        c.run("list * --graph-binaries=x", assert_error=True)
+        assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
+
+        c.run("list * --graph-recipes=x", assert_error=True)
+        assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
+
 
 @pytest.fixture(scope="module")
 def client():

@@ -116,37 +116,33 @@ def list(conan_api: ConanAPI, parser, *args):
         raise ConanException("Missing pattern or graph json file")
     if args.reference and args.graph:
         raise ConanException("Cannot define both the pattern and the graph json file")
+    if (args.graph_recipes or args.graph_binaries) and not args.graph:
+        raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
 
     if args.graph:
         graphfile = make_abs_path(args.graph)
         graph = json.loads(load(graphfile))
         pkglist = MultiPackagesList.from_graph(graph, args.graph_recipes, args.graph_binaries)
-        return {
-            "results": pkglist.serialize(),
-            "conan_api": conan_api,
-            "cli_args": " ".join(
-                [f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg)])
-        }
-
-    ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
-    # If neither remote nor cache are defined, show results only from cache
-    pkglist = MultiPackagesList()
-    if args.cache or not args.remote:
-        try:
-            cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
-        except Exception as e:
-            pkglist.add_error("Local Cache", str(e))
-        else:
-            pkglist.add("Local Cache", cache_list)
-    if args.remote:
-        remotes = conan_api.remotes.list(args.remote)
-        for remote in remotes:
+    else:
+        ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
+        # If neither remote nor cache are defined, show results only from cache
+        pkglist = MultiPackagesList()
+        if args.cache or not args.remote:
             try:
-                remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+                cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
             except Exception as e:
-                pkglist.add_error(remote.name, str(e))
+                pkglist.add_error("Local Cache", str(e))
             else:
-                pkglist.add(remote.name, remote_list)
+                pkglist.add("Local Cache", cache_list)
+        if args.remote:
+            remotes = conan_api.remotes.list(args.remote)
+            for remote in remotes:
+                try:
+                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+                except Exception as e:
+                    pkglist.add_error(remote.name, str(e))
+                else:
+                    pkglist.add(remote.name, remote_list)
 
     return {
         "results": pkglist.serialize(),
