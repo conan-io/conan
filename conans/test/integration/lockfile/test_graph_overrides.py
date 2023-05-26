@@ -131,7 +131,7 @@ def test_overrides_diamond(override, force):
     assert "pkga/0.2" not in str(deps)
     assert "pkga/0.1" not in str(deps)
     # Redundant assert, but checking "overrides" summary
-    overrides = json_graph["overrides"]
+    overrides = json_graph['graph']["overrides"]
     assert len(overrides) == 2
     assert overrides['pkga/0.1'] == ['pkga/0.3']
     assert overrides['pkga/0.2'] == ['pkga/0.3#e3afb975277bc245212d6e8de88f4f8f']
@@ -144,7 +144,7 @@ def test_overrides_diamond(override, force):
     assert "pkga/0.2" not in str(deps)
     assert "pkga/0.1" not in str(deps)
     # Redundant assert, but checking "overrides" summary
-    overrides = json_graph["overrides"]
+    overrides = json_graph['graph']["overrides"]
     assert len(overrides) == 1
     assert overrides["pkga/0.1"] == ["pkga/0.3"]
 

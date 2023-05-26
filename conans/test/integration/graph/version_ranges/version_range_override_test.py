@@ -139,9 +139,9 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
                 "ros_core/pr-53@3rdparty/snapshot#4d670581ccb765839f2239cc8dff8fbd"
             ]
         }
-        self.assertEqual(info["overrides"], expected_overrides)
+        self.assertEqual(info[['graoh']["overrides"], expected_overrides)
         expected_resolved_ranges = {
             "pkgb/[~0]@common/unstable": "pkgb/0.1@common/unstable",
             "ros_perception/[~1.1]@3rdparty/unstable": "ros_perception/1.1.4@3rdparty/unstable"
         }
-        self.assertEqual(info["resolved_ranges"], expected_resolved_ranges)
+        self.assertEqual(info['graoh']["resolved_ranges"], expected_resolved_ranges)
