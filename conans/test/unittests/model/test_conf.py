@@ -9,7 +9,7 @@ from conans.model.conf import ConfDefinition
 @pytest.fixture()
 def conf_definition():
     text = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=someflags
     """)
     c = ConfDefinition()
@@ -22,7 +22,7 @@ def test_conf_definition(conf_definition):
     # Round trip
     assert c.dumps() == text
     # access
-    assert c.get("tools.build:verbosity") == "notice"
+    assert c.get("tools.build:verbosity") == "quiet"
     assert c.get("user.company.toolchain:flags") == "someflags"
     assert c.get("user.microsoft.msbuild:nonexist") is None
     assert c.get("user:nonexist") is None
@@ -64,13 +64,13 @@ def test_conf_rebase(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
        user.company.toolchain:flags=newvalue
-       tools.build:verbosity=trace""")
+       tools.build:verbosity=verbose""")
     c2 = ConfDefinition()
     c2.loads(text)
     c.rebase_conf_definition(c2)
     # The c profile will have precedence, and "
     result = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=someflags
     """)
     assert c.dumps() == result
