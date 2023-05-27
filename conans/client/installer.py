@@ -343,8 +343,9 @@ class BinaryInstaller:
         conanfile_path = editable["path"]
         output_folder = editable.get("output_folder")
 
-        # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
+        base_path = base_path if conanfile.folders.root is None else \
+            os.path.normpath(os.path.join(base_path, conanfile.folders.root))
         conanfile.folders.set_base_folders(base_path, output_folder)
         output = conanfile.output
         output.info("Rewriting files of editable package "
