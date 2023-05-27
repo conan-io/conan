@@ -1,9 +1,11 @@
 import copy
+import json
 import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
+from conans.util.files import save, load
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
@@ -111,6 +113,34 @@ class _Component:
             "requires": self._requires,
             "properties": self._generator_properties
         }
+
+    @staticmethod
+    def deserialize(contents):
+        result = _Component()
+        fields = [
+            "includedirs",
+            "srcdirs",
+            "libdirs",
+            "resdirs",
+            "bindirs",
+            "builddirs",
+            "frameworkdirs",
+            "system_libs",
+            "frameworks",
+            "libs",
+            "defines",
+            "cflags",
+            "cxxflags",
+            "sharedlinkflags",
+            "exelinkflags",
+            "objects",
+            "sysroot",
+            "requires",
+            "properties"
+        ]
+        for f in fields:
+            setattr(result, f"_{f}", contents[f])
+        return result
 
     @property
     def includedirs(self):
@@ -403,6 +433,16 @@ class CppInfo:
         self._package = _Component(set_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
+    def save(self, folder, file="conan_cpp_info.json"):
+        save(os.path.join(folder, file), json.dumps(self.serialize()))
+
+    @staticmethod
+    def load(folder=None, file="conan_cpp_info.json"):
+        if folder:
+            file = os.path.join(folder, file)
+        content = json.loads(load(file))
+        return CppInfo.deserialize(content)
+
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
         return getattr(self._package, attr)
@@ -418,6 +458,14 @@ class CppInfo:
         for component_name, info in self.components.items():
             ret[component_name] = info.serialize()
         return ret
+
+    @staticmethod
+    def deserialize(content):
+        result = CppInfo()
+        result._package = _Component.deserialize(content.pop("root"))
+        for component_name, info in content.items():
+            result.components[component_name] = _Component.deserialize(info)
+        return result
 
     @property
     def has_components(self):
