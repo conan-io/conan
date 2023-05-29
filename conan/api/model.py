@@ -7,11 +7,12 @@ from conans.model.recipe_ref import RecipeReference
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False):
+    def __init__(self, name, url, verify_ssl=True, disabled=False, remote_type=None):
         self._name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
+        self.remote_type = remote_type
 
     @property
     def name(self):
@@ -26,6 +27,8 @@ class Remote:
                self.disabled == other.disabled
 
     def __str__(self):
+        if self.remote_type == "local":
+            return "{}: {} [Local: True, Enabled: {}]".format(self.name, self.url, not self.disabled)
         return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
                                                              not self.disabled)
 

@@ -72,9 +72,11 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the definition of the remote even if duplicated")
+    subparser.add_argument("-t", "--type", choices=["local"],
+                           help="Define the remote type")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
-    r = Remote(args.name, args.url, args.secure, disabled=False)
+    r = Remote(args.name, args.url, args.secure, disabled=False, remote_type=args.type)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 

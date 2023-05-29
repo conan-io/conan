@@ -33,8 +33,9 @@ class _Remotes:
         data = json.loads(text)
         for r in data.get("remotes", []):
             disabled = r.get("disabled", False)
+            remote_type = r.get("type", None)
             # TODO: Remote.serialize/deserialize
-            remote = Remote(r["name"], r["url"], r["verify_ssl"], disabled)
+            remote = Remote(r["name"], r["url"], r["verify_ssl"], disabled, remote_type)
             result._remotes[r["name"]] = remote
         return result
 
@@ -44,6 +45,8 @@ class _Remotes:
             remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
             if r.disabled:
                 remote["disabled"] = True
+            if r.remote_type:
+                remote["type"] = r.remote_type
             remote_list.append(remote)
         ret = {"remotes": remote_list}
         return json.dumps(ret, indent=True)

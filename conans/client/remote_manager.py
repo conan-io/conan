@@ -28,7 +28,7 @@ class RemoteManager:
 
     @staticmethod
     def _git_remote(remote):
-        if remote.url.startswith("file:///"):  # FIXME: remote type?
+        if remote.remote_type == "local":
             return GitRemoteManager(remote)
 
     def check_credentials(self, remote):

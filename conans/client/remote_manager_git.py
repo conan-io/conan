@@ -18,7 +18,7 @@ class GitRemoteManager:
 
     def __init__(self, remote):
         self._remote = remote
-        cache_folder = self._remote.url.replace("file:///", "")
+        cache_folder = self._remote.url
         self._remote_cache_dir = "{}/.cache".format(cache_folder)
         self._exported_file = os.path.join(self._remote_cache_dir, "exported.json")
         from conan.internal.conan_app import ConanApp
@@ -51,10 +51,11 @@ class GitRemoteManager:
     def check_credentials(self):
         raise ConanException(f"Git remote '{self._remote.name}' doesn't support upload")
 
-    def search(self, pattern=None, ignorecase=True):
+    def search(self, pattern=None):
         return self.layout.get_recipes_references(pattern)
 
     def search_packages(self, reference):
+        assert self and reference
         return {}
 
     def remove_recipe(self, ref):
@@ -132,12 +133,12 @@ class _ConanCenterIndexLayout:
     def _get_base_folder(self, recipe_name):
         return os.path.join(self._base_folder, "recipes", recipe_name)
 
-    def _load_config_yml(self, recipe_name):
-        config = os.path.join(self._get_base_folder(recipe_name), "config.yml")
+    @staticmethod
+    def _load_config_yml(folder):
+        config = os.path.join(folder, "config.yml")
         if not os.path.isfile(config):
             return None
-        content = load(config)
-        return yaml.safe_load(content)
+        return yaml.safe_load(load(config))
 
     def get_recipes_references(self, pattern):
         recipes_dir = os.path.join(self._base_folder, "recipes")
@@ -146,7 +147,8 @@ class _ConanCenterIndexLayout:
         ret = []
         excluded = set()
         for r in recipes:
-            config_yml = self._load_config_yml(r)
+            folder = self._get_base_folder(r)
+            config_yml = self._load_config_yml(folder)
             if config_yml is None:
                 raise ConanException(f"Corrupted repo, folder {r} without 'config.yml'")
             versions = config_yml["versions"]
@@ -168,11 +170,12 @@ class _ConanCenterIndexLayout:
         return ret
 
     def get_recipe_folder(self, ref):
-        data = self._load_config_yml(ref.name)
+        folder = self._get_base_folder(ref.name)
+        data = self._load_config_yml(folder)
         if data is None:
             raise RecipeNotFoundException(ref)
         versions = data["versions"]
         if str(ref.version) not in versions:
             raise RecipeNotFoundException(ref)
         subfolder = versions[str(ref.version)]["folder"]
-        return os.path.join(self._get_base_folder(ref.name), subfolder)
+        return os.path.join(folder, subfolder)
