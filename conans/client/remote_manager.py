@@ -219,7 +219,7 @@ class RemoteManager(object):
 def uncompress_file(src_path, dest_folder, scope=None):
     try:
         filesize = os.path.getsize(src_path)
-        big_file = filesize > 10000000  # 10 Mb
+        big_file = filesize > 10000000  # 10 MB
         if big_file:
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
