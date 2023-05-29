@@ -1,3 +1,4 @@
+import json
 import textwrap
 
 import pytest
@@ -146,3 +147,35 @@ def test_components_overrides():
     # This used to crash, because override was not correctly excluded
     c.run("create app")
     assert "app/0.1: Created package" in c.out
+
+
+def test_components_get_global_values():
+    """ Defining global cpp_info.xxxx will automatically translate to all components
+    defined after that
+    """
+    c = TestClient()
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+
+        class ConanRecipe(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.includedirs = ["myinclude"]
+                self.cpp_info.libdirs = ["mylib"]
+                self.cpp_info.components["potato"].libs = ["potato"]
+                self.cpp_info.components["tomato"].libs = ["tomato"]
+        """)
+    c.save({"conanfile.py": pkg})
+    c.run("create .")
+    c.run("install --requires=pkg/0.1 --format=json")
+    graph = json.loads(c.stdout)
+    pkg_cpp_info = graph["graph"]["nodes"]["1"]["cpp_info"]
+    assert "myinclude" in pkg_cpp_info["potato"]["includedirs"][0]
+    assert "myinclude" in pkg_cpp_info["tomato"]["includedirs"][0]
+    assert "mylib" in pkg_cpp_info["potato"]["libdirs"][0]
+    assert "mylib" in pkg_cpp_info["tomato"]["libdirs"][0]
+    # The default "bin" from the global one is also defined
+    assert "bin" in pkg_cpp_info["potato"]["bindirs"][0]
+    assert "bin" in pkg_cpp_info["tomato"]["bindirs"][0]

@@ -89,6 +89,13 @@ class _Component:
             self.libdirs = ["lib"]
             self.bindirs = ["bin"]
 
+    def copy(self):
+        result = _Component()
+        for k, v in self.serialize().items():
+            if v is not None:
+                setattr(result, f"_{k}", copy.copy(v))
+        return result
+
     def serialize(self):
         return {
             "includedirs": self._includedirs,
@@ -398,9 +405,9 @@ class _Component:
 class CppInfo:
 
     def __init__(self, set_defaults=False):
-        self.components = defaultdict(lambda: _Component(set_defaults))
         # Main package is a component with None key
         self._package = _Component(set_defaults)
+        self.components = defaultdict(lambda: self._package.copy())
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):

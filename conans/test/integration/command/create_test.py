@@ -572,6 +572,8 @@ def test_create_format_json_and_deps_cpp_info():
                 self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
                 self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
+                self.cpp_info.components["cmp1"].libdirs = ["lib"]
+                self.cpp_info.components["cmp1"].bindirs = ["bin"]
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
                 self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
                 self.cpp_info.components["cmp1"].sysroot = "/another/sysroot"
@@ -584,7 +586,7 @@ def test_create_format_json_and_deps_cpp_info():
     info = json.loads(client.stdout)
     nodes = info["graph"]["nodes"]
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
-    pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
+    pkg_pkg_ref = 'pkg/0.2#9f5308218357a92d0e14f8acdf6b5636'
     hello_cpp_info = pkg_cpp_info = None
     for n in nodes.values():
         ref = n["ref"]
