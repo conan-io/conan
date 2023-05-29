@@ -32,6 +32,7 @@ def test_editable_cmake_components():
 
             def layout(self):
                 cmake_layout(self, src_folder="src")
+                self.cpp.source.includedirs = []
                 self.cpp.source.components["hello"].includedirs = ["."]
                 self.cpp.source.components["bye"].includedirs = ["."]
                 bt = "." if self.settings.os != "Windows" else str(self.settings.build_type)
