@@ -103,7 +103,7 @@ class FileDownloader:
 
         try:
             total_length = get_total_length()
-            is_large_file = total_length > 10000000  # 10 Mb
+            is_large_file = total_length > 10000000  # 10 MB
             t_start = time.time()
             base_name = os.path.basename(file_path)
             if is_large_file:
