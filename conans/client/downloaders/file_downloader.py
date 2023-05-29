@@ -7,6 +7,7 @@ from conan.api.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
+from conans.util.files import human_size
 from conans.util.sha import check_with_algorithm_sum
 
 
@@ -102,12 +103,13 @@ class FileDownloader:
 
         try:
             total_length = get_total_length()
-            if total_length > 1000000:  # 10 Mb
-                from conan.tools.files.files import _human_size
-                hs = _human_size(total_length)
+            is_large_file = total_length > 10000000  # 10 MB
+            t_start = time.time()
+            base_name = os.path.basename(file_path)
+            if is_large_file:
+                hs = human_size(total_length)
                 action = "Downloading" if range_start == 0 else "Continuing download of"
-                description = f"{action} {hs} {os.path.basename(file_path)}"
-                self._output.info(description)
+                self._output.info(f"{action} {hs} {base_name}")
 
             chunk_size = 1024 * 100
             total_downloaded_size = range_start
@@ -116,6 +118,13 @@ class FileDownloader:
                 for chunk in response.iter_content(chunk_size):
                     file_handler.write(chunk)
                     total_downloaded_size += len(chunk)
+                    if is_large_file:
+                        t = time.time()
+                        if t - t_start > 10:  # Every 10 seconds
+                            hs = human_size(total_downloaded_size)
+                            perc = int(total_downloaded_size*100/total_length)
+                            self._output.info(f"Downloaded {hs} {perc}% {base_name}")
+                            t_start = t
 
             gzip = (response.headers.get("content-encoding") == "gzip")
             response.close()

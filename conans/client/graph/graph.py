@@ -381,7 +381,7 @@ class DepsGraph(object):
 
     def serialize(self):
         for i, n in enumerate(self.nodes):
-            n.id = i
+            n.id = str(i)
         result = OrderedDict()
         result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
