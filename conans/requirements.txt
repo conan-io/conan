@@ -1,7 +1,8 @@
 requests>=2.25, <3.0.0
 urllib3>=1.26.6, <1.27
 colorama>=0.4.3, <0.5.0
-PyYAML>=5.1, <=6.0
+PyYAML>=5.1, <=6.0 ; python_version < '3.10'
+PyYAML>=6.0, <7.0; python_version >= '3.10'
 patch-ng>=1.17.4, <1.18
 fasteners>=0.15
 distro>=1.4.0, <=1.8.0; sys_platform == 'linux' or sys_platform == 'linux2'
