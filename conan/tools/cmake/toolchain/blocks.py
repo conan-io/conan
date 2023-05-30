@@ -12,6 +12,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
@@ -546,6 +547,9 @@ class ExtraFlagsBlock(Block):
 
     template = textwrap.dedent("""
         # Extra c, cxx, linkflags and defines
+        {% if config %}
+        set(CONAN_CONFIG_TYPES config)
+        {% endif %}
         {% if cxxflags %}
         string(APPEND CONAN_CXX_FLAGS "{% for cxxflag in cxxflags %} {{ cxxflag }}{% endfor %}")
         {% endif %}
@@ -590,6 +594,22 @@ class ExtraFlagsBlock(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
+        {% if is_multi %}
+        foreach(config ${CONAN_CONFIG_TYPES})
+            if(DEFINED CONAN_CXX_FLAGS_${config})
+              string(APPEND CMAKE_CXX_FLAGS_${config}_INIT " ${CONAN_CXX_FLAGS_${config}}")
+            endif()
+            if(DEFINED CONAN_C_FLAGS_${config})
+              string(APPEND CMAKE_C_FLAGS_${config}_INIT " ${CONAN_C_FLAGS_${config}}")
+            endif()
+            if(DEFINED CONAN_SHARED_LINKER_FLAGS_${config})
+              string(APPEND CMAKE_SHARED_LINKER_FLAGS_${config}_INIT " ${CONAN_SHARED_LINKER_FLAGS_${config}}")
+            endif()
+            if(DEFINED CONAN_EXE_LINKER_FLAGS_${config})
+              string(APPEND CMAKE_EXE_LINKER_FLAGS_${config}_INIT " ${CONAN_EXE_LINKER_FLAGS_${config}}")
+            endif()
+        endforeach()
+        {% else %}
         if(DEFINED CONAN_CXX_FLAGS)
           string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
         endif()
@@ -602,7 +622,12 @@ class CMakeFlagsInitBlock(Block):
         if(DEFINED CONAN_EXE_LINKER_FLAGS)
           string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
         endif()
+        {% endif %}
         """)
+
+    @property
+    def context(self):
+        return {"is_multi": is_multi_configuration(self._toolchain.generator)}
 
 
 class TryCompileBlock(Block):
