@@ -125,14 +125,12 @@ class ConanFile:
         for a in ("name", "user", "channel", "url", "license",
                   "author", "description", "homepage", "build_policy", "upload_policy",
                   "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run",
-                  "default_options", "options_description",):
+                  "default_options", "options_description"):
             v = getattr(self, a, None)
-            if v is not None:
-                result[a] = v
-        if self.version is not None:
-            result["version"] = str(self.version)
-        if self.topics is not None:
-            result["topics"] = list(self.topics)
+            result[a] = v
+
+        result["version"] = str(self.version) if self.version is not None else None
+        result["topics"] = list(self.topics) if self.topics is not None else None
         result["package_type"] = str(self.package_type)
 
         settings = self.settings

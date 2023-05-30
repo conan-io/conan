@@ -1,20 +1,15 @@
-import json
 import os
 
-from conan.api.output import cli_out_write, ConanOutput
-from conan.cli.command import conan_command, OnceArgument
-from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
+from conan.cli.args import add_lockfile_args, add_profiles_args, add_reference_args
+from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import _get_test_conanfile_path
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers.graph import print_graph_basic
 
 
-def json_export_pkg(info):
-    deps_graph = info
-    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
-
-
-@conan_command(group="Creator", formatters={"json": json_export_pkg})
+@conan_command(group="Creator", formatters={"json": format_graph_json})
 def export_pkg(conan_api, parser, *args):
     """
     Create a package directly from pre-compiled binaries.
@@ -100,4 +95,5 @@ def export_pkg(conan_api, parser, *args):
         # TODO: Do something with lockfile, same as create()
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return deps_graph
+    return {"graph": deps_graph,
+            "conan_api": conan_api}

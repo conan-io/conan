@@ -44,8 +44,8 @@ class TestValidate(unittest.TestCase):
 
         client.run("graph info --require pkg/0.1 -s os=Windows --format json")
         myjson = json.loads(client.stdout)
-        self.assertEqual(myjson["nodes"][1]["binary"], BINARY_INVALID)
-        assert myjson["nodes"][1]["info_invalid"] == "Windows not supported" in client.out
+        self.assertEqual(myjson["graph"]["nodes"]["1"]["binary"], BINARY_INVALID)
+        assert myjson["graph"]["nodes"]["1"]["info_invalid"] == "Windows not supported" in client.out
 
     def test_validate_header_only(self):
         client = TestClient()

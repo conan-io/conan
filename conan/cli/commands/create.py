@@ -1,24 +1,18 @@
-import json
 import os
 import shutil
 
-from conan.api.output import ConanOutput, cli_out_write
+from conan.api.output import ConanOutput
+from conan.cli.args import add_lockfile_args, add_common_install_arguments
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
-from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conans.util.files import mkdir
 
 
-def json_create(deps_graph):
-    if deps_graph is None:
-        return
-    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
-
-
-@conan_command(group="Creator", formatters={"json": json_create})
+@conan_command(group="Creator", formatters={"json": format_graph_json})
 def create(conan_api, parser, *args):
     """
     Create a package.
@@ -102,7 +96,8 @@ def create(conan_api, parser, *args):
                                                       clean=args.lockfile_clean)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return deps_graph
+    return {"graph": deps_graph,
+            "conan_api": conan_api}
 
 
 def _check_tested_reference_matches(deps_graph, tested_ref, out):

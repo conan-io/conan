@@ -30,6 +30,17 @@ def conanfile():
     return c
 
 
+def test_cmake_cmake_program(conanfile):
+    mycmake = "C:\\mycmake.exe"
+    conanfile.conf.define("tools.cmake:cmake_program", mycmake)
+
+    with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
+        write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles", {})
+
+    cmake = CMake(conanfile)
+    assert cmake._cmake_program == mycmake
+
+
 def test_cmake_make_program(conanfile):
     def run(command):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
@@ -42,4 +53,3 @@ def test_cmake_make_program(conanfile):
 
     cmake = CMake(conanfile)
     cmake.configure()
-

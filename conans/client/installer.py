@@ -332,8 +332,6 @@ class BinaryInstaller:
             conanfile = n.conanfile
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
-            conanfile.folders.set_base_source(None)
-            conanfile.folders.set_base_build(None)
             self._call_package_info(conanfile, pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):
@@ -345,8 +343,9 @@ class BinaryInstaller:
         conanfile_path = editable["path"]
         output_folder = editable.get("output_folder")
 
-        # TODO: Check, this assumes the folder is always the conanfile one
         base_path = os.path.dirname(conanfile_path)
+        base_path = base_path if conanfile.folders.root is None else \
+            os.path.normpath(os.path.join(base_path, conanfile.folders.root))
         conanfile.folders.set_base_folders(base_path, output_folder)
         output = conanfile.output
         output.info("Rewriting files of editable package "
@@ -402,7 +401,8 @@ class BinaryInstaller:
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
                 if hasattr(conanfile, "package_info"):
-                    with conanfile_remove_attr(conanfile, ['info'], "package_info"):
+                    with conanfile_remove_attr(conanfile, ['info', "source_folder", "build_folder"],
+                                               "package_info"):
                         MockInfoProperty.package = str(conanfile)
                         conanfile.package_info()
 

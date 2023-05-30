@@ -67,7 +67,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        self._download_and_save_files(urls, dest_folder, files, scope=str(ref))
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -86,7 +86,7 @@ class RestV2Methods(RestCommonMethods):
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files)
+        self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
@@ -149,12 +149,12 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
 
-    def _download_and_save_files(self, urls, dest_folder, files, parallel=False):
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
         retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
-        downloader = ConanInternalCacheDownloader(self.requester, self._config)
+        downloader = ConanInternalCacheDownloader(self.requester, self._config, scope=scope)
         threads = []
 
         for filename in sorted(files, reverse=True):
