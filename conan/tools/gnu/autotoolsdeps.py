@@ -8,11 +8,11 @@ class AutotoolsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._environment = None
-        self._ordered_deps = []
+        self._ordered_deps = None
 
     @property
     def ordered_deps(self):
-        if not self._ordered_deps:
+        if self._ordered_deps is None:
             deps = self._conanfile.dependencies.host.topological_sort
             self._ordered_deps = [dep for dep in reversed(deps.values())]
         return self._ordered_deps
@@ -55,7 +55,7 @@ class AutotoolsDeps:
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
 
-            ## set the rpath in Macos so that the library are found in the configure step
+            # set the rpath in Macos so that the library are found in the configure step
             if self._conanfile.settings.get_safe("os") == "Macos":
                 ldflags.extend(self._rpaths_flags())
 
