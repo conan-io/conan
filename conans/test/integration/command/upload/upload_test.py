@@ -1,8 +1,6 @@
-import itertools
 import os
 import platform
 import stat
-import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -34,29 +32,24 @@ class MyPkg(ConanFile):
 
 class UploadTest(unittest.TestCase):
 
-    @pytest.mark.xfail(reason="cache2.0 will remove -p make sense for 2.0?")
     @pytest.mark.artifactory_ready
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
-        client.run("create . --user=lasote --channel=testing")
-        ref = RecipeReference.loads("hello/0.1@lasote/testing")
+        client.run("create .")
 
-        rrev = client.cache.get_latest_recipe_reference(ref)
-        prev = client.cache.get_latest_package_reference(rrev)
-        pkg_folder = client.cache.pkg_layout(prev).package()
+        pkg_folder = client.created_package_folder("hello/0.1")
         set_dirty(pkg_folder)
 
-        client.run("upload * --confirm", assert_error=True)
-        self.assertIn(f"ERROR: hello/0.1@lasote/testing:{NO_SETTINGS_PACKAGE_ID}: "
-                      "Upload package to 'default' failed: Package %s is corrupted, aborting upload"
-                      % str(prev), client.out)
-        self.assertIn("Remove it with 'conan remove hello/0.1@lasote/testing -p=%s'"
-                      % NO_SETTINGS_PACKAGE_ID, client.out)
+        client.run("upload * -r=default -c", assert_error=True)
+        assert "ERROR: Package hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709 i" \
+               "s corrupted, aborting upload." in client.out
+        assert "Remove it with 'conan remove hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
+               in client.out
 
-        # TODO: cache2.0 check if this makes sense for 2.0, xfail test for the moment
-        client.run("remove hello/0.1@lasote/testing -p=%s -c" % NO_SETTINGS_PACKAGE_ID)
-        client.run("upload * --confirm")
+        # Test that removeing the binary allows moving forward
+        client.run("remove hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+        client.run("upload * -r=default --confirm")
 
     @pytest.mark.artifactory_ready
     def test_upload_force(self):
@@ -106,50 +99,6 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-> conanmanifest.txt", client.out)
         self.assertIn("-> conan_package.tgz", client.out)
         self.assertIn("-> conanfile.py", client.out)
-
-    @pytest.mark.xfail(reason="cache2.0 query not yet implemented")
-    @pytest.mark.artifactory_ready
-    def test_query_upload(self):
-        client = TestClient(default_server_user=True)
-        conanfile_upload_query = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.files import copy
-            class MyPkg(ConanFile):
-                name = "hello1"
-                version = "1.2.1"
-                exports_sources = "*"
-                settings = "os", "arch"
-
-                def package(self):
-                    copy(self, "*", self.source_folder, self.package_folder)
-            """)
-        client.save({"conanfile.py": conanfile_upload_query})
-
-        for _os, arch in itertools.product(["Macos", "Linux", "Windows"],
-                                           ["armv8", "x86_64"]):
-            client.run("create . --user=user --channel=testing -s os=%s -s arch=%s" % (_os, arch))
-
-        # Check that the right number of packages are picked up by the queries
-        client.run("upload hello1/*@user/testing --confirm -q 'os=Windows or os=Macos' -r default")
-        for i in range(1, 5):
-            self.assertIn("Uploading package %d/4" % i, client.out)
-        self.assertNotIn("already in server, skipping upload", client.out)
-
-        client.run("upload hello1/*@user/testing --confirm -q 'os=Linux and arch=x86_64' -r default")
-        self.assertIn("Uploading package 1/1", client.out)
-
-        client.run("upload hello1/*@user/testing --confirm -q 'arch=armv8' -r default")
-        for i in range(1, 4):
-            self.assertIn("Uploading package %d/3" % i, client.out)
-        self.assertIn("already in server, skipping upload", client.out)
-
-        # Check that a query not matching any packages doesn't upload any packages
-        client.run("upload hello1/*@user/testing --confirm -q 'arch=sparc' -r default")
-        self.assertNotIn("Uploading package", client.out)
-
-        # Check that an invalid query fails
-        client.run("upload hello1/*@user/testing --confirm -q 'blah blah blah' -r default", assert_error=True)
-        self.assertIn("Invalid package query", client.out)
 
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
@@ -354,42 +303,27 @@ class UploadTest(unittest.TestCase):
                       "in server, skipping upload", client.out)
         self.assertIn(f"'{prev1.repr_notime()}' already in server, skipping upload", client.out)
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_skip_upload(self):
         """ Check that the option --skip does not upload anything
         """
         client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
+                     "file.txt": ""})
+        client.run("create .")
 
-        files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
-                 "file.txt": ""}
-        client.save(files)
-        client.run("create . --user=frodo --channel=stable")
-        client.run("upload hello0/1.2.1@frodo/stable -r default --skip-upload -r default")
-
-        # dry run should not upload
-        self.assertNotIn("-> conan_package.tgz", client.out)
-
-        # but dry run should compress
-        self.assertIn("Compressing recipe...", client.out)
-        self.assertIn("Compressing package...", client.out)
-
-        client.run("search -r default")
-        # after dry run nothing should be on the server ...
-        self.assertNotIn("hello0/1.2.1@frodo/stable", client.out)
+        client.run("upload * --dry-run -r default -c")
+        assert "Compressing" in client.out
+        client.run("search * -r default")
+        # after dry run nothing should be on the server
+        assert "hello" not in client.out
 
         # now upload, the stuff should NOT be recompressed
-        client.run("upload hello0/1.2.1@frodo/stable -r default -r default")
-
-        # check for upload message
-        self.assertIn("-> conan_package.tgz", client.out)
-
+        client.run("upload * -c -r default")
         # check if compressed files are re-used
-        self.assertNotIn("Compressing recipe...", client.out)
-        self.assertNotIn("Compressing package...", client.out)
-
+        assert "Compressing" not in client.out
         # now it should be on the server
-        client.run("search -r default")
-        self.assertIn("hello0/1.2.1@frodo/stable", client.out)
+        client.run("search * -r default")
+        assert "hello0/1.2.1" in client.out
 
     def test_upload_without_sources(self):
         client = TestClient(default_server_user=True)
@@ -476,28 +410,6 @@ class UploadTest(unittest.TestCase):
         client.run("remote remove server1")
         client.run("upload hello0/1.2.1@user/testing -r server2")
         self.assertNotIn("ERROR: 'server1'", client.out)
-
-    @pytest.mark.xfail(reason="cache2.0: metadata test, check again in the future")
-    def test_upload_export_pkg(self):
-        """
-        Package metadata created when doing an export-pkg and then uploading the package works
-        """
-        server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-        servers = OrderedDict()
-        servers["server1"] = server1
-        client = TestClient(servers=servers)
-        client.save({"release/kk.lib": ""})
-        client.run("user lasote -r server1 -p mypass")
-        client.run("new hello/1.0 --header")
-        client.run("export-pkg . user/testing -pf release")
-        client.run("upload hello/1.0@user/testing -r server1")
-        self.assertNotIn("Binary package hello/1.0@user/testing:5%s not found" %
-                         NO_SETTINGS_PACKAGE_ID, client.out)
-        ref = RecipeReference("hello", "1.0", "user", "testing")
-        # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = client.get_latest_pkg_layout(pref).load_metadata()
-        self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
-        self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)
 
     def test_concurrent_upload(self):
         # https://github.com/conan-io/conan/issues/4953
@@ -590,44 +502,6 @@ class UploadTest(unittest.TestCase):
         client.run("remote logout '*'")
         client.run("upload hello0/1.2.1@user/testing -r default")
         assert "Uploading recipe 'hello0/1.2.1@user/testing" in client.out
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_upload_with_recipe_revision(self):
-        ref = RecipeReference.loads("pkg/1.0@user/channel")
-        client = TurboTestClient(default_server_user=True)
-        pref = client.create(ref, conanfile=GenConanfile())
-        client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
-        self.assertIn("ERROR: Recipe revision fakerevision does not match the one stored in "
-                      "the cache {}".format(pref.ref.revision), client.out)
-
-        client.run("upload pkg/1.0@user/channel#{} --confirm".format(pref.ref.revision))
-        search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
-        self.assertIn(pref.ref.revision, search_result["revision"])
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_upload_with_package_revision(self):
-        ref = RecipeReference.loads("pkg/1.0@user/channel")
-        client = TurboTestClient(default_server_user=True)
-        pref = client.create(ref, conanfile=GenConanfile())
-        client.run("upload pkg/1.0@user/channel#{}:{}#fakeprev --confirm".format(pref.ref.revision,
-                                                                                 pref.package_id),
-                   assert_error=True)
-        self.assertIn(
-            "ERROR: Binary package pkg/1.0@user/channel:{}"
-            "#fakeprev not found".format(pref.package_id),
-            client.out)
-
-        client.run(
-            "upload pkg/1.0@user/channel#{}:{}#{} --confirm".format(pref.ref.revision,
-                                                                    pref.package_id,
-                                                                    pref.revision))
-        search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
-        self.assertIn(pref.ref.revision, search_result["revision"])
-        search_result = client.search(
-            "pkg/1.0@user/channel#{}:{} --revisions  -r default".format(pref.ref.revision,
-                                                                        pref.package_id))[
-            0]
-        self.assertIn(pref.revision, search_result["revision"])
 
 
 def test_upload_only_without_user_channel():

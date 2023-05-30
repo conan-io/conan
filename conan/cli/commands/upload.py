@@ -33,6 +33,8 @@ def upload(conan_api: ConanAPI, parser, *args):
                         help='Perform an integrity check, using the manifests, before upload')
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Upload all matching recipes without confirmation')
+    parser.add_argument('--dry-run', default=False, action='store_true',
+                        help='Do not execute the real upload')
 
     args = parser.parse_args(*args)
 
@@ -55,6 +57,9 @@ def upload(conan_api: ConanAPI, parser, *args):
         _ask_confirm_upload(conan_api, package_list)
 
     conan_api.upload.prepare(package_list, enabled_remotes)
+    if args.dry_run:
+        return  # Missing return of pkg_list for serialization and json inspection
+
     conan_api.upload.upload(package_list, remote)
 
     conan_api.upload.upload_backup_sources(package_list)
