@@ -159,7 +159,7 @@ class RecipeReference:
 
     def matches(self, pattern, is_consumer):
         negate = False
-        if pattern.startswith("!"):
+        if pattern.startswith("!") or pattern.startswith("~"):
             pattern = pattern[1:]
             negate = True
 
