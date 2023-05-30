@@ -1285,3 +1285,33 @@ def test_cmaketoolchain_and_pkg_config_path():
     client.run("create dep/conanfile.py")
     client.run("create pkg/conanfile.py")
     assert "Found dep, version 1.0" in client.out
+
+
+def test_cmaketoolchain_conf_from_tool_require():
+    # https://github.com/conan-io/conan/issues/13914
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Conan(ConanFile):
+            name = "toolchain"
+            version = "1.0"
+
+            def package_info(self):
+                self.conf_info.define("tools.cmake.cmaketoolchain:system_name", "GENERIC-POTATO")
+                self.conf_info.define("tools.cmake.cmaketoolchain:system_processor", "ARM-POTATO")
+                self.conf_info.define("tools.build.cross_building:can_run", False)
+                self.conf_info.define("tools.build:compiler_executables", {
+                    "c": "arm-none-eabi-gcc",
+                    "cpp": "arm-none-eabi-g++",
+                    "asm": "arm-none-eabi-as",
+                })
+        """)
+    c.save({"conanfile.py": conanfile,
+            "test_package/conanfile.py": GenConanfile().with_test("pass")
+                                                       .with_tool_requires("toolchain/1.0")
+                                                       .with_generator("CMakeToolchain")})
+    c.run("create .")
+    toolchain = c.load("test_package/conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME GENERIC-POTATO)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR ARM-POTATO)" in toolchain

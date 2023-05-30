@@ -54,7 +54,7 @@ class _Component:
 
     def __init__(self, set_defaults=False):
         # ###### PROPERTIES
-        self._generator_properties = None
+        self._properties = None
 
         # ###### DIRECTORIES
         self._includedirs = None  # Ordered list of include paths
@@ -109,7 +109,7 @@ class _Component:
             "objects": self._objects,
             "sysroot": self._sysroot,
             "requires": self._requires,
-            "properties": self._generator_properties
+            "properties": self._properties
         }
 
     @property
@@ -321,15 +321,15 @@ class _Component:
         return [r for r in self.requires if "::" not in r]
 
     def set_property(self, property_name, value):
-        if self._generator_properties is None:
-            self._generator_properties = {}
-        self._generator_properties[property_name] = value
+        if self._properties is None:
+            self._properties = {}
+        self._properties[property_name] = value
 
     def get_property(self, property_name):
-        if self._generator_properties is None:
+        if self._properties is None:
             return None
         try:
-            return self._generator_properties[property_name]
+            return self._properties[property_name]
         except KeyError:
             pass
 
@@ -362,16 +362,16 @@ class _Component:
             current_values = self.get_init("requires", [])
             merge_list(other.requires, current_values)
 
-        if other._generator_properties:
-            current_values = self.get_init("_generator_properties", {})
-            current_values.update(other._generator_properties)
+        if other._properties:
+            current_values = self.get_init("_properties", {})
+            current_values.update(other._properties)
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [os.path.join(folder, el) for el in origin]
-        properties = self._generator_properties
+        properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
             if modules is not None:
@@ -387,19 +387,21 @@ class _Component:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [relocate(f) for f in origin]
-        properties = self._generator_properties
+        properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
             if modules is not None:
                 assert isinstance(modules, list), "cmake_build_modules must be a list"
                 properties["cmake_build_modules"] = [relocate(f) for f in modules]
 
+    def parsed_requires(self):
+        return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
+
 
 class CppInfo:
 
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
-        # Main package is a component with None key
         self._package = _Component(set_defaults)
         self._aggregated = None  # A _NewComponent object with all the components aggregated
 
@@ -498,7 +500,7 @@ class CppInfo:
                 # component like "cmake_target_name" describing the target name FOR THE component
                 # not the namespace.
                 # FIXME: What to do about sysroot?
-                result._generator_properties = copy.copy(self._package._generator_properties)
+                result._properties = copy.copy(self._package._properties)
             else:
                 result = copy.copy(self._package)
             self._aggregated = CppInfo()

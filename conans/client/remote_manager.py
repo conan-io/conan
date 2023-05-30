@@ -6,7 +6,6 @@ from requests.exceptions import ConnectionError
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
-from conan.tools.files.files import _human_size
 from conans.client.cache.remote_registry import Remote
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
@@ -14,7 +13,7 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import rmdir
+from conans.util.files import rmdir, human_size
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.files import mkdir, tar_extract
 
@@ -220,9 +219,9 @@ class RemoteManager(object):
 def uncompress_file(src_path, dest_folder, scope=None):
     try:
         filesize = os.path.getsize(src_path)
-        big_file = filesize > 1000000  # 10 Mb
+        big_file = filesize > 10000000  # 10 MB
         if big_file:
-            hs = _human_size(filesize)
+            hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
         with open(src_path, mode='rb') as file_handler:
             tar_extract(file_handler, dest_folder)
