@@ -53,7 +53,7 @@ class TestGraphCreatedUpload:
         assert "Uploading package 'zlib" in c.out
 
 
-class TestGraphPkgList:
+class TestCreateGraphToPkgList:
     def test_graph_pkg_list_only_built(self):
         c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
@@ -80,6 +80,31 @@ class TestGraphPkgList:
         assert len(pkglist) == 2
         assert len(pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]) == 0
         assert len(pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]) == 0
+
+
+class TestGraphInfoToPkgList:
+    def test_graph_pkg_list_only_built(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create zlib")
+        c.run("create app --format=json")
+        c.run("upload * -c -r=default")
+        c.run("remove * -c")
+        c.run("graph info --requires=app/1.0 --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --graph-binaries=build --format=json")
+        pkglist = json.loads(c.stdout)
+        assert len(pkglist["Local Cache"]) == 0
+        assert len(pkglist["default"]) == 2
+        c.run("install --requires=app/1.0 --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --graph-binaries=download --format=json")
+        pkglist = json.loads(c.stdout)
+        assert len(pkglist["Local Cache"]) == 2
+        assert len(pkglist["default"]) == 2
+        c.run("list --graph=graph.json --graph-binaries=build --format=json")
+        pkglist = json.loads(c.stdout)
+        assert len(pkglist["Local Cache"]) == 0
+        assert len(pkglist["default"]) == 2
 
 
 class TestDownloadUpload:

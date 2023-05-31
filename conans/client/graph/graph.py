@@ -213,6 +213,8 @@ class Node(object):
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
+        result["remote"] = self.remote.name if self.remote else None
+        result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
