@@ -119,6 +119,10 @@ class ListPattern:
         else:
             self.package_id = self.package_id or package_id
 
+    @staticmethod
+    def _only_latest(rev):
+        return rev in ["!latest", "~latest"]
+
     @property
     def is_latest_rrev(self):
         return self.rrev == "latest"
@@ -132,7 +136,7 @@ class ListPattern:
             raise ConanException(f"Recipe '{self.ref}' not found")
 
     def filter_rrevs(self, rrevs):
-        if self.rrev == "!latest":
+        if self._only_latest(self.rrev):
             return rrevs[1:]
         rrevs = [r for r in rrevs if fnmatch.fnmatch(r.revision, self.rrev)]
         if not rrevs:
@@ -150,7 +154,7 @@ class ListPattern:
         return prefs
 
     def filter_prevs(self, prevs):
-        if self.prev == "!latest":
+        if self._only_latest(self.prev):
             return prevs[1:]
         prevs = [p for p in prevs if fnmatch.fnmatch(p.revision, self.prev)]
         if not prevs:
