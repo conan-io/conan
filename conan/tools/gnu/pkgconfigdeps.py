@@ -97,7 +97,7 @@ class _PCContentGenerator:
     template = textwrap.dedent("""\
         {%- macro get_libs(libdirs, cpp_info, gnudeps_flags) -%}
         {%- for _ in libdirs -%}
-        {{ '-L"${libdir%s}"' % loop.index + " " }}
+        {{ '-L"${libdir%s}"' % (loop.index0 or "") + " " }}
         {%- endfor -%}
         {%- for sys_lib in (cpp_info.libs + cpp_info.system_libs) -%}
         {{ "-l%s" % sys_lib + " " }}
@@ -112,7 +112,7 @@ class _PCContentGenerator:
 
         {%- macro get_cflags(includedirs, cxxflags, cflags, defines) -%}
         {%- for _ in includedirs -%}
-        {{ '-I"${includedir%s}"' % loop.index + " " }}
+        {{ '-I"${includedir%s}"' % (loop.index0 or "") + " " }}
         {%- endfor -%}
         {%- for cxxflag in cxxflags -%}
         {{ cxxflag + " " }}
@@ -127,13 +127,13 @@ class _PCContentGenerator:
 
         prefix={{ prefix_path }}
         {% for path in libdirs %}
-        {{ "libdir{}={}".format(loop.index, path) }}
+        {{ "libdir{}={}".format((loop.index0 or ""), path) }}
         {% endfor %}
         {% for path in includedirs %}
-        {{ "includedir%d=%s" % (loop.index, path) }}
+        {{ "includedir%s=%s" % ((loop.index0 or ""), path) }}
         {% endfor %}
         {% for path in bindirs %}
-        {{ "bindir{}={}".format(loop.index, path) }}
+        {{ "bindir{}={}".format((loop.index0 or ""), path) }}
         {% endfor %}
         {% if pkg_config_custom_content %}
         # Custom PC content
