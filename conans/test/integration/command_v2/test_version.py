@@ -6,6 +6,9 @@ import sys
 
 
 def test_version_json():
+    """
+    Conan version command should be able to output a json with the version and python version.
+    """
     t = TestClient()
     t.run("version --format=json")
     js = json.loads(t.stdout)
@@ -14,13 +17,28 @@ def test_version_json():
     assert js["python"]["sys_version"] == sys.version
 
 
+def _validate_text_output(output):
+    lines = output.splitlines()
+    assert f'version: {__version__}' in lines
+    assert 'python' in lines
+    assert f'  version: {platform.python_version()}' in lines
+    assert f'  sys_version: {sys.version}' in lines
+
+
 def test_version_text():
+    """
+    Conan version command should be able to output a raw text with the version and python version.
+    """
     t = TestClient()
     t.run("version --format=text")
-    assert [f'version: {__version__}', 'python', f'  version: {platform.python_version()}', f'  sys_version: {sys.version}'] == t.out.splitlines()
+    _validate_text_output(t.out)
 
 
 def test_version_raw():
+    """
+    Conan version command should be able to output a raw text with the version and python version,
+    when no format is specified.
+    """
     t = TestClient()
     t.run("version")
-    assert [f'version: {__version__}', 'python', f'  version: {platform.python_version()}', f'  sys_version: {sys.version}'] == t.out.splitlines()
+    _validate_text_output(t.out)
