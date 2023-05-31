@@ -48,7 +48,7 @@ def download(conan_api: ConanAPI, parser, *args):
         try:
             package_list = multi_package_list[remote.name]
         except KeyError:
-            raise ConanException(f"The current package list do not contain remote '{remote.name}'")
+            raise ConanException(f"The current package list does not contain remote '{remote.name}'")
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
