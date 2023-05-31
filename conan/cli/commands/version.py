@@ -14,8 +14,8 @@ def version(conan_api, parser, *args):
 
     return {'version': str(conan_version),
             'python': {
-                'version': platform.python_version(),
-                'sys_version': sys.version,
+                'version': platform.python_version().replace('\n', ''),
+                'sys_version': sys.version.replace('\n', ''),
                 }
             }
 

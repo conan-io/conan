@@ -19,10 +19,12 @@ def test_version_json():
 
 def _validate_text_output(output):
     lines = output.splitlines()
+    python_version = platform.python_version().replace("\n", "")
+    sys_version = sys.version.replace("\n", "")
     assert f'version: {__version__}' in lines
     assert 'python' in lines
-    assert f'  version: {platform.python_version()}' in lines
-    assert f'  sys_version: {sys.version}' in lines
+    assert f'  version: {python_version}' in lines
+    assert f'  sys_version: {sys_version}' in lines
 
 
 def test_version_text():
