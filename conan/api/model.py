@@ -3,6 +3,7 @@ import fnmatch
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.model.version_range import VersionRange
 
 
 class Remote:
@@ -118,6 +119,25 @@ class ListPattern:
                 raise ConanException("Do not specify 'package_id' with 'only-recipe'")
         else:
             self.package_id = self.package_id or package_id
+
+    @property
+    def search_ref(self):
+        vrange = self._version_range
+        if vrange:
+            return str(RecipeReference(self.name, "*", self.user, self.channel))
+        if "*" in self.ref or not self.version or (self.package_id is None and self.rrev is None):
+            return self.ref
+
+    @property
+    def _version_range(self):
+        if self.version and self.version.startswith("[") and self.version.endswith("]"):
+            return VersionRange(self.version[1:-1])
+
+    def filter_versions(self, refs):
+        vrange = self._version_range
+        if vrange:
+            refs = [r for r in refs if vrange.contains(r.version, None)]
+        return refs
 
     @property
     def is_latest_rrev(self):
