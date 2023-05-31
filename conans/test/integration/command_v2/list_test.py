@@ -151,10 +151,22 @@ class TestListRefs:
 
     @pytest.mark.parametrize("remote", [True, False])
     @pytest.mark.parametrize("pattern, solution", [("zlib/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib*/[*]", ("1.0.0", "2.0.0")),
                                                    ("zlib/[<2]", ("1.0.0",)),
                                                    ("zlib/[>1]", ("2.0.0",))])
     def test_list_recipe_version_ranges(self, client, pattern, solution, remote):
         expected_json = {f"zlib/{v}@user/channel": {} for v in solution}
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipe_version_ranges_patterns(self, client, remote):
+        pattern = "*/[>1]"
+        expected_json = {'zlib/2.0.0@user/channel': {}}
+        self.check_json(client, pattern, remote, expected_json)
+        pattern = "z*/[<2]"
+        expected_json = {'zli/1.0.0': {},
+                         'zlib/1.0.0@user/channel': {},
+                         'zlix/1.0.0': {}}
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
