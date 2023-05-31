@@ -17,10 +17,10 @@ def test_version_json():
 def test_version_text():
     t = TestClient()
     t.run("version --format=text")
-    assert [f'version: {__version__}', f'python.version: {platform.python_version()}', f'python.sys_version: {sys.version}'] == t.out.splitlines()
+    assert [f'version: {__version__}', 'python', f'  version: {platform.python_version()}', f'  sys_version: {sys.version}'] == t.out.splitlines()
 
 
 def test_version_raw():
     t = TestClient()
     t.run("version")
-    assert [f'version: {__version__}', f'python.version: {platform.python_version()}', f'python.sys_version: {sys.version}'] == t.out.splitlines()
+    assert [f'version: {__version__}', 'python', f'  version: {platform.python_version()}', f'  sys_version: {sys.version}'] == t.out.splitlines()
