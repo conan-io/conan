@@ -150,6 +150,26 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
+    @pytest.mark.parametrize("pattern, solution", [("zlib/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib*/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib/[<2]", ("1.0.0",)),
+                                                   ("zlib/[>1]", ("2.0.0",))])
+    def test_list_recipe_version_ranges(self, client, pattern, solution, remote):
+        expected_json = {f"zlib/{v}@user/channel": {} for v in solution}
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipe_version_ranges_patterns(self, client, remote):
+        pattern = "*/[>1]"
+        expected_json = {'zlib/2.0.0@user/channel': {}}
+        self.check_json(client, pattern, remote, expected_json)
+        pattern = "z*/[<2]"
+        expected_json = {'zli/1.0.0': {},
+                         'zlib/1.0.0@user/channel': {},
+                         'zlix/1.0.0': {}}
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipe_versions_exact(self, client, remote):
         pattern = "zli/1.0.0"
         # by default, when a reference is complete, we show latest recipe revision
@@ -421,8 +441,9 @@ class TestListPrefs:
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_latest_prevs(self, client, remote):
-        pattern = "zli/1.0.0:*#latest"
+    @pytest.mark.parametrize("version", ["1.0.0", "[>=1.0.0 <2]"])
+    def test_list_latest_prevs(self, client, remote, version):
+        pattern = f'"zli/{version}:*#latest"'
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0
