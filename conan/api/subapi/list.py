@@ -97,9 +97,10 @@ class ListAPI:
                                  "if 'package_id' is not a pattern")
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
-        if "*" in pattern.ref or not pattern.version or \
-                (pattern.package_id is None and pattern.rrev is None):
-            refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+        search_ref = pattern.search_ref
+        if search_ref:
+            refs = self.conan_api.search.recipes(search_ref, remote=remote)
+            refs = pattern.filter_versions(refs)
             refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
         else:
