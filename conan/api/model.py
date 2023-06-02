@@ -1,8 +1,12 @@
 import fnmatch
+import json
 
+from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_SYSTEM_TOOL, \
+    RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.files import load
 from conans.model.version_range import VersionRange
 
 
@@ -32,6 +36,85 @@ class Remote:
 
     def __repr__(self):
         return str(self)
+
+
+class MultiPackagesList:
+    def __init__(self):
+        self.lists = {}
+
+    def __getitem__(self, name):
+        try:
+            return self.lists[name]
+        except KeyError:
+            raise ConanException(f"'{name}' doesn't exist is package list")
+
+    def add(self, name, pkg_list):
+        self.lists[name] = pkg_list
+
+    def add_error(self, remote_name, error):
+        self.lists[remote_name] = {"error": error}
+
+    def serialize(self):
+        return {k: v.serialize() if isinstance(v, PackagesList) else v
+                for k, v in self.lists.items()}
+
+    @staticmethod
+    def load(file):
+        content = json.loads(load(file))
+        result = {}
+        for remote, pkglist in content.items():
+            if "error" in pkglist:
+                result[remote] = pkglist
+            else:
+                result[remote] = PackagesList.deserialize(pkglist)
+        pkglist = MultiPackagesList()
+        pkglist.lists = result
+        return result
+
+    @staticmethod
+    def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
+        graph = json.loads(load(graphfile))
+        pkglist = MultiPackagesList()
+        cache_list = PackagesList()
+        if graph_recipes is None and graph_binaries is None:
+            recipes = ["*"]
+            binaries = ["*"]
+        else:
+            recipes = [r.lower() for r in graph_recipes or []]
+            binaries = [b.lower() for b in graph_binaries or []]
+
+        pkglist.lists["Local Cache"] = cache_list
+        for node in graph["graph"]["nodes"].values():
+            recipe = node["recipe"]
+            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_SYSTEM_TOOL):
+                continue
+
+            ref = node["ref"]
+            ref = RecipeReference.loads(ref)
+            recipe = recipe.lower()
+            if any(r == "*" or r == recipe for r in recipes):
+                cache_list.add_refs([ref])
+
+            remote = node["remote"]
+            if remote:
+                remote_list = pkglist.lists.setdefault(remote, PackagesList())
+                remote_list.add_refs([ref])
+            pref = PkgReference(ref, node["package_id"], node["prev"])
+            binary_remote = node["binary_remote"]
+            if binary_remote:
+                remote_list = pkglist.lists.setdefault(binary_remote, PackagesList())
+                remote_list.add_refs([ref])  # Binary listed forces recipe listed
+                remote_list.add_prefs(ref, [pref])
+
+            binary = node["binary"]
+            if binary in (BINARY_SKIP, BINARY_INVALID, BINARY_MISSING):
+                continue
+
+            binary = binary.lower()
+            if any(b == "*" or b == binary for b in binaries):
+                cache_list.add_refs([ref])  # Binary listed forces recipe listed
+                cache_list.add_prefs(ref, [pref])
+        return pkglist
 
 
 class PackagesList:
@@ -75,7 +158,9 @@ class PackagesList:
         for ref, ref_dict in self.recipes.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
                 t = rrev_dict.get("timestamp")
-                recipe = RecipeReference.loads(f"{ref}#{rrev}%{t}")  # TODO: optimize this
+                recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
+                if t is not None:
+                    recipe.timestamp = t
                 result[recipe] = rrev_dict
         return result.items()
 
@@ -92,6 +177,12 @@ class PackagesList:
 
     def serialize(self):
         return self.recipes
+
+    @staticmethod
+    def deserialize(data):
+        result = PackagesList()
+        result.recipes = data
+        return result
 
 
 class ListPattern:

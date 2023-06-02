@@ -14,7 +14,6 @@ RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
-RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
 RECIPE_SYSTEM_TOOL = "System tool"
 
 BINARY_CACHE = "Cache"
@@ -214,6 +213,8 @@ class Node(object):
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
+        result["remote"] = self.remote.name if self.remote else None
+        result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
