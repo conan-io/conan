@@ -82,6 +82,11 @@ class TestDownloadCacheBackupSources:
         http_server_base_folder_internet = temp_folder()
 
         save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        save(os.path.join(http_server_base_folder_internet, "mycompanyfile.txt"), "Business stuff")
+
+        @http_server.server.get("/mycompanystorage/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
 
         @http_server.server.get("/internet/<file>")
         def get_internet_file(file):
@@ -99,7 +104,8 @@ class TestDownloadCacheBackupSources:
 
         http_server.run_server()
 
-        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        hello_world_sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        mycompanyfile_sha256 = "7f1d5d6ae44eb93061b0e07661bd8cbac95a7c51fa204570bf7e24d877d4a224"
         conanfile = textwrap.dedent(f"""
             from conan import ConanFile
             from conan.tools.files import download
@@ -108,9 +114,14 @@ class TestDownloadCacheBackupSources:
                 version = "1.0"
                 def source(self):
                     download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
-                             sha256="{sha256}")
+                             sha256="{hello_world_sha256}")
+
+                    download(self, "http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt", "mycompanyfile.txt",
+                             sha256="{mycompanyfile_sha256}")
             """)
 
+        # Ensure that a None url is only warned about but no exception is thrown,
+        # this is possible in CI systems that substitute an env var and fail to give it a value
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
                                     f"core.sources:download_urls=[None, 'origin', 'http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
@@ -122,20 +133,24 @@ class TestDownloadCacheBackupSources:
 
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
                                     f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
-                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
+                                    f"core.sources:exclude_urls=['http://localhost:{http_server.port}/mycompanystorage/']"},
                     path=client.cache.cache_folder)
         client.run("create .")
         client.run("upload * -c -r=default")
 
         server_contents = os.listdir(http_server_base_folder_backups)
-        assert sha256 in server_contents
-        assert sha256 + ".json" in server_contents
+        assert hello_world_sha256 in server_contents
+        assert hello_world_sha256 + ".json" in server_contents
+        assert mycompanyfile_sha256 not in server_contents
+        assert mycompanyfile_sha256 + ".json" not in server_contents
 
         client.run("upload * -c -r=default")
         assert "already in server, skipping upload" in client.out
 
         client.run("source .")
-        assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
+        assert f"Source ['http://localhost:{http_server.port}/internet/myfile.txt'] retrieved from local download cache" in client.out
+        assert f"Source ['http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt'] retrieved from local download cache" in client.out
 
     def test_download_origin_first(self):
         client = TestClient(default_server_user=True)
@@ -340,7 +355,7 @@ class TestDownloadCacheBackupSources:
         assert f"ConanException: The source backup server 'http://localhost:{http_server.port}" \
                f"/downloader/' needs authentication" in client.out
         content = {"credentials":
-                   [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
 
         client.run("create .")
@@ -349,7 +364,7 @@ class TestDownloadCacheBackupSources:
         assert f"The source backup server 'http://localhost:{http_server.port}" \
                f"/uploader/' needs authentication" in client.out
         content = {"credentials":
-                   [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
+                       [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
         # Now use the correct UPLOAD token
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         client.run("upload * -c -r=default --force")  # need --force to guarantee cached updated
@@ -362,7 +377,7 @@ class TestDownloadCacheBackupSources:
         assert "already in server, skipping upload" in client.out
 
         content = {"credentials":
-                   [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
 
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         rmdir(download_cache_folder)

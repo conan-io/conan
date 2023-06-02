@@ -43,7 +43,7 @@ class SourcesCachingDownloader:
                           download_cache_folder, backups_urls):
         """
         this download will first check in the local cache, if not there, it will go to the list
-        of backup_urls defined by user conf (by default ["origin"], and iterate it until
+        of backup_urls defined by user conf (by default ["origin"]), and iterate it until
         something is found.
         """
         # We are going to use the download_urls definition for backups
