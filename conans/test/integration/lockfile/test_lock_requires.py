@@ -449,11 +449,16 @@ class TestLockTestPackage:
 
     def test_create_lock_tool_requires_test(self, client):
         """ same as above, but the full lockfile including the "test_package" can be
-        obtained with a single "conan create"
+        obtained with a "conan test"
         """
         c = client
         with c.chdir("app"):
-            c.run("create . --lockfile-out=conan.lock")
+            c.run("create . --lockfile-out=conan.lock -tf=")
+            lock = c.load("conan.lock")
+            assert "cmake/1.0" not in lock
+            assert "dep/1.0" in lock
+            c.run("test test_package app/1.0 --lockfile-partial --lockfile=conan.lock "
+                  "--lockfile-out=conan.lock")
             lock = c.load("conan.lock")
             assert "cmake/1.0" in lock
             assert "dep/1.0" in lock
