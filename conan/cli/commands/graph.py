@@ -1,6 +1,5 @@
 import json
 import os
-
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
@@ -11,7 +10,6 @@ from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.internal.deploy import do_deploys
 from conans.client.graph.install_graph import InstallGraph
 from conan.errors import ConanException
-from conans.util.files import mkdir
 
 
 @conan_command(group="Consumer")
@@ -170,7 +168,6 @@ def graph_info(conan_api, parser, subparser, *args):
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
         if args.deployer:
             base_folder = args.deployer_folder or os.getcwd()
-            mkdir(base_folder)
             do_deploys(conan_api, deps_graph, args.deployer, base_folder)
 
     return {"graph": deps_graph,

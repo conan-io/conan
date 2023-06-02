@@ -3,7 +3,6 @@ from conan.internal.deploy import do_deploys
 from conans.client.generators import write_generators
 from conans.client.installer import BinaryInstaller
 from conans.errors import ConanInvalidConfiguration
-from conans.util.files import mkdir
 
 
 class InstallAPI:
@@ -64,7 +63,6 @@ class InstallAPI:
         # The previous .set_base_folders has already decided between the source_folder and output
         if deploy:
             base_folder = deploy_folder or conanfile.folders.base_build
-            mkdir(base_folder)
             do_deploys(self.conan_api, deps_graph, deploy, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
