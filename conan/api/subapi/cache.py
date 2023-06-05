@@ -5,6 +5,7 @@ from conan.internal.integrity_check import IntegrityChecker
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_now
 from conans.util.files import rmdir
 
 
@@ -48,6 +49,24 @@ class CacheAPI:
         app = ConanApp(self.conan_api.cache_folder)
         checker = IntegrityChecker(app)
         checker.check(package_list)
+
+    def remove_lru(self, package_list, lru):
+        app = ConanApp(self.conan_api.cache_folder)
+        cache = app.cache
+        timelimit = timestamp_now() - lru
+
+        now = timestamp_now()
+        for ref, ref_bundle in package_list.refs():
+
+            ref_time = cache.get_lru(ref)
+            if ref_time < timelimit:
+                self.conan_api.remove.recipe(ref)
+                continue  # No
+
+            for pref, _ in package_list.prefs(ref, ref_bundle):
+                pref_time = now if "pkg" in str(ref) else now - 10
+                if pref_time < timelimit:
+                    self.conan_api.remove.package(pref)
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True):
         """

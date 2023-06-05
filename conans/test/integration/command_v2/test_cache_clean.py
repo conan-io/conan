@@ -1,4 +1,5 @@
 import os.path
+import time
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -114,3 +115,18 @@ def test_cache_multiple_builds_diff_prev_clean():
     assert len(os.listdir(builds_folder)) == 2  # two builds will remain, both are valid
     c.run('remove * -c')
     assert len(os.listdir(builds_folder)) == 0  # no folder remain
+
+
+def test_cache_clean_lru():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . --name=pkg --version=0.1")
+    c.run("create . --name=dep --version=0.2")
+    #time.sleep(3)
+    #c.run("install --requires=pkg/0.1")
+
+    c.run("cache lru * 3")
+    # TODO: list or cache-remove-lru?
+    c.run("list *")
+    assert "pkg" in c.out
+    assert "dep" not in c.out

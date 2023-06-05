@@ -134,6 +134,12 @@ class ClientCache(object):
     def get_latest_package_reference(self, pref):
         return self._data_cache.get_latest_package_reference(pref)
 
+    def get_recipe_lru(self, ref):
+        return self._data_cache.get_recipe_lru(ref)
+
+    def get_package_lru(self, pref):
+        return self._data_cache.get_package_lru(pref)
+
     @property
     def store(self):
         return self._store_folder

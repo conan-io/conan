@@ -3,6 +3,7 @@ import sqlite3
 from conan.internal.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_now
 
 
 class RecipesDBTable(BaseDbTable):
@@ -10,7 +11,8 @@ class RecipesDBTable(BaseDbTable):
     columns_description = [('reference', str),
                            ('rrev', str),
                            ('path', str, False, None, True),
-                           ('timestamp', float)]
+                           ('timestamp', float),
+                           ('lru', int)]
     unique_together = ('reference', 'rrev')
 
     @staticmethod
@@ -21,6 +23,7 @@ class RecipesDBTable(BaseDbTable):
         return {
             "ref": ref,
             "path": row.path,
+            "lru": row.lru,
         }
 
     def _where_clause(self, ref):
@@ -32,16 +35,6 @@ class RecipesDBTable(BaseDbTable):
         where_expr = ' AND '.join(
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
-
-    def _set_clause(self, ref: RecipeReference, path=None):
-        set_dict = {
-            self.columns.reference: str(ref),
-            self.columns.rrev: ref.revision,
-            self.columns.path: path,
-            self.columns.timestamp: ref.timestamp,
-        }
-        set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
-        return set_expr
 
     def get(self, ref: RecipeReference):
         """ Returns the row matching the reference or fails """
@@ -61,11 +54,12 @@ class RecipesDBTable(BaseDbTable):
         assert ref is not None
         assert ref.revision is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
+        lru = timestamp_now()
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
-                                 f'VALUES ({placeholders})',
-                                 [str(ref), ref.revision, path, ref.timestamp])
+                             f'VALUES ({placeholders})',
+                             [str(ref), ref.revision, path, ref.timestamp, lru])
             except sqlite3.IntegrityError as e:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
 
@@ -91,9 +85,11 @@ class RecipesDBTable(BaseDbTable):
         query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
                     f'{self.columns.path} ,' \
-                    f'{self.columns.timestamp} ' \
+                    f'{self.columns.timestamp}, ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
+
         with self.db_connection() as conn:
             r = conn.execute(query)
             result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
@@ -108,6 +104,7 @@ class RecipesDBTable(BaseDbTable):
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
                     f'{self.columns.path}, ' \
+                    f'{self.columns.lru}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.reference}="{str(ref)}" ' \

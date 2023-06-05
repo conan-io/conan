@@ -4,6 +4,7 @@ from conan.internal.cache.db.table import BaseDbTable
 from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.util.dates import timestamp_now
 
 
 class PackagesDBTable(BaseDbTable):
@@ -14,7 +15,8 @@ class PackagesDBTable(BaseDbTable):
                            ('prev', str, True),
                            ('path', str, False, None, True),
                            ('timestamp', float),
-                           ('build_id', str, True)]
+                           ('build_id', str, True),
+                           ('lru', int)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
     @staticmethod
@@ -26,6 +28,7 @@ class PackagesDBTable(BaseDbTable):
             "pref": pref,
             "build_id": row.build_id,
             "path": row.path,
+            "lru": row.lru
         }
 
     def _where_clause(self, pref: PkgReference):
@@ -73,12 +76,13 @@ class PackagesDBTable(BaseDbTable):
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
+        lru = timestamp_now()
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
-                                   f'VALUES ({placeholders})',
-                                   [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
-                                    path, pref.timestamp, build_id])
+                             f'VALUES ({placeholders})',
+                             [str(pref.ref), pref.ref.revision, pref.package_id, pref.revision,
+                              path, pref.timestamp, build_id, lru])
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
@@ -121,6 +125,7 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.pkgid}, ' \
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
+                    f'{self.columns.lru}, ' \
                     f'MAX({self.columns.timestamp}), ' \
                     f'{self.columns.build_id} ' \
                     f'FROM {self.table_name} ' \
@@ -153,6 +158,7 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.pkgid}, ' \
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
+                    f'{self.columns.lru}, ' \
                     f'MAX({self.columns.timestamp}), ' \
                     f'{self.columns.build_id} ' \
                     f'FROM {self.table_name} ' \
