@@ -18,7 +18,7 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
-        self._file_downloader = FileDownloader(helpers.requester)
+        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name)
         self._cache = helpers.cache
         self._output = conanfile.output
         self._conanfile = conanfile
@@ -62,7 +62,11 @@ class SourcesCachingDownloader:
                 self._output.info(f"Source {urls} retrieved from local download cache")
             else:
                 with set_dirty_context_manager(cached_path):
+                    if None in backups_urls:
+                        raise ConanException("Trying to download sources from None backup remote."
+                                             f" Remotes were: {backups_urls}")
                     for backup_url in backups_urls:
+
                         is_last = backup_url is backups_urls[-1]
                         if backup_url == "origin":  # recipe defined URLs
                             if self._origin_download(urls, cached_path, retry, retry_wait,
@@ -148,11 +152,11 @@ class SourcesCachingDownloader:
 class ConanInternalCacheDownloader:
     """ This is used for the download of Conan packages from server, not for sources/backup sources
     """
-    def __init__(self, requester, config):
+    def __init__(self, requester, config, scope=None):
         self._download_cache = config.get("core.download:download_cache")
         if self._download_cache and not os.path.isabs(self._download_cache):
             raise ConanException("core.download:download_cache must be an absolute path")
-        self._file_downloader = FileDownloader(requester)
+        self._file_downloader = FileDownloader(requester, scope=scope)
 
     def download(self, url, file_path, auth, verify_ssl, retry, retry_wait):
         if not self._download_cache:

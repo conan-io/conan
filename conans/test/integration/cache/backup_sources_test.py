@@ -3,7 +3,7 @@ import os
 import textwrap
 from unittest import mock
 from bottle import static_file, request, HTTPError
-
+from conans.test.assets.genconanfile import GenConanfile
 from conans.errors import NotFoundException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -112,11 +112,18 @@ class TestDownloadCacheBackupSources:
             """)
 
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
-                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
+                                    f"core.sources:download_urls=[None, 'origin', 'http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
+        client.run("create .", assert_error=True)
+        assert "Trying to download sources from None backup remote" in client.out
+
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                    path=client.cache.cache_folder)
         client.run("create .")
         client.run("upload * -c -r=default")
 
@@ -620,3 +627,55 @@ class TestDownloadCacheBackupSources:
         client.run("create .")
         assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup http://localhost:{http_server.port}/downloader2/" in client.out
         assert "sha256 signature failed for" in client.out
+
+    def test_export_then_upload_workflow(self):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+        http_server = StoppableThreadBottle()
+
+        http_server_base_folder_internet = temp_folder()
+        http_server_base_folder_backup1 = temp_folder()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        @http_server.server.get("/internet/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
+
+        @http_server.server.get("/downloader1/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder_backup1)
+
+        @http_server.server.put("/uploader/<file>")
+        def put_file(file):
+            dest = os.path.join(http_server_base_folder_backup1, file)
+            with open(dest, 'wb') as f:
+                f.write(request.body.read())
+
+        http_server.run_server()
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "1.0"
+               def source(self):
+                   download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', 'origin']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("export .")
+        client.run("upload * -c -r=default")
+        # This used to crash because we were trying to list a missing dir if only exports were made
+        assert "[Errno 2] No such file or directory" not in client.out
+        client.run("create .")
+        client.run("upload * -c -r=default")
+        assert sha256 in os.listdir(http_server_base_folder_backup1)

@@ -255,7 +255,7 @@ class RemoteTest(unittest.TestCase):
 
     def test_errors(self):
         self.client.run("remote update origin --url http://foo.com", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.out)
+        self.assertIn("ERROR: Remote 'origin' doesn't exist", self.client.out)
 
         self.client.run("remote remove origin", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)

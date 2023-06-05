@@ -49,7 +49,7 @@ class CMake(object):
         self._toolchain_file = configure_preset.get("toolchainFile")
         self._cache_variables = configure_preset["cacheVariables"]
 
-        self._cmake_program = "cmake"  # Path to CMake should be handled by environment
+        self._cmake_program = conanfile.conf.get("tools.cmake:cmake_program", default="cmake")
 
     def configure(self, variables=None, build_script_folder=None, cli_args=None):
         """
@@ -104,6 +104,9 @@ class CMake(object):
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
+        if not cli_args or ("--log-level" not in cli_args and "--loglevel" not in cli_args):
+            arg_list.extend(self._cmake_log_levels_args)
+
         if cli_args:
             arg_list.extend(cli_args)
 
@@ -132,6 +135,9 @@ class CMake(object):
         cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator)
         if build_tool_args:
             cmd_line_args.extend(build_tool_args)
+
+        args.extend(self._compilation_verbosity_arg)
+
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 
@@ -181,6 +187,7 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
+        arg_list.extend(self._compilation_verbosity_arg)
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.run(command)
@@ -209,3 +216,23 @@ class CMake(object):
         env = ["conanbuild", "conanrun"] if env == "" else env
         self._build(build_type=build_type, target=target, cli_args=cli_args,
                     build_tool_args=build_tool_args, env=env)
+
+    @property
+    def _compilation_verbosity_arg(self):
+        """
+        Controls build tool verbosity, that is, those controlled by -DCMAKE_VERBOSE_MAKEFILE
+        See https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-build-v
+        """
+        verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                             choices=("quiet", "verbose"))
+        return ["--verbose"] if verbosity == "verbose" else []
+
+    @property
+    def _cmake_log_levels_args(self):
+        """
+        Controls CMake's own verbosity levels.
+        See https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-log-level
+        :return:
+        """
+        log_level = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        return ["--loglevel=" + log_level.upper()] if log_level is not None else []

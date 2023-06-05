@@ -6,7 +6,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, msvc_runtime_flag
+from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path
 from conans.errors import ConanException
 from conans.model.pkg_type import PackageType
 
@@ -152,7 +152,10 @@ class AutotoolsToolchain:
             compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
-                    env.define(env_var, compilers_by_conf[comp])
+                    compiler = compilers_by_conf[comp]
+                    # https://github.com/conan-io/conan/issues/13780
+                    compiler = unix_path(self._conanfile, compiler)
+                    env.define(env_var, compiler)
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)

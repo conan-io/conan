@@ -351,3 +351,30 @@ def unzip(filename, destination="."):
         for file_ in zip_info:
             extracted_size += file_.file_size
             z.extract(file_, full_path)
+
+
+def human_size(size_bytes):
+    """
+    format a size in bytes into a 'human' file size, e.g. B, KB, MB, GB, TB, PB
+    Note that bytes will be reported in whole numbers but KB and above will have
+    greater precision.  e.g. 43 B, 443 KB, 4.3 MB, 4.43 GB, etc
+    """
+    unit_size = 1000.0
+    suffixes_table = [('B', 0), ('KB', 1), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
+
+    num = float(size_bytes)
+    the_precision = None
+    the_suffix = None
+    for suffix, precision in suffixes_table:
+        the_precision = precision
+        the_suffix = suffix
+        if num < unit_size:
+            break
+        num /= unit_size
+
+    if the_precision == 0:
+        formatted_size = "%d" % num
+    else:
+        formatted_size = str(round(num, ndigits=the_precision))
+
+    return "%s%s" % (formatted_size, the_suffix)

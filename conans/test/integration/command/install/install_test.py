@@ -429,7 +429,7 @@ def test_install_json_formatter():
     hello_pkg_ref = 'hello/0.1'  # no revision available
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for n in nodes:
+    for _, n in nodes.items():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] is None
@@ -438,7 +438,7 @@ def test_install_json_formatter():
             assert n['binary'] == "Cache"
             pkg_cpp_info = n['cpp_info']
 
-    hello = nodes[0]
+    hello = nodes["0"]
     assert hello["ref"] == hello_pkg_ref
     assert hello["recipe_folder"] == client.current_folder
     assert hello["build_folder"] == client.current_folder
@@ -472,3 +472,16 @@ def test_install_json_formatter():
     assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
     assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
                                                   'pkg_config_name': 'compo1'}
+
+
+def test_upload_skip_binaries_not_hit_server():
+    """
+    When upload_policy = "skip", no need to try to install from servers
+    """
+    c = TestClient(servers={"default": None})  # Broken server, will raise error if used
+    conanfile = GenConanfile("pkg", "0.1").with_class_attribute('upload_policy = "skip"')
+    c.save({"conanfile.py": conanfile})
+    c.run("export .")
+    c.run("install --requires=pkg/0.1 --build=missing")
+    # This would crash if hits the server, but it doesnt
+    assert "pkg/0.1: Created package" in c.out

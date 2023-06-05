@@ -79,6 +79,7 @@ class DepsGraphBuilder(object):
             prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force or prev_require.override:  # override
                 require.overriden_ref = require.ref  # Store that the require has been overriden
+                require.override_ref = prev_ref
                 require.ref = prev_ref
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
@@ -232,6 +233,17 @@ class DepsGraphBuilder(object):
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+        if require.ref.version == "<host_version>":
+            if not require.build or require.visible:
+                raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
+                                     "be used for non-visible tool_requires")
+            req = Requirement(require.ref, headers=True, libs=True, visible=True)
+            transitive = node.transitive_deps.get(req)
+            if transitive is None:
+                raise ConanException(f"{node.ref} require '{require.ref}': didn't find a matching "
+                                     "host dependency")
+            require.ref.version = transitive.require.ref.version
+
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)

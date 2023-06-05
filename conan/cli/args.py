@@ -13,7 +13,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
-    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+    --build=~[pattern] Excluded packages, which will not be built from the source, whose package
                        reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
     --build=missing:[pattern] Build from source if a compatible binary does not exist, only for
                               packages matching pattern.
@@ -32,6 +32,8 @@ def add_lockfile_args(parser):
                         help="Lock package-id and package-revision information")
     parser.add_argument("--lockfile-clean", action="store_true",
                         help="Remove unused entries from the lockfile")
+    parser.add_argument("--lockfile-overrides",
+                        help="Overwrite lockfile overrides")
 
 
 def add_common_install_arguments(parser):

@@ -54,11 +54,11 @@ def test_cmake_config(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_cmake_config_error(client):
@@ -88,13 +88,13 @@ def test_cmake_config_package(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        dep*:tools.build:verbosity=notice
+        dep*:tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity" not in client.out
     client.run("create . --name=dep --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_cmake_config_package_not_scoped(client):
@@ -107,13 +107,13 @@ def test_cmake_config_package_not_scoped(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
     client.run("create . --name=dep --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_config_profile_forbidden(client):
@@ -149,11 +149,11 @@ def test_msbuild_config():
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 @pytest.mark.tool("visual_studio")

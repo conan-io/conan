@@ -4,12 +4,13 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
 
 
-@conan_command(group="Creator")
+@conan_command(group="Creator", formatters={"json": format_graph_json})
 def test(conan_api, parser, *args):
     """
     Test a package from a test_package folder.
@@ -25,10 +26,12 @@ def test(conan_api, parser, *args):
     cwd = os.getcwd()
     ref = RecipeReference.loads(args.reference)
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
@@ -38,7 +41,10 @@ def test(conan_api, parser, *args):
                           args.update, build_modes=args.build)
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.path.dirname(path))
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+
+    return {"graph": deps_graph,
+            "conan_api": conan_api}
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,

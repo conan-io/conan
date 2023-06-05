@@ -1,9 +1,8 @@
-import itertools 
+import itertools
 import glob
 import re
 
 from conan.internal import check_duplicated_generator
-from conans.model.build_info import CppInfo
 from conans.util.files import save
 
 # Filename format strings
@@ -84,34 +83,31 @@ end
 
 # Helper class that expands cpp_info meta information in lua readable string sequences
 class _PremakeTemplate(object):
-    def __init__(self, deps_cpp_info):
-        self.includedirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                      for p in
-                                      deps_cpp_info.includedirs) if deps_cpp_info.includedirs else ""
-        self.libdirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                  for p in deps_cpp_info.libdirs) if deps_cpp_info.libdirs else ""
-        self.bindirs = ",\n".join('"%s"' % p.replace("\\", "/")
-                                  for p in deps_cpp_info.bindirs) if deps_cpp_info.bindirs else ""
-        self.libs = ", ".join(
-            '"%s"' % p.replace('"', '\\"') for p in deps_cpp_info.libs) if deps_cpp_info.libs else ""
-        self.system_libs = ", ".join('"%s"' % p.replace('"', '\\"') for p in
-                                     deps_cpp_info.system_libs) if deps_cpp_info.system_libs else ""
-        self.defines = ", ".join('"%s"' % p.replace('"', '\\"') for p in
-                                 deps_cpp_info.defines) if deps_cpp_info.defines else ""
-        self.cxxflags = ", ".join(
-            '"%s"' % p for p in deps_cpp_info.cxxflags) if deps_cpp_info.cxxflags else ""
-        self.cflags = ", ".join(
-            '"%s"' % p for p in deps_cpp_info.cflags) if deps_cpp_info.cflags else ""
-        self.sharedlinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in
-                                         deps_cpp_info.sharedlinkflags) \
-            if deps_cpp_info.sharedlinkflags else ""
-        self.exelinkflags = ", ".join('"%s"' % p.replace('"', '\\"') for p in
-                                      deps_cpp_info.exelinkflags) \
-            if deps_cpp_info.exelinkflags else ""
+    def __init__(self, dep_cpp_info):
+        def _format_paths(paths):
+            if not paths:
+                return ""
+            return ",\n".join(f'"{p}"'.replace("\\", "/") for p in paths)
+
+        def _format_flags(flags):
+            if not flags:
+                return ""
+            return ", ".join('"%s"' % p.replace('"', '\\"') for p in flags)
+
+        self.includedirs = _format_paths(dep_cpp_info.includedirs)
+        self.libdirs = _format_paths(dep_cpp_info.libdirs)
+        self.bindirs = _format_paths(dep_cpp_info.bindirs)
+        self.libs = _format_flags(dep_cpp_info.libs)
+        self.system_libs = _format_flags(dep_cpp_info.system_libs)
+        self.defines = _format_flags(dep_cpp_info.defines)
+        self.cxxflags = _format_flags(dep_cpp_info.cxxflags)
+        self.cflags = _format_flags(dep_cpp_info.cflags)
+        self.sharedlinkflags = _format_flags(dep_cpp_info.sharedlinkflags)
+        self.exelinkflags = _format_flags(dep_cpp_info.exelinkflags)
         self.frameworks = ", ".join('"%s.framework"' % p.replace('"', '\\"') for p in
-                                    deps_cpp_info.frameworks) if deps_cpp_info.frameworks else ""
-        self.sysroot = "%s" % deps_cpp_info.sysroot.replace("\\",
-                                                            "/") if deps_cpp_info.sysroot else ""
+                                    dep_cpp_info.frameworks) if dep_cpp_info.frameworks else ""
+        self.sysroot = f"{dep_cpp_info.sysroot}".replace("\\", "/") \
+            if dep_cpp_info.sysroot else ""
 
 
 class PremakeDeps(object):
@@ -153,7 +149,7 @@ class PremakeDeps(object):
                  ("Platform", self.architecture)]
         name = "".join("_%s" % v for _, v in props)
         return name.lower()
-    
+
     def _output_lua_file(self, filename, content):
         self.output_files[filename] = "\n".join(["#!lua", *content])
 
@@ -161,11 +157,11 @@ class PremakeDeps(object):
         return "\n".join([
             f"{self.tab * indent}{line}" for line in list(filter(None, string.splitlines()))
         ])
-    
+
     def _premake_filtered(self, content, configuration, architecture, indent=0):
         """
         - Surrounds the lua line(s) contained within ``content`` with a premake "filter" and returns the result.
-        - A "filter" will affect all premake function calls after it's set. It's used to limit following project 
+        - A "filter" will affect all premake function calls after it's set. It's used to limit following project
           setup function call(s) to a certain scope. Here it is used to limit the calls in content to only apply
           if the premake ``configuration`` and ``architecture`` matches the parameters in this function call.
         """
@@ -182,11 +178,11 @@ class PremakeDeps(object):
     @property
     def content(self):
         check_duplicated_generator(self, self._conanfile)
-        
+
         self.output_files = {}
         conf_suffix = str(self._config_suffix())
         conf_name = conf_suffix[1::]
-        
+
         # Global utility file
         self._output_lua_file("conanutils.premake5.lua", [PREMAKE_TEMPLATE_UTILS])
 
@@ -209,14 +205,12 @@ class PremakeDeps(object):
             dep_names.append(dep_name)
 
             # Convert and aggregate dependency's
-            dep_cppinfo = dep.cpp_info.copy()
-            dep_cppinfo.set_relative_base_folder(dep.package_folder)
-            dep_aggregate = dep_cppinfo.aggregated_components()
-            
+            dep_aggregate = dep.cpp_info.aggregated_components()
+
             # Generate config dependent package variable and setup premake file
             var_filename = PREMAKE_VAR_FILE.format(pkgname=dep_name, config=conf_suffix)
             self._output_lua_file(var_filename, [
-                PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name, 
+                PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name,
                     config=conf_name, deps=_PremakeTemplate(dep_aggregate))
             ])
 
@@ -242,14 +236,14 @@ class PremakeDeps(object):
                 *['include "{}"'.format(profile[0]) for profile in profiles],
             ])
 
-        # Output global premake file 
+        # Output global premake file
         self._output_lua_file(PREMAKE_ROOT_FILE, [
             # Includes
             *[f'include "{pkg_file}"' for pkg_file in pkg_files],
             # Functions
             PREMAKE_TEMPLATE_ROOT_FUNCTION.format(
-                function_name="conan_setup_build", 
-                lua_content=PREMAKE_TEMPLATE_ROOT_BUILD, 
+                function_name="conan_setup_build",
+                lua_content=PREMAKE_TEMPLATE_ROOT_BUILD,
                 filter_call="\n".join(
                     ["\n".join(self._premake_filtered(
                         [f'conan_setup_build("{config}")'], config.split("_", 1)[0], config.split("_", 1)[1], 2)
@@ -257,8 +251,8 @@ class PremakeDeps(object):
                 )
             ),
             PREMAKE_TEMPLATE_ROOT_FUNCTION.format(
-                function_name="conan_setup_link", 
-                lua_content=PREMAKE_TEMPLATE_ROOT_LINK, 
+                function_name="conan_setup_link",
+                lua_content=PREMAKE_TEMPLATE_ROOT_LINK,
                 filter_call="\n".join(
                     ["\n".join(self._premake_filtered(
                         [f'conan_setup_link("{config}")'], config.split("_", 1)[0], config.split("_", 1)[1], 2)

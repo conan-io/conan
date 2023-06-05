@@ -210,6 +210,26 @@ def test_multi_deploy():
     assert "conanfile.txt: deploy cache!!" in c.out
 
 
+def test_deploy_local_import():
+    """ test that deployers can share some Python code with local imports
+    """
+    c = TestClient()
+    helper = textwrap.dedent("""
+        def myhelper(conanfile):
+            conanfile.output.info("My HELPER!!")
+        """)
+    deploy_cache = textwrap.dedent("""
+        from helper import myhelper
+        def deploy(graph, output_folder, **kwargs):
+            myhelper(graph.root.conanfile)
+        """)
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "deploy_cache.py"), deploy_cache)
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "helper.py"), helper)
+    c.save({"conanfile.txt": ""})
+    c.run("install . --deploy=deploy_cache")
+    assert "conanfile.txt: My HELPER!!" in c.out
+
+
 def test_builtin_full_deploy():
     """ check the built-in full_deploy
     """

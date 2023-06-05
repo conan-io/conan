@@ -135,9 +135,9 @@ class RecipeReference:
         if len(self_str) > 200:
             raise ConanException(f"Package reference too long >200 {self_str}")
         if not allow_uppercase:
-            validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}$")
+            validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}\Z")
         else:
-            validation_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,100}$")
+            validation_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_+.-]{1,100}\Z")
         if validation_pattern.match(self.name) is None:
             raise ConanException(f"Invalid package name '{self.name}'")
         if validation_pattern.match(str(self.version)) is None:
@@ -159,7 +159,7 @@ class RecipeReference:
 
     def matches(self, pattern, is_consumer):
         negate = False
-        if pattern.startswith("!"):
+        if pattern.startswith("!") or pattern.startswith("~"):
             pattern = pattern[1:]
             negate = True
 

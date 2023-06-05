@@ -52,8 +52,8 @@ BUILT_IN_CONFS = {
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
     "tools.build.cross_building:can_run": "Bool value that indicates whether is possible to run a non-native "
                                           "app on the same architecture. It's used by 'can_run' tool",
-    "tools.build:verbosity": "Verbosity of MSBuild and XCodeBuild build systems. "
-                             "Possible values are 'quiet', 'error', 'warning', 'notice', 'status', 'verbose', 'normal', 'debug', 'v', 'trace' and 'vv'",
+    "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
+    "tools.compilation:verbosity": "Verbosity of compilation tools if set. Possible values are 'quiet' and 'verbose'",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
@@ -63,6 +63,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
+    "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
     "tools.gnu:make_program": "Indicate path to make program",
@@ -84,7 +85,7 @@ BUILT_IN_CONFS = {
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
     "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
-    "tools.system.package_manager:mode": "Mode for package_manager tools: 'check' or 'install'",
+    "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
     "tools.apple:sdk_path": "Path to the SDK to be used",
@@ -267,17 +268,14 @@ class Conf:
 
     def validate(self):
         for conf in self._values:
-            if conf.startswith("tools") or conf.startswith("core"):
-                if conf not in BUILT_IN_CONFS:
-                    raise ConanException(f"Unknown conf '{conf}'. Use 'conan config list' to "
-                                         "display existing configurations")
+            self._check_conf_name(conf)
 
     def items(self):
         # FIXME: Keeping backward compatibility
         for k, v in self._values.items():
             yield k, v.value
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None, choices=None):
         """
         Get all the values of the given configuration name.
 
@@ -287,13 +285,13 @@ class Conf:
                            There are two default smart conversions for bool and str types.
         """
         # Skipping this check only the user.* configurations
-        if USER_CONF_PATTERN.match(conf_name) is None and conf_name not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] '{conf_name}' does not exist in configuration list. "
-                                 f" Run 'conan config list' to see all the available confs.")
+        self._check_conf_name(conf_name)
 
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
+            if choices is not None and v not in choices:
+                raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
@@ -480,6 +478,12 @@ class Conf:
         for v in self._values.values():
             v.set_relative_base_folder(folder)
 
+    @staticmethod
+    def _check_conf_name(conf):
+        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 f" Run 'conan config list' to see all the available confs.")
+
 
 class ConfDefinition:
 
@@ -496,13 +500,13 @@ class ConfDefinition:
     def __bool__(self):
         return bool(self._pattern_confs)
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None, choices=None):
         """
         Get the value of the conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
         return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
-                                                            check_type=check_type)
+                                                            check_type=check_type, choices=choices)
 
     def show(self, fnpattern):
         """

@@ -1,4 +1,4 @@
-import shutil
+import os
 
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
@@ -64,6 +64,16 @@ class CacheAPI:
         app = ConanApp(self.conan_api.cache_folder)
         if temp:
             rmdir(app.cache.temp_folder)
+            # Clean those build folders that didn't succeed to create a package and wont be in DB
+            builds_folder = app.cache.builds_folder
+            if os.path.isdir(builds_folder):
+                for subdir in os.listdir(builds_folder):
+                    folder = os.path.join(builds_folder, subdir)
+                    manifest = os.path.join(folder, "p", "conanmanifest.txt")
+                    info = os.path.join(folder, "p", "conaninfo.txt")
+                    if not os.path.exists(manifest) or not os.path.exists(info):
+                        rmdir(folder)
+
         for ref, ref_bundle in package_list.refs():
             ref_layout = app.cache.ref_layout(ref)
             if source:

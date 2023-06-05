@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 import unittest
@@ -16,6 +17,14 @@ class TestPackageTest(unittest.TestCase):
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --user=lasote --channel=stable")
         self.assertIn("hello/0.1@lasote/stable: Created package", client.out)
+
+    def test_basic_json(self):
+        client = TestClient()
+        client.save({CONANFILE: GenConanfile("hello", "0.1"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        client.run("create . --format=json")
+        graph = json.loads(client.stdout)
+        assert graph["graph"]["nodes"]["1"]["ref"] == "hello/0.1#a90ba236e5310a473dae9f767a41db91"
 
     def test_test_only(self):
         test_conanfile = GenConanfile().with_test("pass")
@@ -366,3 +375,16 @@ def test_removing_test_package_build_folder():
     # This was crashing because not cleaned
     client.run("create .")
     assert "Removing previously existing 'test_package' build folder" in client.out
+
+
+def test_test_package_lockfile_location():
+    """ the lockfile should be in the caller cwd
+    https://github.com/conan-io/conan/issues/13850
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "0.1"),
+            "test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("create . --lockfile-out=myconan.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
+    c.run("test test_package dep/0.1 --lockfile=myconan.lock --lockfile-out=myconan2.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))

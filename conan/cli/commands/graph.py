@@ -50,10 +50,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -76,8 +78,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
-    conanfile_path = os.path.dirname(deps_graph.root.path) if deps_graph.root.path else os.getcwd()
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, conanfile_path)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
     return install_order_serialized
 
@@ -133,10 +134,12 @@ def graph_info(conan_api, parser, subparser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -165,7 +168,7 @@ def graph_info(conan_api, parser, subparser, *args):
 
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
-        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
+        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
         if args.deployer:
             base_folder = args.deployer_folder or os.getcwd()
             do_deploys(conan_api, deps_graph, args.deployer, base_folder)

@@ -8,7 +8,7 @@ import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 class CreateTest(unittest.TestCase):
@@ -70,7 +70,6 @@ class MyPkg(ConanFile):
         client.run("create . --name=pkg --version=0.1 --user=lasote")
         assert "pkg/0.1@lasote:" in client.out
 
-
     def test_error_create_name_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("hello").with_version("1.2")})
@@ -87,7 +86,7 @@ class MyPkg(ConanFile):
         self.assertIn("pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("list * -c")
         self.assertIn("pkg/0.1@lasote/channel", client.out)
-        
+
         # test default without user and channel
         client.run("create . ")
         self.assertIn("pkg/0.1: Generating the package", client.out)
@@ -308,7 +307,7 @@ class MyPkg(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . --format=json")
         data = json.loads(self.client.stdout)
-        cpp_info_data = data["graph"]["nodes"][1]["cpp_info"]
+        cpp_info_data = data["graph"]["nodes"]["1"]["cpp_info"]
         self.assertIn("libpkg1", cpp_info_data["pkg1"]["libs"])
         self.assertListEqual([], cpp_info_data["pkg1"]["requires"])
         self.assertIn("libpkg2", cpp_info_data["pkg2"]["libs"])
@@ -370,7 +369,7 @@ def test_create_format_json():
                  ....
                 },
                 {'ref': 'hello/0.1#18d5440ae45afc4c36139a160ac071c7',
-                 'requires': {'2': 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'},
+                 'dependencies': {'1': {'ref': 'hello/0.1', 'visible': 'True', ...}},
                  ....
                 },
                 {'ref': 'pkg/0.2#44a1a27ac2ea1fbcf434a05c4d57388d',
@@ -437,7 +436,7 @@ def test_create_format_json():
     pkg_pkg_ref = 'pkg/0.2#db78b8d06a78af5c3ac56706f133098d'
     consumer_info = hello_pkg_info = pkg_pkg_info = None
 
-    for n in nodes:
+    for n in nodes.values():
         ref = n["ref"]
         if ref == consumer_ref:
             consumer_info = n
@@ -456,13 +455,31 @@ def test_create_format_json():
     assert consumer_info["settings"] == {'arch': 'x86', 'build_type': 'Debug', 'compiler': 'gcc',
                                          'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
                                          'os': 'Linux'}
-    assert consumer_info["requires"] == {'1': hello_pkg_ref}
+    consumer_deps = {
+        '1': {'ref': 'hello/0.1', 'run': 'False', 'libs': 'True', 'skip': 'False',
+              'test': 'False', 'force': 'False', 'direct': 'True', 'build': 'False',
+              'transitive_headers': 'None', 'transitive_libs': 'None', 'headers': 'True',
+              'package_id_mode': 'None', 'visible': 'True'},
+        '2': {'ref': 'pkg/0.2', 'run': 'False', 'libs': 'True', 'skip': 'False', 'test': 'False',
+              'force': 'False', 'direct': 'False', 'build': 'False', 'transitive_headers': 'None',
+              'transitive_libs': 'None', 'headers': 'True', 'package_id_mode': 'None',
+              'visible': 'True'}
+    }
+    assert consumer_info["dependencies"] == consumer_deps
     # hello/0.1 pkg information
     assert hello_pkg_info["package_id"] == "8eba237c0fb239fcb7daa47979ab99258eaaa7d1"
     assert hello_pkg_info["prev"] == "d95380a07c35273509dfc36b26f6cec1"
     assert hello_pkg_info["settings"] == {}
     assert hello_pkg_info["options"] == {}
-    assert hello_pkg_info["requires"] == {'2': pkg_pkg_ref}
+    hello_pkg_info_deps = {
+        "2": {
+            "ref": "pkg/0.2", "run": "False", "libs": "True", "skip": "False", "test": "False",
+            "force": "False", "direct": "True", "build": "False", "transitive_headers": "None",
+            "transitive_libs": "None", "headers": "True", "package_id_mode": "semver_mode",
+            "visible": "True"
+        }
+    }
+    assert hello_pkg_info["dependencies"] == hello_pkg_info_deps
     # pkg/0.2 pkg information
     assert pkg_pkg_info["package_id"] == "fb1439470288b15b2da269ed97b1a5f2f5d1f766"
     assert pkg_pkg_info["prev"] == "6949b0f89941d2a5994f9e6e4a89a331"
@@ -470,7 +487,7 @@ def test_create_format_json():
     assert pkg_pkg_info["settings"] == {'build_type': 'Debug', 'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++', 'compiler.version': '12'}
     assert pkg_pkg_info["options"] == {'fPIC': 'True', 'shared': 'False'}
-    assert pkg_pkg_info["requires"] == {}
+    assert pkg_pkg_info["dependencies"] == {}
 
 
 def test_create_format_json_and_deps_cpp_info():
@@ -495,7 +512,7 @@ def test_create_format_json_and_deps_cpp_info():
                           'objects': None,
                           'properties': {'pkg_config_aliases': ['compo1_alias'],
                                          'pkg_config_name': 'compo1'},
-                          'requires': None,
+                          'dependencies': None,
                           'resdirs': None,
                           'sharedlinkflags': None,
                           'srcdirs': None,
@@ -519,7 +536,7 @@ def test_create_format_json_and_deps_cpp_info():
                           'properties': {'pkg_config_aliases': ['pkg_alias1',
                                                                 'pkg_alias2'],
                                          'pkg_config_name': 'pkg_other_name'},
-                          'requires': None,
+                          'dependencies': None,
                           'resdirs': ['/path '
                                       'with '
                                       'spaces/.conan2/p/d15a235e212166d9/p/res'],
@@ -569,7 +586,7 @@ def test_create_format_json_and_deps_cpp_info():
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for n in nodes:
+    for n in nodes.values():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] == "Build"

@@ -525,3 +525,17 @@ def test_extra_flags_via_conf():
     assert '-mios-version-min=14 --flag1 --flag2' in env["CXXFLAGS"]
     assert '-mios-version-min=14 --flag3 --flag4' in env["CFLAGS"]
     assert '-mios-version-min=14 --flag5 --flag6' in env["LDFLAGS"]
+
+
+def test_conf_compiler_executable():
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:compiler_executables", {"cpp": "C:/my/path/myg++"})
+    conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
+    conanfile.win_bash = True
+    conanfile.settings = MockSettings(
+        {"build_type": "Release",
+         "os": "Windows"})
+    conanfile.settings_build = conanfile.settings
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert "/c/my/path/myg++" == env["CXX"]

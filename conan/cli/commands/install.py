@@ -1,20 +1,15 @@
-import json
 import os
 
-from conan.api.output import ConanOutput, cli_out_write
+from conan.api.output import ConanOutput
+from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
-from conan.cli import make_abs_path
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 
 
-def json_install(info):
-    deps_graph = info
-    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
-
-
-@conan_command(group="Consumer", formatters={"json": json_install})
+@conan_command(group="Consumer", formatters={"json": format_graph_json})
 def install(conan_api, parser, *args):
     """
     Install the requirements specified in a recipe (conanfile.py or conanfile.txt).
@@ -58,10 +53,12 @@ def install(conan_api, parser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
     if path:
@@ -96,4 +93,6 @@ def install(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return deps_graph
+    return {"graph": deps_graph,
+            "conan_api": conan_api}
+

@@ -65,7 +65,7 @@ def test_relocatable_toolchain():
     assert "sdk/1.0: Calling package()" in c.out
     assert "sdk/1.0: SDK INFO: CUSTOM PATH: arch:x86_64=>armv8!!!" in c.out
 
-    c.run("install consumer -pr:h=embedded -pr:b=linux")
+    c.run("install consumer -pr:h=embedded -pr:b=linux -v")
     c.assert_listed_binary({"base/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Skip"),
                             "sdk/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Cache")},
                            build=True)
@@ -85,7 +85,7 @@ def test_relocatable_toolchain():
 
     # we can even remove the binary!
     c.run("remove base/1.0:* -c")
-    c.run("install consumer -pr:h=embedded -pr:b=linux")
+    c.run("install consumer -pr:h=embedded -pr:b=linux -v")
     c.assert_listed_binary({"base/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Skip"),
                             "sdk/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Cache")},
                            build=True)
