@@ -57,6 +57,9 @@ class DownloadCache:
         if not os.path.exists(path_backups):
             return []
 
+        if excluded_urls is None:
+            excluded_urls = []
+
         all_refs = {str(k) for k, ref in package_list.refs()
                     if ref.get("upload") or any(should_upload_sources(p)
                                                 for p in ref["packages"].values())}

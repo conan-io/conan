@@ -190,8 +190,8 @@ class TestDownloadCacheBackupSources:
                                     f"core.sources:exclude_urls=['http://localhost:{http_server.port}/mycompanystorage/', 'http://localhost:{http_server.port}/mycompanystorage2/']"},
                     path=client.cache.cache_folder)
         client.run("source .")
-        assert f"Source http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
-        assert f"Source http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt retrieved from local download cache" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
+        assert f"File http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt not found in backup http://localhost:{http_server.port}/downloader/" in client.out
 
     def test_download_origin_first(self):
         client = TestClient(default_server_user=True)

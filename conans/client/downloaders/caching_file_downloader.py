@@ -114,9 +114,9 @@ class SourcesCachingDownloader:
             return True
         except NotFoundException:
             if is_last:
-                raise NotFoundException(f"File {urls} not found in {backups_urls}")
+                raise NotFoundException(f"File {urls} not found in backup {backups_urls}")
             else:
-                self._output.warning(f"Sources not found in backup {backup_url}")
+                self._output.warning(f"File {urls} not found in backup {backup_url}")
         except (AuthenticationException, ForbiddenException) as e:
             raise ConanException(f"The source backup server '{backup_url}' "
                                  f"needs authentication: {e}. "
