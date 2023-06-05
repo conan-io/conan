@@ -3,7 +3,7 @@ import os
 from conans.client.cache.cache import ClientCache
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
-from conans.util.files import rmdir
+from conans.util.files import rmdir, mkdir
 
 
 def _find_deployer(d, cache_deploy_folder):
@@ -36,6 +36,7 @@ def _find_deployer(d, cache_deploy_folder):
 
 
 def do_deploys(conan_api, graph, deploy, deploy_folder):
+    mkdir(deploy_folder)
     # Handle the deploys
     cache = ClientCache(conan_api.cache_folder)
     for d in deploy or []:
