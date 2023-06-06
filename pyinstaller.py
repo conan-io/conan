@@ -20,6 +20,7 @@ import platform
 import shutil
 import subprocess
 from distutils import dir_util
+import sys
 
 from conans import __version__
 from conans.util.files import save
@@ -91,7 +92,7 @@ VSVersionInfo(
     return template.format(version=version, version_tuple=version_tuple)
 
 
-def pyinstall(source_folder):
+def pyinstall(source_folder, onefile=False):
     pyinstaller_path = os.path.join(os.getcwd(), 'pyinstaller')
     _install_pyinstaller(pyinstaller_path)
     command = "pyinstaller"  # "python pyinstaller.py"
@@ -128,8 +129,9 @@ def pyinstall(source_folder):
 
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
-    subprocess.call('%s -y -p "%s" --console "%s" %s %s'
-                    % (command, source_folder, conan_path, hidden, win_ver),
+
+    onefile_arg = "--onefile" if onefile else ""
+    subprocess.call(f'{command} -y -p "{source_folder}" {onefile_arg} --console "{conan_path}" {hidden} {win_ver}',
                     cwd=pyinstaller_path, shell=True)
 
     _run_bin(pyinstaller_path)
@@ -138,8 +140,9 @@ def pyinstall(source_folder):
 
 
 if __name__ == "__main__":
+    onefile = "--onefile" in sys.argv
     src_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-    output_folder = pyinstall(src_folder)
+    output_folder = pyinstall(src_folder, onefile)
     print("\n**************Conan binaries created!******************\n"
           "\nAppend this folder to your system PATH: '%s'\n"
           "Feel free to move the whole folder to another location." % output_folder)
