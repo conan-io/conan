@@ -57,6 +57,12 @@ class BaseConanCommand:
             help_message = "Select the output format: {}".format(", ".join(formatters))
             parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
 
+    @staticmethod
+    def _init_log_levels(parser):
+        parser.add_argument("-v", default="status", nargs='?',
+                            help="Level of detail of the output. Valid options from less verbose "
+                                 "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
+                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
     @property
     def name(self):
         return self._name
@@ -109,13 +115,6 @@ class ConanCommand(BaseConanCommand):
         subcommand.set_name(self.name)
         self._subcommands[subcommand.name] = subcommand
 
-    @staticmethod
-    def _init_log_levels(parser):
-        parser.add_argument("-v", default="status", nargs='?',
-                            help="Level of detail of the output. Valid options from less verbose "
-                                 "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
-                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
-
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(description=self._doc, prog="conan {}".format(self._name),
                                      formatter_class=SmartFormatter)
@@ -132,12 +131,11 @@ class ConanCommand(BaseConanCommand):
 
             try:
                 sub = self._subcommands[args[0][0]]
-            except KeyError:  # display help
+            except (KeyError, IndexError):  # display help
                 for sub in self._subcommands.values():
                     sub.set_parser(subcommand_parser)
                 parser.parse_args(*args)
             else:
-                sub._init_formatters(parser)
                 sub.set_parser(subcommand_parser)
                 sub.run(conan_api, parser, *args)
 
@@ -163,6 +161,8 @@ class ConanSubCommand(BaseConanCommand):
     def set_parser(self, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
         self._parser.description = self._doc
+        self._init_formatters(self._parser)
+        self._init_log_levels(self._parser)
 
 
 def conan_command(group=None, formatters=None):
