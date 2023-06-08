@@ -73,20 +73,21 @@ class B2Deps(object):
             if '_'+dep_name in dep_cpp_info.components:
                 dep_cpp_info = dep_cpp_info.components['_'+dep_name]
             # The settings and options the dependency requires, i.e. finds relevant.
-            dep_settings = dependency.settings
-            dep_options = dependency.options
+            variant_settings = self._conanfile.settings
+            variant_options = dependency.options
             # The variant specific file to add this dependency to.
             dep_variant_jam = B2Deps._conanbuildinfo_variation_jam(
-                dep_name_b2, dep_settings, dep_options)
+                dep_name_b2, variant_settings, variant_options)
             if not dep_variant_jam in self._content:
                 self._content[dep_variant_jam] = ""
             # Declare/define the local project for the dependency.
             cbiv = [
-                f'#| {dependency.pref}',
+                '#|',
+                f'{dependency.pref}',
                 '[settings]',
-                dep_settings.dumps(),
+                variant_settings.dumps(),
                 '[options]',
-                dep_options.dumps(),
+                variant_options.dumps(),
                 '|#',
                 f'pkg-project {dep_name_b2} ;']
             # Declare any system libs that we refer to (in usage requirements).
@@ -94,11 +95,11 @@ class B2Deps(object):
             for name, component in dependency.cpp_info.get_sorted_components().items():
                 system_libs |= set(component.system_libs)
             cbiv += self._content_conanbuildinfo_variation_declare_syslibs(
-                dep_name_b2, system_libs, settings=dep_settings, options=dep_options)
+                dep_name_b2, system_libs, settings=variant_settings, options=variant_options)
             # Declare any package libs for usage requirements. The first one is
             # the main/global dependency.
             cbiv += self._content_conanbuildinfo_variation_declare_libs(
-                dep_name_b2, dep_cpp_info, settings=dep_settings, options=dep_options)
+                dep_name_b2, dep_cpp_info, settings=variant_settings, options=variant_options)
             # Followed by any components of the dependency. But skipping the
             # special _depname component. As that is already declare as the
             # main/global lib.
@@ -106,14 +107,14 @@ class B2Deps(object):
                 if name.lower() == '_'+dep_name_b2:
                     continue
                 cbiv += self._content_conanbuildinfo_variation_declare_libs(
-                    dep_name_b2, component, settings=dep_settings, options=dep_options)
+                    dep_name_b2, component, settings=variant_settings, options=variant_options)
             # Declare the main target of the dependency. This is an alias that
             # refers to all the previous targets and adds all the defines,
             # flags, etc for consumers.
             cbiv += self._content_conanbuildinfo_variation_declare_target(
                 dep_name_b2, dep_name_b2,
                 dep_cpp_info,
-                settings=dep_settings, options=dep_options)
+                settings=variant_settings, options=variant_options)
             # Similarly declare the component targets, if any.
             for name, component in dependency.cpp_info.get_sorted_components().items():
                 # Again, always skipping the kludge component as it's already
@@ -121,7 +122,7 @@ class B2Deps(object):
                 if "_"+dep_name_b2 == name.lower():
                     continue
                 cbiv += self._content_conanbuildinfo_variation_declare_target(
-                    dep_name_b2, name.lower(), component, settings=dep_settings, options=dep_options)
+                    dep_name_b2, name.lower(), component, settings=variant_settings, options=variant_options)
             # Add the combined text.
             self._content[dep_variant_jam] += "\n".join(cbiv)+"\n"
 
