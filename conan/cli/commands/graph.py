@@ -1,6 +1,5 @@
 import json
 import os
-
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
@@ -119,6 +118,8 @@ def graph_info(conan_api, parser, subparser, *args):
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("-d", "--deployer", action="append",
                            help='Deploy using the provided deployer to the output folder')
+    subparser.add_argument("-df", "--deployer-folder",
+                           help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
@@ -169,7 +170,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                       clean=args.lockfile_clean)
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
         if args.deployer:
-            base_folder = os.getcwd()
+            base_folder = args.deployer_folder or os.getcwd()
             do_deploys(conan_api, deps_graph, args.deployer, base_folder)
 
     return {"graph": deps_graph,
