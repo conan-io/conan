@@ -82,7 +82,12 @@ class B2Deps(object):
                 self._content[dep_variant_jam] = ""
             # Declare/define the local project for the dependency.
             cbiv = [
-                f'# {dependency.pref}',
+                f'#| {dependency.pref}',
+                '[settings]',
+                dep_settings.dumps(),
+                '[options]',
+                dep_options.dumps(),
+                '|#',
                 f'pkg-project {dep_name_b2} ;']
             # Declare any system libs that we refer to (in usage requirements).
             system_libs = set(dependency.cpp_info.system_libs)
