@@ -148,6 +148,8 @@ class _PCContentGenerator:
     """)
 
     shortened_template = textwrap.dedent("""\
+        prefix={{ prefix_path }}
+
         Name: {{ name }}
         Description: {{ description }}
         Version: {{ version }}
@@ -195,7 +197,12 @@ class _PCContentGenerator:
     def shortened_content(self, info):
         assert isinstance(info, _PCInfo)
 
+        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
+            else self._dep.package_folder
+        prefix_path = root_folder.replace("\\", "/")
+
         context = {
+            "prefix_path": prefix_path,
             "name": info.name,
             "description": info.description,
             "version": self._dep.ref.version,

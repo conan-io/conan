@@ -418,11 +418,14 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
+    prefix = pc_content.splitlines()[0]
     assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
     Version: 0.3
@@ -435,7 +438,9 @@ def test_pkg_config_name_full_aliases():
     assert "Requires: compo1" in pc_content
 
     pc_content = client.load("pkg_alias1.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
     Version: 0.3
@@ -444,7 +449,9 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_alias2.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
     Version: 0.3
