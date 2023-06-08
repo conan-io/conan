@@ -122,15 +122,15 @@ def test_cache_clean_lru():
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1")
     c.run("create . --name=dep --version=0.2")
-    time.sleep(3)
-    # This should update the LRU
-    c.run("install --requires=pkg/0.1")
 
     # TODO: Interface is "conan list --lru + conan remove" or "conan cache remove-lru"?
     #   conan list => should error if -r=myremote is passed
     #   but integrates for everything like can be used to remove and to upload
     #   and can use patterns, package queries
-    c.run("cache remove-lru * 2")
+    time.sleep(2)
+    # This should update the LRU
+    c.run("install --requires=pkg/0.1")
+    c.run("cache remove-lru * 1s")
     print(c.out)
 
     c.run("list *:*")
@@ -139,10 +139,10 @@ def test_cache_clean_lru():
     assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
     assert "dep" not in c.out
 
-    time.sleep(3)
+    time.sleep(2)
     # This should update the LRU
     c.run("graph info --requires=pkg/0.1")
-    c.run("cache remove-lru * 2")
+    c.run("cache remove-lru * 1s")
     print(c.out)
     c.run("list *:*")
     print(c.out)

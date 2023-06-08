@@ -54,7 +54,24 @@ class CacheAPI:
     def remove_lru(self, package_list, lru):
         app = ConanApp(self.conan_api.cache_folder)
         cache = app.cache
-        timelimit = timestamp_now() - lru
+        # TODO: Move DATE conversion to seconds to helper location?
+        lru_value = lru[:-1]
+        try:
+            lru_value = int(lru_value)
+        except TypeError:
+            raise ConanException(f"Time value '{lru_value}' must be an integer")
+        lru_unit = lru[-1]
+        units = {"w": 7*24*60*60,
+                 "d": 24*60*60,
+                 "h": 60*60,
+                 "m": 60,
+                 "s": 1}
+        try:
+            lru_value = lru_value * units[lru_unit]
+        except KeyError:
+            raise ConanException(f"Unrecognized time unit: '{lru_unit}'. Use: {list(units)}")
+
+        timelimit = timestamp_now() - lru_value
 
         for ref, ref_bundle in package_list.refs():
 

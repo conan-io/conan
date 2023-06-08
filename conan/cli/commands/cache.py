@@ -111,5 +111,5 @@ def cache_remove_lru(conan_api: ConanAPI, parser, subparser, *args):
     # TODO: Do we want the query?
     package_list = conan_api.list.select(ref_pattern, package_query=None)
     # TODO: Conversion of units seconds
-    removed_pkg_list = conan_api.cache.remove_lru(package_list, int(args.lru))
+    removed_pkg_list = conan_api.cache.remove_lru(package_list, args.lru)
     return removed_pkg_list
