@@ -100,6 +100,17 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
+    def update_lru(self, pref):
+        assert pref.revision is not None
+        # FIXME: pref comes here without timestamp, why? assert pref.timestamp is not None
+        where_clause = self._where_clause(pref)
+        lru = timestamp_now()
+        query = f"UPDATE {self.table_name} " \
+                f'SET {self.columns.lru} = "{lru}" ' \
+                f"WHERE {where_clause};"
+        with self.db_connection() as conn:
+            conn.execute(query)
+
     def remove_recipe(self, ref: RecipeReference):
         # can't use the _where_clause, because that is an exact match on the package_id, etc
         query = f"DELETE FROM {self.table_name} " \

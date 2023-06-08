@@ -47,10 +47,16 @@ class CacheDatabase:
         self._packages.update_timestamp(pref, path=path)
 
     def get_recipe_lru(self, ref):
-        self._recipes.get_lru(ref)
+        return self._recipes.get(ref)["lru"]
 
     def get_package_lru(self, pref: PkgReference):
-        self._packages.get_lru(pref)
+        return self._packages.get(pref)["lru"]
+
+    def update_recipe_lru(self, ref):
+        self._recipes.update_lru(ref)
+
+    def update_package_lru(self, pref):
+        self._packages.update_lru(pref)
 
     def remove_recipe(self, ref: RecipeReference):
         # Removing the recipe must remove all the package binaries too from DB

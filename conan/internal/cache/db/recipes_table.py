@@ -73,6 +73,17 @@ class RecipesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             conn.execute(query)
 
+    def update_lru(self, ref):
+        assert ref.revision is not None
+        assert ref.timestamp is not None
+        where_clause = self._where_clause(ref)
+        lru = timestamp_now()
+        query = f"UPDATE {self.table_name} " \
+                f'SET {self.columns.lru} = "{lru}" ' \
+                f"WHERE {where_clause};"
+        with self.db_connection() as conn:
+            conn.execute(query)
+
     def remove(self, ref: RecipeReference):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \

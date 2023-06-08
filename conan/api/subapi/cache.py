@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
 from conans.errors import ConanException
@@ -55,18 +56,19 @@ class CacheAPI:
         cache = app.cache
         timelimit = timestamp_now() - lru
 
-        now = timestamp_now()
         for ref, ref_bundle in package_list.refs():
 
-            ref_time = cache.get_lru(ref)
+            ref_time = cache.get_recipe_lru(ref)
             if ref_time < timelimit:
+                ConanOutput().info(f"Recipe {ref} old, removing")
                 self.conan_api.remove.recipe(ref)
                 continue  # No
 
             for pref, _ in package_list.prefs(ref, ref_bundle):
-                pref_time = now if "pkg" in str(ref) else now - 10
+                pref_time = cache.get_package_lru(pref)
                 if pref_time < timelimit:
-                    self.conan_api.remove.package(pref)
+                    ConanOutput().info(f"Package {pref} old, removing")
+                    self.conan_api.remove.package(pref, remote=None)
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True):
         """

@@ -98,7 +98,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand()
-def cache_lru(conan_api: ConanAPI, parser, subparser, *args):
+def cache_remove_lru(conan_api: ConanAPI, parser, subparser, *args):
     """
     Remove non-critical folders from the cache, like source, build and/or download
     (.tgz store) ones.
