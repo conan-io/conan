@@ -43,13 +43,20 @@ class BaseConanCommand:
                                  "commands should provide a documentation string explaining "
                                  "its use briefly.".format(self._name))
 
+    @staticmethod
+    def _init_log_levels(parser):
+        parser.add_argument("-v", default="status", nargs='?',
+                            help="Level of detail of the output. Valid options from less verbose "
+                                 "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
+                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
+
     @property
     def _help_formatters(self):
         """
         Formatters that are shown as available in help, 'text' formatter
         should not appear
         """
-        return [formatter for formatter in list(self._formatters) if formatter != "text"]
+        return [formatter for formatter in self._formatters if formatter != "text"]
 
     def _init_formatters(self, parser):
         formatters = self._help_formatters
@@ -57,12 +64,6 @@ class BaseConanCommand:
             help_message = "Select the output format: {}".format(", ".join(formatters))
             parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
 
-    @staticmethod
-    def _init_log_levels(parser):
-        parser.add_argument("-v", default="status", nargs='?',
-                            help="Level of detail of the output. Valid options from less verbose "
-                                 "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
-                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
     @property
     def name(self):
         return self._name
