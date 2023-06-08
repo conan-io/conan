@@ -149,6 +149,10 @@ class _PCContentGenerator:
 
     shortened_template = textwrap.dedent("""\
         prefix={{ prefix_path }}
+        {% if pkg_config_custom_content %}
+        # Custom PC content
+        {{ pkg_config_custom_content }}
+        {% endif %}
 
         Name: {{ name }}
         Description: {{ description }}
@@ -201,8 +205,14 @@ class _PCContentGenerator:
             else self._dep.package_folder
         prefix_path = root_folder.replace("\\", "/")
 
+        if info.cpp_info:
+            custom_content = info.cpp_info.get_property("pkg_config_custom_content")
+        else:
+            custom_content = None
+
         context = {
             "prefix_path": prefix_path,
+            "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
             "version": self._dep.ref.version,
@@ -353,8 +363,8 @@ class _PCGenerator:
         # Issue related: https://github.com/conan-io/conan/issues/10341
         pkg_name = _get_package_name(self._dep, self._build_context_suffix)
         if f"{pkg_name}.pc" not in pc_files:
-            package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}", None,
-                                   _get_package_aliases(self._dep))
+            package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}",
+                                   self._dep.cpp_info, _get_package_aliases(self._dep))
             # It'll be enough creating a shortened PC file. This file will be like an alias
             pc_files[f"{package_info.name}.pc"] = self._content_generator.shortened_content(package_info)
             for alias in package_info.aliases:
