@@ -166,12 +166,6 @@ class DataCache:
     def get_matching_build_id(self, ref, build_id):
         return self._db.get_matching_build_id(ref, build_id)
 
-    def get_recipe_timestamp(self, ref):
-        return self._db.get_recipe_timestamp(ref)
-
-    def get_package_timestamp(self, pref):
-        return self._db.get_package_timestamp(pref)
-
     def remove_recipe(self, layout: RecipeLayout):
         layout.remove()
         # FIXME: This is clearing package binaries from DB, but not from disk/layout

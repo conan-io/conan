@@ -22,15 +22,6 @@ class CacheDatabase:
         matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
 
-    def get_recipe_timestamp(self, ref):
-        # TODO: Remove this once the ref contains the timestamp
-        ref_data = self.try_get_recipe(ref)
-        return ref_data["ref"].timestamp  # Must exist
-
-    def get_package_timestamp(self, ref):
-        ref_data = self.try_get_package(ref)
-        return ref_data["pref"].timestamp
-
     def get_latest_recipe_reference(self, ref):
         # TODO: This logic could be done directly in DB
         rrevs = self.get_recipe_revisions_references(ref, True)
