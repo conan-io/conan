@@ -136,9 +136,9 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.pkgid}, ' \
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
-                    f'{self.columns.lru}, ' \
                     f'MAX({self.columns.timestamp}), ' \
-                    f'{self.columns.build_id} ' \
+                    f'{self.columns.build_id}, ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{pref.ref.revision}" ' \
                     f'AND {self.columns.reference} = "{str(pref.ref)}" ' \
@@ -169,9 +169,9 @@ class PackagesDBTable(BaseDbTable):
                     f'{self.columns.pkgid}, ' \
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
-                    f'{self.columns.lru}, ' \
                     f'MAX({self.columns.timestamp}), ' \
-                    f'{self.columns.build_id} ' \
+                    f'{self.columns.build_id}, ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.revision}" ' \
                     f'AND {self.columns.reference} = "{str(ref)}" ' \
