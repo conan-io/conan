@@ -115,8 +115,8 @@ class RecipesDBTable(BaseDbTable):
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
                     f'{self.columns.path}, ' \
-                    f'{self.columns.lru}, ' \
-                    f'MAX({self.columns.timestamp}) ' \
+                    f'MAX({self.columns.timestamp}), ' \
+                    f'{self.columns.lru} ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.reference}="{str(ref)}" ' \
                     f'{check_rrev} '\
