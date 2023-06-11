@@ -191,7 +191,7 @@ class TestDownloadCacheBackupSources:
                     path=client.cache.cache_folder)
         client.run("source .")
         assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
-        assert f"File http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt not found in backup http://localhost:{http_server.port}/downloader/" in client.out
+        assert f"File http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt not found in http://localhost:{http_server.port}/downloader/" in client.out
 
     def test_download_origin_first(self):
         client = TestClient(default_server_user=True)
@@ -538,8 +538,8 @@ class TestDownloadCacheBackupSources:
             client.run("source .", assert_error=True)
             assert "WARN: Sources for http://fake/myfile.txt failed in 'origin'" in client.out
             assert "WARN: Checking backups" in client.out
-            assert "NotFoundException: File http://fake/myfile.txt not found " \
-                   "in ['origin', 'http://extrafake/']" in client.out
+            assert "NotFoundException: File http://fake/myfile.txt " \
+                   "not found in ['origin', 'http://extrafake/']" in client.out
 
     def test_ok_when_origin_breaks_midway_list(self):
         client = TestClient(default_server_user=True)
