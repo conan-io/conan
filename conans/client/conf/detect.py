@@ -112,7 +112,7 @@ def _get_default_compiler():
 
     if platform.system() == "Windows":
         return vs or cc or gcc or clang
-    elif platform.system() == "Darwin":
+    elif platform.system() in ["Darwin", "FreeBSD"]:
         return clang or cc or gcc
     elif platform.system() == "SunOS":
         return sun_cc or cc or gcc or clang
