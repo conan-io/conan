@@ -44,7 +44,7 @@ class DownloadCache:
             finally:
                 thread_lock.release()
 
-    def get_backup_sources_files_to_upload(self, package_list):
+    def get_backup_sources_files_to_upload(self, package_list, excluded_urls):
         """ from a package_list of packages to upload, collect from the backup-sources cache
         the matching references to upload those backups too
         """
@@ -57,6 +57,9 @@ class DownloadCache:
         if not os.path.exists(path_backups):
             return []
 
+        if excluded_urls is None:
+            excluded_urls = []
+
         all_refs = {str(k) for k, ref in package_list.refs()
                     if ref.get("upload") or any(should_upload_sources(p)
                                                 for p in ref["packages"].values())}
@@ -66,9 +69,14 @@ class DownloadCache:
                 content = json.loads(load(f))
                 refs = content["references"]
                 # unknown entries are not uploaded at this moment, the flow is not expected.
-                if any(ref in all_refs for ref in refs):
-                    files_to_upload.append(f)
-                    files_to_upload.append(f[:-5])
+                for ref, urls in refs.items():
+                    is_excluded = all(any(url.startswith(excluded_url)
+                                          for excluded_url in excluded_urls)
+                                      for url in urls)
+                    if not is_excluded and ref in all_refs:
+                        files_to_upload.append(f)
+                        files_to_upload.append(f[:-5])
+                        break
         return files_to_upload
 
     @staticmethod
