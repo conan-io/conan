@@ -233,21 +233,21 @@ def _cppstd_apple_clang(clang_version, cppstd):
 
     # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
     # Note: cmake allows c++17 since version 10.0
-    if Version(clang_version) >= "9.1":
+    if clang_version >= "9.1":
         v17 = "c++17"
         vgnu17 = "gnu++17"
-    elif Version(clang_version) >= "6.1":
+    elif clang_version >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "13.0":
+    if clang_version >= "13.0":
         v20 = "c++20"
         vgnu20 = "gnu++20"
-    elif Version(clang_version) >= "10.0":
+    elif clang_version >= "10.0":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if Version(clang_version) >= "13.0":
+    if clang_version >= "13.0":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
@@ -355,7 +355,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
-    if Version(gcc_version) >= "12":
+    if gcc_version >= "12":
         v20 = "c++20"
         vgnu20 = "gnu++20"
 
