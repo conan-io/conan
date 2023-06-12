@@ -178,16 +178,12 @@ def subsystem_path(subsystem, path):
     path = pattern.sub('/\\1/', path).replace('\\', '/')
 
     if append_prefix:
-        print("APPEND PREFIX")
         if subsystem in (MSYS, MSYS2):
             return path.lower()
         elif subsystem == CYGWIN:
             return '/cygdrive' + path.lower()
         elif subsystem == WSL:
             return '/mnt' + path[0:2].lower() + path[2:]
-        else:  # mingw
-            # TODO: Check this is the correct mapping
-            return path
     else:
         return path if subsystem == WSL else path.lower()
     return None

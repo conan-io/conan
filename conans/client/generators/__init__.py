@@ -172,7 +172,6 @@ def _generate_aggregated_env(conanfile):
             filename = "conan{}.sh".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
-            print("SHS!!!!", shs)
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  sh_content(deactivates(shs)))
         if bats:
