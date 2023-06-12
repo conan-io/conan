@@ -91,7 +91,7 @@ class Folders(object):
         if not self.source:
             return self._base_source
 
-        return os.path.join(self._base_source, self.source)
+        return os.path.normpath(os.path.join(self._base_source, self.source))
 
     @property
     def base_source(self):
@@ -106,7 +106,7 @@ class Folders(object):
             return None
         if not self.build:
             return self._base_build
-        return os.path.join(self._base_build, self.build)
+        return os.path.normpath(os.path.join(self._base_build, self.build))
 
     @property
     def recipe_metadata_folder(self):
@@ -147,7 +147,7 @@ class Folders(object):
             return None
         if not self.generators:
             return self._base_generators
-        return os.path.join(self._base_generators, self.generators)
+        return os.path.normpath(os.path.join(self._base_generators, self.generators))
 
     def set_base_generators(self, folder):
         self._base_generators = folder
