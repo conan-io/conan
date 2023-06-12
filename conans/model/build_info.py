@@ -403,7 +403,6 @@ class CppInfo:
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
         self._package = _Component(set_defaults)
-        self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
@@ -490,22 +489,24 @@ class CppInfo:
 
     def aggregated_components(self):
         """Aggregates all the components as global values, returning a new CppInfo"""
-        if self._aggregated is None:
-            if self.has_components:
-                result = _Component()
-                # Reversed to make more dependant first
-                for component in reversed(self.get_sorted_components().values()):
-                    result.merge(component)
-                # NOTE: The properties are not aggregated because they might refer only to the
-                # component like "cmake_target_name" describing the target name FOR THE component
-                # not the namespace.
-                # FIXME: What to do about sysroot?
-                result._properties = copy.copy(self._package._properties)
-            else:
-                result = copy.copy(self._package)
-            self._aggregated = CppInfo()
-            self._aggregated._package = result
-        return self._aggregated
+        # This method had caching before, but after a ``--deployer``, the package changes
+        # location, and this caching was invalid, still pointing to the Conan cache instead of
+        # the deployed
+        if self.has_components:
+            result = _Component()
+            # Reversed to make more dependant first
+            for component in reversed(self.get_sorted_components().values()):
+                result.merge(component)
+            # NOTE: The properties are not aggregated because they might refer only to the
+            # component like "cmake_target_name" describing the target name FOR THE component
+            # not the namespace.
+            # FIXME: What to do about sysroot?
+            result._properties = copy.copy(self._package._properties)
+        else:
+            result = copy.copy(self._package)
+        aggregated = CppInfo()
+        aggregated._package = result
+        return aggregated
 
     def check_component_requires(self, conanfile):
         """ quality check for component requires:
