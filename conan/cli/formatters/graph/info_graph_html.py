@@ -47,11 +47,13 @@ graph_info_html = """
         <script type="text/javascript">
             var nodes = [
                 {%- for node in graph.nodes %}
+                    {% set highlight_node = error is not none and error["should_highlight_node"](node) %}
                     {
                         id: {{ node.id }},
                         label: '{{ node.short_label }}',
-                        shape: '{% if node.is_build_requires %}ellipse{% else %}box{% endif %}',
-                        color: { background: '{{ graph.binary_color(node) }}'},
+                        shape: '{% if highlight_node %}circle{% else %}{% if node.is_build_requires %}ellipse{% else %}box{% endif %}{% endif %}',
+                        color: { background: '{% if highlight_node %}red{% else %}{{ graph.binary_color(node) }}{% endif %}'},
+                        font: { color: "{% if highlight_node %}white{% else %}black{% endif %}" },
                         fulllabel: '<h3>{{ node.label }}</h3>' +
                                    '<ul>' +
                                    '    <li><b>id</b>: {{ node.package_id }}</li>' +
@@ -83,13 +85,24 @@ graph_info_html = """
                     shape: "circle",
                     font: { color: "white" },
                     color: "red",
-                    fulllabel: '<h3>{{ error["label"] }}</h3><p>This node creates a conflict in the dependency graph with {{ error["prev_require"] }}</p>',
+                    fulllabel: '<h3>{{ error["label"] }}</h3><p>This node creates a conflict in the dependency graph with {{ error["prev_node"]["ref"] }}</p>',
                     shapeProperties: { borderDashes: [5, 5] }
                 })
 
                 {% if error["from"] is not none %}
                     edges.push({from: {{ error["from"] }}, to: "{{ error["type"] }}", color: "red", dashes: true, title: "Conflict"})
                 {% endif %}
+                edges.push({from: {{ error["from"] }},
+                            to: "{{ error["type"] }}",
+                            dashes: true,
+                            title: "Bad require",
+                            physics: false,
+                            arrows: "to;from"})
+
+                edges.push({from: {{ error["prev_node"].id }},
+                            to: "{{ error["type"] }}",
+                            color: "red",
+                            title: "Conflict"})
             {% endif %}
 
             var nodes = new vis.DataSet(nodes);
