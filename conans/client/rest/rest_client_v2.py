@@ -118,9 +118,6 @@ class RestV2Methods(RestCommonMethods):
         output = ConanOutput()
         for filename in sorted(files):
             # As the filenames are sorted, the last one is always "conanmanifest.txt"
-            if output and not output.is_terminal:
-                msg = "-> %s" % filename
-                output.info(msg)
             resource_url = urls[filename]
             try:
                 headers = {}
