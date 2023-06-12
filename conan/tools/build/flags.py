@@ -178,7 +178,7 @@ def cppstd_flag(settings):
             "apple-clang": _cppstd_apple_clang,
             "msvc": _cppstd_msvc,
             "intel-cc": _cppstd_intel_cc,
-            "mcst-lcc": _cppstd_mcst_lcc}.get(compiler, None)
+            "mcst-lcc": _cppstd_mcst_lcc}.get(compiler)
     flag = None
     if func:
         flag = func(Version(compiler_version), str(cppstd))
@@ -203,7 +203,7 @@ def cppstd_msvc_flag(visual_version, cppstd):
     if visual_version >= "193":
         v23 = "c++latest"
 
-    return {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
+    return {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd))
 
 def _cppstd_msvc(visual_version, cppstd):
     flag = cppstd_msvc_flag(visual_version, cppstd)
@@ -256,7 +256,7 @@ def _cppstd_apple_clang(clang_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
 
     return "-std=%s" % flag if flag else None
 
@@ -312,7 +312,7 @@ def _cppstd_clang(clang_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
     return "-std=%s" % flag if flag else None
 
 
@@ -461,5 +461,5 @@ def _cppstd_intel_cc(_, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
     return "-std=%s" % flag if flag else None
