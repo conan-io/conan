@@ -15,7 +15,7 @@ class DownloadAPI:
     def recipe(self, ref: RecipeReference, remote: Remote):
         output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)
-        skip_download = app.cache.exists_rrev(ref)
+        skip_download = app.cache.get_recipe_reference(ref)
         if skip_download:
             output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
             return False
@@ -35,7 +35,7 @@ class DownloadAPI:
     def package(self, pref: PkgReference, remote: Remote):
         output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)
-        if not app.cache.exists_rrev(pref.ref):
+        if not app.cache.get_recipe_reference(pref.ref):
             raise ConanException("The recipe of the specified package "
                                  "doesn't exist, download it first")
 

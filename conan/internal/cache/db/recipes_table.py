@@ -54,9 +54,9 @@ class RecipesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
-                                 f'VALUES ({placeholders})',
-                                 [str(ref), ref.revision, path, ref.timestamp])
-            except sqlite3.IntegrityError as e:
+                             f'VALUES ({placeholders})',
+                             [str(ref), ref.revision, path, ref.timestamp])
+            except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
 
     def update_timestamp(self, ref: RecipeReference):
@@ -89,27 +89,42 @@ class RecipesDBTable(BaseDbTable):
             result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
         return result
 
-    def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
-        # FIXME: This is very fragile, we should disambiguate the function and check that revision
-        #        is always None if we want to check the revisions. Do another function to get the
-        #        time or check existence if needed
-        check_rrev = f'AND {self.columns.rrev} = "{ref.revision}" ' if ref.revision else ''
-        if only_latest_rrev:
-            query = f'SELECT {self.columns.reference}, ' \
-                    f'{self.columns.rrev}, ' \
-                    f'{self.columns.path}, ' \
-                    f'MAX({self.columns.timestamp}) ' \
-                    f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.reference}="{str(ref)}" ' \
-                    f'{check_rrev} '\
-                    f'GROUP BY {self.columns.reference} '  # OTHERWISE IT FAILS THE MAX()
-        else:
-            query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.reference} = "{str(ref)}" ' \
-                    f'{check_rrev} ' \
-                    f'ORDER BY {self.columns.timestamp} DESC'
+    def get_recipe_reference(self, ref: RecipeReference):
+        query = f'SELECT * FROM {self.table_name} ' \
+                f'WHERE {self.columns.reference}="{str(ref)}" ' \
+                f'AND {self.columns.rrev} = "{ref.revision}" '
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            if row is None:
+                return
+            ret = self._as_dict(self.row_type(*row))["ref"]
+        return ret
+
+    def get_latest_recipe_reference(self, ref: RecipeReference):
+        query = f'SELECT {self.columns.reference}, ' \
+                f'{self.columns.rrev}, ' \
+                f'{self.columns.path}, ' \
+                f'MAX({self.columns.timestamp}) ' \
+                f'FROM {self.table_name} ' \
+                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f'GROUP BY {self.columns.reference} '  # OTHERWISE IT FAILS THE MAX()
 
         with self.db_connection() as conn:
             r = conn.execute(query)
-            ret = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
+            row = r.fetchone()
+            if row is None:
+                return
+            ret = self._as_dict(self.row_type(*row))["ref"]
+        return ret
+
+    def get_recipe_revisions_references(self, ref: RecipeReference):
+        assert ref.revision is None
+        query = f'SELECT * FROM {self.table_name} ' \
+                f'WHERE {self.columns.reference} = "{str(ref)}" ' \
+                f'ORDER BY {self.columns.timestamp} DESC'
+
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            ret = [self._as_dict(self.row_type(*row))["ref"] for row in r.fetchall()]
         return ret

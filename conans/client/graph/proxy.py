@@ -33,7 +33,10 @@ class ConanProxy:
             return conanfile_path, RECIPE_EDITABLE, None, reference
 
         # check if it there's any revision of this recipe in the local cache
-        ref = self._cache.get_latest_recipe_reference(reference)
+        if reference.revision:
+            ref = self._cache.get_recipe_reference(reference)  # Check if exists in the cache
+        else:
+            ref = self._cache.get_latest_recipe_reference(reference)
 
         # NOT in disk, must be retrieved from remotes
         if not ref:

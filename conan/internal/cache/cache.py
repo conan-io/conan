@@ -142,20 +142,20 @@ class DataCache:
     def list_references(self):
         return self._db.list_references()
 
-    def exists_rrev(self, ref):
-        return self._db.exists_rrev(ref)
-
     def exists_prev(self, pref):
         return self._db.exists_prev(pref)
+
+    def get_recipe_reference(self, ref):
+        return self._db.get_recipe_reference(ref)
 
     def get_latest_recipe_reference(self, ref):
         return self._db.get_latest_recipe_reference(ref)
 
+    def get_recipe_revisions_references(self, ref: RecipeReference):
+        return self._db.get_recipe_revisions_references(ref)
+
     def get_latest_package_reference(self, pref):
         return self._db.get_latest_package_reference(pref)
-
-    def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
-        return self._db.get_recipe_revisions_references(ref, only_latest_rrev)
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return self._db.get_package_references(ref, only_latest_prev)

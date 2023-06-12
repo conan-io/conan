@@ -100,9 +100,19 @@ class ClientCache(object):
     def all_refs(self):
         return self._data_cache.list_references()
 
-    def exists_rrev(self, ref):
-        # Used just by inspect to check before calling get_recipe()
-        return self._data_cache.exists_rrev(ref)
+    def get_recipe_reference(self, ref):
+        # If it doesn't exist, we return None
+        assert ref.revision
+        return self._data_cache.get_recipe_reference(ref)
+
+    def get_latest_recipe_reference(self, ref):
+        # If it doesn't exist, we return None
+        assert ref.revision is None
+        return self._data_cache.get_latest_recipe_reference(ref)
+
+    def get_recipe_revisions_references(self, ref):
+        assert ref.revision is None
+        return self._data_cache.get_recipe_revisions_references(ref)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
@@ -118,12 +128,6 @@ class ClientCache(object):
 
     def get_matching_build_id(self, ref, build_id):
         return self._data_cache.get_matching_build_id(ref, build_id)
-
-    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
-        return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
-
-    def get_latest_recipe_reference(self, ref):
-        return self._data_cache.get_latest_recipe_reference(ref)
 
     def get_latest_package_reference(self, pref):
         return self._data_cache.get_latest_package_reference(pref)
