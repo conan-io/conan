@@ -4,7 +4,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client.generators import relativize_generated_file
-from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
+from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path, MSYS2
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
@@ -519,7 +519,7 @@ class EnvVars:
             is_bat = ext == ".bat"
             is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
-            is_bat = self._subsystem == WINDOWS
+            is_bat = self._subsystem in (WINDOWS, MSYS2, "mingw64")
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
             if is_ps1:
                 filename = filename + ".ps1"
