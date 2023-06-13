@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
@@ -18,12 +18,12 @@ def summary_remove_list(results):
     for remote, remote_info in info.items():
         new_info = result.setdefault(remote, {})
         for ref, content in remote_info.items():
-            for rev, rev_content in content["revisions"].items():
+            for rev, rev_content in content.get("revisions", {}).items():
                 pkgids = rev_content.get('packages')
                 if pkgids is None:
-                    new_info.setdefault(f"{ref}:{rev}", "Removed recipe and all binaries")
+                    new_info.setdefault(f"{ref}#{rev}", "Removed recipe and all binaries")
                 else:
-                    new_info.setdefault(f"{ref}:{rev}", f"Removed binaries: {list(pkgids)}")
+                    new_info.setdefault(f"{ref}#{rev}", f"Removed binaries: {list(pkgids)}")
     print_serial(result)
 
 
@@ -70,6 +70,9 @@ def remove(conan_api: ConanAPI, parser, *args):
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache" if not remote else remote.name]
+        refs_to_remove = package_list.refs()
+        if not refs_to_remove:  # the package list might contain only refs, no revs
+            ConanOutput().warning("Nothing to remove, package list do not contain recipe revisions")
     else:
         ref_pattern = ListPattern(args.pattern, rrev="*", prev="*")
         if ref_pattern.package_id is None and args.package_query is not None:

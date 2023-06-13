@@ -162,3 +162,51 @@ class TestDownloadUpload:
         assert f"Uploading recipe 'zli/" not in client.out
         assert "Uploading package 'zlib/1.0.0" not in client.out
         assert "Uploading package 'zli/" not in client.out
+
+
+class TestListRemove:
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({
+            "zlib.py": GenConanfile("zlib"),
+            "zli.py": GenConanfile("zli", "1.0.0")
+        })
+        c.run("create zli.py")
+        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+        c.run("upload * -r=default -c")
+        return c
+
+    def test_remove_nothing_only_refs(self, client):
+        # It is necessary to do *#* for actually removing something
+        client.run(f"list * --format=json", redirect_stdout="pkglist.json")
+        client.run(f"remove --list=pkglist.json -c")
+        assert "Nothing to remove, package list do not contain recipe revisions" in client.out
+
+    @pytest.mark.parametrize("remote", [False, True])
+    def test_remove_all(self, client, remote):
+        # It is necessary to do *#* for actually removing something
+        remote = "-r=default" if remote else ""
+        client.run(f"list *#* {remote} --format=json", redirect_stdout="pkglist.json")
+        client.run(f"remove --list=pkglist.json {remote} -c")
+        assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78:" \
+               " Removed recipe and all binaries" in client.out
+        assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb:" \
+               " Removed recipe and all binaries" in client.out
+        client.run(f"list * {remote}")
+        assert "There are no matching recipe references" in client.out
+
+    @pytest.mark.parametrize("remote", [False, True])
+    def test_remove_packages(self, client, remote):
+        # It is necessary to do *#* for actually removing something
+        remote = "-r=default" if remote else ""
+        client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
+        client.run(f"remove --list=pkglist.json {remote} -c")
+        assert "Removed recipe and all binaries" not in client.out
+        assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78:" \
+               " Removed binaries" in client.out
+        assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb:" \
+               " Removed binaries" in client.out
+        client.run(f"list *:* {remote}")
+        assert "zli/1.0.0" in client.out
+        assert "zlib/1.0.0@user/channel" in client.out
