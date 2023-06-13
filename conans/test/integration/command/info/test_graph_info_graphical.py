@@ -190,4 +190,4 @@ def test_graph_info_html_output():
     tc.run("new cmake_lib -d name=math -d version=1.0 -d requires=lib/2.0 -f")
     tc.run("export .")
     tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
-    print(tc.out)
+    assert "// Add some helpful visualizations for conflicts" in tc.out

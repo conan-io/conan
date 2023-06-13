@@ -26,7 +26,8 @@ class GraphConflictError(GraphError):
             return f"Version conflict: " \
                    f"Conflict between {self.require.ref} and {self.prev_require.ref} in the graph." \
                    f"{conflicting_node_msg}" \
-                   f"\nRun conan graph info ... --format=html to inspect the graph errors."
+                   f"\nRun conan graph info with your recipe and add --format=html " \
+                   f"to inspect the graph errors in an easier to visualize way."
 
 
 class GraphLoopError(GraphError):

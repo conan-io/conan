@@ -95,14 +95,15 @@ graph_info_html = """
                 edges.push({from: {{ error["from"] }},
                             to: "{{ error["type"] }}",
                             dashes: true,
-                            title: "Bad require",
+                            title: "Conflict",
                             physics: false,
+                            color: "red",
                             arrows: "to;from"})
 
                 edges.push({from: {{ error["prev_node"].id }},
                             to: "{{ error["type"] }}",
                             color: "red",
-                            title: "Conflict"})
+                            title: "Problematic require"})
             {% endif %}
 
             var nodes = new vis.DataSet(nodes);

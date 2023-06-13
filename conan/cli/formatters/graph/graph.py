@@ -111,8 +111,7 @@ def format_graph_html(result):
             "type": "conflict",
             "from": graph.error.node.id or graph.error.base_previous.id,
             "prev_node": graph.error.prev_node,
-            "should_highlight_node": lambda node: node.id == graph.error.prev_node.id or
-                                                  node.id == graph.error.node.id
+            "should_highlight_node": lambda node: node.id == graph.error.node.id
         }
     else:
         error = {
