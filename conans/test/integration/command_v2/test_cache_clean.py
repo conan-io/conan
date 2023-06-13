@@ -1,5 +1,4 @@
 import os.path
-import time
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -115,37 +114,3 @@ def test_cache_multiple_builds_diff_prev_clean():
     assert len(os.listdir(builds_folder)) == 2  # two builds will remain, both are valid
     c.run('remove * -c')
     assert len(os.listdir(builds_folder)) == 0  # no folder remain
-
-
-def test_cache_clean_lru():
-    c = TestClient()
-    c.save({"conanfile.py": GenConanfile()})
-    c.run("create . --name=pkg --version=0.1")
-    c.run("create . --name=dep --version=0.2")
-
-    # TODO: Interface is "conan list --lru + conan remove" or "conan cache remove-lru"?
-    #   conan list => should error if -r=myremote is passed
-    #   but integrates for everything like can be used to remove and to upload
-    #   and can use patterns, package queries
-    time.sleep(2)
-    # This should update the LRU
-    c.run("install --requires=pkg/0.1")
-    c.run("cache remove-lru * 1s")
-    print(c.out)
-
-    c.run("list *:*")
-    print(c.out)
-    assert "pkg" in c.out
-    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
-    assert "dep" not in c.out
-
-    time.sleep(2)
-    # This should update the LRU
-    c.run("graph info --requires=pkg/0.1")
-    c.run("cache remove-lru * 1s")
-    print(c.out)
-    c.run("list *:*")
-    print(c.out)
-    assert "pkg" in c.out
-    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" not in c.out
-    assert "dep" not in c.out

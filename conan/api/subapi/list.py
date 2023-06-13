@@ -84,10 +84,13 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
-    def select(self, pattern, package_query=None, remote=None):
+    def select(self, pattern, package_query=None, remote=None, lru=None):
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
+        if remote and lru:
+            raise ConanException("'--lru' cannot be used in remotes, only in cache")
+
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref

@@ -51,42 +51,6 @@ class CacheAPI:
         checker = IntegrityChecker(app)
         checker.check(package_list)
 
-    def remove_lru(self, package_list, lru):
-        app = ConanApp(self.conan_api.cache_folder)
-        cache = app.cache
-        # TODO: Move DATE conversion to seconds to helper location?
-        lru_value = lru[:-1]
-        try:
-            lru_value = int(lru_value)
-        except TypeError:
-            raise ConanException(f"Time value '{lru_value}' must be an integer")
-        lru_unit = lru[-1]
-        units = {"w": 7*24*60*60,
-                 "d": 24*60*60,
-                 "h": 60*60,
-                 "m": 60,
-                 "s": 1}
-        try:
-            lru_value = lru_value * units[lru_unit]
-        except KeyError:
-            raise ConanException(f"Unrecognized time unit: '{lru_unit}'. Use: {list(units)}")
-
-        timelimit = timestamp_now() - lru_value
-
-        for ref, ref_bundle in package_list.refs():
-
-            ref_time = cache.get_recipe_lru(ref)
-            if ref_time < timelimit:
-                ConanOutput().info(f"Recipe {ref} old, removing")
-                self.conan_api.remove.recipe(ref)
-                continue  # No
-
-            for pref, _ in package_list.prefs(ref, ref_bundle):
-                pref_time = cache.get_package_lru(pref)
-                if pref_time < timelimit:
-                    ConanOutput().info(f"Package {pref} old, removing")
-                    self.conan_api.remove.package(pref, remote=None)
-
     def clean(self, package_list, source=True, build=True, download=True, temp=True):
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
