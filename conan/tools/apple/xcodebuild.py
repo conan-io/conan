@@ -12,27 +12,10 @@ class XcodeBuild(object):
 
     @property
     def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.build:verbosity")
-        if verbosity:
-            if verbosity not in ("quiet", "error", "warning", "notice", "status", "verbose",
-                                 "normal", "debug", "v", "trace", "vv"):
-                raise ConanException(f"Value '{verbosity}' for 'tools.build:verbosity' is not valid")
-            else:
-                # quiet, nothing, verbose
-                verbosity = {"quiet": "quiet",
-                             "error": "quiet",
-                             "warning": "quiet",
-                             "notice": "quiet",
-                             "status": None,
-                             "verbose": None,
-                             "normal": None,
-                             "debug": "verbose",
-                             "v": "verbose",
-                             "trace": "verbose",
-                             "vv": "verbose"}.get(verbosity)
-                if verbosity is not None:
-                    return "-{}".format(verbosity)
-        return ""
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose")) \
+                    or self._conanfile.conf.get("tools.compilation:verbosity",
+                                                choices=("quiet", "verbose"))
+        return "-" + verbosity if verbosity is not None else ""
 
     @property
     def _sdkroot(self):

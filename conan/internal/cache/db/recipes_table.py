@@ -33,16 +33,6 @@ class RecipesDBTable(BaseDbTable):
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
-    def _set_clause(self, ref: RecipeReference, path=None):
-        set_dict = {
-            self.columns.reference: str(ref),
-            self.columns.rrev: ref.revision,
-            self.columns.path: path,
-            self.columns.timestamp: ref.timestamp,
-        }
-        set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
-        return set_expr
-
     def get(self, ref: RecipeReference):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)

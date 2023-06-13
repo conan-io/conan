@@ -56,14 +56,7 @@ class ListAPI:
         if remote:
             results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
         else:
-            refs = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
-            results = []
-            for ref in refs:
-                # TODO: Why another call, and why get_package_revisions_references doesn't return
-                #  already the timestamps?
-                timestamp = app.cache.get_package_timestamp(ref)
-                ref.timestamp = timestamp
-                results.append(ref)
+            results = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
         return results
 
     def packages_configurations(self, ref: RecipeReference,
@@ -97,9 +90,10 @@ class ListAPI:
                                  "if 'package_id' is not a pattern")
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
-        if "*" in pattern.ref or not pattern.version or \
-                (pattern.package_id is None and pattern.rrev is None):
-            refs = self.conan_api.search.recipes(pattern.ref, remote=remote)
+        search_ref = pattern.search_ref
+        if search_ref:
+            refs = self.conan_api.search.recipes(search_ref, remote=remote)
+            refs = pattern.filter_versions(refs)
             refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
         else:

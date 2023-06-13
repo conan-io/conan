@@ -13,7 +13,7 @@ BUILT_IN_CONFS = {
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:skip_warnings": "Do not show warnings in this list",
     "core:default_profile": "Defines the default host profile ('default' by default)",
-    "core:default_build_profile": "Defines the default build profile (None by default)",
+    "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
@@ -27,6 +27,7 @@ BUILT_IN_CONFS = {
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
     "core.sources:upload_url": "Remote URL to upload backup sources to",
+    "core.sources:exclude_urls": "URLs which will not be backed up",
     # Package ID
     "core.package_id:default_unknown_mode": "By default, 'semver_mode'",
     "core.package_id:default_non_embed_mode": "By default, 'minor_mode'",
@@ -52,8 +53,8 @@ BUILT_IN_CONFS = {
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
     "tools.build.cross_building:can_run": "Bool value that indicates whether is possible to run a non-native "
                                           "app on the same architecture. It's used by 'can_run' tool",
-    "tools.build:verbosity": "Verbosity of MSBuild and XCodeBuild build systems. "
-                             "Possible values are 'quiet', 'error', 'warning', 'notice', 'status', 'verbose', 'normal', 'debug', 'v', 'trace' and 'vv'",
+    "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
+    "tools.compilation:verbosity": "Verbosity of compilation tools if set. Possible values are 'quiet' and 'verbose'",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
@@ -275,7 +276,7 @@ class Conf:
         for k, v in self._values.items():
             yield k, v.value
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None, choices=None):
         """
         Get all the values of the given configuration name.
 
@@ -290,6 +291,8 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
+            if choices is not None and v not in choices:
+                raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
                 # Perhaps, user has introduced a "false", "0" or even "off"
@@ -498,13 +501,13 @@ class ConfDefinition:
     def __bool__(self):
         return bool(self._pattern_confs)
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None, choices=None):
         """
         Get the value of the conf name requested and convert it to the [type]-like passed.
         """
         pattern, name = self._split_pattern_name(conf_name)
         return self._pattern_confs.get(pattern, Conf()).get(name, default=default,
-                                                            check_type=check_type)
+                                                            check_type=check_type, choices=choices)
 
     def show(self, fnpattern):
         """

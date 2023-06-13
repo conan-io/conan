@@ -9,7 +9,7 @@ class BuildMode:
                    => ["hello/0.1@foo/bar"] if user wrote "--build hello/0.1@foo/bar"
                    => False if user wrote "never"
                    => True if user wrote "missing"
-                   => ["!foo"] means exclude when building all from sources
+                   => ["!foo"] or ["~foo"] means exclude when building all from sources
     """
     def __init__(self, params):
         self.missing = False
@@ -48,7 +48,7 @@ class BuildMode:
                         # "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
                         clean_pattern = param[:-1] if param.endswith("@") else param
                         clean_pattern = clean_pattern.replace("@#", "#")
-                        if clean_pattern and clean_pattern[0] == "!":
+                        if clean_pattern and clean_pattern[0] in ["!", "~"]:
                             self._excluded_patterns.append(clean_pattern[1:])
                         else:
                             self.patterns.append(clean_pattern)
