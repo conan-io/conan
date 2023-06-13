@@ -28,8 +28,8 @@ class TestMetadataCommands:
 
         # Now upload everything
         c.run("upload * -c -r=default")
-        assert "metadata/logs/mylogs.txt" in c.out
-        assert "metadata/logs/mybuildlogs.txt" in c.out
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+        assert "pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Package metadata: 1 files" in c.out
 
         # Add new files to the metadata
         myfile = os.path.join(metadata_path, "logs", "mylogs2.txt")
@@ -39,10 +39,8 @@ class TestMetadataCommands:
         # Upload the metadata, even if the revisions exist in the server
         # adding the new metadata logs files
         c.run("upload * -c -r=default --metadata=*")
-        assert "metadata/logs/mylogs.txt" in c.out
-        assert "metadata/logs/mybuildlogs.txt" in c.out
-        assert "metadata/logs/mylogs2.txt" in c.out
-        assert "metadata/logs/mybuildlogs2.txt" in c.out
+        assert "pkg/0.1: Recipe metadata: 2 files" in c.out
+        assert "pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Package metadata: 2 files" in c.out
 
         c.run("remove * -c")
         c.run("install --requires=pkg/0.1")  # wont install metadata by default

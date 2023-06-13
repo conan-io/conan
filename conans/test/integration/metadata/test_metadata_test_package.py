@@ -34,7 +34,7 @@ class TestMetadataTestPackage:
 
         # Now upload and remove everything
         c.run("upload * -c -r=default")
-        assert "metadata/test_package/conanfile.py" in c.out
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
         c.run("remove * -c")
 
         c.run("install --requires=pkg/0.1 -r=default")
