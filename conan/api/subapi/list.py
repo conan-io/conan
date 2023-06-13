@@ -32,7 +32,7 @@ class ListAPI:
         if remote:
             results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
-            results = app.cache.get_recipe_revisions_references(ref, only_latest_rrev=False)
+            results = app.cache.get_recipe_revisions_references(ref)
 
         return results
 

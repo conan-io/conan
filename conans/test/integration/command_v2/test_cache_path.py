@@ -63,15 +63,14 @@ def test_cache_path_exist_errors(created_package):
     recipe_revision = pref.ref.revision
 
     t.run("cache path nonexist/1.0", assert_error=True)
-    assert "ERROR: 'nonexist/1.0' not found in cache" in t.out
+    assert "ERROR: Recipe 'nonexist/1.0' not found" in t.out
 
     t.run("cache path nonexist/1.0#rev", assert_error=True)
-    # TODO: Improve this error message
-    assert "ERROR: No entry for recipe 'nonexist/1.0#rev'" in t.out
+    assert "ERROR: Recipe 'nonexist/1.0#rev' not found" in t.out
 
     t.run("cache path foo/1.0#rev", assert_error=True)
     # TODO: Improve this error message
-    assert "ERROR: No entry for recipe 'foo/1.0#rev'" in t.out
+    assert "ERROR: Recipe 'foo/1.0#rev' not found" in t.out
 
     t.run(f"cache path foo/1.0:pid1", assert_error=True)
     assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
