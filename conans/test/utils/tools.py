@@ -657,8 +657,7 @@ class TestClient(object):
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_recipe_reference(ref)
-        ref_layout = self.cache.ref_layout(latest_rrev)
+        ref_layout = self.cache.ref_layout(ref)
         return ref_layout
 
     def get_default_host_profile(self):

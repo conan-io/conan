@@ -90,13 +90,19 @@ class DataCache:
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
-    def get_reference_layout(self, ref: RecipeReference):
+    def get_recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
         """
-        assert ref.revision, "Recipe revision must be known to get the reference layout"
-        ref_data = self._db.try_get_recipe(ref)
+        if ref.revision is None:  # Latest one
+            ref_data = self._db.get_latest_recipe(ref)
+        else:
+            ref_data = self._db.get_recipe(ref)
         ref_path = ref_data.get("path")
+        ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
+
+    def get_recipe_revisions_references(self, ref: RecipeReference):
+        return self._db.get_recipe_revisions_references(ref)
 
     def get_package_layout(self, pref: PkgReference):
         """ the revision must exists, the folder must exist
@@ -112,7 +118,7 @@ class DataCache:
         """ called by RemoteManager.get_recipe()
         """
         try:
-            return self.get_reference_layout(ref)
+            return self.get_recipe_layout(ref)
         except ConanReferenceDoesNotExistInDB:
             assert ref.revision, "Recipe revision must be known to create the package layout"
             reference_path = self._get_path(ref)
@@ -144,15 +150,6 @@ class DataCache:
 
     def exists_prev(self, pref):
         return self._db.exists_prev(pref)
-
-    def get_recipe_reference(self, ref):
-        return self._db.get_recipe_reference(ref)
-
-    def get_latest_recipe_reference(self, ref):
-        return self._db.get_latest_recipe_reference(ref)
-
-    def get_recipe_revisions_references(self, ref: RecipeReference):
-        return self._db.get_recipe_revisions_references(ref)
 
     def get_latest_package_reference(self, pref):
         return self._db.get_latest_package_reference(pref)

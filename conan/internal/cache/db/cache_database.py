@@ -17,15 +17,6 @@ class CacheDatabase:
         matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
 
-    def get_recipe_reference(self, ref):
-        return self._recipes.get_recipe_reference(ref)
-
-    def get_latest_recipe_reference(self, ref):
-        return self._recipes.get_latest_recipe_reference(ref)
-
-    def get_recipe_revisions_references(self, ref: RecipeReference):
-        return self._recipes.get_recipe_revisions_references(ref)
-
     def get_latest_package_reference(self, ref):
         prevs = self.get_package_revisions_references(ref, True)
         return prevs[0] if prevs else None
@@ -53,10 +44,16 @@ class CacheDatabase:
                 return d["pref"]
         return None
 
-    def try_get_recipe(self, ref: RecipeReference):
+    def get_recipe(self, ref: RecipeReference):
         """ Returns the reference data as a dictionary (or fails) """
-        ref_data = self._recipes.get(ref)
-        return ref_data
+        return self._recipes.get_recipe(ref)
+
+    def get_latest_recipe(self, ref: RecipeReference):
+        """ Returns the reference data as a dictionary (or fails) """
+        return self._recipes.get_latest_recipe(ref)
+
+    def get_recipe_revisions_references(self, ref: RecipeReference):
+        return self._recipes.get_recipe_revisions_references(ref)
 
     def try_get_package(self, ref: PkgReference):
         """ Returns the reference data as a dictionary (or fails) """

@@ -74,8 +74,21 @@ class ClientCache(object):
     def assign_prev(self, layout: PackageLayout):
         return self._data_cache.assign_prev(layout)
 
-    def ref_layout(self, ref: RecipeReference):
-        return self._data_cache.get_reference_layout(ref)
+    # Recipe methods
+    def recipe_layout(self, ref: RecipeReference):
+        return self._data_cache.get_recipe_layout(ref)
+
+    ref_layout = recipe_layout
+
+    def get_latest_recipe_reference(self, ref):
+        # TODO: We keep this for testing only, to be removed
+        assert ref.revision is None
+        return self._data_cache.get_recipe_layout(ref).reference
+
+    def get_recipe_revisions_references(self, ref):
+        # For listing multiple revisions only
+        assert ref.revision is None
+        return self._data_cache.get_recipe_revisions_references(ref)
 
     def pkg_layout(self, ref: PkgReference):
         return self._data_cache.get_package_layout(ref)
@@ -99,20 +112,6 @@ class ClientCache(object):
 
     def all_refs(self):
         return self._data_cache.list_references()
-
-    def get_recipe_reference(self, ref):
-        # If it doesn't exist, we return None
-        assert ref.revision
-        return self._data_cache.get_recipe_reference(ref)
-
-    def get_latest_recipe_reference(self, ref):
-        # If it doesn't exist, we return None
-        assert ref.revision is None
-        return self._data_cache.get_latest_recipe_reference(ref)
-
-    def get_recipe_revisions_references(self, ref):
-        assert ref.revision is None
-        return self._data_cache.get_recipe_revisions_references(ref)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache

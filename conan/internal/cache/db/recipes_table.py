@@ -33,20 +33,6 @@ class RecipesDBTable(BaseDbTable):
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
-    def get(self, ref: RecipeReference):
-        """ Returns the row matching the reference or fails """
-        where_clause = self._where_clause(ref)
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {where_clause};'
-
-        with self.db_connection() as conn:
-            r = conn.execute(query)
-            row = r.fetchone()
-
-        if not row:
-            raise ConanReferenceDoesNotExistInDB(f"No entry for recipe '{repr(ref)}'")
-        return self._as_dict(self.row_type(*row))
-
     def create(self, path, ref: RecipeReference):
         assert ref is not None
         assert ref.revision is not None
@@ -62,10 +48,10 @@ class RecipesDBTable(BaseDbTable):
     def update_timestamp(self, ref: RecipeReference):
         assert ref.revision is not None
         assert ref.timestamp is not None
-        where_clause = self._where_clause(ref)
         query = f"UPDATE {self.table_name} " \
                 f'SET {self.columns.timestamp} = "{ref.timestamp}" ' \
-                f"WHERE {where_clause};"
+                f'WHERE {self.columns.reference}="{str(ref)}" ' \
+                f'AND {self.columns.rrev} = "{ref.revision}" '
         with self.db_connection() as conn:
             conn.execute(query)
 
@@ -89,19 +75,19 @@ class RecipesDBTable(BaseDbTable):
             result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
         return result
 
-    def get_recipe_reference(self, ref: RecipeReference):
+    def get_recipe(self, ref: RecipeReference):
         query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {self.columns.reference}="{str(ref)}" ' \
                 f'AND {self.columns.rrev} = "{ref.revision}" '
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if row is None:
-                return
-            ret = self._as_dict(self.row_type(*row))["ref"]
+            if not row:
+                raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref.repr_notime()}' not found")
+            ret = self._as_dict(self.row_type(*row))
         return ret
 
-    def get_latest_recipe_reference(self, ref: RecipeReference):
+    def get_latest_recipe(self, ref: RecipeReference):
         query = f'SELECT {self.columns.reference}, ' \
                 f'{self.columns.rrev}, ' \
                 f'{self.columns.path}, ' \
@@ -114,8 +100,8 @@ class RecipesDBTable(BaseDbTable):
             r = conn.execute(query)
             row = r.fetchone()
             if row is None:
-                return
-            ret = self._as_dict(self.row_type(*row))["ref"]
+                raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
+            ret = self._as_dict(self.row_type(*row))
         return ret
 
     def get_recipe_revisions_references(self, ref: RecipeReference):
