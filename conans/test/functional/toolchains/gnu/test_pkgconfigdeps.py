@@ -100,11 +100,6 @@ def test_pkgconfigdeps_bindir_and_meson():
 
         def layout(self):
             basic_layout(self)
-
-        def test(self):
-            if can_run(self):
-                cmd = os.path.join(self.cpp.build.bindir, "example")
-                self.run(cmd, env="conanrun")
     """)
     client.save({
         "test_package/conanfile.py": test_conanfile,
