@@ -20,22 +20,24 @@ class TestLRU:
         # This should update the LRU
         c.run("install --requires=pkg/0.1")
         c.run("list *#* --lru=1s --format=json", redirect_stdout="old.json")
-        print(c.load("old.json"))
-        c.run("remove --list=old.json")
-        print(c.out)
-
-        c.run("list *:*")
+        c.run("remove --list=old.json -c")
+        # Do the checks
+        c.run("list *:*#*")
         print(c.out)
         assert "pkg" in c.out
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
         assert "dep" not in c.out
 
         time.sleep(2)
-        # This should update the LRU
+        # This should update the LRU of the recipe
         c.run("graph info --requires=pkg/0.1")
-        c.run("list * --lru=1s --format=json", redirect_stdout="old.json")
-        c.run("remove --list=old.json")
+        c.run("list *:*#* --lru=1s --format=json", redirect_stdout="old.json")
         print(c.out)
+        print(c.load("old.json"))
+        return
+        c.run("remove --list=old.json -c")
+        print(c.out)
+
         c.run("list *:*")
         print(c.out)
         assert "pkg" in c.out

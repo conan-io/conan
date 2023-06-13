@@ -28,7 +28,7 @@ class CacheDatabase:
         self._packages.update_timestamp(pref, path=path)
 
     def get_recipe_lru(self, ref):
-        return self._recipes.get(ref)["lru"]
+        return self._recipes.get_recipe(ref)["lru"]
 
     def get_package_lru(self, pref: PkgReference):
         return self._packages.get(pref)["lru"]
