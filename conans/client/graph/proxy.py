@@ -33,10 +33,14 @@ class ConanProxy:
             return conanfile_path, RECIPE_EDITABLE, None, reference
 
         # check if it there's any revision of this recipe in the local cache
-        ref = self._cache.get_latest_recipe_reference(reference)
+        try:
+            recipe_layout = self._cache.recipe_layout(reference)
+            ref = recipe_layout.reference  # latest revision if it was not defined
+        except ConanException:
+            recipe_layout = None
 
         # NOT in disk, must be retrieved from remotes
-        if not ref:
+        if recipe_layout is None:
             # we will only check all servers for latest revision if we did a --update
             remote, new_ref = self._download_recipe(reference, remotes, output, update, check_update)
             recipe_layout = self._cache.ref_layout(new_ref)
@@ -47,7 +51,6 @@ class ConanProxy:
         self._cache.update_recipe_lru(ref)
 
         # TODO: cache2.0: check with new --update flows
-        recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
 
         # TODO: If the revision is given, then we don't need to check for updates?

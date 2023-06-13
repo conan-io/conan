@@ -6,6 +6,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_cache_packages_binary_info, filter_packages
+from conans.util.dates import timelimit
 
 
 class ListAPI:
@@ -32,7 +33,7 @@ class ListAPI:
         if remote:
             results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
-            results = app.cache.get_recipe_revisions_references(ref, only_latest_rrev=False)
+            results = app.cache.get_recipe_revisions_references(ref)
 
         return results
 
@@ -94,6 +95,8 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
+        app = ConanApp(self.conan_api.cache_folder)
+        limit_time = timelimit(lru) if lru else None
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
@@ -117,6 +120,9 @@ class ListAPI:
                 rrevs = self.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
                 rrevs = list(reversed(rrevs))  # Order older revisions first
+
+            if lru:  # Filter LRUs
+                rrevs = [r for r in rrevs if app.cache.get_recipe_lru(r) < limit_time]
             select_bundle.add_refs(rrevs)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
@@ -150,6 +156,9 @@ class ListAPI:
                             prevs = list(reversed(prevs))  # Older revisions first
                             new_prefs.extend(prevs)
                     prefs = new_prefs
+
+                if lru:  # Filter LRUs
+                    prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
 
                 select_bundle.add_prefs(rrev, prefs)
                 select_bundle.add_configurations(packages)

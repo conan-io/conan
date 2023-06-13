@@ -19,7 +19,8 @@ class TestLRU:
         time.sleep(2)
         # This should update the LRU
         c.run("install --requires=pkg/0.1")
-        c.run("list * --lru=1s --format=json", redirect_stdout="old.json")
+        c.run("list *#* --lru=1s --format=json", redirect_stdout="old.json")
+        print(c.load("old.json"))
         c.run("remove --list=old.json")
         print(c.out)
 

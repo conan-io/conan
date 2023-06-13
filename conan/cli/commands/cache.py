@@ -95,21 +95,3 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
-
-
-@conan_subcommand()
-def cache_remove_lru(conan_api: ConanAPI, parser, subparser, *args):
-    """
-    Remove non-critical folders from the cache, like source, build and/or download
-    (.tgz store) ones.
-    """
-    subparser.add_argument("pattern", help="Selection pattern for references to remove lru")
-    subparser.add_argument("lru", help="Time")
-    args = parser.parse_args(*args)
-    # TODO: Do we want the pattern
-    ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
-    # TODO: Do we want the query?
-    package_list = conan_api.list.select(ref_pattern, package_query=None)
-    # TODO: Conversion of units seconds
-    removed_pkg_list = conan_api.cache.remove_lru(package_list, args.lru)
-    return removed_pkg_list
