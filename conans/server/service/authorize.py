@@ -31,7 +31,7 @@ class Authorizer(object, metaclass=ABCMeta):
         username: User that request to read the conans
         ref: RecipeReference
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def check_write_conan(self, username, ref):
@@ -39,7 +39,7 @@ class Authorizer(object, metaclass=ABCMeta):
         username: User that request to write the conans
         ref: RecipeReference
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def check_delete_conan(self, username, ref):
@@ -47,7 +47,7 @@ class Authorizer(object, metaclass=ABCMeta):
         username: User requesting a recipe's deletion
         ref: ConanFileReference
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def check_read_package(self, username, pref):
@@ -55,7 +55,7 @@ class Authorizer(object, metaclass=ABCMeta):
         username: User that request to read the package
         pref: PackageReference
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def check_write_package(self, username, pref):
@@ -63,7 +63,7 @@ class Authorizer(object, metaclass=ABCMeta):
         username: User that request to write the package
         pref: PackageReference
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     @abstractmethod
     def check_delete_package(self, username, pref):
@@ -71,7 +71,7 @@ class Authorizer(object, metaclass=ABCMeta):
         username: User requesting a package's deletion
         pref: PackageReference
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class Authenticator(object, metaclass=ABCMeta):
@@ -84,7 +84,7 @@ class Authenticator(object, metaclass=ABCMeta):
         username: User that request to read the conans
         plain_password:
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 #  ########################################################
 #  ############ BASIC IMPLEMENTATION CLASSES ##############
