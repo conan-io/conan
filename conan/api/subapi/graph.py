@@ -1,5 +1,3 @@
-import os
-
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
@@ -7,10 +5,7 @@ from conans.client.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIP
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile, consumer_definer
-from conans.client.loader import parse_conanfile
-
 from conans.errors import ConanException
-
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -191,10 +186,3 @@ class GraphAPI:
         conan_app = ConanApp(self.conan_api.cache_folder)
         binaries_analyzer = GraphBinariesAnalyzer(conan_app)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update)
-
-    def load_conanfile_class(self, path):
-        """ Given a path to a conanfile.py file, it loads its class (not instance) to allow
-        inspecting the class attributes, like 'name', 'version', 'description', 'options' etc"""
-        path = os.path.join(os.getcwd(), path)
-        _, ret = parse_conanfile(path)
-        return ret

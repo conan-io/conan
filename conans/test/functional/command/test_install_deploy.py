@@ -330,6 +330,40 @@ def test_deploy_editable():
         assert "hi" in header
 
 
+def test_deploy_aggregate_components():
+    """
+    The caching of aggregated components can be causing issues when deploying and using
+    generators that would still point to the packages with components in the cache
+    https://github.com/conan-io/conan/issues/14022
+    """
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.components["mycomp"].libs = ["mycomp"]
+            """)
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_settings("build_type")
+                                                          .with_requires("dep/0.1")
+                                                          .with_generator("CMakeDeps"),
+            "consumer/conanfile.py": GenConanfile().with_settings("build_type")
+                                                   .with_requires("pkg/0.1")
+                                                   .with_generator("CMakeDeps")})
+    c.run("export dep")
+    c.run("export pkg")
+
+    # If we don't change to another folder, the full_deploy will be recursive and fail
+    c.run("install consumer --build=missing --deployer=full_deploy --output-folder=output")
+    data = c.load("output/dep-release-data.cmake")
+    assert 'set(dep_PACKAGE_FOLDER_RELEASE ' \
+           '"${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/dep/0.1")' in data
+    assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in data
+
+
 def test_deploy_single_package():
     """ Let's try a deploy that executes on a single package reference
     """
