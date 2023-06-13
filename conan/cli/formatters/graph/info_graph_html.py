@@ -79,6 +79,7 @@ graph_info_html = """
             ]
 
             {% if error is not none and error["type"] == "conflict" %}
+                // Add some helpful visualizations for conflicts
                 nodes.push({
                     id: "{{ error["type"] }}",
                     label: "{{ error["label"] }}",
