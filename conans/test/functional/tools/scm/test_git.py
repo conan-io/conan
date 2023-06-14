@@ -233,12 +233,12 @@ class TestGitBasicClone:
                     # git.checkout(commit="{commit}")
 
                     git = Git(self)
-                    git.clone(url="{url}", target="target") # git clone url target
-                    git.folder = "target"                   # cd target
+                    git.clone(url="{url}", target="tar get") # git clone url target
+                    git.folder = "tar get"                   # cd target
                     git.checkout(commit="{commit}")         # git checkout commit
 
-                    self.output.info("MYCMAKE: {{}}".format(load(self, "target/CMakeLists.txt")))
-                    self.output.info("MYFILE: {{}}".format(load(self, "target/src/myfile.h")))
+                    self.output.info("MYCMAKE: {{}}".format(load(self, "tar get/CMakeLists.txt")))
+                    self.output.info("MYFILE: {{}}".format(load(self, "tar get/src/myfile.h")))
                 """)
         folder = os.path.join(temp_folder(), "myrepo")
         url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
