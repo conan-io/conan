@@ -193,7 +193,8 @@ class TestUpdateFlows:
         assert f"liba/1.0.0: Retrieving package {NO_SETTINGS_PACKAGE_ID}" \
                " from remote 'server2'" in self.client2.out
 
-        rev_to_upload = self.client2.cache.get_latest_recipe_reference(rev_to_upload)
+        check_ref = RecipeReference.loads(str(rev_to_upload))  # without revision
+        rev_to_upload = self.client2.cache.get_latest_recipe_reference(check_ref)
         assert rev_to_upload.timestamp == self.server_times["server2"]
 
         # | CLIENT      | CLIENT2    | SERVER0    | SERVER1   | SERVER2    |
@@ -277,7 +278,8 @@ class TestUpdateFlows:
 
         latest_cache_revision = self.client.cache.get_latest_recipe_reference(server_rrev_norev)
         assert latest_cache_revision != server_rrev
-        latest_cache_revision = self.client.cache.get_latest_recipe_reference(server_rrev)
+        latest_cache_revision = self.client.cache.recipe_layout(server_rrev).reference
+
         assert self.the_time == latest_cache_revision.timestamp
         self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 

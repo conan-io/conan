@@ -178,7 +178,7 @@ class Git(object):
         self.run('init')
         self.run(f'remote add origin "{url}"')
         self.run(f'fetch --depth 1 origin {commit}')
-        self.run(f'checkout FETCH_HEAD')
+        self.run('checkout FETCH_HEAD')
 
     def checkout(self, commit):
         """
