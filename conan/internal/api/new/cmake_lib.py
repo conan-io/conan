@@ -153,6 +153,21 @@ void {{package_name}}(){
     std::cout << "  {{name}}/{{version}}: _GLIBCXX_USE_CXX11_ABI "<< _GLIBCXX_USE_CXX11_ABI << "\n";
     #endif
 
+    // MSVC runtime
+    #if defined(_DEBUG)
+        #if defined(_MT) and defined(_DLL)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreadedDebugDLL\n";
+        #elif defined(_MT)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreadedDebug\n";
+        #endif
+    #else
+        #if defined(_MT) and defined(_DLL)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreadedDLL\n";
+        #elif defined(_MT)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreaded\n";
+        #endif
+    #endif
+
     // COMPILER VERSIONS
     #if _MSC_VER
     std::cout << "  {{name}}/{{version}}: _MSC_VER" << _MSC_VER<< "\n";
