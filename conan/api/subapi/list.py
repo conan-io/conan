@@ -121,8 +121,9 @@ class ListAPI:
                 rrevs = pattern.filter_rrevs(rrevs)
                 rrevs = list(reversed(rrevs))  # Order older revisions first
 
-            if lru:  # Filter LRUs
+            if lru and pattern.package_id is None:  # Filter LRUs
                 rrevs = [r for r in rrevs if app.cache.get_recipe_lru(r) < limit_time]
+
             select_bundle.add_refs(rrevs)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
