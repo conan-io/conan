@@ -230,7 +230,7 @@ void {{package_name}}(){
 
 void {{package_name}}_print_vector(const std::vector<std::string> &strings) {
     for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
-        std::cout << "{{package_name}}/{{version}} " <<  *it << std::endl;
+        std::cout << "{{package_name}}/{{version}} " << *it << std::endl;
     }
 }
 """
