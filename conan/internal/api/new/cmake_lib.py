@@ -91,6 +91,9 @@ install(TARGETS {{name}})
 
 source_h = """#pragma once
 
+#include <vector>
+#include <string>
+
 {% set define_name = package_name.upper() %}
 #ifdef _WIN32
   #define {{define_name}}_EXPORT __declspec(dllexport)
@@ -99,6 +102,7 @@ source_h = """#pragma once
 #endif
 
 {{define_name}}_EXPORT void {{package_name}}();
+{{define_name}}_EXPORT void {{package_name}}_print_vector(const std::vector<std::string> &strings);
 """
 
 source_cpp = r"""#include <iostream>
@@ -223,6 +227,12 @@ void {{package_name}}(){
     std::cout << "  {{name}}/{{version}}: __CYGWIN__" << __CYGWIN__<< "\n";
     #endif
 }
+
+void {{package_name}}_print_vector(const std::vector<std::string> &strings) {
+    for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
+        std::cout << "{{package_name}}/{{version}} " <<  *it << std::endl;
+    }
+}
 """
 
 
@@ -271,9 +281,16 @@ target_link_libraries(example {{name}}::{{name}})
 
 
 test_main = """#include "{{name}}.h"
+#include <vector>
+#include <string>
 
 int main() {
     {{package_name}}();
+    
+    std::vector<std::string> vec;
+    vec.push_back("test_package");
+
+    {{package_name}}_print_vector(vec);
 }
 """
 
