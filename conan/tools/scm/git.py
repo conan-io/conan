@@ -162,7 +162,8 @@ class Git(object):
             url = url.replace("\\", "/")  # Windows local directory
         mkdir(self.folder)
         self._conanfile.output.info("Cloning git repo")
-        self.run('clone "{}" {} {}'.format(url, " ".join(args), target))
+        target_path = f'"{target}"' if target else ""  # quote in case there are spaces in path
+        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path))
 
     def fetch_commit(self, url, commit):
         """
