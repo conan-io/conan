@@ -164,8 +164,6 @@ class Git(object):
         self._conanfile.output.info("Cloning git repo")
         target_path = f'"{target}"' if target else ""  # quote in case there are spaces in path
         self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path))
-        if target:
-            self.folder = target
 
     def fetch_commit(self, url, commit):
         """

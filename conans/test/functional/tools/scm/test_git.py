@@ -211,8 +211,7 @@ class TestGitBasicClone:
         assert c.load("source/CMakeLists.txt") == "mycmake"
 
     def test_clone_target(self):
-        # Clone to a different target folder, then need to define a new Git, changing the
-        # folder
+        # Clone to a different target folder
         # https://github.com/conan-io/conan/issues/14058
         conanfile = textwrap.dedent("""
             import os
@@ -228,10 +227,15 @@ class TestGitBasicClone:
                     self.folders.source = "source"
 
                 def source(self):
+                    # Alternative, first defining the folder
+                    # git = Git(self, "target")
+                    # git.clone(url="{url}", target=".")
+                    # git.checkout(commit="{commit}")
+
                     git = Git(self)
-                    target = os.path.join(self.source_folder, "target")
-                    git.clone(url="{url}", target=target)
-                    git.checkout(commit="{commit}")
+                    git.clone(url="{url}", target="target") # git clone url target
+                    git.folder = "target"                   # cd target
+                    git.checkout(commit="{commit}")         # git checkout commit
 
                     self.output.info("MYCMAKE: {{}}".format(load(self, "target/CMakeLists.txt")))
                     self.output.info("MYFILE: {{}}".format(load(self, "target/src/myfile.h")))
