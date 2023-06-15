@@ -166,15 +166,17 @@ class _PCContentGenerator:
         self._conanfile = conanfile
         self._dep = dep
 
-    def content(self, info):
-        assert isinstance(info, _PCInfo) and info.cpp_info is not None
-
+    def _get_prefix_path(self):
         # If editable, package_folder can be None
         root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
             else self._dep.package_folder
-        version = info.cpp_info.get_property("component_version") or self._dep.ref.version
+        return root_folder.replace("\\", "/")
 
-        prefix_path = root_folder.replace("\\", "/")
+    def content(self, info):
+        assert isinstance(info, _PCInfo) and info.cpp_info is not None
+
+        prefix_path = self._get_prefix_path()
+        version = info.cpp_info.get_property("component_version") or self._dep.ref.version
         libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
         includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
         custom_content = info.cpp_info.get_property("pkg_config_custom_content")
@@ -200,18 +202,10 @@ class _PCContentGenerator:
 
     def shortened_content(self, info):
         assert isinstance(info, _PCInfo)
-
-        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
-            else self._dep.package_folder
-        prefix_path = root_folder.replace("\\", "/")
-
-        if info.cpp_info:
-            custom_content = info.cpp_info.get_property("pkg_config_custom_content")
-        else:
-            custom_content = None
-
+        custom_content = info.cpp_info.get_property("pkg_config_custom_content") if info.cpp_info \
+            else None
         context = {
-            "prefix_path": prefix_path,
+            "prefix_path": self._get_prefix_path(),
             "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
