@@ -383,13 +383,20 @@ def test_pkg_config_name_full_aliases():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
+        import textwrap
         from conan import ConanFile
 
         class Recipe(ConanFile):
 
             def package_info(self):
+                custom_content = textwrap.dedent(\"""
+                datadir=${prefix}/share
+                schemasdir=${datadir}/mylib/schemas
+                \""")
                 self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
                 self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                # Custom content only added to root pc file -> pkg_other_name.pc
+                self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
                 self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
@@ -421,11 +428,14 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
+    prefix = pc_content.splitlines()[0]
     assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
     Version: 0.3
@@ -434,11 +444,25 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_other_name.pc")
-    assert "Description: Conan package: pkg_other_name" in pc_content
-    assert "Requires: compo1" in pc_content
+    content = textwrap.dedent(f"""\
+    {prefix}
+    # Custom PC content
+
+    datadir=${{prefix}}/share
+    schemasdir=${{datadir}}/mylib/schemas
+
+
+    Name: pkg_other_name
+    Description: Conan package: pkg_other_name
+    Version: 0.3
+    Requires: compo1
+    """)
+    assert content == pc_content
 
     pc_content = client.load("pkg_alias1.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
     Version: 0.3
@@ -447,7 +471,9 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_alias2.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
     Version: 0.3
