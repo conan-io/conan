@@ -4,7 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
 

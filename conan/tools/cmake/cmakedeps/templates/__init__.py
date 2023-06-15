@@ -1,7 +1,7 @@
 import jinja2
 from jinja2 import Template
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class CMakeDepsFileTemplate(object):

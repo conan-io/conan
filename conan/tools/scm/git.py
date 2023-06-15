@@ -1,7 +1,7 @@
 import os
 
 from conan.tools.files import chdir
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
