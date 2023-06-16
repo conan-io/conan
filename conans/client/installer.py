@@ -344,8 +344,7 @@ class BinaryInstaller:
         output_folder = editable.get("output_folder")
 
         base_path = os.path.dirname(conanfile_path)
-        base_path = base_path if conanfile.folders.root is None else \
-            os.path.normpath(os.path.join(base_path, conanfile.folders.root))
+
         conanfile.folders.set_base_folders(base_path, output_folder)
         output = conanfile.output
         output.info("Rewriting files of editable package "
@@ -359,10 +358,7 @@ class BinaryInstaller:
             # Get source of information
             conanfile = node.conanfile
             # New editables mechanism based on Folders
-            conanfile.folders.set_base_package(output_folder or base_path)
-            conanfile.folders.set_base_source(base_path)
-            conanfile.folders.set_base_build(output_folder or base_path)
-            conanfile.folders.set_base_generators(output_folder or base_path)
+            conanfile.folders.set_base_folders(base_path, output_folder)
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"
