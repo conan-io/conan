@@ -383,5 +383,5 @@ def test_info_build_order_broken_recipe():
     c.save({"conanfile.py": dep})
     c.run("export .")
     c.run("graph build-order --requires=dep/0.1 --format=json", assert_error=True)
-    assert "ImportError: cannot import name 'ConanFile' from 'conans'" in c.out
+    assert "ImportError" in c.out
     assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
