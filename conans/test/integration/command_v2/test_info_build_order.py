@@ -366,3 +366,22 @@ def test_info_build_order_lockfile_location():
     assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
     c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock")
     assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
+
+
+def test_info_build_order_broken_recipe():
+    # https://github.com/conan-io/conan/issues/14104
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import replace_in_file
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def export(self):
+                replace_in_file(self, "conanfile.py", "from conan", "from conans")
+        """)
+    c.save({"conanfile.py": dep})
+    c.run("export .")
+    c.run("graph build-order --requires=dep/0.1 --format=json", assert_error=True)
+    assert "ImportError: cannot import name 'ConanFile' from 'conans'" in c.out
+    assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
