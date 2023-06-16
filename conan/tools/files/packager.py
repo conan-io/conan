@@ -1,6 +1,6 @@
 import os
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class _PatternEntry(object):
