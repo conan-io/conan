@@ -28,6 +28,11 @@ class DownloadAPI:
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
         app.remote_manager.get_recipe(ref, remote, metadata)
+        # Respect the timestamp of the server, the ``get_recipe()`` doesn't do it internally
+        # Best would be that ``get_recipe()`` returns the timestamp in the same call
+        server_ref = app.remote_manager.get_recipe_revision_reference(ref, remote)
+        assert server_ref == ref
+        app.cache.update_recipe_timestamp(server_ref)
 
         layout = app.cache.ref_layout(ref)
         conan_file_path = layout.conanfile()
