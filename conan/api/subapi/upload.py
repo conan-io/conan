@@ -2,6 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
+from conan.internal.upload_metadata import gather_metadata
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
@@ -29,13 +30,19 @@ class UploadAPI:
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 
-    def prepare(self, package_list, enabled_remotes):
+    def prepare(self, package_list, enabled_remotes, metadata=None):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
-        if the recipe is still there"""
+        if the recipe is still there
+        :param package_list:
+        :param enabled_remotes:
+        :param metadata: A list of patterns of metadata that should be uploaded. Default None
+                         means all metadata will be uploaded together with the pkg artifacts
+        """
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)
         preparator.prepare(package_list, enabled_remotes)
+        gather_metadata(package_list, app.cache, metadata)
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
