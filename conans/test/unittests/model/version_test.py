@@ -55,7 +55,6 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("4.0.0+xyz") != Version("4.0.0+abc"))
 
     def test_text(self):
-        from conans.model.recipe_ref import Version
         v1 = Version("master+build2")
         vr = _VersionRepr(v1)
         assert vr.major() == "master"
@@ -66,7 +65,6 @@ class VersionTest(unittest.TestCase):
         assert vr.stable() == "master"
 
     def test_patch(self):
-        from conans.model.recipe_ref import Version
         v1 = Version("1.2.3-alpha1+build2")
         vr = _VersionRepr(v1)
         assert vr.major() == "1.Y.Z"
@@ -99,7 +97,6 @@ class VersionTest(unittest.TestCase):
         assert vr.major() == ""
 
     def test_build(self):
-        from conans.model.recipe_ref import Version
         v1 = Version("0.2.3-alpha1+build2")
         vr = _VersionRepr(v1)
         self.assertEqual(vr.build, "build2")
