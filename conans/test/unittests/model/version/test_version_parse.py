@@ -14,6 +14,8 @@ v = [("1.2.3",
       (None, None, None, None), None, "build2"),
      ("1.2.3b.4-pre.1.2b+build.1.1b",
       (1, 2, "3b", 4), "pre.1.2b", "build.1.1b"),
+     ("0.2.3+b178",
+      (0, 2, 3, None), None, "b178")
      ]
 
 
