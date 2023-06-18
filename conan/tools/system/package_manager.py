@@ -2,7 +2,7 @@ import platform
 
 from conan.tools.build import cross_building
 from conans.client.graph.graph import CONTEXT_BUILD
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class _SystemPackageManagerTool(object):

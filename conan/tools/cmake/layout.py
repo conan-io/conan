@@ -1,7 +1,7 @@
 import os
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"):

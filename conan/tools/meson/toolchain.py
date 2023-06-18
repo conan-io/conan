@@ -11,7 +11,7 @@ from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 

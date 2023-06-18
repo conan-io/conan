@@ -7,7 +7,7 @@ from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.microsoft import is_msvc
 from conans.client.graph.graph import RECIPE_CONSUMER
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 
