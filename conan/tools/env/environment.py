@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from conans.client.generators import relativize_generated_file
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
 

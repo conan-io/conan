@@ -21,6 +21,12 @@ class CacheAPI:
         ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.export()
 
+    def recipe_metadata_path(self, ref: RecipeReference):
+        app = ConanApp(self.conan_api.cache_folder)
+        ref = _resolve_latest_ref(app, ref)
+        ref_layout = app.cache.ref_layout(ref)
+        return ref_layout.metadata()
+
     def export_source_path(self, ref: RecipeReference):
         app = ConanApp(self.conan_api.cache_folder)
         ref.revision = None if ref.revision == "latest" else ref.revision
@@ -38,6 +44,12 @@ class CacheAPI:
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.build()
+
+    def package_metadata_path(self, pref: PkgReference):
+        app = ConanApp(self.conan_api.cache_folder)
+        pref = _resolve_latest_pref(app, pref)
+        ref_layout = app.cache.pkg_layout(pref)
+        return ref_layout.metadata()
 
     def package_path(self, pref: PkgReference):
         app = ConanApp(self.conan_api.cache_folder)

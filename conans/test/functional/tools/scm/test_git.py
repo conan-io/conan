@@ -210,6 +210,49 @@ class TestGitBasicClone:
         assert c.load("source/src/myfile.h") == "myheader!"
         assert c.load("source/CMakeLists.txt") == "mycmake"
 
+    def test_clone_target(self):
+        # Clone to a different target folder
+        # https://github.com/conan-io/conan/issues/14058
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.scm import Git
+            from conan.tools.files import load
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def layout(self):
+                    self.folders.source = "source"
+
+                def source(self):
+                    # Alternative, first defining the folder
+                    # git = Git(self, "target")
+                    # git.clone(url="{url}", target=".")
+                    # git.checkout(commit="{commit}")
+
+                    git = Git(self)
+                    git.clone(url="{url}", target="tar get") # git clone url target
+                    git.folder = "tar get"                   # cd target
+                    git.checkout(commit="{commit}")         # git checkout commit
+
+                    self.output.info("MYCMAKE: {{}}".format(load(self, "tar get/CMakeLists.txt")))
+                    self.output.info("MYFILE: {{}}".format(load(self, "tar get/src/myfile.h")))
+                """)
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, commit = create_local_git_repo(files={"src/myfile.h": "myheader!",
+                                                   "CMakeLists.txt": "mycmake"}, folder=folder)
+        # This second commit will NOT be used, as I will use the above commit in the conanfile
+        save_files(path=folder, files={"src/myfile.h": "my2header2!"})
+        git_add_changes_commit(folder=folder)
+
+        c = TestClient()
+        c.save({"conanfile.py": conanfile.format(url=url, commit=commit)})
+        c.run("create .")
+        assert "pkg/0.1: MYCMAKE: mycmake" in c.out
+        assert "pkg/0.1: MYFILE: myheader!" in c.out
+
 
 @pytest.mark.tool("git")
 class TestGitShallowClone:

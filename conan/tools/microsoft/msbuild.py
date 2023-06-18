@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):

@@ -1,5 +1,5 @@
 from conan.tools.apple import to_apple_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class XcodeBuild(object):
