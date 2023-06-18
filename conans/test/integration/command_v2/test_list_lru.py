@@ -1,5 +1,7 @@
 import time
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -10,7 +12,8 @@ class TestLRU:
         c.run("list * --lru=1s -r=default", assert_error=True)
         assert "'--lru' cannot be used in remotes, only in cache" in c.out
 
-    def test_cache_clean_lru(self):
+    @pytest.mark.parametrize("method", ["list", "remove"])
+    def test_cache_clean_lru(self, method):
         c = TestClient()
         c.save({"conanfile.py": GenConanfile()})
         c.run("create . --name=pkg --version=0.1")
@@ -19,8 +22,12 @@ class TestLRU:
         time.sleep(2)
         # This should update the LRU
         c.run("install --requires=pkg/0.1")
-        c.run("list *#* --lru=1s --format=json", redirect_stdout="old.json")
-        c.run("remove --list=old.json -c")
+        # Removing recipes (+ its binaries) that recipes haven't been used
+        if method == "list":
+            c.run("list *#* --lru=1s --format=json", redirect_stdout="old.json")
+            c.run("remove --list=old.json -c")
+        else:
+            c.run("remove * --lru=1s -c")
         # Do the checks
         c.run("list *:*#*")
         assert "pkg" in c.out
@@ -31,8 +38,11 @@ class TestLRU:
         # This should update the LRU of the recipe only
         c.run("graph info --requires=pkg/0.1")
         # IMPORTANT: Note the pattern is NOT the same as the equivalent for 'conan remove'
-        c.run("list *#*:*#* --lru=1s --format=json", redirect_stdout="old.json")
-        c.run("remove --list=old.json -c")
+        if method == "list":
+            c.run("list *#*:*#* --lru=1s --format=json", redirect_stdout="old.json")
+            c.run("remove --list=old.json -c")
+        else:
+            c.run("remove *:* --lru=1s -c")
 
         # Check the binary has been removed, but the recipe is still there
         c.run("list *:*")

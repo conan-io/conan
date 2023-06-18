@@ -51,6 +51,8 @@ def remove(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-r', '--remote', action=OnceArgument,
                         help='Will remove from the specified remote')
     parser.add_argument("-l", "--list", help="Package list file")
+    parser.add_argument('--lru', default=None, action=OnceArgument,
+                        help="List only elements that have been recently used")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -59,6 +61,10 @@ def remove(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.package_query and args.list:
         raise ConanException("Cannot define package-query and the package list file")
+    if args.remote and args.lru:
+        raise ConanException("'--lru' cannot be used in remotes, only in cache")
+    if args.list and args.lru:
+        raise ConanException("'--lru' cannot be used with input package list")
 
     ui = UserInput(conan_api.config.get("core:non_interactive"))
     remote = conan_api.remotes.get(args.remote) if args.remote else None
@@ -77,7 +83,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, rrev="*", prev="*")
         if ref_pattern.package_id is None and args.package_query is not None:
             raise ConanException('--package-query supplied but the pattern does not match packages')
-        package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+        package_list = conan_api.list.select(ref_pattern, args.package_query, remote, lru=args.lru)
         multi_package_list = MultiPackagesList()
         multi_package_list.add("Local Cache" if not remote else remote.name, package_list)
 
