@@ -5,7 +5,7 @@ import textwrap
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 

@@ -7,7 +7,7 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 

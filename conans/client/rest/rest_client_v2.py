@@ -1,4 +1,5 @@
 import copy
+import fnmatch
 import os
 
 from conan.api.output import ConanOutput
@@ -35,12 +36,17 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(d.replace("\\", "/") for d in data["files"].keys())
         return data
 
-    def get_recipe(self, ref, dest_folder):
+    def get_recipe(self, ref, dest_folder, metadata, only_metadata):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
         accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt", "metadata/sign"]
-        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
+        if only_metadata:
+            accepted_files = []
+        metadata = metadata or []
+        metadata = [f"metadata/{m}" for m in metadata]
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)
+                 or any(fnmatch.fnmatch(f, m) for m in metadata)]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -65,13 +71,19 @@ class RestV2Methods(RestCommonMethods):
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
-    def get_package(self, pref, dest_folder):
+    def get_package(self, pref, dest_folder, metadata, only_metadata):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         files = data["files"]
         # Download only known files, but not metadata (except sign)
         accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt", "metadata/sign"]
-        files = [f for f in files if any(f.startswith(m) for m in accepted_files)]
+        if only_metadata:
+            accepted_files = []
+        metadata = metadata or []
+        metadata = [f"metadata/{m}" for m in metadata]
+        files = [f for f in files if any(f.startswith(m) for m in accepted_files)
+                 or any(fnmatch.fnmatch(f, m) for m in metadata)]
+
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.package_file(pref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))

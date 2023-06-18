@@ -58,6 +58,9 @@ def upload(conan_api: ConanAPI, parser, *args):
     parser.add_argument('--dry-run', default=False, action='store_true',
                         help='Do not execute the real upload (experimental)')
     parser.add_argument("-l", "--list", help="Package list file")
+    parser.add_argument("-m", "--metadata", action='append',
+                        help='Upload the metadata, even if the package is already in the server and '
+                             'not uploaded')
 
     args = parser.parse_args(*args)
 
@@ -88,7 +91,7 @@ def upload(conan_api: ConanAPI, parser, *args):
     if not args.list and not args.confirm and "*" in args.pattern:
         _ask_confirm_upload(conan_api, package_list)
 
-    conan_api.upload.prepare(package_list, enabled_remotes)
+    conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
 
     if not args.dry_run:
         conan_api.upload.upload(package_list, remote)

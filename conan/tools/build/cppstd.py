@@ -1,6 +1,6 @@
 import operator
 
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanInvalidConfiguration, ConanException
 from conans.model.version import Version
 
 

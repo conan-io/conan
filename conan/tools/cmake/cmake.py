@@ -5,7 +5,7 @@ from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def _cmake_cmd_line_args(conanfile, generator):
