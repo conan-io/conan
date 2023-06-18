@@ -708,7 +708,8 @@ class GenericSystemBlock(Block):
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
-                    "armv8": "ARM64"}.get(arch)
+                    "armv8": "ARM64",
+                    "arm64ec": "ARM64EC"}.get(arch)
         return None
 
     def _get_generic_system_name(self):
