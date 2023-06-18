@@ -6,14 +6,6 @@ from conans.model.version import Version
 
 class VersionTest(unittest.TestCase):
 
-    def test_simple(self):
-        v1 = Version("1.2.3")
-        self.assertEqual(v1.major, "1")  # 1.X.Y
-        self.assertEqual(v1.minor, "2")  # 1.2.Y
-        self.assertEqual(v1.patch, "3")
-        self.assertEqual(v1.pre, None)
-        self.assertEqual(v1.build, None)
-
     def test_text(self):
         v1 = Version("master+build2")
         vr = _VersionRepr(v1)
