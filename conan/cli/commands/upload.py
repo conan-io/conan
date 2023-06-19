@@ -14,15 +14,15 @@ def summary_upload_list(results):
     """
     cli_out_write("Upload summary:")
     info = results["results"]
-    new_info = {}
+    result = {}
     for remote, remote_info in info.items():
+        new_info = result.setdefault(remote, {})
         for ref, content in remote_info.items():
             for rev, rev_content in content["revisions"].items():
-                prevs = rev_content.get('packages')
-                if prevs:
-                    new_info.setdefault(f"{ref}:{rev}", list(prevs))
-    info = new_info
-    print_serial(info)
+                pkgids = rev_content.get('packages')
+                if pkgids:
+                    new_info.setdefault(f"{ref}:{rev}", list(pkgids))
+    print_serial(result)
 
 
 @conan_command(group="Creator", formatters={"text": summary_upload_list,
@@ -71,6 +71,8 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Missing pattern or package list file")
     if args.pattern and args.list:
         raise ConanException("Cannot define both the pattern and the package list file")
+    if args.package_query and args.list:
+        raise ConanException("Cannot define package-query and the package list file")
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
