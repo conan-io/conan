@@ -1,7 +1,7 @@
 from conan.internal import check_duplicated_generator
+from conan.tools import CppInfo
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.build_info import CppInfo
 
 
 class AutotoolsDeps:
@@ -18,7 +18,7 @@ class AutotoolsDeps:
         return self._ordered_deps
 
     def _get_cpp_info(self):
-        ret = CppInfo()
+        ret = CppInfo(self._conanfile)
         for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
