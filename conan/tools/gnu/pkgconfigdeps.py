@@ -6,7 +6,7 @@ from jinja2 import Template, StrictUndefined
 
 from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
@@ -97,7 +97,7 @@ class _PCContentGenerator:
     template = textwrap.dedent("""\
         {%- macro get_libs(libdirs, cpp_info, gnudeps_flags) -%}
         {%- for _ in libdirs -%}
-        {{ '-L"${libdir%s}"' % loop.index + " " }}
+        {{ '-L"${libdir%s}"' % (loop.index0 or "") + " " }}
         {%- endfor -%}
         {%- for sys_lib in (cpp_info.libs + cpp_info.system_libs) -%}
         {{ "-l%s" % sys_lib + " " }}
@@ -112,7 +112,7 @@ class _PCContentGenerator:
 
         {%- macro get_cflags(includedirs, cxxflags, cflags, defines) -%}
         {%- for _ in includedirs -%}
-        {{ '-I"${includedir%s}"' % loop.index + " " }}
+        {{ '-I"${includedir%s}"' % (loop.index0 or "") + " " }}
         {%- endfor -%}
         {%- for cxxflag in cxxflags -%}
         {{ cxxflag + " " }}
@@ -127,10 +127,13 @@ class _PCContentGenerator:
 
         prefix={{ prefix_path }}
         {% for path in libdirs %}
-        {{ "libdir{}={}".format(loop.index, path) }}
+        {{ "libdir{}={}".format((loop.index0 or ""), path) }}
         {% endfor %}
         {% for path in includedirs %}
-        {{ "includedir%d=%s" % (loop.index, path) }}
+        {{ "includedir%s=%s" % ((loop.index0 or ""), path) }}
+        {% endfor %}
+        {% for path in bindirs %}
+        {{ "bindir{}={}".format((loop.index0 or ""), path) }}
         {% endfor %}
         {% if pkg_config_custom_content %}
         # Custom PC content
@@ -148,6 +151,12 @@ class _PCContentGenerator:
     """)
 
     shortened_template = textwrap.dedent("""\
+        prefix={{ prefix_path }}
+        {% if pkg_config_custom_content %}
+        # Custom PC content
+        {{ pkg_config_custom_content }}
+        {% endif %}
+
         Name: {{ name }}
         Description: {{ description }}
         Version: {{ version }}
@@ -160,23 +169,27 @@ class _PCContentGenerator:
         self._conanfile = conanfile
         self._dep = dep
 
-    def content(self, info):
-        assert isinstance(info, _PCInfo) and info.cpp_info is not None
-
+    def _get_prefix_path(self):
         # If editable, package_folder can be None
         root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
             else self._dep.package_folder
-        version = info.cpp_info.get_property("component_version") or self._dep.ref.version
+        return root_folder.replace("\\", "/")
 
-        prefix_path = root_folder.replace("\\", "/")
+    def content(self, info):
+        assert isinstance(info, _PCInfo) and info.cpp_info is not None
+
+        prefix_path = self._get_prefix_path()
+        version = info.cpp_info.get_property("component_version") or self._dep.ref.version
         libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
         includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
+        bindirs = _get_formatted_dirs(info.cpp_info.bindirs, prefix_path)
         custom_content = info.cpp_info.get_property("pkg_config_custom_content")
 
         context = {
             "prefix_path": prefix_path,
             "libdirs": libdirs,
             "includedirs": includedirs,
+            "bindirs": bindirs,
             "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
@@ -194,8 +207,11 @@ class _PCContentGenerator:
 
     def shortened_content(self, info):
         assert isinstance(info, _PCInfo)
-
+        custom_content = info.cpp_info.get_property("pkg_config_custom_content") if info.cpp_info \
+            else None
         context = {
+            "prefix_path": self._get_prefix_path(),
+            "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
             "version": self._dep.ref.version,
@@ -308,7 +324,7 @@ class _PCGenerator:
         Get all the PC files and contents for any dependency:
 
         * If the given dependency does not have components:
-            The PC file will be the depency one.
+            The PC file will be the dependency one.
 
         * If the given dependency has components:
             The PC files will be saved in this order:
@@ -346,8 +362,8 @@ class _PCGenerator:
         # Issue related: https://github.com/conan-io/conan/issues/10341
         pkg_name = _get_package_name(self._dep, self._build_context_suffix)
         if f"{pkg_name}.pc" not in pc_files:
-            package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}", None,
-                                   _get_package_aliases(self._dep))
+            package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}",
+                                   self._dep.cpp_info, _get_package_aliases(self._dep))
             # It'll be enough creating a shortened PC file. This file will be like an alias
             pc_files[f"{package_info.name}.pc"] = self._content_generator.shortened_content(package_info)
             for alias in package_info.aliases:

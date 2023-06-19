@@ -21,7 +21,7 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     Show the path to the Conan cache for a given reference.
     """
     subparser.add_argument("reference", help="Recipe reference or Package reference")
-    subparser.add_argument("--folder", choices=['export_source', 'source', 'build'],
+    subparser.add_argument("--folder", choices=['export_source', 'source', 'build', 'metadata'],
                            help="Path to show. The 'build'"
                                 " requires a package reference. If not specified it shows 'exports'"
                                 " path ")
@@ -40,6 +40,8 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
             path = conan_api.cache.export_source_path(ref)
         elif args.folder == "source":
             path = conan_api.cache.source_path(ref)
+        elif args.folder == "metadata":
+            path = conan_api.cache.recipe_metadata_path(ref)
         else:
             raise ConanException(f"'--folder {args.folder}' requires a valid package reference")
     else:
@@ -47,6 +49,8 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
             path = conan_api.cache.package_path(pref)
         elif args.folder == "build":
             path = conan_api.cache.build_path(pref)
+        elif args.folder == "metadata":
+            path = conan_api.cache.package_metadata_path(pref)
         else:
             raise ConanException(f"'--folder {args.folder}' requires a recipe reference")
     return path
@@ -64,7 +68,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     subparser.add_argument("-b", "--build", action='store_true', default=False,
                            help="Clean build folders")
     subparser.add_argument("-d", "--download", action='store_true', default=False,
-                           help="Clean download folders")
+                           help="Clean download and metadata folders")
     subparser.add_argument("-t", "--temp", action='store_true', default=False,
                            help="Clean temporary folders")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,

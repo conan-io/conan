@@ -69,7 +69,7 @@ class MultiPackagesList:
                 result[remote] = PackagesList.deserialize(pkglist)
         pkglist = MultiPackagesList()
         pkglist.lists = result
-        return result
+        return pkglist
 
     @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):

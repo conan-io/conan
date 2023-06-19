@@ -7,7 +7,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.errors import NotFoundException
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.files import save, load, rmdir
+from conans.util.files import save, load, rmdir, mkdir
 
 
 class TestDownloadCacheBackupSources:
@@ -82,6 +82,13 @@ class TestDownloadCacheBackupSources:
         http_server_base_folder_internet = temp_folder()
 
         save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        save(os.path.join(http_server_base_folder_internet, "mycompanyfile.txt"), "Business stuff")
+        save(os.path.join(http_server_base_folder_internet, "duplicated1.txt"), "I am duplicated #1")
+        save(os.path.join(http_server_base_folder_internet, "duplicated2.txt"), "I am duplicated #2")
+
+        @http_server.server.get("/mycompanystorage/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
 
         @http_server.server.get("/internet/<file>")
         def get_internet_file(file):
@@ -99,7 +106,11 @@ class TestDownloadCacheBackupSources:
 
         http_server.run_server()
 
-        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        hello_world_sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        mycompanyfile_sha256 = "7f1d5d6ae44eb93061b0e07661bd8cbac95a7c51fa204570bf7e24d877d4a224"
+        duplicated1_sha256 = "744aca0436e2e355c285fa926a37997df488544589cec2260fc9db969a3c78df"
+        duplicated2_sha256 = "66ba2ba05211da3b0b0cb0a08f18e1d9077e7321c2be27887371ec37fade376d"
+
         conanfile = textwrap.dedent(f"""
             from conan import ConanFile
             from conan.tools.files import download
@@ -107,10 +118,35 @@ class TestDownloadCacheBackupSources:
                 name = "pkg"
                 version = "1.0"
                 def source(self):
-                    download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
-                             sha256="{sha256}")
+                    download(self, "http://localhost:{http_server.port}/internet/myfile.txt",
+                            "myfile.txt",
+                             sha256="{hello_world_sha256}")
+
+                    download(self, "http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt",
+                            "mycompanyfile.txt",
+                             sha256="{mycompanyfile_sha256}")
+
+                    download(self, ["http://localhost:{http_server.port}/mycompanystorage/duplicated1.txt",
+                                    "http://localhost:{http_server.port}/internet/duplicated1.txt"],
+                            "duplicated1.txt",
+                            sha256="{duplicated1_sha256}")
+
+                    download(self, ["http://localhost:{http_server.port}/internet/duplicated1.txt"],
+                            "duplicated1.txt",
+                            sha256="{duplicated1_sha256}")
+
+                    download(self, ["http://localhost:{http_server.port}/mycompanystorage/duplicated2.txt",
+                                    "http://localhost:{http_server.port}/mycompanystorage2/duplicated2.txt"],
+                            "duplicated2.txt",
+                            sha256="{duplicated2_sha256}")
+
+                    download(self, "http://localhost:{http_server.port}/mycompanystorage2/duplicated2.txt",
+                            "duplicated2.txt",
+                            sha256="{duplicated2_sha256}")
             """)
 
+        # Ensure that a None url is only warned about but no exception is thrown,
+        # this is possible in CI systems that substitute an env var and fail to give it a value
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
                                     f"core.sources:download_urls=[None, 'origin', 'http://localhost:{http_server.port}/downloader/']\n"
                                     f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
@@ -122,20 +158,40 @@ class TestDownloadCacheBackupSources:
 
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
                                     f"core.sources:download_urls=['origin', 'http://localhost:{http_server.port}/downloader/']\n"
-                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
+                                    f"core.sources:exclude_urls=['http://localhost:{http_server.port}/mycompanystorage/', 'http://localhost:{http_server.port}/mycompanystorage2/']"},
                     path=client.cache.cache_folder)
         client.run("create .")
         client.run("upload * -c -r=default")
 
         server_contents = os.listdir(http_server_base_folder_backups)
-        assert sha256 in server_contents
-        assert sha256 + ".json" in server_contents
+        assert hello_world_sha256 in server_contents
+        assert hello_world_sha256 + ".json" in server_contents
+        # Its only url is excluded, should not be there
+        assert mycompanyfile_sha256 not in server_contents
+        assert mycompanyfile_sha256 + ".json" not in server_contents
+        # It has an excluded url, but another that is not, it should be there
+        assert duplicated1_sha256 in server_contents
+        assert duplicated1_sha256 + ".json" in server_contents
+        # All its urls are excluded, it shoud not be there
+        assert duplicated2_sha256 not in server_contents
+        assert duplicated2_sha256 + ".json" not in server_contents
 
         client.run("upload * -c -r=default")
         assert "already in server, skipping upload" in client.out
 
+        # Clear de local cache
+        rmdir(download_cache_folder)
+        mkdir(download_cache_folder)
+        # Everything the same, but try to download from backup first
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader/', 'origin']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/\n"
+                                    f"core.sources:exclude_urls=['http://localhost:{http_server.port}/mycompanystorage/', 'http://localhost:{http_server.port}/mycompanystorage2/']"},
+                    path=client.cache.cache_folder)
         client.run("source .")
-        assert f"Source http://localhost:{http_server.port}/internet/myfile.txt retrieved from local download cache" in client.out
+        assert f"Sources for http://localhost:{http_server.port}/internet/myfile.txt found in remote backup" in client.out
+        assert f"File http://localhost:{http_server.port}/mycompanystorage/mycompanyfile.txt not found in http://localhost:{http_server.port}/downloader/" in client.out
 
     def test_download_origin_first(self):
         client = TestClient(default_server_user=True)
@@ -340,7 +396,7 @@ class TestDownloadCacheBackupSources:
         assert f"ConanException: The source backup server 'http://localhost:{http_server.port}" \
                f"/downloader/' needs authentication" in client.out
         content = {"credentials":
-                   [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
 
         client.run("create .")
@@ -349,7 +405,7 @@ class TestDownloadCacheBackupSources:
         assert f"The source backup server 'http://localhost:{http_server.port}" \
                f"/uploader/' needs authentication" in client.out
         content = {"credentials":
-                   [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
+                       [{"url": f"http://localhost:{http_server.port}", "token": "myuploadtoken"}]}
         # Now use the correct UPLOAD token
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         client.run("upload * -c -r=default --force")  # need --force to guarantee cached updated
@@ -362,7 +418,7 @@ class TestDownloadCacheBackupSources:
         assert "already in server, skipping upload" in client.out
 
         content = {"credentials":
-                   [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
+                       [{"url": f"http://localhost:{http_server.port}", "token": "mytoken"}]}
 
         save(os.path.join(client.cache_folder, "source_credentials.json"), json.dumps(content))
         rmdir(download_cache_folder)
@@ -482,8 +538,8 @@ class TestDownloadCacheBackupSources:
             client.run("source .", assert_error=True)
             assert "WARN: Sources for http://fake/myfile.txt failed in 'origin'" in client.out
             assert "WARN: Checking backups" in client.out
-            assert "NotFoundException: File http://fake/myfile.txt not found " \
-                   "in ['origin', 'http://extrafake/']" in client.out
+            assert "NotFoundException: File http://fake/myfile.txt " \
+                   "not found in ['origin', 'http://extrafake/']" in client.out
 
     def test_ok_when_origin_breaks_midway_list(self):
         client = TestClient(default_server_user=True)

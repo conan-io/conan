@@ -1,12 +1,32 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
+from conan.api.output import cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
+from conan.cli.commands.list import print_list_json, print_serial
 from conans.client.userio import UserInput
 from conan.errors import ConanException
 
 
-@conan_command(group="Creator")
+def summary_upload_list(results):
+    """ Do litte format modification to serialized
+    list bundle so it looks prettier on text output
+    """
+    cli_out_write("Upload summary:")
+    info = results["results"]
+    result = {}
+    for remote, remote_info in info.items():
+        new_info = result.setdefault(remote, {})
+        for ref, content in remote_info.items():
+            for rev, rev_content in content["revisions"].items():
+                pkgids = rev_content.get('packages')
+                if pkgids:
+                    new_info.setdefault(f"{ref}:{rev}", list(pkgids))
+    print_serial(result)
+
+
+@conan_command(group="Creator", formatters={"text": summary_upload_list,
+                                            "json": print_list_json})
 def upload(conan_api: ConanAPI, parser, *args):
     """
     Upload packages to a remote.
@@ -35,7 +55,12 @@ def upload(conan_api: ConanAPI, parser, *args):
                         help='Perform an integrity check, using the manifests, before upload')
     parser.add_argument('-c', '--confirm', default=False, action='store_true',
                         help='Upload all matching recipes without confirmation')
+    parser.add_argument('--dry-run', default=False, action='store_true',
+                        help='Do not execute the real upload (experimental)')
     parser.add_argument("-l", "--list", help="Package list file")
+    parser.add_argument("-m", "--metadata", action='append',
+                        help='Upload the metadata, even if the package is already in the server and '
+                             'not uploaded')
 
     args = parser.parse_args(*args)
 
@@ -46,6 +71,8 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Missing pattern or package list file")
     if args.pattern and args.list:
         raise ConanException("Cannot define both the pattern and the package list file")
+    if args.package_query and args.list:
+        raise ConanException("Cannot define package-query and the package list file")
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
@@ -66,10 +93,18 @@ def upload(conan_api: ConanAPI, parser, *args):
     if not args.list and not args.confirm and "*" in args.pattern:
         _ask_confirm_upload(conan_api, package_list)
 
-    conan_api.upload.prepare(package_list, enabled_remotes)
-    conan_api.upload.upload(package_list, remote)
+    conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
 
-    conan_api.upload.upload_backup_sources(package_list)
+    if not args.dry_run:
+        conan_api.upload.upload(package_list, remote)
+        conan_api.upload.upload_backup_sources(package_list)
+
+    pkglist = MultiPackagesList()
+    pkglist.add(remote.name, package_list)
+    return {
+        "results": pkglist.serialize(),
+        "conan_api": conan_api
+    }
 
 
 def _ask_confirm_upload(conan_api, upload_data):

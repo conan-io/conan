@@ -64,3 +64,7 @@ class TestConflictDiamondTest:
             c.assert_overrides({"math/1.0": [f"math/{v}"],
                                 "math/1.0.1": [f"math/{v}#8e1a7a5ce869d8c54ae3d33468fd657c"]})
             c.assert_listed_require({f"math/{v}": "Cache"})
+
+        c.run("install --requires=engine/1.0  --requires=ai/1.0", assert_error=True)
+        assert "Conflict between math/1.0.1 and math/1.0 in the graph"
+        assert "Conflict originates from ai/1.0"

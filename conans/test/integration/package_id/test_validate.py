@@ -309,7 +309,6 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: Invalid: Option 2 of 'dep' not supported", client.out)
 
-    @pytest.mark.xfail(reason="The way to check versions of transitive deps has changed")
     def test_validate_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -322,16 +321,23 @@ class TestValidate(unittest.TestCase):
                requires = "dep/0.1"
 
                def validate(self):
-                   # FIXME: This is a ugly interface DO NOT MAKE IT PUBLIC
-                   # if self.info.requires["dep"].full_version ==
-                   if self.requires["dep"].ref.version > "0.1":
+                   if self.dependencies["dep"].ref.version > "0.1":
                        raise ConanInvalidConfiguration("dep> 0.1 is not supported")
            """)
 
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg1 --version=0.1")
 
-        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "dep/0.2")})
+        client.save({"conanfile.py": GenConanfile()
+                    .with_requirement("pkg1/0.1")
+                    .with_requirement("dep/0.2", override=True)})
+        error = client.run("install .", assert_error=True)
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        self.assertIn("pkg1/0.1: Invalid: dep> 0.1 is not supported", client.out)
+
+        client.save({"conanfile.py": GenConanfile()
+                    .with_requirement("pkg1/0.1")
+                    .with_requirement("dep/0.2", force=True)})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: Invalid: dep> 0.1 is not supported", client.out)
