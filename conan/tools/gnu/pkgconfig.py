@@ -31,7 +31,7 @@ class PkgConfig:
         with env.vars(self._conanfile).apply():
             # This way we get the environment from ConanFile, from profile (default buildenv)
             output = StringIO()
-            self._conanfile.run(command, output)
+            self._conanfile.run(command, stdout=output)
         value = output.getvalue().strip()
         return value
 
