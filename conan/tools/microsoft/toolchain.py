@@ -8,7 +8,7 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars, msvs_toolset
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 

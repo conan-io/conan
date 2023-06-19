@@ -1,6 +1,8 @@
 import json
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -117,3 +119,35 @@ def test_lock_create_build_require_transitive():
     assert "conanfile.py (tool/0.1): TARGET:Linux!!" in c.out
     assert "conanfile.py (tool/0.1): MYOS-GEN:Windows!!" in c.out
     assert "conanfile.py (tool/0.1): TARGET-GEN:Linux!!" in c.out
+
+
+class TestTransitiveBuildRequires:
+    @pytest.fixture()
+    def client(self):
+        # https://github.com/conan-io/conan/issues/13899
+        client = TestClient()
+        client.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                     "cmake/conanfile.py": GenConanfile("cmake", "1.0").with_requires("zlib/1.0"),
+                     "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_build_requires("cmake/1.0"),
+                     "consumer/conanfile.py": GenConanfile().with_requires("pkg/[>=1.0]"),
+                     })
+
+        client.run("export zlib")
+        client.run("export cmake")
+        client.run("export pkg")
+        client.run("lock create consumer/conanfile.py -pr:b=default --build=* "
+                   "--lockfile-out=conan.lock")
+        return client
+
+    def test_transitive_build_require(self, client):
+        # This used to crash, not anymore with the fix
+        client.run("install consumer/conanfile.py --build=missing --lockfile=conan.lock")
+        assert "zlib/1.0: Created package" in client.out
+        assert "cmake/1.0: Created package" in client.out
+        assert "pkg/1.0: Created package" in client.out
+
+    def test_transitive_build_require_intermediate(self, client):
+        # This used to crash, not anymore with the fix
+        client.run("install pkg/conanfile.py --build=missing --lockfile=conan.lock")
+        assert "zlib/1.0: Created package" in client.out
+        assert "cmake/1.0: Created package" in client.out

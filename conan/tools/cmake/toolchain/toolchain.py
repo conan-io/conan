@@ -17,7 +17,7 @@ from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conans.client.generators import relativize_generated_file
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.options import _PackageOption
 from conans.util.files import save
 

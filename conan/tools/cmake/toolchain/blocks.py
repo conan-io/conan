@@ -16,7 +16,7 @@ from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load
 
 
@@ -733,7 +733,8 @@ class GenericSystemBlock(Block):
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
-                    "armv8": "ARM64"}.get(arch)
+                    "armv8": "ARM64",
+                    "arm64ec": "ARM64EC"}.get(arch)
         return None
 
     def _get_generic_system_name(self):

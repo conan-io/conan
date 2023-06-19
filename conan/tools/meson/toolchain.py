@@ -11,7 +11,7 @@ from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 
@@ -171,15 +171,15 @@ class MesonToolchain(object):
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
         else:
-            if "Visual" in compiler or compiler == "msvc":
-                default_comp = "cl"
-                default_comp_cpp = "cl"
-            elif "clang" in compiler:
+            if "clang" in compiler:
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+        if "Visual" in compiler or compiler == "msvc":
+            default_comp = "cl"
+            default_comp_cpp = "cl"
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},

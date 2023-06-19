@@ -8,7 +8,7 @@ from conan.tools.build.cppstd import check_max_cppstd, check_min_cppstd, \
 from conan.tools.build.cpu import build_jobs
 from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.stdcpp_library import stdcpp_library
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
 CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"

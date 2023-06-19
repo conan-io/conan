@@ -4,7 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
 
@@ -27,9 +27,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return data_fname
 
     @property
+    def _build_modules_activated(self):
+        if self.require.build:
+            return self.conanfile.ref.name in self.cmakedeps.build_context_build_modules
+        else:
+            return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
+
+    @property
     def context(self):
         global_cpp = self._get_global_cpp_cmake()
-        if not self.build_modules_activated:
+        if not self._build_modules_activated:
             global_cpp.build_modules_paths = ""
 
         components = self._get_required_components_cpp()
@@ -195,22 +202,22 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                                                 self.is_host_windows)
 
             public_comp_deps = []
-            for require in comp.requires:
-                if "::" in require:  # Points to a component of a different package
-                    pkg, cmp_name = require.split("::")
+            for required_pkg, required_comp in comp.parsed_requires():
+                if required_pkg is not None:  # Points to a component of a different package
                     try:  # Make sure the declared dependency is at least in the recipe requires
-                        self.conanfile.dependencies[pkg]
+                        self.conanfile.dependencies[required_pkg]
                     except KeyError:
                         raise ConanException(f"{self.conanfile}: component '{comp_name}' required "
-                                             f"'{require}', but '{pkg}' is not a direct dependency")
+                                             f"'{required_pkg}::{required_comp}', "
+                                             f"but '{required_pkg}' is not a direct dependency")
                     try:
-                        req = transitive_requires[pkg]
+                        req = transitive_requires[required_pkg]
                     except KeyError:  # The transitive dep might have been skipped
                         pass
                     else:
-                        public_comp_deps.append(self.get_component_alias(req, cmp_name))
+                        public_comp_deps.append(self.get_component_alias(req, required_comp))
                 else:  # Points to a component of same package
-                    public_comp_deps.append(self.get_component_alias(self.conanfile, require))
+                    public_comp_deps.append(self.get_component_alias(self.conanfile, required_comp))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
             component_target_name = self.get_component_alias(self.conanfile, comp_name)
             ret.append((component_target_name, deps_cpp_cmake))
