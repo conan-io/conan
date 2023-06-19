@@ -156,7 +156,6 @@ def test_cache_in_layout(conanfile):
     assert "Package_ID: {}".format(package_id) in client.out
 
 
-@pytest.mark.xfail(reason="The conan-source command do not handle yet the layout, to do in other PR")
 def test_same_conanfile_local(conanfile):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
@@ -165,19 +164,17 @@ def test_same_conanfile_local(conanfile):
     client.save({"conanfile.py": conanfile})
 
     source_folder = os.path.join(client.current_folder, "my_sources")
-    build_folder = os.path.join(client.current_folder, "my_build")
+    build_folder = os.path.join(client.current_folder, "install", "my_build")
 
-    client.run("install . lib/1.0@ -if=install")
+    client.run("install . --name=lib --version=1.0 -of=install")
     client.run("source .")
     assert "Source folder: {}".format(source_folder) in client.out
     assert os.path.exists(os.path.join(source_folder, "source.h"))
 
-    client.run("build .  -if=install")
+    client.run("build .  -of=install")
     assert "Build folder: {}".format(build_folder) in client.out
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
 
-    client.run("package .  -if=install", assert_error=True)
-    assert "'package' is not a Conan command" in client.out
 
 def test_cpp_package():
     client = TestClient()
