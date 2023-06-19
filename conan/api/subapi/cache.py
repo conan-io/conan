@@ -1,12 +1,10 @@
 import os
 
-from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.dates import timestamp_now
 from conans.util.files import rmdir
 
 
