@@ -55,7 +55,7 @@ v = [("1", "2"),
      ("1.2.0", "1.2.1-dev"),
      ("1.2", "1.2.1-dev"),
      ("1.2-alpha", "1.2.1-dev"),
-]
+     ]
 
 
 @pytest.mark.parametrize("v1, v2", v)
@@ -68,6 +68,7 @@ def test_comparison(v1, v2):
     assert v1 <= v2
     assert v2 >= v1
 
+
 def test_build_metadata_is_not_equal():
     # https://github.com/conan-io/conan/issues/5900
     # Shouldn't be an "official" order for build metadata, but as they cannot be equal
@@ -75,8 +76,10 @@ def test_build_metadata_is_not_equal():
     assert Version("4.0.0+abc") != Version("4.0.0+xyz")
     assert Version("4.0.0+xyz") != Version("4.0.0+abc")
 
+
 def test_comparison_with_none():
     assert Version("1.2.3") > None
+
 
 def test_comparison_with_integer():
     v1 = Version("13.0")
