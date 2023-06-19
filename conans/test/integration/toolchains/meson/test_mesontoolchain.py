@@ -145,3 +145,23 @@ def test_correct_quotes():
     assert "cpp_std = 'c++17'" in content
     assert "backend = 'ninja'" in content
     assert "buildtype = 'release'" in content
+
+
+def test_deactivate_nowrap():
+    # https://github.com/conan-io/conan/issues/10671
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.project_options.pop("wrap_mode")
+                tc.generate()
+        """)
+    t.save({"conanfile.py": conanfile})
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    assert "wrap_mode " not in content
+    assert "nofallback" not in content
