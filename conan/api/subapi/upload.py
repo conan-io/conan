@@ -2,6 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
+from conan.internal.upload_metadata import gather_metadata
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
@@ -29,13 +30,19 @@ class UploadAPI:
 
         UploadUpstreamChecker(app).check(package_list, remote, force)
 
-    def prepare(self, package_list, enabled_remotes):
+    def prepare(self, package_list, enabled_remotes, metadata=None):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
-        if the recipe is still there"""
+        if the recipe is still there
+        :param package_list:
+        :param enabled_remotes:
+        :param metadata: A list of patterns of metadata that should be uploaded. Default None
+                         means all metadata will be uploaded together with the pkg artifacts
+        """
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)
         preparator.prepare(package_list, enabled_remotes)
+        gather_metadata(package_list, app.cache, metadata)
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
@@ -55,8 +62,10 @@ class UploadAPI:
         url = url if url.endswith("/") else url + "/"
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or app.cache.default_sources_backup_folder
+        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
 
-        files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list)
+        files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list,
+                                                                                      excluded_urls)
         # TODO: verify might need a config to force it to False
         uploader = FileUploader(app.requester, verify=True, config=config)
         # TODO: For Artifactory, we can list all files once and check from there instead

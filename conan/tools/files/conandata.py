@@ -2,7 +2,7 @@ import os
 
 import yaml
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load, save
 
 

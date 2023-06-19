@@ -249,6 +249,7 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     {"remove": "bar*#*50", "rrevs": [bar_rrev, bar_rrev2]},
     {"remove": "bar*#latest", "rrevs": [bar_rrev2]},  # latest is bar_rrev
     {"remove": "bar*#!latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
+    {"remove": "bar*#~latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
     r = "-r default" if with_remote else ""
@@ -311,6 +312,7 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     {"remove": '{}#'.format(bar_rrev2_release), "prevs": []},
     {"remove": '{}#latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1]},
     {"remove": '{}#!latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
+    {"remove": '{}#~latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
 ])
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here

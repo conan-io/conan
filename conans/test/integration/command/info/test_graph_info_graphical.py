@@ -177,3 +177,17 @@ def test_user_templates():
     assert template_folder in c.stdout
     c.run("graph info --requires=lib/0.1 --format=dot")
     assert template_folder in c.stdout
+
+
+def test_graph_info_html_output():
+    tc = TestClient()
+    tc.run("new cmake_lib -d name=lib -d version=1.0")
+    tc.run("export .")
+    tc.run("new cmake_lib -d name=lib -d version=2.0 -f")
+    tc.run("export .")
+    tc.run("new cmake_lib -d name=ui -d version=1.0 -d requires=lib/1.0 -f")
+    tc.run("export .")
+    tc.run("new cmake_lib -d name=math -d version=1.0 -d requires=lib/2.0 -f")
+    tc.run("export .")
+    tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
+    assert "// Add some helpful visualizations for conflicts" in tc.out

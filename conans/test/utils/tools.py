@@ -657,8 +657,7 @@ class TestClient(object):
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_recipe_reference(ref)
-        ref_layout = self.cache.ref_layout(latest_rrev)
+        ref_layout = self.cache.ref_layout(ref)
         return ref_layout
 
     def get_default_host_profile(self):
@@ -765,6 +764,12 @@ class TestClient(object):
         pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
                                str(self.out)).group(1)
         return PkgReference.loads(pref)
+
+    def created_package_folder(self, ref):
+        pref = self.created_package_reference(ref)
+        prev = self.cache.get_latest_package_reference(pref)
+        pkg_folder = self.cache.pkg_layout(prev).package()
+        return pkg_folder
 
     def exported_recipe_revision(self):
         return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)

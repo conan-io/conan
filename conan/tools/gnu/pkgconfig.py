@@ -2,7 +2,7 @@ from io import StringIO
 
 from conan.tools.build import cmd_args_to_string
 from conan.tools.env import Environment
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class PkgConfig:

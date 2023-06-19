@@ -1,14 +1,16 @@
 import json
 
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern
+from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import Color, cli_out_write
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
-
-# Keep them so we don't break other commands that import them, but TODO: Remove later
+from conans.errors import ConanException
 from conans.util.dates import timestamp_to_str
 
+
+# Keep them so we don't break other commands that import them, but TODO: Remove later
 remote_color = Color.BRIGHT_BLUE
 recipe_name_color = Color.GREEN
 recipe_color = Color.BRIGHT_WHITE
@@ -93,36 +95,55 @@ def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions, or packages in the cache (by default) or the remotes.
     """
-    parser.add_argument('reference', help="Recipe reference or package reference. "
-                                          "Both can contain * as wildcard at any reference field. "
-                                          "If revision is not specified, it is assumed latest one.")
+    parser.add_argument('pattern', nargs="?",
+                        help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "If revision is not specified, it is assumed latest one.")
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
+    parser.add_argument("-g", "--graph", help="Graph json file")
+    parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
+    parser.add_argument("-gr", "--graph-recipes", help="Which recipes are listed", action="append")
 
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.reference, rrev=None, prev=None)
-    # If neither remote nor cache are defined, show results only from cache
-    remotes = []
-    if args.cache or not args.remote:
-        remotes.append(None)
-    if args.remote:
-        remotes.extend(conan_api.remotes.list(args.remote))
-    results = {}
-    for remote in remotes:
-        name = getattr(remote, "name", "Local Cache")
-        try:
-            list_bundle = conan_api.list.select(ref_pattern, args.package_query, remote)
-        except Exception as e:
-            results[name] = {"error": str(e)}
-        else:
-            results[name] = list_bundle.serialize()
+
+    if args.pattern is None and args.graph is None:
+        raise ConanException("Missing pattern or graph json file")
+    if args.pattern and args.graph:
+        raise ConanException("Cannot define both the pattern and the graph json file")
+    if (args.graph_recipes or args.graph_binaries) and not args.graph:
+        raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
+
+    if args.graph:
+        graphfile = make_abs_path(args.graph)
+        pkglist = MultiPackagesList.load_graph(graphfile, args.graph_recipes, args.graph_binaries)
+    else:
+        ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
+        # If neither remote nor cache are defined, show results only from cache
+        pkglist = MultiPackagesList()
+        if args.cache or not args.remote:
+            try:
+                cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
+            except Exception as e:
+                pkglist.add_error("Local Cache", str(e))
+            else:
+                pkglist.add("Local Cache", cache_list)
+        if args.remote:
+            remotes = conan_api.remotes.list(args.remote)
+            for remote in remotes:
+                try:
+                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+                except Exception as e:
+                    pkglist.add_error(remote.name, str(e))
+                else:
+                    pkglist.add(remote.name, remote_list)
 
     return {
-        "results": results,
+        "results": pkglist.serialize(),
         "conan_api": conan_api,
         "cli_args": " ".join([f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg)])
     }

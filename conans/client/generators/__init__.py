@@ -199,9 +199,11 @@ def relativize_generated_file(content, conanfile, placeholder):
     abs_base_path = conanfile.folders._base_generators
     if not abs_base_path or not os.path.isabs(abs_base_path):
         return content
+    abs_base_path = os.path.join(abs_base_path, "")  # For the trailing / to dissambiguate matches
     generators_folder = conanfile.generators_folder
     rel_path = os.path.relpath(abs_base_path, generators_folder)
     new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
+    new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
     content = content.replace(abs_base_path, new_path)
     content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
     return content

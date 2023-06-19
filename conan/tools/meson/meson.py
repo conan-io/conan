@@ -2,6 +2,7 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
+from conan.errors import ConanException
 
 
 class Meson(object):
@@ -67,6 +68,9 @@ class Meson(object):
             cmd += " -j{}".format(njobs)
         if target:
             cmd += " {}".format(target)
+        verbosity = self._build_verbosity
+        if verbosity:
+            cmd += " " + verbosity
         self._conanfile.output.info("Meson build cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -78,6 +82,9 @@ class Meson(object):
         self.configure(reconfigure=True)  # To re-do the destination package-folder
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson install -C "{}"'.format(meson_build_folder)
+        verbosity = self._install_verbosity
+        if verbosity:
+            cmd += " " + verbosity
         self._conanfile.run(cmd)
 
     def test(self):
@@ -91,3 +98,19 @@ class Meson(object):
         # TODO: Do we need vcvars for test?
         # TODO: This should use conanrunenv, but what if meson itself is a build-require?
         self._conanfile.run(cmd)
+
+    @property
+    def _build_verbosity(self):
+        # verbosity of build tools. This passes -v to ninja, for example.
+        # See https://github.com/mesonbuild/meson/blob/master/mesonbuild/mcompile.py#L156
+        verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                             choices=("quiet", "verbose"))
+        return "--verbose" if verbosity == "verbose" else ""
+
+    @property
+    def _install_verbosity(self):
+        # https://github.com/mesonbuild/meson/blob/master/mesonbuild/minstall.py#L81
+        # Errors are always logged, and status about installed files is controlled by this flag,
+        # so it's a bit backwards
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        return "--quiet" if verbosity else ""

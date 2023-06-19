@@ -54,7 +54,6 @@ def create(conan_api, parser, *args):
 
     deps_graph = None
     if not is_python_require:
-        # TODO: This section might be overlapping with ``graph_compute()``
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         # FIXME: Dirty: package type still raw, not processed yet
@@ -89,11 +88,10 @@ def create(conan_api, parser, *args):
         #  - decide update policy "--test_package_update"
         tested_python_requires = ref.repr_notime() if is_python_require else None
         from conan.cli.commands.test import run_test
-        deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
-                              remotes, lockfile, update=False, build_modes=args.build,
-                              tested_python_requires=tested_python_requires)
-        lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                      clean=args.lockfile_clean)
+        # The test_package do not make the "conan create" command return a different graph or
+        # produce a different lockfile. The result is always the same, irrespective of test_package
+        run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
+                 update=False, build_modes=args.build, tested_python_requires=tested_python_requires)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,

@@ -92,7 +92,8 @@ class TestTokenRefresh(unittest.TestCase):
         with mock.patch("conans.client.rest.auth_manager.UserInput.request_login",
                         return_value=("myuser", "mypassword")):
 
-            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".")
+            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".",
+                                                   metadata=None, only_metadata=False)
             self.assertEqual(self.localdb.user, "myuser")
             self.assertEqual(self.localdb.access_token, "access_token")
             self.assertEqual(self.localdb.refresh_token, "refresh_token")
@@ -106,7 +107,8 @@ class TestTokenRefresh(unittest.TestCase):
             self.localdb.access_token = "expired"
             self.localdb.refresh_token = "refresh_token"
 
-            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".")
+            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".",
+                                                   metadata=None, only_metadata=False)
             self.assertEqual(self.localdb.user, "myuser")
             self.assertEqual(self.localdb.access_token, "refreshed_access_token")
             self.assertEqual(self.localdb.refresh_token, "refresh_token")

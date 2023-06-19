@@ -175,3 +175,7 @@ class TestUploadPatternErrors:
         pid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         error = f"ERROR: Package revision 'pkg/0.1#{rrev}:{pid}#prev' not found"
         self.assert_error(f"pkg/0.1#{rrev}:{pid}#prev", error, client)
+
+    def test_bad_package_query(self, client):
+        error = "Invalid package query: blah. Invalid expression: blah"
+        self.assert_error("* -p blah", error, client)

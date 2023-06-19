@@ -5,7 +5,7 @@ from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import save, load
+from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
@@ -56,7 +56,7 @@ class _Component:
 
     def __init__(self, set_defaults=False):
         # ###### PROPERTIES
-        self._generator_properties = None
+        self._properties = None
 
         # ###### DIRECTORIES
         self._includedirs = None  # Ordered list of include paths
@@ -111,12 +111,13 @@ class _Component:
             "objects": self._objects,
             "sysroot": self._sysroot,
             "requires": self._requires,
-            "properties": self._generator_properties
+            "properties": self._properties
         }
 
     @staticmethod
     def deserialize(contents):
         result = _Component()
+        # TODO: Refactor to avoid this repetition
         fields = [
             "includedirs",
             "srcdirs",
@@ -351,15 +352,15 @@ class _Component:
         return [r for r in self.requires if "::" not in r]
 
     def set_property(self, property_name, value):
-        if self._generator_properties is None:
-            self._generator_properties = {}
-        self._generator_properties[property_name] = value
+        if self._properties is None:
+            self._properties = {}
+        self._properties[property_name] = value
 
     def get_property(self, property_name):
-        if self._generator_properties is None:
+        if self._properties is None:
             return None
         try:
-            return self._generator_properties[property_name]
+            return self._properties[property_name]
         except KeyError:
             pass
 
@@ -392,16 +393,16 @@ class _Component:
             current_values = self.get_init("requires", [])
             merge_list(other.requires, current_values)
 
-        if other._generator_properties:
-            current_values = self.get_init("_generator_properties", {})
-            current_values.update(other._generator_properties)
+        if other._properties:
+            current_values = self.get_init("_properties", {})
+            current_values.update(other._properties)
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [os.path.join(folder, el) for el in origin]
-        properties = self._generator_properties
+        properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
             if modules is not None:
@@ -417,31 +418,22 @@ class _Component:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [relocate(f) for f in origin]
-        properties = self._generator_properties
+        properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
             if modules is not None:
                 assert isinstance(modules, list), "cmake_build_modules must be a list"
                 properties["cmake_build_modules"] = [relocate(f) for f in modules]
 
+    def parsed_requires(self):
+        return [r.split("::", 1) if "::" in r else (None, r) for r in self.requires]
+
 
 class CppInfo:
 
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
-        # Main package is a component with None key
         self._package = _Component(set_defaults)
-        self._aggregated = None  # A _NewComponent object with all the components aggregated
-
-    def save(self, folder, file="conan_cpp_info.json"):
-        save(os.path.join(folder, file), json.dumps(self.serialize()))
-
-    @staticmethod
-    def load(folder=None, file="conan_cpp_info.json"):
-        if folder:
-            file = os.path.join(folder, file)
-        content = json.loads(load(file))
-        return CppInfo.deserialize(content)
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
@@ -459,13 +451,18 @@ class CppInfo:
             ret[component_name] = info.serialize()
         return ret
 
-    @staticmethod
-    def deserialize(content):
-        result = CppInfo()
-        result._package = _Component.deserialize(content.pop("root"))
+    def deserialize(self, content):
+        self._package = _Component.deserialize(content.pop("root"))
         for component_name, info in content.items():
-            result.components[component_name] = _Component.deserialize(info)
-        return result
+            self.components[component_name] = _Component.deserialize(info)
+        return self
+
+    def save(self, path):
+        save(path, json.dumps(self.serialize()))
+
+    def load(self, path):
+        content = json.loads(load(path))
+        return self.deserialize(content)
 
     @property
     def has_components(self):
@@ -536,22 +533,24 @@ class CppInfo:
 
     def aggregated_components(self):
         """Aggregates all the components as global values, returning a new CppInfo"""
-        if self._aggregated is None:
-            if self.has_components:
-                result = _Component()
-                # Reversed to make more dependant first
-                for component in reversed(self.get_sorted_components().values()):
-                    result.merge(component)
-                # NOTE: The properties are not aggregated because they might refer only to the
-                # component like "cmake_target_name" describing the target name FOR THE component
-                # not the namespace.
-                # FIXME: What to do about sysroot?
-                result._generator_properties = copy.copy(self._package._generator_properties)
-            else:
-                result = copy.copy(self._package)
-            self._aggregated = CppInfo()
-            self._aggregated._package = result
-        return self._aggregated
+        # This method had caching before, but after a ``--deployer``, the package changes
+        # location, and this caching was invalid, still pointing to the Conan cache instead of
+        # the deployed
+        if self.has_components:
+            result = _Component()
+            # Reversed to make more dependant first
+            for component in reversed(self.get_sorted_components().values()):
+                result.merge(component)
+            # NOTE: The properties are not aggregated because they might refer only to the
+            # component like "cmake_target_name" describing the target name FOR THE component
+            # not the namespace.
+            # FIXME: What to do about sysroot?
+            result._properties = copy.copy(self._package._properties)
+        else:
+            result = copy.copy(self._package)
+        aggregated = CppInfo()
+        aggregated._package = result
+        return aggregated
 
     def check_component_requires(self, conanfile):
         """ quality check for component requires:

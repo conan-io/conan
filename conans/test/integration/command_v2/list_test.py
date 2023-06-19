@@ -20,16 +20,25 @@ class TestParamErrors:
     def test_query_param_is_required(self):
         c = TestClient()
         c.run("list", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run("list -c", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run('list -r="*"', assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run("list --remote remote1 --cache", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
+
+        c.run("list * --graph=myjson", assert_error=True)
+        assert "ERROR: Cannot define both the pattern and the graph json file" in c.out
+
+        c.run("list * --graph-binaries=x", assert_error=True)
+        assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
+
+        c.run("list * --graph-recipes=x", assert_error=True)
+        assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
 
 
 @pytest.fixture(scope="module")
@@ -147,6 +156,26 @@ class TestListRefs:
             "zlib/1.0.0@user/channel": {},
             "zlib/2.0.0@user/channel": {}
         }
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    @pytest.mark.parametrize("pattern, solution", [("zlib/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib*/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib/[<2]", ("1.0.0",)),
+                                                   ("zlib/[>1]", ("2.0.0",))])
+    def test_list_recipe_version_ranges(self, client, pattern, solution, remote):
+        expected_json = {f"zlib/{v}@user/channel": {} for v in solution}
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipe_version_ranges_patterns(self, client, remote):
+        pattern = "*/[>1]"
+        expected_json = {'zlib/2.0.0@user/channel': {}}
+        self.check_json(client, pattern, remote, expected_json)
+        pattern = "z*/[<2]"
+        expected_json = {'zli/1.0.0': {},
+                         'zlib/1.0.0@user/channel': {},
+                         'zlix/1.0.0': {}}
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
@@ -421,8 +450,9 @@ class TestListPrefs:
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_latest_prevs(self, client, remote):
-        pattern = "zli/1.0.0:*#latest"
+    @pytest.mark.parametrize("version", ["1.0.0", "[>=1.0.0 <2]"])
+    def test_list_latest_prevs(self, client, remote, version):
+        pattern = f'"zli/{version}:*#latest"'
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0

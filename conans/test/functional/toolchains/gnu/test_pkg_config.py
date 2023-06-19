@@ -86,9 +86,10 @@ def test_pkg_config_round_tripe_cpp_info():
 
     c = TestClient()
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.gnu import PkgConfig
-        from conans.model.build_info import CppInfo
+        from conan.tools import CppInfo
 
         class Pkg(ConanFile):
             name = "pkg"
@@ -97,13 +98,12 @@ def test_pkg_config_round_tripe_cpp_info():
 
             def package(self):
                 pkg_config = PkgConfig(self, "libastral", pkg_config_path=".")
-                cpp_info = CppInfo()
+                cpp_info = CppInfo(self)
                 pkg_config.fill_cpp_info(cpp_info, is_system=False, system_libs=["m"])
-                cpp_info.save(self.package_folder)
+                cpp_info.save(os.path.join(self.package_folder, "cpp_info.json"))
 
             def package_info(self):
-                cpp_info = CppInfo.load()
-                self.cpp_info = cpp_info
+                self.cpp_info = CppInfo(self).load("cpp_info.json")
         """)
     prefix = "C:" if platform.system() == "Windows" else ""
     libastral_pc = textwrap.dedent("""\
