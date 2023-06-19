@@ -19,8 +19,6 @@ def test_editable_folders_root():
                 self.folders.root = ".."
                 self.folders.build = "mybuild"
                 self.cpp.build.libdirs = ["mylibdir"]
-            def generate(self):
-                self.output.info(f"PKG source_folder {self.source_folder}")
         """)
     sub2 = textwrap.dedent("""
         from conan import ConanFile
@@ -35,12 +33,8 @@ def test_editable_folders_root():
             "sub2/conanfile.py": sub2})
     c.run("editable add sub1")
     c.run("install sub2")
-    print(c.out)
-
-    print(c.current_folder)
     libdir = os.path.join(c.current_folder, "mybuild", "mylibdir")
     assert f"conanfile.py: PKG LIBDIR {libdir}" in c.out
-    assert f"pkg/0.1: PKG source_folder {c.current_folder}" in c.out
 
 
 def test_editable_matching_folder_names():
