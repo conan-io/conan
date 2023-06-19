@@ -27,7 +27,7 @@ def test_editable_folders_root():
     app = textwrap.dedent("""
         from conan import ConanFile
 
-        class Pkg(ConanFile):
+        class App(ConanFile):
             requires = "pkg/0.1"
             def generate(self):
                 pkg_libdir = self.dependencies["pkg"].cpp_info.libdir
@@ -65,7 +65,7 @@ def test_editable_folders_sibiling_root():
     app = textwrap.dedent("""
         from conan import ConanFile
 
-        class Pkg(ConanFile):
+        class App(ConanFile):
             requires = "pkg/0.1"
             def generate(self):
                 pkg_libdir = self.dependencies["pkg"].cpp_info.libdir
