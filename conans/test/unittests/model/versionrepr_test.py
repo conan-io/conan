@@ -4,7 +4,7 @@ from conans.model.info import _VersionRepr
 from conans.model.version import Version
 
 
-class VersionTest(unittest.TestCase):
+class VersionReprTest(unittest.TestCase):
 
     def test_text(self):
         v1 = Version("master+build2")
