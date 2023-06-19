@@ -1,8 +1,11 @@
+import json
 import os
 import textwrap
+import time
 
 import pytest
 
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -550,3 +553,41 @@ class TestErrorDuplicates:
         c.run("create pkg --lockfile=conan.lock")
         assert "dep/0.1#f8c2264d0b32a4c33f251fe2944bb642 - Cache" in c.out
         assert "dep/0.1#7b91e6100797b8b012eb3cdc5544800b - Cache" in c.out
+
+
+def test_revision_timestamp():
+    """
+    https://github.com/conan-io/conan/issues/14108
+    """
+    c = TestClient(default_server_user=True)
+
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1")})
+    # revision 0
+    c.run("export pkg")
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("_my=1")})
+    # revision 1
+    c.run("export pkg")
+    rrev = c.exported_recipe_revision()
+    c.run("upload *#* -r=default -c")
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("_my=2")})
+    # revision 2
+    time.sleep(1)
+    c.run("export pkg")
+    latest_rrev = c.exported_recipe_revision()
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    c.run("list *#* -r=default --format=json")
+    list_json = json.loads(c.stdout)
+    server_timestamp = list_json["default"]["pkg/0.1"]["revisions"][latest_rrev]["timestamp"]
+
+    time.sleep(2)
+    ref = RecipeReference.loads(f"pkg/0.1#{rrev}")
+    # we force the lock to include the 2nd revision
+    c.save({"conanfile.txt": f"[requires]\n{repr(ref)}"}, clean_first=True)
+
+    c.run("lock create .")
+    lock = c.load("conan.lock")
+    lock = json.loads(lock)
+    locked_ref = RecipeReference.loads(lock["requires"][0])
+    assert locked_ref == ref
+    assert locked_ref.timestamp and locked_ref.timestamp != server_timestamp
