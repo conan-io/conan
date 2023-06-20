@@ -36,8 +36,8 @@ class UploadAPI:
         if the recipe is still there
         :param package_list:
         :param enabled_remotes:
-        :param metadata: A list of patterns of metadata that should be uploaded. Default None
-        means all metadata will be uploaded together with the pkg artifacts"""
+        :param metadata: A list of patterns of metadata that should be uploaded.
+        Default None means all metadata will be uploaded together with the pkg artifacts"""
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)
         preparator.prepare(package_list, enabled_remotes)
