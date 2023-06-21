@@ -2,7 +2,7 @@ import os
 
 from conans.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def is_apple_os(conanfile):

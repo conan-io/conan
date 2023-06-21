@@ -1,9 +1,11 @@
 import copy
+import json
 import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
+from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
@@ -111,6 +113,35 @@ class _Component:
             "requires": self._requires,
             "properties": self._properties
         }
+
+    @staticmethod
+    def deserialize(contents):
+        result = _Component()
+        # TODO: Refactor to avoid this repetition
+        fields = [
+            "includedirs",
+            "srcdirs",
+            "libdirs",
+            "resdirs",
+            "bindirs",
+            "builddirs",
+            "frameworkdirs",
+            "system_libs",
+            "frameworks",
+            "libs",
+            "defines",
+            "cflags",
+            "cxxflags",
+            "sharedlinkflags",
+            "exelinkflags",
+            "objects",
+            "sysroot",
+            "requires",
+            "properties"
+        ]
+        for f in fields:
+            setattr(result, f"_{f}", contents[f])
+        return result
 
     @property
     def includedirs(self):
@@ -403,7 +434,6 @@ class CppInfo:
     def __init__(self, set_defaults=False):
         self.components = defaultdict(lambda: _Component(set_defaults))
         self._package = _Component(set_defaults)
-        self._aggregated = None  # A _NewComponent object with all the components aggregated
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
@@ -420,6 +450,19 @@ class CppInfo:
         for component_name, info in self.components.items():
             ret[component_name] = info.serialize()
         return ret
+
+    def deserialize(self, content):
+        self._package = _Component.deserialize(content.pop("root"))
+        for component_name, info in content.items():
+            self.components[component_name] = _Component.deserialize(info)
+        return self
+
+    def save(self, path):
+        save(path, json.dumps(self.serialize()))
+
+    def load(self, path):
+        content = json.loads(load(path))
+        return self.deserialize(content)
 
     @property
     def has_components(self):
@@ -490,22 +533,24 @@ class CppInfo:
 
     def aggregated_components(self):
         """Aggregates all the components as global values, returning a new CppInfo"""
-        if self._aggregated is None:
-            if self.has_components:
-                result = _Component()
-                # Reversed to make more dependant first
-                for component in reversed(self.get_sorted_components().values()):
-                    result.merge(component)
-                # NOTE: The properties are not aggregated because they might refer only to the
-                # component like "cmake_target_name" describing the target name FOR THE component
-                # not the namespace.
-                # FIXME: What to do about sysroot?
-                result._properties = copy.copy(self._package._properties)
-            else:
-                result = copy.copy(self._package)
-            self._aggregated = CppInfo()
-            self._aggregated._package = result
-        return self._aggregated
+        # This method had caching before, but after a ``--deployer``, the package changes
+        # location, and this caching was invalid, still pointing to the Conan cache instead of
+        # the deployed
+        if self.has_components:
+            result = _Component()
+            # Reversed to make more dependant first
+            for component in reversed(self.get_sorted_components().values()):
+                result.merge(component)
+            # NOTE: The properties are not aggregated because they might refer only to the
+            # component like "cmake_target_name" describing the target name FOR THE component
+            # not the namespace.
+            # FIXME: What to do about sysroot?
+            result._properties = copy.copy(self._package._properties)
+        else:
+            result = copy.copy(self._package)
+        aggregated = CppInfo()
+        aggregated._package = result
+        return aggregated
 
     def check_component_requires(self, conanfile):
         """ quality check for component requires:

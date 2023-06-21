@@ -12,29 +12,10 @@ class CacheDatabase:
         self._recipes = RecipesDBTable(filename)
         self._packages = PackagesDBTable(filename)
 
-    def exists_rrev(self, ref):
-        # TODO: This logic could be done directly against DB
-        matching_rrevs = self.get_recipe_revisions_references(ref)
-        return len(matching_rrevs) > 0
-
     def exists_prev(self, ref):
         # TODO: This logic could be done directly against DB
         matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
-
-    def get_recipe_timestamp(self, ref):
-        # TODO: Remove this once the ref contains the timestamp
-        ref_data = self.try_get_recipe(ref)
-        return ref_data["ref"].timestamp  # Must exist
-
-    def get_package_timestamp(self, ref):
-        ref_data = self.try_get_package(ref)
-        return ref_data["pref"].timestamp
-
-    def get_latest_recipe_reference(self, ref):
-        # TODO: This logic could be done directly in DB
-        rrevs = self.get_recipe_revisions_references(ref, True)
-        return rrevs[0] if rrevs else None
 
     def get_latest_package_reference(self, ref):
         prevs = self.get_package_revisions_references(ref, True)
@@ -63,10 +44,16 @@ class CacheDatabase:
                 return d["pref"]
         return None
 
-    def try_get_recipe(self, ref: RecipeReference):
+    def get_recipe(self, ref: RecipeReference):
         """ Returns the reference data as a dictionary (or fails) """
-        ref_data = self._recipes.get(ref)
-        return ref_data
+        return self._recipes.get_recipe(ref)
+
+    def get_latest_recipe(self, ref: RecipeReference):
+        """ Returns the reference data as a dictionary (or fails) """
+        return self._recipes.get_latest_recipe(ref)
+
+    def get_recipe_revisions_references(self, ref: RecipeReference):
+        return self._recipes.get_recipe_revisions_references(ref)
 
     def try_get_package(self, ref: PkgReference):
         """ Returns the reference data as a dictionary (or fails) """
@@ -90,7 +77,3 @@ class CacheDatabase:
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]
                 for d in self._packages.get_package_references(ref, only_latest_prev)]
-
-    def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
-        return [d["ref"]
-                for d in self._recipes.get_recipe_revisions_references(ref, only_latest_rrev)]

@@ -14,7 +14,7 @@ def search(conan_api: ConanAPI, parser, *args):
     """
     Search for package recipes in all the remotes (by default), or a remote.
     """
-    parser.add_argument('reference', help="Recipe reference to search for."
+    parser.add_argument('reference', help="Recipe reference to search for. "
                                           "It can contain * as wildcard at any reference field.")
     parser.add_argument("-r", "--remote", action="append",
                         help="Remote names. Accepts wildcards. If not specified it searches "

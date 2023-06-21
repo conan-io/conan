@@ -169,7 +169,7 @@ class Cli:
             raise ConanException("Unknown command %s" % str(exc))
 
         try:
-            command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
+            command.run(self._conan_api, args[0][1:])
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):

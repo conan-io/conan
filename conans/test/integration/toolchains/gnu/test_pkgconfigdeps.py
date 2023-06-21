@@ -31,9 +31,10 @@ def test_pkg_config_dirs():
                 fake_dir = os.path.join("/", "my_absoulte_path", "fake")
                 include_dir = os.path.join(fake_dir, libname, "include")
                 lib_dir = os.path.join(fake_dir, libname, "lib")
-                lib_dir2 = os.path.join(self.package_folder, "lib2")
+                lib_dir1 = os.path.join(self.package_folder, "lib2")
                 self.cpp_info.includedirs = [include_dir]
-                self.cpp_info.libdirs = [lib_dir, lib_dir2]
+                self.cpp_info.libdirs = [lib_dir, lib_dir1]
+                self.cpp_info.bindirs = ["mybin"]
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -46,20 +47,22 @@ def test_pkg_config_dirs():
     assert 'Name: mylib' in pc_content
     assert 'Description: Conan package: mylib' in pc_content
     assert 'Version: 0.1' in pc_content
-    assert 'Libs: -L"${libdir1}" -L"${libdir2}"' in pc_content
-    assert 'Cflags: -I"${includedir1}"' in pc_content
+    assert 'Libs: -L"${libdir}" -L"${libdir1}"' in pc_content
+    assert 'Cflags: -I"${includedir}"' in pc_content
+    # https://github.com/conan-io/conan/pull/13623
+    assert 'bindir=${prefix}/mybin' in pc_content
 
     def assert_is_abs(path):
         assert os.path.isabs(path) is True
 
     for line in pc_content.splitlines():
-        if line.startswith("includedir1="):
-            assert_is_abs(line[len("includedir1="):])
+        if line.startswith("includedir="):
+            assert_is_abs(line[len("includedir="):])
             assert line.endswith("include")
-        elif line.startswith("libdir1="):
-            assert_is_abs(line[len("libdir1="):])
+        elif line.startswith("libdir="):
+            assert_is_abs(line[len("libdir="):])
             assert line.endswith("lib")
-        elif line.startswith("libdir2="):
+        elif line.startswith("libdir1="):
             assert "${prefix}/lib2" in line
 
 
@@ -120,7 +123,7 @@ def test_system_libs():
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("mylib.pc")
-    assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
+    assert 'Libs: -L"${libdir}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 
 def test_multiple_include():
@@ -145,13 +148,13 @@ def test_multiple_include():
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "includedir1=${prefix}/inc1" in pc_content
-    assert "includedir2=${prefix}/inc2" in pc_content
-    assert "includedir3=${prefix}/inc3/foo" in pc_content
-    assert "libdir1=${prefix}/lib1" in pc_content
-    assert "libdir2=${prefix}/lib2" in pc_content
-    assert 'Libs: -L"${libdir1}" -L"${libdir2}"' in pc_content
-    assert 'Cflags: -I"${includedir1}" -I"${includedir2}" -I"${includedir3}"' in pc_content
+    assert "includedir=${prefix}/inc1" in pc_content
+    assert "includedir1=${prefix}/inc2" in pc_content
+    assert "includedir2=${prefix}/inc3/foo" in pc_content
+    assert "libdir=${prefix}/lib1" in pc_content
+    assert "libdir1=${prefix}/lib2" in pc_content
+    assert 'Libs: -L"${libdir}" -L"${libdir1}"' in pc_content
+    assert 'Cflags: -I"${includedir}" -I"${includedir1}" -I"${includedir2}"' in pc_content
 
 
 def test_custom_content():
@@ -184,7 +187,7 @@ def test_custom_content():
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "libdir1=${prefix}/lib" in pc_content
+    assert "libdir=${prefix}/lib" in pc_content
     assert "datadir=${prefix}/share" in pc_content
     assert "schemasdir=${datadir}/mylib/schemas" in pc_content
     assert "bindir=${prefix}/bin" in pc_content
@@ -380,13 +383,20 @@ def test_pkg_config_name_full_aliases():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
+        import textwrap
         from conan import ConanFile
 
         class Recipe(ConanFile):
 
             def package_info(self):
+                custom_content = textwrap.dedent(\"""
+                datadir=${prefix}/share
+                schemasdir=${datadir}/mylib/schemas
+                \""")
                 self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
                 self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                # Custom content only added to root pc file -> pkg_other_name.pc
+                self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
                 self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
@@ -418,11 +428,14 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
+    prefix = pc_content.splitlines()[0]
     assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
     Version: 0.3
@@ -431,11 +444,25 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_other_name.pc")
-    assert "Description: Conan package: pkg_other_name" in pc_content
-    assert "Requires: compo1" in pc_content
+    content = textwrap.dedent(f"""\
+    {prefix}
+    # Custom PC content
+
+    datadir=${{prefix}}/share
+    schemasdir=${{datadir}}/mylib/schemas
+
+
+    Name: pkg_other_name
+    Description: Conan package: pkg_other_name
+    Version: 0.3
+    Requires: compo1
+    """)
+    assert content == pc_content
 
     pc_content = client.load("pkg_alias1.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
     Version: 0.3
@@ -444,7 +471,9 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_alias2.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
     Version: 0.3
@@ -568,9 +597,9 @@ def test_with_editable_layout():
     with client.chdir("pkg"):
         client.run("install . -g PkgConfigDeps")
         pc = client.load("dep.pc")
-        assert 'Libs: -L"${libdir1}" -lmylib' in pc
-        assert 'includedir1=' in pc
-        assert 'Cflags: -I"${includedir1}"' in pc
+        assert 'Libs: -L"${libdir}" -lmylib' in pc
+        assert 'includedir=' in pc
+        assert 'Cflags: -I"${includedir}"' in pc
 
 
 def test_tool_requires():

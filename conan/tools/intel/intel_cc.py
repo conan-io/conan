@@ -22,7 +22,7 @@ import platform
 import textwrap
 
 from conan.internal import check_duplicated_generator
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def _is_using_intel_oneapi(compiler_version):

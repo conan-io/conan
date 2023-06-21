@@ -158,9 +158,8 @@ class PackagePreparator:
     def _prepare_package(self, pref, prev_bundle):
         pkg_layout = self._app.cache.pkg_layout(pref)
         if pkg_layout.package_is_dirty():
-            raise ConanException("Package %s is corrupted, aborting upload.\n"
-                                 "Remove it with 'conan remove %s -p=%s'"
-                                 % (pref, pref.ref, pref.package_id))
+            raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
+                                 f"Remove it with 'conan remove {pref}'")
         cache_files = self._compress_package_files(pkg_layout, pref)
         prev_bundle["files"] = cache_files
 

@@ -74,8 +74,21 @@ class ClientCache(object):
     def assign_prev(self, layout: PackageLayout):
         return self._data_cache.assign_prev(layout)
 
-    def ref_layout(self, ref: RecipeReference):
-        return self._data_cache.get_reference_layout(ref)
+    # Recipe methods
+    def recipe_layout(self, ref: RecipeReference):
+        return self._data_cache.get_recipe_layout(ref)
+
+    ref_layout = recipe_layout
+
+    def get_latest_recipe_reference(self, ref):
+        # TODO: We keep this for testing only, to be removed
+        assert ref.revision is None
+        return self._data_cache.get_recipe_layout(ref).reference
+
+    def get_recipe_revisions_references(self, ref):
+        # For listing multiple revisions only
+        assert ref.revision is None
+        return self._data_cache.get_recipe_revisions_references(ref)
 
     def pkg_layout(self, ref: PkgReference):
         return self._data_cache.get_package_layout(ref)
@@ -92,12 +105,6 @@ class ClientCache(object):
     def remove_package_layout(self, layout):
         self._data_cache.remove_package(layout)
 
-    def get_recipe_timestamp(self, ref):
-        return self._data_cache.get_recipe_timestamp(ref)
-
-    def get_package_timestamp(self, ref):
-        return self._data_cache.get_package_timestamp(ref)
-
     def update_recipe_timestamp(self, ref):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
         that would affect its order in our cache """
@@ -105,10 +112,6 @@ class ClientCache(object):
 
     def all_refs(self):
         return self._data_cache.list_references()
-
-    def exists_rrev(self, ref):
-        # Used just by inspect to check before calling get_recipe()
-        return self._data_cache.exists_rrev(ref)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
@@ -124,12 +127,6 @@ class ClientCache(object):
 
     def get_matching_build_id(self, ref, build_id):
         return self._data_cache.get_matching_build_id(ref, build_id)
-
-    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
-        return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
-
-    def get_latest_recipe_reference(self, ref):
-        return self._data_cache.get_latest_recipe_reference(ref)
 
     def get_latest_package_reference(self, pref):
         return self._data_cache.get_latest_package_reference(pref)
