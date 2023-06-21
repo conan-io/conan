@@ -201,6 +201,7 @@ def test_config_package_append(client):
 
 
 def test_conf_patterns_user_channel():
+    # https://github.com/conan-io/conan/issues/14139
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -208,11 +209,14 @@ def test_conf_patterns_user_channel():
         class Pkg(ConanFile):
             def configure(self):
                 self.output.info(f"CONF: {self.conf.get('user.myteam:myconf')}")
+                self.output.info(f"CONF2: {self.conf.get('user.myteam:myconf2')}")
         """)
     profile = textwrap.dedent("""\
         [conf]
         user.myteam:myconf=myvalue1
+        user.myteam:myconf2=other1
         *@user/channel:user.myteam:myconf=myvalue2
+        *@*/*:user.myteam:myconf2=other2
         """)
     client.save({"dep/conanfile.py": conanfile,
                  "app/conanfile.py": GenConanfile().with_requires("dep1/0.1",
@@ -224,3 +228,5 @@ def test_conf_patterns_user_channel():
     client.run("install app -pr=profile")
     assert "dep1/0.1: CONF: myvalue1" in client.out
     assert "dep2/0.1@user/channel: CONF: myvalue2" in client.out
+    assert "dep1/0.1: CONF2: other1" in client.out
+    assert "dep2/0.1@user/channel: CONF2: other2" in client.out
