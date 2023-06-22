@@ -155,7 +155,7 @@ class _PackageBuilder(object):
                 prev = self._package(conanfile, pref)
                 assert prev
                 node.prev = prev
-            except ConanException as exc:
+            except ConanException as exc:  # TODO: Remove this? unnecessary?
                 raise exc
 
         return node.pref

@@ -62,5 +62,5 @@ class DownloadAPI:
         conan_file_path = layout.conanfile()
         conanfile = app.loader.load_basic(conan_file_path, display=pref.ref)
         output.info(f"Downloading package '{pref.repr_notime()}'")
-        app.remote_manager.get_package(conanfile, pref, remote)
+        app.remote_manager.get_package(conanfile, pref, remote, metadata)
         return True

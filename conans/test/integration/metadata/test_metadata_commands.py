@@ -1,7 +1,7 @@
 import os
 
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import save, load
 
 
@@ -85,3 +85,60 @@ class TestMetadataCommands:
 
         content = load(os.path.join(metadata_path, "logs", "mylogs.txt"))
         assert "mylogs2!!!!" in content
+
+    def test_folder_exist(self):
+        """ so we can cp -R to the metadata folder, having to create the folder in the cache
+        is weird
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert os.path.isdir(metadata_path)
+        c.run(f"cache path pkg/0.1:{NO_SETTINGS_PACKAGE_ID} --folder=metadata")
+        pkg_metadata_path = str(c.stdout).strip()
+        assert os.path.isdir(pkg_metadata_path)
+
+    def test_direct_download_redownload(self):
+        """ When we directly download things, without "conan install" first, it is also able
+        to fetch the requested metadata
+
+        Also, re-downloading same thing shouldn't fail
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        pid = c.created_package_id("pkg/0.1")
+
+        # Add some metadata
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        myfile = os.path.join(metadata_path, "logs", "mylogs.txt")
+        save(myfile, "mylogs!!!!")
+
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
+        pkg_metadata_path = str(c.stdout).strip()
+        myfile = os.path.join(pkg_metadata_path, "logs", "mybuildlogs.txt")
+        save(myfile, "mybuildlogs!!!!")
+
+        # Now upload everything
+        c.run("upload * -c -r=default")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+        assert "pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Package metadata: 1 files" in c.out
+
+        c.run("remove * -c")
+
+        # Forcing the download of the metadata of cache-existing things with the "download" command
+        c.run("download pkg/0.1 -r=default --metadata=*")
+        assert os.path.isfile(os.path.join(metadata_path, "logs", "mylogs.txt"))
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
+        pkg_metadata_path = str(c.stdout).strip()
+        assert os.path.isfile(os.path.join(pkg_metadata_path, "logs", "mybuildlogs.txt"))
+
+        # Re-download shouldn't fail
+        c.run("download pkg/0.1 -r=default --metadata=*")
+        assert os.path.isfile(os.path.join(metadata_path, "logs", "mylogs.txt"))
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
+        pkg_metadata_path = str(c.stdout).strip()
+        assert os.path.isfile(os.path.join(pkg_metadata_path, "logs", "mybuildlogs.txt"))

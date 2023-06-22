@@ -39,20 +39,24 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe(self, ref, dest_folder, metadata, only_metadata):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
-        files = data["files"]
-        accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt", "metadata/sign"]
-        if only_metadata:
-            accepted_files = []
-        metadata = metadata or []
-        metadata = [f"metadata/{m}" for m in metadata]
-        files = [f for f in files if any(f.startswith(m) for m in accepted_files)
-                 or any(fnmatch.fnmatch(f, m) for m in metadata)]
+        server_files = data["files"]
+        result = {}
 
-        # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, parallel=True)
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret
+        if not only_metadata:
+            accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt",
+                              "metadata/sign"]
+            files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
+            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
+            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, parallel=True)
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        if metadata:
+            metadata = [f"metadata/{m}" for m in metadata]
+            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
+            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, parallel=True, metadata=True)
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        return result
 
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
@@ -74,21 +78,26 @@ class RestV2Methods(RestCommonMethods):
     def get_package(self, pref, dest_folder, metadata, only_metadata):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
-        files = data["files"]
+        server_files = data["files"]
+        result = {}
         # Download only known files, but not metadata (except sign)
-        accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt", "metadata/sign"]
-        if only_metadata:
-            accepted_files = []
-        metadata = metadata or []
-        metadata = [f"metadata/{m}" for m in metadata]
-        files = [f for f in files if any(f.startswith(m) for m in accepted_files)
-                 or any(fnmatch.fnmatch(f, m) for m in metadata)]
+        if not only_metadata:  # Retrieve package first, then metadata
+            accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt",
+                              "metadata/sign"]
+            files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
+            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
+            urls = {fn: self.router.package_file(pref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
 
-        # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.package_file(pref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret
+        if metadata:
+            metadata = [f"metadata/{m}" for m in metadata]
+            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
+            urls = {fn: self.router.package_file(pref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref),
+                                          metadata=True)
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        return result
 
     @staticmethod
     def _is_dir(path, files):
@@ -146,7 +155,8 @@ class RestV2Methods(RestCommonMethods):
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
 
-    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None):
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None,
+                                 metadata=False):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
@@ -161,13 +171,14 @@ class RestV2Methods(RestCommonMethods):
             if parallel:
                 kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
                           "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
-                          "auth": self.auth}
+                          "auth": self.auth, "metadata": metadata}
                 thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
                 threads.append(thread)
                 thread.start()
             else:
                 downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
-                                    verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait)
+                                    verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait,
+                                    metadata=metadata)
         for t in threads:
             t.join()
         for t in threads:  # Need to join all before raising errors
