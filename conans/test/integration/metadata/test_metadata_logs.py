@@ -33,7 +33,7 @@ class TestRecipeMetadataLogs:
             def build(self):
                 save(self, "mylogs.txt", "some logs!!!")
                 copy(self, "mylogs.txt", src=self.build_folder,
-                dst=os.path.join(self.pkg_metadata_folder, "logs"))
+                dst=os.path.join(self.package_metadata_folder, "logs"))
         """)
 
     def test_metadata_logs(self):
@@ -105,7 +105,7 @@ class TestRecipeMetadataLogs:
                     assert os.path.exists(self.recipe_metadata_folder)
 
                 def build(self):
-                    assert os.path.exists(self.pkg_metadata_folder)
+                    assert os.path.exists(self.package_metadata_folder)
             """)
         c = TestClient(default_server_user=True)
         c.save({"conanfile.py": conanfile})
@@ -138,7 +138,7 @@ class TestHooksMetadataLogs:
             def post_build(conanfile):
                 conanfile.output.info("post_build")
                 copy(conanfile, "*", src=os.path.join(conanfile.build_folder, "logs"),
-                     dst=os.path.join(conanfile.pkg_metadata_folder, "logs"))
+                     dst=os.path.join(conanfile.package_metadata_folder, "logs"))
             """)
         hook_path = os.path.join(c.cache.hooks_path, "my_hook", "hook_my_hook.py")
         save(hook_path, my_hook)
