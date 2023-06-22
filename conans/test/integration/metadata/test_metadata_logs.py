@@ -64,6 +64,25 @@ class TestRecipeMetadataLogs:
         c.run("build .")
         assert c.load("mybuild/metadata/logs/mylogs.txt") == "some logs!!!"
 
+    def test_download_pkg_list_from_graph(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
+                "file.log": "log contents!"})
+        c.run("create .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("install --requires=pkg/0.1 --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --format=json", redirect_stdout="pkglist.json")
+        # This list will contain both "Local Cache" and "default" origins, because it was downloaded
+        c.run("download --list=pkglist.json -r=default --metadata=*")
+
+        ref = RecipeReference.loads("pkg/0.1")
+        pref = c.get_latest_package_reference(ref)
+        pref_layout = c.get_latest_pkg_layout(pref)
+        assert os.listdir(pref_layout.metadata()) == ["logs"]
+        assert os.listdir(os.path.join(pref_layout.metadata(), "logs")) == ["mylogs.txt"]
+        assert load(os.path.join(pref_layout.metadata(), "logs", "mylogs.txt")) == "some logs!!!"
+
 
 class TestHooksMetadataLogs:
 
