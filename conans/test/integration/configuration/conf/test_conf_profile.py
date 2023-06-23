@@ -309,7 +309,7 @@ def test_conf_patterns_user_channel():
     # https://github.com/conan-io/conan/issues/14139
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Pkg(ConanFile):
             def configure(self):
@@ -328,8 +328,8 @@ def test_conf_patterns_user_channel():
                                                                   "dep2/0.1@user/channel"),
                  "profile": profile})
 
-    client.run("create dep dep1/0.1@")
-    client.run("create dep dep2/0.1@user/channel")
+    client.run("create dep --name=dep1 --version=0.1")
+    client.run("create dep --name=dep2 --version=0.1 --user=user --channel=channel")
     client.run("install app -pr=profile")
     assert "dep1/0.1: CONF: myvalue1" in client.out
     assert "dep2/0.1@user/channel: CONF: myvalue2" in client.out
