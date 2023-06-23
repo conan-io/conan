@@ -107,6 +107,35 @@ class TestGraphInfoToPkgList:
         assert len(pkglist["default"]) == 2
 
 
+class TestInstallToPkgListRemote:
+    """ we can recover a list of remotes for an already installed
+    graph
+    """
+    def test_graph_2_pkg_list_remotes(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create zlib")
+        c.run("create app --format=json")
+        c.run("upload * -c -r=default")
+
+        # This install, packages will be in the cache
+        c.run("install --requires=app/1.0 --format=json", redirect_stdout="graph.json")
+        # So list, will not have remote at all
+        c.run("list --graph=graph.json --format=json", redirect_stdout="pkglist.json")
+
+        pkglist = json.loads(c.load("pkglist.json"))
+        assert len(pkglist["Local Cache"]) == 2
+        assert "default" not in pkglist  # The remote doesn't even exist
+
+        # Lets now compute a list finding in the remotes
+        c.run("listq remote pkglist.json --format=json")
+        print(c.stdout)
+        pkglist = json.loads(c.stdout)
+        assert len(pkglist["Local Cache"]) == 2
+        assert len(pkglist["default"]) == 2
+
+
 class TestDownloadUpload:
     @pytest.fixture()
     def client(self):
