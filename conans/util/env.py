@@ -25,11 +25,6 @@ def environment_update(env_vars):
         os.environ.update(old_env)
 
 
-@contextmanager
-def no_op():
-    yield
-
-
 def get_env(env_key, default=None, environment=None):
     """Get the env variable associated with env_key"""
     if environment is None:
