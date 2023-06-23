@@ -17,7 +17,7 @@ from conans.util.files import rmdir, renamedir
 class DataCache:
 
     def __init__(self, base_folder, db_filename):
-        self._base_folder = os.path.realpath(base_folder)
+        self._base_folder = os.path.abspath(base_folder)
         self._db = CacheDatabase(filename=db_filename)
 
     def _create_path(self, relative_path, remove_contents=True):
