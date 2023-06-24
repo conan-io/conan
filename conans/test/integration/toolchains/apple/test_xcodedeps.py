@@ -40,11 +40,11 @@ def expected_files(current_folder, configuration, architecture, sdk_version):
     return files
 
 
-def check_contents(client, deps, configuration, architecture, sdk_version):
+def check_contents(client, deps, build_type, architecture, sdk_version, custom_config_name=None):
     for dep_name in deps:
         dep_xconfig = client.load("conan_{dep}_{dep}.xcconfig".format(dep=dep_name))
         conf_name = "conan_{}_{}{}.xcconfig".format(dep_name, dep_name,
-                                                 _get_filename(configuration, architecture, sdk_version))
+                                                 _get_filename(build_type, architecture, sdk_version))
 
         assert '#include "{}"'.format(conf_name) in dep_xconfig
         for var in _expected_dep_xconfig:
@@ -53,7 +53,8 @@ def check_contents(client, deps, configuration, architecture, sdk_version):
 
         conan_conf = client.load(conf_name)
         for var in _expected_conf_xconfig:
-            assert var.format(name=dep_name, configuration=configuration, architecture=architecture,
+            xcode_config_name = custom_config_name if custom_config_name else build_type
+            assert var.format(name=dep_name, configuration=xcode_config_name, architecture=architecture,
                               sdk="macosx", sdk_version=sdk_version) in conan_conf
 
 
@@ -88,6 +89,64 @@ def test_generator_files():
 
         check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")
 
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_generator_files_with_custom_config():
+    client = TestClient()
+
+    client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                                           .with_package_info(cpp_info={"libs": ["hello"],
+                                                                        "frameworks": ['framework_hello']},
+                                                              env_info={})})
+    client.run("export hello.py --name=hello --version=0.1")
+
+    client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                                             .with_package_info(cpp_info={"libs": ["goodbye"],
+                                                                          "frameworks": ['framework_goodbye']},
+                                                                env_info={})})
+    client.run("export goodbye.py --name=goodbye --version=0.1")
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.apple import XcodeDeps
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"XcodeConfigName": [None, "ANY"]}
+            default_options = {"XcodeConfigName": None}
+            requires = "hello/0.1", "goodbye/0.1"
+            
+            def generate(self):
+                xcode = XcodeDeps(self)
+                if self.options.get_safe("XcodeConfigName"):
+                    xcode.configuration = str(self.options.get_safe("XcodeConfigName"))
+                xcode.generate()
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+    custom_config_name = "CustomConfig"
+
+    for use_custom_config in [True, False]:
+        for build_type in ["Release", "Debug"]:
+            cli_command = "install . -s build_type={} -s arch=x86_64 -s os.sdk_version=12.1  --build missing".format(build_type)
+            if use_custom_config:
+                cli_command += " -o XcodeConfigName={}".format(custom_config_name)
+
+            client.run(cli_command)
+            
+            for config_file in expected_files(client.current_folder, build_type, "x86_64", "12.1"):
+                assert os.path.isfile(config_file)
+
+            conandeps = client.load("conandeps.xcconfig")
+            assert '#include "conan_hello.xcconfig"' in conandeps
+            assert '#include "conan_goodbye.xcconfig"' in conandeps
+
+            conan_config = client.load("conan_config.xcconfig")
+            assert '#include "conandeps.xcconfig"' in conan_config
+
+            if use_custom_config:
+                check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1", custom_config_name)
+            else:
+                check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_xcodedeps_aggregate_components():
