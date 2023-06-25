@@ -276,20 +276,7 @@ class Requirement:
             return
 
         # Regular and test requires
-        if dep_pkg_type is PackageType.SHARED:
-            if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
-            elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
-            elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
-            elif pkg_type is PackageType.HEADER:
-                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
-            else:
-                assert pkg_type == PackageType.UNKNOWN
-                # TODO: This is undertested, changing it did not break tests
-                downstream_require = require.copy_requirement()
-        elif dep_pkg_type is PackageType.STATIC:
+        if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
