@@ -95,14 +95,12 @@ def test_generator_files_with_custom_config():
     client = TestClient()
 
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                           .with_package_info(cpp_info={"libs": ["hello"],
-                                                                        "frameworks": ['framework_hello']},
+                                           .with_package_info(cpp_info={"libs": ["hello"]},
                                                               env_info={})})
     client.run("export hello.py --name=hello --version=0.1")
 
     client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                             .with_package_info(cpp_info={"libs": ["goodbye"],
-                                                                          "frameworks": ['framework_goodbye']},
+                                             .with_package_info(cpp_info={"libs": ["goodbye"]},
                                                                 env_info={})})
     client.run("export goodbye.py --name=goodbye --version=0.1")
 
@@ -132,7 +130,7 @@ def test_generator_files_with_custom_config():
                 cli_command += " -o XcodeConfigName={}".format(custom_config_name)
 
             client.run(cli_command)
-            
+
             for config_file in expected_files(client.current_folder, build_type, "x86_64", "12.1"):
                 assert os.path.isfile(config_file)
 
