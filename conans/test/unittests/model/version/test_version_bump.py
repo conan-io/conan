@@ -1,6 +1,6 @@
 import pytest
 
-from conans.model.recipe_ref import Version
+from conans.model.version import Version
 
 values = [
     ['1.0.0',       0, "2.0.0"],
