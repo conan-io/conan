@@ -40,11 +40,11 @@ def expected_files(current_folder, configuration, architecture, sdk_version):
     return files
 
 
-def check_contents(client, deps, build_type, architecture, sdk_version, custom_config_name=None):
+def check_contents(client, deps, configuration, architecture, sdk_version):
     for dep_name in deps:
         dep_xconfig = client.load("conan_{dep}_{dep}.xcconfig".format(dep=dep_name))
         conf_name = "conan_{}_{}{}.xcconfig".format(dep_name, dep_name,
-                                                 _get_filename(build_type, architecture, sdk_version))
+                                                 _get_filename(configuration, architecture, sdk_version))
 
         assert '#include "{}"'.format(conf_name) in dep_xconfig
         for var in _expected_dep_xconfig:
@@ -53,8 +53,7 @@ def check_contents(client, deps, build_type, architecture, sdk_version, custom_c
 
         conan_conf = client.load(conf_name)
         for var in _expected_conf_xconfig:
-            xcode_config_name = custom_config_name if custom_config_name else build_type
-            assert var.format(name=dep_name, configuration=xcode_config_name, architecture=architecture,
+            assert var.format(name=dep_name, configuration=configuration, architecture=architecture,
                               sdk="macosx", sdk_version=sdk_version) in conan_conf
 
 
@@ -128,10 +127,13 @@ def test_generator_files_with_custom_config():
             cli_command = "install . -s build_type={} -s arch=x86_64 -s os.sdk_version=12.1  --build missing".format(build_type)
             if use_custom_config:
                 cli_command += " -o XcodeConfigName={}".format(custom_config_name)
+                configuration_name = custom_config_name 
+            else:
+                configuration_name = build_type            
 
             client.run(cli_command)
 
-            for config_file in expected_files(client.current_folder, build_type, "x86_64", "12.1"):
+            for config_file in expected_files(client.current_folder, configuration_name, "x86_64", "12.1"):
                 assert os.path.isfile(config_file)
 
             conandeps = client.load("conandeps.xcconfig")
@@ -141,10 +143,7 @@ def test_generator_files_with_custom_config():
             conan_config = client.load("conan_config.xcconfig")
             assert '#include "conandeps.xcconfig"' in conan_config
 
-            if use_custom_config:
-                check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1", custom_config_name)
-            else:
-                check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")
+            check_contents(client, ["hello", "goodbye"],  configuration_name, "x86_64", "12.1",)
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_xcodedeps_aggregate_components():

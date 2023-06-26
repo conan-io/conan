@@ -78,7 +78,7 @@ class XcodeToolchain(object):
                                                          self._cppstd) if self._cppstd else ""
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings),
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings, self.configuration),
                                                                        self.extension)
 
     @property

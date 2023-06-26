@@ -24,10 +24,10 @@ def _format_name(name):
     return name.lower()
 
 
-def _xcconfig_settings_filename(settings):
+def _xcconfig_settings_filename(settings, configuration):
     arch = settings.get_safe("arch")
     architecture = _to_apple_arch(arch) or arch
-    props = [("configuration", settings.get_safe("build_type")),
+    props = [("configuration", configuration),
              ("architecture", architecture),
              ("sdk name", settings.get_safe("os.sdk")),
              ("sdk version", settings.get_safe("os.sdk_version"))]
@@ -231,7 +231,7 @@ class XcodeDeps(object):
     def get_content_for_component(self, require, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
         result = {}
 
-        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings, self.configuration)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
         result[props_name] = self._conf_xconfig_file(require, pkg_name, component_name, package_folder, transitive_internal)
