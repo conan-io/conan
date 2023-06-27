@@ -358,8 +358,7 @@ def test_makedeps_with_editable_layout():
         client.run("install . -g MakeDeps")
         makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
         assert 'CONAN_LIBS_DEP = $(CONAN_LIB_FLAG)mylib\n' in makefile_content
-        assert 'CONAN_INCLUDE_DIRS_DEP = \\\n' \
-               '\t$(CONAN_INCLUDE_DIRS_FLAG)$(CONAN_ROOT_DEP)/include\n' in makefile_content
+        assert 'CONAN_INCLUDE_DIRS_DEP = $(CONAN_INCLUDE_DIRS_FLAG)$(CONAN_ROOT_DEP)/include\n' in makefile_content
 
 
 def test_makedeps_tool_requires():
