@@ -107,7 +107,7 @@ def test_system_libs():
 
         class Test(ConanFile):
             name = "test"
-            version = "0.1"
+            version = "2.0"
             settings = "build_type"
             def package(self):
                 save(self, os.path.join(self.package_folder, "lib/lib1.lib"), "")
@@ -119,6 +119,7 @@ def test_system_libs():
                     self.cpp_info.system_libs.append("sys1d")
                 else:
                     self.cpp_info.system_libs.append("sys1")
+                self.cpp_info.set_property("cmake_package_version_compat", "AnyNewerVersion")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -127,7 +128,7 @@ def test_system_libs():
 
     conanfile = textwrap.dedent("""
         [requires]
-        test/0.1
+        test/2.0
 
         [generators]
         CMakeDeps
@@ -137,7 +138,7 @@ def test_system_libs():
         project(consumer NONE)
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
         set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
-        find_package(test)
+        find_package(test 1.0)
         message("System libs release: ${test_SYSTEM_LIBS_RELEASE}")
         message("Libraries to Link release: ${test_LIBS_RELEASE}")
         message("System libs debug: ${test_SYSTEM_LIBS_DEBUG}")
@@ -183,7 +184,7 @@ def test_system_libs_no_libs():
 
         class Test(ConanFile):
             name = "test"
-            version = "0.1"
+            version = "0.1.1"
             settings = "build_type"
 
             def package_info(self):
@@ -191,6 +192,7 @@ def test_system_libs_no_libs():
                     self.cpp_info.system_libs.append("sys1d")
                 else:
                     self.cpp_info.system_libs.append("sys1")
+                self.cpp_info.set_property("cmake_package_version_compat", "SameMinorVersion")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -199,7 +201,7 @@ def test_system_libs_no_libs():
 
     conanfile = textwrap.dedent("""
         [requires]
-        test/0.1
+        test/0.1.1
 
         [generators]
         CMakeDeps
@@ -209,7 +211,7 @@ def test_system_libs_no_libs():
         project(consumer NONE)
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
         set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
-        find_package(test)
+        find_package(test 0.1)
         message("System libs Release: ${test_SYSTEM_LIBS_RELEASE}")
         message("Libraries to Link release: ${test_LIBS_RELEASE}")
         message("System libs Debug: ${test_SYSTEM_LIBS_DEBUG}")
@@ -688,7 +690,7 @@ def test_cmake_target_runtime_dlls():
     client.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
     client.run_command("cmake --build build --config Release")
     client.run_command("build\\Release\\foo.exe")
-    
+
     assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "hello.dll"))
     assert "hello/1.0: Hello World Release!" in client.out # if the DLL wasn't copied, the application would not run and show output
 
