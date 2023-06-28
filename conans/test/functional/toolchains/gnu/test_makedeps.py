@@ -1,4 +1,3 @@
-import platform
 import textwrap
 
 import pytest
@@ -7,7 +6,6 @@ from conans.test.utils.tools import TestClient
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
 
-@pytest.mark.skipif(platform.system() == "Windows", reason="Use nmake instead")
 @pytest.mark.tool("make")
 def test_make_deps_definitions_escape():
     """
@@ -27,7 +25,6 @@ def test_make_deps_definitions_escape():
     client.run("export . --name=hello --version=0.1.0")
     client.run("install --requires=hello/0.1.0 --build=missing -g MakeDeps")
     client.run_command(f"make --print-data-base -f {CONAN_MAKEFILE_FILENAME}", assert_error=True)
-    print(f"current folder: {client.current_folder}")
     assert r'CONAN_CXXFLAGS_HELLO = flag2=\"my flag2\"' in client.out
     assert r'CONAN_CFLAGS_HELLO = flag1=\"my flag1\"' in client.out
     assert r'CONAN_DEFINES_HELLO = $(CONAN_DEFINE_FLAG)USER_CONFIG="user_config.h" $(CONAN_DEFINE_FLAG)OTHER="other.h"' in client.out
@@ -75,7 +72,6 @@ def test_makedeps_with_makefile_build():
         client.run("new cmake_lib -d name=hello -d version=0.1.0")
         client.run(r'create . -tf="" -pr:b=default -pr:h=default')
     with client.chdir("app"):
-        client.run("new cmake_exe -d name=app -d version=0.1.0")
         client.run("install --requires=hello/0.1.0 -pr:b=default -pr:h=default -g MakeDeps -of build")
         client.save({"Makefile": textwrap.dedent('''
             include build/conandeps.mk
@@ -88,7 +84,7 @@ def test_makedeps_with_makefile_build():
             LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
             EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
-            SRCS          = src/main.cpp
+            SRCS          = main.cpp
             OBJS          = main.o
             EXE_FILENAME  = main
 
@@ -100,6 +96,9 @@ def test_makedeps_with_makefile_build():
 
             %.o                     :   $(SRCS)
             \t$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+            '''),
+            "main.cpp": textwrap.dedent(r'''
+            #include "hello.h"
+            int main() { hello(); }
             ''')})
-        print(f"\ncurrent folder: {client.current_folder}")
         client.run_command("make -f Makefile")
