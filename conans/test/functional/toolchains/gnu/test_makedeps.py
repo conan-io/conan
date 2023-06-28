@@ -36,7 +36,7 @@ def test_makedeps_with_tool_requires():
     MakeDeps has to create any test requires to be declared on the recipe.
     """
     client = TestClient(path_with_spaces=False)
-    with client.chdir("app"):
+    with client.chdir("lib"):
         client.run("new cmake_lib -d name=app -d version=1.0")
         client.run("create . -tf=\"\"")
     with client.chdir("test"):
@@ -69,6 +69,7 @@ def test_makedeps_with_makefile_build():
     """
     client = TestClient(path_with_spaces=False)
     with client.chdir("lib"):
+
         client.run("new cmake_lib -d name=hello -d version=0.1.0")
         client.run(r'create . -tf="" -pr:b=default -pr:h=default')
     with client.chdir("app"):
@@ -77,7 +78,7 @@ def test_makedeps_with_makefile_build():
             include build/conandeps.mk
 
             CFLAGS              += $(CONAN_CFLAGS)
-            CXXFLAGS            += $(CONAN_CXXFLAGS)
+            CXXFLAGS            += $(CONAN_CXXFLAGS) -std=c++11
             CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
             CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
             LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
