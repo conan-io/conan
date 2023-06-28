@@ -1,6 +1,8 @@
+import platform
 import pytest
 import os
 import textwrap
+import pathlib
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -39,10 +41,11 @@ def test_make_dirs_with_abs_path():
     makefile_path = os.path.join(client.current_folder, CONAN_MAKEFILE_FILENAME)
     assert os.path.isfile(makefile_path)
     makefile_content = load(makefile_path)
+    prefix = pathlib.Path.home().drive if platform.system() == "Windows" else ""
     assert 'CONAN_NAME_MYLIB = mylib' in makefile_content
     assert 'CONAN_VERSION_MYLIB = 0.1' in makefile_content
-    assert 'CONAN_LIB_DIRS_MYLIB = \\\n\t$(CONAN_LIB_DIRS_FLAG)/my_absoulte_path/fake/mylib/lib \\\n\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/lib2' in makefile_content
-    assert 'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIRS_FLAG)/my_absoulte_path/fake/mylib/include' in makefile_content
+    assert f'CONAN_LIB_DIRS_MYLIB = \\\n\t$(CONAN_LIB_DIRS_FLAG){prefix}/my_absoulte_path/fake/mylib/lib \\\n\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/lib2' in makefile_content
+    assert f'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIRS_FLAG){prefix}/my_absoulte_path/fake/mylib/include' in makefile_content
     assert 'CONAN_BIN_DIRS_MYLIB = $(CONAN_BIN_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/bin' in makefile_content
 
     def assert_is_abs(path):

@@ -79,7 +79,6 @@ def test_makedeps_with_makefile_build():
         client.run("install --requires=hello/0.1.0 -pr:b=default -pr:h=default -g MakeDeps -of build")
         client.save({"Makefile": textwrap.dedent('''
             include build/conandeps.mk
-
             CFLAGS              += $(CONAN_CFLAGS)
             CXXFLAGS            += $(CONAN_CXXFLAGS) -std=c++14
             CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
@@ -87,7 +86,6 @@ def test_makedeps_with_makefile_build():
             LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
             LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
             EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
-
             SRCS          = main.cpp
             OBJS          = main.o
             EXE_FILENAME  = main
