@@ -64,7 +64,7 @@ class DownloadCache:
         for k, ref in package_list.refs():
             packages = ref.get("packages", {}).values()
             if ref.get("upload") or any(should_upload_sources(p) for p in packages):
-                all_refs.update(str(k))
+                all_refs.add(str(k))
 
         for f in os.listdir(path_backups):
             if f.endswith(".json"):
