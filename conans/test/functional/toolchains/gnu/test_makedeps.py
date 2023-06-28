@@ -36,7 +36,7 @@ def test_make_deps_definitions_escape():
 
 
 @pytest.mark.tool("cmake")
-def test_makedeps_with_test_requires():
+def test_makedeps_with_tool_requires():
     """
     MakeDeps has to create any test requires to be declared on the recipe.
     """
