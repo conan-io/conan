@@ -1,12 +1,13 @@
 import textwrap
 
+import platform
 import pytest
 
 from conans.test.utils.tools import TestClient
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
 
-@pytest.mark.tool("make")
+@pytest.mark.tool("make" if platform.system() != "Windows" else "msys2")
 def test_make_deps_definitions_escape():
     """
     MakeDeps has to escape the definitions properly.
@@ -61,7 +62,7 @@ def test_makedeps_with_tool_requires():
     assert "CONAN_NAME_APP" in content
 
 
-@pytest.mark.tool("make")
+@pytest.mark.tool("make" if platform.system() != "Windows" else "msys2")
 @pytest.mark.tool("cmake")
 def test_makedeps_with_makefile_build():
     """
