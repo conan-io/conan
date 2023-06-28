@@ -89,7 +89,7 @@ def test_make_empty_dirs():
     assert os.path.exists(makefile_path) is True
     makefile_content = load(makefile_path)
     assert 'CONAN_ROOT_MYLIB' in makefile_content
-    assert 'CONAN_SYSROOT_MYLIB' in makefile_content
+    assert 'SYSROOT' not in makefile_content
     assert 'CONAN_INCLUDE_DIRS' not in makefile_content
     assert 'CONAN_LIB_DIRS' not in makefile_content
     assert 'CONAN_BIN_DIRS' not in makefile_content
@@ -232,9 +232,8 @@ def test_make_with_public_deps_and_component_requires():
     assert 'CONAN_REQUIRES_SECOND = \\\n' \
            '\t$(CONAN_REQUIRES_SECOND_MYCOMPONENT) \\\n' \
            '\t$(CONAN_REQUIRES_SECOND_MYFIRSTCOMP)\n' in makefile_content
-    assert 'CONAN_SYSROOT_SECOND_MYFIRSTCOMP = $(CONAN_ROOT_SECOND)/.\n' in makefile_content
+    assert 'SYSROOT' not in makefile_content
     assert 'CONAN_REQUIRES_SECOND_MYFIRSTCOMP = mycomponent\n' in makefile_content
-    assert 'CONAN_SYSROOT_LIB = $(CONAN_ROOT_LIB)/.\n' in makefile_content
     assert 'CONAN_LIBS_LIB = $(CONAN_LIBS_LIB_CMP1)\n'in makefile_content
 
     assert 'CONAN_COMPONENTS_LIB = cmp1\n' in makefile_content
