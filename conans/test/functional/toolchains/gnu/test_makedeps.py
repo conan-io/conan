@@ -1,11 +1,9 @@
-import os.path
 import platform
 import textwrap
 
 import pytest
 
 from conans.test.utils.tools import TestClient
-from conans.test.assets.genconanfile import GenConanfile
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
 
@@ -47,7 +45,7 @@ def test_makedeps_with_tool_requires():
     with client.chdir("test"):
         client.run("new cmake_lib -d name=test -d version=1.0")
         client.run("create . -tf=\"\"")
-    with client.chdir("test"):
+    with client.chdir("tool"):
         client.run("new cmake_lib -d name=tool -d version=1.0")
         client.run("create . -tf=\"\"")
     # Create library having build and test requires
