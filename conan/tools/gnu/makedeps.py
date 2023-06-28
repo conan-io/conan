@@ -105,11 +105,13 @@ class MakeDeps(object):
                 if _output_var(v, item, root, root_id, prefix_var) and add_to_aggregates:
                     var_aggregates.setdefault(name, []).append(self._var_ref(v))
 
-            sysroot = cpp_info.sysroot if isinstance(cpp_info.sysroot, list) else [cpp_info.sysroot]
-
             prefix_path = root.replace("\\", "/")
-            sysroot = _get_formatted_dirs(sysroot, prefix_path, _makeify(dep.ref.name))
-            _var("SYSROOT", sysroot)
+
+            # INFO: sysroot is a list with an empty string as default value
+            sysroot = cpp_info.sysroot if isinstance(cpp_info.sysroot, list) else [cpp_info.sysroot]
+            if sysroot and sysroot[0]:
+                sysroot = _get_formatted_dirs(sysroot, prefix_path, _makeify(dep.ref.name))
+                _var("SYSROOT", sysroot)
 
             for var in ['INCLUDE_DIRS', 'LIB_DIRS', 'BIN_DIRS', 'SRC_DIRS', 'BUILD_DIRS', 'RES_DIRS',
                         'FRAMEWORK_DIRS']:
