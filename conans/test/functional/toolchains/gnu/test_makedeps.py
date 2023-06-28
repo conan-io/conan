@@ -65,7 +65,7 @@ def test_makedeps_with_tool_requires():
 
 
 @pytest.mark.tool("make" if platform.system() != "Windows" else "msys2")
-@pytest.mark.tool("cmake")
+#@pytest.mark.tool("cmake")
 def test_makedeps_with_makefile_build():
     """
     Build a small application using MakeDeps generator
@@ -79,25 +79,15 @@ def test_makedeps_with_makefile_build():
         client.run("install --requires=hello/0.1.0 -pr:b=default -pr:h=default -g MakeDeps -of build")
         client.save({"Makefile": textwrap.dedent('''
             include build/conandeps.mk
-            CFLAGS              += $(CONAN_CFLAGS)
             CXXFLAGS            += $(CONAN_CXXFLAGS) -std=c++14
             CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
             CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
             LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
             LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
             EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
-            SRCS          = main.cpp
-            OBJS          = main.o
-            EXE_FILENAME  = main
 
-            .PHONY                  :   exe
-            exe                     :   $(EXE_FILENAME)
-
-            $(EXE_FILENAME)         :   $(OBJS)
-            \t$(CXX) $(OBJS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) -o $(EXE_FILENAME)
-
-            %.o                     :   $(SRCS)
-            \t$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+            all:
+            \t$(CXX) main.cpp $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) -o main
             '''),
             "main.cpp": textwrap.dedent(r'''
             #include "hello.h"
