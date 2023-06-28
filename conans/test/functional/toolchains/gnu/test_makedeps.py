@@ -3,6 +3,8 @@ import textwrap
 import platform
 import pytest
 
+from conans.test.assets.autotools import gen_makefile
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
@@ -79,7 +81,7 @@ def test_makedeps_with_makefile_build():
             include build/conandeps.mk
 
             CFLAGS              += $(CONAN_CFLAGS)
-            CXXFLAGS            += $(CONAN_CXXFLAGS) -std=c++11
+            CXXFLAGS            += $(CONAN_CXXFLAGS) -std=c++14
             CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
             CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
             LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
