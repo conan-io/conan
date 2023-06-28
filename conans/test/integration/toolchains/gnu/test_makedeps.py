@@ -1,4 +1,4 @@
-import glob
+import pytest
 import os
 import textwrap
 
@@ -404,3 +404,24 @@ def test_makedeps_tool_requires():
     # TODO: MakeDeps should support tool_requires in the future
     assert "CONAN_LIBS_TOOL" not in make_content
     assert "CONAN_NAME_OTHER" not in make_content
+
+
+@pytest.mark.parametrize("pattern, result, expected",
+                         [("libs = []", False, 'SYSROOT'),
+                          ("sysroot = ['/foo/bar/sysroot']", True, 'CONAN_SYSROOT_PACKAGE = /foo/bar/sysroot')])
+def test_makefile_sysroot(pattern, result, expected):
+    """
+    The MakeDeps should not enforce sysroot in case not defined
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class TestMakeDepsConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.{{ pattern }}
+            """)
+    client.save({"conanfile.py": conanfile.replace("{{ pattern }}", pattern)})
+    client.run("create . --name package --version 0.1.0")
+    client.run("install --requires=package/0.1.0 -pr:h default -pr:b default -g MakeDeps")
+    makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
+    assert (expected in makefile_content) == result
