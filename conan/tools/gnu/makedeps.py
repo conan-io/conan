@@ -146,16 +146,6 @@ class MakeDeps(object):
 
         # Top-of-file banner
         line_buffer.append(self._title)
-
-        # Output build settings variables
-        settings = {"BUILD": self._conanfile.settings_build, "HOST": self._conanfile.settings}
-        for name, settings_it in settings.items():
-            line_buffer.append(f"# Conan {name.lower()} settings")
-            for key, value in settings_it.items():
-                var_name = f"CONAN_{name}_" + _makeify(key)
-                _output_var(var_name, value, blank_after=False)
-            line_buffer.append("")
-
         preamble = _divert()
 
         body = []
