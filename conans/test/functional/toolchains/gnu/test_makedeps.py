@@ -65,6 +65,7 @@ def test_makedeps_with_tool_requires():
 
 
 @pytest.mark.tool("msys2")
+@pytest.mark.tool("mingw64")
 def test_makedeps_with_makefile_build():
     """
     Build a small application using MakeDeps generator
@@ -95,6 +96,9 @@ def test_makedeps_with_makefile_build():
                         settings = "os", "arch", "compiler", "build_type"
                         generators = "AutotoolsToolchain"
                         exports_sources = ("Makefile", "hello.cpp", "hello.h")
+
+                        def configure(self):
+                            self.win_bash = self.settings.os == "Windows"
 
                         def build(self):
                             Autotools(self).make()
