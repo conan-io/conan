@@ -1,6 +1,6 @@
 
 def handle_common_config_options(conanfile):
-    if conanfile.settings.os == "Windows":
+    if conanfile.settings.get_safe("os") == "Windows":
         conanfile.options.rm_safe("fPIC")
 
 
