@@ -175,9 +175,19 @@ class XCRun(object):
         """path to libtool"""
         return self.find('libtool')
 
+    @property
+    def otool(self):
+        """path to otool"""
+        return self.find('otool')
 
-def _get_dylib_install_name(path_to_dylib):
-    command = "otool -D {}".format(path_to_dylib)
+    @property
+    def install_name_tool(self):
+        """path to install_name_tool"""
+        return self.find('install_name_tool')
+
+
+def _get_dylib_install_name(otool, path_to_dylib):
+    command = f"{otool} -D {path_to_dylib}"
     output =  iter(check_output_runner(command).splitlines())
     # Note: if otool return multiple entries for different architectures
     # assume they are the same and pick the first one.
@@ -194,26 +204,30 @@ def fix_apple_shared_install_name(conanfile):
     *install_name_tool* utility available in macOS to set ``@rpath``.
     """
 
+    xcrun = XCRun(conanfile)
+    otool = xcrun.otool
+    install_name_tool = xcrun.install_name_tool
+
     def _darwin_is_binary(file, binary_type):
         if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):
             return False
-        check_file = f"otool -hv {file}"
+        check_file = f"{otool} -hv {file}"
         return binary_type in check_output_runner(check_file)
 
     def _darwin_collect_binaries(folder, binary_type):
         return [os.path.join(folder, f) for f in os.listdir(folder) if _darwin_is_binary(os.path.join(folder, f), binary_type)]
 
     def _fix_install_name(dylib_path, new_name):
-        command = f"install_name_tool {dylib_path} -id {new_name}"
+        command = f"{install_name_tool} {dylib_path} -id {new_name}"
         conanfile.run(command)
 
     def _fix_dep_name(dylib_path, old_name, new_name):
-        command = f"install_name_tool {dylib_path} -change {old_name} {new_name}"
+        command = f"{install_name_tool} {dylib_path} -change {old_name} {new_name}"
         conanfile.run(command)
 
     def _get_rpath_entries(binary_file):
         entries = []
-        command = "otool -l {}".format(binary_file)
+        command = f"{otool} -l {binary_file}"
         otool_output = check_output_runner(command).splitlines()
         for count, text in enumerate(otool_output):
             pass
@@ -223,7 +237,7 @@ def fix_apple_shared_install_name(conanfile):
         return entries
 
     def _get_shared_dependencies(binary_file):
-        command = "otool -L {}".format(binary_file)
+        command = f"{otool} -L {binary_file}"
         all_shared = check_output_runner(command).strip().split(":")[1].strip()
         ret = [s.split("(")[0].strip() for s in all_shared.splitlines()]
         return ret
@@ -239,7 +253,7 @@ def fix_apple_shared_install_name(conanfile):
             shared_libs = _darwin_collect_binaries(full_folder, "DYLIB")
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
-                install_name = _get_dylib_install_name(shared_lib)
+                install_name = _get_dylib_install_name(otool, shared_lib)
                 #TODO: we probably only want to fix the install the name if
                 # it starts with `/`.
                 rpath_name = f"@rpath/{os.path.basename(install_name)}"
@@ -282,7 +296,7 @@ def fix_apple_shared_install_name(conanfile):
                 existing_rpaths = _get_rpath_entries(executable)
                 rpaths_to_add = list(set(rel_paths) - set(existing_rpaths))
                 for entry in rpaths_to_add:
-                    command = f"install_name_tool {executable} -add_rpath {entry}"
+                    command = f"{install_name_tool} {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
     if is_apple_os(conanfile):
