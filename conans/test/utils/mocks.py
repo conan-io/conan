@@ -62,6 +62,9 @@ class MockSettings(object):
         except KeyError:
             raise ConanException("'%s' value not defined" % name)
 
+    def rm_safe(self, name):
+        self.values.pop(name)
+
 
 class MockCppInfo(object):
     def __init__(self):

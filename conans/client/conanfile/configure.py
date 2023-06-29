@@ -9,6 +9,8 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "config_options"):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
+    else:
+        conanfile._config_options_default()
 
     # Assign only the current package options values, but none of the dependencies
     is_consumer = conanfile._conan_is_consumer
@@ -17,6 +19,8 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "configure"):
         with conanfile_exception_formatter(conanfile, "configure"):
             conanfile.configure()
+    else:
+        conanfile._configure_default()
 
     self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
                                                                       is_consumer)
