@@ -101,7 +101,7 @@ def test_makedeps_with_makefile_build():
 
                         def package(self):
                             copy(self, "libhello.a", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
-                            copy(self, "libhello.a", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
+                            copy(self, "hello.h", src=self.source_folder, dst=os.path.join(self.package_folder, "include"))
 
                         def package_info(self):
                             self.cpp_info.libs = ["hello"]
