@@ -64,22 +64,55 @@ def test_makedeps_with_tool_requires():
     assert "CONAN_NAME_APP" in content
 
 
-@pytest.mark.tool("make" if platform.system() != "Windows" else "msys2")
-#@pytest.mark.tool("cmake")
+@pytest.mark.tool("msys2")
 def test_makedeps_with_makefile_build():
     """
     Build a small application using MakeDeps generator
     """
     client = TestClient(path_with_spaces=False)
     with client.chdir("lib"):
+        client.save({"Makefile": textwrap.dedent('''
+                    all: hello.a
+                    hello.o: hello.cpp hello.h
+                    \t$(CXX) -O -c hello.cpp hello.h
+                    hello.a: hello.o
+                    \t$(AR) rcs libhello.a hello.o
+                    '''),
+                    "hello.cpp": textwrap.dedent(r'''
+                    #include <iostream>
+                    #include "hello.h"
+                    void hello(){ std::cout << "hello world!\n"; }
+                    '''),
+                    "hello.h": textwrap.dedent(r'''
+                    void hello();
+                    '''),
+                    "conanfile.py": textwrap.dedent(r'''
+                    from conan import ConanFile
+                    from conan.tools.gnu import Autotools
+                    from conan.tools.files import copy
+                    import os
+                    class PackageConan(ConanFile):
+                        settings = "os", "arch", "compiler", "build_type"
+                        generators = "AutotoolsToolchain"
+                        exports_sources = ("Makefile", "hello.cpp", "hello.h")
 
-        client.run("new cmake_lib -d name=hello -d version=0.1.0")
-        client.run(r'create . -tf="" -pr:b=default -pr:h=default')
+                        def build(self):
+                            Autotools(self).make()
+
+                        def package(self):
+                            copy(self, "libhello.a", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
+                            copy(self, "libhello.a", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
+
+                        def package_info(self):
+                            self.cpp_info.libs = ["hello"]
+                    ''')
+                     })
+        client.run('create . --name=hello --version=0.1.0 -c tools.microsoft.bash:subsystem=msys2 -c tools.microsoft.bash:path=bash')
     with client.chdir("app"):
         client.run("install --requires=hello/0.1.0 -pr:b=default -pr:h=default -g MakeDeps -of build")
         client.save({"Makefile": textwrap.dedent('''
             include build/conandeps.mk
-            CXXFLAGS            += $(CONAN_CXXFLAGS) -std=c++14
+            CXXFLAGS            += $(CONAN_CXXFLAGS)
             CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS))
             CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
             LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
