@@ -190,4 +190,22 @@ def test_graph_info_html_output():
     tc.run("new cmake_lib -d name=math -d version=1.0 -d requires=lib/2.0 -f")
     tc.run("export .")
     tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
-    assert "// Add some helpful visualizations for conflicts" in tc.out
+    assert "// Add error conflict node" in tc.out
+    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
+    assert "// Add edge from base node to the new error node" not in tc.out
+    assert "// Add edge from previous node that already had conflicting dependency" in tc.out
+
+    tc.run("new cmake_lib -d name=libiconv -d version=1.0 -d requires=lib/2.0 -f")
+    tc.run("export .")
+    tc.run("new cmake_lib -d name=boost -d version=1.0 -d requires=libiconv/1.0 -f")
+    tc.run("export .")
+    tc.run("new cmake_lib -d name=openimageio -d version=1.0 -d requires=boost/1.0 -d requires=lib/1.0 -f")
+    tc.run("export .")
+    tc.run("graph info . --format=html", assert_error=True)
+    assert "// Add error conflict node" in tc.out
+    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
+    assert "// Add edge from base node to the new error node" in tc.out
+    assert "// Add edge from previous node that already had conflicting dependency" not in tc.out
+    # There used to be a few bugs with weird graphs, check for regressions
+    assert "jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'context'" not in tc.out
+    assert "from: ," not in tc.out
