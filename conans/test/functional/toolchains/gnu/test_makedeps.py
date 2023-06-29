@@ -4,7 +4,7 @@ import platform
 import pytest
 
 from conans.test.assets.autotools import gen_makefile
-from conans.test.assets.sources import gen_function_cpp
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
@@ -72,30 +72,18 @@ def test_makedeps_with_makefile_build():
     """
     client = TestClient(path_with_spaces=False)
     with client.chdir("lib"):
-        client.save({"Makefile": textwrap.dedent('''
-                    all: hello.a
-                    hello.o: hello.cpp hello.h
-                    \t$(CXX) -O -c hello.cpp hello.h
-                    hello.a: hello.o
-                    \t$(AR) rcs libhello.a hello.o
-                    '''),
-                    "hello.cpp": textwrap.dedent(r'''
-                    #include <iostream>
-                    #include "hello.h"
-                    void hello(){ std::cout << "hello world!\n"; }
-                    '''),
-                    "hello.h": textwrap.dedent(r'''
-                    void hello();
-                    '''),
+        client.save({"Makefile": gen_makefile(libs=["hello"]),
+                    "hello.cpp": gen_function_cpp(name="hello", includes=["hello"], calls=["hello"]),
+                    "hello.h": gen_function_h(name="hello"),
                     "conanfile.py": textwrap.dedent(r'''
                     from conan import ConanFile
                     from conan.tools.gnu import Autotools
                     from conan.tools.files import copy
                     import os
                     class PackageConan(ConanFile):
-                        settings = "os", "arch", "compiler", "build_type"
                         generators = "AutotoolsToolchain"
                         exports_sources = ("Makefile", "hello.cpp", "hello.h")
+                        settings = "os", "arch", "compiler"
 
                         def configure(self):
                             self.win_bash = self.settings.os == "Windows"
@@ -126,8 +114,6 @@ def test_makedeps_with_makefile_build():
             all:
             \t$(CXX) main.cpp $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) -o main
             '''),
-            "main.cpp": textwrap.dedent(r'''
-            #include "hello.h"
-            int main() { hello(); }
-            ''')})
+            "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
+            })
         client.run_command("make -f Makefile")
