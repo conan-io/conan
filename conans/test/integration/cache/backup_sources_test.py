@@ -783,8 +783,9 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("export .")
+        exported_rev = client.exported_recipe_revision()
         client.run("upload * --only-recipe -c -r=default")
         # This second run used to crash because we thought there would be some packages always
         client.run("upload * --only-recipe -c -r=default")
         # Ensure we are testing for an already uploaded recipe
-        assert "Recipe 'pkg/1.0#484fcbf5e3904169741c043649ca5d12' already in server, skipping upload" in client.out
+        assert f"Recipe 'pkg/1.0#{exported_rev}' already in server, skipping upload" in client.out
