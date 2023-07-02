@@ -22,9 +22,9 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
     subparser.add_argument("reference", help="Recipe reference or Package reference")
     subparser.add_argument("--folder", choices=['export_source', 'source', 'build', 'metadata'],
-                           help="Path to show. The 'build'"
-                                " requires a package reference. If not specified it shows 'exports'"
-                                " path ")
+                           help="Path to show. The 'build' requires a package reference. "
+                                "If the argument is not passed, it shows 'exports' path for recipe references "
+                                "and 'package' folder for package references.")
 
     args = parser.parse_args(*args)
     try:
