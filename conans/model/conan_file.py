@@ -349,3 +349,7 @@ class ConanFile:
     def _conan_configure_default(self):
         from conan.tools.options import handle_common_configure_options
         handle_common_configure_options(self)
+
+    def _conan_package_id_default(self):
+        from conan.tools.options import handle_common_package_id_options
+        handle_common_package_id_options(self)

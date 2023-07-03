@@ -81,5 +81,7 @@ def run_validate_package_id(conanfile):
         with conanfile_exception_formatter(conanfile, "package_id"):
             with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
                 conanfile.package_id()
+    else:
+        conanfile._conan_package_id_default()
 
     conanfile.info.validate()

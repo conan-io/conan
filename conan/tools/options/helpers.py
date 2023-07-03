@@ -10,3 +10,8 @@ def handle_common_configure_options(conanfile):
         conanfile.options.rm_safe("shared")
     elif conanfile.options.get_safe("shared"):
         conanfile.options.rm_safe("fPIC")
+
+
+def handle_common_package_id_options(conanfile):
+    if conanfile.options.get_safe("header_only"):
+        self.info.clear()
