@@ -13,6 +13,7 @@ from conan.tools.apple import fix_apple_shared_install_name
 class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "library"
 
     # Optional metadata
     license = "<Put the package license here>"

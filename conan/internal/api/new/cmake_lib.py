@@ -5,6 +5,7 @@ from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "library"
 
     # Optional metadata
     license = "<Put the package license here>"
@@ -286,7 +287,7 @@ test_main = """#include "{{name}}.h"
 
 int main() {
     {{package_name}}();
-    
+
     std::vector<std::string> vec;
     vec.push_back("test_package");
 
