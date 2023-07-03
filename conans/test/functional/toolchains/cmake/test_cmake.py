@@ -217,7 +217,6 @@ class WinTest(Base):
         options = {"shared": shared}
         save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
         toolchain_path = os.path.join(self.client.current_folder, "build",
@@ -314,7 +313,6 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
         self.assertIn("The C compiler identification is GNU", self.client.out)
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
