@@ -1,3 +1,5 @@
+from conans.model.pkg_type import PackageType
+
 
 def handle_common_config_options(conanfile):
     if conanfile.settings.get_safe("os") == "Windows":
@@ -13,5 +15,5 @@ def handle_common_configure_options(conanfile):
 
 
 def handle_common_package_id_options(conanfile):
-    if conanfile.options.get_safe("header_only"):
+    if conanfile.options.get_safe("header_only") or conanfile.package_type == PackageType.HEADER:
         conanfile.info.clear()

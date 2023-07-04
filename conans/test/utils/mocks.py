@@ -84,6 +84,7 @@ class MockConanfile(ConanFile):
     def __init__(self, settings, options=None, runner=None):
         self.display_name = ""
         self._conan_node = None
+        self.package_type = "unknown"
         self.folders = Folders()
         self.settings = settings
         self.settings_build = settings

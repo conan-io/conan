@@ -151,3 +151,20 @@ class ConfigureOptionsTest(unittest.TestCase):
         self.assertIn(result, client.out)
         if header_only:
             self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
+
+    def test_header_package_type_pid(self):
+        """
+        Test that we get the pid for header only when package type is set to header-library
+        """
+        client = TestClient()
+        conanfile = textwrap.dedent(f"""\
+               from conan import ConanFile
+
+               class Pkg(ConanFile):
+                   settings = "os", "compiler", "arch", "build_type"
+                   package_type = "header-library"
+
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run(f"create . --name=pkg --version=0.1")
+        self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)

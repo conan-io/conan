@@ -2,6 +2,7 @@ from conan.tools.options import (
     handle_common_config_options,
     handle_common_configure_options, handle_common_package_id_options
 )
+from conans.model.pkg_type import PackageType
 from conans.test.utils.mocks import MockSettings, ConanFileMock, MockOptions, MockConanfile
 
 
@@ -44,7 +45,8 @@ def test_handle_common_configure_options():
 def test_handle_common_package_id_options():
     """
     When header_only option is False, the original settings and options is kept in package id info
-    When the heacer_only option is True, the package id info is cleared
+    When the heacer_only option is True, the package id info is cleared.
+    When package type is header, then the package id info is cleared
     """
     original_settings = {"os": "Linux", "compiler": "gcc"}
     options = MockOptions({"header_only": False})
@@ -55,6 +57,12 @@ def test_handle_common_package_id_options():
 
     options = MockOptions({"header_only": True})
     conanfile = MockConanfile(original_settings, options)
+    handle_common_package_id_options(conanfile)
+    assert conanfile.info.settings == {}
+    assert conanfile.info.options == {}
+
+    conanfile = MockConanfile(original_settings)
+    conanfile.package_type = PackageType.HEADER
     handle_common_package_id_options(conanfile)
     assert conanfile.info.settings == {}
     assert conanfile.info.options == {}
