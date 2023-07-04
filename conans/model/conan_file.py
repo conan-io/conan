@@ -341,15 +341,3 @@ class ConanFile:
         self.buildenv_info.deploy_base_folder(self.package_folder, deploy_folder)
         self.runenv_info.deploy_base_folder(self.package_folder, deploy_folder)
         self.folders.set_base_package(deploy_folder)
-
-    def _conan_config_options_default(self):
-        from conan.tools.options import handle_common_config_options
-        handle_common_config_options(self)
-
-    def _conan_configure_default(self):
-        from conan.tools.options import handle_common_configure_options
-        handle_common_configure_options(self)
-
-    def _conan_package_id_default(self):
-        from conan.tools.options import handle_common_package_id_options
-        handle_common_package_id_options(self)
