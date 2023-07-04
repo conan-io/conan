@@ -181,31 +181,31 @@ def test_user_templates():
 
 def test_graph_info_html_output():
     tc = TestClient()
-    tc.run("new cmake_lib -d name=lib -d version=1.0")
-    tc.run("export .")
-    tc.run("new cmake_lib -d name=lib -d version=2.0 -f")
-    tc.run("export .")
-    tc.run("new cmake_lib -d name=ui -d version=1.0 -d requires=lib/1.0 -f")
-    tc.run("export .")
-    tc.run("new cmake_lib -d name=math -d version=1.0 -d requires=lib/2.0 -f")
-    tc.run("export .")
+    tc.save({"lib/conanfile.py": GenConanfile("lib"),
+             "ui/conanfile.py": GenConanfile("ui", "1.0").with_requirement("lib/1.0"),
+             "math/conanfile.py": GenConanfile("math", "1.0").with_requirement("lib/2.0"),
+             "libiconv/conanfile.py": GenConanfile("libiconv", "1.0").with_requirement("lib/2.0"),
+             "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("libiconv/1.0"),
+             "openimageio/conanfile.py": GenConanfile("openimageio", "1.0").with_requirement("boost/1.0").with_requirement("lib/1.0")})
+    tc.run("export lib/ --version=1.0")
+    tc.run("export lib/ --version=2.0")
+    tc.run("export ui")
+    tc.run("export math")
+    tc.run("export libiconv")
+    tc.run("export boost")
+    tc.run("export openimageio")
+
     tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
     assert "// Add error conflict node" in tc.out
     assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
     assert "// Add edge from base node to the new error node" not in tc.out
     assert "// Add edge from previous node that already had conflicting dependency" in tc.out
 
-    tc.run("new cmake_lib -d name=libiconv -d version=1.0 -d requires=lib/2.0 -f")
-    tc.run("export .")
-    tc.run("new cmake_lib -d name=boost -d version=1.0 -d requires=libiconv/1.0 -f")
-    tc.run("export .")
-    tc.run("new cmake_lib -d name=openimageio -d version=1.0 -d requires=boost/1.0 -d requires=lib/1.0 -f")
-    tc.run("export .")
-    tc.run("graph info . --format=html", assert_error=True)
+    tc.run("graph info openimageio/ --format=html", assert_error=True)
     assert "// Add error conflict node" in tc.out
     assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
     assert "// Add edge from base node to the new error node" in tc.out
     assert "// Add edge from previous node that already had conflicting dependency" not in tc.out
     # There used to be a few bugs with weird graphs, check for regressions
-    assert "jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'context'" not in tc.out
+    assert "jinja2.exceptions.UndefinedError" not in tc.out
     assert "from: ," not in tc.out
