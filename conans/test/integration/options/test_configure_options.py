@@ -119,8 +119,7 @@ class ConfigureOptionsTest(unittest.TestCase):
     ])
     def test_methods_defined_explicit(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are managed automatically when methods config_otpions and configure are not
-        defined.
+        Test that options are managed when the tool is used in methods defined by user.
         Check that header only package gets its unique package ID.
         """
         client = TestClient()

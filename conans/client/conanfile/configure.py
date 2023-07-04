@@ -11,7 +11,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
     else:
-        _conanfile_config_options_default(conanfile)
+        handle_common_config_options(conanfile)
 
     # Assign only the current package options values, but none of the dependencies
     is_consumer = conanfile._conan_is_consumer
@@ -21,7 +21,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(conanfile, "configure"):
             conanfile.configure()
     else:
-        _conanfile_configure_default(conanfile)
+        handle_common_configure_options(conanfile)
 
     self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
                                                                       is_consumer)
@@ -43,11 +43,3 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "build_requirements"):
         with conanfile_exception_formatter(conanfile, "build_requirements"):
             conanfile.build_requirements()
-
-
-def _conanfile_config_options_default(conanfile):
-    handle_common_config_options(conanfile)
-
-
-def _conanfile_configure_default(conanfile):
-    handle_common_configure_options(conanfile)
