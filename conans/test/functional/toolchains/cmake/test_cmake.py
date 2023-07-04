@@ -394,6 +394,7 @@ class LinuxTest(Base):
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
                 "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": defines,
+                # fPIC is managed automatically depending on the shared option value
                 "CMAKE_POSITION_INDEPENDENT_CODE": "ON" if not shared else ""
                 }
 
