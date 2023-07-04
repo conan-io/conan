@@ -8,8 +8,8 @@ from conans.test.utils.tools import TestClient
 
 class ConfigureOptionsTest(unittest.TestCase):
     """
-    Test config_options() and configure() methods can manage shared, fPIC and header_only options
-    automatically
+    Test config_options(), configure() and package_id() methods can manage shared, fPIC and
+    header_only options automatically.
     """
 
     @parameterized.expand([
@@ -28,7 +28,8 @@ class ConfigureOptionsTest(unittest.TestCase):
     def test_methods_not_defined(self, settings_os, shared, fpic, header_only, result):
         """
         Test that options are managed automatically when methods config_otpions and configure are not
-        defined
+        defined.
+        Check that header only package gets its unique package ID.
         """
         client = TestClient()
         conanfile = textwrap.dedent(f"""\
@@ -49,6 +50,8 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.run(f"create . --name=pkg --version=0.1 -s os={settings_os}")
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
         self.assertIn(result, client.out)
+        if header_only:
+            self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
 
     @parameterized.expand([
         ["Linux", False, False, False, [False, False, False]],
@@ -70,7 +73,8 @@ class ConfigureOptionsTest(unittest.TestCase):
     ])
     def test_optout(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are not managed automatically when methods are defined
+        Test that options are not managed automatically when methods are defined.
+        Check that header only package gets its unique package ID.
         """
         client = TestClient()
         conanfile = textwrap.dedent(f"""\
@@ -97,6 +101,8 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.run(f"create . --name=pkg --version=0.1 -s os={settings_os}")
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
         self.assertIn(result, client.out)
+        if header_only:
+            self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
 
     @parameterized.expand([
         ["Linux", False, False, False, [False, False, False]],
@@ -114,7 +120,8 @@ class ConfigureOptionsTest(unittest.TestCase):
     def test_methods_defined_explicit(self, settings_os, shared, fpic, header_only, result):
         """
         Test that options are managed automatically when methods config_otpions and configure are not
-        defined
+        defined.
+        Check that header only package gets its unique package ID.
         """
         client = TestClient()
         conanfile = textwrap.dedent(f"""\
@@ -142,3 +149,5 @@ class ConfigureOptionsTest(unittest.TestCase):
         client.run(f"create . --name=pkg --version=0.1 -s os={settings_os}")
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
         self.assertIn(result, client.out)
+        if header_only:
+            self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
