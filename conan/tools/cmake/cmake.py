@@ -133,7 +133,7 @@ class CMake(object):
     def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
         self._build(build_type, target, cli_args, build_tool_args)
 
-    def install(self, build_type=None, component=None, strip=False):
+    def install(self, build_type=None, component=None):
         mkdir(self._conanfile, self._conanfile.package_folder)
 
         bt = build_type or self._conanfile.settings.get_safe("build_type")
@@ -147,7 +147,9 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
-        if strip:
+
+        do_strip = self._conanfile.conf.get("tools.cmake.install:strip", check_type=bool)
+        if do_strip:
             arg_list.append("--strip")
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
