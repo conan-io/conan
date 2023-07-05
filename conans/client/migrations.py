@@ -68,8 +68,8 @@ def _migrate_pkg_db_lru(cache):
             connection.execute(f"ALTER TABLE {table} ADD COLUMN 'lru' "
                                f"INTEGER DEFAULT '{lru}' NOT NULL;")
     except Exception:
-        ConanOutput().error("Could not complete the 2.0.8 DB migration. Please manually remove "
-                            "your .conan2 cache and reinstall packages")
+        ConanOutput().error(f"Could not complete the 2.0.8 DB migration."
+                            " Please manually remove your .conan2 cache and reinstall packages")
         raise
     finally:
         connection.close()

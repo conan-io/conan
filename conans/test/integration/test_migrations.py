@@ -1,9 +1,21 @@
 import os
+import sqlite3
 
 import pytest
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
+
+
+def _drop_lru_column(cache):
+    db_filename = os.path.join(cache.store, 'cache.sqlite3')
+    connection = sqlite3.connect(db_filename, isolation_level=None,
+                                 timeout=1, check_same_thread=False)
+    try:
+        for table in ("recipes", "packages"):
+            connection.execute(f"ALTER TABLE {table} DROP COLUMN 'lru';")
+    finally:
+        connection.close()
 
 
 @pytest.mark.parametrize(["plugin_path", "string_replace", "new_string"],
@@ -21,6 +33,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     # Let's change the version
     version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
     save(version_txt_file_path, "1.0.0")
+    _drop_lru_column(t.cache)
 
     # Do a modification to the profile plugin without changing the comment
     contents = contents.replace(string_replace, new_string)
@@ -28,6 +41,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
 
     # Trigger the migrations
     t.run("-v")
+    assert "WARN: Running 2.0.8 DB migration to add LRU column" in t.out
     assert f"Migration: Successfully updated {os.path.basename(plugin_path)}" in t.out
     contents = load(profile_plugin_path)
     # Our changes are removed!!!
@@ -50,8 +64,10 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     # Let's change the version
     version_txt_file_path2 = os.path.join(t2.cache_folder, "version.txt")
     save(version_txt_file_path2, "1.0.0")
+    _drop_lru_column(t2.cache)
     # Trigger the migrations
     t2.run("-v")
+    assert "WARN: Running 2.0.8 DB migration to add LRU column" in t2.out
     assert f"Migration: Successfully updated" not in t2.out
     contents = load(profile_plugin_path2)
     # Our Changes are kept!
