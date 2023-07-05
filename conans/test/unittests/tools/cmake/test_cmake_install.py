@@ -55,7 +55,7 @@ def test_run_install_strip():
     conanfile = ConanFileMock()
 
     conanfile.conf = Conf()
-    conanfile.conf["tools.cmake.install:strip"] = True
+    conanfile.conf["tools.cmake:install_strip"] = True
 
     conanfile.folders.generators = "."
     conanfile.folders.set_base_generators(temp_folder())
