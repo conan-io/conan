@@ -3,6 +3,8 @@ import sqlite3
 
 import pytest
 
+from conan.internal.cache.db.packages_table import PackagesDBTable
+from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
@@ -13,7 +15,13 @@ def _drop_lru_column(cache):
                                  timeout=1, check_same_thread=False)
     try:
         for table in ("recipes", "packages"):
-            connection.execute(f"ALTER TABLE {table} DROP COLUMN 'lru';")
+            columns = PackagesDBTable.columns_description if table == "packages" else \
+                      RecipesDBTable.columns_description
+            columns = [elem[0] for elem in columns if elem[0] != "lru"]
+            columns = ", ".join(columns)
+            connection.execute(f"CREATE TABLE {table}_backup AS SELECT {columns} FROM {table};")
+            connection.execute(f"DROP TABLE {table};")
+            connection.execute(f"ALTER TABLE {table}_backup RENAME TO {table};")
     finally:
         connection.close()
 
