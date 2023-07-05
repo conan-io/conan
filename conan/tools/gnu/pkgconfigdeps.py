@@ -125,7 +125,9 @@ class _PCContentGenerator:
         {%- endfor -%}
         {%- endmacro -%}
 
-        prefix={{ prefix_path }}
+        {%- if prefix -%}
+        prefix={{ prefix }}
+        {%- endif -%}
         {% for path in libdirs %}
         {{ "libdir{}={}".format((loop.index0 or ""), path) }}
         {% endfor %}
@@ -151,7 +153,9 @@ class _PCContentGenerator:
     """)
 
     shortened_template = textwrap.dedent("""\
-        prefix={{ prefix_path }}
+        {%- if prefix -%}
+        prefix={{ prefix }}
+        {%- endif -%}
         {% if pkg_config_custom_content %}
         # Custom PC content
         {{ pkg_config_custom_content }}
@@ -175,25 +179,35 @@ class _PCContentGenerator:
             else self._dep.package_folder
         return root_folder.replace("\\", "/")
 
-    def content(self, info):
-        assert isinstance(info, _PCInfo) and info.cpp_info is not None
-
-        prefix_path = self._get_prefix_path()
-        version = info.cpp_info.get_property("component_version") or self._dep.ref.version
-        libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
-        includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
-        bindirs = _get_formatted_dirs(info.cpp_info.bindirs, prefix_path)
-        custom_content = info.cpp_info.get_property("pkg_config_custom_content")
-
-        context = {
-            "prefix_path": prefix_path,
+    def _get_custom_pc_variables(self, cpp_info):
+        """
+        Prune any value from the final *.pc file if any user is setting their own ones through
+        the ``pkg_config_custom_content`` variable.
+        """
+        custom_content = cpp_info.get_property("pkg_config_custom_content")
+        prefix_path = "" if "prefix=" in custom_content else self._get_prefix_path()
+        libdirs = [] if "libdir=" in custom_content else \
+            _get_formatted_dirs(cpp_info.libdirs, prefix_path)
+        includedirs = [] if "includedir=" in custom_content else \
+            _get_formatted_dirs(cpp_info.includedirs, prefix_path)
+        bindirs = [] if "bindir=" in custom_content else \
+            _get_formatted_dirs(cpp_info.bindirs, prefix_path)
+        return {
+            "prefix": prefix_path,
             "libdirs": libdirs,
             "includedirs": includedirs,
             "bindirs": bindirs,
-            "pkg_config_custom_content": custom_content,
+            "pkg_config_custom_content": custom_content
+        }
+
+    def content(self, info):
+        assert isinstance(info, _PCInfo) and info.cpp_info is not None
+
+        pc_variables = self._get_custom_pc_variables(info.cpp_info)
+        context = {
             "name": info.name,
             "description": info.description,
-            "version": version,
+            "version": info.cpp_info.get_property("component_version") or self._dep.ref.version,
             "requires": info.requires,
             "cpp_info": info.cpp_info,
             "cxxflags": [var.replace('"', '\\"') for var in info.cpp_info.cxxflags],
@@ -201,6 +215,7 @@ class _PCContentGenerator:
             "defines": [var.replace('"', '\\"') for var in info.cpp_info.defines],
             "gnudeps_flags": GnuDepsFlags(self._conanfile, info.cpp_info)
         }
+        context.update(pc_variables)
         template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         return template.render(context)
@@ -210,7 +225,7 @@ class _PCContentGenerator:
         custom_content = info.cpp_info.get_property("pkg_config_custom_content") if info.cpp_info \
             else None
         context = {
-            "prefix_path": self._get_prefix_path(),
+            "prefix": self._get_prefix_path(),
             "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
