@@ -1,12 +1,13 @@
 import os
+import re
 import textwrap
 from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
@@ -125,9 +126,9 @@ class _PCContentGenerator:
         {%- endfor -%}
         {%- endmacro -%}
 
-        {%- if prefix -%}
+        {% if prefix %}
         prefix={{ prefix }}
-        {%- endif -%}
+        {% endif %}
         {% for path in libdirs %}
         {{ "libdir{}={}".format((loop.index0 or ""), path) }}
         {% endfor %}
@@ -153,9 +154,9 @@ class _PCContentGenerator:
     """)
 
     shortened_template = textwrap.dedent("""\
-        {%- if prefix -%}
+        {% if prefix %}
         prefix={{ prefix }}
-        {%- endif -%}
+        {% endif %}
         {% if pkg_config_custom_content %}
         # Custom PC content
         {{ pkg_config_custom_content }}
@@ -179,31 +180,40 @@ class _PCContentGenerator:
             else self._dep.package_folder
         return root_folder.replace("\\", "/")
 
-    def _get_custom_pc_variables(self, cpp_info):
+    @staticmethod
+    def _is_var_match(var, content):
         """
-        Prune any value from the final *.pc file if any user is setting their own ones through
-        the ``pkg_config_custom_content`` variable.
+        Matches any *.pc variable in the content given.
         """
-        custom_content = cpp_info.get_property("pkg_config_custom_content")
-        prefix_path = "" if "prefix=" in custom_content else self._get_prefix_path()
-        libdirs = [] if "libdir=" in custom_content else \
-            _get_formatted_dirs(cpp_info.libdirs, prefix_path)
-        includedirs = [] if "includedir=" in custom_content else \
-            _get_formatted_dirs(cpp_info.includedirs, prefix_path)
-        bindirs = [] if "bindir=" in custom_content else \
-            _get_formatted_dirs(cpp_info.bindirs, prefix_path)
-        return {
-            "prefix": prefix_path,
-            "libdirs": libdirs,
-            "includedirs": includedirs,
-            "bindirs": bindirs,
-            "pkg_config_custom_content": custom_content
-        }
+        if content:
+            return re.search("^{}=".format(var), content, re.MULTILINE)
 
     def content(self, info):
         assert isinstance(info, _PCInfo) and info.cpp_info is not None
 
-        pc_variables = self._get_custom_pc_variables(info.cpp_info)
+        def _get_custom_pc_variables(cpp_info):
+            """
+            Prune any value from the final *.pc file if any user is setting their own ones through
+            the ``pkg_config_custom_content`` variable.
+            """
+            custom_content = cpp_info.get_property("pkg_config_custom_content")
+            prefix_path = "" if self._is_var_match("prefix", custom_content) else \
+                self._get_prefix_path()
+            libdirs = [] if self._is_var_match("libdir", custom_content) else \
+                _get_formatted_dirs(cpp_info.libdirs, prefix_path)
+            includedirs = [] if self._is_var_match("includedir", custom_content) else \
+                _get_formatted_dirs(cpp_info.includedirs, prefix_path)
+            bindirs = [] if self._is_var_match("bindir", custom_content) else \
+                _get_formatted_dirs(cpp_info.bindirs, prefix_path)
+            return {
+                "prefix": prefix_path,
+                "libdirs": libdirs,
+                "includedirs": includedirs,
+                "bindirs": bindirs,
+                "pkg_config_custom_content": custom_content
+            }
+
+        pc_variables = _get_custom_pc_variables(info.cpp_info)
         context = {
             "name": info.name,
             "description": info.description,
@@ -224,8 +234,9 @@ class _PCContentGenerator:
         assert isinstance(info, _PCInfo)
         custom_content = info.cpp_info.get_property("pkg_config_custom_content") if info.cpp_info \
             else None
+        prefix_path = "" if self._is_var_match("prefix", custom_content) else self._get_prefix_path()
         context = {
-            "prefix": self._get_prefix_path(),
+            "prefix": prefix_path,
             "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
