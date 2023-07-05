@@ -55,10 +55,8 @@ class RemoteManager(object):
         try:
             zipped_files = self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                                              only_metadata=False)
-            # TODO: Optimize this call, it is slow to always query all revisions
-            remote_refs = self._call_remote(remote, "get_recipe_revisions_references", ref)
-            ref_time = remote_refs[0].timestamp
-            ref.timestamp = ref_time
+            # The timestamp of the ``ref`` from the server has been already obtained by ConanProxy
+            # or it will be obtained explicitly by the ``conan download``
             # filter metadata files
             # This could be also optimized in download, avoiding downloading them, for performance
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}

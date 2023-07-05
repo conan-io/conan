@@ -37,10 +37,7 @@ class ConanProxy:
             recipe_layout = self._cache.recipe_layout(reference)
             ref = recipe_layout.reference  # latest revision if it was not defined
         except ConanException:
-            recipe_layout = None
-
-        # NOT in disk, must be retrieved from remotes
-        if recipe_layout is None:
+            # NOT in disk, must be retrieved from remotes
             # we will only check all servers for latest revision if we did a --update
             remote, new_ref = self._download_recipe(reference, remotes, output, update, check_update)
             recipe_layout = self._cache.ref_layout(new_ref)

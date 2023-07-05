@@ -1,9 +1,11 @@
 import copy
+import json
 import os
 from collections import OrderedDict, defaultdict
 
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
+from conans.util.files import load, save
 
 _DIRS_VAR_NAMES = ["_includedirs", "_srcdirs", "_libdirs", "_resdirs", "_bindirs", "_builddirs",
                    "_frameworkdirs", "_objects"]
@@ -111,6 +113,13 @@ class _Component:
             "requires": self._requires,
             "properties": self._properties
         }
+
+    @staticmethod
+    def deserialize(contents):
+        result = _Component()
+        for field, value in contents.items():
+            setattr(result, f"_{field}", value)
+        return result
 
     @property
     def includedirs(self):
@@ -419,6 +428,19 @@ class CppInfo:
         for component_name, info in self.components.items():
             ret[component_name] = info.serialize()
         return ret
+
+    def deserialize(self, content):
+        self._package = _Component.deserialize(content.pop("root"))
+        for component_name, info in content.items():
+            self.components[component_name] = _Component.deserialize(info)
+        return self
+
+    def save(self, path):
+        save(path, json.dumps(self.serialize()))
+
+    def load(self, path):
+        content = json.loads(load(path))
+        return self.deserialize(content)
 
     @property
     def has_components(self):

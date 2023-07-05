@@ -51,6 +51,24 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("download pkg/0.1@user/testing#latest:* -r default")
         self.assertIn(f"pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
+    def test_reuse_super(self):
+        client = TestClient(default_server_user=True)
+        self._define_base(client)
+        reuse = textwrap.dedent("""
+               from conan import ConanFile
+               class PkgTest(ConanFile):
+                   python_requires = "base/1.1@user/testing"
+                   python_requires_extend = "base.MyConanfileBase"
+
+                   def source(self):
+                       super().source()
+                       self.output.info("MY OWN SOURCE")
+               """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("source . --name=pkg --version=0.1")
+        assert "conanfile.py (pkg/0.1): My cool source!" in client.out
+        assert "conanfile.py (pkg/0.1): MY OWN SOURCE" in client.out
+
     def test_reuse_dot(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""

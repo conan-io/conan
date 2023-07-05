@@ -708,7 +708,8 @@ class GenericSystemBlock(Block):
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
-                    "armv8": "ARM64"}.get(arch)
+                    "armv8": "ARM64",
+                    "arm64ec": "ARM64EC"}.get(arch)
         return None
 
     def _get_generic_system_name(self):
@@ -732,8 +733,9 @@ class GenericSystemBlock(Block):
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
+        os_build = self._conanfile.settings_build.get_safe("os")
         return os_host in ('iOS', 'watchOS', 'tvOS') or (
-                os_host == 'Macos' and arch_host != arch_build)
+                os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
@@ -745,6 +747,7 @@ class GenericSystemBlock(Block):
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
         assert hasattr(self._conanfile, "settings_build")
+        # TODO: Remove unused if
         if hasattr(self._conanfile, "settings_build"):
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
