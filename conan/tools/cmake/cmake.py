@@ -148,7 +148,7 @@ class CMake(object):
         if component:
             arg_list.extend(["--component", component])
 
-        do_strip = self._conanfile.conf.get("tools.cmake.install:strip", check_type=bool)
+        do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
         if do_strip:
             arg_list.append("--strip")
         arg_list = " ".join(filter(None, arg_list))
