@@ -204,6 +204,9 @@ def fix_apple_shared_install_name(conanfile):
     *install_name_tool* utility available in macOS to set ``@rpath``.
     """
 
+    if not is_apple_os(conanfile):
+        return
+
     xcrun = XCRun(conanfile)
     otool = xcrun.otool
     install_name_tool = xcrun.install_name_tool
@@ -299,10 +302,9 @@ def fix_apple_shared_install_name(conanfile):
                     command = f"{install_name_tool} {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
-    if is_apple_os(conanfile):
-        substitutions = _fix_dylib_files(conanfile)
+    substitutions = _fix_dylib_files(conanfile)
 
-        # Only "fix" executables if dylib files were patched, otherwise
-        # there is nothing to do.
-        if substitutions:
-            _fix_executables(conanfile, substitutions)
+    # Only "fix" executables if dylib files were patched, otherwise
+    # there is nothing to do.
+    if substitutions:
+        _fix_executables(conanfile, substitutions)
