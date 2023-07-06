@@ -42,6 +42,36 @@ def test_cross_build():
     assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
 
 
+def test_cross_build_linux_to_macos():
+    linux_profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        """)
+    macos_profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        os.sdk_version=13.1
+        arch=x86_64
+        compiler=apple-clang
+        compiler.version=13
+        compiler.libcxx=libc++
+        build_type=Release
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain",
+                 "linux": linux_profile,
+                 "macos": macos_profile})
+    client.run("install . --profile:build=linux --profile:host=macos")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
+    assert "set(CMAKE_SYSTEM_VERSION 13.1)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR x86_64)" in toolchain
+
+
 def test_cross_build_user_toolchain():
     # When a user_toolchain is defined in [conf], CMakeToolchain will not generate anything
     # for cross-build

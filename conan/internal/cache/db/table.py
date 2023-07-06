@@ -16,13 +16,12 @@ class BaseDbTable:
         column_names: List[str] = [it[0] for it in self.columns_description]
         self.row_type = namedtuple('_', column_names)
         self.columns = self.row_type(*column_names)
-        self.create_table()
 
     @contextmanager
     def db_connection(self):
+        connection = sqlite3.connect(self.filename, isolation_level=None,
+                                     timeout=1, check_same_thread=False)
         try:
-            connection = sqlite3.connect(self.filename, isolation_level=None,
-                                        timeout=1, check_same_thread=False)
             yield connection
         finally:
             connection.close()
