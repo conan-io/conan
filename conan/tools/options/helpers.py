@@ -15,5 +15,5 @@ def handle_common_configure_options(conanfile):
 
 
 def handle_common_package_id_options(conanfile):
-    if conanfile.options.get_safe("header_only") or conanfile.package_type == PackageType.HEADER:
+    if conanfile.options.get_safe("header_only") or conanfile.package_type is PackageType.HEADER:
         conanfile.info.clear()
