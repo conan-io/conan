@@ -249,11 +249,11 @@ def test_cmake_config_version_compat_rejected(policy):
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . --name=test --version=2.2.1")
+    client.run("create . --name=mytest --version=2.2.1")
 
     conanfile = textwrap.dedent("""
         [requires]
-        test/2.2.1
+        mytest/2.2.1
 
         [generators]
         CMakeDeps
@@ -265,7 +265,8 @@ def test_cmake_config_version_compat_rejected(policy):
     cmakelists = textwrap.dedent(f"""
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
-        find_package(test {version_to_reject} CONFIG REQUIRED)
+        message(STATUS "CMAKE VERSION=${{CMAKE_VERSION}}")
+        find_package(mytest {version_to_reject} CONFIG REQUIRED)
         """)
 
     client.save({"conanfile.txt": conanfile,
