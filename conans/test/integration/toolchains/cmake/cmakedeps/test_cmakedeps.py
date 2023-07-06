@@ -563,7 +563,7 @@ class TestCMakeVersionConfigCompat:
                 name = "dep"
                 version = "0.1"
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_package_version_compat", "AnyNewerVersion")
+                    self.cpp_info.set_property("cmake_config_version_compat", "AnyNewerVersion")
                 """)
 
         c.save({"conanfile.py": dep})
@@ -590,10 +590,10 @@ class TestCMakeVersionConfigCompat:
                 name = "dep"
                 version = "0.1"
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_package_version_compat", "Unknown")
+                    self.cpp_info.set_property("cmake_config_version_compat", "Unknown")
                 """)
 
         c.save({"conanfile.py": dep})
         c.run("create .")
         c.run("install --requires=dep/0.1 -g CMakeDeps", assert_error=True)
-        assert "Unknown cmake_package_version_compat=Unknown in dep/0.1" in c.out
+        assert "Unknown cmake_config_version_compat=Unknown in dep/0.1" in c.out
