@@ -173,9 +173,10 @@ def test_custom_content():
 
             def package_info(self):
                 custom_content = textwrap.dedent(\"""
+                        bindir=${prefix}/my/bin/folder
+                        fakelibdir=${prefix}/my/lib/folder
                         datadir=${prefix}/share
                         schemasdir=${datadir}/mylib/schemas
-                        bindir=${prefix}/bin
                     \""")
                 self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                 self.cpp_info.includedirs = ["include"]
@@ -188,9 +189,11 @@ def test_custom_content():
 
     pc_content = client.load("pkg.pc")
     assert "libdir=${prefix}/lib" in pc_content
+    assert "fakelibdir=${prefix}/my/lib/folder" in pc_content
     assert "datadir=${prefix}/share" in pc_content
     assert "schemasdir=${datadir}/mylib/schemas" in pc_content
-    assert "bindir=${prefix}/bin" in pc_content
+    assert "bindir=${prefix}/bin" not in pc_content
+    assert "bindir=${prefix}/my/bin/folder" in pc_content
     assert "Name: pkg" in pc_content
 
 
