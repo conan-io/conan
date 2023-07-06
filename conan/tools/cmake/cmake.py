@@ -147,6 +147,10 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
+
+        do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        if do_strip:
+            arg_list.append("--strip")
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
