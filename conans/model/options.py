@@ -139,8 +139,6 @@ class _PackageOptions:
             delattr(self, field)
         except ConanException:
             pass
-        except KeyError:
-            pass
 
     def validate(self):
         for child in self._data.values():

@@ -9,6 +9,9 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "config_options"):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
+    else:
+        if conanfile.settings.get_safe("os") == "Windows":
+            conanfile.options.rm_safe("fPIC")
 
     # Assign only the current package options values, but none of the dependencies
     is_consumer = conanfile._conan_is_consumer
