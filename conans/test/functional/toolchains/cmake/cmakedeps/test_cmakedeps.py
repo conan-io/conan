@@ -119,7 +119,7 @@ def test_system_libs():
                     self.cpp_info.system_libs.append("sys1d")
                 else:
                     self.cpp_info.system_libs.append("sys1")
-                self.cpp_info.set_property("cmake_package_version_compat", "AnyNewerVersion")
+                self.cpp_info.set_property("cmake_config_version_compat", "AnyNewerVersion")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -192,7 +192,7 @@ def test_system_libs_no_libs():
                     self.cpp_info.system_libs.append("sys1d")
                 else:
                     self.cpp_info.system_libs.append("sys1")
-                self.cpp_info.set_property("cmake_package_version_compat", "SameMinorVersion")
+                self.cpp_info.set_property("cmake_config_version_compat", "SameMinorVersion")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -234,6 +234,46 @@ def test_system_libs_no_libs():
         assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;test_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.parametrize("policy",
+                         ["AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"])
+def test_cmake_config_version_compat_rejected(policy):
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+
+        class Test(ConanFile):
+            def package_info(self):
+                self.cpp_info.set_property("cmake_config_version_compat", "{policy}")
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=test --version=2.2.1")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        test/2.2.1
+
+        [generators]
+        CMakeDeps
+        """)
+    version_to_reject = {"AnyNewerVersion": "3.0",
+                         "SameMajorVersion": "1.0",
+                         "SameMinorVersion": "2.1",
+                         "ExactVersion": "2.2.0"}[policy]
+    cmakelists = textwrap.dedent(f"""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        find_package(test {version_to_reject} CONFIG REQUIRED)
+        """)
+
+    client.save({"conanfile.txt": conanfile,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install .")
+    client.run_command('cmake .', assert_error=True)
+    assert "The following configuration files were considered but not accepted" in client.out
+    assert "2.2.1" in client.out
 
 
 @pytest.mark.tool("cmake")

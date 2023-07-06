@@ -20,11 +20,11 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        policy = self.conanfile.cpp_info.get_property("cmake_package_version_compat")
+        policy = self.conanfile.cpp_info.get_property("cmake_config_version_compat")
         if policy is None:
             policy = "SameMajorVersion"
         if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
-            raise ConanException(f"Unknown cmake_package_version_compat={policy} in {self.conanfile}")
+            raise ConanException(f"Unknown cmake_config_version_compat={policy} in {self.conanfile}")
         return {"version": self.conanfile.ref.version,
                 "policy": policy}
 
@@ -83,6 +83,7 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
                   set(PACKAGE_VERSION_COMPATIBLE TRUE)
                 else()
                   set(PACKAGE_VERSION_COMPATIBLE FALSE)
+                endif()
                 {% endif %}
 
                 if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
