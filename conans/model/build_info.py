@@ -117,30 +117,8 @@ class _Component:
     @staticmethod
     def deserialize(contents):
         result = _Component()
-        # TODO: Refactor to avoid this repetition
-        fields = [
-            "includedirs",
-            "srcdirs",
-            "libdirs",
-            "resdirs",
-            "bindirs",
-            "builddirs",
-            "frameworkdirs",
-            "system_libs",
-            "frameworks",
-            "libs",
-            "defines",
-            "cflags",
-            "cxxflags",
-            "sharedlinkflags",
-            "exelinkflags",
-            "objects",
-            "sysroot",
-            "requires",
-            "properties"
-        ]
-        for f in fields:
-            setattr(result, f"_{f}", contents[f])
+        for field, value in contents.items():
+            setattr(result, f"_{field}", value)
         return result
 
     @property

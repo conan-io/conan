@@ -60,9 +60,12 @@ class DownloadCache:
         if excluded_urls is None:
             excluded_urls = []
 
-        all_refs = {str(k) for k, ref in package_list.refs()
-                    if ref.get("upload") or any(should_upload_sources(p)
-                                                for p in ref["packages"].values())}
+        all_refs = set()
+        for k, ref in package_list.refs():
+            packages = ref.get("packages", {}).values()
+            if ref.get("upload") or any(should_upload_sources(p) for p in packages):
+                all_refs.add(str(k))
+
         for f in os.listdir(path_backups):
             if f.endswith(".json"):
                 f = os.path.join(path_backups, f)

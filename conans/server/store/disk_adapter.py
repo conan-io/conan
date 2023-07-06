@@ -1,12 +1,16 @@
 import os
+from contextlib import contextmanager
 
 import fasteners
 
 from conans.errors import NotFoundException
-from conans.util.env import no_op
 from conans.util.files import md5sum, rmdir
 from conans.server.utils.files import path_exists, relative_dirs
 
+
+@contextmanager
+def no_op():
+    yield
 
 
 class ServerDiskAdapter(object):
