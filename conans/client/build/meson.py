@@ -26,6 +26,8 @@ class Meson(object):
                Possible values: ninja,vs,vs2010,vs2015,vs2017,xcode
         :param build_type: Overrides default build type comming from settings
         """
+        conanfile.output.warning(f"**** The 'from conans import Meson' helper is deprecated. "
+                                 "Please update your code and remove it. ****")
         self._conanfile = conanfile
         self._settings = conanfile.settings
         self._append_vcvars = append_vcvars

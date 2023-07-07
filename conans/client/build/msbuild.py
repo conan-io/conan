@@ -40,6 +40,9 @@ class MSBuild(object):
             self._settings = conanfile
             self.build_env = None
 
+        conanfile.output.warning(f"**** The 'from conans import MSBuild' helper is deprecated. "
+                                 "Please update your code and remove it. ****")
+
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
               vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,

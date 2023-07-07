@@ -117,7 +117,7 @@ class GeneratorManager(object):
         elif generator_name == "MesonDeps":
             from conan.tools.meson import MesonDeps
             return MesonDeps
-        elif generator_name in ("MSBuildDeps", "msbuild"):
+        elif generator_name in "MSBuildDeps":
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
         elif generator_name == "VCVars":
@@ -168,17 +168,6 @@ class GeneratorManager(object):
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
-                if generator_name == "msbuild":
-                    msg = (
-                        "\n*****************************************************************\n"
-                        "******************************************************************\n"
-                        "'msbuild' has been deprecated and moved.\n"
-                        "It will be removed in next Conan release.\n"
-                        "Use 'MSBuildDeps' method instead.\n"
-                        "********************************************************************\n"
-                        "********************************************************************\n")
-                    from conans.client.output import Color
-                    output.writeln(msg, front=Color.BRIGHT_RED)
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
@@ -207,6 +196,8 @@ class GeneratorManager(object):
             try:
                 generator.output_path = old_gen_folder
                 content = generator.content
+                conanfile.output.warning(f"**** The '{generator_name}' generator is deprecated. "
+                                         "Please update your code and remove it. ****")
                 if isinstance(content, dict):
                     if generator.filename:
                         output.warn("Generator %s is multifile. Property 'filename' not used"
