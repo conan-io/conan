@@ -88,8 +88,7 @@ def _get_formatted_dirs(folder_name, folders, prefix_path_):
             directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
         suffix = str(i) if i else ""
         var_name = f"{folder_name}{suffix}"
-        ret[var_name] = "%s%s" % (prefix, directory)
-        ret.setdefault(f"%%{folder_name}vars", []).append(var_name)
+        ret[var_name] = f"{prefix}{directory}"
     return ret
 
 
@@ -100,9 +99,7 @@ class _PCContentGenerator:
 
     template = textwrap.dedent("""\
         {% for k, v in pc_variables.items() %}
-        {% if not k.startswith('%%') %}
         {{ "{}={}".format(k, v) }}
-        {% endif %}
         {% endfor %}
 
         Name: {{ name }}
@@ -185,8 +182,10 @@ class _PCContentGenerator:
         if info.cpp_info is not None:
             context.update({
                 "version": info.cpp_info.get_property("component_version") or self._dep.ref.version,
-                "cflags": self._get_cflags(pc_variables.get("%%includedirvars", []), info.cpp_info),
-                "libflags": self._get_lib_flags(pc_variables.get("%%libdirvars", []), info.cpp_info)
+                "cflags": self._get_cflags([d for d in pc_variables if d.startswith("includedir")],
+                                           info.cpp_info),
+                "libflags": self._get_lib_flags([d for d in pc_variables if d.startswith("libdir")],
+                                                info.cpp_info)
             })
         return context
 
