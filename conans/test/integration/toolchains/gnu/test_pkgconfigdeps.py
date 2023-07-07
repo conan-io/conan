@@ -186,13 +186,23 @@ def test_custom_content():
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "libdir=${prefix}/lib" in pc_content
-    assert "fakelibdir=${prefix}/my/lib/folder" in pc_content
-    assert "datadir=${prefix}/share" in pc_content
-    assert "schemasdir=${datadir}/mylib/schemas" in pc_content
-    assert "bindir=${prefix}/bin" not in pc_content
-    assert "bindir=${prefix}/my/bin/folder" in pc_content
-    assert "Name: pkg" in pc_content
+    prefix = pc_content.splitlines()[0]
+    expected = textwrap.dedent(f"""\
+    {prefix}
+    libdir=${{prefix}}/lib
+    includedir=${{prefix}}/include
+    bindir=${{prefix}}/my/bin/folder
+    fakelibdir=${{prefix}}/my/lib/folder
+    datadir=${{prefix}}/share
+    schemasdir=${{datadir}}/mylib/schemas
+
+    Name: pkg
+    Description: Conan package: pkg
+    Version: 0.1
+    Libs: -L"${{libdir}}"
+    Cflags: -I"${{includedir}}"
+    """)
+    assert expected == pc_content
 
 
 def test_custom_content_and_version_components():
