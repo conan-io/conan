@@ -34,6 +34,8 @@ class AutoToolsBuildEnvironment(object):
         """
         FIXME: include_rpath_flags CONAN 2.0 to default True? Could break many packages in center
         """
+        conanfile.output.warning(f"**** The 'AutoToolsBuildEnvironment' helper is deprecated. "
+                                 "Please update your code and remove it. ****")
         self._conanfile = conanfile
         self._win_bash = win_bash
         self._include_rpath_flags = include_rpath_flags

@@ -143,7 +143,7 @@ class BasicTest(unittest.TestCase):
                 name = "Pkg"
                 version = "0.1"
                 settings = "os", "compiler", "arch", "build_type"
-                generators = "msbuild"
+                generators = "MSBuildDeps"
 
                 def generate(self):
                     tc = MSBuildToolchain(self)

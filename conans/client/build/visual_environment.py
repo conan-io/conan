@@ -25,6 +25,8 @@ class VisualStudioBuildEnvironment(object):
         """
         :param conanfile: ConanFile instance
         """
+        conanfile.output.warning(f"**** The 'VisualStudioBuildEnvironment' helper is deprecated. "
+                                 "Please update your code and remove it. ****")
         self._with_build_type_flags = with_build_type_flags
 
         self._conanfile = conanfile

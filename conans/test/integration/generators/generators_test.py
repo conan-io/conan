@@ -156,21 +156,21 @@ qmake
                 settings = "os", "compiler", "arch", "build_type"
                 def configure(self):
                     if self.settings.os == "Windows":
-                        self.generators = ["msbuild"]
+                        self.generators = ["MSBuildDeps"]
                 """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
 
         client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
                    ' -s compiler.runtime=MD')
-        self.assertIn("conanfile.py: Generator 'msbuild' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)
         client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
                    "'-s compiler.libcxx=libstdc++")
         self.assertNotIn("msbuild", client.out)
         # create
         client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
                    '-s compiler.version=15 -s compiler.runtime=MD')
-        self.assertIn("pkg/0.1: Generator 'msbuild' calling 'generate()'", client.out)
+        self.assertIn("pkg/0.1: Generator 'MSBuildDeps' calling 'generate()'", client.out)
         client.run("create . pkg/0.1@ -s os=Linux -s compiler=gcc -s compiler.version=5.2 "
                    "-s compiler.libcxx=libstdc++")
         self.assertNotIn("msbuild", client.out)
@@ -178,4 +178,4 @@ qmake
         # Test that command line generators append
         client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
                    ' -s compiler.runtime=MD -g cmake')
-        self.assertIn("conanfile.py: Generator 'msbuild' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MSBuildDeps' calling 'generate()'", client.out)

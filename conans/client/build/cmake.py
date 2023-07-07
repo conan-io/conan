@@ -55,6 +55,8 @@ class CMake(object):
                 conanfile.output.warning(wrong_helper_msg)
             else:
                 raise ConanException(wrong_helper_msg)
+        conanfile.output.warning(f"**** The 'from conans import CMake' helper is deprecated. "
+                                 "Please update your code and remove it. ****")
         self._append_vcvars = append_vcvars
         self._conanfile = conanfile
         self._settings = conanfile.settings
