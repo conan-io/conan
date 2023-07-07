@@ -52,7 +52,9 @@ def remove(conan_api: ConanAPI, parser, *args):
                         help='Will remove from the specified remote')
     parser.add_argument("-l", "--list", help="Package list file")
     parser.add_argument('--lru', default=None, action=OnceArgument,
-                        help="List only elements that have been recently used")
+                        help="Remove recipes and binaries that have not been recently used. Use a"
+                             " time limit like --lru=5d (days) or --lru=4w (weeks),"
+                             " h (hours), m(minutes)")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:

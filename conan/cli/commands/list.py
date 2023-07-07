@@ -109,7 +109,9 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
     parser.add_argument("-gr", "--graph-recipes", help="Which recipes are listed", action="append")
     parser.add_argument('--lru', default=None, action=OnceArgument,
-                        help="List only elements that have been recently used")
+                        help="List recipes and binaries that have not been recently used. Use a"
+                             " time limit like --lru=5d (days) or --lru=4w (weeks),"
+                             " h (hours), m(minutes)")
 
     args = parser.parse_args(*args)
 
