@@ -94,9 +94,7 @@ def test_empty_dirs():
     expected = textwrap.dedent("""
         Name: mylib
         Description: Conan package: mylib
-        Version: 0.1
-        Libs:%s
-        Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
+        Version: 0.1""")
     assert "\n".join(pc_content.splitlines()[1:]) == expected
 
 
@@ -449,15 +447,17 @@ def test_pkg_config_name_full_aliases():
     pc_content = client.load("pkg_other_name.pc")
     content = textwrap.dedent(f"""\
     {prefix}
-    # Custom PC content
-
+    libdir=${{prefix}}/lib
+    includedir=${{prefix}}/include
+    bindir=${{prefix}}/bin
     datadir=${{prefix}}/share
     schemasdir=${{datadir}}/mylib/schemas
-
 
     Name: pkg_other_name
     Description: Conan package: pkg_other_name
     Version: 0.3
+    Libs: -L"${{libdir}}"
+    Cflags: -I"${{includedir}}"
     Requires: compo1
     """)
     assert content == pc_content
