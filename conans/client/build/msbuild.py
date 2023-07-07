@@ -36,12 +36,11 @@ class MSBuild(object):
             self._output = self._conanfile.output
             self.build_env = VisualStudioBuildEnvironment(self._conanfile,
                                                           with_build_type_flags=False)
+            conanfile.output.warning(f"**** The 'from conans import MSBuild' helper is deprecated. "
+                                     "Please update your code and remove it. ****")
         else:  # backwards compatible with build_sln_command
             self._settings = conanfile
             self.build_env = None
-
-        conanfile.output.warning(f"**** The 'from conans import MSBuild' helper is deprecated. "
-                                 "Please update your code and remove it. ****")
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,

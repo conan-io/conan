@@ -117,7 +117,7 @@ class GeneratorManager(object):
         elif generator_name == "MesonDeps":
             from conan.tools.meson import MesonDeps
             return MesonDeps
-        elif generator_name in "MSBuildDeps":
+        elif generator_name == "MSBuildDeps":
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
         elif generator_name == "VCVars":
