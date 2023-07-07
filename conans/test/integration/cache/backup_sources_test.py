@@ -687,6 +687,7 @@ class TestDownloadCacheBackupSources:
     def test_export_then_upload_workflow(self):
         client = TestClient(default_server_user=True)
         download_cache_folder = temp_folder()
+        mkdir(os.path.join(download_cache_folder, "s"))
         http_server = StoppableThreadBottle()
 
         http_server_base_folder_internet = temp_folder()
@@ -735,3 +736,56 @@ class TestDownloadCacheBackupSources:
         client.run("create .")
         client.run("upload * -c -r=default")
         assert sha256 in os.listdir(http_server_base_folder_backup1)
+
+    def test_export_then_upload_recipe_only_workflow(self):
+        client = TestClient(default_server_user=True)
+        download_cache_folder = temp_folder()
+        mkdir(os.path.join(download_cache_folder, "s"))
+        http_server = StoppableThreadBottle()
+
+        http_server_base_folder_internet = temp_folder()
+        http_server_base_folder_backup1 = temp_folder()
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        @http_server.server.get("/internet/<file>")
+        def get_internet_file(file):
+            return static_file(file, http_server_base_folder_internet)
+
+        @http_server.server.get("/downloader1/<file>")
+        def get_file(file):
+            return static_file(file, http_server_base_folder_backup1)
+
+        @http_server.server.put("/uploader/<file>")
+        def put_file(file):
+            dest = os.path.join(http_server_base_folder_backup1, file)
+            with open(dest, 'wb') as f:
+                f.write(request.body.read())
+
+        http_server.run_server()
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "1.0"
+               def source(self):
+                   download(self, "http://localhost:{http_server.port}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader1/', 'origin']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                    path=client.cache.cache_folder)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("export .")
+        exported_rev = client.exported_recipe_revision()
+        client.run("upload * --only-recipe -c -r=default")
+        # This second run used to crash because we thought there would be some packages always
+        client.run("upload * --only-recipe -c -r=default")
+        # Ensure we are testing for an already uploaded recipe
+        assert f"Recipe 'pkg/1.0#{exported_rev}' already in server, skipping upload" in client.out
