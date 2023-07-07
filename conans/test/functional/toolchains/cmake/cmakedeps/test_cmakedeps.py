@@ -274,7 +274,6 @@ def test_cmake_config_version_compat_rejected(policy):
                  "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install .")
     client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake', assert_error=True)
-    print(client.out)
     assert "The following configuration files were considered but not accepted" in client.out
     assert "2.2.1" in client.out
 
