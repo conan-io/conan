@@ -779,6 +779,11 @@ class TestClient(object):
         ref = RecipeReference.loads(m)
         return self.cache.ref_layout(ref)
 
+    def created_layout(self):
+        pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
+        pref = PkgReference.loads(pref)
+        return self.cache.pkg_layout(pref)
+
 
 class TurboTestClient(TestClient):
 

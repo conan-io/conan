@@ -310,25 +310,6 @@ class OpenSSLConan(ConanFile):
         self.assertEqual(sorted(os.listdir(export_path)),
                          ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST])
 
-    def _create_packages_and_builds(self):
-        pref = self.client.get_latest_package_reference(self.ref)
-        pkg_layout = self.client.get_latest_pkg_layout(pref)
-        reg_builds = pkg_layout.build()
-        reg_packs = pkg_layout.package()
-
-        folders = [os.path.join(reg_builds, '342525g4f52f35f'),
-                   os.path.join(reg_builds, 'ew9o8asdf908asdf80'),
-                   os.path.join(reg_packs, '342525g4f52f35f'),
-                   os.path.join(reg_packs, 'ew9o8asdf908asdf80')]
-
-        file_list = []
-        for f in folders:
-            for name, content in {'file1.h': 'asddfasdf', 'file1.dll': 'asddfasdf'}.items():
-                file_path = os.path.join(f, name)
-                save(file_path, content)
-                file_list.append(file_path)
-        return file_list
-
 
 class ExportMetadataTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
