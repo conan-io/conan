@@ -81,23 +81,24 @@ def upload(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
-    if not package_list.recipes:
+    if package_list.recipes:
+        if args.check:
+            conan_api.cache.check_integrity(package_list)
+        # Check if the recipes/packages are in the remote
+        conan_api.upload.check_upstream(package_list, remote, args.force)
+
+        # If only if search with "*" we ask for confirmation
+        if not args.list and not args.confirm and "*" in args.pattern:
+            _ask_confirm_upload(conan_api, package_list)
+
+        conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
+
+        if not args.dry_run:
+            conan_api.upload.upload(package_list, remote)
+            conan_api.upload.upload_backup_sources(package_list)
+    elif not args.list:
+        # Don't error on no recipes for automated workflows using list
         raise ConanException("No recipes found matching pattern '{}'".format(args.pattern))
-
-    if args.check:
-        conan_api.cache.check_integrity(package_list)
-    # Check if the recipes/packages are in the remote
-    conan_api.upload.check_upstream(package_list, remote, args.force)
-
-    # If only if search with "*" we ask for confirmation
-    if not args.list and not args.confirm and "*" in args.pattern:
-        _ask_confirm_upload(conan_api, package_list)
-
-    conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
-
-    if not args.dry_run:
-        conan_api.upload.upload(package_list, remote)
-        conan_api.upload.upload_backup_sources(package_list)
 
     pkglist = MultiPackagesList()
     pkglist.add(remote.name, package_list)
