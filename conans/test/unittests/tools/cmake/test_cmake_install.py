@@ -28,9 +28,38 @@ def test_run_install_component():
     conanfile.settings = settings
     conanfile.folders.set_base_package(temp_folder())
 
-    # Choose generator to match generic setttings
+    # Choose generator to match generic settings
     write_cmake_presets(conanfile, "toolchain", "Visual Studio 14 2015", {})
     cmake = CMake(conanfile)
     cmake.install(component="foo")
 
     assert "--component foo" in conanfile.command
+
+
+def test_run_install_strip():
+    """
+    Testing that the install/strip rule is called
+    Issue related: https://github.com/conan-io/conan/issues/14166
+    """
+
+    settings = Settings.loads(get_default_settings_yml())
+    settings.os = "Linux"
+    settings.arch = "x86_64"
+    settings.build_type = "Release"
+    settings.compiler = "gcc"
+    settings.compiler.version = "11"
+
+    conanfile = ConanFileMock()
+
+    conanfile.conf = Conf()
+    conanfile.conf["tools.cmake:install_strip"] = True
+
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+    conanfile.folders.set_base_package(temp_folder())
+
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    cmake.install()
+    assert "--strip" in conanfile.command
