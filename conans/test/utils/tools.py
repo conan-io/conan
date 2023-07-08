@@ -774,6 +774,11 @@ class TestClient(object):
     def exported_recipe_revision(self):
         return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)
 
+    def exported_layout(self):
+        m = re.search(r": Exported: (\S+)", str(self.out)).group(1)
+        ref = RecipeReference.loads(m)
+        return self.cache.ref_layout(ref)
+
 
 class TurboTestClient(TestClient):
 

@@ -137,12 +137,11 @@ sources:
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
                                                        sha256_value)})
-        ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+
+        client.run(f"create . --name=pkg --version=0.1")
         self.assertIn("OK!", client.out)
 
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        ref_layout = client.cache.ref_layout(latest_rrev)
+        ref_layout = client.exported_layout()
         source_folder = ref_layout.source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
         self.assertEqual("foo", load(downloaded_file))

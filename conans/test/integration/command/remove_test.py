@@ -39,9 +39,8 @@ class RemoveWithoutUserChannel(unittest.TestCase):
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=lib --version=1.0")
-        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
-        ref_layout = self.client.cache.ref_layout(latest_rrev)
-        pkg_ids = self.client.cache.get_package_references(latest_rrev)
+        ref_layout = self.client.exported_layout()
+        pkg_ids = self.client.cache.get_package_references(ref_layout.reference)
         latest_prev = self.client.cache.get_latest_package_reference(pkg_ids[0])
         pkg_layout = self.client.cache.pkg_layout(latest_prev)
         self.client.run("remove lib/1.0 -c")

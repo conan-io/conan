@@ -105,7 +105,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . --user=user --channel=testing")
-        ref = RecipeReference.loads("hello0/1.2.1@user/testing")
+        layout = client.exported_layout()
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
@@ -114,8 +114,7 @@ class UploadTest(unittest.TestCase):
                        assert_error=True)
             self.assertIn("Error gzopen conan_sources.tgz", client.out)
 
-            latest_rrev = client.cache.get_latest_recipe_reference(ref)
-            export_download_folder = client.cache.ref_layout(latest_rrev).download_export()
+            export_download_folder = layout.download_export()
 
             tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
@@ -189,11 +188,10 @@ class UploadTest(unittest.TestCase):
         client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
         client2.run("export . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        latest_rrev = client2.cache.get_latest_recipe_reference(ref)
-        manifest, _ = client2.cache.ref_layout(latest_rrev).recipe_manifests()
+        layout = client2.exported_layout()
+        manifest, _ = layout.recipe_manifests()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(latest_rrev).export())
+        manifest.save(layout.export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         assert "Uploading recipe 'hello0/1.2.1@frodo/stable#" in client2.out
 
@@ -216,11 +214,10 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save(files)
         client2.run("export . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        rrev2 = client2.cache.get_latest_recipe_reference(ref)
-        manifest, _ = client2.cache.ref_layout(rrev2).recipe_manifests()
+        layout = client2.exported_layout()
+        manifest, _ = layout.recipe_manifests()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(rrev2).export())
+        manifest.save(layout.export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn(f"Recipe 'hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7' already "
                       "in server, skipping upload", client2.out)
