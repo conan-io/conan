@@ -37,6 +37,18 @@ class TestListUpload:
             assert f"Uploading recipe '{r}'" in client.out
         assert str(client.out).count("Uploading package") == 2
 
+    def test_list_upload_empty_list(self, client):
+        client.run(f"install --requires=zlib/1.0.0@user/channel -f json",
+                   redirect_stdout="install_graph.json")
+
+        # Generate an empty pkglist.json
+        client.run(f"list --format=json --graph=install_graph.json --graph-binaries=bogus",
+                   redirect_stdout="pkglist.json")
+
+        # No binaries should be uploaded since the pkglist is empty, but the command
+        # should not error
+        client.run("upload --list=pkglist.json -r=default")
+
 
 class TestGraphCreatedUpload:
     def test_create_upload(self):
