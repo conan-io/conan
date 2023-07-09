@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
@@ -96,8 +96,11 @@ def upload(conan_api: ConanAPI, parser, *args):
         if not args.dry_run:
             conan_api.upload.upload(package_list, remote)
             conan_api.upload.upload_backup_sources(package_list)
-    elif not args.list:
-        # Don't error on no recipes for automated workflows using list
+    elif args.list:
+        # Don't error on no recipes for automated workflows using list,
+        # but warn to tell the user that no packages were uploaded
+        ConanOutput().warning(f"No packages were uploaded because the package list is empty.")
+    else:
         raise ConanException("No recipes found matching pattern '{}'".format(args.pattern))
 
     pkglist = MultiPackagesList()
