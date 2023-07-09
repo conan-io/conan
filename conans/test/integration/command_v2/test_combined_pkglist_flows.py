@@ -48,6 +48,7 @@ class TestListUpload:
         # No binaries should be uploaded since the pkglist is empty, but the command
         # should not error
         client.run("upload --list=pkglist.json -r=default")
+        assert "No packages were uploaded because the package list is empty." in client.out
 
 
 class TestGraphCreatedUpload:
