@@ -657,7 +657,7 @@ class TestClient(object):
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        ref_layout = self.cache.ref_layout(ref)
+        ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
     def get_default_host_profile(self):
@@ -777,7 +777,7 @@ class TestClient(object):
     def exported_layout(self):
         m = re.search(r": Exported: (\S+)", str(self.out)).group(1)
         ref = RecipeReference.loads(m)
-        return self.cache.ref_layout(ref)
+        return self.cache.recipe_layout(ref)
 
     def created_layout(self):
         pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
