@@ -99,6 +99,12 @@ class UploadTest(unittest.TestCase):
         assert "Uploading recipe 'hello0/1.2.1@" in client.out
         assert "Uploading package 'hello0/1.2.1@" in client.out
 
+    def test_pattern_upload_no_recipes(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("upload bogus/*@dummy/testing --confirm -r default", assert_error=True)
+        self.assertIn("No recipes found matching pattern 'bogus/*@dummy/testing'", client.out)
+
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
         client = TestClient(default_server_user=True)
