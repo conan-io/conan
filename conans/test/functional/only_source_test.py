@@ -103,7 +103,7 @@ class OnlySourceTest(unittest.TestCase):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
         other_client.run("install --requires=%s --build='*'" % str(ref))
-        pkg_layout = client.created_layout()
+        pkg_layout = other_client.created_layout()
         self.assertTrue(os.path.exists(pkg_layout.build()))
         self.assertTrue(os.path.exists(pkg_layout.package()))
 
