@@ -18,7 +18,7 @@ def test_cache_path(created_package):
     recipe_revision = pref.ref.revision
 
     # Basic recipe paths, without specifying revision
-    recipe_layout = t.cache.ref_layout(pref.ref)
+    recipe_layout = t.exported_layout()
     t.run("cache path foo/1.0")
     assert recipe_layout.export() == str(t.out).rstrip()
     t.run("cache path foo/1.0#latest")

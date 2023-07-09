@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -17,9 +16,7 @@ def test_meson_lib_template():
     client.run("install .")
     client.run("build .")
     client.run("export-pkg . --name=hello --version=0.1")
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.created_layout().package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
     # Create works
