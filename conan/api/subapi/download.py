@@ -34,7 +34,7 @@ class DownloadAPI:
         assert server_ref == ref
         app.cache.update_recipe_timestamp(server_ref)
 
-        layout = app.cache.ref_layout(ref)
+        layout = app.cache.recipe_layout(ref)
         conan_file_path = layout.conanfile()
         conanfile = app.loader.load_basic(conan_file_path, display=ref, remotes=[remote])
 
@@ -58,7 +58,7 @@ class DownloadAPI:
             if metadata:
                 app.remote_manager.get_package_metadata(pref, remote, metadata)
             return False
-        layout = app.cache.ref_layout(pref.ref)
+        layout = app.cache.recipe_layout(pref.ref)
         conan_file_path = layout.conanfile()
         conanfile = app.loader.load_basic(conan_file_path, display=pref.ref)
         output.info(f"Downloading package '{pref.repr_notime()}'")

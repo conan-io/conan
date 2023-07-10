@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.scm import git_add_changes_commit
 from conans.test.utils.tools import TestClient
@@ -17,10 +16,7 @@ class TestRevisionModeSCM:
         commit = t.init_git_repo({'conanfile.py': conanfile})
 
         t.run(f"export . --name=pkg --version=0.1")
-
-        ref = RecipeReference.loads("pkg/0.1")
-        latest_rev = t.cache.get_latest_recipe_reference(ref)
-        assert latest_rev.revision == commit
+        assert t.exported_recipe_revision() == commit
 
         # Now it will fail if dirty
         t.save({"conanfile.py": conanfile + "\n#comment"})
@@ -29,8 +25,7 @@ class TestRevisionModeSCM:
         # Commit to fix
         commit2 = git_add_changes_commit(t.current_folder, msg="fix")
         t.run(f"export . --name=pkg --version=0.1")
-        latest_rev = t.cache.get_latest_recipe_reference(ref)
-        assert latest_rev.revision == commit2
+        assert t.exported_recipe_revision() == commit2
 
     def test_revision_mode_scm_subfolder(self):
         """ emulates a mono-repo with 2 subprojects, when a change is done in a subproject
@@ -46,15 +41,11 @@ class TestRevisionModeSCM:
 
         # pkga still gets the initial commit, as it didn't change its contents
         t.run(f"export pkga --name=pkga --version=0.1")
-        ref = RecipeReference.loads("pkga/0.1")
-        latest_rev = t.cache.get_latest_recipe_reference(ref)
-        assert latest_rev.revision == commit
+        assert t.exported_recipe_revision() == commit
 
         # but pkgb will get the commit of the new changed folder
         t.run(f"export pkgb --name=pkgb --version=0.1")
-        ref = RecipeReference.loads("pkgb/0.1")
-        latest_rev = t.cache.get_latest_recipe_reference(ref)
-        assert latest_rev.revision == commit_b
+        assert t.exported_recipe_revision() == commit_b
 
     def test_auto_revision_without_commits(self):
         """If we have a repo but without commits, it has to fail when the revision_mode=scm"""

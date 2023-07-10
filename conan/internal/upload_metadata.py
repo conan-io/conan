@@ -21,7 +21,7 @@ def _metadata_files(folder, metadata):
 def gather_metadata(package_list, cache, metadata):
     for rref, recipe_bundle in package_list.refs():
         if metadata or recipe_bundle["upload"]:
-            metadata_folder = cache.ref_layout(rref).metadata()
+            metadata_folder = cache.recipe_layout(rref).metadata()
             files = _metadata_files(metadata_folder, metadata)
             if files:
                 ConanOutput(scope=str(rref)).info(f"Recipe metadata: {len(files)} files")

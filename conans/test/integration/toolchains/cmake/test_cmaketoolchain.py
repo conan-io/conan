@@ -993,9 +993,7 @@ def test_recipe_build_folders_vars():
 
     # Now we do the build in the cache, the recipe folders are still used
     client.run("create . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True")
-    ref = client.created_package_reference("pkg/0.1")
-    layout = client.get_latest_pkg_layout(ref)
-    build_folder = layout.build()
+    build_folder = client.created_layout().build()
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
@@ -1003,9 +1001,7 @@ def test_recipe_build_folders_vars():
     # If we change the conf ``build_folder_vars``, it doesn't affect the cache build
     client.run("create . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True "
                "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
-    ref = client.created_package_reference("pkg/0.1")
-    layout = client.get_latest_pkg_layout(ref)
-    build_folder = layout.build()
+    build_folder = client.created_layout().build()
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets

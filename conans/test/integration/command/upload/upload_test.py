@@ -38,7 +38,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("create .")
 
-        pkg_folder = client.created_package_folder("hello/0.1")
+        pkg_folder = client.created_layout().package()
         set_dirty(pkg_folder)
 
         client.run("upload * -r=default -c", assert_error=True)

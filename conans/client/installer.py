@@ -118,7 +118,7 @@ class _PackageBuilder(object):
         pref = node.pref
 
         # TODO: cache2.0 fix this
-        recipe_layout = self._cache.ref_layout(pref.ref)
+        recipe_layout = self._cache.recipe_layout(pref.ref)
 
         base_source = recipe_layout.source()
         base_package = package_layout.package()
@@ -180,7 +180,7 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
-        recipe_layout = self._cache.ref_layout(node.ref)
+        recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
 
