@@ -33,7 +33,7 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
     pid1 = c.created_package_id("dep/0.1")
     c.run("create dep -o dep/*:myopt=False")
     pid2 = c.created_package_id("dep/0.1")
-    if typedep is not "header-library":
+    if typedep != "header-library":
         assert pid1 != pid2
 
     c.run("create consumer -o dep/*:myopt=True")
