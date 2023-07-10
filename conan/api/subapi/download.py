@@ -1,7 +1,6 @@
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -34,13 +33,10 @@ class DownloadAPI:
         assert server_ref == ref
         app.cache.update_recipe_timestamp(server_ref)
 
-        layout = app.cache.ref_layout(ref)
-        conan_file_path = layout.conanfile()
-        conanfile = app.loader.load_basic(conan_file_path, display=ref, remotes=[remote])
-
         # Download the sources too, don't be lazy
         output.info(f"Downloading '{str(ref)}' sources")
-        retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, [remote])
+        recipe_layout = app.cache.ref_layout(ref)
+        app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
         return True
 
     def package(self, pref: PkgReference, remote: Remote, metadata=None):
@@ -58,9 +54,6 @@ class DownloadAPI:
             if metadata:
                 app.remote_manager.get_package_metadata(pref, remote, metadata)
             return False
-        layout = app.cache.ref_layout(pref.ref)
-        conan_file_path = layout.conanfile()
-        conanfile = app.loader.load_basic(conan_file_path, display=pref.ref)
         output.info(f"Downloading package '{pref.repr_notime()}'")
-        app.remote_manager.get_package(conanfile, pref, remote)
+        app.remote_manager.get_package(pref, remote)
         return True
