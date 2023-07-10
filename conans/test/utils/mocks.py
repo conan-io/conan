@@ -63,7 +63,7 @@ class MockSettings(object):
             raise ConanException("'%s' value not defined" % name)
 
     def rm_safe(self, name):
-        self.values.pop(name)
+        self.values.pop(name, None)
 
 
 class MockCppInfo(object):
