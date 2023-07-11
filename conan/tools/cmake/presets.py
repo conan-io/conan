@@ -28,11 +28,11 @@ class _CMakePresets:
             if "CMAKE_SH" not in cache_variables:
                 cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
 
-            cmake_make_program = conanfile.conf.get("tools.gnu:make_program",
-                                                    default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
-            if cmake_make_program:
-                cmake_make_program = cmake_make_program.replace("\\", "/")
-                cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
+        cmake_make_program = conanfile.conf.get("tools.gnu:make_program",
+                                                default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
+        if cmake_make_program:
+            cmake_make_program = cmake_make_program.replace("\\", "/")
+            cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
 
         if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
             cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"

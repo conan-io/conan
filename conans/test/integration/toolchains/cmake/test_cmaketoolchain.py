@@ -582,6 +582,11 @@ def test_toolchain_cache_variables():
     assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
     assert f"-G {_format_val('MinGW Makefiles')}" in client.out
 
+    client.run("install . --name=mylib --version=1.0 -c tools.gnu:make_program='MyMake'")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
+
 
 def test_android_c_library():
     client = TestClient()
