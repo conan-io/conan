@@ -62,6 +62,9 @@ class MockSettings(object):
         except KeyError:
             raise ConanException("'%s' value not defined" % name)
 
+    def rm_safe(self, name):
+        self.values.pop(name, None)
+
 
 class MockCppInfo(object):
     def __init__(self):
@@ -81,6 +84,7 @@ class MockConanfile(ConanFile):
     def __init__(self, settings, options=None, runner=None):
         self.display_name = ""
         self._conan_node = None
+        self.package_type = "unknown"
         self.folders = Folders()
         self.settings = settings
         self.settings_build = settings
@@ -90,9 +94,15 @@ class MockConanfile(ConanFile):
         self.conf = Conf()
 
         class MockConanInfo:
-            pass
+            settings = None
+            options = None
+
+            def clear(self):
+                self.settings = {}
+                self.options = {}
         self.info = MockConanInfo()
         self.info.settings = settings  # Incomplete, only settings for Cppstd Min/Max tests
+        self.info.options = options
 
     def run(self, *args, **kwargs):
         if self.runner:
