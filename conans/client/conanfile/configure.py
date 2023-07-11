@@ -1,7 +1,7 @@
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
-from conan.tools.options import handle_common_config_options, handle_common_configure_options
+from conan.tools import default_config_options, default_configure
 
 
 def run_configure_method(conanfile, down_options, profile_options, ref):
@@ -11,7 +11,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
     else:
-        handle_common_config_options(conanfile)
+        default_config_options(conanfile)
 
     # Assign only the current package options values, but none of the dependencies
     is_consumer = conanfile._conan_is_consumer
@@ -21,7 +21,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(conanfile, "configure"):
             conanfile.configure()
     else:
-        handle_common_configure_options(conanfile)
+        default_configure(conanfile)
 
     self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
                                                                       is_consumer)

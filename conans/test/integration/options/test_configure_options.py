@@ -125,7 +125,7 @@ class ConfigureOptionsTest(unittest.TestCase):
         client = TestClient()
         conanfile = textwrap.dedent(f"""\
                from conan import ConanFile
-               from conan.tools.options import handle_common_config_options, handle_common_configure_options
+               from conan.tools import default_config_options, default_configure
 
                class Pkg(ConanFile):
                    settings = "os", "compiler", "arch", "build_type"
@@ -133,10 +133,10 @@ class ConfigureOptionsTest(unittest.TestCase):
                    default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
 
                    def config_options(self):
-                       handle_common_config_options(self)
+                       default_config_options(self)
 
                    def configure(self):
-                       handle_common_configure_options(self)
+                       default_configure(self)
 
                    def build(self):
                        shared = self.options.get_safe("shared")

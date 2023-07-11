@@ -1,12 +1,12 @@
 from conans.model.pkg_type import PackageType
 
 
-def handle_common_config_options(conanfile):
+def default_config_options(conanfile):
     if conanfile.settings.get_safe("os") == "Windows":
         conanfile.options.rm_safe("fPIC")
 
 
-def handle_common_configure_options(conanfile):
+def default_configure(conanfile):
     if conanfile.options.get_safe("header_only"):
         conanfile.options.rm_safe("fPIC")
         conanfile.options.rm_safe("shared")
@@ -14,6 +14,6 @@ def handle_common_configure_options(conanfile):
         conanfile.options.rm_safe("fPIC")
 
 
-def handle_common_package_id_options(conanfile):
+def default_package_id(conanfile):
     if conanfile.options.get_safe("header_only") or conanfile.package_type is PackageType.HEADER:
         conanfile.info.clear()
