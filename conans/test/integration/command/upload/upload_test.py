@@ -38,7 +38,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("create .")
 
-        pkg_folder = client.created_package_folder("hello/0.1")
+        pkg_folder = client.created_layout().package()
         set_dirty(pkg_folder)
 
         client.run("upload * -r=default -c", assert_error=True)
@@ -167,11 +167,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
         client.run("create . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        pkg_ids = client.cache.get_package_references(latest_rrev)
-        latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
-        package_folder = client.cache.pkg_layout(latest_prev).package()
+        package_folder = client.created_layout().package()
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)

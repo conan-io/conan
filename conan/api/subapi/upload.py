@@ -20,7 +20,7 @@ class UploadAPI:
         the package_list in that case"""
         app = ConanApp(self.conan_api.cache_folder)
         for ref, bundle in package_list.refs():
-            layout = app.cache.ref_layout(ref)
+            layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path)
             if conanfile.upload_policy == "skip":
