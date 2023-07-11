@@ -302,8 +302,10 @@ def test_conandata_trim():
           """)
     c.save({"conanfile.py": conanfile,
             "conandata.yml": conandata_yml})
-    c.run("export . 1.0@")
-    assert "pkg/1.0: Exported revision: 70612e15e4fc9af1123fe11731ac214f" in c.out
+    c.run("export . --version=1.0")
+    layout = c.exported_layout()
+    data1 = load(os.path.join(layout.export(), "conandata.yml"))
+    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
     conandata_yml2 = textwrap.dedent("""\
         sources:
          "1.0":
@@ -322,5 +324,9 @@ def test_conandata_trim():
         something: else
         """)
     c.save({"conandata.yml": conandata_yml2})
-    c.run("export . 1.0@")
-    assert "pkg/1.0: Exported revision: 70612e15e4fc9af1123fe11731ac214f" in c.out
+    c.run("export . --version=1.0")
+    layout = c.exported_layout()
+    data2 = load(os.path.join(layout.export(), "conandata.yml"))
+    assert "1.1" not in data2
+    assert data1 == data2
+    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
