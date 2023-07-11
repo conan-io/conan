@@ -94,9 +94,7 @@ def test_empty_dirs():
     expected = textwrap.dedent("""
         Name: mylib
         Description: Conan package: mylib
-        Version: 0.1
-        Libs:%s
-        Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
+        Version: 0.1""")
     assert "\n".join(pc_content.splitlines()[1:]) == expected
 
 
@@ -173,9 +171,10 @@ def test_custom_content():
 
             def package_info(self):
                 custom_content = textwrap.dedent(\"""
+                        bindir=${prefix}/my/bin/folder
+                        fakelibdir=${prefix}/my/lib/folder
                         datadir=${prefix}/share
                         schemasdir=${datadir}/mylib/schemas
-                        bindir=${prefix}/bin
                     \""")
                 self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                 self.cpp_info.includedirs = ["include"]
@@ -187,11 +186,23 @@ def test_custom_content():
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "libdir=${prefix}/lib" in pc_content
-    assert "datadir=${prefix}/share" in pc_content
-    assert "schemasdir=${datadir}/mylib/schemas" in pc_content
-    assert "bindir=${prefix}/bin" in pc_content
-    assert "Name: pkg" in pc_content
+    prefix = pc_content.splitlines()[0]
+    expected = textwrap.dedent(f"""\
+    {prefix}
+    libdir=${{prefix}}/lib
+    includedir=${{prefix}}/include
+    bindir=${{prefix}}/my/bin/folder
+    fakelibdir=${{prefix}}/my/lib/folder
+    datadir=${{prefix}}/share
+    schemasdir=${{datadir}}/mylib/schemas
+
+    Name: pkg
+    Description: Conan package: pkg
+    Version: 0.1
+    Libs: -L"${{libdir}}"
+    Cflags: -I"${{includedir}}"
+    """)
+    assert expected == pc_content
 
 
 def test_custom_content_and_version_components():
@@ -446,15 +457,17 @@ def test_pkg_config_name_full_aliases():
     pc_content = client.load("pkg_other_name.pc")
     content = textwrap.dedent(f"""\
     {prefix}
-    # Custom PC content
-
+    libdir=${{prefix}}/lib
+    includedir=${{prefix}}/include
+    bindir=${{prefix}}/bin
     datadir=${{prefix}}/share
     schemasdir=${{datadir}}/mylib/schemas
-
 
     Name: pkg_other_name
     Description: Conan package: pkg_other_name
     Version: 0.3
+    Libs: -L"${{libdir}}"
+    Cflags: -I"${{includedir}}"
     Requires: compo1
     """)
     assert content == pc_content

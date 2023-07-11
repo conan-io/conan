@@ -388,3 +388,17 @@ def test_test_package_lockfile_location():
     assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
     c.run("test test_package dep/0.1 --lockfile=myconan.lock --lockfile-out=myconan2.lock")
     assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
+
+
+def test_package_missing_binary_msg():
+    # https://github.com/conan-io/conan/issues/13904
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "0.1"),
+            "test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("export .")
+    c.run("test test_package dep/0.1", assert_error=True)
+    assert "ERROR: Missing binary: dep/0.1" in c.out
+    assert "'conan test' tested packages must exist" in c.out
+    c.run("test test_package dep/0.1 --build=dep/0.1", assert_error=True)
+    assert "ERROR: Missing binary: dep/0.1" in c.out
+    assert "'conan test' tested packages must exist" in c.out

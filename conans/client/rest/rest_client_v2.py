@@ -60,8 +60,7 @@ class RestV2Methods(RestCommonMethods):
 
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
-        if not ref.revision:
-            ref, _ = self.get_latest_recipe_reference(ref)
+        assert ref.revision, f"get_recipe_sources() called without revision {ref}"
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]

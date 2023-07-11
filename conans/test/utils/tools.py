@@ -657,7 +657,7 @@ class TestClient(object):
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        ref_layout = self.cache.ref_layout(ref)
+        ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
     def get_default_host_profile(self):
@@ -765,14 +765,18 @@ class TestClient(object):
                                str(self.out)).group(1)
         return PkgReference.loads(pref)
 
-    def created_package_folder(self, ref):
-        pref = self.created_package_reference(ref)
-        prev = self.cache.get_latest_package_reference(pref)
-        pkg_folder = self.cache.pkg_layout(prev).package()
-        return pkg_folder
-
     def exported_recipe_revision(self):
         return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)
+
+    def exported_layout(self):
+        m = re.search(r": Exported: (\S+)", str(self.out)).group(1)
+        ref = RecipeReference.loads(m)
+        return self.cache.recipe_layout(ref)
+
+    def created_layout(self):
+        pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
+        pref = PkgReference.loads(pref)
+        return self.cache.pkg_layout(pref)
 
 
 class TurboTestClient(TestClient):

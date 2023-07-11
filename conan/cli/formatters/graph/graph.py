@@ -105,20 +105,14 @@ def format_graph_html(result):
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
+    error = {
+        "type": "unknown",
+        "context": graph.error,
+        "should_highlight_node": lambda node: False
+    }
     if isinstance(graph.error, GraphConflictError):
-        error = {
-            "label": graph.error.require.ref,
-            "type": "conflict",
-            "from": graph.error.node.id or graph.error.base_previous.id,
-            "prev_node": graph.error.prev_node,
-            "should_highlight_node": lambda node: node.id == graph.error.node.id
-        }
-    else:
-        error = {
-            "type": "unknown",
-            "error:": graph.error,
-            "should_highlight_node": lambda node: False
-        }
+        error["type"] = "conflict"
+        error["should_highlight_node"] = lambda node: node.id == graph.error.node.id
     cli_out_write(_render_graph(graph, error, template, template_folder))
     if graph.error:
         raise graph.error

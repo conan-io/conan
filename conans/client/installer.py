@@ -118,7 +118,7 @@ class _PackageBuilder(object):
         pref = node.pref
 
         # TODO: cache2.0 fix this
-        recipe_layout = self._cache.ref_layout(pref.ref)
+        recipe_layout = self._cache.recipe_layout(pref.ref)
 
         base_source = recipe_layout.source()
         base_package = package_layout.package()
@@ -180,7 +180,7 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
-        recipe_layout = self._cache.ref_layout(node.ref)
+        recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
 
@@ -249,7 +249,7 @@ class BinaryInstaller:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
-                    self._handle_package(package, install_reference, None, handled_count, package_count)
+                    self._handle_package(package, install_reference, handled_count, package_count)
                     handled_count += 1
 
         MockInfoProperty.message()
@@ -285,9 +285,9 @@ class BinaryInstaller:
         node = package.nodes[0]
         assert node.pref.revision is not None
         assert node.pref.timestamp is not None
-        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
+        self._remote_manager.get_package(node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, remotes, handled_count, total_count):
+    def _handle_package(self, package, install_reference, handled_count, total_count):
         if package.binary == BINARY_SYSTEM_TOOL:
             return
 

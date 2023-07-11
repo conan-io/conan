@@ -6,9 +6,8 @@ import textwrap
 import unittest
 from textwrap import dedent
 
-from conans.model.package_ref import PkgReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
 
@@ -128,11 +127,7 @@ class TestConan(ConanFile):
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
-        rrev = client.exported_recipe_revision()
-        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
-        package_folder = client.cache.pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -159,12 +154,8 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
                    "-s os=Windows")
-        rrev = client.exported_recipe_revision()
-        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
 
-        package_folder = client.cache.pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -199,11 +190,8 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
         client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
-        rrev = client.exported_recipe_revision()
-        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
-        package_folder = client.cache.pkg_layout(pref).package()
+
+        package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -315,10 +303,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        rrev = client.exported_recipe_revision()
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1#{rrev}:{NO_SETTINGS_PACKAGE_ID}#{prev}")
-        package_folder = client.cache.pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 

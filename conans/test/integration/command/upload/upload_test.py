@@ -38,7 +38,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("create .")
 
-        pkg_folder = client.created_package_folder("hello/0.1")
+        pkg_folder = client.created_layout().package()
         set_dirty(pkg_folder)
 
         client.run("upload * -r=default -c", assert_error=True)
@@ -99,13 +99,19 @@ class UploadTest(unittest.TestCase):
         assert "Uploading recipe 'hello0/1.2.1@" in client.out
         assert "Uploading package 'hello0/1.2.1@" in client.out
 
+    def test_pattern_upload_no_recipes(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("upload bogus/*@dummy/testing --confirm -r default", assert_error=True)
+        self.assertIn("No recipes found matching pattern 'bogus/*@dummy/testing'", client.out)
+
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . --user=user --channel=testing")
-        ref = RecipeReference.loads("hello0/1.2.1@user/testing")
+        layout = client.exported_layout()
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
@@ -114,8 +120,7 @@ class UploadTest(unittest.TestCase):
                        assert_error=True)
             self.assertIn("Error gzopen conan_sources.tgz", client.out)
 
-            latest_rrev = client.cache.get_latest_recipe_reference(ref)
-            export_download_folder = client.cache.ref_layout(latest_rrev).download_export()
+            export_download_folder = layout.download_export()
 
             tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
@@ -162,11 +167,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
         client.run("create . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        pkg_ids = client.cache.get_package_references(latest_rrev)
-        latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
-        package_folder = client.cache.pkg_layout(latest_prev).package()
+        package_folder = client.created_layout().package()
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)
@@ -189,11 +190,10 @@ class UploadTest(unittest.TestCase):
         client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
         client2.run("export . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        latest_rrev = client2.cache.get_latest_recipe_reference(ref)
-        manifest, _ = client2.cache.ref_layout(latest_rrev).recipe_manifests()
+        layout = client2.exported_layout()
+        manifest, _ = layout.recipe_manifests()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(latest_rrev).export())
+        manifest.save(layout.export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         assert "Uploading recipe 'hello0/1.2.1@frodo/stable#" in client2.out
 
@@ -216,11 +216,10 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save(files)
         client2.run("export . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        rrev2 = client2.cache.get_latest_recipe_reference(ref)
-        manifest, _ = client2.cache.ref_layout(rrev2).recipe_manifests()
+        layout = client2.exported_layout()
+        manifest, _ = layout.recipe_manifests()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(rrev2).export())
+        manifest.save(layout.export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn(f"Recipe 'hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7' already "
                       "in server, skipping upload", client2.out)

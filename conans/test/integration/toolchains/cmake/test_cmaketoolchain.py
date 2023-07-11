@@ -582,6 +582,11 @@ def test_toolchain_cache_variables():
     assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
     assert f"-G {_format_val('MinGW Makefiles')}" in client.out
 
+    client.run("install . --name=mylib --version=1.0 -c tools.gnu:make_program='MyMake'")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cache_variables = presets["configurePresets"][0]["cacheVariables"]
+    assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
+
 
 def test_android_c_library():
     client = TestClient()
@@ -993,9 +998,7 @@ def test_recipe_build_folders_vars():
 
     # Now we do the build in the cache, the recipe folders are still used
     client.run("create . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True")
-    ref = client.created_package_reference("pkg/0.1")
-    layout = client.get_latest_pkg_layout(ref)
-    build_folder = layout.build()
+    build_folder = client.created_layout().build()
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
@@ -1003,9 +1006,7 @@ def test_recipe_build_folders_vars():
     # If we change the conf ``build_folder_vars``, it doesn't affect the cache build
     client.run("create . -s os=Windows -s arch=armv8 -s build_type=Debug -o shared=True "
                "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
-    ref = client.created_package_reference("pkg/0.1")
-    layout = client.get_latest_pkg_layout(ref)
-    build_folder = layout.build()
+    build_folder = client.created_layout().build()
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
