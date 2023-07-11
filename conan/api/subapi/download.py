@@ -35,7 +35,7 @@ class DownloadAPI:
 
         # Download the sources too, don't be lazy
         output.info(f"Downloading '{str(ref)}' sources")
-        recipe_layout = app.cache.ref_layout(ref)
+        recipe_layout = app.cache.recipe_layout(ref)
         app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
         return True
 
