@@ -549,3 +549,51 @@ def test_system_libs_transitivity():
     app = c.load("app/header-release-data.cmake")
     assert "set(header_SYSTEM_LIBS_RELEASE dl)" in app
     assert "set(header_FRAMEWORKS_RELEASE CoreDriver)" in app
+
+
+class TestCMakeVersionConfigCompat:
+    """
+    https://github.com/conan-io/conan/issues/13809
+    """
+    def test_cmake_version_config_compatibility(self):
+        c = TestClient()
+        dep = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_version_compat", "AnyNewerVersion")
+                """)
+
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run("install --requires=dep/0.1 -g CMakeDeps")
+        dep = c.load("dep-config-version.cmake")
+        expected = textwrap.dedent("""\
+            if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+                set(PACKAGE_VERSION_COMPATIBLE FALSE)
+            else()
+                set(PACKAGE_VERSION_COMPATIBLE TRUE)
+
+                if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+                    set(PACKAGE_VERSION_EXACT TRUE)
+                endif()
+            endif()""")
+        assert expected in dep
+
+    def test_cmake_version_config_compatibility_error(self):
+        c = TestClient()
+        dep = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_version_compat", "Unknown")
+                """)
+
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run("install --requires=dep/0.1 -g CMakeDeps", assert_error=True)
+        assert "Unknown cmake_config_version_compat=Unknown in dep/0.1" in c.out

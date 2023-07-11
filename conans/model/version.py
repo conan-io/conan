@@ -70,6 +70,7 @@ class Version:
         else:
             value = items[0]
             self._pre = None
+
         items = value.split(".")
         items = [_VersionItem(item) for item in items]
         self._items = tuple(items)
@@ -99,8 +100,7 @@ class Version:
         items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         # prerelease and build are dropped while bumping digits
-        result = Version(v)
-        return result
+        return Version(v)
 
     def upper_bound(self, index):
         items = list(self._items[:index])
@@ -111,8 +111,7 @@ class Version:
         items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         v += "-"  # Exclude prereleases
-        result = Version(v)
-        return result
+        return Version(v)
 
     @property
     def pre(self):

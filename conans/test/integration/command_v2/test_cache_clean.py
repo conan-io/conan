@@ -9,10 +9,9 @@ def test_cache_clean():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("*").with_exports_sources("*"),
             "sorces/file.txt": ""})
     c.run("create .")
-    pref = c.created_package_reference("pkg/0.1")
+    ref_layout = c.exported_layout()
+    pkg_layout = c.created_layout()
     c.run("upload * -c -r=default")  # Force creation of tgzs
-    ref_layout = c.get_latest_ref_layout(pref.ref)
-    pkg_layout = c.get_latest_pkg_layout(pref)
     assert os.path.exists(ref_layout.source())
     assert os.path.exists(ref_layout.download_export())
     assert os.path.exists(pkg_layout.build())

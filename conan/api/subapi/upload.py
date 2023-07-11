@@ -20,7 +20,7 @@ class UploadAPI:
         the package_list in that case"""
         app = ConanApp(self.conan_api.cache_folder)
         for ref, bundle in package_list.refs():
-            layout = app.cache.ref_layout(ref)
+            layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path)
             if conanfile.upload_policy == "skip":
@@ -37,8 +37,7 @@ class UploadAPI:
         :param package_list:
         :param enabled_remotes:
         :param metadata: A list of patterns of metadata that should be uploaded. Default None
-                         means all metadata will be uploaded together with the pkg artifacts
-        """
+        means all metadata will be uploaded together with the pkg artifacts"""
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)
         preparator.prepare(package_list, enabled_remotes)

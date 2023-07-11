@@ -562,9 +562,7 @@ class CMakeInstallTest(unittest.TestCase):
         assert "unrecognized option" not in client.out
         assert "--verbose" in client.out
         self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
-        ref = RecipeReference.loads("pkg/0.1")
-        pref = client.get_latest_package_reference(ref)
-        package_folder = client.get_latest_pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
     def test_install_in_build(self):

@@ -68,5 +68,5 @@ def test_get_dylib_install_name():
     for mock_output in (single_arch, universal_binary):
         with mock.patch("conan.tools.apple.apple.check_output_runner") as mock_output_runner:
             mock_output_runner.return_value = mock_output
-            install_name = _get_dylib_install_name("/path/to/libwebp.7.dylib")
+            install_name = _get_dylib_install_name("otool", "/path/to/libwebp.7.dylib")
             assert "/absolute/path/lib/libwebp.7.dylib" == install_name

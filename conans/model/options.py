@@ -135,10 +135,8 @@ class _PackageOptions:
         return self._data.get(field, default)
 
     def rm_safe(self, field):
-        try:
-            delattr(self, field)
-        except ConanException:
-            pass
+        # This should never raise any exception, in any case
+        self._data.pop(field, None)
 
     def validate(self):
         for child in self._data.values():
@@ -150,10 +148,6 @@ class _PackageOptions:
         for k, v in self._data.items():
             result._data[k] = v.copy_conaninfo_option()
         return result
-
-    @property
-    def fields(self):
-        return sorted(list(self._data.keys()))
 
     def _ensure_exists(self, field):
         if self._constrained and field not in self._data:
@@ -168,7 +162,6 @@ class _PackageOptions:
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        current_value = self._data.get(field)
         # It is always possible to remove an option, even if it is frozen (freeze=True),
         # and it got a value, because it is the only way an option could be removed
         # conditionally to other option value (like fPIC if shared)

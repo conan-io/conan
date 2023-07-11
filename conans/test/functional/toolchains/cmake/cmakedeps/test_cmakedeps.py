@@ -107,7 +107,7 @@ def test_system_libs():
 
         class Test(ConanFile):
             name = "test"
-            version = "0.1"
+            version = "2.0"
             settings = "build_type"
             def package(self):
                 save(self, os.path.join(self.package_folder, "lib/lib1.lib"), "")
@@ -119,6 +119,7 @@ def test_system_libs():
                     self.cpp_info.system_libs.append("sys1d")
                 else:
                     self.cpp_info.system_libs.append("sys1")
+                self.cpp_info.set_property("cmake_config_version_compat", "AnyNewerVersion")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -127,7 +128,7 @@ def test_system_libs():
 
     conanfile = textwrap.dedent("""
         [requires]
-        test/0.1
+        test/2.0
 
         [generators]
         CMakeDeps
@@ -137,7 +138,7 @@ def test_system_libs():
         project(consumer NONE)
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
         set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
-        find_package(test)
+        find_package(test 1.0)
         message("System libs release: ${test_SYSTEM_LIBS_RELEASE}")
         message("Libraries to Link release: ${test_LIBS_RELEASE}")
         message("System libs debug: ${test_SYSTEM_LIBS_DEBUG}")
@@ -183,7 +184,7 @@ def test_system_libs_no_libs():
 
         class Test(ConanFile):
             name = "test"
-            version = "0.1"
+            version = "0.1.1"
             settings = "build_type"
 
             def package_info(self):
@@ -191,6 +192,7 @@ def test_system_libs_no_libs():
                     self.cpp_info.system_libs.append("sys1d")
                 else:
                     self.cpp_info.system_libs.append("sys1")
+                self.cpp_info.set_property("cmake_config_version_compat", "SameMinorVersion")
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
@@ -199,7 +201,7 @@ def test_system_libs_no_libs():
 
     conanfile = textwrap.dedent("""
         [requires]
-        test/0.1
+        test/0.1.1
 
         [generators]
         CMakeDeps
@@ -209,7 +211,7 @@ def test_system_libs_no_libs():
         project(consumer NONE)
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
         set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
-        find_package(test)
+        find_package(test 0.1)
         message("System libs Release: ${test_SYSTEM_LIBS_RELEASE}")
         message("Libraries to Link release: ${test_LIBS_RELEASE}")
         message("System libs Debug: ${test_SYSTEM_LIBS_DEBUG}")
@@ -232,6 +234,48 @@ def test_system_libs_no_libs():
         assert f"Target libs: $<$<CONFIG:{build_type}>:>;$<$<CONFIG:{build_type}>:>;test_DEPS_TARGET" in client.out
         assert f"DEPS TARGET: $<$<CONFIG:{build_type}>:>;" \
                f"$<$<CONFIG:{build_type}>:{library_name}>" in client.out
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.parametrize("policy",
+                         ["AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"])
+def test_cmake_config_version_compat_rejected(policy):
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+
+        class Test(ConanFile):
+            def package_info(self):
+                self.cpp_info.set_property("cmake_config_version_compat", "{policy}")
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=mytest --version=2.2.1")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        mytest/2.2.1
+
+        [generators]
+        CMakeDeps
+        CMakeToolchain
+        """)
+    version_to_reject = {"AnyNewerVersion": "3.0",
+                         "SameMajorVersion": "1.0",
+                         "SameMinorVersion": "2.1",
+                         "ExactVersion": "2.2.0"}[policy]
+    cmakelists = textwrap.dedent(f"""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        message(STATUS "CMAKE VERSION=${{CMAKE_VERSION}}")
+        find_package(mytest {version_to_reject} CONFIG REQUIRED)
+        """)
+
+    client.save({"conanfile.txt": conanfile,
+                 "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install .")
+    client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake', assert_error=True)
+    assert "The following configuration files were considered but not accepted" in client.out
+    assert "2.2.1" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -688,7 +732,7 @@ def test_cmake_target_runtime_dlls():
     client.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
     client.run_command("cmake --build build --config Release")
     client.run_command("build\\Release\\foo.exe")
-    
+
     assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "hello.dll"))
     assert "hello/1.0: Hello World Release!" in client.out # if the DLL wasn't copied, the application would not run and show output
 
