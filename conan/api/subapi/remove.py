@@ -17,7 +17,7 @@ class RemoveAPI:
             app.remote_manager.remove_recipe(ref, remote)
         else:
             self.all_recipe_packages(ref)
-            recipe_layout = app.cache.ref_layout(ref)
+            recipe_layout = app.cache.recipe_layout(ref)
             app.cache.remove_recipe_layout(recipe_layout)
 
     def all_recipe_packages(self, ref: RecipeReference, remote: Remote = None):

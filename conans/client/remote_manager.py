@@ -84,7 +84,7 @@ class RemoteManager(object):
         assert ref.revision, "get_recipe without revision specified"
         output = ConanOutput(scope=str(ref))
         output.info("Retrieving recipe metadata from remote '%s' " % remote.name)
-        layout = self._cache.ref_layout(ref)
+        layout = self._cache.recipe_layout(ref)
         download_export = layout.download_export()
         try:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,

@@ -81,7 +81,7 @@ class PackagePreparator:
     def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
         for ref, bundle in upload_bundle.refs():
-            layout = self._app.cache.ref_layout(ref)
+            layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
 
@@ -97,7 +97,7 @@ class PackagePreparator:
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            recipe_layout = self._app.cache.ref_layout(ref)
+            recipe_layout = self._app.cache.recipe_layout(ref)
             retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)

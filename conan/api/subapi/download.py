@@ -54,6 +54,7 @@ class DownloadAPI:
             if metadata:
                 app.remote_manager.get_package_metadata(pref, remote, metadata)
             return False
+
         output.info(f"Downloading package '{pref.repr_notime()}'")
         app.remote_manager.get_package(pref, remote)
         return True

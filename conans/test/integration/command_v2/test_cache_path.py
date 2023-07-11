@@ -9,16 +9,18 @@ def created_package():
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name foo --version 1.0")
-    pref = t.created_package_reference("foo/1.0")
-    return t, pref
+    recipe_layout = t.exported_layout()
+    pkg_layout = t.created_layout()
+    return t, recipe_layout, pkg_layout
 
 
 def test_cache_path(created_package):
-    t, pref = created_package
-    recipe_revision = pref.ref.revision
+    t, recipe_layout, pkg_layout = created_package
 
     # Basic recipe paths, without specifying revision
-    recipe_layout = t.exported_layout()
+
+    recipe_revision = recipe_layout.reference.revision
+    pref = pkg_layout.reference
     t.run("cache path foo/1.0")
     assert recipe_layout.export() == str(t.out).rstrip()
     t.run("cache path foo/1.0#latest")
@@ -36,7 +38,6 @@ def test_cache_path(created_package):
     t.run(f"cache path foo/1.0#{recipe_revision} --folder=source")
     assert recipe_layout.source() == str(t.out).rstrip()
 
-    pkg_layout = t.cache.pkg_layout(pref)
     # Basic package paths, without specifying revision
     t.run(f"cache path foo/1.0:{pref.package_id}")
     assert pkg_layout.package() == str(t.out).rstrip()
@@ -59,8 +60,9 @@ def test_cache_path(created_package):
 
 
 def test_cache_path_exist_errors(created_package):
-    t, pref = created_package
-    recipe_revision = pref.ref.revision
+    t, recipe_layout, pkg_layout = created_package
+    recipe_revision = recipe_layout.reference.revision
+    pref = pkg_layout.reference
 
     t.run("cache path nonexist/1.0", assert_error=True)
     assert "ERROR: Recipe 'nonexist/1.0' not found" in t.out

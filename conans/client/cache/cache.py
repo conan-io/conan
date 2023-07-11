@@ -78,8 +78,6 @@ class ClientCache(object):
     def recipe_layout(self, ref: RecipeReference):
         return self._data_cache.get_recipe_layout(ref)
 
-    ref_layout = recipe_layout
-
     def get_latest_recipe_reference(self, ref):
         # TODO: We keep this for testing only, to be removed
         assert ref.revision is None
