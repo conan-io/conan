@@ -274,3 +274,53 @@ class TestConanDataUpdate:
         c.save({"conanfile.py": conanfile})
         c.run("export .")  # It doesn't fail
         assert "pkg/0.1: Calling export()" in c.out
+
+
+def test_conandata_trim():
+    """ test the explict trim_conandata() helper
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import trim_conandata
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            def export(self):
+                trim_conandata(self)
+        """)
+    conandata_yml = textwrap.dedent("""\
+        sources:
+          "1.0":
+            url: "url1"
+            sha256: "sha1"
+        patches:
+          "1.0":
+            - patch_file: "patches/some_patch"
+              base_path: "source_subfolder"
+        something: else
+          """)
+    c.save({"conanfile.py": conanfile,
+            "conandata.yml": conandata_yml})
+    c.run("export . 1.0@")
+    assert "pkg/1.0: Exported revision: 70612e15e4fc9af1123fe11731ac214f" in c.out
+    conandata_yml2 = textwrap.dedent("""\
+        sources:
+         "1.0":
+           url: "url1"
+           sha256: "sha1"
+         "1.1":
+           url: "url2"
+           sha256: "sha2"
+        patches:
+         "1.1":
+           - patch_file: "patches/some_patch2"
+             base_path: "source_subfolder"
+         "1.0":
+           - patch_file: "patches/some_patch"
+             base_path: "source_subfolder"
+        something: else
+        """)
+    c.save({"conandata.yml": conandata_yml2})
+    c.run("export . 1.0@")
+    assert "pkg/1.0: Exported revision: 70612e15e4fc9af1123fe11731ac214f" in c.out
