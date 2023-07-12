@@ -158,10 +158,10 @@ class ConanInternalCacheDownloader:
             raise ConanException("core.download:download_cache must be an absolute path")
         self._file_downloader = FileDownloader(requester, scope=scope)
 
-    def download(self, url, file_path, auth, verify_ssl, retry, retry_wait):
-        if not self._download_cache:
+    def download(self, url, file_path, auth, verify_ssl, retry, retry_wait, metadata=False):
+        if not self._download_cache or metadata:  # Metadata not cached and can be overwritten
             self._file_downloader.download(url, file_path, retry=retry, retry_wait=retry_wait,
-                                           verify_ssl=verify_ssl, auth=auth, overwrite=False)
+                                           verify_ssl=verify_ssl, auth=auth, overwrite=metadata)
             return
 
         download_cache = DownloadCache(self._download_cache)

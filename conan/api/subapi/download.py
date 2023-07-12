@@ -56,5 +56,5 @@ class DownloadAPI:
             return False
 
         output.info(f"Downloading package '{pref.repr_notime()}'")
-        app.remote_manager.get_package(pref, remote)
+        app.remote_manager.get_package(pref, remote, metadata)
         return True

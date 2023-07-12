@@ -155,7 +155,7 @@ class _PackageBuilder(object):
                 prev = self._package(conanfile, pref)
                 assert prev
                 node.prev = prev
-            except ConanException as exc:
+            except ConanException as exc:  # TODO: Remove this? unnecessary?
                 raise exc
 
         return node.pref
@@ -326,12 +326,14 @@ class BinaryInstaller:
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
+        pkg_metadata = package_layout.metadata()
         assert os.path.isdir(pkg_folder), "Pkg '%s' folder must exist: %s" % (str(pref), pkg_folder)
         for n in package.nodes:
             n.prev = pref.revision  # Make sure the prev is assigned
             conanfile = n.conanfile
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
+            conanfile.folders.set_base_pkg_metadata(pkg_metadata)
             self._call_package_info(conanfile, pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):

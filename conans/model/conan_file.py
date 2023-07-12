@@ -278,8 +278,8 @@ class ConanFile:
         return self.folders.recipe_metadata_folder
 
     @property
-    def pkg_metadata_folder(self):
-        return self.folders.pkg_metadata_folder
+    def package_metadata_folder(self):
+        return self.folders.package_metadata_folder
 
     @property
     def build_path(self) -> Path:
