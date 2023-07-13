@@ -47,7 +47,7 @@ class Meson(object):
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
-            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
+            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
         if reconfigure:
             cmd += ' --reconfigure'
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
