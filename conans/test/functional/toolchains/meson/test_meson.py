@@ -294,3 +294,5 @@ def test_meson_using_prefix_path_in_application():
                  "src/main.c": main_c,
                  "meson.build": meson_build})
     client.run("build .")
+    assert "unrecognized character escape sequence" not in str(client.out)  # if Visual
+    assert "unknown escape sequence" not in str(client.out)  # if mingw
