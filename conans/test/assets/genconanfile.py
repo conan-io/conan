@@ -47,7 +47,7 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
-        self._options_auto_handle = None
+        self._activate_default_behaviors = None
 
     def with_package_type(self, value):
         self._package_type = value
@@ -70,8 +70,8 @@ class GenConanfile(object):
         self._deprecated = deprecated
         return self
 
-    def with_options_auto_handle(self, options_auto_handle):
-        self._options_auto_handle = options_auto_handle
+    def with_activate_default_behaviors(self, activate_default_behaviors):
+        self._activate_default_behaviors = activate_default_behaviors
         return self
 
     def with_revision_mode(self, revision_mode):
@@ -282,8 +282,8 @@ class GenConanfile(object):
         return line
 
     @property
-    def _options_auto_handle_render(self):
-        line = "options_auto_handle = {}".format(self._options_auto_handle)
+    def _activate_default_behaviors_render(self):
+        line = "activate_default_behaviors = {}".format(self._activate_default_behaviors)
         return line
 
     @property
@@ -472,7 +472,7 @@ class GenConanfile(object):
                        "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines",
-                       "options_auto_handle"):
+                       "activate_default_behaviors"):
             if member == "requirements":
                 # FIXME: This seems exclusive, but we could mix them?
                 v = self._requirements or self._tool_requirements or self._build_requirements
