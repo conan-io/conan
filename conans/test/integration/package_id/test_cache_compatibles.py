@@ -307,6 +307,8 @@ class TestDefaultCompat:
 
 
 class TestErrorsCompatibility:
+    """ when the plugin fails, we want a clear message and a helpful trace
+    """
     def test_error_compatibility(self):
         c = TestClient()
         debug_compat = textwrap.dedent("""\
