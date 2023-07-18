@@ -116,7 +116,7 @@ class XCRun:
         command.extend(args)
         output = StringIO()
         cmd_str = cmd_args_to_string(command)
-        self._conanfile.run(f"git {cmd_str}", stdout=output)
+        self._conanfile.run(f"{cmd_str}", stdout=output)
         return output.getvalue().strip()
 
     def find(self, tool):

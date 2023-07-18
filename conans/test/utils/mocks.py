@@ -106,7 +106,6 @@ class MockConanfile(ConanFile):
 
     def run(self, *args, **kwargs):
         if self.runner:
-            kwargs["output"] = None
             self.runner(*args, **kwargs)
 
 
