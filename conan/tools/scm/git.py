@@ -1,12 +1,12 @@
 import os
+from io import StringIO
 
 from conan.tools.files import chdir
 from conan.errors import ConanException
 from conans.util.files import mkdir
-from conans.util.runners import check_output_runner
 
 
-class Git(object):
+class Git:
     """
     Git is a wrapper for several common patterns used with *git* tool.
     """
@@ -25,7 +25,9 @@ class Git(object):
         :return: The console output of the command.
         """
         with chdir(self._conanfile, self.folder):
-            return check_output_runner("git {}".format(cmd)).strip()
+            output = StringIO()
+            self._conanfile.run(f"git {cmd}", stdout=output)
+            return output.getvalue().strip()
 
     def get_commit(self):
         """
