@@ -6,6 +6,8 @@ from conans.util.files import save
 
 
 class TestErrorsProfilePlugin:
+    """ when the plugin fails, we want a clear message and a helpful trace
+    """
     def test_error_profile_plugin(self):
         c = TestClient()
         profile_plugin = textwrap.dedent("""\
