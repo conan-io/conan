@@ -3,8 +3,7 @@ from collections import OrderedDict
 
 from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
-from conans.errors import conanfile_exception_formatter
-
+from conans.errors import conanfile_exception_formatter, ConanException, scoped_traceback
 
 # TODO: Define other compatibility besides applications
 _default_compat = """\
@@ -81,7 +80,12 @@ class BinaryCompatibility:
                 recipe_compatibles = conanfile.compatibility()
                 compat_infos.extend(self._compatible_infos(conanfile, recipe_compatibles))
 
-        plugin_compatibles = self._compatibility(conanfile)
+        try:
+            plugin_compatibles = self._compatibility(conanfile)
+        except Exception as e:
+            msg = f"Error while processing 'compatibility.py' plugin for '{conanfile}'"
+            msg = scoped_traceback(msg, e, scope="plugins/compatibility")
+            raise ConanException(msg)
         compat_infos.extend(self._compatible_infos(conanfile, plugin_compatibles))
         if not compat_infos:
             return {}
