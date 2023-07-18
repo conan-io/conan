@@ -47,7 +47,6 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
-        self._activate_default_behaviors = None
 
     def with_package_type(self, value):
         self._package_type = value
@@ -68,10 +67,6 @@ class GenConanfile(object):
 
     def with_deprecated(self, deprecated):
         self._deprecated = deprecated
-        return self
-
-    def with_activate_default_behaviors(self, activate_default_behaviors):
-        self._activate_default_behaviors = activate_default_behaviors
         return self
 
     def with_revision_mode(self, revision_mode):
@@ -282,11 +277,6 @@ class GenConanfile(object):
         return line
 
     @property
-    def _activate_default_behaviors_render(self):
-        line = "activate_default_behaviors = {}".format(self._activate_default_behaviors)
-        return line
-
-    @property
     def _settings_render(self):
         line = ", ".join('"%s"' % s for s in self._settings)
         return "settings = {}".format(line)
@@ -471,8 +461,8 @@ class GenConanfile(object):
                        "exports_sources", "exports", "generators", "requires", "build_requires",
                        "tool_requires", "test_requires", "requirements", "python_requires",
                        "revision_mode", "settings", "options", "default_options", "build",
-                       "package_method", "package_info", "package_id_lines", "test_lines",
-                       "activate_default_behaviors"):
+                       "package_method", "package_info", "package_id_lines", "test_lines"
+                       ):
             if member == "requirements":
                 # FIXME: This seems exclusive, but we could mix them?
                 v = self._requirements or self._tool_requirements or self._build_requirements
