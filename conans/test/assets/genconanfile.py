@@ -47,7 +47,7 @@ class GenConanfile(object):
         self._exports = None
         self._cmake_build = False
         self._class_attributes = None
-        self._options_auto_handle = True
+        self._options_auto_handle = None
 
     def with_package_type(self, value):
         self._package_type = value
@@ -68,6 +68,10 @@ class GenConanfile(object):
 
     def with_deprecated(self, deprecated):
         self._deprecated = deprecated
+        return self
+
+    def with_options_auto_handle(self, options_auto_handle):
+        self._options_auto_handle = options_auto_handle
         return self
 
     def with_revision_mode(self, revision_mode):
