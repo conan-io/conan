@@ -27,8 +27,8 @@ class ConfigureOptionsTest(unittest.TestCase):
     ])
     def test_methods_not_defined(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are managed automatically when methods config_otpions and configure are not
-        defined.
+        Test that options are managed automatically when methods config_options and configure are not
+        defined and options_auto_handle=True.
         Check that header only package gets its unique package ID.
         """
         client = TestClient()
@@ -39,6 +39,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                settings = "os", "compiler", "arch", "build_type"
                options = {{"shared": [True, False], "fPIC": [True, False], "header_only": [True, False]}}
                default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
+               options_auto_handle = True
 
                def build(self):
                    shared = self.options.get_safe("shared")
@@ -73,7 +74,7 @@ class ConfigureOptionsTest(unittest.TestCase):
     ])
     def test_optout(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are not managed automatically when methods are defined.
+        Test that options are not managed automatically when methods are defined even if options_auto_handle=True.
         Check that header only package gets its unique package ID.
         """
         client = TestClient()
@@ -84,6 +85,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                settings = "os", "compiler", "arch", "build_type"
                options = {{"shared": [True, False], "fPIC": [True, False], "header_only": [True, False]}}
                default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
+               options_auto_handle = True
 
                def config_options(self):
                    pass
@@ -131,6 +133,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                    settings = "os", "compiler", "arch", "build_type"
                    options = {{"shared": [True, False], "fPIC": [True, False], "header_only": [True, False]}}
                    default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
+                   options_auto_handle = True
 
                    def config_options(self):
                        default_config_options(self)
@@ -162,6 +165,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                class Pkg(ConanFile):
                    settings = "os", "compiler", "arch", "build_type"
                    package_type = "header-library"
+                   options_auto_handle = True
 
                 """)
         client.save({"conanfile.py": conanfile})
