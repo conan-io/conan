@@ -22,7 +22,7 @@ def search(conan_api: ConanAPI, parser, *args):
     args = parser.parse_args(*args)
     ref_pattern = ListPattern(args.reference, rrev=None)
     if ref_pattern.package_id is not None or ref_pattern.rrev is not None:
-        raise ConanException("Incorrect search pattern")
+        raise ConanException("Specifying a recipe revision or package ID is not allowed")
 
     remotes = conan_api.remotes.list(args.remote)
     if not remotes:

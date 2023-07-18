@@ -240,4 +240,6 @@ class CMake(object):
         :return:
         """
         log_level = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        if log_level == "quiet":
+            log_level = "error"
         return ["--loglevel=" + log_level.upper()] if log_level is not None else []
