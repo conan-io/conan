@@ -15,6 +15,5 @@ class TestErrorsProfilePlugin:
         save(os.path.join(c.cache.plugins_path, "profile.py"), profile_plugin)
 
         c.run("install --requires=zlib/1.2.3", assert_error=True)
-        print(c.out)
         assert "Error while processing 'profile.py' plugin, line 2" in c.out
         assert "settings = profile.kk" in c.out
