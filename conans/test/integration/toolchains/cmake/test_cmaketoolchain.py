@@ -406,6 +406,67 @@ def test_cmake_presets_binary_dir_available():
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
 
 
+def test_cmake_presets_shared_preset():
+    """valid user preset file is created when multiple project presets inherit
+    from the same conan presets.
+    """
+    client = TestClient()
+    project_presets = textwrap.dedent("""
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {
+            "major": 3,
+            "minor": 23,
+            "patch": 0
+        },
+        "include":["ConanPresets.json"],
+        "configurePresets": [
+            {
+                "name": "debug1",
+                "inherits": ["conan-debug"]
+            },
+            {
+                "name": "debug2",
+                "inherits": ["conan-debug"]
+            },
+            {
+                "name": "release1",
+                "inherits": ["conan-release"]
+            },
+            {
+                "name": "release2",
+                "inherits": ["conan-release"]
+            }
+        ]
+    }""")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout, CMakeToolchain
+
+    class TestPresets(ConanFile):
+        generators = ["CMakeDeps"]
+        settings = "build_type"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            tc = CMakeToolchain(self)
+            tc.user_presets_path = 'ConanPresets.json'
+            tc.generate()
+    """)
+
+    client.save({"CMakePresets.json": project_presets,
+                 "conanfile.py": conanfile,
+                 "CMakeLists.txt": "" })  #File must exist for Conan to do Preset things.
+
+    client.run("install . -s build_type=Debug")
+
+    conan_presets = json.loads(client.load("ConanPresets.json"))
+    assert len(conan_presets["configurePresets"]) == 1
+    assert conan_presets["configurePresets"][0]["name"] == "conan-release"
+
+
 def test_cmake_presets_multiconfig():
     client = TestClient()
     profile = textwrap.dedent("""
