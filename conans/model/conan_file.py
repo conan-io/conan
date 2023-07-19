@@ -48,7 +48,7 @@ class ConanFile:
     default_options = None
     package_type = None
 
-    activate_default_behaviors = False
+    implements = []
 
     provides = None
     deprecated = None

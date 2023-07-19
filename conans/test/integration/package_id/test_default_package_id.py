@@ -23,9 +23,9 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
     """
     c = TestClient()
     dep = GenConanfile("dep", "0.1").with_option("myopt", [True, False]) \
-        .with_package_type(typedep).with_class_attribute("activate_default_behaviors=True")
+        .with_package_type(typedep).with_class_attribute('implements = ["auto_shared_fpic", "auto_header_only"]')
     consumer = GenConanfile("consumer", "0.1").with_requires("dep/0.1")\
-        .with_package_type(typeconsumer).with_class_attribute("activate_default_behaviors=True")
+        .with_package_type(typeconsumer).with_class_attribute('implements = ["auto_shared_fpic", "auto_header_only"]')
 
     c.save({"dep/conanfile.py": dep,
             "consumer/conanfile.py": consumer})

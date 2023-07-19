@@ -3,7 +3,7 @@ from collections import OrderedDict
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     conanfile_remove_attr, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
-from conan.tools import default_package_id
+import conans.client.conanfile.implementations as implementations
 
 
 def compute_package_id(node, new_config):
@@ -82,6 +82,8 @@ def run_validate_package_id(conanfile):
         with conanfile_exception_formatter(conanfile, "package_id"):
             with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
                 conanfile.package_id()
-    elif conanfile.activate_default_behaviors:
-        default_package_id(conanfile)
+    elif conanfile.implements:
+        for implementation in conanfile.implements:
+            implementations.call(implementations, implementation, "package_id", conanfile)
+
     conanfile.info.validate()
