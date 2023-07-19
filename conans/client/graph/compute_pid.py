@@ -3,7 +3,7 @@ from collections import OrderedDict
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
     conanfile_remove_attr, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
-import conans.client.conanfile.implementations as implementations
+from conans.client.conanfile.implementations import auto_header_only_package_id
 
 
 def compute_package_id(node, new_config):
@@ -82,8 +82,7 @@ def run_validate_package_id(conanfile):
         with conanfile_exception_formatter(conanfile, "package_id"):
             with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
                 conanfile.package_id()
-    elif conanfile.implements:
-        for implementation in conanfile.implements:
-            implementations.call(implementations, implementation, "package_id", conanfile)
+    elif "auto_header_only" in conanfile.implements:
+        auto_header_only_package_id(conanfile)
 
     conanfile.info.validate()
