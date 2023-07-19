@@ -70,8 +70,7 @@ def test_makedeps_with_tool_requires():
     assert "CONAN_NAME_TOOL" not in content
 
 
-@pytest.mark.tool("msys2")
-@pytest.mark.tool("mingw64")
+@pytest.mark.tool("make" if platform.system() != "Windows" else "msys2")
 def test_makedeps_with_makefile_build():
     """
     Build a small application using MakeDeps generator
@@ -87,7 +86,6 @@ def test_makedeps_with_makefile_build():
                     from conan.tools.files import copy
                     import os
                     class PackageConan(ConanFile):
-                        generators = "AutotoolsToolchain"
                         exports_sources = ("Makefile", "hello.cpp", "hello.h")
                         settings = "os", "arch", "compiler"
 
@@ -95,18 +93,21 @@ def test_makedeps_with_makefile_build():
                             self.win_bash = self.settings.os == "Windows"
 
                         def build(self):
-                            Autotools(self).make()
+                            self.run("make -f Makefile")
 
                         def package(self):
                             copy(self, "libhello.a", src=self.build_folder, dst=os.path.join(self.package_folder, "lib"))
                             copy(self, "hello.h", src=self.source_folder, dst=os.path.join(self.package_folder, "include"))
 
                         def package_info(self):
-                            self.cpp_info.libs = ["hello"]
+                            self.cpp_info.components["qux"].includedirs = ["include"]
+                            self.cpp_info.components["baz"].libs = ["hello"]
+                            self.cpp_info.components["baz"].defines = ["FOOBAR=1"]
                     ''')
                      })
         client.run('create . --name=hello --version=0.1.0 -c tools.microsoft.bash:subsystem=msys2 -c tools.microsoft.bash:path=bash')
-    with client.chdir("app"):
+    with client.chdir("global"):
+        # Consume from global variables
         client.run("install --requires=hello/0.1.0 -pr:b=default -pr:h=default -g MakeDeps -of build")
         client.save({"Makefile": textwrap.dedent('''
             include build/conandeps.mk
@@ -115,6 +116,24 @@ def test_makedeps_with_makefile_build():
             CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES))
             LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS))
             LDLIBS              += $(addprefix -l, $(CONAN_LIBS))
+            EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
+
+            all:
+            \t$(CXX) main.cpp $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(LDLIBS) $(EXELINKFLAGS) -o main
+            '''),
+            "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"]),
+            })
+        client.run_command("make -f Makefile")
+    with client.chdir("components"):
+        # Consume from components
+        client.run("install --requires=hello/0.1.0 -pr:b=default -pr:h=default -g MakeDeps -of build")
+        client.save({"Makefile": textwrap.dedent('''
+            include build/conandeps.mk
+            CXXFLAGS            += $(CONAN_CXXFLAGS)
+            CPPFLAGS            += $(addprefix -I, $(CONAN_INCLUDE_DIRS_HELLO_QUX))
+            CPPFLAGS            += $(addprefix -D, $(CONAN_DEFINES) $(CONAN_DEFINES_HELLO_BAZ))
+            LDFLAGS             += $(addprefix -L, $(CONAN_LIB_DIRS_HELLO_BAZ))
+            LDLIBS              += $(addprefix -l, $(CONAN_LIBS_HELLO_BAZ))
             EXELINKFLAGS        += $(CONAN_EXELINKFLAGS)
 
             all:
