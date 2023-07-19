@@ -406,7 +406,8 @@ def test_cmake_presets_binary_dir_available():
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
 
 
-def test_cmake_presets_shared_preset():
+@pytest.mark.parametrize("presets", ["CMakePresets.json", "CMakeUserPresets.json"])
+def test_cmake_presets_shared_preset(presets):
     """valid user preset file is created when multiple project presets inherit
     from the same conan presets.
     """
@@ -456,9 +457,9 @@ def test_cmake_presets_shared_preset():
             tc.generate()
     """)
 
-    client.save({"CMakePresets.json": project_presets,
+    client.save({presets: project_presets,
                  "conanfile.py": conanfile,
-                 "CMakeLists.txt": "" })  #File must exist for Conan to do Preset things.
+                 "CMakeLists.txt": ""})  # File must exist for Conan to do Preset things.
 
     client.run("install . -s build_type=Debug")
 
