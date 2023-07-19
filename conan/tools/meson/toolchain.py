@@ -32,11 +32,6 @@ class MesonToolchain(object):
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
-    # Constants to be overridden by conan_meson_deps_flags.ini (if exists)
-    deps_c_args = []
-    deps_c_link_args = []
-    deps_cpp_args = []
-    deps_cpp_link_args = []
 
     [project options]
     {% for it, value in project_options.items() -%}
@@ -69,16 +64,16 @@ class MesonToolchain(object):
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
     # C/C++ arguments
-    c_args = {{c_args}} + preprocessor_definitions + deps_c_args
-    c_link_args = {{c_link_args}} + deps_c_link_args
-    cpp_args = {{cpp_args}} + preprocessor_definitions + deps_cpp_args
-    cpp_link_args = {{cpp_link_args}} + deps_cpp_link_args
+    c_args = {{c_args}} + preprocessor_definitions
+    c_link_args = {{c_link_args}}
+    cpp_args = {{cpp_args}} + preprocessor_definitions
+    cpp_link_args = {{cpp_link_args}}
     {% if is_apple_system %}
     # Objective-C/C++ arguments
-    objc_args = {{objc_args}} + preprocessor_definitions + deps_c_args
-    objc_link_args = {{objc_link_args}} + deps_c_link_args
-    objcpp_args = {{objcpp_args}} + preprocessor_definitions + deps_cpp_args
-    objcpp_link_args = {{objcpp_link_args}} + deps_cpp_link_args
+    objc_args = {{objc_args}} + preprocessor_definitions
+    objc_link_args = {{objc_link_args}}
+    objcpp_args = {{objcpp_args}} + preprocessor_definitions
+    objcpp_link_args = {{objcpp_link_args}}
     {% endif %}
 
     {% for context, values in cross_build.items() %}
