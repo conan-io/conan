@@ -306,7 +306,7 @@ def test_make_with_public_deps_and_component_requires_second():
 
 def test_makedeps_with_test_requires():
     """
-    MakeDeps has to create any test requires declared on the recipe.
+    MakeDeps has to create any test requires to be declared on the recipe.
     """
     client = TestClient()
     conanfile = textwrap.dedent("""

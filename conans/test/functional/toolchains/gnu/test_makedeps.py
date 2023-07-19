@@ -73,7 +73,7 @@ def test_makedeps_with_tool_requires():
 @pytest.mark.tool("make" if platform.system() != "Windows" else "msys2")
 def test_makedeps_with_makefile_build():
     """
-    Build a small application using MakeDeps generator
+    Build a small application using MakeDeps generator and with components
     """
     client = TestClient(path_with_spaces=False)
     with client.chdir("lib"):
