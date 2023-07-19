@@ -47,6 +47,11 @@ class TestRevisionModeSCM:
         t.run(f"export pkgb --name=pkgb --version=0.1")
         assert t.exported_recipe_revision() == commit_b
 
+        # if pkgb is dirty, we should still be able to correctly create pkga in 'scm_folder' mode
+        t.save({"pkgb/conanfile.py": conanfile + "\n#new comment"})
+        t.run(f"export pkga --name=pkga --version=0.1")
+        assert t.exported_recipe_revision() == commit
+
     def test_auto_revision_without_commits(self):
         """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
         t = TestClient()

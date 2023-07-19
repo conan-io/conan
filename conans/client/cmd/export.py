@@ -93,9 +93,9 @@ def _calc_revision(scoped_output, path, manifest, revision_mode):
     if revision_mode == "hash":
         revision = manifest.summary_hash
     else:
+        f = '-- "."' if revision_mode == "scm_folder" else ""
         try:
             with chdir(path):
-                f = '-- "."' if revision_mode == "scm_folder" else ""
                 revision = check_output_runner(f'git rev-list HEAD -n 1 --full-history {f}').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
@@ -103,7 +103,7 @@ def _calc_revision(scoped_output, path, manifest, revision_mode):
             raise ConanException("{}: {}".format(error_msg, exc))
 
         with chdir(path):
-            if bool(check_output_runner('git status -s').strip()):
+            if bool(check_output_runner(f'git status -s {f}').strip()):
                 raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
                                      " 'conan export', please commit the changes and run again.")
 
