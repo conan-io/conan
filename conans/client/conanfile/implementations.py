@@ -1,5 +1,3 @@
-import inspect
-
 from conans.model.pkg_type import PackageType
 
 
