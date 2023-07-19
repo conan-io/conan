@@ -24,7 +24,6 @@ def test_make_dirs_with_abs_path():
 
             def package_info(self):
                 self.cpp_info.frameworkdirs = []
-                self.cpp_info.filter_empty = False
                 libname = "mylib"
                 fake_dir = os.path.join("/", "my_absoulte_path", "fake")
                 include_dir = os.path.join(fake_dir, libname, "include")
