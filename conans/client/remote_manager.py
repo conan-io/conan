@@ -60,7 +60,7 @@ class RemoteManager(object):
             if "conanmanifest.txt" not in zipped_files:
                 raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: "
                                      f"no conanmanifest.txt")
-            self._signer.verify(ref, download_export)
+            self._signer.verify(ref, download_export, files=zipped_files)
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'")
             self._cache.remove_recipe_layout(layout)
@@ -103,6 +103,7 @@ class RemoteManager(object):
             mkdir(export_sources_folder)  # create the folder even if no source files
             return
 
+        self._signer.verify(ref, download_folder, files=zipped_files)
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
@@ -149,7 +150,7 @@ class RemoteManager(object):
             for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
-            self._signer.verify(pref, download_pkg_folder)
+            self._signer.verify(pref, download_pkg_folder, zipped_files)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
