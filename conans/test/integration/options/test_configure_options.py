@@ -27,8 +27,8 @@ class ConfigureOptionsTest(unittest.TestCase):
     ])
     def test_methods_not_defined(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are managed automatically when methods config_otpions and configure are not
-        defined.
+        Test that options are managed automatically when methods config_options and configure are not
+        defined and implements = ["auto_shared_fpic", "auto_header_only"].
         Check that header only package gets its unique package ID.
         """
         client = TestClient()
@@ -39,6 +39,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                settings = "os", "compiler", "arch", "build_type"
                options = {{"shared": [True, False], "fPIC": [True, False], "header_only": [True, False]}}
                default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
+               implements = ["auto_shared_fpic", "auto_header_only"]
 
                def build(self):
                    shared = self.options.get_safe("shared")
@@ -73,7 +74,7 @@ class ConfigureOptionsTest(unittest.TestCase):
     ])
     def test_optout(self, settings_os, shared, fpic, header_only, result):
         """
-        Test that options are not managed automatically when methods are defined.
+        Test that options are not managed automatically when methods are defined even if implements = ["auto_shared_fpic", "auto_header_only"]
         Check that header only package gets its unique package ID.
         """
         client = TestClient()
@@ -84,6 +85,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                settings = "os", "compiler", "arch", "build_type"
                options = {{"shared": [True, False], "fPIC": [True, False], "header_only": [True, False]}}
                default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
+               implements = ["auto_shared_fpic", "auto_header_only"]
 
                def config_options(self):
                    pass
@@ -104,53 +106,6 @@ class ConfigureOptionsTest(unittest.TestCase):
         if header_only:
             self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
 
-    @parameterized.expand([
-        ["Linux", False, False, False, [False, False, False]],
-        ["Windows", False, False, False, [False, None, False]],
-        ["Windows", True, False, False, [True, None, False]],
-        ["Windows", False, False, True, [None, None, True]],
-        ["Linux", False, False, True, [None, None, True]],
-        ["Linux", True, True, False, [True, None, False]],
-        ["Linux", True, False, False, [True, None, False]],
-        ["Linux", True, True, True, [None, None, True]],
-        ["Linux", True, True, True, [None, None, True]],
-        ["Linux", False, True, False, [False, True, False]],
-        ["Linux", False, True, False, [False, True, False]],
-    ])
-    def test_methods_defined_explicit(self, settings_os, shared, fpic, header_only, result):
-        """
-        Test that options are managed when the tool is used in methods defined by user.
-        Check that header only package gets its unique package ID.
-        """
-        client = TestClient()
-        conanfile = textwrap.dedent(f"""\
-               from conan import ConanFile
-               from conan.tools import default_config_options, default_configure
-
-               class Pkg(ConanFile):
-                   settings = "os", "compiler", "arch", "build_type"
-                   options = {{"shared": [True, False], "fPIC": [True, False], "header_only": [True, False]}}
-                   default_options = {{"shared": {shared}, "fPIC": {fpic}, "header_only": {header_only}}}
-
-                   def config_options(self):
-                       default_config_options(self)
-
-                   def configure(self):
-                       default_configure(self)
-
-                   def build(self):
-                       shared = self.options.get_safe("shared")
-                       fpic = self.options.get_safe("fPIC")
-                       header_only = self.options.get_safe("header_only")
-                       self.output.info(f"shared: {{shared}}, fPIC: {{fpic}}, header only: {{header_only}}")
-                """)
-        client.save({"conanfile.py": conanfile})
-        client.run(f"create . --name=pkg --version=0.1 -s os={settings_os}")
-        result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
-        self.assertIn(result, client.out)
-        if header_only:
-            self.assertIn("Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created", client.out)
-
     def test_header_package_type_pid(self):
         """
         Test that we get the pid for header only when package type is set to header-library
@@ -162,6 +117,7 @@ class ConfigureOptionsTest(unittest.TestCase):
                class Pkg(ConanFile):
                    settings = "os", "compiler", "arch", "build_type"
                    package_type = "header-library"
+                   implements = ["auto_shared_fpic", "auto_header_only"]
 
                 """)
         client.save({"conanfile.py": conanfile})

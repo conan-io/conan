@@ -1,7 +1,7 @@
 from conans.errors import conanfile_exception_formatter
 from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements, ToolRequirements
-from conan.tools import default_config_options, default_configure
+from conans.client.conanfile.implementations import auto_shared_fpic_config_options, auto_shared_fpic_configure
 
 
 def run_configure_method(conanfile, down_options, profile_options, ref):
@@ -10,8 +10,8 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "config_options"):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
-    else:
-        default_config_options(conanfile)
+    elif "auto_shared_fpic" in conanfile.implements:
+        auto_shared_fpic_config_options(conanfile)
 
     # Assign only the current package options values, but none of the dependencies
     is_consumer = conanfile._conan_is_consumer
@@ -20,8 +20,8 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "configure"):
         with conanfile_exception_formatter(conanfile, "configure"):
             conanfile.configure()
-    else:
-        default_configure(conanfile)
+    elif "auto_shared_fpic" in conanfile.implements:
+        auto_shared_fpic_configure(conanfile)
 
     self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
                                                                       is_consumer)

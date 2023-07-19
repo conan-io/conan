@@ -57,6 +57,7 @@ class Base(unittest.TestCase):
             generators = "CMakeDeps"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
+            implements = ["auto_shared_fpic", "auto_header_only"]
 
             def generate(self):
                 tc = CMakeToolchain(self)
@@ -395,6 +396,7 @@ class LinuxTest(Base):
                 "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": defines,
                 # fPIC is managed automatically depending on the shared option value
+                # if implements = ["auto_shared_fpic", "auto_header_only"]
                 "CMAKE_POSITION_INDEPENDENT_CODE": "ON" if not shared else ""
                 }
 
