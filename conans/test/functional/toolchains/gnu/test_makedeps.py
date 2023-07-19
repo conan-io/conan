@@ -33,35 +33,41 @@ def test_make_deps_definitions_escape():
     assert r'CONAN_DEFINES_HELLO = $(CONAN_DEFINE_FLAG)USER_CONFIG="user_config.h" $(CONAN_DEFINE_FLAG)OTHER="other.h"' in client.out
 
 
-@pytest.mark.tool("cmake")
 def test_makedeps_with_tool_requires():
     """
     MakeDeps has to create any test requires to be declared on the recipe.
     """
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        class HelloLib(ConanFile):
+            def package_info(self):
+                self.cpp_info.libs = ["libname"]
+        ''')
     client = TestClient(path_with_spaces=False)
     with client.chdir("lib"):
-        client.run("new cmake_lib -d name=app -d version=1.0")
-        client.run("create . -tf=\"\"")
+        client.save({"conanfile.py": conanfile.replace("libname", "hello")})
+        client.run("create . --name=hello --version=0.1.0 -tf=\"\"")
     with client.chdir("test"):
-        client.run("new cmake_lib -d name=test -d version=1.0")
-        client.run("create . -tf=\"\"")
+        client.save({"conanfile.py": conanfile.replace("libname", "test")})
+        client.run("create . --name=test --version=0.1.0 -tf=\"\"")
     with client.chdir("tool"):
-        client.run("new cmake_lib -d name=tool -d version=1.0")
-        client.run("create . -tf=\"\"")
+        client.save({"conanfile.py": conanfile.replace("libname", "tool")})
+        client.run("create . --name=tool --version=0.1.0 -tf=\"\"")
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''
         from conan import ConanFile
         class HelloLib(ConanFile):
             def build_requirements(self):
-                self.test_requires('app/1.0')
-                self.test_requires('test/1.0')
-                self.tool_requires('tool/1.0')
+                self.test_requires('hello/0.1.0')
+                self.test_requires('test/0.1.0')
+                self.tool_requires('tool/0.1.0')
         ''')
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g MakeDeps")
     content = client.load(CONAN_MAKEFILE_FILENAME)
     assert "CONAN_NAME_TEST" in content
-    assert "CONAN_NAME_APP" in content
+    assert "CONAN_NAME_HELLO" in content
+    assert "CONAN_NAME_TOOL" not in content
 
 
 @pytest.mark.tool("msys2")
