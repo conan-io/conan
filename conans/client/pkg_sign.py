@@ -35,8 +35,9 @@ class PkgSignaturesPlugin:
                 if pkg_bundle["upload"]:
                     _sign(pref, pkg_bundle["files"], self._cache.pkg_layout(pref).download_package())
 
-    def verify(self, ref, folder):
+    def verify(self, ref, folder, files):
         if self._plugin_verify_function is None:
             return
         metadata_sign = os.path.join(folder, METADATA, "sign")
-        self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign)
+        self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
+                                     files=files)
