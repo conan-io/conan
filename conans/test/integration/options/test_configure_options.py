@@ -28,7 +28,7 @@ class ConfigureOptionsTest(unittest.TestCase):
     def test_methods_not_defined(self, settings_os, shared, fpic, header_only, result):
         """
         Test that options are managed automatically when methods config_options and configure are not
-        defined and activate_default_behaviors=True.
+        defined and implements = ["auto_shared_fpic", "auto_header_only"].
         Check that header only package gets its unique package ID.
         """
         client = TestClient()
