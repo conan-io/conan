@@ -284,11 +284,16 @@ class DepsGraphBuilder(object):
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is
             # now possible to do "self.build_requires(..., options={k:v})" to specify it
-            if require.visible and context == CONTEXT_HOST:
+            if require.visible:
                 # Only visible requirements in the host context propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
         else:
-            down_options = node.conanfile.up_options if require.visible else Options()
+            if require.visible:
+                down_options = node.conanfile.up_options
+            elif not require.build:  # for requires in "host", like test_requires, pass myoptions
+                down_options = node.conanfile.private_up_options
+            else:
+                down_options = Options(options_values=node.conanfile.default_build_options)
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
         require.process_package_type(node, new_node)
