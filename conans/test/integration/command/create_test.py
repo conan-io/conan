@@ -319,6 +319,43 @@ def test_create_build_missing():
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
 
 
+def test_create_no_user_channel():
+    """ test the --build=pattern and --build=missing:pattern syntax to build missing packages
+     without user/channel
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep1/0.1", "dep2/0.1@user",
+                                                                         "dep3/0.1@user/channel")})
+    c.run("export dep --name=dep1 --version=0.1")
+    c.run("export dep --name=dep2 --version=0.1 --user=user")
+    c.run("export dep --name=dep3 --version=0.1 --user=user --channel=channel")
+
+    # First test the ``--build=missing:pattern``
+    c.run("create pkg --build=missing:*@", assert_error=True)
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Missing"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Missing")})
+    c.run("create pkg --build=missing:!*@", assert_error=True)
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Missing"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+    # Now lets make sure they exist
+    c.run("create pkg --build=missing")
+
+    # Now test the --build=pattern
+    c.run("create pkg --build=*@")
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache")})
+    # The --build=* needs to be said: "build all except those that have user/channel
+    c.run("create pkg --build=* --build=!*@")
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+
 def test_create_format_json():
     """
     Tests the ``conan create . -f json`` result

@@ -40,14 +40,11 @@ class BuildMode:
                 else:
                     if param.startswith("missing:"):
                         clean_pattern = param[len("missing:"):]
-                        clean_pattern = clean_pattern[:-1] if param.endswith("@") else clean_pattern
-                        clean_pattern = clean_pattern.replace("@#", "#")
                         self.build_missing_patterns.append(clean_pattern)
                     else:
                         # Remove the @ at the end, to match for
                         # "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
-                        clean_pattern = param[:-1] if param.endswith("@") else param
-                        clean_pattern = clean_pattern.replace("@#", "#")
+                        clean_pattern = param
                         if clean_pattern and clean_pattern[0] in ["!", "~"]:
                             self._excluded_patterns.append(clean_pattern[1:])
                         else:

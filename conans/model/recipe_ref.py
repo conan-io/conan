@@ -167,6 +167,9 @@ class RecipeReference:
         if pattern.endswith("@"):  # it means we want to match only without user/channel
             pattern = pattern[:-1]
             no_user_channel = True
+        elif "@#" in pattern:
+            pattern = pattern.replace("@#", "#")
+            no_user_channel = True
 
         condition = ((pattern == "&" and is_consumer) or
                       fnmatch.fnmatchcase(str(self), pattern) or
