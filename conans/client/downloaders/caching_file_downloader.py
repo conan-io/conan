@@ -108,6 +108,7 @@ class SourcesCachingDownloader:
         don't want silently skipping a backup because it is down.
         """
         try:
+            backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
             self._file_downloader.download(backup_url + sha256, cached_path, sha256=sha256)
             self._file_downloader.download(backup_url + sha256 + ".json", cached_path + ".json")
             self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
