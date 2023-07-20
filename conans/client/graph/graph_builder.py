@@ -148,14 +148,12 @@ class DepsGraphBuilder(object):
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
-        tool_requires = profile.tool_requires
-        for pattern, tool_requires in tool_requires.items():
+        for pattern, tool_requires in profile.tool_requires.items():
             if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):
                 for tool_require in tool_requires:  # Do the override
                     if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
-                    # FIXME: converting back to string?
-                    node.conanfile.requires.tool_require(str(tool_require),
+                    node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock):
