@@ -1,5 +1,7 @@
 import os
 import re
+import textwrap
+from jinja2 import Template, StrictUndefined
 
 from conan.internal import check_duplicated_generator
 from conan.tools.files import save
@@ -26,6 +28,177 @@ def _get_formatted_dirs(folders, prefix_path_, name):
             directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
         ret.append(f"{prefix}{directory}")
     return ret
+
+
+def _makefy(name):
+    """
+    Convert a name to Make-variable-friendly syntax
+    """
+    return re.sub(r'[^0-9A-Z_]', '_', name.upper())
+
+
+class DepContentGenerator:
+    template = textwrap.dedent("""\
+        {%- macro format_map_values(values) -%}
+        {%- for var, value in values.items() -%}
+        CONAN_{{ var.upper() }}_{{ name }} = {{ format_list_values(value) }}
+        {%- endfor -%}
+        {%- endmacro -%}
+
+        {%- macro format_list_values(values) -%}
+        {% if values|length == 1 %}
+        {{ values[0] }}
+
+        {% else %}
+        \\
+        {% for value in values[:-1] %}
+        \t{{ value }} \\
+        {% endfor %}
+        \t{{ values|last }}
+
+        {% endif %}
+        {%- endmacro -%}
+
+        # {{ dep.ref.name }}/{{ dep.ref.version }}
+
+        CONAN_NAME_{{ name }} = {{ dep.ref.name }}
+
+        CONAN_VERSION_{{ name }} = {{ dep.ref.version }}
+
+        CONAN_ROOT_{{ name }} = {{ root }}
+
+        {% if sysroot %}
+        CONAN_SYSROOT_{{ name }} = {{ sysroot }}\n
+        {% endif %}
+        {{ format_map_values(dirs) }}
+        {{ format_map_values(flags) }}
+        {% if components|length > 0 %}
+        CONAN_COMPONENTS_{{ name }} = {{ format_list_values(components) }}
+        {% endif %}""")
+
+    def __init__(self, conanfile, dependency, root, sysroot=None, dirs=None, flags=None):
+        self._conanfile = conanfile
+        self._dep = dependency
+        self._root = root
+        self._sysroot = sysroot
+        self._dirs = dirs or {}
+        self._flags = flags or {}
+
+    def _conan_prefix_flag(self, variable):
+        """
+        Return a global flag to be used as prefix to any value in the makefile
+        """
+        return f"$(CONAN_{variable.upper()}_FLAG)" if variable else ""
+
+    def _format_makefile_values(self, values, prefix=""):
+        """
+        Format a list of Python values to be used in the makefile
+        """
+        return f"{prefix}{values[0]}" if len(values) else f" \\\n\t{prefix}".join(values)
+
+    def content(self):
+        context = {
+            "dep": self._dep,
+            "name": _makefy(self._dep.ref.name),
+            "root": self._root,
+            "sysroot": self._sysroot,
+            "dirs": self._dirs,
+            "flags": self._flags,
+            "components": list(self._dep.cpp_info.get_sorted_components().keys())
+        }
+        template = Template(self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        return template.render(context)
+
+
+class DepGenerator:
+
+    def __init__(self, conanfile, requirement, dependency):
+        self._conanfile = conanfile
+        self._req = requirement
+        self._dep = dependency
+
+    def _format_makefile_values(self, values, prefix=""):
+        """
+        Format a list of Python values to be used in the makefile
+        """
+        return f"{prefix}{values[0]}" if len(values) else f" \\\n\t{prefix}".join(values)
+
+    def _conan_prefix_flag(self, variable):
+        """
+        Return a global flag to be used as prefix to any value in the makefile
+        """
+        return f"$(CONAN_{variable.upper()}_FLAG)" if variable else ""
+
+    def _get_dependency_dirs(self, root):
+        """
+        List regular directories from cpp_info and format them to be used in the makefile
+        :param root: Package root folder
+        """
+        dirs = {}
+        for var in ['includedirs', 'libdirs', 'bindirs', 'srcdirs', 'builddirs', 'resdirs', 'frameworkdirs']:
+            cppinfo_value = getattr(self._dep.cpp_info, var)
+            formatted_dirs = _get_formatted_dirs(cppinfo_value, root, _makefy(self._dep.ref.name))
+            if formatted_dirs:
+                var = var.replace("dirs", "_dirs")
+                dirs[var] = [self._conan_prefix_flag(var) + it for it in formatted_dirs]
+        return dirs
+
+    def _get_dependency_flags(self):
+        """
+        List common variables from cpp_info and format them to be used in the makefile
+        """
+        common_variables = {
+            "objects": None,
+            "libs": "lib",
+            "system_libs": "system_lib",
+            "defines": "define",
+            "cflags": None,
+            "cxxflags": None,
+            "sharedlinkflags": None,
+            "exelinkflags": None,
+            "frameworks": None,
+            "requires": None,
+        }
+        flags = {}
+        for var, prefix_var in common_variables.items():
+            cppinfo_value = getattr(self._dep.cpp_info, var)
+            # Use component cpp_info info when does not provide any value
+            if not cppinfo_value and hasattr(self._dep.cpp_info, "components"):
+                cppinfo_value = [f"$(CONAN_{var.upper()}_{_makefy(self._dep.ref.name)}_{_makefy(name)})" for name, obj in self._dep.cpp_info.components.items() if getattr(obj, var.lower())]
+                # avoid repeating same prefix twice
+                prefix_var = ""
+            if "flags" in var:
+                cppinfo_value = [var.replace('"', '\\"') for var in cppinfo_value]
+            if cppinfo_value:
+                flags[var.upper()] = [prefix_var + it for it in cppinfo_value]
+        return flags
+
+    def _get_sysroot(self, root):
+        """
+        Get the sysroot of the dependency. Sysroot is a list of directories, or a single directory
+        """
+        sysroot = self._dep.cpp_info.sysroot if isinstance(self._dep.cpp_info.sysroot, list) else [self._dep.cpp_info.sysroot]
+        # sysroot may return ['']
+        if not sysroot or not sysroot[0]:
+            return None
+        return _get_formatted_dirs(sysroot, root, _makefy(self._dep.ref.name)) if sysroot and [0] else None
+
+    def _get_root_folder(self):
+        """
+        Get the root folder of the dependency
+        """
+        root = self._dep.recipe_folder if self._dep.package_folder is None else self._dep.package_folder
+        return root.replace("\\", "/")
+
+    def generate(self):
+        root = self._get_root_folder()
+        sysroot = self._get_sysroot(root)
+        dirs = self._get_dependency_dirs(root)
+        flags = self._get_dependency_flags()
+        dep_content_gen = DepContentGenerator(self._conanfile, self._dep, root, sysroot, dirs, flags)
+        content = dep_content_gen.content()
+        # TODO: Generate Component data
+        return content
 
 
 class MakeDeps(object):
@@ -113,8 +286,7 @@ class MakeDeps(object):
                 sysroot = _get_formatted_dirs(sysroot, prefix_path, _makeify(dep.ref.name))
                 _var("SYSROOT", sysroot)
 
-            for var in ['INCLUDE_DIRS', 'LIB_DIRS', 'BIN_DIRS', 'SRC_DIRS', 'BUILD_DIRS', 'RES_DIRS',
-                        'FRAMEWORK_DIRS']:
+            for var in ['INCLUDE_DIRS', 'LIB_DIRS', 'BIN_DIRS', 'SRC_DIRS', 'BUILD_DIRS', 'RES_DIRS', 'FRAMEWORK_DIRS']:
                 cppinfo_value = getattr(cpp_info, var.replace('_', '').lower())
                 dirs = _get_formatted_dirs(cppinfo_value, prefix_path, _makeify(dep.ref.name))
                 _var(var, dirs, f"CONAN_{var}_FLAG")
@@ -161,6 +333,10 @@ class MakeDeps(object):
             # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
             if require.build:
                 continue
+
+            dep_gen = DepGenerator(self._conanfile, require, dep)
+            content = dep_gen.generate()
+            save(self._conanfile, path=f"{require.ref.name}.mk", content=content)
 
             dep_id = _makeify(require.ref.name)
             dep_name_list.append(require.ref.name)
