@@ -304,17 +304,20 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update, tested_graph=None):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update, build_mode_test=None,
+                       tested_graph=None):
         self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
 
-        main_mode = test_mode = None
-        if build_mode:
-            main_mode = [m for m in build_mode if not m.startswith("test:")]
-            test_mode = [m[5:] for m in build_mode if m.startswith("test:")]
-        main_mode = BuildMode(main_mode)
-        test_mode = BuildMode(test_mode)
-        mainprefs = [str(n.pref) for n in tested_graph.nodes] if tested_graph is not None else None
+        if tested_graph is None:
+            main_mode = BuildMode(build_mode)
+            test_mode = None  # Should not be used at all
+            mainprefs = None
+        else:
+            main_mode = BuildMode(["never"])
+            test_mode = BuildMode(build_mode_test)
+            mainprefs = [str(n.pref) for n in tested_graph.nodes
+                         if n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)]
 
         if main_mode.cascade:
             ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "

@@ -18,7 +18,7 @@ def print_graph_basic(graph):
     for node in graph.nodes:
         if hasattr(node.conanfile, "python_requires"):
             for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
-                python_requires[r.ref] = r.recipe, r.remote, False
+                python_requires[r.ref] = r.recipe, r.remote
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:

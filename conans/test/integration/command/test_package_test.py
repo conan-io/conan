@@ -131,13 +131,14 @@ class TestPackageBuild:
                                                                .with_test("pass")})
         c.run("export tool")
         c.run("export dep")
-        c.run("create pkg --build=*")
+        c.run("create pkg --build=* --build-test=*")
+
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
         c.assert_listed_require({"tool/0.1": "Cache"}, build=True, test_package=True)
         c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")},
                                build=True, test_package=True)
-        # FIXME: Re-building already built things is unaceptable
+        # Note we do NOT rebuild the already built binaries
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Cache")},
                                test_package=True)
@@ -151,7 +152,7 @@ class TestPackageBuild:
                                                                .with_test("pass")})
         c.run("export tool")
         c.run("create dep")
-        c.run("create pkg --build=missing")
+        c.run("create pkg --build=missing --build-test=missing")
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
         c.assert_listed_require({"tool/0.1": "Cache"}, build=True, test_package=True)
