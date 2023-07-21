@@ -37,6 +37,141 @@ def _makefy(name):
     return re.sub(r'[^0-9A-Z_]', '_', name.upper())
 
 
+class GlobalContentGenerator:
+    template = textwrap.dedent("""\
+            {%- macro format_map_values(values) -%}
+            {%- for var, value in values.items() -%}
+            CONAN_{{ var.upper() }} = {{ format_list_values(value) }}
+            {%- endfor -%}
+            {%- endmacro -%}
+
+            {%- macro format_list_values(values) -%}
+            {% if values|length == 1 %}
+            {{ values[0] }}
+
+            {% else %}
+            \\
+            {% for value in values[:-1] %}
+            \t{{ value }} \\
+            {% endfor %}
+            \t{{ values|last }}
+
+            {% endif %}
+            {%- endmacro -%}
+
+            # Aggregated global variables
+
+            {{- format_map_values(dirs) }}
+            {{- format_map_values(flags) -}}
+            """)
+
+    template_deps = textwrap.dedent("""\
+            {%- macro format_list_values(values) -%}
+            {% if values|length == 1 %}
+            {{ values[0] }}
+
+            {% else %}
+            \\
+            {% for value in values[:-1] %}
+            \t{{ value }} \\
+            {% endfor %}
+            \t{{ values|last }}
+
+            {% endif %}
+            {%- endmacro -%}
+
+            CONAN_DEPS = {{ format_list_values(deps) }}
+            """)
+
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+
+    def content(self, deps_cpp_info_dirs, deps_cpp_info_flags):
+        context = {"dirs": deps_cpp_info_dirs, "flags": deps_cpp_info_flags}
+        template = Template(self.template_deps, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        return template.render(context)
+
+    def deps_content(self, dependencies_names):
+        context = {"deps": dependencies_names}
+        template = Template(self.template_deps, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        return template.render(context)
+
+
+class GlobalGenerator:
+
+    def __init__(self, conanfile, dependencies):
+        self._conanfile = conanfile
+        self._deps = dependencies
+
+    def _format_makefile_values(self, values, prefix=""):
+        """
+        Format a list of Python values to be used in the makefile
+        """
+        return f"{prefix}{values[0]}" if len(values) else f" \\\n\t{prefix}".join(values)
+
+    def _conan_prefix_flag(self, variable):
+        """
+        Return a global flag to be used as prefix to any value in the makefile
+        """
+        return f"$(CONAN_{variable.upper()}_FLAG)" if variable else ""
+
+    def _get_dependency_dirs(self, dependencies):
+        """
+        List regular directories from cpp_info and format them to be used in the makefile
+        :param dep: Dependency list to add to the global list
+        """
+        common_dirs = ['includedirs', 'libdirs', 'bindirs', 'srcdirs', 'builddirs', 'resdirs', 'frameworkdirs']
+        dirs = {}
+        for dep in dependencies:
+            for var in common_dirs:
+                cppinfo_value = getattr(dep.cpp_info, var)
+                if c
+                if formatted_dirs:
+                    var = var.replace("dirs", "_dirs")
+                    dirs[var] = [self._conan_prefix_flag(var) + it for it in formatted_dirs]
+        return dirs
+
+    def _get_dependency_flags(self, dependency):
+        """
+        List common variables from cpp_info and format them to be used in the makefile
+        :param dep: Dependency object
+        """
+        common_variables = {
+            "objects": None,
+            "libs": "lib",
+            "system_libs": "system_lib",
+            "defines": "define",
+            "cflags": None,
+            "cxxflags": None,
+            "sharedlinkflags": None,
+            "exelinkflags": None,
+            "frameworks": None,
+            "requires": None,
+        }
+        flags = {}
+        for var in common_variables.keys():
+            cppinfo_value = getattr(dependency.cpp_info, var)
+            # Use component cpp_info info when does not provide any value
+            if not cppinfo_value and hasattr(dependency.cpp_info, "components"):
+                cppinfo_value = [f"$(CONAN_{var.upper()}_{_makefy(dependency.ref.name)})" for name, obj in dependency.cpp_info.components.items() if getattr(obj, var.lower())]
+            if "flags" in var:
+                cppinfo_value = [var.replace('"', '\\"') for var in cppinfo_value]
+            if cppinfo_value:
+                flags[var.upper()] = [it for it in cppinfo_value]
+        return flags
+
+    def generate(self):
+        glob_content_gen = GlobalContentGenerator(self._conanfile)
+        dirs = self._get_dependency_dirs(self._deps)
+        flags = self._get_dependency_flags(self._deps)
+        return glob_content_gen.content(dirs, flags)
+
+    def deps_generate(self):
+        dependencies = [dep[1].ref.name for dep in self._deps if dep[1].ref.name != self._conanfile.name]
+        glob_content_gen = GlobalContentGenerator(self._conanfile)
+        return glob_content_gen.deps_content(dependencies)
+
+
 class DepComponentContentGenerator:
     template = textwrap.dedent("""\
         {%- macro format_map_values(values) -%}
@@ -477,13 +612,23 @@ class MakeDeps(object):
         build_req = self._conanfile.dependencies.build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
-        for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
+        require_list = []
+
+        # Filter the build_requires not activated for any requirement
+        dependencies = [tup for tup in list(host_req.items()) + list(build_req.items()) + list(test_req.items()) if not tup[0].build]
+
+        glob_gen = GlobalGenerator(self._conanfile, dependencies)
+        content = glob_gen.deps_generate() + "\n" + glob_gen.generate()
+        save(self._conanfile, path="global.mk", content=content)
+
+        for require, dep in dependencies:
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
-            # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
+
             if require.build:
                 continue
 
+            require_list.append(require)
             dep_gen = DepGenerator(self._conanfile, require, dep)
             content = dep_gen.generate()
             save(self._conanfile, path=f"{require.ref.name}.mk", content=content)
