@@ -61,8 +61,8 @@ class DepComponentContentGenerator:
 
         # {{ dep.ref.name }}::{{ comp_name }}
 
-        {{ format_map_values(dirs) }}
-        {{ format_map_values(flags) }}
+        {{ format_map_values(dirs) -}}
+        {{- format_map_values(flags) -}}
         """)
 
     def __init__(self, conanfile, dependency, component_name, component, root, dirs=None, flags=None):
@@ -132,13 +132,13 @@ class DepContentGenerator:
         CONAN_ROOT_{{ name }} = {{ root }}
 
         {% if sysroot %}
-        CONAN_SYSROOT_{{ name }} = {{ sysroot }}\n
+        CONAN_SYSROOT_{{ name }} = {{ sysroot }}
         {% endif %}
-        {{ format_map_values(dirs) }}
-        {{ format_map_values(flags) }}
-        {% if components|length > 0 %}
+        {{- format_map_values(dirs) }}
+        {{- format_map_values(flags) -}}
+        {%- if components|length > 0 -%}
         CONAN_COMPONENTS_{{ name }} = {{ format_list_values(components) }}
-        {% endif %}
+        {%- endif -%}
         """)
 
     def __init__(self, conanfile, dependency, root, sysroot=None, dirs=None, flags=None):
