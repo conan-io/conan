@@ -320,7 +320,6 @@ class GraphBinariesAnalyzer(object):
                                   "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
                                   "more efficient re-builds")
         for node in deps_graph.ordered_iterate():
-            build_mode = test_mode if node.test_package else main_mode
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc
@@ -333,6 +332,7 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.layout()
             else:
                 self._evaluate_package_id(node)
+                build_mode = test_mode if node.test_package else main_mode
                 if lockfile:
                     locked_prev = lockfile.resolve_prev(node)
                     if locked_prev:

@@ -134,7 +134,7 @@ def test_allowed(conanfile):
     build_mode = BuildMode(["missing"])
     assert build_mode.allowed(conanfile) is True
 
-    build_mode = BuildMode([])
+    build_mode = BuildMode(None)
     assert build_mode.allowed(conanfile) is False
 
 
