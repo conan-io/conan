@@ -304,7 +304,7 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update, tested_graph=None):
         self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
 
@@ -314,6 +314,7 @@ class GraphBinariesAnalyzer(object):
             test_mode = [m[5:] for m in build_mode if m.startswith("test:")]
         main_mode = BuildMode(main_mode)
         test_mode = BuildMode(test_mode)
+        mainprefs = [str(n.pref) for n in tested_graph.nodes] if tested_graph is not None else None
 
         if main_mode.cascade:
             ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
@@ -332,7 +333,8 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.layout()
             else:
                 self._evaluate_package_id(node)
-                build_mode = test_mode if node.test_package else main_mode
+                build_mode = main_mode if mainprefs is None or str(node.pref) in mainprefs \
+                    else test_mode
                 if lockfile:
                     locked_prev = lockfile.resolve_prev(node)
                     if locked_prev:

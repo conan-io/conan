@@ -48,7 +48,7 @@ def test(conan_api, parser, *args):
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,
-             build_modes, tested_python_requires=None):
+             build_modes, tested_python_requires=None, tested_graph=None):
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
                                                          profile_host, profile_build,
                                                          remotes=remotes,
@@ -68,7 +68,7 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
     deps_graph.report_graph_error()
 
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=update,
-                                     lockfile=lockfile)
+                                     lockfile=lockfile, tested_graph=tested_graph)
     print_graph_packages(deps_graph)
 
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
