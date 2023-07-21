@@ -307,13 +307,14 @@ class GraphBinariesAnalyzer(object):
     def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
         self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
-        test_package = deps_graph.root.conanfile.tested_reference_str is not None
-        test_package = False  # HARDCODED disabled feature, need to properly remove it
-        if test_package:
-            main_mode = BuildMode(["never"])
-            test_mode = BuildMode(build_mode)
-        else:
-            main_mode = test_mode = BuildMode(build_mode)
+
+        main_mode = test_mode = None
+        if build_mode:
+            main_mode = [m for m in build_mode if not m.startswith("test:")]
+            test_mode = [m for m in build_mode if not m.startswith("test:")]
+        main_mode = BuildMode(main_mode)
+        test_mode = BuildMode(test_mode)
+
         if main_mode.cascade:
             ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
                                   "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
