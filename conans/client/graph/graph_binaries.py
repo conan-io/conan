@@ -311,7 +311,7 @@ class GraphBinariesAnalyzer(object):
         main_mode = test_mode = None
         if build_mode:
             main_mode = [m for m in build_mode if not m.startswith("test:")]
-            test_mode = [m for m in build_mode if not m.startswith("test:")]
+            test_mode = [m[5:] for m in build_mode if m.startswith("test:")]
         main_mode = BuildMode(main_mode)
         test_mode = BuildMode(test_mode)
 
