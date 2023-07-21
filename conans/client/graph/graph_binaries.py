@@ -308,6 +308,7 @@ class GraphBinariesAnalyzer(object):
         self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
         test_package = deps_graph.root.conanfile.tested_reference_str is not None
+        test_package = False  # HARDCODED disabled feature, need to properly remove it
         if test_package:
             main_mode = BuildMode(["never"])
             test_mode = BuildMode(build_mode)
