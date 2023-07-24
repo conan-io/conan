@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, redirect_output
 from conans.util.env import environment_update
 from conans.util.files import save
 from conans.util.runners import check_output_runner
-
+from conan.tools.microsoft.visual import vcvars_command
 
 class TestProfile(unittest.TestCase):
 
@@ -128,3 +128,13 @@ class DetectCompilersTest(unittest.TestCase):
         assert "MyProfile2' already exists" in c.out
 
         c.run("profile detect --name=./MyProfile2 --force")  # will not raise error
+    
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows and msvc")
+    def test_profile_new_msvc_vcvars(self):
+        c = TestClient()
+
+        # extract location of cl.exe
+        vcvars = vcvars_command(version="15", architecture="x64")
+        command = f"{vcvars} && where cl.exe"
+        
+
