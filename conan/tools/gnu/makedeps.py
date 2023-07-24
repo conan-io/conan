@@ -105,7 +105,7 @@ class GlobalContentGenerator:
             {% if values|length == 1 %}
             {{ values[0] }}
 
-            {% else %}
+            {% elif values|length > 1 %}
             \\
             {% for value in values[:-1] %}
             \t{{ value }} \\
@@ -126,7 +126,7 @@ class GlobalContentGenerator:
             {% if values|length == 1 %}
             {{ values[0] }}
 
-            {% else %}
+            {% elif values|length > 1 %}
             \\
             {% for value in values[:-1] %}
             \t{{ value }} \\
@@ -226,7 +226,7 @@ class DepComponentContentGenerator:
         {% if values|length == 1 %}
         {{ values[0] }}
 
-        {% else %}
+        {% elif values|length > 1 %}
         \\
         {% for value in values[:-1] %}
         \t{{ value }} \\
@@ -283,7 +283,7 @@ class DepContentGenerator:
         {% if values|length == 1 %}
         {{ values[0] }}
 
-        {% else %}
+        {% elif values|length > 1 %}
         \\
         {% for value in values[:-1] %}
         \t{{ value }} \\
@@ -301,8 +301,8 @@ class DepContentGenerator:
 
         CONAN_ROOT_{{ name }} = {{ root }}
 
-        {% if sysroot %}
-        CONAN_SYSROOT_{{ name }} = {{ sysroot }}
+        {% if sysroot|length > 0 %}
+        CONAN_SYSROOT_{{ name }} = {{ format_list_values(sysroot) }}
         {% endif %}
         {{- format_map_values(dirs) }}
         {{- format_map_values(flags) -}}
@@ -465,7 +465,7 @@ class DepGenerator:
         # sysroot may return ['']
         if not sysroot or not sysroot[0]:
             return []
-        return _get_formatted_dirs(sysroot, root, _makefy(self._dep.ref.name)) if sysroot and [0] else None
+        return _get_formatted_dirs(sysroot, root, _makefy(self._dep.ref.name)) if sysroot and sysroot[0] else None
 
     def _get_root_folder(self):
         """
