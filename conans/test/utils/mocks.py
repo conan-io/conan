@@ -106,6 +106,7 @@ class MockConanfile(ConanFile):
 
     def run(self, *args, **kwargs):
         if self.runner:
+            kwargs.pop("quiet", None)
             self.runner(*args, **kwargs)
 
 
