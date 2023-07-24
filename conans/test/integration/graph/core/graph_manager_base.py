@@ -115,7 +115,7 @@ class GraphManagerTest(unittest.TestCase):
             profile_build.options = Options(options_values=options_build)
         profile_host.process_settings(self.cache)
         profile_build.process_settings(self.cache)
-        build_mode = []  # Means build all
+        build_mode = ["*"]  # Means build all
 
         conan_api = ConanAPI(cache_folder=self.cache_folder)
 

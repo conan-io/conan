@@ -48,6 +48,8 @@ class ConanFile:
     default_options = None
     package_type = None
 
+    implements = []
+
     provides = None
     deprecated = None
 

@@ -263,19 +263,22 @@ class _IncludingPresets:
         # so things doesn't break for multi-platform, when inherits don't exist
         collected_targets = {}
         types = "configurePresets", "buildPresets", "testPresets"
-        for file in ("CMakePresets.json", "CMakeUserPresests.json"):
+        for file in ("CMakePresets.json", "CMakeUserPresets.json"):
             user_file = os.path.join(output_dir, file)
             if os.path.exists(user_file):
                 user_json = json.loads(load(user_file))
                 for preset_type in types:
-                    conan_inherits = []
                     for preset in user_json.get(preset_type, []):
                         inherits = preset.get("inherits", [])
                         if isinstance(inherits, str):
                             inherits = [inherits]
-                        conan_inherits.extend([i for i in inherits if i.startswith(preset_prefix)])
-                    if len(conan_inherits):
-                        collected_targets.setdefault(preset_type, []).extend(list(set(conan_inherits)))
+                        inherits = [i for i in inherits if i.startswith(preset_prefix)]
+                        if inherits:
+                            existing = collected_targets.setdefault(preset_type, [])
+                            for i in inherits:
+                                if i not in existing:
+                                    existing.append(i)
+
         return collected_targets
 
     @staticmethod

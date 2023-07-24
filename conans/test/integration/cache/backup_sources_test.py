@@ -284,8 +284,8 @@ class TestDownloadCacheBackupSources:
                     """)
 
         client.save({"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
-                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader/', 'origin']\n"
-                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader/"},
+                                    f"core.sources:download_urls=['http://localhost:{http_server.port}/downloader', 'origin']\n"
+                                    f"core.sources:upload_url=http://localhost:{http_server.port}/uploader"},
                     path=client.cache.cache_folder)
 
         client.save({"conanfile.py": conanfile})
