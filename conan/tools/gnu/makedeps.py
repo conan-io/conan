@@ -1,7 +1,6 @@
 import os
 import re
 import textwrap
-from dataclasses import dataclass
 
 from jinja2 import Template, StrictUndefined
 
@@ -77,14 +76,14 @@ def _common_cppinfo_dirs() -> list:
             'frameworkdirs']
 
 
-@dataclass
 class MakeInfo:
     """
     Store temporary information about each dependency
     """
-    name: str
-    dirs: list
-    flags: list
+    def __init__(self, name: str, dirs: list, flags: list):
+        self.name = name
+        self.dirs = dirs
+        self.flags = flags
 
 
 class GlobalContentGenerator:
