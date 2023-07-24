@@ -26,7 +26,7 @@ class Git:
         """
         with chdir(self._conanfile, self.folder):
             output = StringIO()
-            self._conanfile.run(f"git {cmd}", stdout=output)
+            self._conanfile.run(f"git {cmd}", stdout=output, quiet=True)
             return output.getvalue().strip()
 
     def get_commit(self):
