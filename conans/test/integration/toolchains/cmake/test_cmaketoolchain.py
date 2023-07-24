@@ -39,7 +39,7 @@ def test_cross_build():
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
-    assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
 
 
 def test_cross_build_linux_to_macos():
@@ -158,7 +158,7 @@ def test_cross_arch():
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
-    assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
 
 
 def test_no_cross_build_arch():
