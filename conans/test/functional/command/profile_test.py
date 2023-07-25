@@ -133,16 +133,21 @@ class DetectCompilersTest(unittest.TestCase):
     def test_profile_new_msvc_vcvars(self):
         c = TestClient()
 
-        # extract location of cl.exe
-        vcvars = vcvars_command(version="17", architecture="x64")
+        # extract location of cl.exe from vcvars
+        vcvars = vcvars_command(version="15", architecture="x64")
         ret = c.run_command(f"{vcvars} && where cl.exe")
         assert ret == 0
-        cl_location = c.out.splitlines()[-1]
-        assert os.path.isfile(cl_location)
+        cl_executable = c.out.splitlines()[-1]
+        assert os.path.isfile(cl_executable)
+        cl_location = os.path.dirname(cl_executable)
+        
+        # Try different variations, including full path and full path with quotes 
+        for var in ["cl", "cl.exe", cl_executable, f'"{cl_executable}"']:
+            output = RedirectedTestOutput()
+            with redirect_output(output):
+                with environment_update({"CC": var, "PATH": cl_location}):
+                    result = detect_defaults_settings()
 
-        output = RedirectedTestOutput()
-        with redirect_output(output):
-            with environment_update({"CC": cl_location}):
-                result = detect_defaults_settings()
-        # result is a list of tuples (name, value) so converting it to dict
-        result = dict(result)
+            result = dict(result)
+            assert result['compiler'] == "msvc"
+            assert str(result['compiler.version']) == "191"
