@@ -43,9 +43,9 @@ def test_make_dirs_with_abs_path():
     prefix = pathlib.Path.home().drive if platform.system() == "Windows" else ""
     assert 'CONAN_NAME_MYLIB = mylib' in makefile_content
     assert 'CONAN_VERSION_MYLIB = 0.1' in makefile_content
-    assert f'CONAN_LIB_DIRS_MYLIB = \\\n\t$(CONAN_LIB_DIRS_FLAG){prefix}/my_absoulte_path/fake/mylib/lib \\\n\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/lib2' in makefile_content
-    assert f'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIRS_FLAG){prefix}/my_absoulte_path/fake/mylib/include' in makefile_content
-    assert 'CONAN_BIN_DIRS_MYLIB = $(CONAN_BIN_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/bin' in makefile_content
+    assert f'CONAN_LIB_DIRS_MYLIB = \\\n\t$(CONAN_LIB_DIR_FLAG){prefix}/my_absoulte_path/fake/mylib/lib \\\n\t$(CONAN_LIB_DIR_FLAG)$(CONAN_ROOT_MYLIB)/lib2' in makefile_content
+    assert f'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIR_FLAG){prefix}/my_absoulte_path/fake/mylib/include' in makefile_content
+    assert 'CONAN_BIN_DIRS_MYLIB = $(CONAN_BIN_DIR_FLAG)$(CONAN_ROOT_MYLIB)/bin' in makefile_content
 
     def assert_is_abs(path):
         assert os.path.isabs(path) is True
@@ -156,12 +156,12 @@ def test_multiple_include_and_lib_dirs():
 
     makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
     assert "CONAN_INCLUDE_DIRS_PKG = \\\n" \
-           "\t$(CONAN_INCLUDE_DIRS_FLAG)$(CONAN_ROOT_PKG)/inc1 \\\n" \
-           "\t$(CONAN_INCLUDE_DIRS_FLAG)$(CONAN_ROOT_PKG)/inc2 \\\n" \
-           "\t$(CONAN_INCLUDE_DIRS_FLAG)$(CONAN_ROOT_PKG)/inc3/foo\n" in makefile_content
+           "\t$(CONAN_INCLUDE_DIR_FLAG)$(CONAN_ROOT_PKG)/inc1 \\\n" \
+           "\t$(CONAN_INCLUDE_DIR_FLAG)$(CONAN_ROOT_PKG)/inc2 \\\n" \
+           "\t$(CONAN_INCLUDE_DIR_FLAG)$(CONAN_ROOT_PKG)/inc3/foo\n" in makefile_content
     assert "CONAN_LIB_DIRS_PKG = \\\n" \
-           "\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_PKG)/lib1 \\\n" \
-           "\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_PKG)/lib2\n" in makefile_content
+           "\t$(CONAN_LIB_DIR_FLAG)$(CONAN_ROOT_PKG)/lib1 \\\n" \
+           "\t$(CONAN_LIB_DIR_FLAG)$(CONAN_ROOT_PKG)/lib2\n" in makefile_content
     assert "CONAN_INCLUDE_DIRS = $(CONAN_INCLUDE_DIRS_PKG)\n" in makefile_content
     assert "CONAN_LIB_DIRS = $(CONAN_LIB_DIRS_PKG)\n" in makefile_content
 
@@ -359,7 +359,7 @@ def test_makedeps_with_editable_layout():
         client.run("install . -g MakeDeps")
         makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
         assert 'CONAN_LIBS_DEP = $(CONAN_LIB_FLAG)mylib\n' in makefile_content
-        assert 'CONAN_INCLUDE_DIRS_DEP = $(CONAN_INCLUDE_DIRS_FLAG)$(CONAN_ROOT_DEP)/include\n' in makefile_content
+        assert 'CONAN_INCLUDE_DIRS_DEP = $(CONAN_INCLUDE_DIR_FLAG)$(CONAN_ROOT_DEP)/include\n' in makefile_content
 
 
 def test_makedeps_tool_requires():

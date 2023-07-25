@@ -11,6 +11,7 @@ For better customization, it allows appending prefixes as flags variables:
 - CONAN_SYSTEM_LIB_FLAG: Add a prefix to all system_libs variables, e.g. -l
 - CONAN_INCLUDE_DIR_FLAG: Add a prefix to all include dirs variables, e.g. -I
 - CONAN_LIB_DIR_FLAG: Add a prefix to all lib dirs variables, e.g. -L
+- CONAN_BIN_DIR_FLAG: Add a prefix to all bin dirs variables, e.g. -L
 
 
 The conandeps.mk file layout is as follows:
@@ -96,13 +97,13 @@ def _common_cppinfo_dirs() -> dict:
     Regular cppinfo folders exported by any Conanfile and their Makefile prefixes
     """
     return {
-        'includedirs': "include_dir",
-        'libdirs': "lib_dir",
-        'bindirs': None,
-        'srcdirs': None,
-        'builddirs': None,
-        'resdirs': None,
-        'frameworkdirs': None,
+        "includedirs": "include_dir",
+        "libdirs": "lib_dir",
+        "bindirs": "bin_dir",
+        "srcdirs": None,
+        "builddirs": None,
+        "resdirs": None,
+        "frameworkdirs": None,
     }
 
 
