@@ -276,10 +276,15 @@ class DepComponentContentGenerator:
         {{- format_map_values(flags) -}}
         """)
 
-    def __init__(self, dependency: object, component_name: str, root: str, dirs: dict, flags: dict):
+    def __init__(self, dependency: object, component_name: str, dirs: dict, flags: dict):
+        """
+        :param dependency: The dependency object that owns the component
+        :param component_name: The component raw name e.g. poco::poco_json
+        :param dirs: The component cpp_info folders
+        :param flags: The component cpp_info variables
+        """
         self._dep = dependency
         self._name = component_name
-        self._root = root
         self._dirs = dirs or {}
         self._flags = flags or {}
 
@@ -292,7 +297,6 @@ class DepComponentContentGenerator:
             "comp_name": self._name,
             "dep_name": _makefy(self._dep.ref.name),
             "name": _makefy(self._name),
-            "root": self._root,
             "dirs": self._dirs,
             "flags": self._flags
         }
@@ -441,7 +445,7 @@ class DepComponentGenerator:
         """
         dirs = self._get_component_dirs()
         flags = self._get_component_flags()
-        comp_content_gen = DepComponentContentGenerator(self._dep, self._name, self._root, dirs, flags)
+        comp_content_gen = DepComponentContentGenerator(self._dep, self._name, dirs, flags)
         comp_content = comp_content_gen.content()
         return comp_content
 
@@ -569,8 +573,7 @@ class MakeDeps:
         make_infos = []
 
         for require, dep in dependencies:
-            # Require is not used at the moment, but its information could be used,
-            # and will be used in Conan 2.0
+            # Require is not used at the moment, but its information could be used, and will be used in Conan 2.0
             if require.build:
                 continue
 
