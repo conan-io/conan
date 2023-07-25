@@ -84,11 +84,10 @@ class ConanRequester(object):
 
         self._url_creds = URLCredentials(cache_folder)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
-        self._no_proxy_match = config.get("core.net.http:no_proxy_match")
+        self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
-        self._cacert_path = config.get("core.net.http:cacert_path")
+        self._cacert_path = config.get("core.net.http:cacert_path", check_type=str)
         self._client_certificates = config.get("core.net.http:client_cert")
-        self._no_proxy_match = config.get("core.net.http:no_proxy_match")
         self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
                                               check_type=bool)
 

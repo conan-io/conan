@@ -156,6 +156,7 @@ class ConanOutput:
             ret += "{}".format(msg)
 
         self.stream.write("{}\n".format(ret))
+        self.stream.flush()
 
     def trace(self, msg):
         if self._conan_output_level <= LEVEL_TRACE:

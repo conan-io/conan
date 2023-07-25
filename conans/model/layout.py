@@ -116,7 +116,7 @@ class Folders(object):
         self._base_recipe_metadata = folder
 
     @property
-    def pkg_metadata_folder(self):
+    def package_metadata_folder(self):
         return self._base_pkg_metadata
 
     def set_base_pkg_metadata(self, folder):

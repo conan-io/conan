@@ -40,7 +40,7 @@ class ConanProxy:
             # NOT in disk, must be retrieved from remotes
             # we will only check all servers for latest revision if we did a --update
             remote, new_ref = self._download_recipe(reference, remotes, output, update, check_update)
-            recipe_layout = self._cache.ref_layout(new_ref)
+            recipe_layout = self._cache.recipe_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
@@ -76,7 +76,7 @@ class ConanProxy:
                 if update:
                     output.info("Retrieving from remote '%s'..." % remote.name)
                     self._download(remote_ref, remote)
-                    new_recipe_layout = self._cache.ref_layout(remote_ref)
+                    new_recipe_layout = self._cache.recipe_layout(remote_ref)
                     new_conanfile_path = new_recipe_layout.conanfile()
                     status = RECIPE_UPDATED
                     return new_conanfile_path, status, remote, remote_ref

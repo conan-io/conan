@@ -86,9 +86,9 @@ class OnlySourceTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello0", "0.1")})
         client.run("export . --user=lasote --channel=stable")
         client.run("install --requires=%s --build missing" % str(ref))
-        pref = client.get_latest_package_reference(ref)
-        self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).build()))
-        self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).package()))
+        pkg_layout = client.created_layout()
+        self.assertTrue(os.path.exists(pkg_layout.build()))
+        self.assertTrue(os.path.exists(pkg_layout.package()))
 
         # Upload
         client.run("upload %s -r default" % str(ref))
@@ -103,9 +103,9 @@ class OnlySourceTest(unittest.TestCase):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers)
         other_client.run("install --requires=%s --build='*'" % str(ref))
-        pref = client.get_latest_package_reference(ref)
-        self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
-        self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
+        pkg_layout = other_client.created_layout()
+        self.assertTrue(os.path.exists(pkg_layout.build()))
+        self.assertTrue(os.path.exists(pkg_layout.package()))
 
         # Use an invalid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers)

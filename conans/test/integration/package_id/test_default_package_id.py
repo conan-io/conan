@@ -5,9 +5,9 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.parametrize("typedep, typeconsumer, different_id",
-                         [("header-library", "application", True),
-                          ("header-library", "shared-library", True),
-                          ("header-library", "static-library", True),
+                         [("header-library", "application", False),
+                          ("header-library", "shared-library", False),
+                          ("header-library", "static-library", False),
                           ("static-library", "application", True),
                           ("static-library", "shared-library", True),
                           ("static-library", "header-library", False),
@@ -23,9 +23,9 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
     """
     c = TestClient()
     dep = GenConanfile("dep", "0.1").with_option("myopt", [True, False]) \
-        .with_package_type(typedep)
+        .with_package_type(typedep).with_class_attribute('implements = ["auto_shared_fpic", "auto_header_only"]')
     consumer = GenConanfile("consumer", "0.1").with_requires("dep/0.1")\
-        .with_package_type(typeconsumer)
+        .with_package_type(typeconsumer).with_class_attribute('implements = ["auto_shared_fpic", "auto_header_only"]')
 
     c.save({"dep/conanfile.py": dep,
             "consumer/conanfile.py": consumer})
@@ -33,7 +33,8 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
     pid1 = c.created_package_id("dep/0.1")
     c.run("create dep -o dep/*:myopt=False")
     pid2 = c.created_package_id("dep/0.1")
-    assert pid1 != pid2
+    if typedep != "header-library":
+        assert pid1 != pid2
 
     c.run("create consumer -o dep/*:myopt=True")
     pid1 = c.created_package_id("consumer/0.1")

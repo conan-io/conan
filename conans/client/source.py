@@ -62,6 +62,7 @@ def config_source(export_source_folder, conanfile, hook_manager):
     if not os.path.exists(conanfile.folders.base_source):  # No source folder, need to get it
         with set_dirty_context_manager(conanfile.folders.base_source):
             mkdir(conanfile.source_folder)
+            mkdir(conanfile.recipe_metadata_folder)
 
             # First of all get the exported scm sources (if auto) or clone (if fixed)
             # Now move the export-sources to the right location

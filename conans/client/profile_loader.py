@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from conan import conan_version
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
-from conans.errors import ConanException
+from conans.errors import ConanException, scoped_traceback
 from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile
@@ -133,8 +133,12 @@ class ProfileLoader:
         # Only after everything has been aggregated, try to complete missing settings
         profile_plugin = self._load_profile_plugin()
         if profile_plugin is not None:
-            profile_plugin(result)
-
+            try:
+                profile_plugin(result)
+            except Exception as e:
+                msg = f"Error while processing 'profile.py' plugin"
+                msg = scoped_traceback(msg, e, scope="/extensions/plugins")
+                raise ConanException(msg)
         result.process_settings(self._cache)
         return result
 

@@ -1,3 +1,5 @@
+import os
+
 from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conans.model.package_ref import PkgReference
@@ -11,6 +13,9 @@ class CacheDatabase:
     def __init__(self, filename):
         self._recipes = RecipesDBTable(filename)
         self._packages = PackagesDBTable(filename)
+        if not os.path.isfile(filename):
+            self._recipes.create_table()
+            self._packages.create_table()
 
     def exists_prev(self, ref):
         # TODO: This logic could be done directly against DB

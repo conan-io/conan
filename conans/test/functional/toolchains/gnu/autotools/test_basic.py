@@ -353,17 +353,13 @@ def test_autotools_arguments_override():
                 self.cpp_info.libdirs = ["somefolder/customlibfolder"]
                 self.cpp_info.includedirs = ["somefolder/customincludefolder"]
         """)
-    #client.run("config set log.print_run_commands=1")
+
     client.save({"conanfile.py": conanfile})
     client.run("create . -tf=\"\"")
 
     # autoreconf args --force that is default should not be there
     assert "--force" not in client.out
     assert "--install" in client.out
-
-    package_id = client.created_package_id("mylib/1.0")
-    ref = RecipeReference.loads("mylib/1.0")
-    pref = client.get_latest_package_reference(ref, package_id)
 
     # we override the default DESTDIR in the install
     assert re.search("^.*make install .*DESTDIR=(.*)/somefolder.*$", str(client.out), re.MULTILINE)

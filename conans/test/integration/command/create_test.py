@@ -243,12 +243,7 @@ def test_conaninfo_contents_without_user_channel():
                 .with_require("hello/0.1")})
     client.run("create .")
 
-    ref = RecipeReference.loads("bye/0.1")
-
-    refs = client.cache.get_latest_recipe_reference(ref)
-    pkgs = client.cache.get_package_references(refs)
-    prev = client.cache.get_latest_package_reference(pkgs[0])
-    package_folder = client.cache.pkg_layout(prev).package()
+    package_folder = client.created_layout().package()
 
     conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
     # The user and channel nor None nor "_/" appears in the conaninfo

@@ -48,6 +48,8 @@ class ConanFile:
     default_options = None
     package_type = None
 
+    implements = []
+
     provides = None
     deprecated = None
 
@@ -278,8 +280,8 @@ class ConanFile:
         return self.folders.recipe_metadata_folder
 
     @property
-    def pkg_metadata_folder(self):
-        return self.folders.pkg_metadata_folder
+    def package_metadata_folder(self):
+        return self.folders.package_metadata_folder
 
     @property
     def build_path(self) -> Path:

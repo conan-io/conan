@@ -188,6 +188,11 @@ class CMake(object):
         if component:
             arg_list.extend(["--component", component])
         arg_list.extend(self._compilation_verbosity_arg)
+
+        do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        if do_strip:
+            arg_list.append("--strip")
+
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
         self._conanfile.run(command)
@@ -235,4 +240,6 @@ class CMake(object):
         :return:
         """
         log_level = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        if log_level == "quiet":
+            log_level = "error"
         return ["--loglevel=" + log_level.upper()] if log_level is not None else []

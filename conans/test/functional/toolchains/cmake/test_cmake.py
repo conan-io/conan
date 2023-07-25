@@ -57,6 +57,7 @@ class Base(unittest.TestCase):
             generators = "CMakeDeps"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
+            implements = ["auto_shared_fpic", "auto_header_only"]
 
             def generate(self):
                 tc = CMakeToolchain(self)
@@ -217,7 +218,6 @@ class WinTest(Base):
         options = {"shared": shared}
         save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
         toolchain_path = os.path.join(self.client.current_folder, "build",
@@ -314,7 +314,6 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
         self.assertIn("The C compiler identification is GNU", self.client.out)
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
@@ -396,7 +395,9 @@ class LinuxTest(Base):
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
                 "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": defines,
-                "CMAKE_POSITION_INDEPENDENT_CODE": "ON"
+                # fPIC is managed automatically depending on the shared option value
+                # if implements = ["auto_shared_fpic", "auto_header_only"]
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON" if not shared else ""
                 }
 
         def _verify_out(marker=">>"):
@@ -562,9 +563,7 @@ class CMakeInstallTest(unittest.TestCase):
         assert "unrecognized option" not in client.out
         assert "--verbose" in client.out
         self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
-        ref = RecipeReference.loads("pkg/0.1")
-        pref = client.get_latest_package_reference(ref)
-        package_folder = client.get_latest_pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
     def test_install_in_build(self):
