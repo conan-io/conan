@@ -134,7 +134,15 @@ class DetectCompilersTest(unittest.TestCase):
         c = TestClient()
 
         # extract location of cl.exe
-        vcvars = vcvars_command(version="15", architecture="x64")
-        command = f"{vcvars} && where cl.exe"
-        
+        vcvars = vcvars_command(version="17", architecture="x64")
+        ret = c.run_command(f"{vcvars} && where cl.exe")
+        assert ret == 0
+        cl_location = c.out.splitlines()[-1]
+        assert os.path.isfile(cl_location)
 
+        output = RedirectedTestOutput()
+        with redirect_output(output):
+            with environment_update({"CC": cl_location}):
+                result = detect_defaults_settings()
+        # result is a list of tuples (name, value) so converting it to dict
+        result = dict(result)

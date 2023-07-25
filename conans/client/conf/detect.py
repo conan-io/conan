@@ -34,6 +34,17 @@ def _gcc_compiler(compiler_exe="gcc"):
             return compiler, installed_version
     except Exception:
         return None
+    
+def _msvc_cl_compiler(compiler_exe="cl"):
+    try:
+        ret, out = detect_runner(f"{compiler_exe} /?")
+        if ret != 0 or not "Microsoft" in out:
+            return None
+        compiler = "msvc"
+        full_version = re.search(r"([0-9]+)\.([0-9]+)\.([0-9]+)\.?([0-9]+)?", out).group()
+        
+    except Exception:
+        return None
 
 
 def _clang_compiler(compiler_exe="clang"):
@@ -96,6 +107,9 @@ def _get_default_compiler():
             return gcc
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
+        if platform.system() == "Windows" and command.endswith(("cl", "cl.exe")) and not "clang" in command:
+            vs = _msvc_cl_compiler(command)
+
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
