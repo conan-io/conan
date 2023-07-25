@@ -107,6 +107,44 @@ def _common_cppinfo_dirs() -> dict:
     }
 
 
+def _jinja_format_list_values():
+    """
+    Template method to format a list of values in a Makefile,
+    It does not print anything in case the list is empty
+    e.g.
+    define_variable_value("FOO", ["single_value"]
+    output:
+    FOO = single_value
+
+    define_variable_value("BAR", ["value1", "value2"]
+    output:
+    BAR = \
+        value1 \
+        value2
+    """
+    return textwrap.dedent("""\
+            {%- macro define_variable_value(var, values) -%}
+            {%- if values|length > 0 -%}
+            {{ var }} = {{ format_list_values(values) }}
+            {%- endif -%}
+            {%- endmacro %}
+
+            {%- macro format_list_values(values) -%}
+            {% if values|length == 1 %}
+            {{ values[0] }}
+
+            {% elif values|length > 1 %}
+            \\
+            {% for value in values[:-1] %}
+            \t{{ value }} \\
+            {% endfor %}
+            \t{{ values|last }}
+
+            {% endif %}
+            {%- endmacro %}
+            """)
+
+
 class MakeInfo:
     """
     Store temporary information about each dependency
@@ -126,54 +164,38 @@ class MakeInfo:
 class GlobalContentGenerator:
     """
     Generates the formatted content for global variables (e.g. CONAN_DEPS, CONAN_LIBS)
+    - Empty variables are not exposed in the Makefile
+    - Single value variables are exposed in a single line
+    - Multiple value variables are exposed in multiple lines with a tabulation
     """
 
     template = textwrap.dedent("""\
-            {%- macro format_map_values(values) -%}
-            {%- for var, value in values.items() -%}
-            {%- if value|length > 0 -%}
-            CONAN_{{ var.upper() }} = {{ format_list_values(value) }}
-            {%- endif -%}
-            {%- endfor -%}
-            {%- endmacro -%}
-
-            {%- macro format_list_values(values) -%}
-            {% if values|length == 1 %}
-            {{ values[0] }}
-
-            {% elif values|length > 1 %}
-            \\
-            {% for value in values[:-1] %}
-            \t{{ value }} \\
-            {% endfor %}
-            \t{{ values|last }}
-
-            {% endif %}
-            {%- endmacro %}
 
             # Aggregated global variables
 
 
-            {{ format_map_values(dirs) -}}
-            {{- format_map_values(flags) -}}
+            {{ define_variable_value("CONAN_INCLUDE_DIRS", include_dirs) -}}
+            {{- define_variable_value("CONAN_LIB_DIRS", lib_dirs) -}}
+            {{- define_variable_value("CONAN_BIN_DIRS", bin_dirs) -}}
+            {{- define_variable_value("CONAN_SRC_DIRS", src_dirs) -}}
+            {{- define_variable_value("CONAN_BUILD_DIRS", build_dirs) -}}
+            {{- define_variable_value("CONAN_RES_DIRS", res_dirs) -}}
+            {{- define_variable_value("CONAN_FRAMEWORK_DIRS", framework_dirs) -}}
+            {{- define_variable_value("CONAN_OBJECTS", objects) -}}
+            {{- define_variable_value("CONAN_LIBS", libs) -}}
+            {{- define_variable_value("CONAN_DEFINES", defines) -}}
+            {{- define_variable_value("CONAN_CFLAGS", cflags) -}}
+            {{- define_variable_value("CONAN_CXXFLAGS", cxxflags) -}}
+            {{- define_variable_value("CONAN_SHAREDLINKFLAGS", sharedlinkflags) -}}
+            {{- define_variable_value("CONAN_EXELINKFLAGS", exelinkflags) -}}
+            {{- define_variable_value("CONAN_FRAMEWORKS", frameworks) -}}
+            {{- define_variable_value("CONAN_REQUIRES", requires) -}}
+            {{- define_variable_value("CONAN_SYSTEM_LIBS", system_libs) -}}
             """)
 
     template_deps = textwrap.dedent("""\
-            {%- macro format_list_values(values) -%}
-            {% if values|length == 1 %}
-            {{ values[0] }}
 
-            {% elif values|length > 1 %}
-            \\
-            {% for value in values[:-1] %}
-            \t{{ value }} \\
-            {% endfor %}
-            \t{{ values|last }}
-
-            {% endif %}
-            {%- endmacro -%}
-
-            CONAN_DEPS = {{ format_list_values(deps) }}
+            {{ define_variable_value("CONAN_DEPS", deps) }}
             """)
 
     def content(self, deps_cpp_info_dirs: dict, deps_cpp_info_flags: dict) -> str:
@@ -182,8 +204,24 @@ class GlobalContentGenerator:
         :param deps_cpp_info_dirs: Formatted dependencies folders
         :param deps_cpp_info_flags: Formatted dependencies variables
         """
-        context = {"dirs": deps_cpp_info_dirs, "flags": deps_cpp_info_flags}
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        context = {"include_dirs": deps_cpp_info_dirs.get("include_dirs", []),
+                   "lib_dirs": deps_cpp_info_dirs.get("lib_dirs", []),
+                   "bin_dirs": deps_cpp_info_dirs.get("bin_dirs", []),
+                   "src_dirs": deps_cpp_info_dirs.get("src_dirs", []),
+                   "build_dirs": deps_cpp_info_dirs.get("build_dirs", []),
+                   "res_dirs": deps_cpp_info_dirs.get("res_dirs", []),
+                   "framework_dirs": deps_cpp_info_dirs.get("framework_dirs", []),
+                   "objects": deps_cpp_info_flags.get("objects", []),
+                   "libs": deps_cpp_info_flags.get("libs", []),
+                   "defines": deps_cpp_info_flags.get("defines", []),
+                   "cflags": deps_cpp_info_flags.get("cflags", []),
+                   "cxxflags": deps_cpp_info_flags.get("cxxflags", []),
+                   "sharedlinkflags": deps_cpp_info_flags.get("sharedlinkflags", []),
+                   "exelinkflags": deps_cpp_info_flags.get("exelinkflags", []),
+                   "frameworks": deps_cpp_info_flags.get("frameworks", []),
+                   "requires": deps_cpp_info_flags.get("requires", []),
+                   "system_libs": deps_cpp_info_flags.get("system_libs", [])}
+        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
     def deps_content(self, dependencies_names: list) -> str:
@@ -192,7 +230,7 @@ class GlobalContentGenerator:
         :param dependencies_names: Non-formatted dependencies names
         """
         context = {"deps": dependencies_names}
-        template = Template(self.template_deps, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template_deps, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
 
