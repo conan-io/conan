@@ -45,7 +45,7 @@ def _get_formatted_dirs(folders: list, prefix_path_: str, name: str) -> list:
     :return: list of formatted directories
     """
     ret = []
-    for i, directory in enumerate(folders):
+    for _, directory in enumerate(folders):
         directory = os.path.normpath(directory).replace("\\", "/")
         prefix = ""
         if not os.path.isabs(directory):
@@ -219,7 +219,7 @@ class GlobalGenerator:
         List common variables from cpp_info and format them to be used in the makefile
         """
         flags = {}
-        for var in _common_cppinfo_variables().keys():
+        for var in _common_cppinfo_variables():
             key = var.replace("dirs", "_dirs")
             flags[key] = [f"$(CONAN_{key.upper()}_{_makefy(makeinfo.name)})" for makeinfo in self._make_infos if var in makeinfo.flags]
         return flags
@@ -536,7 +536,7 @@ class DepGenerator:
         return content
 
 
-class MakeDeps(object):
+class MakeDeps:
     """
     Generates a Makefile with the variables needed to build a project with the specified.
     """
