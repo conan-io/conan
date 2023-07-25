@@ -47,9 +47,11 @@ def timelimit(expression):
     except TypeError:
         raise ConanException(f"Time value '{time_value}' must be an integer")
     time_units = expression[-1]
-    units = {"w": 7*24*60*60,
-             "d": 24*60*60,
-             "h": 60*60,
+    units = {"y": 365 * 24 * 60 * 60,
+             "M": 30 * 24 * 60 * 60,
+             "w": 7 * 24 * 60 * 60,
+             "d": 24 * 60 * 60,
+             "h": 60 * 60,
              "m": 60,
              "s": 1}
     try:

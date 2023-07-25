@@ -1,4 +1,5 @@
 import os
+import shutil
 import sqlite3
 
 from conan.api.output import ConanOutput
@@ -53,13 +54,18 @@ class ClientMigrator(Migrator):
         from conans.client.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(cache)
 
-        if old_version and old_version < "2.0.8":
+        if old_version and old_version < "2.0.10":
             _migrate_pkg_db_lru(cache)
 
 
 def _migrate_pkg_db_lru(cache):
-    ConanOutput().warning("Running 2.0.8 DB migration to add LRU column")
+    ConanOutput().warning("**************************************************")
+    ConanOutput().warning("Running 2.0.10 DB migration to add LRU column")
     db_filename = os.path.join(cache.store, 'cache.sqlite3')
+    shutil.copy2(db_filename, os.path.join(cache.store, "cache.sqlite3.backup"))
+    ConanOutput().warning("Created 'cache.sqlite3.backup'. Restore it 'cache.sqlite3' to "
+                          "downgrade to Conan < 2.0.10")
+    ConanOutput().warning("**************************************************")
     connection = sqlite3.connect(db_filename, isolation_level=None,
                                  timeout=1, check_same_thread=False)
     try:
@@ -68,7 +74,7 @@ def _migrate_pkg_db_lru(cache):
             connection.execute(f"ALTER TABLE {table} ADD COLUMN 'lru' "
                                f"INTEGER DEFAULT '{lru}' NOT NULL;")
     except Exception:
-        ConanOutput().error(f"Could not complete the 2.0.8 DB migration."
+        ConanOutput().error(f"Could not complete the 2.0.10 DB migration."
                             " Please manually remove your .conan2 cache and reinstall packages")
         raise
     finally:

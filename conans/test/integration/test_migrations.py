@@ -76,6 +76,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     # Trigger the migrations
     t2.run("-v")
     assert "WARN: Running 2.0.8 DB migration to add LRU column" in t2.out
+    assert "WARN: Created 'cache.sqlite3.backup'" in t2.out
     assert f"Migration: Successfully updated" not in t2.out
     contents = load(profile_plugin_path2)
     # Our Changes are kept!
