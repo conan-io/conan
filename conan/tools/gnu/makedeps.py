@@ -358,25 +358,6 @@ class DepContentGenerator:
     """
 
     template = textwrap.dedent("""\
-        {%- macro format_map_values(values) -%}
-        {%- for var, value in values.items() -%}
-        CONAN_{{ var.upper() }}_{{ name }} = {{ format_list_values(value) }}
-        {%- endfor -%}
-        {%- endmacro -%}
-
-        {%- macro format_list_values(values) -%}
-        {% if values|length == 1 %}
-        {{ values[0] }}
-
-        {% elif values|length > 1 %}
-        \\
-        {% for value in values[:-1] %}
-        \t{{ value }} \\
-        {% endfor %}
-        \t{{ values|last }}
-
-        {% endif %}
-        {%- endmacro %}
 
         # {{ dep.ref.name }}/{{ dep.ref.version }}
 
@@ -387,14 +368,25 @@ class DepContentGenerator:
 
         CONAN_ROOT_{{ name }} = {{ root }}
 
-        {% if sysroot|length > 0 %}
-        CONAN_SYSROOT_{{ name }} = {{ format_list_values(sysroot) }}
-        {% endif %}
-        {{- format_map_values(dirs) }}
-        {{- format_map_values(flags) -}}
-        {%- if components|length > 0 -%}
-        CONAN_COMPONENTS_{{ name }} = {{ format_list_values(components) }}
-        {%- endif -%}
+        {{  define_variable_value("CONAN_SYSROOT_{}".format(name), sysroot) -}}
+        {{- define_variable_value("CONAN_INCLUDE_DIRS_{}".format(name), include_dirs) -}}
+        {{- define_variable_value("CONAN_LIB_DIRS_{}".format(name), lib_dirs) -}}
+        {{- define_variable_value("CONAN_BIN_DIRS_{}".format(name), bin_dirs) -}}
+        {{- define_variable_value("CONAN_SRC_DIRS_{}".format(name), src_dirs) -}}
+        {{- define_variable_value("CONAN_BUILD_DIRS_{}".format(name), build_dirs) -}}
+        {{- define_variable_value("CONAN_RES_DIRS_{}".format(name), res_dirs) -}}
+        {{- define_variable_value("CONAN_FRAMEWORK_DIRS_{}".format(name), framework_dirs) -}}
+        {{- define_variable_value("CONAN_OBJECTS_{}".format(name), objects) -}}
+        {{- define_variable_value("CONAN_LIBS_{}".format(name), libs) -}}
+        {{- define_variable_value("CONAN_DEFINES_{}".format(name), defines) -}}
+        {{- define_variable_value("CONAN_CFLAGS_{}".format(name), cflags) -}}
+        {{- define_variable_value("CONAN_CXXFLAGS_{}".format(name), cxxflags) -}}
+        {{- define_variable_value("CONAN_SHAREDLINKFLAGS_{}".format(name), sharedlinkflags) -}}
+        {{- define_variable_value("CONAN_EXELINKFLAGS_{}".format(name), exelinkflags) -}}
+        {{- define_variable_value("CONAN_FRAMEWORKS_{}".format(name), frameworks) -}}
+        {{- define_variable_value("CONAN_REQUIRES_{}".format(name), requires) -}}
+        {{- define_variable_value("CONAN_SYSTEM_LIBS_{}".format(name), system_libs) -}}
+        {{- define_variable_value("CONAN_COMPONENTS_{}".format(name), components) -}}
         """)
 
     def __init__(self, dependency: object, root: str, sysroot: str, dirs: dict, flags: dict):
@@ -413,11 +405,26 @@ class DepContentGenerator:
             "name": _makefy(self._dep.ref.name),
             "root": self._root,
             "sysroot": self._sysroot,
-            "dirs": self._dirs,
-            "flags": self._flags,
+            "include_dirs": self._dirs.get("include_dirs", []),
+            "lib_dirs": self._dirs.get("lib_dirs", []),
+            "bin_dirs": self._dirs.get("bin_dirs", []),
+            "src_dirs": self._dirs.get("src_dirs", []),
+            "build_dirs": self._dirs.get("build_dirs", []),
+            "res_dirs": self._dirs.get("res_dirs", []),
+            "framework_dirs": self._dirs.get("framework_dirs", []),
+            "objects": self._flags.get("objects", []),
+            "libs": self._flags.get("libs", []),
+            "defines": self._flags.get("defines", []),
+            "cflags": self._flags.get("cflags", []),
+            "cxxflags": self._flags.get("cxxflags", []),
+            "sharedlinkflags": self._flags.get("sharedlinkflags", []),
+            "exelinkflags": self._flags.get("exelinkflags", []),
+            "frameworks": self._flags.get("frameworks", []),
+            "requires": self._flags.get("requires", []),
+            "system_libs": self._flags.get("system_libs", []),
             "components": list(self._dep.cpp_info.get_sorted_components().keys())
         }
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -550,7 +557,7 @@ class DepGenerator:
                 cppinfo_value = [var.replace('"', '\\"') for var in cppinfo_value]
             if cppinfo_value:
                 self._info.flags.append(var)
-                flags[var.upper()] = [_conan_prefix_flag(prefix_var) + it for it in cppinfo_value]
+                flags[var] = [_conan_prefix_flag(prefix_var) + it for it in cppinfo_value]
         return flags
 
     def _get_sysroot(self, root: str) -> list:
