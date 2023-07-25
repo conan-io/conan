@@ -10,8 +10,7 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
     BINARY_SYSTEM_TOOL, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, conanfile_remove_attr)
+from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
@@ -97,7 +96,7 @@ class _PackageBuilder(object):
         except Exception as exc:
             conanfile.output.error("\nPackage '%s' build failed" % pref.package_id)
             conanfile.output.warning("Build folder %s" % conanfile.build_folder)
-            if isinstance(exc, ConanExceptionInUserConanfileMethod):
+            if isinstance(exc, ConanException):
                 raise exc
             raise ConanException(exc)
 

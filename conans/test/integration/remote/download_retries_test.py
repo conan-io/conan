@@ -1,6 +1,5 @@
 import unittest
 
-from conans import REVISIONS
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
@@ -10,7 +9,7 @@ class DownloadRetriesTest(unittest.TestCase):
 
     def test_do_not_retry_when_missing_file(self):
 
-        test_server = TestServer(server_capabilities=[REVISIONS])
+        test_server = TestServer()
         client = TestClient(servers={"default": test_server}, inputs=["admin", "password"])
         conanfile = '''from conan import ConanFile
 class MyConanfile(ConanFile):
