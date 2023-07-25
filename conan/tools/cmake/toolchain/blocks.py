@@ -540,6 +540,9 @@ class FindFiles(Block):
                 nf = os.path.normpath(req.package_folder)
                 host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
                 host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+                if len([p for p in cppinfo.builddirs if os.path.normpath(p) == nf]) > 1:
+                    # package_folder was additionally appended to builddirs by the user
+                    host_build_paths_noroot.append(nf)
             else:
                 host_build_paths_root = []
                 host_build_paths_noroot.extend(p for p in cppinfo.builddirs)

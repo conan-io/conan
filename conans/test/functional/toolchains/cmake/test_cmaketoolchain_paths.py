@@ -173,7 +173,10 @@ def test_cmaketoolchain_path_find_package_editable():
 @pytest.mark.parametrize(
     "find_root_path_modes", [find_root_path_modes_default, find_root_path_modes_cross_build],
 )
-def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_modes):
+@pytest.mark.parametrize(
+    "builddir", ['self.package_folder', 'os.path.join("hello", "cmake")', '"."'],
+)
+def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_modes, builddir):
     client = TestClient()
 
     conanfile = textwrap.dedent("""
@@ -197,8 +200,8 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
                 cmake.install()
 
             def package_info(self):
-                self.cpp_info.builddirs.append(os.path.join("hello", "cmake"))
-        """)
+                self.cpp_info.builddirs.append({})
+        """.format(builddir))
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
