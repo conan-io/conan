@@ -107,16 +107,18 @@ def _common_cppinfo_dirs() -> dict:
     }
 
 
-def _jinja_format_list_values():
+def _jinja_format_list_values() -> str:
     """
     Template method to format a list of values in a Makefile,
-    It does not print anything in case the list is empty
+    - Empty variables are not exposed in the Makefile
+    - Single value variables are exposed in a single line
+    - Multiple value variables are exposed in multiple lines with a tabulation
     e.g.
-    define_variable_value("FOO", ["single_value"]
+    define_variable_value("FOO", ["single_value"])
     output:
     FOO = single_value
 
-    define_variable_value("BAR", ["value1", "value2"]
+    define_variable_value("BAR", ["value1", "value2"])
     output:
     BAR = \
         value1 \
@@ -164,9 +166,6 @@ class MakeInfo:
 class GlobalContentGenerator:
     """
     Generates the formatted content for global variables (e.g. CONAN_DEPS, CONAN_LIBS)
-    - Empty variables are not exposed in the Makefile
-    - Single value variables are exposed in a single line
-    - Multiple value variables are exposed in multiple lines with a tabulation
     """
 
     template = textwrap.dedent("""\
@@ -312,7 +311,7 @@ class DepComponentContentGenerator:
     def __init__(self, dependency: object, component_name: str, dirs: dict, flags: dict):
         """
         :param dependency: The dependency object that owns the component
-        :param component_name: The component raw name e.g. poco::poco_json
+        :param component_name: component raw name e.g. poco::poco_json
         :param dirs: The component cpp_info folders
         :param flags: The component cpp_info variables
         """
