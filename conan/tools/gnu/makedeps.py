@@ -1,3 +1,29 @@
+"""Makefile generator for Conan dependencies
+
+This generator creates a Makefile (conandeps.mk) with variables for each dependency and consider their components.
+To simplify its usage, it also creates global variables with aggregated values from all dependencies.
+This generator does not work like a toolchain, it does not include settings.
+
+For better customization, it allows appending prefixes as flags variables:
+
+- CONAN_LIB_FLAG: Add a prefix to all libs variables, e.g. -l
+- CONAN_DEFINE_FLAG: Add a prefix to all defines variables, e.g. -D
+- CONAN_SYSTEM_LIB_FLAG: Add a prefix to all system_libs variables, e.g. -l
+- CONAN_INCLUDE_DIR_FLAG: Add a prefix to all include dirs variables, e.g. -I
+- CONAN_LIB_DIR_FLAG: Add a prefix to all lib dirs variables, e.g. -L
+
+
+The conandeps.mk file layout is as follows:
+
+- CONAN_DEPS: list all transitive and intransitive dependencies names without version (e.g. zlib)
+- Iterate over each dependency and its components:
+    - Prints name, version, root folder, regular folders, libs and flags
+    - Components are rootified to avoid repeating same prefix twice for the root folder
+    - Components libs, folder and flags are solved as variables to avoid repeating same name twice
+- Aggregated global variables for simplification, sum all dependencies to common variables (e.g. CONAN_INCLUDE_DIRS)
+
+"""
+
 import os
 import re
 import textwrap
