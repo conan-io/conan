@@ -239,6 +239,83 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
 
 
 @pytest.mark.tool_cmake
+@pytest.mark.parametrize(
+    "settings",
+    [
+        "",
+        pytest.param(
+            ios10_armv8_settings,
+            marks=pytest.mark.skipif(platform.system() != "Darwin", reason="OSX only"),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "find_root_path_modes", [find_root_path_modes_default, find_root_path_modes_cross_build],
+)
+def test_cmaketoolchain_path_find_package_real_config_default(settings, find_root_path_modes):
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+        import os
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "*"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                pass
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def package_info(self):
+                self.cpp_info.frameworkdirs.append(self.package_folder)
+        """)
+    cmake = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello NONE)
+
+        add_library(hello INTERFACE)
+        install(TARGETS hello EXPORT helloConfig)
+        install(EXPORT helloConfig
+            DESTINATION "${CMAKE_INSTALL_PREFIX}/share/cmake/hello"
+            NAMESPACE hello::
+        )
+        """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmake})
+    client.run("create . hello/0.1@ -pr:b default {}".format(settings))
+
+    consumer = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyHello NONE)
+
+        find_package(hello REQUIRED)
+        """)
+
+    client.save({"CMakeLists.txt": consumer}, clean_first=True)
+    client.run("install hello/0.1@ -g CMakeToolchain -pr:b default {}".format(settings))
+    with client.chdir("build"):
+        client.run_command(_cmake_command_toolchain(find_root_path_modes))
+    # If it didn't fail, it found the helloConfig.cmake
+    assert "Conan: Target declared" not in client.out
+
+    # If using the CMakeDeps generator, the in-package .cmake will be ignored
+    client.run("install hello/0.1@ -g CMakeToolchain -g CMakeDeps -pr:b default {}".format(settings))
+    with client.chdir("build2"):  # A clean folder, not the previous one, CMake cache doesnt affect
+        client.run_command(_cmake_command_toolchain(find_root_path_modes))
+    assert "Conan: Target declared 'hello::hello'" in client.out
+
+
+
+
+@pytest.mark.tool_cmake
 @pytest.mark.parametrize("require_type", ["requires", "build_requires"])
 @pytest.mark.parametrize(
     "settings",

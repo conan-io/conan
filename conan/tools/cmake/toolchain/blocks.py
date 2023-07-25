@@ -476,7 +476,7 @@ class FindFiles(Block):
         {% if cmake_library_path %}
         list(PREPEND CMAKE_LIBRARY_PATH {{ cmake_library_path }})
         {% endif %}
-        {% if is_apple and cmake_framework_path %}
+        {% if cmake_framework_path %}
         list(PREPEND CMAKE_FRAMEWORK_PATH {{ cmake_framework_path }})
         {% endif %}
         {% if cmake_include_path %}
@@ -493,11 +493,9 @@ class FindFiles(Block):
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_LIBRARY OR CMAKE_FIND_ROOT_PATH_MODE_LIBRARY STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
         endif()
-        {% if is_apple %}
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK OR CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_FRAMEWORK "BOTH")
         endif()
-        {% endif %}
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_INCLUDE OR CMAKE_FIND_ROOT_PATH_MODE_INCLUDE STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
         endif()
@@ -520,7 +518,6 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         os_ = self._conanfile.settings.get_safe("os")
-        is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context, also including test_requires, which are in host
         # TODO: Add here in 2.0 the "skip": False trait
@@ -537,16 +534,16 @@ class FindFiles(Block):
             # The package_folder can be None if editable and layout(), in that case only the
             # host_build_paths_noroot will be populated
             if req.package_folder:
-                nf = os.path.normpath(req.package_folder)
-                host_build_paths_root.extend(p for p in cppinfo.builddirs if os.path.normpath(p) == nf)
-                host_build_paths_noroot.extend(p for p in cppinfo.builddirs if os.path.normpath(p) != nf)
+                package_folder = os.path.normpath(req.package_folder)
+                builddirs = [os.path.normpath(p) for p in cppinfo.builddirs]
+                host_build_paths_root.extend(p for p in builddirs if p == package_folder)
+                host_build_paths_noroot.extend(p for p in builddirs if p != package_folder)
             else:
                 host_build_paths_root = []
                 host_build_paths_noroot.extend(p for p in cppinfo.builddirs)
             host_lib_paths.extend(cppinfo.libdirs)
             host_bin_paths.extend(cppinfo.bindirs)
-            if is_apple_:
-                host_framework_paths.extend(cppinfo.frameworkdirs)
+            host_framework_paths.extend(cppinfo.frameworkdirs)
             host_include_paths.extend(cppinfo.includedirs)
 
         # Read information from build context
@@ -560,6 +557,18 @@ class FindFiles(Block):
         has_build_context = hasattr(self._conanfile, "settings_build") # always true in Conan 2.0
         bin_paths = build_bin_paths if has_build_context else host_bin_paths
 
+        def filter_paths(inlist): # remove duplicates
+            return list(set(inlist)) # TODO: remove paths which do not exist
+
+        # remove duplicates from each list
+        host_build_paths_root = filter_paths(host_build_paths_root)
+        host_build_paths_noroot = filter_paths(host_build_paths_noroot)
+        build_build_paths = filter_paths(build_build_paths)
+        bin_paths = filter_paths(bin_paths)
+        host_lib_paths = filter_paths(host_lib_paths)
+        host_framework_paths = filter_paths(host_framework_paths)
+        host_include_paths = filter_paths(host_include_paths)
+
         return {
             "find_package_prefer_config": find_package_prefer_config,
             "generators_folder": "${CMAKE_CURRENT_LIST_DIR}",
@@ -570,7 +579,6 @@ class FindFiles(Block):
             "cmake_library_path": self._join_paths(host_lib_paths),
             "cmake_framework_path": self._join_paths(host_framework_paths),
             "cmake_include_path": self._join_paths(host_include_paths),
-            "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
         }
 
