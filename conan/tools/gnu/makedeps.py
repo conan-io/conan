@@ -288,30 +288,25 @@ class DepComponentContentGenerator:
     """
 
     template = textwrap.dedent("""\
-        {%- macro format_map_values(values) -%}
-        {%- for var, value in values.items() -%}
-        CONAN_{{ var.upper() }}_{{ dep_name }}_{{ name }} = {{ format_list_values(value) }}
-        {%- endfor -%}
-        {%- endmacro -%}
-
-        {%- macro format_list_values(values) -%}
-        {% if values|length == 1 %}
-        {{ values[0] }}
-
-        {% elif values|length > 1 %}
-        \\
-        {% for value in values[:-1] %}
-        \t{{ value }} \\
-        {% endfor %}
-        \t{{ values|last }}
-
-        {% endif %}
-        {%- endmacro -%}
-
         # {{ dep.ref.name }}::{{ comp_name }}
 
-        {{ format_map_values(dirs) -}}
-        {{- format_map_values(flags) -}}
+        {{  define_variable_value("CONAN_INCLUDE_DIRS_{}_{}".format(dep_name, name), include_dirs) -}}
+        {{- define_variable_value("CONAN_LIB_DIRS_{}_{}".format(dep_name, name), lib_dirs) -}}
+        {{- define_variable_value("CONAN_BIN_DIRS_{}_{}".format(dep_name, name), bin_dirs) -}}
+        {{- define_variable_value("CONAN_SRC_DIRS_{}_{}".format(dep_name, name), src_dirs) -}}
+        {{- define_variable_value("CONAN_BUILD_DIRS_{}_{}".format(dep_name, name), build_dirs) -}}
+        {{- define_variable_value("CONAN_RES_DIRS_{}_{}".format(dep_name, name), res_dirs) -}}
+        {{- define_variable_value("CONAN_FRAMEWORK_DIRS_{}_{}".format(dep_name, name), framework_dirs) -}}
+        {{- define_variable_value("CONAN_OBJECTS_{}_{}".format(dep_name, name), objects) -}}
+        {{- define_variable_value("CONAN_LIBS_{}_{}".format(dep_name, name), libs) -}}
+        {{- define_variable_value("CONAN_DEFINES_{}_{}".format(dep_name, name), defines) -}}
+        {{- define_variable_value("CONAN_CFLAGS_{}_{}".format(dep_name, name), cflags) -}}
+        {{- define_variable_value("CONAN_CXXFLAGS_{}_{}".format(dep_name, name), cxxflags) -}}
+        {{- define_variable_value("CONAN_SHAREDLINKFLAGS_{}_{}".format(dep_name, name), sharedlinkflags) -}}
+        {{- define_variable_value("CONAN_EXELINKFLAGS_{}_{}".format(dep_name, name), exelinkflags) -}}
+        {{- define_variable_value("CONAN_FRAMEWORKS_{}_{}".format(dep_name, name), frameworks) -}}
+        {{- define_variable_value("CONAN_REQUIRES_{}_{}".format(dep_name, name), requires) -}}
+        {{- define_variable_value("CONAN_SYSTEM_LIBS_{}_{}".format(dep_name, name), system_libs) -}}
         """)
 
     def __init__(self, dependency: object, component_name: str, dirs: dict, flags: dict):
@@ -335,10 +330,25 @@ class DepComponentContentGenerator:
             "comp_name": self._name,
             "dep_name": _makefy(self._dep.ref.name),
             "name": _makefy(self._name),
-            "dirs": self._dirs,
-            "flags": self._flags
+            "include_dirs": self._dirs.get("include_dirs", []),
+            "lib_dirs": self._dirs.get("lib_dirs", []),
+            "bin_dirs": self._dirs.get("bin_dirs", []),
+            "src_dirs": self._dirs.get("src_dirs", []),
+            "build_dirs": self._dirs.get("build_dirs", []),
+            "res_dirs": self._dirs.get("res_dirs", []),
+            "framework_dirs": self._dirs.get("framework_dirs", []),
+            "objects": self._flags.get("objects", []),
+            "libs": self._flags.get("libs", []),
+            "defines": self._flags.get("defines", []),
+            "cflags": self._flags.get("cflags", []),
+            "cxxflags": self._flags.get("cxxflags", []),
+            "sharedlinkflags": self._flags.get("sharedlinkflags", []),
+            "exelinkflags": self._flags.get("exelinkflags", []),
+            "frameworks": self._flags.get("frameworks", []),
+            "requires": self._flags.get("requires", []),
+            "system_libs": self._flags.get("system_libs", [])
         }
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -472,7 +482,7 @@ class DepComponentGenerator:
             if "flags" in var:
                 cppinfo_value = [var.replace('"', '\\"') for var in cppinfo_value]
             if cppinfo_value:
-                flags[var.upper()] = [_conan_prefix_flag(prefix_var) + it for it in cppinfo_value]
+                flags[var] = [_conan_prefix_flag(prefix_var) + it for it in cppinfo_value]
                 self._makeinfo.flags.append(var)
         return flags
 
