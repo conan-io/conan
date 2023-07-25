@@ -60,6 +60,8 @@ def _get_formatted_dirs(folders: list, prefix_path_: str, name: str) -> list:
 def _makefy(name: str) -> str:
     """
     Convert a name to Make-variable-friendly syntax
+    :param name: The name to be converted
+    :return: Safe makefile variable, not including bad characters that are not parsed correctly
     """
     return re.sub(r'[^0-9A-Z_]', '_', name.upper())
 
@@ -108,7 +110,13 @@ class MakeInfo:
     """
     Store temporary information about each dependency
     """
+
     def __init__(self, name: str, dirs: list, flags: list):
+        """
+        :param name: Dependency or component raw name
+        :param dirs: cpp_info folders supported by the dependency
+        :param flags: cpp_info variables supported by the dependency
+        """
         self.name = name
         self.dirs = dirs
         self.flags = flags
@@ -167,10 +175,7 @@ class GlobalContentGenerator:
             CONAN_DEPS = {{ format_list_values(deps) }}
             """)
 
-    def __init__(self, conanfile):
-        self._conanfile = conanfile
-
-    def content(self, deps_cpp_info_dirs: list, deps_cpp_info_flags: list) -> str:
+    def content(self, deps_cpp_info_dirs: dict, deps_cpp_info_flags: dict) -> str:
         """
         Generate content for Cppinfo variables (e.g. CONAN_LIBS, CONAN_INCLUDE_DIRS)
         :param deps_cpp_info_dirs: Formatted dependencies folders
@@ -199,7 +204,7 @@ class GlobalGenerator:
         self._conanfile = conanfile
         self._make_infos = make_infos
 
-    def _get_dependency_dirs(self) -> list:
+    def _get_dependency_dirs(self) -> dict:
         """
         List regular directories from cpp_info and format them to be used in the makefile
         """
@@ -209,7 +214,7 @@ class GlobalGenerator:
             dirs[key] = [f"$(CONAN_{key.upper()}_{_makefy(makeinfo.name)})" for makeinfo in self._make_infos if var in makeinfo.dirs]
         return dirs
 
-    def _get_dependency_flags(self) -> list:
+    def _get_dependency_flags(self) -> dict:
         """
         List common variables from cpp_info and format them to be used in the makefile
         """
@@ -223,7 +228,7 @@ class GlobalGenerator:
         """
         Process folder and variables for a dependency and generates its Makefile content
         """
-        glob_content_gen = GlobalContentGenerator(self._conanfile)
+        glob_content_gen = GlobalContentGenerator()
         dirs = self._get_dependency_dirs()
         flags = self._get_dependency_flags()
         return glob_content_gen.content(dirs, flags)
@@ -234,7 +239,7 @@ class GlobalGenerator:
         It should be added as first variable in the Makefile.
         """
         dependencies = [makeinfo.name for makeinfo in self._make_infos if makeinfo.name != self._conanfile.name]
-        glob_content_gen = GlobalContentGenerator(self._conanfile)
+        glob_content_gen = GlobalContentGenerator()
         return glob_content_gen.deps_content(dependencies)
 
 
@@ -270,8 +275,7 @@ class DepComponentContentGenerator:
         {{- format_map_values(flags) -}}
         """)
 
-    def __init__(self, conanfile: object, dependency: object, component_name: str, root: str, dirs: dict, flags: dict):
-        self._conanfile = conanfile
+    def __init__(self, dependency: object, component_name: str, root: str, dirs: dict, flags: dict):
         self._dep = dependency
         self._name = component_name
         self._root = root
@@ -340,8 +344,7 @@ class DepContentGenerator:
         {%- endif -%}
         """)
 
-    def __init__(self, conanfile: object, dependency: object, root: str, sysroot: str, dirs: dict, flags: dict):
-        self._conanfile = conanfile
+    def __init__(self, dependency: object, root: str, sysroot: str, dirs: dict, flags: dict):
         self._dep = dependency
         self._root = root
         self._sysroot = sysroot
@@ -366,9 +369,18 @@ class DepContentGenerator:
 
 
 class DepComponentGenerator:
+    """
+    Generates Makefile content for a dependency component
+    """
 
-    def __init__(self, conanfile: object, dependency: object, makeinfo: MakeInfo, component_name: str, component: object, root: str):
-        self._conanfile = conanfile
+    def __init__(self, dependency: object, makeinfo: MakeInfo, component_name: str, component: object, root: str):
+        """
+        :param dependency: The dependency object that owns the component
+        :param makeinfo: Makeinfo to store component variables
+        :param component_name: The component raw name e.g. poco::poco_json
+        :param component: The component object to obtain cpp_info variables
+        :param root: The dependency root folder
+        """
         self._dep = dependency
         self._name = component_name
         self._comp = component
@@ -378,6 +390,7 @@ class DepComponentGenerator:
     def _get_component_dirs(self) -> dict:
         """
         List regular directories from cpp_info and format them to be used in the makefile
+        :return: A dictionary with regular folder name and its formatted path
         """
         dirs = {}
         for var, flag in _common_cppinfo_dirs().items():
@@ -406,6 +419,7 @@ class DepComponentGenerator:
     def _get_component_flags(self) -> dict:
         """
         List common variables from cpp_info and format them to be used in the makefile
+        :return: A dictionary with regular flag/variable name and its formatted value with prefix
         """
         flags = {}
         for var, prefix_var in _common_cppinfo_variables().items():
@@ -422,10 +436,11 @@ class DepComponentGenerator:
     def generate(self) -> str:
         """
         Process component cpp_info variables and generate its Makefile content
+        :return: Component Makefile content
         """
         dirs = self._get_component_dirs()
         flags = self._get_component_flags()
-        comp_content_gen = DepComponentContentGenerator(self._conanfile, self._dep, self._name, self._root, dirs, flags)
+        comp_content_gen = DepComponentContentGenerator(self._dep, self._name, self._root, dirs, flags)
         comp_content = comp_content_gen.content()
         return comp_content
 
@@ -435,8 +450,7 @@ class DepGenerator:
     Process a dependency cpp_info variables and generate its Makefile content
     """
 
-    def __init__(self, conanfile: object, dependency: object):
-        self._conanfile = conanfile
+    def __init__(self, dependency: object):
         self._dep = dependency
         self._info = MakeInfo(self._dep.ref.name, [], [])
 
@@ -512,11 +526,11 @@ class DepGenerator:
         sysroot = self._get_sysroot(root)
         dirs = self._get_dependency_dirs(root, self._dep)
         flags = self._get_dependency_flags(self._dep)
-        dep_content_gen = DepContentGenerator(self._conanfile, self._dep, root, sysroot, dirs, flags)
+        dep_content_gen = DepContentGenerator(self._dep, root, sysroot, dirs, flags)
         content = dep_content_gen.content()
 
         for comp_name, comp in self._dep.cpp_info.get_sorted_components().items():
-            component_gen = DepComponentGenerator(self._conanfile, self._dep, self._info, comp_name, comp, root)
+            component_gen = DepComponentGenerator(self._dep, self._info, comp_name, comp, root)
             content += component_gen.generate()
 
         return content
@@ -559,7 +573,7 @@ class MakeDeps(object):
             if require.build:
                 continue
 
-            dep_gen = DepGenerator(self._conanfile, dep)
+            dep_gen = DepGenerator(dep)
             make_infos.append(dep_gen.make_global_info())
             deps_buffer += dep_gen.generate()
 
