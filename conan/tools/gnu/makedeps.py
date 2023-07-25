@@ -47,7 +47,7 @@ def _conan_prefix_flag(variable: str) -> str:
 
 def _common_cppinfo_variables() -> dict:
     """
-    Regular cppinfo variables exported by any Conanfile
+    Regular cppinfo variables exported by any Conanfile and their Makefile prefixes
     """
     return {
         "objects": None,
@@ -63,17 +63,19 @@ def _common_cppinfo_variables() -> dict:
     }
 
 
-def _common_cppinfo_dirs() -> list:
+def _common_cppinfo_dirs() -> dict:
     """
-    Regular cppinfo folders exported by any Conanfile
+    Regular cppinfo folders exported by any Conanfile and their Makefile prefixes
     """
-    return ['includedirs',
-            'libdirs',
-            'bindirs',
-            'srcdirs',
-            'builddirs',
-            'resdirs',
-            'frameworkdirs']
+    return {
+        'includedirs': "include_dir",
+        'libdirs': "lib_dir",
+        'bindirs': None,
+        'srcdirs': None,
+        'builddirs': None,
+        'resdirs': None,
+        'frameworkdirs': None,
+    }
 
 
 class MakeInfo:
@@ -352,14 +354,14 @@ class DepComponentGenerator:
         List regular directories from cpp_info and format them to be used in the makefile
         """
         dirs = {}
-        for var in _common_cppinfo_dirs():
+        for var, flag in _common_cppinfo_dirs().items():
             cppinfo_value = getattr(self._comp, var)
             formatted_dirs = _get_formatted_dirs(cppinfo_value, self._root, _makefy(self._name))
             if formatted_dirs:
                 self._makeinfo.dirs.append(var)
                 var = var.replace("dirs", "_dirs")
                 formatted_dirs = self._rootify(self._root, self._dep.ref.name, cppinfo_value)
-                dirs[var] = [_conan_prefix_flag(var) + it for it in formatted_dirs]
+                dirs[var] = [_conan_prefix_flag(flag) + it for it in formatted_dirs]
         return dirs
 
     def _rootify(self, root: str, root_id: str, path_list: list) -> list:
@@ -429,13 +431,13 @@ class DepGenerator:
         :return: A dictionary with regular folder name and its formatted path
         """
         dirs = {}
-        for var in _common_cppinfo_dirs():
+        for var, prefix in _common_cppinfo_dirs().items():
             cppinfo_value = getattr(dependency.cpp_info, var)
             formatted_dirs = _get_formatted_dirs(cppinfo_value, root, _makefy(dependency.ref.name))
             if formatted_dirs:
                 self._info.dirs.append(var)
                 var = var.replace("dirs", "_dirs")
-                dirs[var] = [_conan_prefix_flag(var) + it for it in formatted_dirs]
+                dirs[var] = [_conan_prefix_flag(prefix) + it for it in formatted_dirs]
         return dirs
 
     def _get_dependency_flags(self, dependency: object) -> dict:
