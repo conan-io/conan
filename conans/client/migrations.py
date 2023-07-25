@@ -59,13 +59,13 @@ class ClientMigrator(Migrator):
 
 
 def _migrate_pkg_db_lru(cache):
-    ConanOutput().warning("**************************************************")
+    ConanOutput().warning("*********************************************************")
     ConanOutput().warning("Running 2.0.10 DB migration to add LRU column")
     db_filename = os.path.join(cache.store, 'cache.sqlite3')
     shutil.copy2(db_filename, os.path.join(cache.store, "cache.sqlite3.backup"))
-    ConanOutput().warning("Created 'cache.sqlite3.backup'. Restore it 'cache.sqlite3' to "
-                          "downgrade to Conan < 2.0.10")
-    ConanOutput().warning("**************************************************")
+    ConanOutput().warning(f"Created 'cache.sqlite3.backup' in: {cache.store}")
+    ConanOutput().warning("Restore it 'cache.sqlite3' to downgrade to Conan < 2.0.10")
+    ConanOutput().warning("**********************************************************")
     connection = sqlite3.connect(db_filename, isolation_level=None,
                                  timeout=1, check_same_thread=False)
     try:
