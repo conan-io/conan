@@ -162,6 +162,24 @@ class TestPackageBuild:
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Cache")},
                                test_package=True)
 
+    def test_build_test_package_dep(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+                "pkg/test_package/conanfile.py": GenConanfile().with_requires("dep/0.1")
+                                                               .with_test("pass")})
+        c.run("export dep")
+        c.run("create pkg --build=missing", assert_error=True)
+        c.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing"),
+                                "pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
+                               test_package=True)
+        c.run("create pkg --build-test=missing")
+        c.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build"),
+                                "pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
+                               test_package=True)
+
 
 class ConanTestTest(unittest.TestCase):
 
