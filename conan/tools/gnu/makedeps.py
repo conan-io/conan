@@ -112,9 +112,10 @@ class GlobalContentGenerator:
             \t{{ values|last }}
 
             {% endif %}
-            {%- endmacro -%}
+            {%- endmacro %}
 
             # Aggregated global variables
+
 
             {{ format_map_values(dirs) -}}
             {{- format_map_values(flags) -}}
@@ -290,9 +291,10 @@ class DepContentGenerator:
         \t{{ values|last }}
 
         {% endif %}
-        {%- endmacro -%}
+        {%- endmacro %}
 
         # {{ dep.ref.name }}/{{ dep.ref.version }}
+
 
         CONAN_NAME_{{ name }} = {{ dep.ref.name }}
 
@@ -515,7 +517,7 @@ class MakeDeps(object):
         build_req = self._conanfile.dependencies.build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
-        content_buffer = self._title
+        content_buffer = f"{self._title}\n"
         deps_buffer = ""
 
         # Filter the build_requires not activated for any requirement
