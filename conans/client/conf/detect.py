@@ -45,7 +45,7 @@ def _msvc_cl_compiler(compiler_exe="cl"):
         if not "Microsoft" in first_line:
             return None
         compiler = "msvc"
-        version_regex = re.search(r"(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.([0-9]+)\.?([0-9]+)?", out)
+        version_regex = re.search(r"(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.([0-9]+)\.?([0-9]+)?", first_line)
         if not version_regex:
             return None
         # 19.36.32535 -> 193
