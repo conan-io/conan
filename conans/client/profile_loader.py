@@ -112,9 +112,10 @@ class ProfileLoader:
 
     def _load_profile_plugin(self):
         profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
-        mod, _ = load_python_file(profile_plugin)
-        if hasattr(mod, "profile_plugin"):
-            return mod.profile_plugin
+        if os.path.exists(profile_plugin):
+            mod, _ = load_python_file(profile_plugin)
+            if hasattr(mod, "profile_plugin"):
+                return mod.profile_plugin
 
     def from_cli_args(self, profiles, settings, options, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
@@ -400,8 +401,8 @@ def _profile_parse_args(settings, options, conf):
     return result
 
 
-def migrate_profile_plugin(cache):
+def migrate_profile_plugin(cache, create_files):
     from conans.client.migrations import update_file
 
     profile_plugin_file = os.path.join(cache.plugins_path, "profile.py")
-    update_file(profile_plugin_file, _default_profile_plugin)
+    update_file(profile_plugin_file, _default_profile_plugin, create_files)

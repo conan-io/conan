@@ -129,4 +129,4 @@ def migrate_settings_file(cache):
     from conans.client.migrations import update_file
 
     settings_path = cache.settings_path
-    update_file(settings_path, default_settings_yml)
+    update_file(settings_path, default_settings_yml, create_files=True)
