@@ -43,10 +43,10 @@ def conanfile_exception_formatter(conanfile_name, func_name):
         from conan.api.output import LEVEL_DEBUG, ConanOutput
         if ConanOutput.level_allowed(LEVEL_DEBUG):
             import traceback
-            raise ConanExceptionInUserConanfileMethod(traceback.format_exc())
+            raise ConanException(traceback.format_exc())
         m = scoped_traceback(f"{conanfile_name}: Error in {func_name}() method", e,
                              scope="conanfile.py")
-        raise ConanExceptionInUserConanfileMethod(m)
+        raise ConanException(m)
 
     try:
         yield
@@ -143,23 +143,11 @@ class NoRemoteAvailable(ConanException):
     pass
 
 
-class InvalidNameException(ConanException):
-    pass
-
-
 class ConanConnectionError(ConanException):
     pass
 
 
-class ConanOutdatedClient(ConanException):
-    pass
-
-
-class ConanExceptionInUserConanfileMethod(ConanException):
-    pass
-
-
-class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
+class ConanInvalidConfiguration(ConanException):
     """
     This binary, for the requested configuration and package-id cannot be built
     """

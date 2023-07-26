@@ -7,7 +7,9 @@ import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.runners import conan_run
 
 _conanfile_py = textwrap.dedent("""
 from conan import ConanFile
@@ -103,7 +105,8 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     demo = os.path.join(t.current_folder, "build", "demo")
     assert os.path.isfile(demo) is True
 
-    xcrun = XCRun(None, os_sdk)
+    conanfile = MockConanfile({}, runner=conan_run)
+    xcrun = XCRun(conanfile, os_sdk)
     lipo = xcrun.find('lipo')
 
     t.run_command('"%s" -info "%s"' % (lipo, libhello))
