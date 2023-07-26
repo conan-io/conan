@@ -21,6 +21,7 @@ import bottle
 import mock
 import requests
 from mock import Mock
+from requests.auth import HTTPBasicAuth
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
@@ -233,6 +234,9 @@ class TestRequester:
     @staticmethod
     def _set_auth_headers(kwargs):
         if kwargs.get("auth"):
+            if isinstance(kwargs.get("auth"), tuple):  # For download(..., auth=(user, paswd))
+                kwargs["auth"] = HTTPBasicAuth(*kwargs.get("auth"))
+                return
             mock_request = Mock()
             mock_request.headers = {}
             kwargs["auth"](mock_request)

@@ -1,3 +1,4 @@
+import base64
 import uuid
 
 import bottle
@@ -24,8 +25,16 @@ class TestFileServer:
 
         @app.route("/forbidden", method=["GET"])
         def get_forbidden():
-            print("IAM HERE!!!!")
             return bottle.HTTPError(403, "Access denied.")
+
+        @app.route("/basic-auth/<file>", method=["GET"])
+        def get_user_passwd(file):
+            print("I AM HERE")
+            auth = bottle.request.headers.get("Authorization")
+            print("AUTH ", auth)
+            if auth is None or auth != "Basic password":
+                return bottle.HTTPError(401, "Not authorized")
+            return bottle.static_file(file, store)
 
     def __repr__(self):
         return "TestFileServer @ " + self.fake_url

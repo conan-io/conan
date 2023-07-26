@@ -118,24 +118,27 @@ class TestDownload:
         # Not authorized
         with pytest.raises(AuthenticationException) as exc:
             download(conanfile, file_server.fake_url + "/forbidden", dest)
-        assert "403: Forbidden" in str(exc.value)
+        assert "403 Forbidden" in str(exc.value)
 
-    def test_download_authorized(self, bottle_server):
+    def test_download_authorized(self):
         # Not authorized
-        dest = os.path.join(temp_folder(), "manual.html")
+        file_server = TestFileServer()
+        save(os.path.join(file_server.store, "manual.html"), "this is some content")
         conanfile = ConanFileMock()
-        conanfile._conan_helpers.requester = requests
+        conanfile._conan_helpers.requester = TestRequester({"file_server": file_server})
+
+        dest = os.path.join(temp_folder(), "manual.html")
         with pytest.raises(AuthenticationException):
-            download(conanfile, "http://localhost:%s/basic-auth/user/passwd" % bottle_server.port,
-                     dest, retry=0, retry_wait=0)
+            download(conanfile, file_server.fake_url + "/basic-auth/manual.html",
+                     dest, auth=("user", "wrong"), retry=0, retry_wait=0)
 
         # Authorized
-        download(conanfile, "http://localhost:%s/basic-auth/user/passwd" % bottle_server.port, dest,
+        download(conanfile, file_server.fake_url + "/basic-auth/manual.hml", dest,
                  auth=("user", "passwd"), retry=0, retry_wait=0)
 
         # Authorized using headers
-        download(conanfile, "http://localhost:%s/basic-auth/user/passwd" % bottle_server.port, dest,
-                 headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, retry=0, retry_wait=0)
+        download(conanfile, file_server.fake_url + "/basic-auth/manual.html", dest,
+                 headers={"Authorization": "Basic password"}, retry=0, retry_wait=0)
 
     def test_download_retries_errors(self):
         # unreachable server will retry
