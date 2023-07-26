@@ -132,11 +132,13 @@ class TestPackageBuild:
         c.run("export tool")
         c.run("export dep")
         c.run("create pkg --build=*")
+
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
-        c.assert_listed_require({"tool/0.1": "(tp) Cache"}, build=True, test_package=True)
+        c.assert_listed_require({"tool/0.1": "Cache"}, build=True, test_package=True)
         c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")},
                                build=True, test_package=True)
+        # Note we do NOT rebuild the already built binaries
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Cache")},
                                test_package=True)
@@ -153,11 +155,29 @@ class TestPackageBuild:
         c.run("create pkg --build=missing")
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
-        c.assert_listed_require({"tool/0.1": "(tp) Cache"}, build=True, test_package=True)
+        c.assert_listed_require({"tool/0.1": "Cache"}, build=True, test_package=True)
         c.assert_listed_binary({"tool/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")},
                                build=True, test_package=True)
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Cache")},
+                               test_package=True)
+
+    def test_build_test_package_dep(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+                "pkg/test_package/conanfile.py": GenConanfile().with_requires("dep/0.1")
+                                                               .with_test("pass")})
+        c.run("export dep")
+        c.run('create pkg --build=missing --build-test=""', assert_error=True)
+        c.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing"),
+                                "pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
+                               test_package=True)
+        c.run("create pkg --build-test=missing")
+        c.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
+        c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build"),
+                                "pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
                                test_package=True)
 
 
@@ -398,7 +418,6 @@ def test_package_missing_binary_msg():
     c.run("export .")
     c.run("test test_package dep/0.1", assert_error=True)
     assert "ERROR: Missing binary: dep/0.1" in c.out
-    assert "'conan test' tested packages must exist" in c.out
-    c.run("test test_package dep/0.1 --build=dep/0.1", assert_error=True)
-    assert "ERROR: Missing binary: dep/0.1" in c.out
-    assert "'conan test' tested packages must exist" in c.out
+    assert "This is a **test_package** missing binary." in c.out
+    c.run("test test_package dep/0.1 --build=dep/0.1")
+    c.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})

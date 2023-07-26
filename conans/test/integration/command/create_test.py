@@ -739,3 +739,34 @@ def test_name_never():
     c.save({"conanfile.py": GenConanfile("never", "0.1")})
     c.run("create .")
     assert "never/0.1: Created package" in c.out
+
+
+def test_create_both_host_build_require():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("protobuf", "0.1").with_settings("build_type"),
+            "test_package/conanfile.py": GenConanfile().with_build_requires("protobuf/0.1")
+                                                       .with_test("pass")})
+    c.run("create . -s:b build_type=Release -s:h build_type=Debug", assert_error=True)
+    print(c.out)
+    # The main "host" Debug binary will be correctly build
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
+    # But test_package will fail because of the missing "tool_require" in Release
+    c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Missing")},
+                           build=True, test_package=True)
+
+    c.run("remove * -c")  # make sure that previous binary is removed
+    c.run("create . -s:b build_type=Release -s:h build_type=Debug --build-test=missing")
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
+    # it used to fail, now it works and builds the test_package "tools_requires" in Release
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Cache")},
+                           test_package=True)
+    c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Build")},
+                           build=True, test_package=True)
+
+    # we can be more explicit about the current package only with "missing:protobuf/*"
+    c.run("remove * -c")  # make sure that previous binary is removed
+    c.run("create . -s:b build_type=Release -s:h build_type=Debug --build-test=missing:protobuf/*")
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
+    # it used to fail, now it works and builds the test_package "tools_requires" in Release
+    c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Build")},
+                           build=True, test_package=True)
