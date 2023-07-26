@@ -53,6 +53,8 @@ def create(conan_api, parser, *args):
                                                          args.build_require)
 
     print_profiles(profile_host, profile_build)
+    if args.build is not None and args.build_test is None:
+        args.build_test = args.build
 
     deps_graph = None
     if not is_python_require:

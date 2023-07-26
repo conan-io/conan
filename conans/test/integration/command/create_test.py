@@ -710,6 +710,7 @@ def test_create_both_host_build_require():
             "test_package/conanfile.py": GenConanfile().with_build_requires("protobuf/0.1")
                                                        .with_test("pass")})
     c.run("create . -s:b build_type=Release -s:h build_type=Debug", assert_error=True)
+    print(c.out)
     # The main "host" Debug binary will be correctly build
     c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
     # But test_package will fail because of the missing "tool_require" in Release

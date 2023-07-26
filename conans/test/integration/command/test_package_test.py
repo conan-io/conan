@@ -131,7 +131,7 @@ class TestPackageBuild:
                                                                .with_test("pass")})
         c.run("export tool")
         c.run("export dep")
-        c.run("create pkg --build=* --build-test=*")
+        c.run("create pkg --build=*")
 
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
@@ -152,7 +152,7 @@ class TestPackageBuild:
                                                                .with_test("pass")})
         c.run("export tool")
         c.run("create dep")
-        c.run("create pkg --build=missing --build-test=missing")
+        c.run("create pkg --build=missing")
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
                                 "pkg/0.1": ("59205ba5b14b8f4ebc216a6c51a89553021e82c1", "Build")})
         c.assert_listed_require({"tool/0.1": "Cache"}, build=True, test_package=True)
@@ -169,7 +169,7 @@ class TestPackageBuild:
                 "pkg/test_package/conanfile.py": GenConanfile().with_requires("dep/0.1")
                                                                .with_test("pass")})
         c.run("export dep")
-        c.run("create pkg --build=missing", assert_error=True)
+        c.run('create pkg --build=missing --build-test=""', assert_error=True)
         c.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")})
         c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Missing"),
                                 "pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")},
@@ -418,6 +418,6 @@ def test_package_missing_binary_msg():
     c.run("export .")
     c.run("test test_package dep/0.1", assert_error=True)
     assert "ERROR: Missing binary: dep/0.1" in c.out
-    assert "'conan test' tested packages must exist" in c.out
+    assert "This is a **test_package** missing binary." in c.out
     c.run("test test_package dep/0.1 --build=dep/0.1")
     c.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
