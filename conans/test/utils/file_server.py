@@ -1,4 +1,4 @@
-import base64
+import os
 import uuid
 
 import bottle
@@ -29,12 +29,28 @@ class TestFileServer:
 
         @app.route("/basic-auth/<file>", method=["GET"])
         def get_user_passwd(file):
-            print("I AM HERE")
+            auth = bottle.request.auth
+            if auth is not None:
+                if auth != ("user", "passwd"):
+                    return bottle.HTTPError(401, "Not authorized")
+                return bottle.static_file(file, store)
+
             auth = bottle.request.headers.get("Authorization")
-            print("AUTH ", auth)
             if auth is None or auth != "Basic password":
                 return bottle.HTTPError(401, "Not authorized")
             return bottle.static_file(file, store)
+
+        @app.route("/internal_error", method=["GET"])
+        def internal_error():
+            return bottle.HTTPError(500, "Internal error")
+
+        @app.route("/gz/<file>", method=["GET"])
+        def get_gz(file):
+            return bottle.static_file(file, store + "/gz", mimetype="application/octet-stream")
+
+        @app.route("/<folder>/<file>", method=["GET"])
+        def get_folder(folder, file):
+            return bottle.static_file(file, os.path.join(store, folder))
 
     def __repr__(self):
         return "TestFileServer @ " + self.fake_url
