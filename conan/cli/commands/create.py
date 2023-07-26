@@ -21,12 +21,14 @@ def create(conan_api, parser, *args):
     add_lockfile_args(parser)
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='Whether the provided reference is a build-require')
+                        help='Whether the package being created is a build-require (to be used'
+                             'as tool_requires() by other packages)')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
     parser.add_argument("-bt", "--build-test", action="append",
-                        help="Same as '--build' but only for the test_package requires")
+                        help="Same as '--build' but only for the test_package requires. By default"
+                             " if not specified it will take the '--build' value if specified")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
