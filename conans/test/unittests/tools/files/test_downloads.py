@@ -6,9 +6,10 @@ from bottle import HTTPError, auth_basic, static_file
 
 from conan.tools.files import ftp_download, download, get
 from conans.errors import ConanException, AuthenticationException
+from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, redirect_output
+from conans.test.utils.tools import StoppableThreadBottle, redirect_output, TestRequester
 from conans.util.files import save, load, chdir
 
 
@@ -76,39 +77,47 @@ def bottle_server():
 @pytest.mark.slow
 class TestDownload:
 
-    def test_download(self, bottle_server):
-        dest = os.path.join(temp_folder(), "manual.html")
+    def test_download(self):
+        file_server = TestFileServer()
+        save(os.path.join(file_server.store, "manual.html"), "this is some content")
         conanfile = ConanFileMock()
-        conanfile._conan_helpers.requester = requests
-        download(conanfile, "http://localhost:%s/manual.html" % bottle_server.port, dest, retry=3,
-                 retry_wait=0)
+        conanfile._conan_helpers.requester = TestRequester({"file_server": file_server})
+
+        dest = os.path.join(temp_folder(), "manual.html")
+        download(conanfile, file_server.fake_url + "/manual.html", dest, retry=3, retry_wait=0)
         content = load(dest)
         assert content == "this is some content"
 
         # Can re-download
-        download(conanfile, "http://localhost:%s/manual.html" % bottle_server.port, dest, retry=3,
-                 retry_wait=0)
+        download(conanfile, file_server.fake_url + "/manual.html", dest, retry=3, retry_wait=0)
+        content = load(dest)
+        assert content == "this is some content"
 
-    def test_download_iterate_url(self, bottle_server):
-        dest = os.path.join(temp_folder(), "manual.html")
+    def test_download_iterate_url(self):
+        file_server = TestFileServer()
+        save(os.path.join(file_server.store, "manual.html"), "this is some content")
         conanfile = ConanFileMock()
-        conanfile._conan_helpers.requester = requests
+        conanfile._conan_helpers.requester = TestRequester({"file_server": file_server})
+
+        dest = os.path.join(temp_folder(), "manual.html")
         output = RedirectedTestOutput()
         with redirect_output(output):
             download(conanfile, ["invalid",
-                                 "http://localhost:%s/manual.html" % bottle_server.port], dest,
+                                 file_server.fake_url + "/manual.html"], dest,
                      retry=3, retry_wait=0)
         content = load(dest)
         assert content == "this is some content"
         assert "Trying another mirror." in str(output)
 
-    def test_download_forbidden(self, bottle_server):
+    def test_download_forbidden(self):
+        file_server = TestFileServer()
+        conanfile = ConanFileMock()
+        conanfile._conan_helpers.requester = TestRequester({"file_server": file_server})
+
         dest = os.path.join(temp_folder(), "manual.html")
         # Not authorized
         with pytest.raises(AuthenticationException) as exc:
-            conanfile = ConanFileMock()
-            conanfile._conan_helpers.requester = requests
-            download(conanfile, "http://localhost:%s/forbidden" % bottle_server.port, dest)
+            download(conanfile, file_server.fake_url + "/forbidden", dest)
         assert "403: Forbidden" in str(exc.value)
 
     def test_download_authorized(self, bottle_server):
