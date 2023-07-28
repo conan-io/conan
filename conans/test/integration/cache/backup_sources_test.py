@@ -3,7 +3,6 @@ import os
 import textwrap
 from unittest import mock
 from bottle import static_file, request, HTTPError
-from conans.test.assets.genconanfile import GenConanfile
 from conans.errors import NotFoundException
 from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import temp_folder
@@ -175,7 +174,7 @@ class TestDownloadCacheBackupSources:
                     path=client.cache.cache_folder)
         client.run("source .")
         assert f"Sources for {file_server.fake_url}/internet/myfile.txt found in remote backup" in client.out
-        assert f"File {file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {file_server.fake_url}/downloader/" in client.out
+        assert f"File {file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {file_server.fake_url}/backups/" in client.out
 
     def test_download_origin_first(self):
         client = TestClient(default_server_user=True)

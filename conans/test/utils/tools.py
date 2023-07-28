@@ -215,7 +215,7 @@ class TestRequester:
             kwargs.pop("stream", None)
             kwargs.pop("verify", None)
             auth = kwargs.pop("auth", None)
-            if auth:
+            if auth and isinstance(auth, tuple):
                 app.set_authorization(("Basic", auth))
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)

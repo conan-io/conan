@@ -86,11 +86,11 @@ class TestDownload:
 
         # Authorized
         download(conanfile, file_server.fake_url + "/basic-auth/manual.html", dest,
-                 auth=("user", "passwd"), retry=0, retry_wait=0)
+                 auth=("user", "password"), retry=0, retry_wait=0)
 
         # Authorized using headers
         download(conanfile, file_server.fake_url + "/basic-auth/manual.html", dest,
-                 headers={"Authorization": "Basic password"}, retry=0, retry_wait=0)
+                 headers={"Authorization": "Bearer password"}, retry=0, retry_wait=0)
 
     def test_download_retries_errors(self):
         conanfile = ConanFileMock()
