@@ -421,3 +421,20 @@ def test_package_missing_binary_msg():
     assert "This is a **test_package** missing binary." in c.out
     c.run("test test_package dep/0.1 --build=dep/0.1")
     c.assert_listed_binary({"dep/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+
+def test_test_binary_missing():
+    # Trying to reproduce https://github.com/conan-io/conan/issues/14352,
+    # without success so far
+    c = TestClient()
+    c.save({"zlib/conanfile.py": GenConanfile("zlib", "0.1"),
+            "openssl/conanfile.py": GenConanfile("openssl", "0.1").with_requires("zlib/0.1"),
+            "cmake/conanfile.py": GenConanfile("cmake", "0.1").with_requires("openssl/0.1"),
+            "dep/conanfile.py": GenConanfile("dep", "0.1").with_requires("openssl/0.1")
+                                                          .with_tool_requires("cmake/0.1"),
+            "dep/test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("export zlib")
+    c.run("export openssl")
+    c.run("export cmake")
+    c.run("export dep")
+    c.run("test dep/test_package dep/0.1 --build=missing")
