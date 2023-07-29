@@ -21,10 +21,14 @@ def create(conan_api, parser, *args):
     add_lockfile_args(parser)
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='Whether the provided reference is a build-require')
+                        help='Whether the package being created is a build-require (to be used'
+                             'as tool_requires() by other packages)')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
+    parser.add_argument("-bt", "--build-test", action="append",
+                        help="Same as '--build' but only for the test_package requires. By default"
+                             " if not specified it will take the '--build' value if specified")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -51,6 +55,8 @@ def create(conan_api, parser, *args):
                                                          args.build_require)
 
     print_profiles(profile_host, profile_build)
+    if args.build is not None and args.build_test is None:
+        args.build_test = args.build
 
     deps_graph = None
     if not is_python_require:
@@ -91,7 +97,8 @@ def create(conan_api, parser, *args):
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
         run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
-                 update=False, build_modes=args.build, tested_python_requires=tested_python_requires)
+                 update=False, build_modes=args.build, build_modes_test=args.build_test,
+                 tested_python_requires=tested_python_requires, tested_graph=deps_graph)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,
