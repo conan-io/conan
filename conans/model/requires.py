@@ -408,8 +408,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None, options=None):
-        self._requires.test_require(ref, run=run, options=options)
+    def __call__(self, ref, run=None, options=None, force=None):
+        self._requires.test_require(ref, run=run, options=options, force=force)
 
 
 class Requirements:
@@ -510,7 +510,7 @@ class Requirements:
             req.override = True
             self._requires[req] = req
 
-    def test_require(self, ref, run=None, options=None):
+    def test_require(self, ref, run=None, options=None, force=None):
         """
              Represent a testing framework like gtest
 
@@ -526,7 +526,7 @@ class Requirements:
         # libs = True => We need to link with it
         # headers = True => We need to include it
         req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
-                          test=True, package_id_mode=None, options=options)
+                          test=True, package_id_mode=None, options=options, force=force)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

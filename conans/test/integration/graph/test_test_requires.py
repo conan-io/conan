@@ -87,6 +87,27 @@ class TestTestRequiresDiamond:
                                  "engine/1.0": "Cache"})
         c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
 
+    def test_test_requires_conflict_force(self):
+        c = TestClient()
+        game = textwrap.dedent("""
+           from conan import ConanFile
+           class Pkg(ConanFile):
+               def requirements(self):
+                   self.test_requires("gtest/1.0", force=True)
+                   self.test_requires("rapidcheck/1.0")
+           """)
+        c.save({"gtest/conanfile.py": GenConanfile("gtest"),
+                "rapidcheck/conanfile.py":
+                    GenConanfile("rapidcheck", "1.0").with_requires("gtest/1.1"),
+                "game/conanfile.py": game
+                })
+        c.run("create gtest --version=1.0")
+        c.run("create gtest --version=1.1")
+        c.run("create rapidcheck")
+        c.run("install game")
+        c.assert_listed_require({"gtest/1.0": "Cache"}, test=True)
+        c.assert_overrides({"gtest/1.1": ["gtest/1.0#08dd14dd79315dd95c94b85d13bd1388"]})
+
 
 def test_require_options():
     c = TestClient()
