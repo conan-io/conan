@@ -175,3 +175,32 @@ def test_requires_transitive_diamond_components():
     c.run("create libc")
     # This used to crash due to component not defined to liba
     assert "libc/0.1: Created package" in c.out
+
+
+def test_test_requires_options():
+    """ the default_options = {} values also propagate to ``test_requires()`` """
+    c = TestClient()
+    c.save({"test/conanfile.py": GenConanfile("test", "0.1").with_option("myoption", [1, 2, 3]),
+            "consumer/conanfile.py": GenConanfile().with_test_requires("test/0.1")
+                                                   .with_default_option("test/*:myoption", "2")})
+    c.run("create test -o myoption=2")
+    c.assert_listed_binary({"test/0.1": ("a3cb1345b8297bfdffea4ef4bb1b2694c54d1d69", "Build")})
+
+    c.run("install consumer")
+    c.assert_listed_require({"test/0.1": "Cache"}, test=True)
+    c.assert_listed_binary({"test/0.1": ("a3cb1345b8297bfdffea4ef4bb1b2694c54d1d69", "Cache")},
+                           test=True)
+
+
+def test_invisible_requires_options():
+    """ the default_options = {} values also propagate to ``requires(visible=False)`` """
+    c = TestClient()
+    c.save({"test/conanfile.py": GenConanfile("test", "0.1").with_option("myoption", [1, 2, 3]),
+            "consumer/conanfile.py": GenConanfile().with_requirement("test/0.1", visible=False)
+                                                   .with_default_option("test/*:myoption", "2")})
+    c.run("create test -o myoption=2")
+    c.assert_listed_binary({"test/0.1": ("a3cb1345b8297bfdffea4ef4bb1b2694c54d1d69", "Build")})
+
+    c.run("install consumer")
+    c.assert_listed_require({"test/0.1": "Cache"})
+    c.assert_listed_binary({"test/0.1": ("a3cb1345b8297bfdffea4ef4bb1b2694c54d1d69", "Cache")})

@@ -116,6 +116,45 @@ def test_different_options_values_recipe(scope):
         assert f"protobuf/1.0: MYOPTION: build-{build}" in c.out
 
 
+def test_different_options_values_recipe_attributes():
+    """
+    consumer -> protobuf (library)
+        \\--(build)-> protobuf (protoc)
+    protobuf by default is a static library (shared=False)
+    The "consumer" conanfile.py can use ``default_options`` to define protobuf:shared
+    """
+    c = TestClient()
+    protobuf = textwrap.dedent("""
+        from conan import ConanFile
+        class Proto(ConanFile):
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+
+            def package_info(self):
+                self.output.info("MYOPTION: {}-{}".format(self.context, self.options.shared))
+        """)
+    c.save({"conanfile.py": protobuf})
+    c.run("create . --name=protobuf --version=1.0")
+    c.run("create . --name=protobuf --version=1.0 -o protobuf/*:shared=True")
+
+    consumer_recipe = textwrap.dedent("""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            default_options = {{"protobuf/*:shared": {host}}}
+            default_build_options = {{"protobuf/*:shared": {build}}}
+            def requirements(self):
+                self.requires("protobuf/1.0")
+            def build_requirements(self):
+                self.build_requires("protobuf/1.0")
+        """)
+
+    for host, build in ((True, True), (True, False), (False, True), (False, False)):
+        c.save({"conanfile.py": consumer_recipe.format(host=host, build=build)})
+        c.run("install .")
+        assert f"protobuf/1.0: MYOPTION: host-{host}" in c.out
+        assert f"protobuf/1.0: MYOPTION: build-{build}" in c.out
+
+
 def test_different_options_values_recipe_priority():
     """
     consumer ---> mypkg ---> protobuf (library)
