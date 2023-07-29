@@ -151,7 +151,6 @@ def test_resource_compile():
           <PreprocessorDefinitions>
              MYTEST=MYVALUE;%(PreprocessorDefinitions)
           </PreprocessorDefinitions>
-          <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
         </ResourceCompile>"""
 
     props_file = load(props_file)  # Remove all blanks and CR to compare
@@ -274,7 +273,6 @@ def test_msbuildtoolchain_changing_flags_via_attributes():
     expected_resource_compile = """
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/flag1 /flag2 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>"""
     assert expected_cl_compile in toolchain
     assert expected_link in toolchain
