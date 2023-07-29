@@ -325,8 +325,8 @@ class ConanFile:
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conans.util.runners import conan_run
-        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}",
-                              fg=Color.BRIGHT_BLUE)
+        if not quiet:
+            ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
         ConanOutput().writeln("")
 
