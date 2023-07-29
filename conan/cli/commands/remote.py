@@ -168,7 +168,7 @@ def remote_login(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern or name of the remote to login into. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     subparser.add_argument("username", nargs="?", help='Username')
-    subparser.add_argument("-p", "--password", nargs='?', const="", type=str, action=OnceArgument,
+    subparser.add_argument("-p", "--password", nargs='?', type=str, action=OnceArgument,
                            help='User password. Use double quotes if password with spacing, '
                                 'and escape quotes if existing. If empty, the password is '
                                 'requested interactively (not exposed)')
