@@ -176,7 +176,7 @@ def test_cmaketoolchain_path_find_package_editable():
     "find_root_path_modes", [find_root_path_modes_default, find_root_path_modes_cross_build],
 )
 @pytest.mark.parametrize(
-    "builddir", ["os.path.join('hello', 'cmake')", "self.package_folder"],
+    "builddir", ["os.path.join('hello', 'cmake')", "self.package_folder", '"."'],
 )
 def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_modes, builddir):
     client = TestClient()
