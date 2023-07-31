@@ -48,7 +48,7 @@ class FileUploader(object):
 
     def exists(self, url, auth):
         response = self._requester.head(url, verify=self._verify_ssl, auth=auth)
-        return response
+        return bool(response.ok)
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
                headers=None):
