@@ -10,8 +10,7 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
     BINARY_SYSTEM_TOOL, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, conanfile_remove_attr)
+from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
 from conans.model.build_info import CppInfo, MockInfoProperty
 from conans.model.package_ref import PkgReference
 from conans.paths import CONANINFO
@@ -97,7 +96,7 @@ class _PackageBuilder(object):
         except Exception as exc:
             conanfile.output.error("\nPackage '%s' build failed" % pref.package_id)
             conanfile.output.warning("Build folder %s" % conanfile.build_folder)
-            if isinstance(exc, ConanExceptionInUserConanfileMethod):
+            if isinstance(exc, ConanException):
                 raise exc
             raise ConanException(exc)
 
@@ -118,7 +117,7 @@ class _PackageBuilder(object):
         pref = node.pref
 
         # TODO: cache2.0 fix this
-        recipe_layout = self._cache.ref_layout(pref.ref)
+        recipe_layout = self._cache.recipe_layout(pref.ref)
 
         base_source = recipe_layout.source()
         base_package = package_layout.package()
@@ -155,7 +154,7 @@ class _PackageBuilder(object):
                 prev = self._package(conanfile, pref)
                 assert prev
                 node.prev = prev
-            except ConanException as exc:
+            except ConanException as exc:  # TODO: Remove this? unnecessary?
                 raise exc
 
         return node.pref
@@ -180,7 +179,7 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
-        recipe_layout = self._cache.ref_layout(node.ref)
+        recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
 
@@ -249,7 +248,7 @@ class BinaryInstaller:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
-                    self._handle_package(package, install_reference, None, handled_count, package_count)
+                    self._handle_package(package, install_reference, handled_count, package_count)
                     handled_count += 1
 
         MockInfoProperty.message()
@@ -285,9 +284,9 @@ class BinaryInstaller:
         node = package.nodes[0]
         assert node.pref.revision is not None
         assert node.pref.timestamp is not None
-        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote)
+        self._remote_manager.get_package(node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, remotes, handled_count, total_count):
+    def _handle_package(self, package, install_reference, handled_count, total_count):
         if package.binary == BINARY_SYSTEM_TOOL:
             return
 
@@ -326,12 +325,14 @@ class BinaryInstaller:
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
+        pkg_metadata = package_layout.metadata()
         assert os.path.isdir(pkg_folder), "Pkg '%s' folder must exist: %s" % (str(pref), pkg_folder)
         for n in package.nodes:
             n.prev = pref.revision  # Make sure the prev is assigned
             conanfile = n.conanfile
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
+            conanfile.folders.set_base_pkg_metadata(pkg_metadata)
             self._call_package_info(conanfile, pkg_folder, is_editable=False)
 
     def _handle_node_editable(self, install_node):

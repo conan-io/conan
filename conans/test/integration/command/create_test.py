@@ -243,12 +243,7 @@ def test_conaninfo_contents_without_user_channel():
                 .with_require("hello/0.1")})
     client.run("create .")
 
-    ref = RecipeReference.loads("bye/0.1")
-
-    refs = client.cache.get_latest_recipe_reference(ref)
-    pkgs = client.cache.get_package_references(refs)
-    prev = client.cache.get_latest_package_reference(pkgs[0])
-    package_folder = client.cache.pkg_layout(prev).package()
+    package_folder = client.created_layout().package()
 
     conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
     # The user and channel nor None nor "_/" appears in the conaninfo
@@ -322,6 +317,43 @@ def test_create_build_missing():
     c.assert_listed_binary({"pkg/1.0": ("4c0c198b627f9af3e038af4da5e6b3ae205c2435", "Build")})
     c.assert_listed_binary({"dep/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Missing")})
     assert "ERROR: Missing prebuilt package for 'dep/1.0'" in c.out
+
+
+def test_create_no_user_channel():
+    """ test the --build=pattern and --build=missing:pattern syntax to build missing packages
+     without user/channel
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep1/0.1", "dep2/0.1@user",
+                                                                         "dep3/0.1@user/channel")})
+    c.run("export dep --name=dep1 --version=0.1")
+    c.run("export dep --name=dep2 --version=0.1 --user=user")
+    c.run("export dep --name=dep3 --version=0.1 --user=user --channel=channel")
+
+    # First test the ``--build=missing:pattern``
+    c.run("create pkg --build=missing:*@", assert_error=True)
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Missing"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Missing")})
+    c.run("create pkg --build=missing:!*@", assert_error=True)
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Missing"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+    # Now lets make sure they exist
+    c.run("create pkg --build=missing")
+
+    # Now test the --build=pattern
+    c.run("create pkg --build=*@")
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache")})
+    # The --build=* needs to be said: "build all except those that have user/channel
+    c.run("create pkg --build=* --build=!*@")
+    c.assert_listed_binary({"dep1/0.1": (NO_SETTINGS_PACKAGE_ID, "Cache"),
+                            "dep2/0.1": (NO_SETTINGS_PACKAGE_ID, "Build"),
+                            "dep3/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
 
 
 def test_create_format_json():
@@ -707,3 +739,34 @@ def test_name_never():
     c.save({"conanfile.py": GenConanfile("never", "0.1")})
     c.run("create .")
     assert "never/0.1: Created package" in c.out
+
+
+def test_create_both_host_build_require():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("protobuf", "0.1").with_settings("build_type"),
+            "test_package/conanfile.py": GenConanfile().with_build_requires("protobuf/0.1")
+                                                       .with_test("pass")})
+    c.run("create . -s:b build_type=Release -s:h build_type=Debug", assert_error=True)
+    print(c.out)
+    # The main "host" Debug binary will be correctly build
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
+    # But test_package will fail because of the missing "tool_require" in Release
+    c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Missing")},
+                           build=True, test_package=True)
+
+    c.run("remove * -c")  # make sure that previous binary is removed
+    c.run("create . -s:b build_type=Release -s:h build_type=Debug --build-test=missing")
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
+    # it used to fail, now it works and builds the test_package "tools_requires" in Release
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Cache")},
+                           test_package=True)
+    c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Build")},
+                           build=True, test_package=True)
+
+    # we can be more explicit about the current package only with "missing:protobuf/*"
+    c.run("remove * -c")  # make sure that previous binary is removed
+    c.run("create . -s:b build_type=Release -s:h build_type=Debug --build-test=missing:protobuf/*")
+    c.assert_listed_binary({"protobuf/0.1": ("9e186f6d94c008b544af1569d1a6368d8339efc5", "Build")})
+    # it used to fail, now it works and builds the test_package "tools_requires" in Release
+    c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Build")},
+                           build=True, test_package=True)

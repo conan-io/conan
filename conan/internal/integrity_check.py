@@ -28,7 +28,7 @@ class IntegrityChecker:
             raise ConanException("There are corrupted artifacts, check the error logs")
 
     def _recipe_corrupted(self, ref: RecipeReference):
-        layout = self._app.cache.ref_layout(ref)
+        layout = self._app.cache.recipe_layout(ref)
         output = ConanOutput()
         read_manifest, expected_manifest = layout.recipe_manifests()
 

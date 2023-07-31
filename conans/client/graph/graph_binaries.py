@@ -304,21 +304,26 @@ class GraphBinariesAnalyzer(object):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
+    def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update, build_mode_test=None,
+                       tested_graph=None):
         self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
-        test_package = deps_graph.root.conanfile.tested_reference_str is not None
-        if test_package:
-            main_mode = BuildMode(["never"])
-            test_mode = BuildMode(build_mode)
+
+        if tested_graph is None:
+            main_mode = BuildMode(build_mode)
+            test_mode = None  # Should not be used at all
+            mainprefs = None
         else:
-            main_mode = test_mode = BuildMode(build_mode)
+            main_mode = BuildMode(["never"])
+            test_mode = BuildMode(build_mode_test)
+            mainprefs = [str(n.pref) for n in tested_graph.nodes
+                         if n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)]
+
         if main_mode.cascade:
             ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
                                   "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
                                   "more efficient re-builds")
         for node in deps_graph.ordered_iterate():
-            build_mode = test_mode if node.test_package else main_mode
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc
@@ -331,6 +336,8 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.layout()
             else:
                 self._evaluate_package_id(node)
+                build_mode = main_mode if mainprefs is None or str(node.pref) in mainprefs \
+                    else test_mode
                 if lockfile:
                     locked_prev = lockfile.resolve_prev(node)
                     if locked_prev:

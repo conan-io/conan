@@ -1,69 +1,42 @@
-import base64
 import json
 import os
 import textwrap
 
-from bottle import static_file, request, HTTPError
 
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.file_server import TestFileServer
+from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
 def test_source_download_password():
-    http_server = StoppableThreadBottle()
-    http_server_base_folder = temp_folder()
-    save(os.path.join(http_server_base_folder, "myfile.txt"), "hello world!")
-
-    def valid_auth():
-        auth = request.headers.get("Authorization")
-        if auth == "Bearer mytoken":
-            return
-        if auth and "Basic" in auth and \
-                base64.b64decode(auth[6:], validate=False) == b"myuser:mypassword":
-            return
-        return HTTPError(401, "Authentication required")
-
-    @http_server.server.get("/<file>")
-    def get_file(file):
-        ret = valid_auth()
-        return ret or static_file(file, http_server_base_folder)
-
-    @http_server.server.put("/<file>")
-    def put_file(file):
-        ret = valid_auth()
-        if ret:
-            return ret
-        dest = os.path.join(http_server_base_folder, file)
-        with open(dest, 'wb') as f:
-            f.write(request.body.read())
-
-    http_server.run_server()
-
-    server_url = f"http://localhost:{http_server.port}"
-
     c = TestClient()
+    file_server = TestFileServer()
+    c.servers["file_server"] = file_server
+    save(os.path.join(file_server.store, "myfile.txt"), "hello world!")
+
+    server_url = file_server.fake_url
+
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.files import download, load
         class Pkg(ConanFile):
             def source(self):
-                download(self, "{server_url}/myfile.txt", "myfile.txt")
+                download(self, "{server_url}/basic-auth/myfile.txt", "myfile.txt")
                 self.output.info(f"Content: {{load(self, 'myfile.txt')}}")
             """)
     c.save({"conanfile.py": conanfile})
-    content = {"credentials": [{"url": server_url, "token": "mytoken"}]}
+    content = {"credentials": [{"url": server_url, "token": "password"}]}
     save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .")
     assert "Content: hello world!" in c.out
     content = {"credentials": [{"url": server_url,
-                                "user": "myuser", "password": "mypassword"}]}
+                                "user": "user", "password": "password"}]}
     save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .")
     assert "Content: hello world!" in c.out
 
     content = {"credentials": [{"url": server_url, "token": "{{mytk}}"}]}
-    content = "{% set mytk = 'mytoken' %}\n" + json.dumps(content)
+    content = "{% set mytk = 'password' %}\n" + json.dumps(content)
     save(os.path.join(c.cache_folder, "source_credentials.json"), content)
     c.run("source .")
     assert "Content: hello world!" in c.out

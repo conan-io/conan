@@ -36,27 +36,6 @@ def get_exception_from_error(error_code):
             return None
 
 
-def handle_return_deserializer():
-    """Decorator for rest api methods.
-    Map exceptions and http return codes and deserialize if needed.
-
-    at this moment only used by check_credentials() endpoint
-    """
-
-    def handle_return(method):
-        def inner(*argc, **argv):
-            ret = method(*argc, **argv)
-            if ret.status_code != 200:
-                ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-                text = ret.text if ret.status_code != 404 else "404 Not found"
-                raise get_exception_from_error(ret.status_code)(text)
-            return ret.content.decode()
-
-        return inner
-
-    return handle_return
-
-
 class RestCommonMethods(object):
 
     def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl):
@@ -139,7 +118,6 @@ class RestCommonMethods(object):
         # logger.debug("REST: Obtained new refresh and access tokens")
         return new_access_token, new_refresh_token
 
-    @handle_return_deserializer()
     def check_credentials(self):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
@@ -147,7 +125,11 @@ class RestCommonMethods(object):
         # logger.debug("REST: Check credentials: %s" % url)
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
-        return ret
+        if ret.status_code != 200:
+            ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
+            text = ret.text if ret.status_code != 404 else "404 Not found"
+            raise get_exception_from_error(ret.status_code)(text)
+        return ret.content.decode()
 
     def server_capabilities(self, user=None, password=None):
         """Get information about the server: status, version, type and capabilities"""

@@ -9,6 +9,7 @@ from conan.tools.files import copy
 class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "library"
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"

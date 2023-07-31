@@ -570,6 +570,46 @@ class TestTransitiveOptionsShared:
         self.check(client)
 
 
+def test_options_no_user_channel_patterns():
+    c = TestClient()
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            options = {"myoption": [1, 2, 3]}
+            def configure(self):
+                self.output.info(f"MYOPTION: {self.options.myoption}")
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep1/0.1", "dep2/0.1@user",
+                                                                         "dep3/0.1@user/channel")})
+    c.run("export dep --name=dep1 --version=0.1")
+    c.run("export dep --name=dep2 --version=0.1 --user=user")
+    c.run("export dep --name=dep3 --version=0.1 --user=user --channel=channel")
+
+    c.run("graph info pkg -o *:myoption=3 -o *@:myoption=1")
+    assert "dep1/0.1: MYOPTION: 1" in c.out
+    assert "dep2/0.1@user: MYOPTION: 3" in c.out
+    assert "dep3/0.1@user/channel: MYOPTION: 3" in c.out
+
+    # Recall that order is also important latest matching pattern wins
+    c.run("graph info pkg -o *@:myoption=1 -o *:myoption=1")
+    assert "dep1/0.1: MYOPTION: 1" in c.out
+    assert "dep2/0.1@user: MYOPTION: 1" in c.out
+    assert "dep3/0.1@user/channel: MYOPTION: 1" in c.out
+
+    # This is a bit weird negation approach, but it works = all packages that have user channel
+    c.run("graph info pkg -o *:myoption=3 -o ~*@:myoption=1")
+    assert "dep1/0.1: MYOPTION: 3" in c.out
+    assert "dep2/0.1@user: MYOPTION: 1" in c.out
+    assert "dep3/0.1@user/channel: MYOPTION: 1" in c.out
+
+    # Which is identical to '~*@' == '*@*'
+    c.run("graph info pkg -o *:myoption=3 -o *@*:myoption=1")
+    assert "dep1/0.1: MYOPTION: 3" in c.out
+    assert "dep2/0.1@user: MYOPTION: 1" in c.out
+    assert "dep3/0.1@user/channel: MYOPTION: 1" in c.out
+
+
 class TestTransitiveOptionsSharedInvisible:
     """
     https://github.com/conan-io/conan/issues/13854

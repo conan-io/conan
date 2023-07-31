@@ -39,7 +39,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
     :param kwargs: Extra parameters that can be added and will contribute to output information
     """
 
-    patch_type = kwargs.get('patch_type')
+    patch_type = kwargs.get('patch_type') or ("file" if patch_file else "string")
     patch_description = kwargs.get('patch_description')
 
     if patch_type or patch_description:
@@ -96,8 +96,11 @@ def apply_conandata_patches(conanfile):
         if "patch_file" in it:
             # The patch files are located in the root src
             entry = it.copy()
-            patch_file = os.path.join(conanfile.export_sources_folder, entry.pop("patch_file"))
-            patch(conanfile, patch_file=patch_file, **entry)
+            patch_file = entry.pop("patch_file")
+            patch_file_path = os.path.join(conanfile.export_sources_folder, patch_file)
+            if not "patch_description" in entry:
+                entry["patch_description"] = patch_file
+            patch(conanfile, patch_file=patch_file_path, **entry)
         elif "patch_string" in it:
             patch(conanfile, **it)
         else:

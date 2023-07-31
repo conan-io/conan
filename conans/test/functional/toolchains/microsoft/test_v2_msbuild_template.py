@@ -1,10 +1,8 @@
 import os
 import platform
-import re
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -18,10 +16,7 @@ def test_msbuild_lib_template():
 
     assert os.path.isfile(os.path.join(client.current_folder, "x64", "Release", "hello.lib"))
     client.run("export-pkg .")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.created_layout().package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
     assert os.path.exists(os.path.join(package_folder, "lib", "hello.lib"))
 

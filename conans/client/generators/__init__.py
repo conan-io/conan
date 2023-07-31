@@ -58,7 +58,7 @@ def load_cache_generators(path):
         mod, _ = load_python_file(full_path)
         for name, value in inspect.getmembers(mod):
             if inspect.isclass(value) and not name.startswith("_"):
-                result = {name: value}
+                result[name] = value
     return result
 
 

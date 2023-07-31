@@ -4,11 +4,9 @@ from conans.model.recipe_ref import ref_matches
 
 
 class BuildMode:
-    """ build_mode => ["*"] if user wrote "--build"
-                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+    """ build_mode => ["*"] if user wrote "--build=*"
+                   => ["hello", "bye"] if user wrote "--build hello --build bye"
                    => ["hello/0.1@foo/bar"] if user wrote "--build hello/0.1@foo/bar"
-                   => False if user wrote "never"
-                   => True if user wrote "missing"
                    => ["!foo"] or ["~foo"] means exclude when building all from sources
     """
     def __init__(self, params):
@@ -20,38 +18,31 @@ class BuildMode:
         self.build_missing_patterns = []
         self._unused_patterns = []
         self._excluded_patterns = []
-        self.all = False
         if params is None:
             return
 
         assert isinstance(params, list)
-        if len(params) == 0:
-            self.all = True
-        else:
-            for param in params:
-                if param == "missing":
-                    self.missing = True
-                elif param == "editable":
-                    self.editable = True
-                elif param == "never":
-                    self.never = True
-                elif param == "cascade":
-                    self.cascade = True
+        assert len(params) > 0  # Not empty list
+
+        for param in params:
+            if param == "missing":
+                self.missing = True
+            elif param == "editable":
+                self.editable = True
+            elif param == "never":
+                self.never = True
+            elif param == "cascade":
+                self.cascade = True
+            else:
+                if param.startswith("missing:"):
+                    clean_pattern = param[len("missing:"):]
+                    self.build_missing_patterns.append(clean_pattern)
                 else:
-                    if param.startswith("missing:"):
-                        clean_pattern = param[len("missing:"):]
-                        clean_pattern = clean_pattern[:-1] if param.endswith("@") else clean_pattern
-                        clean_pattern = clean_pattern.replace("@#", "#")
-                        self.build_missing_patterns.append(clean_pattern)
+                    clean_pattern = param
+                    if clean_pattern and clean_pattern[0] in ["!", "~"]:
+                        self._excluded_patterns.append(clean_pattern[1:])
                     else:
-                        # Remove the @ at the end, to match for
-                        # "conan install --requires=pkg/0.1@ --build=pkg/0.1@"
-                        clean_pattern = param[:-1] if param.endswith("@") else param
-                        clean_pattern = clean_pattern.replace("@#", "#")
-                        if clean_pattern and clean_pattern[0] in ["!", "~"]:
-                            self._excluded_patterns.append(clean_pattern[1:])
-                        else:
-                            self.patterns.append(clean_pattern)
+                        self.patterns.append(clean_pattern)
 
             if self.never and (self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
@@ -74,8 +65,6 @@ class BuildMode:
 
         if self.never:
             return False
-        if self.all:
-            return True
 
         if conan_file.build_policy == "always":
             raise ConanException("{}: build_policy='always' has been removed. "

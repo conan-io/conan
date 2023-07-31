@@ -22,16 +22,17 @@ def test_pkg_sign():
             for f in sorted(os.listdir(artifacts_folder)):
                 if os.path.isfile(os.path.join(artifacts_folder, f)):
                     files.append(f)
+            print("Signing files: ", sorted(files))
             signature = os.path.join(signature_folder, "signature.asc")
             open(signature, "w").write("\n".join(files))
 
-        def verify(ref, artifacts_folder, signature_folder):
+        def verify(ref, artifacts_folder, signature_folder, files):
             print("Verifying ref: ", ref)
             print("Verifying folder: ", artifacts_folder)
             signature = os.path.join(signature_folder, "signature.asc")
             contents = open(signature).read()
             print("verifying contents", contents)
-            for f in sorted(os.listdir(artifacts_folder)):
+            for f in files:
                 print("VERIFYING ", f)
                 if os.path.isfile(os.path.join(artifacts_folder, f)):
                     assert f in contents
@@ -41,7 +42,17 @@ def test_pkg_sign():
     c.run("upload * -r=default -c")
     assert "Signing ref:  pkg/0.1" in c.out
     assert "Signing ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
+    # Make sure it is signing the sources too
+    assert "Signing files:  ['conan_export.tgz', 'conan_sources.tgz', " \
+           "'conanfile.py', 'conanmanifest.txt']" in c.out
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1")
     assert "Verifying ref:  pkg/0.1" in c.out
     assert "Verifying ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
+    assert "VERIFYING  conanfile.py" in c.out
+    assert "VERIFYING  conan_sources.tgz" not in c.out # Sources not retrieved now
+    # Lets force the retrieval of the sources
+    c.run("install --requires=pkg/0.1 --build=*")
+    assert "Verifying ref:  pkg/0.1" in c.out
+    assert "VERIFYING  conanfile.py" not in c.out  # It doesn't re-verify previous contents
+    assert "VERIFYING  conan_sources.tgz" in c.out

@@ -202,6 +202,7 @@ class ConanFileLoader:
         path, basename = os.path.split(conan_txt_path)
         display_name = basename
         conanfile = self._parse_conan_txt(contents, path, display_name)
+        conanfile._conan_helpers = self._conanfile_helpers
         conanfile._conan_is_consumer = True
         return conanfile
 

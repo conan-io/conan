@@ -48,7 +48,7 @@ class _InstallPackageReference:
 
     def add(self, node):
         assert self.package_id == node.package_id
-        assert self.binary == node.binary
+        assert self.binary == node.binary, f"Binary for {node}: {self.binary}!={node.binary}"
         assert self.prev == node.prev
         # The context might vary, but if same package_id, all fine
         # assert self.context == node.context
@@ -185,8 +185,10 @@ class InstallGraph:
     def __init__(self, deps_graph=None):
         self._nodes = {}  # ref with rev: _InstallGraphNode
 
+        self._is_test_package = False
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
+            self._is_test_package = deps_graph.root.conanfile.tested_reference_str is not None
 
     @staticmethod
     def load(filename):
@@ -278,8 +280,7 @@ class InstallGraph:
         if missing:
             self._raise_missing(missing)
 
-    @staticmethod
-    def _raise_missing(missing):
+    def _raise_missing(self, missing):
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
         missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
@@ -299,15 +300,22 @@ class InstallGraph:
               f"{conanfile.info.dumps()}"
         conanfile.output.warning(msg)
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
-        if len(missing_prefs) >= 5:
-            build_str = "--build=missing"
+        if self._is_test_package:
+            build_msg = "This is a **test_package** missing binary. You can use --build (for " \
+                        "all dependencies) or --build-test (exclusive for 'test_package' " \
+                        "dependencies) to define what can be built from sources"
         else:
-            build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref) for pref in missing_prefs])))
+            if len(missing_prefs) >= 5:
+                build_str = "--build=missing"
+            else:
+                build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
+                                                  for pref in missing_prefs])))
+            build_msg = f"or try to build locally from sources using the '{build_str}' argument"
 
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'
            Check the available packages using 'conan list {ref}:* -r=remote'
-           or try to build locally from sources using the '{build_str}' argument
+           {build_msg}
 
            More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
            '''))
