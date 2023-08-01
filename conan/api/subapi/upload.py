@@ -19,7 +19,7 @@ class UploadAPI:
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
         app = ConanApp(self.conan_api.cache_folder)
-        for ref, bundle in package_list.refs():
+        for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path)
