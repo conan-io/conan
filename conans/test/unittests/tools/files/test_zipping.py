@@ -5,7 +5,7 @@ from os.path import basename
 import pytest
 
 from conan.tools.files import unzip
-from conans.test.utils.mocks import MockConanfile
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -23,7 +23,7 @@ def test_unzip():
     zf.write(file_path, basename(file_path))
     zf.close()
 
-    conanfile = MockConanfile({})
+    conanfile = ConanFileMock({})
 
     # Unzip and check permissions are kept
     dest_dir = temp_folder()

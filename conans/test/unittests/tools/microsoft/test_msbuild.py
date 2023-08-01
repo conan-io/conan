@@ -7,7 +7,7 @@ from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_st
 from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
-from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
+from conans.test.utils.mocks import ConanFileMock, MockSettings, ConanFileMock, MockOptions
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load
 
@@ -232,7 +232,7 @@ def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected)
                              "compiler.runtime": runtime,
                              "compiler.version": "17",
                              "cppstd": "17"})
-    conanfile = MockConanfile(settings, options)
+    conanfile = ConanFileMock(settings, options)
     assert is_msvc_static_runtime(conanfile) == expected
 
 

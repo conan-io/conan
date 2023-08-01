@@ -3,7 +3,7 @@ import os
 import pytest
 
 from conan.tools.scm import Git
-from conans.test.utils.mocks import MockConanfile
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.files import chdir
 from conans.util.runners import conan_run
@@ -29,7 +29,7 @@ def test_change_branch_in_root_commit():
     c.run_command("git checkout master")
     c.run_command('git merge --no-ff change_branch -m "Merge branch"')
 
-    conanfile = MockConanfile({}, runner=conan_run)
+    conanfile = ConanFileMock({}, runner=conan_run)
     git = Git(conanfile, folder=c.current_folder)
     commit_conan = git.get_commit()
 
@@ -58,7 +58,7 @@ def test_multi_folder_repo():
     c.run_command('git commit -m "root change"')
 
     # Git object for lib_a
-    conanfile = MockConanfile({}, runner=conan_run)
+    conanfile = ConanFileMock({}, runner=conan_run)
     git = Git(conanfile, folder=os.path.join(c.current_folder, "lib_a"))
     commit_libA = git.get_commit()
 
@@ -125,7 +125,7 @@ def test_relative_folder_repo():
     c.run_command("git add .")
     c.run_command('git commit -m "root change"')
 
-    conanfile = MockConanfile({}, runner=conan_run)
+    conanfile = ConanFileMock({}, runner=conan_run)
     # Relative paths for folders, from the current_folder
     with chdir(c.current_folder):
         git = Git(conanfile, folder="lib_a")
@@ -188,7 +188,7 @@ def test_submodule_repo():
     c.run_command("git add .")
     c.run_command('git commit -m "root change"')
 
-    conanfile = MockConanfile({}, runner=conan_run)
+    conanfile = ConanFileMock({}, runner=conan_run)
     with chdir(c.current_folder):
         # default case
         git = Git(conanfile)
