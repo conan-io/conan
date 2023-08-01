@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from packageurl import PackageURL
+
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -228,6 +230,29 @@ class Node(object):
         result["context"] = self.context
         result["test"] = self.test
         return result
+
+    def package_url(self):
+        """
+        Creates a PURL following https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst
+        """
+        qualifiers = {
+            "prev": self.prev
+        }
+        if self.ref.user:
+            qualifiers["user"] = self.ref.user
+        if self.ref.channel:
+            qualifiers["channel"] = self.ref.channel
+        if self.ref.revision:
+            qualifiers["rref"] = self.ref.revision
+        if self.remote:
+            qualifiers["repository_url"] = self.remote
+        else:
+            qualifiers["repository_url"] = "https://center.conan.io"
+        return PackageURL(
+            type="conan",
+            name=self.name,
+            version=str(self.ref.version),
+            qualifiers=qualifiers)
 
     def overrides(self):
 

@@ -144,3 +144,44 @@ def format_graph_json(result):
     cli_out_write(json_result)
     if graph.error:
         raise graph.error
+
+
+def format_graph_cyclonedx(result):
+    """
+    # creates a CycloneDX JSON according to https://cyclonedx.org/docs/1.4/json/
+    """
+    def licenses(conanfilelic):
+        def entry(id):
+            return {"license": {
+                "id": id
+            }}
+        if conanfilelic is None:
+            return []
+        elif isinstance(conanfilelic, str):
+            return [entry(conanfilelic)]
+        else:
+            return [entry(i) for i in conanfilelic]
+
+    result["graph"].serialize()  # fills ids
+    deps = result["graph"].nodes[1:]  # first node is app itself
+    cyclonedx = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.4",
+        "version": 1,
+        "dependencies": [n.id for n in deps],
+        "components": [
+            {
+                "type": "library",
+                "bom-ref": n.id,
+                "purl": n.package_url().to_string(),
+                "licenses": licenses(n.conanfile.license),
+                "name": n.name,
+                "version": n.conanfile.version,
+                "supplier": {
+                    "url": [n.conanfile.homepage]
+                }
+            } for n in deps
+        ]
+    }
+    json_result = json.dumps(cyclonedx, indent=4)
+    cli_out_write(json_result)
