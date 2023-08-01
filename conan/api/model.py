@@ -42,6 +42,9 @@ class MultiPackagesList:
     def __init__(self):
         self.lists = {}
 
+    def setdefault(self, key, default):
+        return self.lists.setdefault(key, default)
+
     def __getitem__(self, name):
         try:
             return self.lists[name]
