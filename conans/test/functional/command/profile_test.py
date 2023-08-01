@@ -146,8 +146,8 @@ class DetectCompilersTest(unittest.TestCase):
             output = RedirectedTestOutput()
             with redirect_output(output):
                 with environment_update({"CC": var, "PATH": cl_location}):
-                    result = detect_defaults_settings()
+                    c.run("profile detect --name=./cl-profile")
 
-            result = dict(result)
-            assert result['compiler'] == "msvc"
-            assert str(result['compiler.version']) == "191"
+            profile = c.load("cl-profile")
+            assert "compiler=msvc" in profile
+            assert "compiler.version=191" in profile
