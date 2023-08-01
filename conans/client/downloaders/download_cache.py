@@ -61,7 +61,7 @@ class DownloadCache:
             excluded_urls = []
 
         all_refs = set()
-        for k, ref in package_list.refs():
+        for k, ref in package_list.refs().items():
             packages = ref.get("packages", {}).values()
             if ref.get("upload") or any(should_upload_sources(p) for p in packages):
                 all_refs.add(str(k))
