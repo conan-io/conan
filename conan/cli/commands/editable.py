@@ -23,11 +23,17 @@ def editable_add(conan_api, parser, subparser, *args):
     add_reference_args(subparser)
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-r", "--remote", action="append", default=None,
+                       help='Look in the specified remote or remotes server')
+    group.add_argument("-nr", "--no-remote", action="store_true",
+                       help='Do not use remote, resolve exclusively in the cache')
     args = parser.parse_args(*args)
 
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     cwd = os.getcwd()
     ref = conan_api.local.editable_add(args.path, args.name, args.version, args.user, args.channel,
-                                       cwd, args.output_folder)
+                                       cwd, args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' in editable mode".format(ref))
 
 
