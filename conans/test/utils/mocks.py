@@ -109,7 +109,8 @@ class ConanFileMock(ConanFile):
         self._commands.append(args[0])
         if self.runner:
             kwargs.pop("quiet", None)
-            self.runner(*args, **kwargs)
+            return self.runner(*args, **kwargs)
+        return 0  # simulating it was OK!
 
     @property
     def commands(self):
