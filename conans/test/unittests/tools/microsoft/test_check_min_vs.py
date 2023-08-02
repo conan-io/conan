@@ -2,7 +2,7 @@ import pytest
 
 from conan.tools.microsoft import check_min_vs
 from conans.errors import ConanInvalidConfiguration
-from conans.test.utils.mocks import MockConanfile, MockSettings
+from conans.test.utils.mocks import ConanFileMock, MockSettings
 
 
 class TestCheckMinVS:
@@ -29,7 +29,7 @@ class TestCheckMinVS:
         settings = MockSettings({"compiler": compiler,
                                  "compiler.version": version,
                                  "compiler.update": update})
-        conanfile = MockConanfile(settings)
+        conanfile = ConanFileMock(settings)
         return conanfile
 
     @pytest.mark.parametrize(parametrize_vars, valid_parametrize_values)

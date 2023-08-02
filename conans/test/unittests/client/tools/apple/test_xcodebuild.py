@@ -1,7 +1,6 @@
 import pytest
 
 from conan.tools.apple import XcodeBuild
-from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 

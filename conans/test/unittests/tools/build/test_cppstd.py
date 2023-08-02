@@ -2,7 +2,7 @@ import pytest
 
 from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd, default_cppstd
 from conans.errors import ConanException, ConanInvalidConfiguration
-from conans.test.utils.mocks import MockSettings, MockConanfile
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 @pytest.mark.parametrize("compiler,compiler_version,values", [
@@ -20,21 +20,21 @@ from conans.test.utils.mocks import MockSettings, MockConanfile
 ])
 def test_supported_cppstd_clang(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
 
 
 def test_supported_cppstd_with_specific_values():
     settings = MockSettings({})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile, "clang", "3.1")
     assert sot == ['98', 'gnu98', '11', 'gnu11']
 
 
 def test_supported_cppstd_error():
     settings = MockSettings({})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     with pytest.raises(ConanException) as exc:
         supported_cppstd(conanfile)
     assert "Called supported_cppstd with no compiler or no compiler.version" in str(exc)
@@ -53,7 +53,7 @@ def test_supported_cppstd_error():
 ])
 def test_supported_cppstd_gcc(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
 
@@ -72,7 +72,7 @@ def test_supported_cppstd_gcc(compiler, compiler_version, values):
 ])
 def test_supported_cppstd_apple_clang(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
 
@@ -86,7 +86,7 @@ def test_supported_cppstd_apple_clang(compiler, compiler_version, values):
 ])
 def test_supported_cppstd_msvc(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
 
@@ -100,7 +100,7 @@ def test_supported_cppstd_msvc(compiler, compiler_version, values):
 ])
 def test_supported_cppstd_mcst(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
 
@@ -111,7 +111,7 @@ def test_supported_cppstd_mcst(compiler, compiler_version, values):
 ])
 def test_supported_cppstd_qcc(compiler, compiler_version, values):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = supported_cppstd(conanfile)
     assert sot == values
 
@@ -124,7 +124,7 @@ def test_supported_cppstd_qcc(compiler, compiler_version, values):
 ])
 def test_default_cppstd_gcc(compiler, compiler_version, result):
     settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     sot = default_cppstd(conanfile)
     assert sot == result
 
@@ -132,7 +132,7 @@ def test_default_cppstd_gcc(compiler, compiler_version, result):
 def test_check_cppstd_type():
     """ cppstd must be a number
     """
-    conanfile = MockConanfile(MockSettings({}))
+    conanfile = ConanFileMock(MockSettings({}))
     with pytest.raises(ConanException) as exc:
         check_min_cppstd(conanfile, "gnu17", False)
 
@@ -148,7 +148,7 @@ def _create_conanfile(compiler, version, os, cppstd, libcxx=None):
                              "compiler.cppstd": cppstd})
     if libcxx:
         settings.values["compiler.libcxx"] = libcxx
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     return conanfile
 
 
