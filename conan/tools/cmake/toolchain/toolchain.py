@@ -184,6 +184,8 @@ class CMakeToolchain(object):
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
             ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
+        user_presets_path = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_presets_path",
+                                                     self.user_presets_path)
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
@@ -207,7 +209,7 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path, self.presets_prefix)
+                            user_presets_path, self.presets_prefix)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

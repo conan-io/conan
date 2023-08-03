@@ -72,6 +72,16 @@ def test_cmake_toolchain_custom_toolchain():
     assert "binaryDir" in presets["configurePresets"][0]
 
 
+def test_cmake_toolchain_custom_user_presets_path():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:user_presets_path=ConanPresets.json")
+
+    client.run("install .")
+    assert not os.path.exists(os.path.join(client.current_folder, "CMakeUserPresets.json"))
+    assert os.path.exists(os.path.join(client.current_folder, "ConanPresets.json"))
+
+
 @pytest.mark.skipif(platform.system() != "Darwin",
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool("cmake", "3.23")
