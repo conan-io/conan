@@ -1,5 +1,6 @@
 import textwrap
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -175,3 +176,49 @@ def test_propagate_conf_info():
     client.run("install . ")
     assert "conanfile.py: CONF1: val1" in client.out
     assert "conanfile.py: CONF2: val1" in client.out
+
+
+def test_conf_both_build_and_host():
+    """
+    # https://github.com/conan-io/conan/issues/14421
+    app --(requires)-----> protobuf(lib-host-release) -(tool_require)-> tool/0.1
+      \\- (tool_require)-> protobuf(protoc-build-release) -(tool_require) -> tool/0.1
+
+    profile-host = Debug
+    profile-build = Release
+    """
+
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            def package_info(self):
+                myvalue = str(self.settings_target.build_type)
+                self.conf_info.define("user.team.myconf", myvalue)
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --build-require")
+
+    myprotobuf = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "myprotobuf"
+            version = "0.1"
+            settings = "build_type"
+            tool_requires = "tool/0.1"
+
+            def generate(self):
+                self.output.info(f"MYCONF {self.context}: {self.conf.get('user.team.myconf')}")
+        """)
+
+    client.save({"myprotobuf/conanfile.py": myprotobuf,
+                 "app/conanfile.py": GenConanfile().with_requires("myprotobuf/0.1")
+                                                   .with_tool_requires("myprotobuf/0.1")},
+                clean_first=True)
+    client.run('export myprotobuf')
+    client.run("install app --build=missing -s:h build_type=Debug -s:b build_type=Release")
+    assert "myprotobuf/0.1: MYCONF build: Release" in client.out
+    assert "myprotobuf/0.1: MYCONF host: Debug" in client.out

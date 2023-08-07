@@ -4,7 +4,7 @@ from conans.model.recipe_ref import ref_matches
 
 
 def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_context,
-                                 is_build_require, ref=None):
+                                 is_build_require, ref=None, parent=None):
     """ this function fills conanfile information with the profile informaiton
     It is called for:
         - computing the root_node
@@ -28,8 +28,19 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     conanfile.settings_build = profile_build.processed_settings.copy()
     # profile target
     conanfile.settings_target = None
-    if is_build_require or base_context == CONTEXT_BUILD:
-        conanfile.settings_target = profile_host.processed_settings.copy()
+
+    if is_build_require:
+        if base_context == CONTEXT_BUILD:
+            conanfile.settings_target = profile_build.processed_settings.copy()
+        else:
+            conanfile.settings_target = profile_host.processed_settings.copy()
+    else:
+        if base_context == CONTEXT_BUILD:
+            # if parent is first level tool-requires, required by HOST context
+            if parent is None or parent.settings_target != parent.settings_build:
+                conanfile.settings_target = profile_host.processed_settings.copy()
+            else:
+                conanfile.settings_target = profile_build.processed_settings.copy()
 
 
 def _initialize_conanfile(conanfile, profile, ref):
