@@ -102,7 +102,7 @@ class PyRequireLoader(object):
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
         # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
-        self._range_resolver.resolve(requirement, "py_require", remotes, update)
+        self._range_resolver.resolve(requirement, "python_requires", remotes, update)
         ref = requirement.ref
         return ref
 
