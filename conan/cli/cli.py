@@ -219,7 +219,7 @@ class Cli:
             return exception.code
 
         assert isinstance(exception, Exception)
-        print(traceback.format_exc())
+        output.error(traceback.format_exc())
         msg = exception_message_safe(exception)
         output.error(msg)
         return ERROR_UNEXPECTED
