@@ -1,15 +1,15 @@
 import os
+import shutil
 import sys
 import textwrap
 import unittest
 
-import pytest
 import yaml
-from bottle import static_file
 
 from conans.model.recipe_ref import RecipeReference
+from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import tgz_with_contents
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.tools import TestClient
 from conans.util.files import md5sum, sha1sum, sha256sum, load
 
 
@@ -87,9 +87,11 @@ sources:
         client.run("install . --build='*'")
         self.assertIn("My URL:", client.out)
 
-    @pytest.mark.slow
-    @pytest.mark.local_bottle
     def test_conan_data_as_source_newtools(self):
+        client = TestClient()
+        file_server = TestFileServer()
+        client.servers["file_server"] = file_server
+
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
         if sys.version_info.major == 3 and sys.version_info.minor >= 9:
             # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
@@ -105,17 +107,8 @@ sources:
         self.assertEqual(sha1_value, sha1sum(tgz_path))
         self.assertEqual(sha256_value, sha256sum(tgz_path))
 
-        # Instance stoppable thread server and add endpoints
-        thread = StoppableThreadBottle()
+        shutil.copy2(tgz_path, file_server.store)
 
-        @thread.server.get("/myfile.tar.gz")
-        def get_file():
-            return static_file(os.path.basename(tgz_path), root=os.path.dirname(tgz_path),
-                               mimetype="")
-
-        thread.run_server()
-
-        client = TestClient()
         conanfile = textwrap.dedent("""
                 from conan import ConanFile
                 from conan.tools.files import get
@@ -129,13 +122,13 @@ sources:
         conandata = textwrap.dedent("""
                 sources:
                   all:
-                    url: "http://localhost:{}/myfile.tar.gz"
+                    url: "{}/myfile.tar.gz"
                     md5: "{}"
                     sha1: "{}"
                     sha256: "{}"
                 """)
         client.save({"conanfile.py": conanfile,
-                     "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
+                     "conandata.yml": conandata.format(file_server.fake_url, md5_value, sha1_value,
                                                        sha256_value)})
 
         client.run(f"create . --name=pkg --version=0.1")

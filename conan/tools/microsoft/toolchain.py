@@ -34,7 +34,6 @@ class MSBuildToolchain(object):
             </Link>
             <ResourceCompile>
               <PreprocessorDefinitions>{{ defines }}%(PreprocessorDefinitions)</PreprocessorDefinitions>
-              <AdditionalOptions>{{ compiler_flags }} %(AdditionalOptions)</AdditionalOptions>
             </ResourceCompile>
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">

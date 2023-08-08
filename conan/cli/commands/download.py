@@ -60,9 +60,9 @@ def download(conan_api: ConanAPI, parser, *args):
 
     refs = []
     prefs = []
-    for ref, recipe_bundle in package_list.refs():
+    for ref, recipe_bundle in package_list.refs().items():
         refs.append(ref)
-        for pref, _ in package_list.prefs(ref, recipe_bundle):
+        for pref, _ in package_list.prefs(ref, recipe_bundle).items():
             prefs.append(pref)
 
     if parallel <= 1:

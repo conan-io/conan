@@ -48,7 +48,7 @@ class _InstallPackageReference:
 
     def add(self, node):
         assert self.package_id == node.package_id
-        assert self.binary == node.binary
+        assert self.binary == node.binary, f"Binary for {node}: {self.binary}!={node.binary}"
         assert self.prev == node.prev
         # The context might vary, but if same package_id, all fine
         # assert self.context == node.context

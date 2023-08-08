@@ -5,10 +5,9 @@ import mock
 import pytest
 from unittest.mock import PropertyMock
 
-from conan.tools.system.package_manager import Apt, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, Zypper, \
-    PacMan, _SystemPackageManagerTool
+from conan.tools.system.package_manager import Apt, Apk, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, \
+    Zypper, PacMan, _SystemPackageManagerTool
 from conans.errors import ConanException
-from conans.model.conf import Conf
 from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 
@@ -37,7 +36,6 @@ def test_msys2():
         with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
             context_mock.return_value = "host"
             conanfile = ConanFileMock()
-            conanfile.conf = Conf()
             conanfile.settings = Settings()
             conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
             manager = _SystemPackageManagerTool(conanfile)
@@ -58,6 +56,7 @@ def test_msys2():
     ("opensuse-leap", "zypper"),
     ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
+    ("alpine", "apk"),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
@@ -79,7 +78,6 @@ def test_package_manager_distro(distro, tool):
 ])
 def test_sudo_str(sudo, sudo_askpass, expected_str):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.package_manager:sudo", sudo)
     conanfile.conf.define("tools.system.package_manager:sudo_askpass", sudo_askpass)
@@ -95,7 +93,6 @@ def test_sudo_str(sudo, sudo_askpass, expected_str):
 ])
 def test_apt_install_recommends(recommends, recommends_str):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.package_manager:tool", "apt-get")
     conanfile.conf.define("tools.system.package_manager:mode", "install")
@@ -107,10 +104,9 @@ def test_apt_install_recommends(recommends, recommends_str):
 
 
 @pytest.mark.parametrize("tool_class",
-                         [Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
+                         [Apk, Apt, Yum, Dnf, Brew, Pkg, PkgUtil, Chocolatey, PacMan, Zypper])
 def test_tools_install_mode_check(tool_class):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
@@ -132,6 +128,7 @@ def test_tools_install_mode_check(tool_class):
 
 @pytest.mark.parametrize("tool_class, result",
 [
+    (Apk, "apk update"),
     (Apt, "apt-get update"),
     (Yum, "yum check-update -y"),
     (Dnf, "dnf check-update -y"),
@@ -144,7 +141,6 @@ def test_tools_install_mode_check(tool_class):
 ])
 def test_tools_update_mode_install(tool_class, result):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     for mode in ["check", "install"]:
@@ -167,7 +163,6 @@ def test_tools_update_mode_install(tool_class, result):
 def test_dnf_yum_return_code_100(tool_class, result):
     # https://github.com/conan-io/conan/issues/11661
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     conanfile.conf.define("tools.system.package_manager:mode", "install")
@@ -198,6 +193,7 @@ def test_dnf_yum_return_code_100(tool_class, result):
 
 @pytest.mark.parametrize("tool_class, arch_host, result", [
     # not cross-compile -> do not add host architecture
+    (Apk, 'x86_64', 'apk add --no-cache package1 package2'),
     (Apt, 'x86_64', 'apt-get install -y --no-install-recommends package1 package2'),
     (Yum, 'x86_64', 'yum install -y package1 package2'),
     (Dnf, 'x86_64', 'dnf install -y package1 package2'),
@@ -220,8 +216,7 @@ def test_dnf_yum_return_code_100(tool_class, result):
 ])
 def test_tools_install_mode_install_different_archs(tool_class, arch_host, result):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
-    conanfile.settings = MockSettings({"arch": f"{arch_host}"})
+    conanfile.settings = MockSettings({"arch": arch_host})
     conanfile.settings_build = MockSettings({"arch": "x86_64"})
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     conanfile.conf.define("tools.system.package_manager:mode", "install")
@@ -248,7 +243,6 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
 ])
 def test_tools_install_archless(tool_class, result):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = MockSettings({"arch": "x86"})
     conanfile.settings_build = MockSettings({"arch": "x86_64"})
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
@@ -267,6 +261,7 @@ def test_tools_install_archless(tool_class, result):
 
 
 @pytest.mark.parametrize("tool_class, result", [
+    (Apk, 'apk info -e package'),
     (Apt, 'dpkg-query -W -f=\'${Status}\' package | grep -q "ok installed"'),
     (Yum, 'rpm -q package'),
     (Dnf, 'rpm -q package'),
@@ -279,7 +274,6 @@ def test_tools_install_archless(tool_class, result):
 ])
 def test_tools_check(tool_class, result):
     conanfile = ConanFileMock()
-    conanfile.conf = Conf()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:

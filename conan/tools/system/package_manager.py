@@ -40,6 +40,7 @@ class _SystemPackageManagerTool(object):
         elif os_name == "Windows" and self._conanfile.conf.get("tools.microsoft.bash:subsystem") == "msys2":
             os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian"],
+                           "apk": ["alpine"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux", "rocky"],
                            "dnf": ["fedora", "rhel", "centos", "mageia"],
@@ -330,6 +331,25 @@ class PacMan(_SystemPackageManagerTool):
         super(PacMan, self).__init__(conanfile)
         self._arch_names = {"x86": "lib32"} if arch_names is None else arch_names
         self._arch_separator = "-"
+
+
+class Apk(_SystemPackageManagerTool):
+    tool_name = "apk"
+    install_command = "{sudo}{tool} add --no-cache {packages}"
+    update_command = "{sudo}{tool} update"
+    check_command = "{tool} info -e {package}"
+
+    def __init__(self, conanfile, _arch_names=None):
+        """
+        Constructor method.
+        Note that *Apk* does not support architecture names since Alpine Linux does not support
+        multiarch. Therefore, the ``arch_names`` argument is ignored.
+
+        :param conanfile: the current recipe object. Always use ``self``.
+        """
+        super(Apk, self).__init__(conanfile)
+        self._arch_names = {}
+        self._arch_separator = ""
 
 
 class Zypper(_SystemPackageManagerTool):

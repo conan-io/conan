@@ -373,12 +373,13 @@ class Options:
         which is the state that a package should define in order to reproduce
         """
         assert isinstance(down_options, Options)
+        # We need to store a copy for internal propagation for test_requires and tool_requires
+        private_deps_options = Options()
+        private_deps_options._deps_package_options = self._deps_package_options.copy()
         # self_options are the minimal necessary for a build-order
         # TODO: check this, isn't this just a copy?
         self_options = Options()
-        for pattern, options in down_options._deps_package_options.items():
-            self_options._deps_package_options.setdefault(pattern,
-                                                          _PackageOptions()).update_options(options)
+        self_options._deps_package_options = down_options._deps_package_options.copy()
 
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
@@ -395,4 +396,4 @@ class Options:
         # not be able to do ``self.options["mydep"]`` because it will be empty. self.dependencies
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
-        return self_options, upstream_options
+        return self_options, upstream_options, private_deps_options
