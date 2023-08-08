@@ -41,7 +41,7 @@ def inspect(conan_api, parser, *args):
     conanfile = conan_api.local.inspect(path, remotes=remotes, lockfile=lockfile)
     result = conanfile.serialize()
     # Some of the serialization info is not initialized so it's pointless to show it to the user
-    for item in ("cpp_info", "system_requires", "recipe_folder"):
+    for item in ("cpp_info", "system_requires", "recipe_folder", "conf_info"):
         if item in result:
             del result[item]
 
