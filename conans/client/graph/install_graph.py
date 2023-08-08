@@ -48,7 +48,7 @@ class _InstallPackageReference:
 
     def add(self, node):
         assert self.package_id == node.package_id
-        assert self.binary == node.binary
+        assert self.binary == node.binary, f"Binary for {node}: {self.binary}!={node.binary}"
         assert self.prev == node.prev
         # The context might vary, but if same package_id, all fine
         # assert self.context == node.context
@@ -301,9 +301,9 @@ class InstallGraph:
         conanfile.output.warning(msg)
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
         if self._is_test_package:
-            build_msg = "'conan test' tested packages must exist, and '--build' argument " \
-                        "is used only for the 'test_package' dependencies, not for the tested " \
-                        "dependencies"
+            build_msg = "This is a **test_package** missing binary. You can use --build (for " \
+                        "all dependencies) or --build-test (exclusive for 'test_package' " \
+                        "dependencies) to define what can be built from sources"
         else:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"

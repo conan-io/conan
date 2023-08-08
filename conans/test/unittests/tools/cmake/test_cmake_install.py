@@ -63,3 +63,59 @@ def test_run_install_strip():
     cmake = CMake(conanfile)
     cmake.install()
     assert "--strip" in conanfile.command
+
+
+def test_run_install_cli_args():
+    """
+    Testing that the passing cli_args to install works
+    Issue related: https://github.com/conan-io/conan/issues/14235
+    """
+
+    settings = Settings.loads(get_default_settings_yml())
+    settings.os = "Linux"
+    settings.arch = "x86_64"
+    settings.build_type = "Release"
+    settings.compiler = "gcc"
+    settings.compiler.version = "11"
+
+    conanfile = ConanFileMock()
+
+    conanfile.conf = Conf()
+
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+    conanfile.folders.set_base_package(temp_folder())
+
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    cmake.install(cli_args=["--prefix=/tmp"])
+    assert "--prefix=/tmp" in conanfile.command
+
+
+def test_run_install_cli_args_strip():
+    """
+    Testing that the install/strip rule is called when using cli_args
+    Issue related: https://github.com/conan-io/conan/issues/14235
+    """
+
+    settings = Settings.loads(get_default_settings_yml())
+    settings.os = "Linux"
+    settings.arch = "x86_64"
+    settings.build_type = "Release"
+    settings.compiler = "gcc"
+    settings.compiler.version = "11"
+
+    conanfile = ConanFileMock()
+
+    conanfile.conf = Conf()
+
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+    conanfile.folders.set_base_package(temp_folder())
+
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    cmake.install(cli_args=["--strip"])
+    assert "--strip" in conanfile.command

@@ -1,4 +1,5 @@
 import os
+from io import StringIO
 
 from conans.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
@@ -85,7 +86,7 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
     return f"{flag}={os_version}" if flag else ''
 
 
-class XCRun(object):
+class XCRun:
     """
     XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.
     """
@@ -95,31 +96,28 @@ class XCRun(object):
         :param conanfile: Conanfile instance.
         :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the
             sdk it automatically if ``None`` is passed.
-        :param target_settings: Try to use ``settings_target`` in case they exist (``False`` by default)
+        :param use_settings_target: Try to use ``settings_target`` in case they exist (``False`` by default)
         """
-        settings = None
-        if conanfile:
-            settings = conanfile.settings
-            if use_settings_target and conanfile.settings_target is not None:
-                settings = conanfile.settings_target
+        settings = conanfile.settings
+        if use_settings_target and conanfile.settings_target is not None:
+            settings = conanfile.settings_target
 
-            if sdk is None and settings:
-                sdk = settings.get_safe('os.sdk')
+        if sdk is None and settings:
+            sdk = settings.get_safe('os.sdk')
 
+        self._conanfile = conanfile
         self.settings = settings
         self.sdk = sdk
 
     def _invoke(self, args):
-        def cmd_output(cmd):
-            from conans.util.runners import check_output_runner
-            cmd_str = cmd_args_to_string(cmd)
-            return check_output_runner(cmd_str).strip()
-
         command = ['xcrun']
         if self.sdk:
             command.extend(['-sdk', self.sdk])
         command.extend(args)
-        return cmd_output(command)
+        output = StringIO()
+        cmd_str = cmd_args_to_string(command)
+        self._conanfile.run(f"{cmd_str}", stdout=output, quiet=True)
+        return output.getvalue().strip()
 
     def find(self, tool):
         """find SDK tools (e.g. clang, ar, ranlib, lipo, codesign, etc.)"""

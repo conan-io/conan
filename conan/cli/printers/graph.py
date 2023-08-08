@@ -18,16 +18,16 @@ def print_graph_basic(graph):
     for node in graph.nodes:
         if hasattr(node.conanfile, "python_requires"):
             for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
-                python_requires[r.ref] = r.recipe, r.remote, False
+                python_requires[r.ref] = r.recipe, r.remote
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
-            build_requires[node.ref] = node.recipe, node.remote, node.test_package
+            build_requires[node.ref] = node.recipe, node.remote
         else:
             if node.test:
-                test_requires[node.ref] = node.recipe, node.remote, node.test_package
+                test_requires[node.ref] = node.recipe, node.remote
             else:
-                requires[node.ref] = node.recipe, node.remote, node.test_package
+                requires[node.ref] = node.recipe, node.remote
         if node.conanfile.deprecated:
             deprecated[node.ref] = node.conanfile.deprecated
 
@@ -39,11 +39,9 @@ def print_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for ref, (recipe, remote, test_package) in sorted(reqs_to_print.items()):
+        for ref, (recipe, remote) in sorted(reqs_to_print.items()):
             if remote is not None:
                 recipe = "{} ({})".format(recipe, remote.name)
-            if test_package:
-                recipe = f"(tp) {recipe}"
             output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)

@@ -10,6 +10,7 @@ import pytest
 from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
     is_apple_os, XCRun
 from conans.test.utils.mocks import MockSettings, ConanFileMock
+from conans.util.runners import conan_run
 
 
 class FakeSettings(object):
@@ -82,7 +83,6 @@ class AppleTest(unittest.TestCase):
         self.assertIsNone(_to_apple_arch('mips'))
         self.assertEqual(_to_apple_arch('mips', default='mips'), 'mips')
 
-
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
     def test_xcrun(self):
 
@@ -95,8 +95,7 @@ class AppleTest(unittest.TestCase):
             self.assertTrue(xcrun_.find('lipo').endswith('lipo'))
             self.assertTrue(os.path.isdir(xcrun_.sdk_path))
 
-        conanfile = ConanFileMock({})
-        conanfile.settings = FakeSettings('Macos', 'x86')
+        conanfile = ConanFileMock(settings=FakeSettings('Macos', 'x86'), runner=conan_run)
         xcrun = XCRun(conanfile)
         _common_asserts(xcrun)
 

@@ -8,7 +8,6 @@ import pytest
 import requests
 from mock import patch
 
-from conans import REVISIONS
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -477,8 +476,7 @@ class UploadTest(unittest.TestCase):
                 else:
                     return requests.get(url, **kwargs)
 
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")],
-                            server_capabilities=[REVISIONS])
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
         client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
                             inputs=["user", "password"])

@@ -113,15 +113,15 @@ def upload(conan_api: ConanAPI, parser, *args):
 
 def _ask_confirm_upload(conan_api, upload_data):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    for ref, bundle in upload_data.refs():
+    for ref, bundle in upload_data.refs().items():
         msg = "Are you sure you want to upload recipe '%s'?" % ref.repr_notime()
         if not ui.request_boolean(msg):
             bundle["upload"] = False
-            for _, prev_bundle in upload_data.prefs(ref, bundle):
+            for _, prev_bundle in upload_data.prefs(ref, bundle).items():
                 prev_bundle["upload"] = False
 
         else:
-            for pref, prev_bundle in upload_data.prefs(ref, bundle):
+            for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
                 msg = "Are you sure you want to upload package '%s'?" % pref.repr_notime()
                 if not ui.request_boolean(msg):
                     prev_bundle["upload"] = False

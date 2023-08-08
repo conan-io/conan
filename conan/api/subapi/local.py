@@ -42,10 +42,10 @@ class LocalAPI:
         return path
 
     def editable_add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
-                     output_folder=None):
+                     output_folder=None, remotes=None):
         path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api.cache_folder)
-        conanfile = app.loader.load_named(path, name, version, user, channel)
+        conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         # Retrieve conanfile.py from target_path
         target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)

@@ -39,7 +39,6 @@ def test_msbuildtoolchain_props_with_extra_flags():
     expected_resource_compile = """
     <ResourceCompile>
       <PreprocessorDefinitions>DEF1;DEF2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>--flag1 --flag2 --flag3 --flag4 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>"""
     assert expected_cl_compile in toolchain
     assert expected_link in toolchain

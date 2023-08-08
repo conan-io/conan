@@ -52,7 +52,8 @@ def client(_client):
 
 
 @pytest.mark.tool("cmake")
-def test_install_deploy(client):
+@pytest.mark.parametrize("powershell", [False, True])
+def test_install_deploy(client, powershell):
     c = client
     custom_content = 'message(STATUS "MY_TOOL_VARIABLE=${MY_TOOL_VARIABLE}!")'
     cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["hello", "tool"],
@@ -73,8 +74,9 @@ def test_install_deploy(client):
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
            clean_first=True)
+    pwsh = "-c tools.env.virtualenv:powershell=True" if powershell else ""
     c.run("install . -o *:shared=True "
-          "--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
+          f"--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps {pwsh}")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
     deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")
@@ -93,7 +95,10 @@ def test_install_deploy(client):
     assert "MY_TOOL_VARIABLE=Hello world!!" in c2.out
     c2.run_command("cmake --build . --config Release")
     if platform.system() == "Windows":  # Only the .bat env-generators are relocatable
-        cmd = r"mydeploy\conanrun.bat && Release\my_app.exe"
+        if powershell:
+            cmd = r"powershell.exe mydeploy\conanrun.ps1 ; Release\my_app.exe"
+        else:
+            cmd = r"mydeploy\conanrun.bat && Release\my_app.exe"
         # For Lunux: cmd = ". mydeploy/conanrun.sh && ./my_app"
         c2.run_command(cmd)
         assert "hello/0.1: Hello World Release!" in c2.out

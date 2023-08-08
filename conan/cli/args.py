@@ -7,7 +7,7 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 
     --build="*"        Force build from source for all packages.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
-                       package is not found. Cannot be combined with other '--build' options.
+                       package is not found, it cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
     --build=cascade    Build packages from source that have at least one dependency being built from
                        source.

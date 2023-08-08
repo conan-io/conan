@@ -214,7 +214,9 @@ class TestRequester:
             kwargs["expect_errors"] = True
             kwargs.pop("stream", None)
             kwargs.pop("verify", None)
-            kwargs.pop("auth", None)
+            auth = kwargs.pop("auth", None)
+            if auth and isinstance(auth, tuple):
+                app.set_authorization(("Basic", auth))
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
@@ -233,6 +235,8 @@ class TestRequester:
     @staticmethod
     def _set_auth_headers(kwargs):
         if kwargs.get("auth"):
+            if isinstance(kwargs.get("auth"), tuple):  # For download(..., auth=(user, paswd))
+                return
             mock_request = Mock()
             mock_request.headers = {}
             kwargs["auth"](mock_request)

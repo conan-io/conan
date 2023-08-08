@@ -1,11 +1,10 @@
 import os
 import textwrap
 
-from bottle import static_file, request
-
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.tools import TestClient
 from conans.util.files import save, set_dirty
 
 
@@ -74,21 +73,13 @@ class TestDownloadCache:
         # TODO  assert "Downloading" not in client.out
 
     def test_user_downloads_cached_newtools(self):
-        http_server = StoppableThreadBottle()
-        http_folder = temp_folder()
-        save(os.path.join(http_folder, "myfile.txt"), "some content")
-        save(os.path.join(http_folder, "myfile2.txt"), "some query")
-        save(os.path.join(http_folder, "myfile3.txt"), "some content 3")
-
-        @http_server.server.get("/<file>")
-        def get_file(file):
-            if request.query:
-                return static_file("myfile2.txt", http_folder)
-            return static_file(file, http_folder)
-
-        http_server.run_server()
-
         client = TestClient()
+        file_server = TestFileServer()
+        client.servers["file_server"] = file_server
+        save(os.path.join(file_server.store, "myfile.txt"), "some content")
+        save(os.path.join(file_server.store, "myfile2.txt"), "some query")
+        save(os.path.join(file_server.store, "myfile3.txt"), "some content 3")
+
         tmp_folder = temp_folder()
         client.save({"global.conf": f"core.sources:download_cache={tmp_folder}"},
                     path=client.cache.cache_folder)
@@ -98,8 +89,8 @@ class TestDownloadCache:
            from conan.tools.files import download
            class Pkg(ConanFile):
                def source(self):
-                   download(self, "http://localhost:%s/myfile.txt", "myfile.txt", md5="kk")
-           """ % http_server.port)
+                   download(self, "%s/myfile.txt", "myfile.txt", md5="kk")
+           """ % file_server.fake_url)
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
         assert "ConanException: md5 signature failed for" in client.out
@@ -117,10 +108,10 @@ class TestDownloadCache:
                     md5 = "9893532233caff98cd083a116b013c0b"
                     md5_2 = "0dc8a17658b1c7cfa23657780742a353"
                     sha256 = "bcc23055e479c1050455f5bb457088cfae3cbb2783f7579a7df9e33ea9f43429"
-                    download(self, "http://localhost:{0}/myfile.txt", "myfile.txt", md5=md5)
-                    download(self, "http://localhost:{0}/myfile3.txt", "myfile3.txt", sha256=sha256)
-                    download(self, "http://localhost:{0}/myfile.txt?q=2", "myfile2.txt", md5=md5_2)
-            """).format(http_server.port)
+                    download(self, "{0}/myfile.txt", "myfile.txt", md5=md5)
+                    download(self, "{0}/myfile3.txt", "myfile3.txt", sha256=sha256)
+                    download(self, "{0}/myfile.txt?q=myfile2.txt", "myfile2.txt", md5=md5_2)
+            """).format(file_server.fake_url)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         assert "some content" in client.load("myfile.txt")
@@ -128,7 +119,7 @@ class TestDownloadCache:
         assert "some content 3" in client.load("myfile3.txt")
 
         # remove remote and local files
-        os.remove(os.path.join(http_folder, "myfile3.txt"))
+        os.remove(os.path.join(file_server.store, "myfile3.txt"))
         os.remove(os.path.join(client.current_folder, "myfile.txt"))
         os.remove(os.path.join(client.current_folder, "myfile2.txt"))
         os.remove(os.path.join(client.current_folder, "myfile3.txt"))
@@ -142,7 +133,7 @@ class TestDownloadCache:
         save(client.cache.new_config_path, "")
         client.run("source .", assert_error=True)
         assert "ERROR: conanfile.py: Error in source() method, line 10" in client.out
-        assert "Not found: http://localhost" in client.out
+        assert "Not found" in client.out
 
     def test_download_relative_error(self):
         """ relative paths are not allowed

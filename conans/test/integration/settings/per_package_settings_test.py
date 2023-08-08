@@ -75,3 +75,23 @@ class PerPackageSettingTest(unittest.TestCase):
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing %s -s compiler.libcxx=libstdc++ "
                    "-s pkg*:compiler.libcxx=libstdc++11" % settings)
         self.assertIn("consumer/0.1@user/testing: Created package", client.out)
+
+    def test_per_package_setting_all_packages_without_user_channel(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                def configure(self):
+                    self.output.info(f"I am a {self.settings.os} pkg!!!")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name=pkg1 --version=0.1 -s os=Windows")
+        client.run("create . --name=pkg2 --version=0.1 --user=user -s os=Linux")
+        client.run("create . --name=pkg3 --version=0.1 --user=user --channel=channel -s os=Linux")
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1@user",
+                                                                  "pkg3/0.1@user/channel")})
+        client.run("install . -s os=Linux -s *@:os=Windows")
+        assert "pkg1/0.1: I am a Windows pkg!!!" in client.out
+        assert "pkg2/0.1@user: I am a Linux pkg!!!" in client.out
+        assert "pkg3/0.1@user/channel: I am a Linux pkg!!!" in client.out
