@@ -126,6 +126,8 @@ def validate_common_graph_args(args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
+    if args.channel and not args.user:
+        raise ConanException("Can't specify --channel without --user")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
     if args.path and (args.requires or args.tool_requires):
