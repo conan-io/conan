@@ -751,7 +751,8 @@ class GenericSystemBlock(Block):
         if hasattr(self._conanfile, "settings_build"):
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
-            arch_host = {"armv8": "aarch64"}.get(arch_host, arch_host)
+            if arch_host == "armv8":
+                arch_host = {"Windows": "ARM64", "Macos": "arm64"}.get(os_host, "aarch64")
 
             if system_name is None:  # Try to deduce
                 _system_version = None
