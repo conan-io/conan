@@ -65,7 +65,7 @@ class BinaryCompatibility:
     def __init__(self, cache):
         compatibility_file = os.path.join(cache.plugins_path, "compatibility", "compatibility.py")
         if not os.path.exists(compatibility_file):
-            raise ConanException("The 'compatibility.py' plugin file doesn't exist. If you want"
+            raise ConanException("The 'compatibility.py' plugin file doesn't exist. If you want "
                                  "to disable it, edit its contents instead of removing it")
         mod, _ = load_python_file(compatibility_file)
         self._compatibility = mod.compatibility
