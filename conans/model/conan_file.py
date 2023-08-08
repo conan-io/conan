@@ -160,6 +160,7 @@ class ConanFile:
         result["package_folder"] = self.package_folder
 
         result["cpp_info"] = self.cpp_info.serialize()
+        result["conf_info"] = self.conf_info.serialize()
         result["label"] = self.display_name
         return result
 
