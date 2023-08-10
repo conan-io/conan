@@ -27,19 +27,35 @@ def test_cross_build():
         arch=armv8
         build_type=Release
         """)
+    embedwin = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+        """)
 
     client = TestClient(path_with_spaces=False)
 
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
         .with_generator("CMakeToolchain")
     client.save({"conanfile.py": conanfile,
-                "rpi": rpi_profile,
+                 "rpi": rpi_profile,
+                 "embedwin": embedwin,
                  "windows": windows_profile})
     client.run("install . --profile:build=windows --profile:host=rpi")
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
-    assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+
+    client.run("install . --profile:build=windows --profile:host=embedwin")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Windows)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR ARM64)" in toolchain
 
 
 def test_cross_build_linux_to_macos():
@@ -146,19 +162,35 @@ def test_cross_arch():
         compiler.libcxx=libstdc++11
         build_type=Release
         """)
+    profile_macos = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """)
 
     client = TestClient(path_with_spaces=False)
 
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
         .with_generator("CMakeToolchain")
     client.save({"conanfile.py": conanfile,
-                "linux64": build_profile,
+                 "linux64": build_profile,
+                 "macos": profile_macos,
                  "linuxarm": profile_arm})
     client.run("install . --profile:build=linux64 --profile:host=linuxarm")
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
-    assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+
+    client.run("install . --profile:build=linux64 --profile:host=macos")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
 
 
 def test_no_cross_build_arch():
@@ -684,6 +716,7 @@ def test_android_legacy_toolchain_flag(cmake_legacy_toolchain):
         .with_generator("CMakeToolchain")
     client.save({"conanfile.py": conanfile})
     settings = "-s arch=x86_64 -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo"
+    expected = None
     if cmake_legacy_toolchain is not None:
         settings += f" -c tools.android:cmake_legacy_toolchain={cmake_legacy_toolchain}"
         expected = "ON" if cmake_legacy_toolchain else "OFF"

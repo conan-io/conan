@@ -58,6 +58,7 @@ class TestFileServer:
                 return bottle.HTTPError(401, "Not authorized")
             return bottle.static_file(file, store)
 
+        @app.route("/internal_error/<rest>", method=["GET"])
         @app.route("/internal_error", method=["GET"])
         def internal_error():
             return bottle.HTTPError(500, "Internal error")

@@ -37,8 +37,8 @@ class RangeResolver:
                 resolved_ref = remote_resolved_ref
 
         if resolved_ref is None:
-            raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
-                                 "could not be resolved" % (version_range, require, base_conanref))
+            raise ConanException(f"Version range '{version_range}' from requirement '{require.ref}' "
+                                 f"required by '{base_conanref}' could not be resolved")
 
         # To fix Cache behavior, we remove the revision information
         resolved_ref.revision = None  # FIXME: Wasting information already obtained from server?
