@@ -37,10 +37,10 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     else:
         if base_context == CONTEXT_BUILD:
             # if parent is first level tool-requires, required by HOST context
-            if parent is None or parent.settings_target != parent.settings_build:
+            if parent is None or parent.settings_target is None:
                 conanfile.settings_target = profile_host.processed_settings.copy()
             else:
-                conanfile.settings_target = profile_build.processed_settings.copy()
+                conanfile.settings_target = parent.settings_target.copy()
 
 
 def _initialize_conanfile(conanfile, profile, ref):

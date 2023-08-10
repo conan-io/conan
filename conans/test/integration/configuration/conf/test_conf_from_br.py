@@ -178,6 +178,50 @@ def test_propagate_conf_info():
     assert "conanfile.py: CONF2: val1" in client.out
 
 
+def test_conf_transitive_tool():
+    """
+    # https://github.com/conan-io/conan/issues/14421
+    app --(tool_requires)--> tool/0.1 -> lib/0.1 -(tool_require)-> libbuilder/0.1 -> zlib/0.1
+
+    profile-host = Debug
+    profile-build = Release
+    """
+
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            version = "0.1"
+            settings = "build_type"
+            {}
+            def package_info(self):
+                self.output.info(f"host: {{self.settings.build_type}}")
+                self.output.info(f"build: {{self.settings_build.build_type}}")
+                if self.settings_target is not None:
+                    self.output.info(f"target: {{self.settings_target.build_type}}")
+        """)
+    client.save({"zlib/conanfile.py": conanfile.format(""),
+                 "libbuilder/conanfile.py": conanfile.format("requires='zlib/0.1'"),
+                 "lib/conanfile.py": conanfile.format("tool_requires='libbuilder/0.1'"),
+                 "tool/conanfile.py": conanfile.format("requires='lib/0.1'"),
+                 "app/conanfile.py": conanfile.format("tool_requires='tool/0.1'")})
+    client.run("export zlib --name=zlib")
+    client.run("export libbuilder --name=libbuilder")
+    client.run("export lib --name=lib")
+    client.run("export tool --name=tool")
+    client.run("create app --name=app -s:b build_type=Release -s:h build_type=Debug --build=missing")
+    for lib in "zlib", "libbuilder":
+        assert f"{lib}/0.1: host: Release" in client.out
+        assert f"{lib}/0.1: build: Release" in client.out
+        assert f"{lib}/0.1: target: Release" in client.out  # used to create lib/0.1 that is Release!
+    for lib in "lib", "tool":
+        assert f"{lib}/0.1: host: Release" in client.out
+        assert f"{lib}/0.1: build: Release" in client.out
+        assert f"{lib}/0.1: target: Debug" in client.out  # used to create app/0.1 that is Debug!
+    assert "app/0.1: host: Debug" in client.out
+    assert "app/0.1: build: Release" in client.out
+
+
 def test_conf_both_build_and_host():
     """
     # https://github.com/conan-io/conan/issues/14421
