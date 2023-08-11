@@ -2,7 +2,8 @@ import json
 import os
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD
+from conan.api.output import ConanOutput
+from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
@@ -87,6 +88,7 @@ class Lockfile(object):
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
         self._alias = {}
+        self._overrides = Overrides()
         self.partial = False
 
         if deps_graph is None:
@@ -112,6 +114,7 @@ class Lockfile(object):
                 self._requires.add(graph_node.ref, pids)
 
         self._alias.update(deps_graph.aliased)
+        self._overrides.update(deps_graph.overrides())
 
         self._requires.sort()
         self._build_requires.sort()
@@ -146,6 +149,8 @@ class Lockfile(object):
         self._requires.merge(other._requires)
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
+        self._alias.update(other._alias)
+        self._overrides.update(other._overrides)
 
     def add(self, requires=None, build_requires=None, python_requires=None):
         """ adding new things manually will trigger the sort() of the locked list, so lockfiles
@@ -184,6 +189,8 @@ class Lockfile(object):
         if "alias" in data:
             graph_lock._alias = {RecipeReference.loads(k): RecipeReference.loads(v)
                                  for k, v in data["alias"].items()}
+        if "overrides" in data:
+            graph_lock._overrides = Overrides.deserialize(data["overrides"])
         return graph_lock
 
     def serialize(self):
@@ -199,14 +206,34 @@ class Lockfile(object):
             result["python_requires"] = self._python_requires.serialize()
         if self._alias:
             result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
+        if self._overrides:
+            result["overrides"] = self._overrides.serialize()
         return result
 
-    def resolve_locked(self, node, require):
+    def resolve_locked(self, node, require, resolve_prereleases):
         if require.build or node.context == CONTEXT_BUILD:
             locked_refs = self._build_requires.refs()
         else:
             locked_refs = self._requires.refs()
-        self._resolve(require, locked_refs)
+        self._resolve_overrides(require)
+        try:
+            self._resolve(require, locked_refs, resolve_prereleases)
+        except ConanException:
+            overrides = self._overrides.get(require.ref)
+            if overrides is not None and len(overrides) > 1:
+                msg = f"Override defined for {require.ref}, but multiple possible overrides" \
+                      f" {overrides}. You might need to apply the 'conan graph build-order'" \
+                      f" overrides for correctly building this package with this lockfile"
+                ConanOutput().error(msg)
+            raise
+
+    def _resolve_overrides(self, require):
+        existing = self._overrides.get(require.ref)
+        if existing is not None and len(existing) == 1:
+            require.overriden_ref = require.ref  # Store that the require has been overriden
+            ref = next(iter(existing))
+            require.ref = ref
+            require.override_ref = ref
 
     def resolve_prev(self, node):
         if node.context == CONTEXT_BUILD:
@@ -216,27 +243,20 @@ class Lockfile(object):
         if prevs:
             return prevs.get(node.package_id)
 
-    def _resolve(self, require, locked_refs):
+    def _resolve(self, require, locked_refs, resolve_prereleases):
         version_range = require.version_range
         ref = require.ref
         matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
                    r.channel == ref.channel]
         if version_range:
             for m in matches:
-                if m.version in version_range:
+                if version_range.contains(m.version, resolve_prereleases):
                     require.ref = m
                     break
             else:
                 if not self.partial:
                     raise ConanException(f"Requirement '{ref}' not in lockfile")
         else:
-            alias = require.alias
-            if alias:
-                locked_alias = self._alias.get(alias)
-                if locked_alias is not None:
-                    require.ref = locked_alias
-                elif not self.partial:
-                    raise ConanException(f"Requirement alias '{alias}' not in lockfile")
             ref = require.ref
             if ref.revision is None:
                 for m in matches:
@@ -250,6 +270,14 @@ class Lockfile(object):
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile")
 
-    def resolve_locked_pyrequires(self, require):
+    def replace_alias(self, require, alias):
+        locked_alias = self._alias.get(alias)
+        if locked_alias is not None:
+            require.ref = locked_alias
+            return True
+        elif not self.partial:
+            raise ConanException(f"Requirement alias '{alias}' not in lockfile")
+
+    def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE
-        self._resolve(require, locked_refs)
+        self._resolve(require, locked_refs, resolve_prereleases)

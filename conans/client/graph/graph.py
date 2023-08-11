@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -12,8 +13,8 @@ RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (onl
 RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
-RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
-RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
+RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
+RECIPE_SYSTEM_TOOL = "System tool"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -24,6 +25,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
+BINARY_SYSTEM_TOOL = "System tool"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -55,6 +57,7 @@ class Node(object):
         self.binary_remote = None
         self.context = context
         self.test = test
+        self.test_package = False  # True if it is a test_package only package
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
@@ -76,6 +79,8 @@ class Node(object):
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
+            if transitive.require.override:
+                continue
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
     def propagate_downstream(self, require, node, src_node=None):
@@ -91,6 +96,7 @@ class Node(object):
                 return True
             require.aggregate(existing.require)
 
+        assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
         self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
@@ -207,19 +213,39 @@ class Node(object):
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
+        result["remote"] = self.remote.name if self.remote else None
+        result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
         # TODO: This doesn't match the model, check it
-        result["invalid_build"] = self.cant_build is not False
-        if self.cant_build:
-            result["invalid_build_reason"] = self.cant_build
+        result["invalid_build"] = self.cant_build
+        result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
+        result.pop("requires", None)  # superseded by "dependencies" (graph.transitive_deps)
+        result["dependencies"] = {d.node.id: d.require.serialize()
+                                  for d in self.transitive_deps.values() if d.node is not None}
         result["context"] = self.context
         result["test"] = self.test
-        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
+
+    def overrides(self):
+
+        def transitive_subgraph():
+            result = set()
+            opened = {self}
+            while opened:
+                new_opened = set()
+                for o in opened:
+                    result.add(o)
+                    new_opened.update(set(o.neighbors()).difference(result))
+                opened = new_opened
+
+            return result
+
+        nodes = transitive_subgraph()
+        return Overrides.create(nodes)
 
 
 class Edge(object):
@@ -229,12 +255,71 @@ class Edge(object):
         self.require = require
 
 
+class Overrides:
+    def __init__(self):
+        self._overrides = {}  # {require_ref: {override_ref1, override_ref2}}
+
+    def __bool__(self):
+        return bool(self._overrides)
+
+    def __repr__(self):
+        return repr(self.serialize())
+
+    @staticmethod
+    def create(nodes):
+        overrides = {}
+        for n in nodes:
+            for r in n.conanfile.requires.values():
+                if r.override:
+                    continue
+                if r.overriden_ref and not r.force:
+                    overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
+                else:
+                    overrides.setdefault(r.ref, set()).add(None)
+
+        # reduce, eliminate those overrides definitions that only override to None, that is, not
+        # really an override
+        result = Overrides()
+        for require, override_info in overrides.items():
+            if len(override_info) != 1 or None not in override_info:
+                result._overrides[require] = override_info
+        return result
+
+    def get(self, require):
+        return self._overrides.get(require)
+
+    def update(self, other):
+        """
+        @type other: Overrides
+        """
+        for require, override_info in other._overrides.items():
+            self._overrides.setdefault(require, set()).update(override_info)
+
+    def items(self):
+        return self._overrides.items()
+
+    def serialize(self):
+        return {k.repr_notime(): [e.repr_notime() if e else None for e in v]
+                for k, v in self._overrides.items()}
+
+    @staticmethod
+    def deserialize(data):
+        result = Overrides()
+        result._overrides = {RecipeReference.loads(k):
+                             set([RecipeReference.loads(e) if e else None for e in v])
+                             for k, v in data.items()}
+        return result
+
+
 class DepsGraph(object):
     def __init__(self):
         self.nodes = []
         self.aliased = {}
         self.resolved_ranges = {}
         self.error = False
+
+    def overrides(self):
+        return Overrides.create(self.nodes)
 
     def __repr__(self):
         return "\n".join((repr(n) for n in self.nodes))
@@ -297,8 +382,10 @@ class DepsGraph(object):
 
     def serialize(self):
         for i, n in enumerate(self.nodes):
-            n.id = i
+            n.id = str(i)
         result = OrderedDict()
-        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        result["overrides"] = self.overrides().serialize()
+        result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
         return result

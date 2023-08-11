@@ -5,10 +5,9 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import mkdir, rmdir, save
+from conans.util.files import mkdir, save
 
 
 @pytest.fixture()
@@ -190,29 +189,11 @@ def test_install_with_profile(client):
 def test_install_with_path_errors(client):
     # Install without path param not allowed
     client.run("install", assert_error=True)
-    assert "ERROR: Please specify at least a path to a conanfile or a valid reference." in client.out
+    assert "ERROR: Please specify a path" in client.out
 
     # Path with wrong conanfile.txt path
     client.run("install not_real_dir/conanfile.txt", assert_error=True)
     assert "Conanfile not found" in client.out
-
-
-@pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
-def test_install_broken_reference(client):
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
-    client.run("remote add_ref hello/0.1@lasote/stable default")
-    ref = RecipeReference.loads("hello/0.1@lasote/stable")
-    # Because the folder is removed, the metadata is removed and the
-    # origin remote is lost
-    rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
-    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
-
-    # If it was associated, it has to be desasociated
-    client.run("remote remove_ref hello/0.1@lasote/stable")
-    client.run("install --requires=hello/0.1@lasote/stable", assert_error=True)
-    assert "Unable to find 'hello/0.1@lasote/stable' in remotes" in client.out
 
 
 @pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
@@ -448,7 +429,7 @@ def test_install_json_formatter():
     hello_pkg_ref = 'hello/0.1'  # no revision available
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for n in nodes:
+    for _, n in nodes.items():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] is None
@@ -456,6 +437,14 @@ def test_install_json_formatter():
         elif ref == pkg_pkg_ref:
             assert n['binary'] == "Cache"
             pkg_cpp_info = n['cpp_info']
+
+    hello = nodes["0"]
+    assert hello["ref"] == hello_pkg_ref
+    assert hello["recipe_folder"] == client.current_folder
+    assert hello["build_folder"] == client.current_folder
+    assert hello["generators_folder"] == client.current_folder
+    assert hello["package_folder"] is None
+
     assert hello_cpp_info and pkg_cpp_info
     # hello/0.1 cpp_info
     assert hello_cpp_info['root']["libs"] is None
@@ -483,3 +472,16 @@ def test_install_json_formatter():
     assert pkg_cpp_info['cmp1']["sysroot"] == "/another/sysroot"
     assert pkg_cpp_info['cmp1']["properties"] == {'pkg_config_aliases': ['compo1_alias'],
                                                   'pkg_config_name': 'compo1'}
+
+
+def test_upload_skip_binaries_not_hit_server():
+    """
+    When upload_policy = "skip", no need to try to install from servers
+    """
+    c = TestClient(servers={"default": None})  # Broken server, will raise error if used
+    conanfile = GenConanfile("pkg", "0.1").with_class_attribute('upload_policy = "skip"')
+    c.save({"conanfile.py": conanfile})
+    c.run("export .")
+    c.run("install --requires=pkg/0.1 --build=missing")
+    # This would crash if hits the server, but it doesnt
+    assert "pkg/0.1: Created package" in c.out

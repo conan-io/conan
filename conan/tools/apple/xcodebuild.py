@@ -1,5 +1,5 @@
 from conan.tools.apple import to_apple_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class XcodeBuild(object):
@@ -12,12 +12,10 @@ class XcodeBuild(object):
 
     @property
     def _verbosity(self):
-        verbosity = self._conanfile.conf.get("tools.apple.xcodebuild:verbosity", default="", check_type=str)
-        if verbosity == "quiet" or verbosity == "verbose":
-            return "-{}".format(verbosity)
-        elif verbosity:
-            raise ConanException("Value {} for 'tools.apple.xcodebuild:verbosity' is not valid".format(verbosity))
-        return ""
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose")) \
+                    or self._conanfile.conf.get("tools.compilation:verbosity",
+                                                choices=("quiet", "verbose"))
+        return "-" + verbosity if verbosity is not None else ""
 
     @property
     def _sdkroot(self):

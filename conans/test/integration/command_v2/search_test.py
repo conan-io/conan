@@ -6,6 +6,7 @@ import pytest
 
 from conans.errors import ConanConnectionError, ConanException
 from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -242,3 +243,27 @@ class TestRemotes:
 
         self.client.run("search test_*")
         assert expected_output in self.client.out
+
+
+def test_no_user_channel_error():
+    # https://github.com/conan-io/conan/issues/13170
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    c.run("export . --version=1.0")
+    c.run("export . --version=1.0 --user=user --channel=channel")
+    c.run("list *")
+    assert "pkg/1.0" in [s.strip() for s in str(c.out).splitlines()]
+    assert "pkg/1.0@user/channel" in c.out
+    # I want to list only those without user/channel
+    c.run("list pkg/*@")
+    assert "pkg/1.0" in c.out
+    assert "user/channel" not in c.out
+
+    # The same underlying logic is used in upload
+    c.run("upload pkg/*@ -r=default -c")
+    assert "Uploading recipe 'pkg/1.0" in c.out
+    assert "user/channel" not in c.out
+
+    c.run("search pkg/*@ -r=default")
+    assert "pkg/1.0" in c.out
+    assert "user/channel" not in c.out

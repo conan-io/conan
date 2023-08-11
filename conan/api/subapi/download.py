@@ -1,8 +1,6 @@
 from conan.api.model import Remote
-from conan.api.subapi import api_method
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
-from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -13,42 +11,50 @@ class DownloadAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
-    def recipe(self, ref: RecipeReference, remote: Remote):
+    def recipe(self, ref: RecipeReference, remote: Remote, metadata=None):
         output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)
-        skip_download = app.cache.exists_rrev(ref)
-        if skip_download:
+        assert ref.revision, f"Reference '{ref}' must have revision"
+        try:
+            app.cache.recipe_layout(ref)  # raises if not found
+        except ConanException:
+            pass
+        else:
             output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
+            if metadata:
+                app.remote_manager.get_recipe_metadata(ref, remote, metadata)
             return False
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
-        app.remote_manager.get_recipe(ref, remote)
-
-        layout = app.cache.ref_layout(ref)
-        conan_file_path = layout.conanfile()
-        conanfile = app.loader.load_basic(conan_file_path, display=ref, remotes=[remote])
+        app.remote_manager.get_recipe(ref, remote, metadata)
+        # Respect the timestamp of the server, the ``get_recipe()`` doesn't do it internally
+        # Best would be that ``get_recipe()`` returns the timestamp in the same call
+        server_ref = app.remote_manager.get_recipe_revision_reference(ref, remote)
+        assert server_ref == ref
+        app.cache.update_recipe_timestamp(server_ref)
 
         # Download the sources too, don't be lazy
         output.info(f"Downloading '{str(ref)}' sources")
-        retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, [remote])
+        recipe_layout = app.cache.recipe_layout(ref)
+        app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
         return True
 
-    @api_method
-    def package(self, pref: PkgReference, remote: Remote):
+    def package(self, pref: PkgReference, remote: Remote, metadata=None):
         output = ConanOutput()
         app = ConanApp(self.conan_api.cache_folder)
-        if not app.cache.exists_rrev(pref.ref):
+        try:
+            app.cache.recipe_layout(pref.ref)  # raises if not found
+        except ConanException:
             raise ConanException("The recipe of the specified package "
                                  "doesn't exist, download it first")
 
         skip_download = app.cache.exists_prev(pref)
         if skip_download:
             output.info(f"Skip package {pref.repr_notime()} download, already in cache")
+            if metadata:
+                app.remote_manager.get_package_metadata(pref, remote, metadata)
             return False
-        layout = app.cache.ref_layout(pref.ref)
-        conan_file_path = layout.conanfile()
-        conanfile = app.loader.load_basic(conan_file_path, display=pref.ref)
+
         output.info(f"Downloading package '{pref.repr_notime()}'")
-        app.remote_manager.get_package(conanfile, pref, remote)
+        app.remote_manager.get_package(pref, remote, metadata)
         return True

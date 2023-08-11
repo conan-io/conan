@@ -5,14 +5,14 @@ from jinja2 import Environment, meta, exceptions
 
 from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 
 @conan_command(group="Creator")
 def new(conan_api, parser, *args):
     """
-    Create a new recipe (with conanfile.py and other files) from either a predefined or a user-defined template
+    Create a new example recipe and source files from a template.
     """
     parser.add_argument("template", help="Template name, "
                         "either a predefined built-in or a user-provided one. "
@@ -24,7 +24,7 @@ def new(conan_api, parser, *args):
                         "as your template, or a path relative to your conan home folder."
                         )
     parser.add_argument("-d", "--define", action="append",
-                        help="Define a template argument as key=value")
+                        help="Define a template argument as key=value, e.g., -d name=mypkg")
     parser.add_argument("-f", "--force", action='store_true', help="Overwrite file if it already exists")
 
     args = parser.parse_args(*args)
@@ -67,8 +67,8 @@ def new(conan_api, parser, *args):
                 ast = env.parse(templ_str)
                 template_vars.extend(meta.find_undeclared_variables(ast))
 
-            injected_vars = {"conan_version", "package_name", "as_iterable", "as_name"}
-            optional_vars = {"requires"}
+            injected_vars = {"conan_version", "package_name", "as_name"}
+            optional_vars = {"requires", "tool_requires"}
             template_vars = list(set(template_vars) - injected_vars - optional_vars)
             template_vars.sort()
             return template_vars

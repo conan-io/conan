@@ -4,6 +4,7 @@ import os
 from bottle import FileUpload, static_file
 
 from conans.errors import RecipeNotFoundException, PackageNotFoundException, NotFoundException
+from conans.paths import CONAN_MANIFEST
 from conans.model.package_ref import PkgReference
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
@@ -42,8 +43,9 @@ class ConanServiceV2:
         path = self._server_store.get_recipe_file_path(reference, filename)
         self._upload_to_path(body, headers, path)
 
-        # If the upload was ok, update the pointer to the latest
-        self._server_store.update_last_revision(reference)
+        # If the upload was ok, of the manifest, update the pointer to the latest
+        if filename == CONAN_MANIFEST:
+            self._server_store.update_last_revision(reference)
 
     def get_recipe_revisions_references(self, ref, auth_user):
         self._authorizer.check_read_conan(auth_user, ref)
@@ -104,8 +106,9 @@ class ConanServiceV2:
         path = self._server_store.get_package_file_path(pref, filename)
         self._upload_to_path(body, headers, path)
 
-        # If the upload was ok, update the pointer to the latest
-        self._server_store.update_last_package_revision(pref)
+        # If the upload was ok, of the manifest, update the pointer to the latest
+        if filename == CONAN_MANIFEST:
+            self._server_store.update_last_package_revision(pref)
 
     # Misc
     @staticmethod

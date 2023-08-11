@@ -1,4 +1,5 @@
 import json
+import os
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -28,7 +29,9 @@ def test_info_build_order():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=dep/0.1 --build=dep/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -47,7 +50,9 @@ def test_info_build_order():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -79,7 +84,9 @@ def test_info_build_order_build_require():
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--tool-require=dep/0.1 --build=dep/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -98,7 +105,9 @@ def test_info_build_order_build_require():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -130,12 +139,14 @@ def test_info_build_order_options():
              'depends': [],
              'packages': [[
                  {'package_id': '1124b99dc8cd3c8bbf79121c7bf86ce40c725a40', 'prev': None,
-                  'context': 'build', 'depends': [],
-                  'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': []},
+                  'context': 'build', 'depends': [], "overrides": {},
+                  'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
+                  'build_args': '--tool-require=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=2'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
-                  'context': 'build', 'depends': [],
+                  'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
-                  'filenames': []}
+                  'filenames': [],
+                  'build_args': '--tool-require=tool/0.1 --build=tool/0.1 -o tool/0.1:myopt=1'}
              ]]}
         ],
         [
@@ -144,14 +155,16 @@ def test_info_build_order_options():
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': []}
+                  'filenames': [], "overrides": {},
+                  'build_args': '--require=dep1/0.1 --build=dep1/0.1'}
              ]]},
             {'ref': 'dep2/0.1#23c789d2b36f0461e52cd6f139f97f5e',
              'depends': ['tool/0.1#b4c19a1357b43877a2019dd2804336a9'],
              'packages': [[
                  {'package_id': 'da39a3ee5e6b4b0d3255bfef95601890afd80709', 'prev': None,
                   'context': 'host', 'depends': [], 'binary': 'Build', 'options': [],
-                  'filenames': []}
+                  'filenames': [], "overrides": {},
+                  'build_args': '--require=dep2/0.1 --build=dep2/0.1'}
              ]]}
         ]
     ]
@@ -187,7 +200,9 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=dep/0.1 --build=dep/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -206,7 +221,9 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             },
@@ -223,7 +240,9 @@ def test_info_build_order_merge_multi_product():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=pkg/0.2 --build=pkg/0.2',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -273,7 +292,9 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=depwin/0.1 --build=depwin/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             },
@@ -288,7 +309,9 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=depnix/0.1 --build=depnix/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -308,7 +331,9 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        "options": [],
+                        "overrides": {}
                     },
                     {
                         "package_id": "dc29fa55ec82fab6bd820398c7a152ae5f7d4e28",
@@ -317,7 +342,9 @@ def test_info_build_order_merge_conditionals():
                         "context": "host",
                         'depends': [],
                         "binary": "Build",
-                        "options": []
+                        'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                        "options": [],
+                        "overrides": {}
                     }
                 ]]
             }
@@ -325,3 +352,36 @@ def test_info_build_order_merge_conditionals():
     ]
 
     assert bo_json == result
+
+
+def test_info_build_order_lockfile_location():
+    """ the lockfile should be in the caller cwd
+    https://github.com/conan-io/conan/issues/13850
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
+    c.run("create dep")
+    c.run("lock create pkg --lockfile-out=myconan.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
+    c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock")
+    assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
+
+
+def test_info_build_order_broken_recipe():
+    # https://github.com/conan-io/conan/issues/14104
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import replace_in_file
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def export(self):
+                replace_in_file(self, "conanfile.py", "from conan", "from conans")
+        """)
+    c.save({"conanfile.py": dep})
+    c.run("export .")
+    c.run("graph build-order --requires=dep/0.1 --format=json", assert_error=True)
+    assert "ImportError" in c.out
+    assert "It is possible that this recipe is not Conan 2.0 ready" in c.out

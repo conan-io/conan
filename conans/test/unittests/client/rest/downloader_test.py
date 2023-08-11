@@ -7,7 +7,6 @@ import pytest
 
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.util.files import load
 
 
 class MockResponse(object):
@@ -71,7 +70,7 @@ class DownloaderUnitTest(unittest.TestCase):
         requester = MockRequester(expected_content)
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
-        actual_content = load(self.target, binary=True)
+        actual_content = open(self.target, "rb").read()
         self.assertEqual(expected_content, actual_content)
 
     def test_resume_download_to_file_if_interrupted(self):
@@ -80,7 +79,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target, verify_ssl=None,
                             retry=0, retry_wait=0)
-        actual_content = load(self.target, binary=True)
+        actual_content = open(self.target, "rb").read()
         self.assertEqual(expected_content, actual_content)
 
     def test_fail_interrupted_download_to_file_if_no_progress(self):
@@ -103,7 +102,7 @@ class DownloaderUnitTest(unittest.TestCase):
         requester = MockRequester(expected_content, echo_header=echo_header)
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
-        actual_content = load(self.target, binary=True)
+        actual_content = open(self.target, "rb").read()
         self.assertEqual(expected_content, actual_content)
 
     def test_download_with_compressed_content_and_smaller_content_length(self):
@@ -112,5 +111,5 @@ class DownloaderUnitTest(unittest.TestCase):
         requester = MockRequester(expected_content, echo_header=echo_header)
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
-        actual_content = load(self.target, binary=True)
+        actual_content = open(self.target, "rb").read()
         self.assertEqual(expected_content, actual_content)

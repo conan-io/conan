@@ -1,6 +1,6 @@
 import operator
 
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanInvalidConfiguration, ConanException
 from conans.model.version import Version
 
 
@@ -94,7 +94,7 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
 
 def supported_cppstd(conanfile, compiler=None, compiler_version=None):
     """
-    Get the a list of supported ``compiler.cppstd`` for the "conanfile.settings.compiler" and
+    Get a list of supported ``compiler.cppstd`` for the "conanfile.settings.compiler" and
     "conanfile.settings.compiler_version" or for the parameters "compiler" and "compiler_version"
     if specified.
 
@@ -112,7 +112,9 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
             "gcc": _gcc_supported_cppstd,
             "msvc": _msvc_supported_cppstd,
             "clang": _clang_supported_cppstd,
-            "mcst-lcc": _mcst_lcc_supported_cppstd}.get(compiler)
+            "mcst-lcc": _mcst_lcc_supported_cppstd,
+            "qcc": _qcc_supported_cppstd,
+            }.get(compiler)
     if func:
         return func(Version(compiler_version))
     return None
@@ -203,11 +205,17 @@ def _gcc_supported_cppstd(version):
 
 def _msvc_supported_cppstd(version):
     """
+    https://learn.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version?view=msvc-170
+    - /std:c++14 starting in Visual Studio 2015 Update 3 (190)
+    - /std:c++17 starting in Visual Studio 2017 version 15.3. (191)
+    - /std:c++20 starting in Visual Studio 2019 version 16.11 (192)
     [14, 17, 20, 23]
     """
-    if version < "190":
+    if version < "190":  # pre VS 2015
         return []
-    if version < "191":
+    if version < "191":  # VS 2015
+        return ["14"]
+    if version < "192":  # VS 2017
         return ["14", "17"]
     if version < "193":
         return ["14", "17", "20"]
@@ -248,3 +256,13 @@ def _mcst_lcc_supported_cppstd(version):
     # FIXME: When cppstd 23 was introduced????
 
     return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
+def _qcc_supported_cppstd(version):
+    """
+    [98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
+    """
+
+    if version < "5":
+        return ["98", "gnu98"]
+    else:
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]

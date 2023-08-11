@@ -1,11 +1,11 @@
 import os
 
 from conan.tools.build import build_jobs, cmd_args_to_string
-from conan.tools.cmake.presets import load_cmake_presets, get_configure_preset
+from conan.tools.cmake.presets import load_cmake_presets
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.files import chdir, mkdir
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def _cmake_cmd_line_args(conanfile, generator):
@@ -42,13 +42,14 @@ class CMake(object):
         self._conanfile = conanfile
 
         cmake_presets = load_cmake_presets(conanfile.generators_folder)
-        configure_preset = get_configure_preset(cmake_presets, conanfile)
+        # Conan generated presets will have exactly 1 configurePresets, no more
+        configure_preset = cmake_presets["configurePresets"][0]
 
         self._generator = configure_preset["generator"]
         self._toolchain_file = configure_preset.get("toolchainFile")
         self._cache_variables = configure_preset["cacheVariables"]
 
-        self._cmake_program = "cmake"  # Path to CMake should be handled by environment
+        self._cmake_program = conanfile.conf.get("tools.cmake:cmake_program", default="cmake")
 
     def configure(self, variables=None, build_script_folder=None, cli_args=None):
         """
@@ -73,6 +74,7 @@ class CMake(object):
                                     ``self.folders.source`` at the ``layout()`` method.
         :param cli_args: List of extra arguments provided when calling to CMake.
         """
+        self._conanfile.output.info("Running CMake.configure()")
         cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
             cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
@@ -102,11 +104,13 @@ class CMake(object):
         arg_list.extend(['-D{}="{}"'.format(k, v) for k, v in self._cache_variables.items()])
         arg_list.append('"{}"'.format(cmakelist_folder))
 
+        if not cli_args or ("--log-level" not in cli_args and "--loglevel" not in cli_args):
+            arg_list.extend(self._cmake_log_levels_args)
+
         if cli_args:
             arg_list.extend(cli_args)
 
         command = " ".join(arg_list)
-        self._conanfile.output.info("CMake command: %s" % command)
         with chdir(self, build_folder):
             self._conanfile.run(command)
 
@@ -131,13 +135,15 @@ class CMake(object):
         cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator)
         if build_tool_args:
             cmd_line_args.extend(build_tool_args)
+
+        args.extend(self._compilation_verbosity_arg)
+
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 
         arg_list = ['"{}"'.format(bf), build_config, cmd_args_to_string(args)]
         arg_list = " ".join(filter(None, arg_list))
         command = "%s --build %s" % (self._cmake_program, arg_list)
-        self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command, env=env)
 
     def build(self, build_type=None, target=None, cli_args=None, build_tool_args=None):
@@ -154,6 +160,7 @@ class CMake(object):
                                 build system that will be passed to the command
                                 line after the ``--`` indicator: ``cmake --build ... -- barg1 barg2``
         """
+        self._conanfile.output.info("Running CMake.build()")
         self._build(build_type, target, cli_args, build_tool_args)
 
     def install(self, build_type=None, component=None):
@@ -166,6 +173,7 @@ class CMake(object):
                            as in that case the build type must be specified at configure time,
                            not build type.
         """
+        self._conanfile.output.info("Running CMake.install()")
         mkdir(self._conanfile, self._conanfile.package_folder)
 
         bt = build_type or self._conanfile.settings.get_safe("build_type")
@@ -179,9 +187,14 @@ class CMake(object):
         arg_list = ["--install", build_folder, build_config, "--prefix", pkg_folder]
         if component:
             arg_list.extend(["--component", component])
+        arg_list.extend(self._compilation_verbosity_arg)
+
+        do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        if do_strip:
+            arg_list.append("--strip")
+
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)
-        self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 
     def test(self, build_type=None, target=None, cli_args=None, build_tool_args=None, env=""):
@@ -208,3 +221,25 @@ class CMake(object):
         env = ["conanbuild", "conanrun"] if env == "" else env
         self._build(build_type=build_type, target=target, cli_args=cli_args,
                     build_tool_args=build_tool_args, env=env)
+
+    @property
+    def _compilation_verbosity_arg(self):
+        """
+        Controls build tool verbosity, that is, those controlled by -DCMAKE_VERBOSE_MAKEFILE
+        See https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-build-v
+        """
+        verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                             choices=("quiet", "verbose"))
+        return ["--verbose"] if verbosity == "verbose" else []
+
+    @property
+    def _cmake_log_levels_args(self):
+        """
+        Controls CMake's own verbosity levels.
+        See https://cmake.org/cmake/help/latest/manual/cmake.1.html#cmdoption-cmake-log-level
+        :return:
+        """
+        log_level = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        if log_level == "quiet":
+            log_level = "error"
+        return ["--loglevel=" + log_level.upper()] if log_level is not None else []

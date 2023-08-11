@@ -1,12 +1,10 @@
 import platform
-import re
 import os
 import shutil
 import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -21,10 +19,8 @@ def test_autotools_lib_template():
     client.run("build .")
 
     client.run("export-pkg .")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    pkg_layout = client.created_layout()
+    package_folder = pkg_layout.package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
     assert os.path.exists(os.path.join(package_folder, "lib", "libhello.a"))
 
@@ -34,10 +30,8 @@ def test_autotools_lib_template():
     client.run("install . -o hello/*:shared=True")
     client.run("build . -o hello/*:shared=True")
     client.run("export-pkg . -o hello/*:shared=True")
-    ref = RecipeReference.loads("hello/0.1")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    pkg_layout = client.created_layout()
+    package_folder = pkg_layout.package()
 
     if platform.system() == "Darwin":
         # Ensure that install name of dylib is patched
@@ -57,12 +51,13 @@ def test_autotools_lib_template():
     client.save({}, clean_first=True)
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True")
+    build_folder = client.created_test_build_folder("hello/0.1")
     assert "hello/0.1: Hello World Release!" in client.out
     if platform.system() == "Darwin":
-        client.run_command("otool -l test_package/test_output/build-release/main")
+        client.run_command(f"otool -l test_package/{build_folder}/main")
         assert "@rpath/libhello.0.dylib" in client.out
     else:
-        client.run_command("ldd test_package/test_output/build-release/main")
+        client.run_command(f"ldd test_package/{build_folder}/main")
         assert "libhello.so.0" in client.out
 
 
@@ -95,32 +90,31 @@ def test_autotools_relocatable_libs_darwin():
     client.run("new autotools_lib -d name=hello -d version=0.1")
     client.run("create . -o hello/*:shared=True")
 
-    package_id = re.search(r"Package (\S+) created", str(client.out)).group(1)
-    package_id = package_id.replace("'", "")
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    build_folder = client.created_test_build_folder("hello/0.1")
+    pkg_layout = client.created_layout()
+    package_folder = pkg_layout.package()
 
     dylib = os.path.join(package_folder, "lib", "libhello.0.dylib")
     if platform.system() == "Darwin":
         client.run_command("otool -l {}".format(dylib))
         assert "@rpath/libhello.0.dylib" in client.out
-        client.run_command("otool -l {}".format("test_package/test_output/build-release/main"))
+        client.run_command("otool -l {}".format(f"test_package/{build_folder}/main"))
         assert package_folder in client.out
 
     # will work because rpath set
-    client.run_command("test_package/test_output/build-release/main")
+    client.run_command(f"test_package/{build_folder}/main")
     assert "hello/0.1: Hello World Release!" in client.out
 
     # move to another location so that the path set in the rpath does not exist
     # then the execution should fail
     shutil.move(os.path.join(package_folder, "lib"), os.path.join(client.current_folder, "tempfolder"))
     # will fail because rpath does not exist
-    client.run_command("test_package/test_output/build-release/main", assert_error=True)
+    client.run_command(f"test_package/{build_folder}/main", assert_error=True)
     assert "Library not loaded: @rpath/libhello.0.dylib" in str(client.out).replace("'", "")
 
     # Use DYLD_LIBRARY_PATH and should run
-    client.run_command("DYLD_LIBRARY_PATH={} test_package/test_output/build-release/main".format(os.path.join(client.current_folder, "tempfolder")))
+    client.run_command("DYLD_LIBRARY_PATH={} test_package/{}/main".format(os.path.join(client.current_folder, "tempfolder"),
+                                                                          build_folder))
     assert "hello/0.1: Hello World Release!" in client.out
 
 
@@ -131,7 +125,7 @@ def test_autotools_relocatable_libs_darwin_downloaded():
     client2 = TestClient(servers=client.servers, path_with_spaces=False)
     assert client2.cache_folder != client.cache_folder
     client.run("new autotools_lib -d name=hello -d version=0.1")
-    client.run("create . -o hello/*:shared=True -tf=None")
+    client.run("create . -o hello/*:shared=True -tf=\"\"")
     client.run("upload hello/0.1 -c -r default")
     client.run("remove * -c")
 
@@ -317,11 +311,9 @@ def test_autotools_fix_shared_libs():
         "conanfile.py": conanfile,
     })
 
-    client.run("create . -o hello/*:shared=True -tf=None")
+    client.run("create . -o hello/*:shared=True -tf=\"\"")
 
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.created_layout().package()
 
     # install name fixed
     client.run_command("otool -D {}".format(os.path.join(package_folder, "lib", "libhello.0.dylib")))

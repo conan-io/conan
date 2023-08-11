@@ -4,7 +4,7 @@ import textwrap
 from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 
 
@@ -27,9 +27,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return data_fname
 
     @property
+    def _build_modules_activated(self):
+        if self.require.build:
+            return self.conanfile.ref.name in self.cmakedeps.build_context_build_modules
+        else:
+            return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
+
+    @property
     def context(self):
         global_cpp = self._get_global_cpp_cmake()
-        if not self.build_modules_activated:
+        if not self._build_modules_activated:
             global_cpp.build_modules_paths = ""
 
         components = self._get_required_components_cpp()
@@ -47,7 +54,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         dependency_filenames = self._get_dependency_filenames()
         # Get the nodes that have the property cmake_find_mode=None (no files to generate)
         dependency_find_modes = self._get_dependencies_find_modes()
-        root_folder = self._root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+
+        # Make the root_folder relative to the generated xxx-data.cmake file
+        root_folder = self._root_folder
+        root_folder = root_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
         return {"global_cpp": global_cpp,
                 "has_components": self.conanfile.cpp_info.has_components,
@@ -186,29 +196,28 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
-        pkg_deps = self.conanfile.dependencies.filter({"direct": True})
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
                                                 self.is_host_windows)
 
             public_comp_deps = []
-            for require in comp.requires:
-                if "::" in require:  # Points to a component of a different package
-                    pkg, cmp_name = require.split("::")
+            for required_pkg, required_comp in comp.parsed_requires():
+                if required_pkg is not None:  # Points to a component of a different package
                     try:  # Make sure the declared dependency is at least in the recipe requires
-                        self.conanfile.dependencies[pkg]
+                        self.conanfile.dependencies[required_pkg]
                     except KeyError:
                         raise ConanException(f"{self.conanfile}: component '{comp_name}' required "
-                                             f"'{require}', but '{pkg}' is not a direct dependency")
+                                             f"'{required_pkg}::{required_comp}', "
+                                             f"but '{required_pkg}' is not a direct dependency")
                     try:
-                        req = transitive_requires[pkg]
+                        req = transitive_requires[required_pkg]
                     except KeyError:  # The transitive dep might have been skipped
                         pass
                     else:
-                        public_comp_deps.append(self.get_component_alias(req, cmp_name))
+                        public_comp_deps.append(self.get_component_alias(req, required_comp))
                 else:  # Points to a component of same package
-                    public_comp_deps.append(self.get_component_alias(self.conanfile, require))
+                    public_comp_deps.append(self.get_component_alias(self.conanfile, required_comp))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
             component_target_name = self.get_component_alias(self.conanfile, comp_name)
             ret.append((component_target_name, deps_cpp_cmake))
@@ -320,10 +329,12 @@ class _TargetDataContext(object):
         if require and not require.headers:
             self.include_paths = ""
         if require and not require.libs:
-            self.lib_paths = ""
+            # self.lib_paths = ""  IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED IT EVEN IF
+            #                      NOT REALLY LINKING LIB
             self.libs = ""
-            self.system_libs = ""
-            self.frameworks = ""
+            if cpp_info.frameworkdirs:  # Only invalidate for in-package frameworks
+                # FIXME: The mix of in-package frameworks + system ones is broken
+                self.frameworks = ""
         if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""

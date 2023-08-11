@@ -10,8 +10,9 @@ import pytest
 
 from conans.errors import ConanException, ConanConnectionError
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 from conans.util.env import environment_update
+from conans.util.files import load, save
 
 
 class TestParamErrors:
@@ -19,16 +20,25 @@ class TestParamErrors:
     def test_query_param_is_required(self):
         c = TestClient()
         c.run("list", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run("list -c", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run('list -r="*"', assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
 
         c.run("list --remote remote1 --cache", assert_error=True)
-        assert "error: the following arguments are required: reference" in c.out
+        assert "ERROR: Missing pattern or graph json file" in c.out
+
+        c.run("list * --graph=myjson", assert_error=True)
+        assert "ERROR: Cannot define both the pattern and the graph json file" in c.out
+
+        c.run("list * --graph-binaries=x", assert_error=True)
+        assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
+
+        c.run("list * --graph-recipes=x", assert_error=True)
+        assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
 
 
 @pytest.fixture(scope="module")
@@ -146,6 +156,26 @@ class TestListRefs:
             "zlib/1.0.0@user/channel": {},
             "zlib/2.0.0@user/channel": {}
         }
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    @pytest.mark.parametrize("pattern, solution", [("zlib/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib*/[*]", ("1.0.0", "2.0.0")),
+                                                   ("zlib/[<2]", ("1.0.0",)),
+                                                   ("zlib/[>1]", ("2.0.0",))])
+    def test_list_recipe_version_ranges(self, client, pattern, solution, remote):
+        expected_json = {f"zlib/{v}@user/channel": {} for v in solution}
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipe_version_ranges_patterns(self, client, remote):
+        pattern = "*/[>1]"
+        expected_json = {'zlib/2.0.0@user/channel': {}}
+        self.check_json(client, pattern, remote, expected_json)
+        pattern = "z*/[<2]"
+        expected_json = {'zli/1.0.0': {},
+                         'zlib/1.0.0@user/channel': {},
+                         'zlix/1.0.0': {}}
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
@@ -420,8 +450,9 @@ class TestListPrefs:
         self.check(client, pattern, remote, expected)
 
     @pytest.mark.parametrize("remote", [True, False])
-    def test_list_latest_prevs(self, client, remote):
-        pattern = "zli/1.0.0:*#latest"
+    @pytest.mark.parametrize("version", ["1.0.0", "[>=1.0.0 <2]"])
+    def test_list_latest_prevs(self, client, remote, version):
+        pattern = f'"zli/{version}:*#latest"'
         expected = textwrap.dedent(f"""\
           zli
             zli/1.0.0
@@ -429,17 +460,17 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:27:34 UTC)
                   packages
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      revisions
+                        9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
                       info
                         settings
                           os: Linux
-                      revisions
-                        9beff32b8c94ea0ce5a5e67dad95f525 (10-11-2023 10:13:13)
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
                       info
                         settings
                           os: Windows
-                      revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (10-11-2023 10:13:13)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -454,18 +485,18 @@ class TestListPrefs:
                 b58eeddfe2fd25ac3a105f72836b3360 (2023-01-10 22:41:09 UTC)
                   packages
                     9a4eb3c8701508aa9458b1a73d0633783ecc2270
+                      revisions
+                        9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
                       info
                         settings
                           os: Linux
-                      revisions
-                        9beff32b8c94ea0ce5a5e67dad95f525 (2023-01-10 22:41:09 UTC)
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
+                      revisions
+                        24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                       info
                         settings
                           os: Windows
-                      revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
-                        24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -504,8 +535,8 @@ class TestListPrefs:
                   packages
                     ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715
                       revisions
-                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
                         24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
+                        d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
           """)
         self.check(client, pattern, remote, expected)
 
@@ -546,6 +577,110 @@ class TestListPrefs:
                           os: Linux
           """)
         self.check(client, pattern, remote, expected)
+
+
+def test_list_prefs_query_custom_settings():
+    """
+    Make sure query works for custom settings
+    # https://github.com/conan-io/conan/issues/13071
+    """
+    c = TestClient(default_server_user=True)
+    settings = load(c.cache.settings_path)
+    settings += textwrap.dedent("""\
+        newsetting:
+            value1:
+            value2:
+                subsetting: [1, 2, 3]
+        """)
+    save(c.cache.settings_path, settings)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("newsetting")})
+    c.run("create . -s newsetting=value1")
+    c.run("create . -s newsetting=value2 -s newsetting.subsetting=1")
+    c.run("create . -s newsetting=value2 -s newsetting.subsetting=2")
+    c.run("upload * -r=default -c")
+    c.run("list pkg/1.0:* -p newsetting=value1")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
+    c.run("list pkg/1.0:* -p newsetting=value1 -r=default")
+    assert "newsetting: value1" in c.out
+    assert "newsetting: value2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1"')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
+    c.run('list pkg/1.0:* -p "newsetting=value2 AND newsetting.subsetting=1" -r=default')
+    assert "newsetting: value2" in c.out
+    assert "newsetting.subsetting: 1" in c.out
+    assert "newsetting.subsetting: 2" not in c.out
+
+
+def test_list_query_options():
+    """
+    Make sure query works for custom settings
+    https://github.com/conan-io/conan/issues/13617
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_option("myoption", [1, 2, 3])})
+    c.run("create . -o myoption=1")
+    c.run("create . -o myoption=2")
+    c.run("create . -o myoption=3")
+
+    c.run("list pkg/1.0:* -p options.myoption=1")
+    assert "myoption: 1" in c.out
+    assert "myoption: 2" not in c.out
+    assert "myoption: 3" not in c.out
+    c.run("list pkg/1.0:* -p options.myoption=2")
+    assert "myoption: 1" not in c.out
+    assert "myoption: 2" in c.out
+    assert "myoption: 3" not in c.out
+
+    c.run("upload * -r=default -c")
+    c.run("list pkg/1.0:* -p options.myoption=1 -r=default")
+    assert "myoption: 1" in c.out
+    assert "myoption: 2" not in c.out
+    assert "myoption: 3" not in c.out
+    c.run("list pkg/1.0:* -p options.myoption=2 -r=default")
+    assert "myoption: 1" not in c.out
+    assert "myoption: 2" in c.out
+    assert "myoption: 3" not in c.out
+
+
+def test_list_empty_settings():
+    """
+    If settings are empty, do not crash
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    c.run("create .")
+
+    c.run("list pkg/1.0:* -p os=Windows -f=json")
+    revisions = json.loads(c.stdout)["Local Cache"]["pkg/1.0"]["revisions"]
+    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+    assert pkgs == {}
+    c.run("list pkg/1.0:* -p os=None -f=json")
+    revisions = json.loads(c.stdout)["Local Cache"]["pkg/1.0"]["revisions"]
+    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+    assert pkgs == {NO_SETTINGS_PACKAGE_ID: {"info": {}}}
+
+
+class TestListNoUserChannel:
+    def test_no_user_channel(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib.py": GenConanfile("zlib"), })
+
+        c.run("create zlib.py --version=1.0.0")
+        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+        c.run("upload * -r=default -c")
+
+        c.run("list zlib/1.0.0#latest")
+        assert "user/channel" not in c.out
+        c.run("list zlib/1.0.0#latest -r=default")
+        assert "user/channel" not in c.out
+
+        c.run("list zlib/1.0.0:*")
+        assert "user/channel" not in c.out
+        c.run("list zlib/1.0.0:* -r=default")
+        assert "user/channel" not in c.out
 
 
 class TestListRemotes:

@@ -162,7 +162,6 @@ class ConanLib(ConanFile):
         # download the sources from server0
         client.run("install --requires=hello/0.1@ -r server0")
         client.run("upload hello/0.1 -r server1")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)
 
         # install from server1 that has the sources, upload to server1
@@ -171,14 +170,12 @@ class ConanLib(ConanFile):
         client.run("install --requires=hello/0.1@ -r server1")
         client.run("upload hello/0.1 -r server1")
         assert f"'hello/0.1#{rrev}' already in server, skipping upload" in client.out
-        self.assertNotIn("Downloading conan_sources.tgz", client.out)
         self.assertNotIn("Sources downloaded from 'server0'", client.out)
 
         # install from server0 and build
         # download sources from server0
         client.run("remove * -c")
         client.run("install --requires=hello/0.1@ -r server0 --build='*'")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
         self.assertIn("Sources downloaded from 'server0'", client.out)
 
     def test_source_method_called_once(self):
@@ -245,7 +242,7 @@ class TestSourceWithoutDefaultProfile:
     def client(self):
         c = TestClient()
         # The ``source()`` should still receive necessary configuration
-        save(c.cache.new_config_path, "tools.files.download:download_cache=MYCACHE")
+        save(c.cache.new_config_path, "tools.files.download:retry=MYCACHE")
         # Make sure we don't have default profile
         os.remove(c.cache.default_profile_path)
         return c
@@ -256,7 +253,7 @@ class TestSourceWithoutDefaultProfile:
 
             class Pkg(ConanFile):
                 def source(self):
-                    c = self.conf.get("tools.files.download:download_cache")
+                    c = self.conf.get("tools.files.download:retry")
                     self.output.info("CACHE:{}!!".format(c))
                 """)
         client.save({"conanfile.py": conanfile})
@@ -273,7 +270,7 @@ class TestSourceWithoutDefaultProfile:
                 def layout(self):
                     cmake_layout(self)
                 def source(self):
-                    c = self.conf.get("tools.files.download:download_cache")
+                    c = self.conf.get("tools.files.download:retry")
                     self.output.info("CACHE:{}!!".format(c))
                 """)
         client.save({"conanfile.py": conanfile})

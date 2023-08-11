@@ -45,11 +45,7 @@ def test_override(client):
     assert "compiler=gcc" in conaninfo
 
     # CHECK CONANINFO FILE
-    latest_rrev = client.cache.get_latest_recipe_reference(
-        RecipeReference.loads("visual/0.1@lasote/testing"))
-    pkg_ids = client.cache.get_package_references(latest_rrev)
-    latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
-    package_path = client.cache.pkg_layout(latest_prev).package()
+    package_path = client.created_layout().package()
     conaninfo = load(os.path.join(package_path, CONANINFO))
     assert "compiler=msvc" in conaninfo
     assert "compiler.version=191" in conaninfo
@@ -81,7 +77,7 @@ def test_exclude_patterns_settings():
     client.run("create zlib --name zlib --version 1.0")
     client.run("create openssl --name openssl --version 1.0")
 
-    # We miss openss and zlib debug packages
+    # We miss openssl and zlib debug packages
     client.run("install consumer -s build_type=Debug", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'openssl/1.0', 'zlib/1.0'" in client.out
 
@@ -100,7 +96,7 @@ def test_exclude_patterns_settings():
     client.run("install --requires consumer/1.0 -s consumer/*:build_type=Debug")
 
     # Priority between package scoped settings
-    client.run('remove consumer/*#* -p="build_type=Debug" -c')
+    client.run('remove consumer/*#* -c')
     client.run("install --reference consumer/1.0 -s build_type=Debug", assert_error=True)
     # Pre-check, there is no Debug package for any of them
     assert "ERROR: Missing prebuilt package for 'consumer/1.0', 'openssl/1.0', 'zlib/1.0'"

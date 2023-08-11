@@ -1,10 +1,12 @@
+from conan.api.output import ConanOutput
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compatibility import BinaryCompatibility
 from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_EDITABLE_BUILD)
+                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_SYSTEM_TOOL,
+                                       BINARY_SYSTEM_TOOL)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 
@@ -22,14 +24,9 @@ class GraphBinariesAnalyzer(object):
     def _evaluate_build(node, build_mode):
         ref, conanfile = node.ref, node.conanfile
         with_deps_to_build = False
-        # For cascade mode, we need to check also the "modified" status of the lockfile if exists
-        # modified nodes have already been built, so they shouldn't be built again
+        # check dependencies, if they are being built, "cascade" will try to build this one too
         if build_mode.cascade:
-            for dep in node.dependencies:
-                dep_node = dep.dst
-                if dep_node.binary == BINARY_BUILD:
-                    with_deps_to_build = True
-                    break
+            with_deps_to_build = any(dep.dst.binary == BINARY_BUILD for dep in node.dependencies)
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
             conanfile.output.info('Forced build from source')
@@ -138,7 +135,7 @@ class GraphBinariesAnalyzer(object):
         assert node.prev is None, "Node.prev should be None"
 
         self._process_node(node, build_mode)
-        if node.binary in (BINARY_MISSING,) \
+        if node.binary == BINARY_MISSING \
                 and not build_mode.should_build_missing(node.conanfile) and not node.should_build:
             self._process_compatible_packages(node)
 
@@ -158,6 +155,9 @@ class GraphBinariesAnalyzer(object):
 
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID
+            return
+        if node.recipe == RECIPE_SYSTEM_TOOL:
+            node.binary = BINARY_SYSTEM_TOOL
             return
 
         if node.recipe == RECIPE_EDITABLE:
@@ -183,7 +183,16 @@ class GraphBinariesAnalyzer(object):
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 
-        if cache_latest_prev is None:  # This binary does NOT exist in the cache
+        if node.conanfile.upload_policy == "skip":
+            if cache_latest_prev:
+                node.binary = BINARY_CACHE
+                node.prev = cache_latest_prev.revision
+            elif build_mode.allowed(node.conanfile):
+                node.should_build = True
+                node.binary = BINARY_BUILD
+            else:
+                node.binary = BINARY_MISSING
+        elif cache_latest_prev is None:  # This binary does NOT exist in the cache
             self._evaluate_download(node)
         else:  # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node)
@@ -296,10 +305,20 @@ class GraphBinariesAnalyzer(object):
                 conanfile.layout()
 
     def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update):
-        self._selected_remotes = remotes or []# TODO: A bit dirty interfaz, pass as arg instead
+        self._selected_remotes = remotes or []  # TODO: A bit dirty interfaz, pass as arg instead
         self._update = update  # TODO: Dirty, fix it
-        build_mode = BuildMode(build_mode)
+        test_package = deps_graph.root.conanfile.tested_reference_str is not None
+        if test_package:
+            main_mode = BuildMode(["never"])
+            test_mode = BuildMode(build_mode)
+        else:
+            main_mode = test_mode = BuildMode(build_mode)
+        if main_mode.cascade:
+            ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
+                                  "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
+                                  "more efficient re-builds")
         for node in deps_graph.ordered_iterate():
+            build_mode = test_mode if node.test_package else main_mode
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 if node.path is not None and node.path.endswith(".py"):
                     # For .py we keep evaluating the package_id, validate(), etc
@@ -326,7 +345,8 @@ class GraphBinariesAnalyzer(object):
         required_nodes = set()
         required_nodes.add(graph.root)
         for node in graph.nodes:
-            if node.binary != BINARY_BUILD and node is not graph.root:
+            if node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE) \
+                    and node is not graph.root:
                 continue
             for req, dep in node.transitive_deps.items():
                 dep_node = dep.node

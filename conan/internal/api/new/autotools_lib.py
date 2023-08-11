@@ -13,6 +13,7 @@ from conan.tools.apple import fix_apple_shared_install_name
 class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "library"
 
     # Optional metadata
     license = "<Put the package license here>"
@@ -30,7 +31,11 @@ class {{package_name}}Conan(ConanFile):
 
     def config_options(self):
         if self.settings.os == "Windows":
-            del self.options.fPIC
+            self.options.rm_safe("fPIC")
+
+    def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
 
     def layout(self):
         basic_layout(self)

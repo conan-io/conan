@@ -79,8 +79,8 @@ def test_update_not_date():
 
     ref = RecipeReference.loads("hello0/1.0@lasote/stable")
 
-    initial_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
-    initial_package_timestamp = client.cache.get_package_timestamp(prev)
+    initial_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    initial_package_timestamp = prev.timestamp
 
     time.sleep(1)
 
@@ -90,8 +90,8 @@ def test_update_not_date():
     client.run("export . --user=lasote --channel=stable")
     client.run("install --requires=hello0/1.0@lasote/stable --build='*'")
 
-    rebuild_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
-    rebuild_package_timestamp = client.cache.get_package_timestamp(client.get_latest_package_reference(ref))
+    rebuild_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    rebuild_package_timestamp = client.get_latest_package_reference(ref).timestamp
 
     assert rebuild_recipe_timestamp != initial_recipe_timestamp
     assert rebuild_package_timestamp != initial_package_timestamp
@@ -105,8 +105,8 @@ def test_update_not_date():
 
     client.assert_listed_require({"hello0/1.0@lasote/stable": "Newer"})
 
-    failed_update_recipe_timestamp = client.cache.get_recipe_timestamp(client.cache.get_latest_recipe_reference(ref))
-    failed_update_package_timestamp = client.cache.get_package_timestamp(client.get_latest_package_reference(ref))
+    failed_update_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    failed_update_package_timestamp = client.get_latest_package_reference(ref).timestamp
 
     assert rebuild_recipe_timestamp == failed_update_recipe_timestamp
     assert rebuild_package_timestamp == failed_update_package_timestamp
@@ -126,8 +126,7 @@ def test_reuse():
 
     client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
     client2.run("install --requires=hello0/1.0@lasote/stable")
-
-    assert str(client2.out).count("Downloading conaninfo.txt") == 1
+    assert "hello0/1.0@lasote/stable: Retrieving package" in client2.out
 
     client.save({"header.h": "//EMPTY!"})
     sleep(1)
@@ -149,3 +148,25 @@ def test_update_binaries_failed():
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
     client.run("install --requires=pkg/0.1@lasote/testing --update")
     assert "WARN: Can't update, there are no remotes defined" in client.out
+
+
+def test_install_update_repeated_tool_requires():
+    """
+    Test that requiring the same thing multiple times, like a tool-requires, only
+    require checking the servers 1, so it is much faster
+
+    https://github.com/conan-io/conan/issues/13508
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "liba/conanfile.py": GenConanfile("liba", "0.1"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1"),
+            "profile": "[tool_requires]\ntool/0.1"
+            })
+    c.run("create tool")
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("install libc --update -pr=profile")
+    assert 1 == str(c.out).count("tool/0.1: Checking remote")

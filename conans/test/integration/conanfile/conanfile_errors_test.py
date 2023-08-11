@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
@@ -137,6 +139,27 @@ class ConanfileErrorsTest(unittest.TestCase):
         self.assertIn("Duplicated requirement", client.out)
 
 
+class TestWrongMethods:
+    # https://github.com/conan-io/conan/issues/12961
+    @pytest.mark.parametrize("requires", ["requires", "tool_requires",
+                                          "test_requires", "build_requires"])
+    def test_wrong_method_requires(self, requires):
+        """ this is expected to be a relatively frequent user error, and the trace was
+        very ugly and debugging complicated
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def {requires}(self):
+                    pass
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install .", assert_error=True)
+        expected = "requirements" if requires == "requires" else "build_requirements"
+        assert f" Wrong '{requires}' definition, did you mean '{expected}()'?" in c.out
+
+
 def test_notduplicate_requires_py():
     client = TestClient()
     conanfile = textwrap.dedent('''
@@ -152,3 +175,20 @@ def test_notduplicate_requires_py():
     client.save(files)
     client.run("export .")
     assert "hello/0.1: Exported" in client.out
+
+
+def test_requirements_change_options():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.1"
+
+            def requirements(self):
+                self.options["mydep"].myoption = 3
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert "ERROR: hello/0.1: Dependencies options were defined incorrectly." in c.out

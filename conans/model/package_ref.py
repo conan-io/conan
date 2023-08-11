@@ -71,7 +71,8 @@ class PkgReference:
         #    at "graph_binaries" to check: cache_latest_prev != pref
         #    at "installer" to check: if pkg_layout.reference != pref (probably just optimization?)
         #    at "revisions_test"
-        return self.ref == other.ref and self.revision == other.revision
+        return self.ref == other.ref and self.package_id == other.package_id and \
+               self.revision == other.revision
 
     def __hash__(self):
         # Used in dicts of PkgReferences as keys like the cached nodes in the graph binaries

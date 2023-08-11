@@ -79,8 +79,9 @@ def test_supported_cppstd_apple_clang(compiler, compiler_version, values):
 
 @pytest.mark.parametrize("compiler,compiler_version,values", [
     ("msvc", "180", []),
-    ("msvc", "190", ['14', '17']),
-    ("msvc", "191", ['14', '17', '20']),
+    ("msvc", "190", ['14']),
+    ("msvc", "191", ['14', '17']),
+    ("msvc", "192", ['14', '17', '20']),
     ("msvc", "193", ['14', '17', '20', '23']),
 ])
 def test_supported_cppstd_msvc(compiler, compiler_version, values):
@@ -103,6 +104,16 @@ def test_supported_cppstd_mcst(compiler, compiler_version, values):
     sot = supported_cppstd(conanfile)
     assert sot == values
 
+@pytest.mark.parametrize("compiler,compiler_version,values", [
+    ("qcc", "4.4", ['98', 'gnu98']),
+    ("qcc", "5.4", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17"]),
+    ("qcc", "8.3", ['98', 'gnu98', '11', 'gnu11', "14", "gnu14", "17", "gnu17"]),
+])
+def test_supported_cppstd_qcc(compiler, compiler_version, values):
+    settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
+    conanfile = MockConanfile(settings)
+    sot = supported_cppstd(conanfile)
+    assert sot == values
 
 @pytest.mark.parametrize("compiler,compiler_version,result", [
     ("gcc", "5", 'gnu98'),

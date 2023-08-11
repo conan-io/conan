@@ -88,7 +88,7 @@ def _get_default_compiler():
         command = cc or cxx
         if "clang" in command.lower():
             return _clang_compiler(command)
-        if "gcc" in command:
+        if "gcc" in command or "g++" in command or "c++" in command:
             gcc = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
@@ -112,7 +112,7 @@ def _get_default_compiler():
 
     if platform.system() == "Windows":
         return vs or cc or gcc or clang
-    elif platform.system() == "Darwin":
+    elif platform.system() in ["Darwin", "FreeBSD"]:
         return clang or cc or gcc
     elif platform.system() == "SunOS":
         return sun_cc or cc or gcc or clang
@@ -133,8 +133,6 @@ def _get_profile_compiler_version(compiler, version):
         return major
     elif compiler == "apple-clang" and major >= 13:
         output.info("apple-clang>=13, using the major as version")
-        return major
-    elif compiler == "Visual Studio":
         return major
     elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major
@@ -206,18 +204,19 @@ def _detect_compiler_version(result):
     elif compiler == "clang":
         if platform.system() == "FreeBSD":
             result.append(("compiler.libcxx", "libc++"))
+        elif platform.system() == "Darwin":
+            result.append(("compiler.libcxx", "libc++"))
+        elif platform.system() == "Windows":
+            # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
+            result.append(("compiler.runtime", "dynamic"))
+            result.append(("compiler.runtime_type", "Release"))
+            result.append(("compiler.runtime_version", "v143"))
+            ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
+            ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
+                                  "define compiler.libcxx")
         else:
-            if platform.system() == "Windows":
-                # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
-                result.append(("compiler.runtime", "dynamic"))
-                result.append(("compiler.runtime_type", "Release"))
-                result.append(("compiler.runtime_version", "v143"))
-                ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
-                ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
-                                      "define compiler.libcxx")
-            else:
-                libcxx = _detect_gcc_libcxx(version, "clang++")
-                result.append(("compiler.libcxx", libcxx))
+            libcxx = _detect_gcc_libcxx(version, "clang++")
+            result.append(("compiler.libcxx", libcxx))
     elif compiler == "sun-cc":
         result.append(("compiler.libcxx", "libCstd"))
     elif compiler == "mcst-lcc":
@@ -226,10 +225,12 @@ def _detect_compiler_version(result):
         # Add default mandatory fields for MSVC compiler
         result.append(("compiler.cppstd", "14"))
         result.append(("compiler.runtime", "dynamic"))
-        result.append(("compiler.runtime_type", "Release"))
 
     if compiler != "msvc":
         cppstd = _cppstd_default(compiler, version)
+        if compiler == "apple-clang" and version >= "11":
+            # forced auto-detection, gnu98 is too old
+            cppstd = "gnu17"
         result.append(("compiler.cppstd", cppstd))
 
 
@@ -333,7 +334,7 @@ def _detected_architecture():
 
 
 def _detect_os_arch(result):
-    from conans.client.conf import get_default_settings_yml
+    from conans.client.conf import default_settings_yml
     from conans.model.settings import Settings
 
     the_os = platform.system()
@@ -345,7 +346,7 @@ def _detect_os_arch(result):
 
     if arch:
         if arch.startswith('arm'):
-            settings = Settings.loads(get_default_settings_yml())
+            settings = Settings.loads(default_settings_yml)
             defined_architectures = settings.arch.values_range
             defined_arm_architectures = [v for v in defined_architectures if v.startswith("arm")]
 
@@ -377,7 +378,7 @@ def _cppstd_default(compiler, compiler_version):
     assert isinstance(compiler_version, Version)
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
+               "apple-clang": "gnu98",
                "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default

@@ -1,3 +1,3 @@
 from conans.errors import ConanException
 from conans.errors import ConanInvalidConfiguration
-from conans.errors import ConanInvalidSystemRequirements
+from conans.errors import ConanMigrationError

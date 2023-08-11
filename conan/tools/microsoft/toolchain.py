@@ -7,8 +7,8 @@ from jinja2 import Template
 from conan.internal import check_duplicated_generator
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
-from conan.tools.microsoft.visual import VCVars, msvc_version_to_toolset_version
-from conans.errors import ConanException
+from conan.tools.microsoft.visual import VCVars, msvs_toolset
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 
@@ -69,7 +69,7 @@ class MSBuildToolchain(object):
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         #: VS IDE Toolset, e.g., ``"v140"``. If ``compiler=msvc``, you can use ``compiler.toolset``
         #: setting, else, it'll be based on ``msvc`` version.
-        self.toolset = self._msvs_toolset(conanfile)
+        self.toolset = msvs_toolset(conanfile)
         self.properties = {}
 
     def _name_condition(self, settings):
@@ -102,23 +102,6 @@ class MSBuildToolchain(object):
             IntelCC(self._conanfile).generate()
         else:
             VCVars(self._conanfile).generate()
-
-    @staticmethod
-    def _msvs_toolset(conanfile):
-        settings = conanfile.settings
-        compiler = settings.get_safe("compiler")
-        compiler_version = settings.get_safe("compiler.version")
-        if compiler == "msvc":
-            subs_toolset = settings.get_safe("compiler.toolset")
-            if subs_toolset:
-                return subs_toolset
-            return msvc_version_to_toolset_version(compiler_version)
-        if compiler == "intel":
-            compiler_version = compiler_version if "." in compiler_version else \
-                "%s.0" % compiler_version
-            return "Intel C++ Compiler " + compiler_version
-        if compiler == "intel-cc":
-            return IntelCC(conanfile).ms_toolset
 
     @staticmethod
     def _runtime_library(settings):
@@ -155,7 +138,7 @@ class MSBuildToolchain(object):
 
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
-        toolset = self.toolset
+        toolset = self.toolset or ""
         compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
                                                    default={}, check_type=dict)
         self.compile_options.update(compile_options)

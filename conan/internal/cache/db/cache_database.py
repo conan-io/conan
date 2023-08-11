@@ -1,4 +1,4 @@
-import sqlite3
+import os
 
 from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
@@ -11,37 +11,16 @@ CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database 
 class CacheDatabase:
 
     def __init__(self, filename):
-        self._conn = sqlite3.connect(filename, isolation_level=None,
-                                     timeout=CONNECTION_TIMEOUT_SECONDS, check_same_thread=False)
-        self._recipes = RecipesDBTable(self._conn)
-        self._packages = PackagesDBTable(self._conn)
-
-    def close(self):
-        self._conn.close()
-
-    def exists_rrev(self, ref):
-        # TODO: This logic could be done directly against DB
-        matching_rrevs = self.get_recipe_revisions_references(ref)
-        return len(matching_rrevs) > 0
+        self._recipes = RecipesDBTable(filename)
+        self._packages = PackagesDBTable(filename)
+        if not os.path.isfile(filename):
+            self._recipes.create_table()
+            self._packages.create_table()
 
     def exists_prev(self, ref):
         # TODO: This logic could be done directly against DB
         matching_prevs = self.get_package_revisions_references(ref)
         return len(matching_prevs) > 0
-
-    def get_recipe_timestamp(self, ref):
-        # TODO: Remove this once the ref contains the timestamp
-        ref_data = self.try_get_recipe(ref)
-        return ref_data["ref"].timestamp  # Must exist
-
-    def get_package_timestamp(self, ref):
-        ref_data = self.try_get_package(ref)
-        return ref_data["pref"].timestamp
-
-    def get_latest_recipe_reference(self, ref):
-        # TODO: This logic could be done directly in DB
-        rrevs = self.get_recipe_revisions_references(ref, True)
-        return rrevs[0] if rrevs else None
 
     def get_latest_package_reference(self, ref):
         prevs = self.get_package_revisions_references(ref, True)
@@ -50,8 +29,8 @@ class CacheDatabase:
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 
-    def update_package_timestamp(self, pref: PkgReference):
-        self._packages.update_timestamp(pref)
+    def update_package_timestamp(self, pref: PkgReference, path: str):
+        self._packages.update_timestamp(pref, path=path)
 
     def remove_recipe(self, ref: RecipeReference):
         # Removing the recipe must remove all the package binaries too from DB
@@ -70,10 +49,16 @@ class CacheDatabase:
                 return d["pref"]
         return None
 
-    def try_get_recipe(self, ref: RecipeReference):
+    def get_recipe(self, ref: RecipeReference):
         """ Returns the reference data as a dictionary (or fails) """
-        ref_data = self._recipes.get(ref)
-        return ref_data
+        return self._recipes.get_recipe(ref)
+
+    def get_latest_recipe(self, ref: RecipeReference):
+        """ Returns the reference data as a dictionary (or fails) """
+        return self._recipes.get_latest_recipe(ref)
+
+    def get_recipe_revisions_references(self, ref: RecipeReference):
+        return self._recipes.get_recipe_revisions_references(ref)
 
     def try_get_package(self, ref: PkgReference):
         """ Returns the reference data as a dictionary (or fails) """
@@ -97,7 +82,3 @@ class CacheDatabase:
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]
                 for d in self._packages.get_package_references(ref, only_latest_prev)]
-
-    def get_recipe_revisions_references(self, ref: RecipeReference, only_latest_rrev=False):
-        return [d["ref"]
-                for d in self._recipes.get_recipe_revisions_references(ref, only_latest_rrev)]

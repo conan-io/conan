@@ -7,21 +7,21 @@ from conan.api.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
+from conans.util.files import human_size
 from conans.util.sha import check_with_algorithm_sum
-from conans.util.tracer import log_download
 
 
 class FileDownloader:
 
-    def __init__(self, requester):
-        self._output = ConanOutput()
+    def __init__(self, requester, scope=None):
+        self._output = ConanOutput(scope=scope)
         self._requester = requester
 
     def download(self, url, file_path, retry=2, retry_wait=0, verify_ssl=True, auth=None,
                  overwrite=False, headers=None, md5=None, sha1=None, sha256=None):
         """ in order to make the download concurrent, the folder for file_path MUST exist
         """
-        assert file_path, "Conan 2.0 always download files to disk, not to memory"
+        assert file_path, "Conan 2.0 always downloads files to disk, not to memory"
         assert os.path.isabs(file_path), "Target file_path must be absolute"
 
         if os.path.exists(file_path):
@@ -48,14 +48,14 @@ class FileDownloader:
                         self._output.info(f"Waiting {retry_wait} seconds to retry...")
                         time.sleep(retry_wait)
 
-            self._check_checksum(file_path, md5, sha1, sha256)
+            self.check_checksum(file_path, md5, sha1, sha256)
         except Exception:
             if os.path.exists(file_path):
                 os.remove(file_path)
             raise
 
     @staticmethod
-    def _check_checksum(file_path, md5, sha1, sha256):
+    def check_checksum(file_path, md5, sha1, sha256):
         if md5 is not None:
             check_with_algorithm_sum("md5", file_path, md5)
         if sha1 is not None:
@@ -64,7 +64,6 @@ class FileDownloader:
             check_with_algorithm_sum("sha256", file_path, sha256)
 
     def _download_file(self, url, auth, headers, file_path, verify_ssl, try_resume=False):
-        t1 = time.time()
         if try_resume and os.path.exists(file_path):
             range_start = os.path.getsize(file_path)
             headers = headers.copy() if headers else {}
@@ -104,9 +103,13 @@ class FileDownloader:
 
         try:
             total_length = get_total_length()
-            action = "Downloading" if range_start == 0 else "Continuing download of"
-            description = "{} {}".format(action, os.path.basename(file_path))
-            self._output.info(description)
+            is_large_file = total_length > 10000000  # 10 MB
+            t_start = time.time()
+            base_name = os.path.basename(file_path)
+            if is_large_file:
+                hs = human_size(total_length)
+                action = "Downloading" if range_start == 0 else "Continuing download of"
+                self._output.info(f"{action} {hs} {base_name}")
 
             chunk_size = 1024 * 100
             total_downloaded_size = range_start
@@ -115,6 +118,13 @@ class FileDownloader:
                 for chunk in response.iter_content(chunk_size):
                     file_handler.write(chunk)
                     total_downloaded_size += len(chunk)
+                    if is_large_file:
+                        t = time.time()
+                        if t - t_start > 10:  # Every 10 seconds
+                            hs = human_size(total_downloaded_size)
+                            perc = int(total_downloaded_size*100/total_length)
+                            self._output.info(f"Downloaded {hs} {perc}% {base_name}")
+                            t_start = t
 
             gzip = (response.headers.get("content-encoding") == "gzip")
             response.close()
@@ -126,10 +136,6 @@ class FileDownloader:
                 else:
                     raise ConanException("Transfer interrupted before complete: %s < %s"
                                          % (total_downloaded_size, total_length))
-
-            duration = time.time() - t1
-            log_download(url, duration)
-
         except Exception as e:
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"

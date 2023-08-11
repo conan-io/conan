@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 
 import pytest
@@ -9,39 +10,6 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conans.util.env import environment_update
-
-
-class RemoveOutdatedTest(unittest.TestCase):
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_remove_query(self):
-        test_server = TestServer(users={"admin": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, inputs=["admin", "password"])
-        conanfile = """from conan import ConanFile
-class Test(ConanFile):
-    settings = "os"
-    """
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Windows")
-        client.run("create . --name=Test --version=0.1 --user=lasote --channel=testing -s os=Linux")
-        client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
-        client.run("create . --name=Test2 --version=0.1 --user=lasote --channel=testing")
-        client.run("upload * --confirm -r default")
-
-        for remote in ("", "-r=default"):
-            client.run("remove Test/0.1@lasote/testing -q=os=Windows -c %s" % remote)
-            client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertNotIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-
-            client.run("remove Test2/0.1@lasote/testing -q=os=Windows -c %s" % remote)
-            client.run("search Test2/0.1@lasote/testing %s" % remote)
-            self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-            client.run("remove Test2/0.1@lasote/testing -q=os=None -c %s" % remote)
-            client.run("search Test2/0.1@lasote/testing %s" % remote)
-            self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-            self.assertIn("There are no packages", client.out)
 
 
 conaninfo = '''
@@ -71,11 +39,8 @@ class RemoveWithoutUserChannel(unittest.TestCase):
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=lib --version=1.0")
-        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
-        ref_layout = self.client.cache.ref_layout(latest_rrev)
-        pkg_ids = self.client.cache.get_package_references(latest_rrev)
-        latest_prev = self.client.cache.get_latest_package_reference(pkg_ids[0])
-        pkg_layout = self.client.cache.pkg_layout(latest_prev)
+        ref_layout = self.client.exported_layout()
+        pkg_layout = self.client.created_layout()
         self.client.run("remove lib/1.0 -c")
         self.assertFalse(os.path.exists(ref_layout.base_folder))
         self.assertFalse(os.path.exists(pkg_layout.base_folder))
@@ -187,8 +152,8 @@ bar_rrev2_release_prev1 = "{}#{}".format(bar_rrev2_release, bar_prev1)
 bar_rrev2_release_prev2 = "{}#{}".format(bar_rrev2_release, bar_prev2)
 
 
-@pytest.fixture()
-def populated_client():
+@pytest.fixture(scope="module")
+def _populated_client_base():
     """
     foo/1.0@ (one revision) no packages
     foo/1.0@user/channel (one revision)  no packages
@@ -223,13 +188,22 @@ def populated_client():
     client.save({"conanfile.py": conanfile + "\n # THIS IS ANOTHER RECIPE REVISION"})
     client.run("create . --name=bar --version=1.1 -s build_type=Debug")
 
-    client.run("upload '*' -c -r default")
-    # By default only the latest is uploaded, we want all of them
-    client.run("upload {} -c -r default".format(bar_rrev))
-    client.run("upload {} -c -r default".format(bar_rrev2))
-    client.run("upload {} -c -r default".format(bar_rrev2_release_prev1))
-    client.run("upload {} -c -r default".format(bar_rrev2_release_prev2))
+    client.run("upload '*#*:*#*' -c -r default")
 
+    return client
+
+
+@pytest.fixture()
+def populated_client(_populated_client_base):
+    """ this is much faster than creating and uploading everythin
+    """
+    client = TestClient(default_server_user=True)
+    shutil.rmtree(client.cache_folder)
+    shutil.copytree(_populated_client_base.cache_folder, client.cache_folder)
+    shutil.rmtree(client.servers["default"].test_server._base_path)
+    shutil.copytree(_populated_client_base.servers["default"].test_server._base_path,
+                    client.servers["default"].test_server._base_path)
+    client.update_servers()
     return client
 
 
@@ -254,15 +228,13 @@ def populated_client():
     {"remove": "*/*#", "recipes": []},
 ])
 def test_new_remove_recipes_expressions(populated_client, with_remote, data):
-
-    with populated_client.mocked_servers():
-        r = "-r default" if with_remote else ""
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
-        elif data.get("error_msg"):
-            assert data.get("error_msg") in populated_client.out
+    r = "-r default" if with_remote else ""
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        assert _get_all_recipes(populated_client, with_remote) == set(data["recipes"])
+    elif data.get("error_msg"):
+        assert data.get("error_msg") in populated_client.out
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -272,15 +244,17 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     {"remove": "bar/1.1#*9*", "rrevs": []},
     {"remove": "bar/1.1#*2a", "rrevs": [bar_rrev]},
     {"remove": "bar*#*50", "rrevs": [bar_rrev, bar_rrev2]},
+    {"remove": "bar*#latest", "rrevs": [bar_rrev2]},  # latest is bar_rrev
+    {"remove": "bar*#!latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
+    {"remove": "bar*#~latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
-    with populated_client.mocked_servers():
-        r = "-r default" if with_remote else ""
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            rrevs = _get_revisions_recipes(populated_client, "bar/1.1", with_remote)
-            assert rrevs == set(data["rrevs"])
+    r = "-r default" if with_remote else ""
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        rrevs = _get_revisions_recipes(populated_client, "bar/1.1", with_remote)
+        assert rrevs == set(data["rrevs"])
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -289,7 +263,7 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": "bar/1.1#*:*#*", "prefs": []},
     {"remove": "bar/1.1#z*:*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
     {"remove": "bar/1.1#*:*#kk*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1#*:{}".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
+    {"remove": "bar/1.1#*:{}*".format(pkg_id_release), "prefs": [bar_rrev2_debug]},
     {"remove": "bar/1.1#*:*{}".format(pkg_id_release[-12:]), "prefs": [bar_rrev2_debug]},
     {"remove": "{}:*{}*".format(bar_rrev2, pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
     {"remove": "*/*#*:*{}*".format(pkg_id_debug[5:15]), "prefs": [bar_rrev2_release]},
@@ -300,26 +274,23 @@ def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, 
     {"remove": '*/*#*:*#* -p', "error": True,
      "error_msg": "argument -p/--package-query: expected one argument"},
     {"remove": "bar/1.1#*:", "prefs": []},
-    {"remove": "bar/1.1#*:234234#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1:234234", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
-    {"remove": "bar/1.1 -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1#*:234234*#", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:234234*", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
+    {"remove": "bar/1.1:* -p os=Windows", "prefs": [bar_rrev2_debug, bar_rrev2_release]},
 ])
 def test_new_remove_package_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
     r = "-r default" if with_remote else ""
-    populated_client.run("remove f/* -c {}".format(r))
-
     pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
     assert pids == {bar_rrev2_debug, bar_rrev2_release}
 
-    with populated_client.mocked_servers():
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
-            assert pids == set(data["prefs"])
-        elif data.get("error_msg"):
-            assert data.get("error_msg") in populated_client.out
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        pids = _get_all_packages(populated_client, bar_rrev2, with_remote)
+        assert pids == set(data["prefs"])
+    elif data.get("error_msg"):
+        assert data.get("error_msg") in populated_client.out
 
 
 @pytest.mark.parametrize("with_remote", [True, False])
@@ -336,6 +307,9 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
      "prevs": [bar_rrev2_release_prev1, bar_rrev2_release_prev2]},
     # Errors
     {"remove": '{}#'.format(bar_rrev2_release), "prevs": []},
+    {"remove": '{}#latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1]},
+    {"remove": '{}#!latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
+    {"remove": '{}#~latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
 ])
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here
@@ -345,14 +319,18 @@ def test_new_remove_package_revisions_expressions(populated_client, with_remote,
     prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
     assert set(prefs) == {bar_rrev2_release_prev1, bar_rrev2_release_prev2}
 
-    with populated_client.mocked_servers():
-        error = data.get("error", False)
-        populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
-        if not error:
-            prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
-            assert set(prefs) == set(data["prevs"])
-        elif data.get("error_msg"):
-            assert data.get("error_msg") in populated_client.out
+    error = data.get("error", False)
+    populated_client.run("remove {} -c {}".format(data["remove"], r), assert_error=error)
+    if not error:
+        prefs = _get_revisions_packages(populated_client, bar_rrev2_release, with_remote)
+        assert set(prefs) == set(data["prevs"])
+    elif data.get("error_msg"):
+        assert data.get("error_msg") in populated_client.out
+
+
+def test_package_query_no_package_ref(populated_client):
+    populated_client.run("remove * -p 'compiler=clang'", assert_error=True)
+    assert "--package-query supplied but the pattern does not match packages" in populated_client.out
 
 
 def _get_all_recipes(client, with_remote):
@@ -393,4 +371,3 @@ def _get_revisions_packages(client, pref, with_remote):
             return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])
         except NotFoundException:
             return set()
-

@@ -325,7 +325,6 @@ def test_buildenv_from_requires():
     assert "BUILDENV OpenSSL: MyOpenSSLLinuxValue!!!" in client.out
 
 
-@pytest.mark.xfail(reason="The VirtualEnv generator is not fully complete")
 def test_diamond_repeated():
     pkga = textwrap.dedent(r"""
         from conan import ConanFile
@@ -392,15 +391,20 @@ def test_diamond_repeated():
     client.run("export pkgc --name=pkgc --version=1.0")
     client.run("export pkgd --name=pkgd --version=1.0")
 
-    client.run("install --requires=pkge --build")
+    client.run("install pkge --build=missing")
+    # PkgB has higher priority (included first) so it is appended last and prepended first (wrtC)
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
     assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
     assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
 
     # No settings always sh
-    conanrun = client.load("conanrunenv.sh")
+    conanrun = client.load("pkge/conanrunenv.sh")
     assert "PATH" not in conanrun
+    assert 'export MYVAR1="PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1"' in conanrun
+    assert 'export MYVAR2="$MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2"' in conanrun
+    assert 'export MYVAR3="PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 $MYVAR3"' in conanrun
+    assert 'export MYVAR4="PkgDValue4"' in conanrun
 
 
 @pytest.mark.parametrize("require_run", [True, False])
@@ -422,8 +426,8 @@ def test_environment_scripts_generated_envvars(require_run):
                                   .with_package_file("lib/mylib", "mylibcontent")
                                   .with_settings("os"))
     conanfile_require = (GenConanfile().with_package_file("bin/myapp", "myexe")
-                    .with_package_file("lib/mylib", "mylibcontent")
-                    .with_settings("os"))
+                                       .with_package_file("lib/mylib", "mylibcontent")
+                                       .with_settings("os"))
     if require_run:
         conanfile_require.with_package_type("application")
     client.save({"build_require_pkg/conanfile.py": conanfile_br,
@@ -525,6 +529,49 @@ def test_multiple_deactivate():
         assert "VAR2=!!" in out
 
 
+def test_multiple_deactivate_order():
+    """
+    https://github.com/conan-io/conan/issues/13693
+    """
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.env import Environment
+        class Pkg(ConanFile):
+            def generate(self):
+                e1 = Environment()
+                e1.define("MYVAR", "Value1")
+                e1.vars(self).save_script("mybuild1")
+                e2 = Environment()
+                e2.define("MYVAR", "Value2")
+                e2.vars(self).save_script("mybuild2")
+        """)
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo MYVAR=%MYVAR%!!
+        """)
+    display_sh = textwrap.dedent("""\
+        echo MYVAR=$MYVAR!!
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "display.bat": display_bat,
+                 "display.sh": display_sh})
+    os.chmod(os.path.join(client.current_folder, "display.sh"), 0o777)
+    client.run("install .")
+
+    for _ in range(2):  # Just repeat it, so we can check things keep working
+        if platform.system() == "Windows":
+            cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+        else:
+            cmd = '. ./conanbuild.sh && ./display.sh && . ./deactivate_conanbuild.sh && ./display.sh'
+        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  shell=True, cwd=client.current_folder).communicate()
+        out = out.decode()
+        assert "MYVAR=Value2!!" in out
+        assert 3 == str(out).count("Restoring environment")
+        assert "MYVAR=!!" in out
+
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Path problem in Windows only")
 @pytest.mark.parametrize("num_deps", [3, ])
 def test_massive_paths(num_deps):
@@ -622,7 +669,7 @@ def test_profile_build_env_spaces():
                               shell=True, cwd=client.current_folder).communicate()
     out = out.decode()
     assert "VAR1= VALUE1!!" in out
-    assert  "Restoring environment" in out
+    assert "Restoring environment" in out
     assert "VAR1=!!" in out
 
 
@@ -747,3 +794,50 @@ def test_error_with_dots_virtualenv():
     client.run("create dep -s:b arch=armv8.3")
     client.run("create consumer -s arch=armv8.3")
     assert "DUMMY=123456" in client.out
+
+
+def test_runenv_info_propagated():
+    """
+    A runenv_info in a recipe, which is required by an executable that is used
+    in another place as a tool_require (also its own test_package), should be
+    propagated
+    test_package --(tool_requires)->tools-(requires)->lib(defines runenv_info)
+    https://github.com/conan-io/conan/issues/12939
+    """
+    c = TestClient()
+    # NOTE: The lib contains ``package_type = "shared-library"`` to force propagation of runenv_info
+    lib = textwrap.dedent("""
+        from conan import ConanFile
+        class Lib(ConanFile):
+            name = "lib"
+            version = "0.1"
+            settings = "build_type"
+            package_type = "shared-library"
+            def package_info(self):
+                self.runenv_info.define("MYLIBVAR", f"MYLIBVALUE:{self.settings.build_type}")
+        """)
+    tool_test_package = textwrap.dedent("""
+        import platform
+        from conan import ConanFile
+        class TestTool(ConanFile):
+            settings = "build_type"
+            test_type = "explicit"
+            generators = "VirtualBuildEnv"
+            def build_requirements(self):
+                self.tool_requires(self.tested_reference_str)
+            def build(self):
+                self.output.info(f"Building TEST_PACKAGE IN {self.settings.build_type}!!")
+                if platform.system()!= "Windows":
+                    self.run("echo MYLIBVAR=$MYLIBVAR")
+                else:
+                    self.run("set MYLIBVAR")
+            def test(self):
+                pass
+        """)
+    c.save({"lib/conanfile.py": lib,
+            "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("lib/0.1"),
+            "tool/test_package/conanfile.py": tool_test_package})
+    c.run("create lib -s build_type=Release")
+    c.run("create tool --build-require -s:b build_type=Release -s:h build_type=Debug")
+    assert "tool/0.1 (test package): Building TEST_PACKAGE IN Debug!!" in c.out
+    assert "MYLIBVAR=MYLIBVALUE:Release" in c.out

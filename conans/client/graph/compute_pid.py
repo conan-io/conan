@@ -1,8 +1,9 @@
 from collections import OrderedDict
 
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
-    conanfile_remove_attr
+    conanfile_remove_attr, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo, PythonRequiresInfo
+from conans.client.conanfile.implementations import auto_header_only_package_id
 
 
 def compute_package_id(node, new_config):
@@ -39,9 +40,13 @@ def compute_package_id(node, new_config):
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
     python_requires = PythonRequiresInfo(python_requires, python_mode)
+    try:
+        copied_options = conanfile.options.copy_conaninfo_options()
+    except ConanException as e:
+        raise ConanException(f"{conanfile}: {e}")
 
     conanfile.info = ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
-                               options=conanfile.options.copy_conaninfo_options(),
+                               options=copied_options,
                                reqs_info=reqs_info,
                                build_requires_info=build_requires_info,
                                python_requires=python_requires,
@@ -77,5 +82,7 @@ def run_validate_package_id(conanfile):
         with conanfile_exception_formatter(conanfile, "package_id"):
             with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
                 conanfile.package_id()
+    elif "auto_header_only" in conanfile.implements:
+        auto_header_only_package_id(conanfile)
 
     conanfile.info.validate()

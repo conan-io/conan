@@ -3,7 +3,7 @@ from os import chdir
 
 import pytest
 
-from conan.tools.files.files import load_toolchain_args
+from conan.tools.build import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
@@ -328,6 +328,19 @@ def test_apple_min_os_flag():
     assert expected in env["LDFLAGS"]
 
 
+def test_crossbuild_from_macos_to_non_apple_os():
+    """Check we are not adding Apple-specific flags
+        when the os_build is Macos, but we are targetting
+        a non-Apple OS (e.g. Linux, Android, QNX)"""
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Android", "arch": "armv8"})
+    conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
+    be = AutotoolsToolchain(conanfile)
+    assert be.apple_min_version_flag == ''
+    assert be.apple_arch_flag is None
+    assert be.apple_isysroot_flag is None
+
+
 def test_apple_isysrootflag():
     """Even when no cross building it is adjusted because it could target a Mac version"""
     conanfile = ConanFileMock()
@@ -512,3 +525,17 @@ def test_extra_flags_via_conf():
     assert '-mios-version-min=14 --flag1 --flag2' in env["CXXFLAGS"]
     assert '-mios-version-min=14 --flag3 --flag4' in env["CFLAGS"]
     assert '-mios-version-min=14 --flag5 --flag6' in env["LDFLAGS"]
+
+
+def test_conf_compiler_executable():
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:compiler_executables", {"cpp": "C:/my/path/myg++"})
+    conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
+    conanfile.win_bash = True
+    conanfile.settings = MockSettings(
+        {"build_type": "Release",
+         "os": "Windows"})
+    conanfile.settings_build = conanfile.settings
+    be = AutotoolsToolchain(conanfile)
+    env = be.vars()
+    assert "/c/my/path/myg++" == env["CXX"]

@@ -89,6 +89,7 @@ def test_auto_package_no_components():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . --name=lib --version=1.0")
+    assert "AutoPackager is **** deprecated ****" in client.out
     package_id = client.created_package_id("lib/1.0")
 
     ref = RecipeReference.loads("lib/1.0@")

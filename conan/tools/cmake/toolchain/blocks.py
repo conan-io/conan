@@ -5,7 +5,9 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import is_apple_os, to_apple_arch, get_apple_sdk_fullname
+from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.tools.android.utils import android_abi
+from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
@@ -13,7 +15,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load
 
 
@@ -259,6 +261,9 @@ class AndroidSystemBlock(Block):
         set(ANDROID_STL {{ android_stl }})
         {% endif %}
         set(ANDROID_ABI {{ android_abi }})
+        {% if android_use_legacy_toolchain_file %}
+        set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE {{ android_use_legacy_toolchain_file }})
+        {% endif %}
         include({{ android_ndk_path }}/build/cmake/android.toolchain.cmake)
         """)
 
@@ -266,11 +271,6 @@ class AndroidSystemBlock(Block):
         os_ = self._conanfile.settings.get_safe("os")
         if os_ != "Android":
             return
-
-        android_abi = {"x86": "x86",
-                       "x86_64": "x86_64",
-                       "armv7": "armeabi-v7a",
-                       "armv8": "arm64-v8a"}.get(str(self._conanfile.settings.arch))
 
         # TODO: only 'c++_shared' y 'c++_static' supported?
         #  https://developer.android.com/ndk/guides/cpp-support
@@ -281,11 +281,17 @@ class AndroidSystemBlock(Block):
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk_path = android_ndk_path.replace("\\", "/")
 
+        use_cmake_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain",
+                                                              check_type=bool)
+        if use_cmake_legacy_toolchain is not None:
+            use_cmake_legacy_toolchain = "ON" if use_cmake_legacy_toolchain else "OFF"
+
         ctxt_toolchain = {
             'android_platform': 'android-' + str(self._conanfile.settings.os.api_level),
-            'android_abi': android_abi,
+            'android_abi': android_abi(self._conanfile),
             'android_stl': libcxx_str,
             'android_ndk_path': android_ndk_path,
+            'android_use_legacy_toolchain_file': use_cmake_legacy_toolchain,
         }
         return ctxt_toolchain
 
@@ -345,7 +351,6 @@ class AppleSystemBlock(Block):
         """)
 
     def context(self):
-        os_ = self._conanfile.settings.get_safe("os")
         if not is_apple_os(self._conanfile):
             return None
 
@@ -459,7 +464,6 @@ class FindFiles(Block):
         if prefer_config is False:
             find_package_prefer_config = "OFF"
 
-        os_ = self._conanfile.settings.get_safe("os")
         is_apple_ = is_apple_os(self._conanfile)
 
         # Read information from host context
@@ -516,12 +520,9 @@ class PkgConfigBlock(Block):
         pkg_config = self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str)
         if pkg_config:
             pkg_config = pkg_config.replace("\\", "/")
-        pkg_config_path = self._conanfile.generators_folder
-        if pkg_config_path:
-            # hardcoding scope as "build"
-            subsystem = deduce_subsystem(self._conanfile, "build")
-            pathsep = ":" if subsystem != WINDOWS else ";"
-            pkg_config_path = pkg_config_path.replace("\\", "/") + pathsep
+        subsystem = deduce_subsystem(self._conanfile, "build")
+        pathsep = ":" if subsystem != WINDOWS else ";"
+        pkg_config_path = "${CMAKE_CURRENT_LIST_DIR}" + pathsep
         return {"pkg_config": pkg_config,
                 "pkg_config_path": pkg_config_path}
 
@@ -569,6 +570,15 @@ class ExtraFlagsBlock(Block):
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
+
+        # See https://github.com/conan-io/conan/issues/13374
+        android_ndk_path = self._conanfile.conf.get("tools.android:ndk_path")
+        android_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain",
+                                                            check_type=bool)
+        if android_ndk_path and (cxxflags or cflags) and android_legacy_toolchain is not False:
+            self._conanfile.output.warning("tools.build:cxxflags or cflags are defined, but Android NDK toolchain may be overriding "
+                                            "the values. Consider setting tools.android:cmake_legacy_toolchain to False.")
+
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
@@ -698,7 +708,8 @@ class GenericSystemBlock(Block):
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
-                    "armv8": "ARM64"}.get(arch)
+                    "armv8": "ARM64",
+                    "arm64ec": "ARM64EC"}.get(arch)
         return None
 
     def _get_generic_system_name(self):
@@ -708,6 +719,7 @@ class GenericSystemBlock(Block):
         arch_build = self._conanfile.settings_build.get_safe("arch")
         cmake_system_name_map = {"Neutrino": "QNX",
                                  "": "Generic",
+                                 "baremetal": "Generic",
                                  None: "Generic"}
         if os_host != os_build:
             return cmake_system_name_map.get(os_host, os_host)
@@ -721,8 +733,9 @@ class GenericSystemBlock(Block):
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
+        os_build = self._conanfile.settings_build.get_safe("os")
         return os_host in ('iOS', 'watchOS', 'tvOS') or (
-                os_host == 'Macos' and arch_host != arch_build)
+                os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
@@ -734,6 +747,7 @@ class GenericSystemBlock(Block):
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
         assert hasattr(self._conanfile, "settings_build")
+        # TODO: Remove unused if
         if hasattr(self._conanfile, "settings_build"):
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")

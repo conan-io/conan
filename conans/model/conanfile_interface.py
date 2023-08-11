@@ -32,8 +32,16 @@ class ConanFileInterface:
         return self._conanfile.recipe_folder
 
     @property
+    def recipe_metadata_folder(self):
+        return self._conanfile.recipe_metadata_folder
+
+    @property
     def package_folder(self):
         return self._conanfile.package_folder
+
+    @property
+    def package_metadata_folder(self):
+        return self._conanfile.package_metadata_folder
 
     @property
     def package_path(self) -> Path:

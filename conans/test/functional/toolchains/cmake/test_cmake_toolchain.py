@@ -133,10 +133,10 @@ def test_cmake_user_presets_load(existing_user_presets, schema2):
     else:
         assert "include" in user_presets_data.keys()
 
-    if existing_user_presets == None:
-        t.run_command("cmake . --preset release")
+    if existing_user_presets is None:
+        t.run_command("cmake . --preset conan-release")
         assert 'CMAKE_BUILD_TYPE="Release"' in t.out
-        t.run_command("cmake . --preset debug")
+        t.run_command("cmake . --preset conan-debug")
         assert 'CMAKE_BUILD_TYPE="Debug"' in t.out
 
 
@@ -557,21 +557,22 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
+
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
-                      '\'["options.missing"]\''
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["options.missing"]\' ' \
+                      '-c tools.cmake.cmaketoolchain:generator=Ninja'
     client.run("install . {}".format(settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "generators"))
 
 
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_setting():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
-    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
-                      '\'["settings.missing"]\''
+    settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.missing"]\' ' \
+                      '-c tools.cmake.cmaketoolchain:generator=Ninja'
     client.run("install . {}".format(settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "generators"))
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -589,7 +590,7 @@ def test_cmake_presets_multiple_settings_single_config():
                "-s compiler.version=12.0 -s compiler.cppstd=gnu17"
     client.run("install . {} {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
-                                       "generators"))
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
@@ -597,33 +598,38 @@ def test_cmake_presets_multiple_settings_single_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
 
-    # If we create the "Debug" one, it has the same toolchain and preset file, that is
-    # always multiconfig
+    # If we create the "Debug" one, it will be appended
     client.run("install . {} -s build_type=Debug {}".format(settings, settings_layout))
-    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17", "generators"))
+    assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-12.0-gnu17",
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
-    assert len(user_presets["include"]) == 1
+    assert len(user_presets["include"]) == 2
     presets = json.loads(load(user_presets["include"][0]))
-    assert len(presets["configurePresets"]) == 2
-    assert len(presets["buildPresets"]) == 2
-    assert len(presets["testPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["configurePresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["buildPresets"][1]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["testPresets"][0]["name"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][1]["name"] == "apple-clang-12.0-gnu17-debug"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-12.0-gnu17-release"
-    assert presets["testPresets"][1]["configurePreset"] == "apple-clang-12.0-gnu17-debug"
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert len(presets["testPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-release"
+
+    presets = json.loads(load(user_presets["include"][1]))
+    assert len(presets["configurePresets"]) == 1
+    assert len(presets["buildPresets"]) == 1
+    assert len(presets["testPresets"]) == 1
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-12.0-gnu17-debug"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-12.0-gnu17-debug"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -631,40 +637,40 @@ def test_cmake_presets_multiple_settings_single_config():
                "-s compiler.version=13 -s compiler.cppstd=gnu20"
     client.run("install . {} {}".format(settings, settings_layout))
     assert os.path.exists(os.path.join(client.current_folder, "build", "apple-clang-13-gnu20",
-                                       "generators"))
+                                       "Release", "generators"))
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     # The [0] is the apple-clang 12 the [1] is the apple-clang 13
-    assert len(user_presets["include"]) == 2
-    presets = json.loads(load(user_presets["include"][1]))
+    assert len(user_presets["include"]) == 3
+    presets = json.loads(load(user_presets["include"][2]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["buildPresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "apple-clang-13-gnu20-release"
-    assert presets["testPresets"][0]["name"] == "apple-clang-13-gnu20-release"
-    assert presets["testPresets"][0]["configurePreset"] == "apple-clang-13-gnu20-release"
+    assert presets["configurePresets"][0]["name"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["buildPresets"][0]["name"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["testPresets"][0]["name"] == "conan-apple-clang-13-gnu20-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-apple-clang-13-gnu20-release"
 
     # We can build with cmake manually
     if platform.system() == "Darwin":
-        client.run_command("cmake . --preset apple-clang-12.0-gnu17-release")
-        client.run_command("cmake --build --preset apple-clang-12.0-gnu17-release")
-        client.run_command("ctest --preset apple-clang-12.0-gnu17-release")
+        client.run_command("cmake . --preset conan-apple-clang-12.0-gnu17-release")
+        client.run_command("cmake --build --preset conan-apple-clang-12.0-gnu17-release")
+        client.run_command("ctest --preset conan-apple-clang-12.0-gnu17-release")
         client.run_command("./build/apple-clang-12.0-gnu17/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2017" in client.out
 
-        client.run_command("cmake . --preset apple-clang-12.0-gnu17-debug")
-        client.run_command("cmake --build --preset apple-clang-12.0-gnu17-debug")
-        client.run_command("ctest --preset apple-clang-12.0-gnu17-debug")
+        client.run_command("cmake . --preset conan-apple-clang-12.0-gnu17-debug")
+        client.run_command("cmake --build --preset conan-apple-clang-12.0-gnu17-debug")
+        client.run_command("ctest --preset conan-apple-clang-12.0-gnu17-debug")
         client.run_command("./build/apple-clang-12.0-gnu17/Debug/hello")
         assert "Hello World Debug!" in client.out
         assert "__cplusplus2017" in client.out
 
-        client.run_command("cmake . --preset apple-clang-13-gnu20-release")
-        client.run_command("cmake --build --preset apple-clang-13-gnu20-release")
-        client.run_command("ctest --preset apple-clang-13-gnu20-release")
+        client.run_command("cmake . --preset conan-apple-clang-13-gnu20-release")
+        client.run_command("cmake --build --preset conan-apple-clang-13-gnu20-release")
+        client.run_command("ctest --preset conan-apple-clang-13-gnu20-release")
         client.run_command("./build/apple-clang-13-gnu20/Release/hello")
         assert "Hello World Release!" in client.out
         assert "__cplusplus2020" in client.out
@@ -683,8 +689,12 @@ def test_cmake_presets_duplicated_install(multiconfig):
         settings += '-c tools.cmake.cmaketoolchain:generator="Multi-Config"'
     client.run("install . {}".format(settings))
     client.run("install . {}".format(settings))
-    presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
-                                "CMakePresets.json")
+    if multiconfig:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "generators",
+                                    "CMakePresets.json")
+    else:
+        presets_path = os.path.join(client.current_folder, "build", "gcc-5", "Release", "generators",
+                                    "CMakePresets.json")
     assert os.path.exists(presets_path)
     contents = json.loads(load(presets_path))
     assert len(contents["buildPresets"]) == 1
@@ -725,8 +735,8 @@ def test_remove_missing_presets():
 def test_cmake_presets_options_single_config():
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_lib -d name=hello -d version=0.1")
-    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler", ' \
-                  '"options.shared"]\''
+    conf_layout = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler",' \
+                  '"settings.build_type", "options.shared"]\''
 
     default_compiler = {"Darwin": "apple-clang",
                         "Windows": "msvc",
@@ -734,14 +744,14 @@ def test_cmake_presets_options_single_config():
 
     for shared in (True, False):
         client.run("install . {} -o shared={}".format(conf_layout, shared))
-        shared_str = "shared_true" if shared else "shared_false"
+        shared_str = "shared" if shared else "static"
         assert os.path.exists(os.path.join(client.current_folder,
-                                           "build", "{}-{}".format(default_compiler, shared_str),
+                                           "build", "{}-release-{}".format(default_compiler, shared_str),
                                            "generators"))
 
     client.run("install . {}".format(conf_layout))
     assert os.path.exists(os.path.join(client.current_folder,
-                                       "build", "{}-shared_false".format(default_compiler),
+                                       "build", "{}-release-static".format(default_compiler),
                                        "generators"))
 
     user_presets_path = os.path.join(client.current_folder, "CMakeUserPresets.json")
@@ -750,13 +760,13 @@ def test_cmake_presets_options_single_config():
     # We can build with cmake manually
     if platform.system() == "Darwin":
         for shared in (True, False):
-            shared_str = "shared_true" if shared else "shared_false"
-            client.run_command("cmake . --preset apple-clang-{}-release".format(shared_str))
-            client.run_command("cmake --build --preset apple-clang-{}-release".format(shared_str))
-            client.run_command("ctest --preset apple-clang-{}-release".format(shared_str))
+            shared_str = "shared" if shared else "static"
+            client.run_command("cmake . --preset conan-apple-clang-release-{}".format(shared_str))
+            client.run_command("cmake --build --preset conan-apple-clang-release-{}".format(shared_str))
+            client.run_command("ctest --preset conan-apple-clang-release-{}".format(shared_str))
             the_lib = "libhello.a" if not shared else "libhello.dylib"
             path = os.path.join(client.current_folder,
-                                "build", "apple-clang-{}".format(shared_str), "release", the_lib)
+                                "build", "apple-clang-release-{}".format(shared_str), the_lib)
             assert os.path.exists(path)
 
 
@@ -782,11 +792,11 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["testPresets"][0]["configurePreset"] == "dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "conan-dynamic-14"
+    assert presets["buildPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-dynamic-14"
+    assert presets["testPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-dynamic-14"
 
     # If we create the "Debug" one, it has the same toolchain and preset file, that is
     # always multiconfig
@@ -799,15 +809,15 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
     assert len(presets["testPresets"]) == 2
-    assert presets["configurePresets"][0]["name"] == "dynamic-14"
-    assert presets["buildPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["buildPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["buildPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["buildPresets"][1]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][0]["name"] == "dynamic-14-release"
-    assert presets["testPresets"][1]["name"] == "dynamic-14-debug"
-    assert presets["testPresets"][0]["configurePreset"] == "dynamic-14"
-    assert presets["testPresets"][1]["configurePreset"] == "dynamic-14"
+    assert presets["configurePresets"][0]["name"] == "conan-dynamic-14"
+    assert presets["buildPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["buildPresets"][1]["name"] == "conan-dynamic-14-debug"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-dynamic-14"
+    assert presets["buildPresets"][1]["configurePreset"] == "conan-dynamic-14"
+    assert presets["testPresets"][0]["name"] == "conan-dynamic-14-release"
+    assert presets["testPresets"][1]["name"] == "conan-dynamic-14-debug"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-dynamic-14"
+    assert presets["testPresets"][1]["configurePreset"] == "conan-dynamic-14"
 
     # But If we change, for example, the cppstd and the compiler version, the toolchain
     # and presets will be different, but it will be appended to the UserPresets.json
@@ -823,92 +833,34 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
-    assert presets["configurePresets"][0]["name"] == "static-17"
-    assert presets["buildPresets"][0]["name"] == "static-17-release"
-    assert presets["buildPresets"][0]["configurePreset"] == "static-17"
-    assert presets["testPresets"][0]["name"] == "static-17-release"
-    assert presets["testPresets"][0]["configurePreset"] == "static-17"
+    assert presets["configurePresets"][0]["name"] == "conan-static-17"
+    assert presets["buildPresets"][0]["name"] == "conan-static-17-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "conan-static-17"
+    assert presets["testPresets"][0]["name"] == "conan-static-17-release"
+    assert presets["testPresets"][0]["configurePreset"] == "conan-static-17"
 
     # We can build with cmake manually
-    client.run_command("cmake . --preset dynamic-14")
+    client.run_command("cmake . --preset conan-dynamic-14")
 
-    client.run_command("cmake --build --preset dynamic-14-release")
-    client.run_command("ctest --preset dynamic-14-release")
+    client.run_command("cmake --build --preset conan-dynamic-14-release")
+    client.run_command("ctest --preset conan-dynamic-14-release")
     client.run_command("build\\dynamic-14\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake --build --preset dynamic-14-debug")
-    client.run_command("ctest --preset dynamic-14-debug")
+    client.run_command("cmake --build --preset conan-dynamic-14-debug")
+    client.run_command("ctest --preset conan-dynamic-14-debug")
     client.run_command("build\\dynamic-14\\Debug\\hello")
     assert "Hello World Debug!" in client.out
     assert "MSVC_LANG2014" in client.out
 
-    client.run_command("cmake . --preset static-17")
+    client.run_command("cmake . --preset conan-static-17")
 
-    client.run_command("cmake --build --preset static-17-release")
-    client.run_command("ctest --preset static-17-release")
+    client.run_command("cmake --build --preset conan-static-17-release")
+    client.run_command("ctest --preset conan-static-17-release")
     client.run_command("build\\static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
-
-
-@pytest.mark.tool("cmake", "3.23")
-def test_max_schema_version2_build():
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_exe -d name=hello -d version=0.1")
-    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2"]
-    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
-    client.run("build .")
-
-
-@pytest.mark.tool("cmake", "3.23")
-def test_user_presets_version2():
-    client = TestClient(path_with_spaces=False)
-    client.run("new cmake_exe -d name=hello -d version=0.1")
-    configs = ["-c tools.cmake.cmaketoolchain.presets:max_schema_version=2 ",
-               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'"]
-    client.run("install . {} -s compiler.cppstd=14".format(" ".join(configs)))
-    client.run("install . {} -s compiler.cppstd=17".format(" ".join(configs)))
-    # TODO: This line was failing, after being merged from conan 1.x, because the default
-    #  compiler in CI is VS 191, that do not support c++20, and this raises, but apparently
-    #  it does nothing @lasote
-    # client.run("install . {} -s compiler.cppstd=20".format(" ".join(configs)))
-
-    if platform.system() == "Windows":
-        client.run_command("cmake . --preset 14")
-        client.run_command("cmake --build --preset 14-release")
-        client.run_command("ctest --preset 14-release")
-        client.run_command(r"build\14\Release\hello.exe")
-    else:
-        client.run_command("cmake . --preset 14-release")
-        client.run_command("cmake --build --preset 14-release")
-        client.run_command("ctest --preset 14-release")
-        client.run_command("./build/14/Release/hello")
-
-    assert "Hello World Release!" in client.out
-
-    if platform.system() != "Windows":
-        assert "__cplusplus2014" in client.out
-    else:
-        assert "MSVC_LANG2014" in client.out
-
-    if platform.system() == "Windows":
-        client.run_command("cmake . --preset 17")
-        client.run_command("cmake --build --preset 17-release")
-        client.run_command("ctest --preset 17-release")
-        client.run_command(r"build\17\Release\hello.exe")
-    else:
-        client.run_command("cmake . --preset 17-release")
-        client.run_command("cmake --build --preset 17-release")
-        client.run_command("ctest --preset 17-release")
-        client.run_command("./build/17/Release/hello")
-
-    assert "Hello World Release!" in client.out
-    if platform.system() != "Windows":
-        assert "__cplusplus2017" in client.out
-    else:
-        assert "MSVC_LANG2017" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -977,31 +929,28 @@ def test_cmake_presets_with_conanfile_txt():
 
     c.run("install .")
     c.run("install . -s build_type=Debug")
-    assert os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
-    presets_path = os.path.join(c.current_folder, "build", "generators", "CMakePresets.json")
-    assert os.path.exists(presets_path)
 
     if platform.system() != "Windows":
-        c.run_command("cmake --preset debug")
-        c.run_command("cmake --build --preset debug")
-        c.run_command("ctest --preset debug")
+        c.run_command("cmake --preset conan-debug")
+        c.run_command("cmake --build --preset conan-debug")
+        c.run_command("ctest --preset conan-debug")
         c.run_command("./build/Debug/foo")
     else:
-        c.run_command("cmake --preset default")
-        c.run_command("cmake --build --preset debug")
-        c.run_command("ctest --preset debug")
+        c.run_command("cmake --preset conan-default")
+        c.run_command("cmake --build --preset conan-debug")
+        c.run_command("ctest --preset conan-debug")
         c.run_command("build\\Debug\\foo")
 
     assert "Hello World Debug!" in c.out
 
     if platform.system() != "Windows":
-        c.run_command("cmake --preset release")
-        c.run_command("cmake --build --preset release")
-        c.run_command("ctest --preset release")
+        c.run_command("cmake --preset conan-release")
+        c.run_command("cmake --build --preset conan-release")
+        c.run_command("ctest --preset conan-release")
         c.run_command("./build/Release/foo")
     else:
-        c.run_command("cmake --build --preset release")
-        c.run_command("ctest --preset release")
+        c.run_command("cmake --build --preset conan-release")
+        c.run_command("ctest --preset conan-release")
         c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
@@ -1152,7 +1101,7 @@ def test_cmake_toolchain_vars_when_option_declared():
     #       takes precedence.
     fpic_option = "-o mylib/*:fPIC=True" if platform.system() != "Windows" else ""
     fpic_cmake_value = "ON" if platform.system() != "Windows" else "OFF"
-    t.run(f"create . -o mylib/*:shared=False {fpic_option} --test-folder=None")
+    t.run(f"create . -o mylib/*:shared=False {fpic_option} --test-folder=")
     assert "mylib target type: STATIC_LIBRARY" in t.out
     assert f"mylib position independent code: {fpic_cmake_value}" in t.out
 
@@ -1178,7 +1127,8 @@ def test_cmake_toolchain_vars_when_option_declared():
 
 
 @pytest.mark.tool("cmake")
-def test_find_program_for_tool_requires():
+@pytest.mark.parametrize("single_profile", [True, False])
+def test_find_program_for_tool_requires(single_profile):
     """Test that the same reference can be both a tool_requires and a regular requires,
     and that find_program (executables) and find_package (libraries) find the correct ones
     when cross building.
@@ -1250,7 +1200,7 @@ def test_find_program_for_tool_requires():
                 self.requires("foobar/1.0")
 
             def build_requirements(self):
-                self.tool_requires("foobar/1.0")
+               self.tool_requires("foobar/1.0")
     """)
 
     cmakelists_consumer = textwrap.dedent("""
@@ -1260,6 +1210,9 @@ def test_find_program_for_tool_requires():
         find_program(FOOBIN_EXECUTABLE foobin)
         message("foobin executable: ${FOOBIN_EXECUTABLE}")
         message("foobar include dir: ${foobar_INCLUDE_DIR}")
+        if(NOT FOOBIN_EXECUTABLE)
+          message(FATAL_ERROR "FOOBIN executable not found")
+        endif()
     """)
 
     client.save({
@@ -1267,6 +1220,7 @@ def test_find_program_for_tool_requires():
         "CMakeLists.txt": cmakelists_consumer,
         "host_profile": host_profile,
         "build_profile": build_profile}, clean_first=True)
+
     client.run("install conanfile_consumer.py -g CMakeToolchain -g CMakeDeps -pr:b build_profile -pr:h host_profile")
 
     with client.chdir("build"):
@@ -1331,3 +1285,33 @@ def test_cmaketoolchain_and_pkg_config_path():
     client.run("create dep/conanfile.py")
     client.run("create pkg/conanfile.py")
     assert "Found dep, version 1.0" in client.out
+
+
+def test_cmaketoolchain_conf_from_tool_require():
+    # https://github.com/conan-io/conan/issues/13914
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Conan(ConanFile):
+            name = "toolchain"
+            version = "1.0"
+
+            def package_info(self):
+                self.conf_info.define("tools.cmake.cmaketoolchain:system_name", "GENERIC-POTATO")
+                self.conf_info.define("tools.cmake.cmaketoolchain:system_processor", "ARM-POTATO")
+                self.conf_info.define("tools.build.cross_building:can_run", False)
+                self.conf_info.define("tools.build:compiler_executables", {
+                    "c": "arm-none-eabi-gcc",
+                    "cpp": "arm-none-eabi-g++",
+                    "asm": "arm-none-eabi-as",
+                })
+        """)
+    c.save({"conanfile.py": conanfile,
+            "test_package/conanfile.py": GenConanfile().with_test("pass")
+                                                       .with_tool_requires("toolchain/1.0")
+                                                       .with_generator("CMakeToolchain")})
+    c.run("create .")
+    toolchain = c.load("test_package/conan_toolchain.cmake")
+    assert "set(CMAKE_SYSTEM_NAME GENERIC-POTATO)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR ARM-POTATO)" in toolchain

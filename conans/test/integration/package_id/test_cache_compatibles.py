@@ -219,12 +219,12 @@ class TestDefaultCompat:
         client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Build")})
         # Just check that it works and doesn't fail
-        assert "Installing (downloading, building) binaries" in client.out
+        assert "Installing packages" in client.out
         client.run("create . -s compiler.cppstd=14 --build missing")
         # Now it will not build, as package exist
         client.assert_listed_binary({"sum/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Cache")})
-        assert "Installing (downloading, building) binaries" in client.out
+        assert "Installing packages" in client.out
 
     def test_check_min_cppstd(self):
         """ test that the check_min_cppstd works fine wiht compatibility, as it is based
@@ -304,3 +304,35 @@ class TestDefaultCompat:
         c.assert_listed_binary({"pkg/0.1": ("145f423d315bee340546093be5b333ef5238668e", "Build")})
         c.run(f"create . {settings} -s compiler.cppstd=17")
         c.assert_listed_binary({"pkg/0.1": ("00fcbc3b6ab76a68f15e7e750e8081d57a6f5812", "Build")})
+
+
+class TestErrorsCompatibility:
+    """ when the plugin fails, we want a clear message and a helpful trace
+    """
+    def test_error_compatibility(self):
+        c = TestClient()
+        debug_compat = textwrap.dedent("""\
+            def debug_compat(conanfile):
+                other(conanfile)
+
+            def other(conanfile):
+                conanfile.settings.os
+            """)
+        compatibles = textwrap.dedent("""\
+            from debug_compat import debug_compat
+            def compatibility(conanfile):
+                return debug_compat(conanfile)
+            """)
+        compatible_folder = os.path.join(c.cache.plugins_path, "compatibility")
+        save(os.path.join(compatible_folder, "compatibility.py"), compatibles)
+        save(os.path.join(compatible_folder, "debug_compat.py"), debug_compat)
+
+        conanfile = GenConanfile("dep", "0.1")
+        c.save({"dep/conanfile.py": conanfile,
+                "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+
+        c.run(f"export dep")
+        c.run(f"install consumer", assert_error=True)
+        assert "Error while processing 'compatibility.py' plugin for 'dep/0.1', line 3" in c.out
+        assert "while calling 'debug_compat', line 2" in c.out
+        assert "while calling 'other', line 5" in c.out

@@ -1,22 +1,21 @@
 import json
 import os
-
-from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.printers.graph import print_graph_packages
-from conan.internal.deploy import do_deploys
+from conan.api.output import ConanOutput, cli_out_write, Color
+from conan.cli import make_abs_path
+from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
-from conan.cli.commands import make_abs_path
-from conan.cli.args import common_graph_args
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
+from conan.cli.printers.graph import print_graph_packages, print_graph_basic
+from conan.internal.deploy import do_deploys
 from conans.client.graph.install_graph import InstallGraph
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @conan_command(group="Consumer")
 def graph(conan_api, parser, *args):
     """
-    Computes a dependency graph, without  installing or building the binaries
+    Compute a dependency graph, without installing or building the binaries.
     """
 
 
@@ -36,7 +35,7 @@ def json_build_order(build_order):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order(conan_api, parser, subparser, *args):
     """
-    Computes the build order of a dependency graph
+    Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
     args = parser.parse_args(*args)
@@ -51,10 +50,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -66,6 +67,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.build, args.update)
+    print_graph_basic(deps_graph)
+    deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
@@ -77,8 +80,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
-    conanfile_path = os.path.dirname(deps_graph.root.path) if deps_graph.root.path else os.getcwd()
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, conanfile_path)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
     return install_order_serialized
 
@@ -86,7 +88,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters={"text": cli_build_order, "json": json_build_order})
 def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
-    Merges more than 1 build-order file
+    Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
     args = parser.parse_args(*args)
@@ -107,24 +109,25 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
                               "dot": format_graph_dot})
 def graph_info(conan_api, parser, subparser, *args):
     """
-    Computes the dependency graph and shows information about it
+    Compute the dependency graph and show information about it.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--check-updates", default=False, action="store_true")
+    subparser.add_argument("--check-updates", default=False, action="store_true",
+                           help="Check if there are recipe updates")
     subparser.add_argument("--filter", action="append",
                            help="Show only the specified fields")
     subparser.add_argument("--package-filter", action="append",
                            help='Print information only for packages that match the patterns')
-    subparser.add_argument("--deploy", action="append",
+    subparser.add_argument("-d", "--deployer", action="append",
                            help='Deploy using the provided deployer to the output folder')
+    subparser.add_argument("-df", "--deployer-folder",
+                           help="Deployer output folder, base build folder by default if not set")
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
     # parameter validation
-    if args.requires and (args.name or args.version or args.user or args.channel):
-        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--requires")
-    if not args.path and not args.requires and not args.tool_requires:
-        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
+    validate_common_graph_args(args)
     if args.format in ("html", "dot") and args.filter:
         raise ConanException(f"Formatted output '{args.format}' cannot filter fields")
 
@@ -133,10 +136,12 @@ def graph_info(conan_api, parser, subparser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -144,25 +149,31 @@ def graph_info(conan_api, parser, subparser, *args):
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         allow_error=True,
-                                                         check_updates=args.check_updates)
+                                                         check_updates=args.check_updates,
+                                                         is_build_require=args.build_require)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         allow_error=True,
                                                          check_updates=args.check_updates)
-    if not deps_graph.error:
+    print_graph_basic(deps_graph)
+    if deps_graph.error:
+        ConanOutput().info("Graph error", Color.BRIGHT_RED)
+        ConanOutput().info("    {}".format(deps_graph.error), Color.BRIGHT_RED)
+    else:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                          lockfile=lockfile)
         print_graph_packages(deps_graph)
 
+        conan_api.install.install_system_requires(deps_graph, only_info=True)
+        conan_api.install.install_sources(deps_graph, remotes=remotes)
+
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
-        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
-        if args.deploy:
-            base_folder = os.getcwd()
-            do_deploys(conan_api, deps_graph, args.deploy, base_folder)
+        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+        if args.deployer:
+            base_folder = args.deployer_folder or os.getcwd()
+            do_deploys(conan_api, deps_graph, args.deployer, base_folder)
 
     return {"graph": deps_graph,
             "field_filter": args.filter,

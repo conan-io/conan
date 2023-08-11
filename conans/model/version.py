@@ -70,6 +70,7 @@ class Version:
         else:
             value = items[0]
             self._pre = None
+
         items = value.split(".")
         items = [_VersionItem(item) for item in items]
         self._items = tuple(items)
@@ -79,10 +80,14 @@ class Version:
 
     def bump(self, index):
         """
-           Increments by 1 the version field at the specified index, setting to 0 the fields
+        :meta private:
+            Bump the version
+            Increments by 1 the version field at the specified index, setting to 0 the fields
             on the right.
-           2.5 => bump(1) => 2.6
-           1.5.7 => bump(0) => 2.0.0
+            2.5 => bump(1) => 2.6
+            1.5.7 => bump(0) => 2.0.0
+
+        :param index:
         """
         # this method is used to compute version ranges from tilde ~1.2 and caret ^1.2.1 ranges
         # TODO: at this moment it only works for digits, cannot increment pre-release or builds
@@ -95,8 +100,7 @@ class Version:
         items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         # prerelease and build are dropped while bumping digits
-        result = Version(v)
-        return result
+        return Version(v)
 
     def upper_bound(self, index):
         items = list(self._items[:index])
@@ -107,8 +111,7 @@ class Version:
         items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         v += "-"  # Exclude prereleases
-        result = Version(v)
-        return result
+        return Version(v)
 
     @property
     def pre(self):
@@ -159,7 +162,7 @@ class Version:
     def __eq__(self, other):
         if other is None:
             return False
-        if isinstance(other, str):
+        if not isinstance(other, Version):
             other = Version(other)
 
         return (self._nonzero_items, self._pre, self._build) ==\

@@ -1,23 +1,18 @@
-import json
 import os
 
-from conan.api.output import ConanOutput, cli_out_write
-from conan.cli.args import common_graph_args
+from conan.api.output import ConanOutput
+from conan.cli import make_abs_path
+from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
-from conan.cli.commands import make_abs_path
-from conan.cli.printers.graph import print_graph_packages
-from conans.errors import ConanException
+from conan.cli.formatters.graph import format_graph_json
+from conan.cli.printers import print_profiles
+from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 
 
-def json_install(info):
-    deps_graph = info
-    cli_out_write(json.dumps({"graph": deps_graph.serialize()}, indent=4))
-
-
-@conan_command(group="Consumer", formatters={"json": json_install})
+@conan_command(group="Consumer", formatters={"json": format_graph_json})
 def install(conan_api, parser, *args):
     """
-    Installs the requirements specified in a recipe (conanfile.py or conanfile.txt).
+    Install the requirements specified in a recipe (conanfile.py or conanfile.txt).
 
     It can also be used to install a concrete package specifying a
     reference. If any requirement is not found in the local cache, it will
@@ -34,19 +29,15 @@ def install(conan_api, parser, *args):
                         help='Generators to use')
     parser.add_argument("-of", "--output-folder",
                         help='The root output folder for generated and build files')
-    parser.add_argument("--deploy", action="append",
+    parser.add_argument("-d", "--deployer", action="append",
                         help='Deploy using the provided deployer to the output folder')
+    parser.add_argument("--deployer-folder",
+                        help="Deployer output folder, base build folder by default if not set")
+    parser.add_argument("--build-require", action='store_true', default=False,
+                        help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
-    # parameter validation
-    if args.requires and (args.name or args.version or args.user or args.channel):
-        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--requires")
-    if not args.path and not args.requires and not args.tool_requires:
-        raise ConanException("Please specify at least a path to a conanfile or a valid reference.")
-    if args.path and (args.requires or args.tool_requires):
-        raise ConanException("--requires and --tool-requires arguments are incompatible with "
-                             f"[path] '{args.path}' argument")
+    validate_common_graph_args(args)
     cwd = os.getcwd()
 
     if args.path:
@@ -62,37 +53,46 @@ def install(conan_api, parser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
-                                                         remotes, args.update)
+                                                         remotes, args.update,
+                                                         is_build_require=args.build_require)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update)
+    print_graph_basic(deps_graph)
+    deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
 
     out = ConanOutput()
-    out.title("Installing packages")
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes, update=args.update)
+    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     out.title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph=deps_graph,
                                        generators=args.generator,
                                        output_folder=output_folder,
                                        source_folder=source_folder,
-                                       deploy=args.deploy
+                                       deploy=args.deployer,
+                                       deploy_folder=args.deployer_folder
                                        )
 
+    out.success("Install finished successfully")
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return deps_graph
+    return {"graph": deps_graph,
+            "conan_api": conan_api}
+

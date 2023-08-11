@@ -12,7 +12,6 @@ from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run, check_vs_runtime
 from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import touch
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
@@ -112,7 +111,7 @@ def build_windows_subsystem(profile, make_program, subsystem):
                                              includes=["hello"], calls=["hello"])})
     # Make sure it is newer
     t = time.time() + 1
-    touch(os.path.join(client.current_folder, "app.cpp"), (t, t))
+    os.utime(os.path.join(client.current_folder, "app.cpp"), (t, t))
 
     client.run("build . --profile=profile")
     client.run_command("app")
@@ -293,7 +292,7 @@ def test_autotools_option_checking():
             """)
 
     client.save({"test_package/conanfile.py": conanfile})
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     # check that the shared flags are not added to the exe's configure, making it fail
     client.run("test test_package mylib/1.0@")
@@ -325,7 +324,7 @@ def test_autotools_arguments_override():
 
             def config_options(self):
                 if self.settings.os == "Windows":
-                    del self.options.fPIC
+                    self.options.rm_safe("fPIC")
 
             def layout(self):
                 basic_layout(self)
@@ -354,17 +353,13 @@ def test_autotools_arguments_override():
                 self.cpp_info.libdirs = ["somefolder/customlibfolder"]
                 self.cpp_info.includedirs = ["somefolder/customincludefolder"]
         """)
-    #client.run("config set log.print_run_commands=1")
+
     client.save({"conanfile.py": conanfile})
-    client.run("create . -tf=None")
+    client.run("create . -tf=\"\"")
 
     # autoreconf args --force that is default should not be there
     assert "--force" not in client.out
     assert "--install" in client.out
-
-    package_id = client.created_package_id("mylib/1.0")
-    ref = RecipeReference.loads("mylib/1.0")
-    pref = client.get_latest_package_reference(ref, package_id)
 
     # we override the default DESTDIR in the install
     assert re.search("^.*make install .*DESTDIR=(.*)/somefolder.*$", str(client.out), re.MULTILINE)

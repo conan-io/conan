@@ -10,14 +10,8 @@ from conans.util.files import load
 class DownloadTest(unittest.TestCase):
 
     def test_download_with_sources(self):
-        client = TestClient(servers={"default": TestServer()}, inputs=["admin", "password"])
-        conanfile = """from conan import ConanFile
-class Pkg(ConanFile):
-    name = "pkg"
-    version = "0.1"
-    exports_sources = "*"
-"""
-        client.save({"conanfile.py": conanfile,
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports_sources("*"),
                      "file.h": "myfile.h",
                      "otherfile.cpp": "C++code"})
         client.run("export . --user=lasote --channel=stable")
@@ -27,7 +21,7 @@ class Pkg(ConanFile):
         client.run("remove pkg/0.1@lasote/stable -c")
 
         client.run("download pkg/0.1@lasote/stable -r default")
-        self.assertIn("Downloading conan_sources.tgz", client.out)
+        self.assertIn("Downloading 'pkg/0.1@lasote/stable' sources", client.out)
         source = client.get_latest_ref_layout(ref).export_sources()
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))
@@ -51,8 +45,12 @@ class Pkg(ConanFile):
                       NO_SETTINGS_PACKAGE_ID, client.out)
 
     def test_download_with_python_requires(self):
-        """ when having a python_require in a different repo, it cannot be ``conan download``
-        as the download runs from a single repo. This test captures the failures
+        """ In the past,
+        when having a python_require in a different repo, it cannot be ``conan download``
+        as the download runs from a single repo.
+
+        Now, from https://github.com/conan-io/conan/issues/14260, "conan download" doesn't
+        really need to load conanfile, so it doesn't fail because of this.
         """
         # https://github.com/conan-io/conan/issues/9548
         servers = OrderedDict([("tools", TestServer()),
@@ -71,13 +69,5 @@ class Pkg(ConanFile):
         self.assertIn("Downloading", c.out)
         c.run("remove * -c")
 
-        # This fails, as it won't allow 2 remotes
-        c.run("download pkg/0.1 -r pkgs -r tools", assert_error=True)
-        self.assertIn("-r can only be specified once", c.out)
-        # This fails, because the python_requires is not in the "pkgs" repo
-        c.run("download pkg/0.1 -r pkgs", assert_error=True)
-        self.assertIn("Unable to find 'tool/0.1' in remotes", c.out)
-        # solution, install first the python_requires
-        c.run("download tool/0.1 -r tools")
         c.run("download pkg/0.1 -r pkgs")
-        # it doesn't fail anymore
+        assert "pkg/0.1: Downloaded package revision" in c.out

@@ -2,7 +2,7 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
-from conan.tools.meson.mesondeps import MesonDeps
+from conan.errors import ConanException
 
 
 class Meson(object):
@@ -31,7 +31,6 @@ class Meson(object):
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
-        deps_flags = os.path.join(generators_folder, MesonDeps.filename)  # extra machine files layer
         meson_filenames = []
         if os.path.exists(cross):
             cmd_param = " --cross-file"
@@ -39,9 +38,6 @@ class Meson(object):
         else:
             cmd_param = " --native-file"
             meson_filenames.append(native)
-
-        if os.path.exists(deps_flags):
-            meson_filenames.append(deps_flags)
 
         machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
                                                  default=[], check_type=list)
@@ -51,7 +47,7 @@ class Meson(object):
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         if self._conanfile.package_folder:
-            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
+            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
         if reconfigure:
             cmd += ' --reconfigure'
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
@@ -72,6 +68,9 @@ class Meson(object):
             cmd += " -j{}".format(njobs)
         if target:
             cmd += " {}".format(target)
+        verbosity = self._build_verbosity
+        if verbosity:
+            cmd += " " + verbosity
         self._conanfile.output.info("Meson build cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -83,6 +82,9 @@ class Meson(object):
         self.configure(reconfigure=True)  # To re-do the destination package-folder
         meson_build_folder = self._conanfile.build_folder
         cmd = 'meson install -C "{}"'.format(meson_build_folder)
+        verbosity = self._install_verbosity
+        if verbosity:
+            cmd += " " + verbosity
         self._conanfile.run(cmd)
 
     def test(self):
@@ -96,3 +98,19 @@ class Meson(object):
         # TODO: Do we need vcvars for test?
         # TODO: This should use conanrunenv, but what if meson itself is a build-require?
         self._conanfile.run(cmd)
+
+    @property
+    def _build_verbosity(self):
+        # verbosity of build tools. This passes -v to ninja, for example.
+        # See https://github.com/mesonbuild/meson/blob/master/mesonbuild/mcompile.py#L156
+        verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                             choices=("quiet", "verbose"))
+        return "--verbose" if verbosity == "verbose" else ""
+
+    @property
+    def _install_verbosity(self):
+        # https://github.com/mesonbuild/meson/blob/master/mesonbuild/minstall.py#L81
+        # Errors are always logged, and status about installed files is controlled by this flag,
+        # so it's a bit backwards
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        return "--quiet" if verbosity else ""

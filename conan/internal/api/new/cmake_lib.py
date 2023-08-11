@@ -5,6 +5,7 @@ from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "library"
 
     # Optional metadata
     license = "<Put the package license here>"
@@ -23,7 +24,11 @@ class {{package_name}}Recipe(ConanFile):
 
     def config_options(self):
         if self.settings.os == "Windows":
-            del self.options.fPIC
+            self.options.rm_safe("fPIC")
+
+    def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
 
     def layout(self):
         cmake_layout(self)
@@ -48,17 +53,25 @@ class {{package_name}}Recipe(ConanFile):
 
     {% if requires is defined -%}
     def requirements(self):
-        {% for require in as_iterable(requires) -%}
+        {% for require in requires -%}
         self.requires("{{ require }}")
         {% endfor %}
     {%- endif %}
+
+    {% if tool_requires is defined -%}
+    def build_requirements(self):
+        {% for require in tool_requires -%}
+        self.tool_requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+
 '''
 
 cmake_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 find_package({{as_name(require)}} CONFIG REQUIRED)
 {% endfor %}
 {%- endif %}
@@ -68,7 +81,7 @@ add_library({{name}} src/{{name}}.cpp)
 target_include_directories({{name}} PUBLIC include)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 target_link_libraries({{name}} PRIVATE {{as_name(require)}}::{{as_name(require)}})
 {% endfor %}
 {%- endif %}
@@ -79,6 +92,9 @@ install(TARGETS {{name}})
 
 source_h = """#pragma once
 
+#include <vector>
+#include <string>
+
 {% set define_name = package_name.upper() %}
 #ifdef _WIN32
   #define {{define_name}}_EXPORT __declspec(dllexport)
@@ -87,12 +103,13 @@ source_h = """#pragma once
 #endif
 
 {{define_name}}_EXPORT void {{package_name}}();
+{{define_name}}_EXPORT void {{package_name}}_print_vector(const std::vector<std::string> &strings);
 """
 
 source_cpp = r"""#include <iostream>
 #include "{{name}}.h"
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 #include "{{ as_name(require) }}.h"
 {% endfor %}
 {%- endif %}
@@ -100,7 +117,7 @@ source_cpp = r"""#include <iostream>
 
 void {{package_name}}(){
     {% if requires is defined -%}
-    {% for require in as_iterable(requires) -%}
+    {% for require in requires -%}
     {{ as_name(require) }}();
     {% endfor %}
     {%- endif %}
@@ -139,6 +156,21 @@ void {{package_name}}(){
     // Libstdc++
     #if defined _GLIBCXX_USE_CXX11_ABI
     std::cout << "  {{name}}/{{version}}: _GLIBCXX_USE_CXX11_ABI "<< _GLIBCXX_USE_CXX11_ABI << "\n";
+    #endif
+
+    // MSVC runtime
+    #if defined(_DEBUG)
+        #if defined(_MT) && defined(_DLL)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreadedDebugDLL\n";
+        #elif defined(_MT)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreadedDebug\n";
+        #endif
+    #else
+        #if defined(_MT) && defined(_DLL)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreadedDLL\n";
+        #elif defined(_MT)
+        std::cout << "  {{name}}/{{version}}: MSVC runtime: MultiThreaded\n";
+        #endif
     #endif
 
     // COMPILER VERSIONS
@@ -196,6 +228,12 @@ void {{package_name}}(){
     std::cout << "  {{name}}/{{version}}: __CYGWIN__" << __CYGWIN__<< "\n";
     #endif
 }
+
+void {{package_name}}_print_vector(const std::vector<std::string> &strings) {
+    for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
+        std::cout << "{{package_name}}/{{version}} " << *it << std::endl;
+    }
+}
 """
 
 
@@ -233,7 +271,7 @@ project(PackageTest CXX)
 find_package({{name}} CONFIG REQUIRED)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 find_package({{as_name(require)}} CONFIG REQUIRED)
 {% endfor %}
 {%- endif %}
@@ -244,9 +282,16 @@ target_link_libraries(example {{name}}::{{name}})
 
 
 test_main = """#include "{{name}}.h"
+#include <vector>
+#include <string>
 
 int main() {
     {{package_name}}();
+
+    std::vector<std::string> vec;
+    vec.push_back("test_package");
+
+    {{package_name}}_print_vector(vec);
 }
 """
 

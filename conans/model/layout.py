@@ -43,6 +43,9 @@ class Folders(object):
         self._base_export = None
         self._base_export_sources = None
 
+        self._base_recipe_metadata = None
+        self._base_pkg_metadata = None
+
         self.source = ""
         self.build = ""
         self.package = ""
@@ -50,11 +53,11 @@ class Folders(object):
         # Relative location of the project root, if the conanfile is not in that project root, but
         # in a subfolder: e.g: If the conanfile is in a subfolder then self.root = ".."
         self.root = None
-        self.test_output = "test_output"
         # The relative location with respect to the project root of the subproject containing the
         # conanfile.py, that makes most of the output folders defined in layouts (cmake_layout, etc)
         # start from the subproject again
         self.subproject = None
+        self.build_folder_vars = None
 
     def __repr__(self):
         return str(self.__dict__)
@@ -78,6 +81,8 @@ class Folders(object):
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_export_sources = output_folder or base_folder
+        self._base_recipe_metadata = base_folder
+        self._base_pkg_metadata = output_folder or base_folder
 
     @property
     def source_folder(self):
@@ -86,7 +91,7 @@ class Folders(object):
         if not self.source:
             return self._base_source
 
-        return os.path.join(self._base_source, self.source)
+        return os.path.normpath(os.path.join(self._base_source, self.source))
 
     @property
     def base_source(self):
@@ -101,7 +106,21 @@ class Folders(object):
             return None
         if not self.build:
             return self._base_build
-        return os.path.join(self._base_build, self.build)
+        return os.path.normpath(os.path.join(self._base_build, self.build))
+
+    @property
+    def recipe_metadata_folder(self):
+        return self._base_recipe_metadata
+
+    def set_base_recipe_metadata(self, folder):
+        self._base_recipe_metadata = folder
+
+    @property
+    def package_metadata_folder(self):
+        return self._base_pkg_metadata
+
+    def set_base_pkg_metadata(self, folder):
+        self._base_pkg_metadata = folder
 
     @property
     def base_build(self):
@@ -128,7 +147,7 @@ class Folders(object):
             return None
         if not self.generators:
             return self._base_generators
-        return os.path.join(self._base_generators, self.generators)
+        return os.path.normpath(os.path.join(self._base_generators, self.generators))
 
     def set_base_generators(self, folder):
         self._base_generators = folder

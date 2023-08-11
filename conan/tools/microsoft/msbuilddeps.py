@@ -7,7 +7,7 @@ from xml.dom import minidom
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 
@@ -197,7 +197,6 @@ class MSBuildDeps(object):
         if require and not require.libs:
             lib_dirs = ""
             libs = ""
-            system_libs = ""
         if require and not require.libs and not require.headers:
             definitions = ""
             compiler_flags = ""
@@ -320,8 +319,6 @@ class MSBuildDeps(object):
         if dep.cpp_info.has_components:
             pkg_aggregated_content = None
             for comp_name, comp_info in dep.cpp_info.components.items():
-                if comp_name is None:
-                    continue
                 full_comp_name = "{}_{}".format(dep_name, self._get_valid_xml_format(comp_name))
                 vars_filename = "conan_%s_vars%s.props" % (full_comp_name, conf_name)
                 activate_filename = "conan_%s%s.props" % (full_comp_name, conf_name)
@@ -329,12 +326,12 @@ class MSBuildDeps(object):
                 pkg_filename = "conan_%s.props" % dep_name
 
                 public_deps = []  # To store the xml dependencies/file names
-                for r in comp_info.requires:
-                    if "::" in r:  # Points to a component of a different package
-                        pkg, cmp_name = r.split("::")
-                        public_deps.append(pkg if pkg == cmp_name else "{}_{}".format(pkg, cmp_name))
+                for required_pkg, required_comp in comp_info.parsed_requires():
+                    if required_pkg is not None:  # Points to a component of a different package
+                        public_deps.append(required_pkg if required_pkg == required_comp
+                                           else "{}_{}".format(required_pkg, required_comp))
                     else:  # Points to a component of same package
-                        public_deps.append("{}_{}".format(dep_name, r))
+                        public_deps.append("{}_{}".format(dep_name, required_comp))
                 public_deps = [self._get_valid_xml_format(d) for d in public_deps]
                 result[vars_filename] = self._vars_props_file(require, dep, full_comp_name,
                                                               comp_info, build=build)

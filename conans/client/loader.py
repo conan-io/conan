@@ -238,15 +238,15 @@ class ConanFileLoader:
         try:
             conanfile.options = Options.loads(parser.options)
         except Exception:
-            raise ConanException("Error while parsing [options] in conanfile\n"
-                                 "Options should be specified as 'pkg:option=value'")
+            raise ConanException("Error while parsing [options] in conanfile.txt\n"
+                                 "Options should be specified as 'pkg/*:option=value'")
 
         return conanfile
 
     def load_virtual(self, requires=None, tool_requires=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(display_name="virtual")
+        conanfile = ConanFile(display_name="cli")
 
         if tool_requires:
             for reference in tool_requires:

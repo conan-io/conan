@@ -3,8 +3,9 @@ import textwrap
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conans.client.generators import relativize_generated_file
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
 
@@ -46,19 +47,25 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
-    if bool(bats) + bool(shs) + bool(ps1s) > 1:
+    if bool(bats + ps1s) + bool(shs) > 1:
         raise ConanException("Cannot wrap command with different envs,"
-                             " {} - {} - {}".format(bats, shs, ps1s))
+                             "{} - {}".format(bats+ps1s, shs))
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
-        return '{} && {}'.format(launchers, cmd)
+        if ps1s:
+            ps1_launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
+            cmd = cmd.replace('"', "'")
+            return '{} && powershell.exe {} ; cmd /c {}'.format(launchers, ps1_launchers, cmd)
+        else:
+            return '{} && {}'.format(launchers, cmd)
     elif shs:
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
         launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
+        cmd = cmd.replace('"', "'")
         return 'powershell.exe {} ; cmd /c {}'.format(launchers, cmd)
     else:
         return cmd
@@ -404,6 +411,7 @@ class EnvVars:
             """).format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys()))
         capture = textwrap.dedent("""\
             @echo off
+            chcp 65001 > nul
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
@@ -412,7 +420,10 @@ class EnvVars:
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
-        save(file_location, content)
+        content = relativize_generated_file(content, self._conanfile, "%~dp0")
+        # It is very important to save it correctly with utf-8, the Conan util save() is broken
+        os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
+        open(file_location, "w", encoding="utf-8").write(content)
 
     def save_ps1(self, file_location, generate_deactivate=True,):
         _, filename = os.path.split(file_location)
@@ -454,7 +465,10 @@ class EnvVars:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
-        save(file_location, content)
+        # It is very important to save it correctly with utf-16, the Conan util save() is broken
+        # and powershell uses utf-16 files!!!
+        os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
+        open(file_location, "w", encoding="utf-16").write(content)
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
@@ -483,6 +497,8 @@ class EnvVars:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "$script_folder")
+        content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
     def save_script(self, filename):

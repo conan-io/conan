@@ -34,6 +34,8 @@ class InstallMissingDependency(unittest.TestCase):
                                               .with_require("dep2/1.0@lasote/testing")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --user=lasote --channel=testing", assert_error=True)
+        client.assert_overrides({"dep1/1.0@lasote/testing":
+                                ['dep1/2.0@lasote/testing']})
 
         self.assertIn("Can't find a 'dep2/1.0@lasote/testing' package", client.out)
         self.assertIn("dep1/2.Y.Z", client.out)
@@ -50,4 +52,4 @@ class InstallMissingDependency(unittest.TestCase):
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --name=pkg --version=1.0", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'dep1/1.0', 'dep2/1.0'", client.out)
-        self.assertIn("Or try to build locally from sources with '--build=dep1/1.0 --build=dep2/1.0'", client.out)
+        self.assertIn("or try to build locally from sources using the '--build=dep1/1.0 --build=dep2/1.0'", client.out)

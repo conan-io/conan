@@ -4,13 +4,14 @@ import textwrap
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag
+from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
+    apple_sdk_path
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save
 
 
@@ -31,11 +32,6 @@ class MesonToolchain(object):
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
-    # Constants to be overridden by conan_meson_deps_flags.ini (if exists)
-    deps_c_args = []
-    deps_c_link_args = []
-    deps_cpp_args = []
-    deps_cpp_link_args = []
 
     [project options]
     {% for it, value in project_options.items() -%}
@@ -68,16 +64,16 @@ class MesonToolchain(object):
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
     # C/C++ arguments
-    c_args = {{c_args}} + preprocessor_definitions + deps_c_args
-    c_link_args = {{c_link_args}} + deps_c_link_args
-    cpp_args = {{cpp_args}} + preprocessor_definitions + deps_cpp_args
-    cpp_link_args = {{cpp_link_args}} + deps_cpp_link_args
+    c_args = {{c_args}} + preprocessor_definitions
+    c_link_args = {{c_link_args}}
+    cpp_args = {{cpp_args}} + preprocessor_definitions
+    cpp_link_args = {{cpp_link_args}}
     {% if is_apple_system %}
     # Objective-C/C++ arguments
-    objc_args = {{objc_args}} + preprocessor_definitions + deps_c_args
-    objc_link_args = {{objc_link_args}} + deps_c_link_args
-    objcpp_args = {{objcpp_args}} + preprocessor_definitions + deps_cpp_args
-    objcpp_link_args = {{objcpp_link_args}} + deps_cpp_link_args
+    objc_args = {{objc_args}} + preprocessor_definitions
+    objc_link_args = {{objc_link_args}}
+    objcpp_args = {{objcpp_args}} + preprocessor_definitions
+    objcpp_link_args = {{objcpp_link_args}}
     {% endif %}
 
     {% for context, values in cross_build.items() %}
@@ -121,8 +117,12 @@ class MesonToolchain(object):
         compiler = self._conanfile.settings.get_safe("compiler")
         if compiler is None:
             raise ConanException("MesonToolchain needs 'settings.compiler', but it is not defined")
+        compiler_version = self._conanfile.settings.get_safe("compiler.version")
+        if compiler_version is None:
+            raise ConanException("MesonToolchain needs 'settings.compiler.version', but it is not defined")
+
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        self._cpp_std = to_cppstd_flag(compiler, cppstd)
+        self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
 
         if compiler == "msvc":
             vscrt = msvc_runtime_flag(self._conanfile)
@@ -166,21 +166,25 @@ class MesonToolchain(object):
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
         else:
-            if "Visual" in compiler or compiler == "msvc":
-                default_comp = "cl"
-                default_comp_cpp = "cl"
-            elif "clang" in compiler:
+            if "clang" in compiler:
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+        if "Visual" in compiler or compiler == "msvc":
+            default_comp = "cl"
+            default_comp_cpp = "cl"
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
+        # FIXME: This VirtualBuildEnv instance is breaking things!!
+        # FIXME: It shouldn't be used here, not intended for this use case
+        prev_status = self._conanfile.virtualbuildenv
         build_env = VirtualBuildEnv(self._conanfile).vars()
+        self._conanfile.virtualbuildenv = prev_status
         #: Defines the Meson ``c`` variable. Defaulted to ``CC`` build environment value
         self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
         #: Defines the Meson ``cpp`` variable. Defaulted to ``CXX`` build environment value
@@ -249,9 +253,6 @@ class MesonToolchain(object):
             elements = getattr(self._conanfile.cpp.package, name)
             return elements[0] if elements else None
 
-        if not self._conanfile.package_folder:
-            return {}
-
         ret = {}
         bindir = _get_cpp_info_value("bindirs")
         datadir = _get_cpp_info_value("resdirs")
@@ -280,9 +281,12 @@ class MesonToolchain(object):
         if not self._is_apple_system:
             return
         # SDK path is mandatory for cross-building
-        sdk_path = self._conanfile.conf.get("tools.apple:sdk_path")
+        sdk_path = apple_sdk_path(self._conanfile)
         if not sdk_path and self.cross_build:
-            raise ConanException("You must provide a valid SDK path for cross-compilation.")
+            raise ConanException(
+                "Apple SDK path not found. For cross-compilation, you must "
+                "provide a valid SDK path in 'tools.apple:sdk_path' config."
+            )
 
         # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
         os_sdk = self._conanfile.settings.get_safe('os.sdk')

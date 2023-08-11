@@ -7,7 +7,7 @@ os:
     WindowsStore:
         version: ["8.1", "10.0"]
     WindowsCE:
-        platform: ANY
+        platform: [ANY]
         version: ["5.0", "6.0", "7.0", "8.0"]
     Linux:
     iOS:
@@ -36,7 +36,7 @@ os:
                         "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2", "15.4", "16.0", "16.1"]
     Macos:
         version: [null, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
-        sdk_version: [null, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3", "13.0"]
+        sdk_version: [null, "10.13", "10.14", "10.15", "11.0", "11.1", "11.3", "12.0", "12.1", "12.3", "13.0", "13.1"]
         subsystem:
             null:
             catalyst:
@@ -55,7 +55,7 @@ os:
     VxWorks:
         version: ["7"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64,
-       armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3,
+       armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, arm64ec,
        sparc, sparcv9,
        mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le,
        e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7,
@@ -70,11 +70,12 @@ compiler:
                     "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                     "6", "6.1", "6.2", "6.3", "6.4", "6.5",
                     "7", "7.1", "7.2", "7.3", "7.4", "7.5",
-                    "8", "8.1", "8.2", "8.3", "8.4",
-                    "9", "9.1", "9.2", "9.3", "9.4",
-                    "10", "10.1", "10.2", "10.3",
+                    "8", "8.1", "8.2", "8.3", "8.4", "8.5",
+                    "9", "9.1", "9.2", "9.3", "9.4", "9.5",
+                    "10", "10.1", "10.2", "10.3", "10.4", "10.5",
                     "11", "11.1", "11.2", "11.3",
-                    "12", "12.1", "12.2"]
+                    "12", "12.1", "12.2", "12.3",
+                    "13", "13.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [null, posix, win32]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW
@@ -96,7 +97,7 @@ compiler:
         runtime_type: [null, Debug, Release]
         runtime_version: [null, v140, v141, v142, v143]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0", "15"]
         libcxx: [libstdc++, libc++]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     intel-cc:
@@ -104,7 +105,7 @@ compiler:
         update: [null, ANY]
         mode: ["icx", "classic", "dpcpp"]
         libcxx: [null, libstdc++, libstdc++11, libc++]
-        cppstd: [null, 98, gnu98, 03, gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
+        cppstd: [null, 98, gnu98, "03", gnu03, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
     qcc:
@@ -128,4 +129,4 @@ def migrate_settings_file(cache):
     from conans.client.migrations import update_file
 
     settings_path = cache.settings_path
-    update_file(settings_path, get_default_settings_yml())
+    update_file(settings_path, default_settings_yml)

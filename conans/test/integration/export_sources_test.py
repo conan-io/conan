@@ -1,14 +1,9 @@
 import os
-import platform
 import textwrap
-
-import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import load, rmdir
+from conans.test.utils.tools import TestClient
 
 
 def test_exports():
@@ -74,48 +69,4 @@ def test_test_package_copied():
     client.save({"conanfile.py": conanfile,
                  "test_package/foo.txt": "bar"})
     client.run("export . --name foo --version 1.0")
-    assert "Copied 1 '.txt' file" in client.out
-
-
-@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
-def test_exports_does_not_follow_symlink():
-    def absolute_existing_folder():
-        tmp = temp_folder()
-        with open(os.path.join(tmp, "source.cpp"), "a") as _f:
-            _f.write("foo")
-        return tmp
-
-    linked_abs_folder = absolute_existing_folder()
-    client = TurboTestClient(default_server_user=True)
-    conanfile = GenConanfile()\
-        .with_package('copy(self, "*", self.source_folder, self.package_folder)')\
-        .with_exports_sources("*")\
-        .with_import("from conan.tools.files import copy")
-    client.save({"conanfile.py": conanfile, "foo.txt": "bar"})
-    os.symlink(linked_abs_folder, os.path.join(client.current_folder, "linked_folder"))
-    pref = client.create(RecipeReference.loads("lib/1.0"), conanfile=False)
-    exports_sources_folder = client.get_latest_ref_layout(pref.ref).export_sources()
-    assert os.path.islink(os.path.join(exports_sources_folder, "linked_folder"))
-    assert os.path.exists(os.path.join(exports_sources_folder, "linked_folder", "source.cpp"))
-
-    # Check files have been copied to the build
-    build_folder = client.get_latest_pkg_layout(pref).build()
-    assert os.path.islink(os.path.join(build_folder, "linked_folder"))
-    assert os.path.exists(os.path.join(build_folder, "linked_folder", "source.cpp"))
-
-    # Check package files are there
-    package_folder = client.get_latest_pkg_layout(pref).package()
-    assert os.path.islink(os.path.join(package_folder, "linked_folder"))
-    assert os.path.exists(os.path.join(package_folder, "linked_folder", "source.cpp"))
-
-    # Check that the manifest doesn't contain the symlink nor the source.cpp
-    contents = load(os.path.join(package_folder, "conanmanifest.txt"))
-    assert "foo.txt" in contents
-    assert "linked_folder" not in contents
-    assert "source.cpp" not in contents
-
-    # Now is a broken link, but the files are not in the cache, just a broken link
-    rmdir(linked_abs_folder)
-    assert not os.path.exists(os.path.join(exports_sources_folder, "linked_folder", "source.cpp"))
-    assert not os.path.exists(os.path.join(build_folder, "linked_folder", "source.cpp"))
-    assert not os.path.exists(os.path.join(package_folder, "linked_folder", "source.cpp"))
+    assert "Copied 2 '.txt' file" in client.out

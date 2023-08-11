@@ -9,8 +9,9 @@ from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
 from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetConfigurationTemplate
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
-from conans.errors import ConanException
-from conans.util.files import save
+from conan.tools.files import save
+from conans.client.generators import relativize_generated_file
+from conan.errors import ConanException
 
 
 class CMakeDeps(object):
@@ -41,7 +42,7 @@ class CMakeDeps(object):
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
-            save(generator_file, content)
+            save(self._conanfile, generator_file, content)
 
     @property
     def content(self):
@@ -94,7 +95,9 @@ class CMakeDeps(object):
             ret[config_version.filename] = config_version.render()
 
         data_target = ConfigDataTemplate(self, require, dep, find_module_mode)
-        ret[data_target.filename] = data_target.render()
+        data_content = relativize_generated_file(data_target.render(), self._conanfile,
+                                                 "${CMAKE_CURRENT_LIST_DIR}")
+        ret[data_target.filename] = data_content
 
         target_configuration = TargetConfigurationTemplate(self, require, dep, find_module_mode)
         ret[target_configuration.filename] = target_configuration.render()

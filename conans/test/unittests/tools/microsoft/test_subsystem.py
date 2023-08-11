@@ -11,7 +11,6 @@ expected_results = [
     ("msys", '/c/path/to/stuff'),
     ("cygwin", '/cygdrive/c/path/to/stuff'),
     ("wsl", '/mnt/c/path/to/stuff'),
-    ("sfu", '/dev/fs/C/path/to/stuff')
 ]
 
 

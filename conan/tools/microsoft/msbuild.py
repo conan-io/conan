@@ -1,12 +1,20 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    verbosity = conanfile.conf.get("tools.microsoft.msbuild:verbosity")
-    if verbosity:
-        if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
-            raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
-        return '/verbosity:{}'.format(verbosity)
+    """
+    Controls msbuild verbosity.
+    See https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-command-line-reference
+    :return:
+    """
+    verbosity = conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+    if verbosity is not None:
+        verbosity = {
+            "quiet": "Quiet",
+            "verbose": "Detailed",
+        }.get(verbosity)
+        return f'/verbosity:{verbosity}'
+    return ""
 
 
 def msbuild_arch(arch):
@@ -47,7 +55,7 @@ class MSBuild(object):
         :return: ``str`` msbuild command line.
         """
         # TODO: Enable output_binary_log via config
-        cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
+        cmd = ('msbuild "%s" /p:Configuration="%s" /p:Platform=%s'
                % (sln, self.build_type, self.platform))
 
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)

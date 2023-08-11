@@ -1,5 +1,4 @@
 import os
-import platform
 import unittest
 
 import pytest
@@ -81,7 +80,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans
         tmp_dir = temp_folder()
-        self.api.get_recipe(ref, tmp_dir)
+        self.api.get_recipe(ref, tmp_dir, metadata=None, only_metadata=False)
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
@@ -96,19 +95,18 @@ class RestApiTest(unittest.TestCase):
 
         # Get the package
         tmp_dir = temp_folder()
-        self.api.get_package(pref, tmp_dir)
-        self.assertIn("hello.cpp", os.listdir(tmp_dir))
+        self.api.get_package(pref, tmp_dir, metadata=None, only_metadata=False)
+        # The hello.cpp file is not downloaded!
+        self.assertNotIn("hello.cpp", os.listdir(tmp_dir))
 
-    @pytest.mark.skipif(platform.system() != "Linux", reason="only Linux")
     def test_upload_huge_conan(self):
         ref = RecipeReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
-        files = {"file%s.cpp" % name: "File conent" for name in range(10)}
-        self._upload_recipe(ref, files)
+        self._upload_recipe(ref, {"file9.cpp": ""})
 
         tmp = temp_folder()
-        files = self.api.get_recipe(ref, tmp)
+        files = self.api.get_recipe(ref, tmp, metadata=None, only_metadata=False)
         self.assertIsNotNone(files)
-        self.assertTrue(os.path.exists(os.path.join(tmp, "file9.cpp")))
+        self.assertFalse(os.path.exists(os.path.join(tmp, "file9.cpp")))
 
     def test_search(self):
         # Upload a conan1
@@ -199,7 +197,8 @@ class RestApiTest(unittest.TestCase):
     def _upload_package(self, package_reference, base_files=None):
 
         files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
-                 "hello.cpp": "hello"}
+                 "hello.cpp": "hello",
+                 "conanmanifest.txt": ""}
         if base_files:
             files.update(base_files)
 

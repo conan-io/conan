@@ -55,6 +55,47 @@ class TestBasicCliOutput:
               package_id: {pref.package_id}
               prev: {pref.revision}""") in client.out
 
+    def test_nontuple_topics(self):
+        client = TestClient()
+        # This is the representation that should always happen,
+        # we wouldn't expect topics not to be a tuple here
+        conanfile = textwrap.dedent("""
+                            from conan import ConanFile
+
+                            class MyTest(ConanFile):
+                                name = "pkg"
+                                version = "0.2"
+                                provides = ("bar",)
+                                topics = ("foo",)
+                            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("graph info . --format=json")
+        recipe = json.loads(client.stdout)["graph"]["nodes"]["0"]
+        assert type(recipe["topics"]) == list
+        assert recipe["topics"] == ["foo"]
+        assert type(recipe["provides"]) == list
+        assert recipe["provides"] == ["bar"]
+
+        # But this used to fail,
+        # topics were not converted to a list internally if one was not provided
+        client2 = TestClient()
+        conanfile2 = textwrap.dedent("""
+                    from conan import ConanFile
+
+                    class MyTest(ConanFile):
+                        name = "pkg"
+                        version = "0.2"
+                        provides = "bar"
+                        topics = "foo"
+                    """)
+        client2.save({"conanfile.py": conanfile2})
+        client2.run("graph info . --format=json")
+        recipe = json.loads(client2.stdout)["graph"]["nodes"]["0"]
+        assert type(recipe["topics"]) == list
+        assert recipe["topics"] == ["foo"]
+        assert type(recipe["provides"]) == list
+        assert recipe["provides"] == ["bar"]
+
 
 class TestConanfilePath:
     def test_cwd(self):
@@ -70,7 +111,7 @@ class TestConanfilePath:
         client = TestClient()
 
         client.run("graph info", assert_error=True)
-        assert "ERROR: Please specify at least a path" in client.out
+        assert "ERROR: Please specify a path" in client.out
 
         client.run("graph info not_real_path", assert_error=True)
         assert "ERROR: Conanfile not found" in client.out
@@ -122,10 +163,10 @@ class TestJsonOutput:
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"conanfile.py": conanfile})
         client.run("graph info . --package-filter=nothing --format=json")
-        assert '"nodes": []' in client.out
+        assert '"nodes": {}' in client.out
         client.run("graph info . --package-filter=pkg* --format=json")
         graph = json.loads(client.stdout)
-        assert graph["nodes"][0]["ref"] == "pkg/0.1"
+        assert graph["graph"]["nodes"]["0"]["ref"] == "pkg/0.1"
 
     def test_json_info_outputs(self):
         client = TestClient()
@@ -133,7 +174,7 @@ class TestJsonOutput:
         client.save({"conanfile.py": conanfile})
         client.run("graph info . -s build_type=Debug --format=json")
         graph = json.loads(client.stdout)
-        assert graph["nodes"][0]["settings"]["build_type"] == "Debug"
+        assert graph["graph"]["nodes"]["0"]["settings"]["build_type"] == "Debug"
 
 
 class TestAdvancedCliOutput:
@@ -158,7 +199,7 @@ class TestAdvancedCliOutput:
 
         client.run("graph info . --format=json")
         info = json.loads(client.stdout)
-        assert info["nodes"][0]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
+        assert info["graph"]["nodes"]["0"]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
 
     def test_build_id_info(self):
         client = TestClient()
@@ -198,7 +239,7 @@ class TestEditables:
             """)
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": GenConanfile().with_require("pkg/0.1")})
-        c.run("editable add pkg pkg/0.1@")
+        c.run("editable add pkg --name=pkg --version=0.1")
         # TODO: Check this --package-filter with *
         c.run("graph info consumer --package-filter=pkg*")
         # FIXME: Paths are not diplayed yet
@@ -267,7 +308,7 @@ class TestDeployers:
         c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                               .with_class_attribute("license='GPL'"),
                 "collectlicenses.py": collectlicenses})
-        c.run("graph info . --deploy=collectlicenses")
+        c.run("graph info . --deployer=collectlicenses")
         assert "conanfile.py: LICENSE : GPL!" in c.out
         assert "LICENSE pkg/0.1: MIT!" in c.out
         contents = c.load("licenses.txt")
@@ -312,6 +353,22 @@ class TestErrorsInGraph:
         exit_code = c.run("graph info consumer", assert_error=True)
         assert "ERROR: Package 'dep/0.1' not resolved: dep/0.1: Cannot load" in c.out
         assert exit_code == ERROR_GENERAL
+
+
+class TestInfoUpdate:
+
+    def test_update(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("tool")})
+        c.run("create . --version=1.0")
+        c.run("create . --version=1.1")
+        c.run("upload tool/1.1 -r=default -c")
+        c.run("remove tool/1.1 -c")
+        c.save({"conanfile.py": GenConanfile().with_requires("tool/[*]")})
+        c.run("graph info . --filter=recipe")
+        assert "tool/1.0#7fbd52996f34447f4a4c362edb5b4af5 - Cache" in c.out
+        c.run("graph info . --update --filter=recipe")
+        assert "tool/1.1#7fbd52996f34447f4a4c362edb5b4af5 - Downloaded (default)" in c.out
 
 
 def test_info_not_hit_server():

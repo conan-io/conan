@@ -1,10 +1,7 @@
 from conan.api.output import ConanOutput
-from conan.api.subapi import api_method
 from conan.internal.conan_app import ConanApp
 from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.graph import BINARY_INVALID
-from conans.errors import ConanInvalidConfiguration
 from conans.model.package_ref import PkgReference
 
 
@@ -13,13 +10,12 @@ class ExportAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    @api_method
     def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
+        ConanOutput().title("Exporting recipe to the cache")
         app = ConanApp(self.conan_api.cache_folder)
         return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
                           remotes=remotes)
 
-    @api_method
     def export_pkg(self, deps_graph, source_folder, output_folder):
         app = ConanApp(self.conan_api.cache_folder)
         cache, hook_manager = app.cache, app.hook_manager
@@ -32,10 +28,6 @@ class ExportAPI:
         ref = pkg_node.ref
         out = ConanOutput(scope=pkg_node.conanfile.display_name)
         out.info("Exporting binary from user folder to Conan cache")
-        if pkg_node.binary == BINARY_INVALID:
-            binary, reason = "Invalid", pkg_node.conanfile.info.invalid
-            msg = "{}: Invalid ID: {}: {}".format(ref, binary, reason)
-            raise ConanInvalidConfiguration(msg)
         conanfile = pkg_node.conanfile
 
         package_id = pkg_node.package_id

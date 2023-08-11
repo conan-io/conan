@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
@@ -15,7 +16,8 @@ from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, G
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
-from conans.errors import ConanException
+from conans.client.generators import relativize_generated_file
+from conan.errors import ConanException
 from conans.model.options import _PackageOption
 from conans.util.files import save
 
@@ -147,7 +149,8 @@ class CMakeToolchain(object):
 
         # Set the CMAKE_MODULE_PATH and CMAKE_PREFIX_PATH to the deps .builddirs
         self.find_builddirs = True
-        self.user_presets_path = None
+        self.user_presets_path = "CMakeUserPresets.json"
+        self.presets_prefix = "conan"
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -169,6 +172,7 @@ class CMakeToolchain(object):
     def content(self):
         context = self._context()
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
+        content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
 
     def generate(self):
@@ -179,6 +183,7 @@ class CMakeToolchain(object):
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
+            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
@@ -202,7 +207,7 @@ class CMakeToolchain(object):
                 cache_variables[name] = value
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path)
+                            self.user_presets_path, self.presets_prefix)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

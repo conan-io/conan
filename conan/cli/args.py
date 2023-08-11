@@ -1,12 +1,11 @@
 from conan.cli.command import OnceArgument
-
+from conan.errors import ConanException
 
 _help_build_policies = '''Optional, specify which packages to build from source. Combining multiple
-    '--build' options on one command line is allowed. For dependencies, the optional 'build_policy'
-    attribute in their conanfile.py takes precedence over the command line parameter.
-    Possible parameters:
+    '--build' options on one command line is allowed.
+    Possible values:
 
-    --build="*"        Force build for all packages, do not use binary packages.
+    --build="*"        Force build from source for all packages.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
                        package is not found. Cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
@@ -14,29 +13,31 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
-    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+    --build=~[pattern] Excluded packages, which will not be built from the source, whose package
                        reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
-
-    Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
-    will be used if it exists, otherwise the behavior is like '--build={}'.
+    --build=missing:[pattern] Build from source if a compatible binary does not exist, only for
+                              packages matching pattern.
 '''
 
 
 def add_lockfile_args(parser):
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
-                        help="Path to a lockfile.")
+                        help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                             "existing 'conan.lock' file")
     parser.add_argument("--lockfile-partial", action="store_true",
                         help="Do not raise an error if some dependency is not found in lockfile")
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-packages", action="store_true",
                         help="Lock package-id and package-revision information")
-    parser.add_argument("--lockfile-clean", action="store_true", help="remove unused")
+    parser.add_argument("--lockfile-clean", action="store_true",
+                        help="Remove unused entries from the lockfile")
+    parser.add_argument("--lockfile-overrides",
+                        help="Overwrite lockfile overrides")
 
 
-def _add_common_install_arguments(parser, build_help, update_help=None):
-    if build_help:
-        parser.add_argument("-b", "--build", action="append", help=build_help)
+def add_common_install_arguments(parser):
+    parser.add_argument("-b", "--build", action="append", help=_help_build_policies)
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", action="append", default=None,
@@ -44,13 +45,11 @@ def _add_common_install_arguments(parser, build_help, update_help=None):
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
 
-    if not update_help:
-        update_help = ("Will check the remote and in case a newer version and/or revision of "
-                       "the dependencies exists there, it will install those in the local cache. "
-                       "When using version ranges, it will install the latest version that "
-                       "satisfies the range. Also, if using revisions, it will update to the "
-                       "latest revision for the resolved version range.")
-
+    update_help = ("Will check the remote and in case a newer version and/or revision of "
+                   "the dependencies exists there, it will install those in the local cache. "
+                   "When using version ranges, it will install the latest version that "
+                   "satisfies the range. Also, if using revisions, it will update to the "
+                   "latest revision for the resolved version range.")
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help=update_help)
     add_profiles_args(parser)
@@ -106,7 +105,7 @@ def add_reference_args(parser):
     parser.add_argument("--user", action=OnceArgument,
                         help='Provide a user if not specified in conanfile')
     parser.add_argument("--channel", action=OnceArgument,
-                        help='Provide a channel if not specified in conanfil')
+                        help='Provide a channel if not specified in conanfile')
 
 
 def common_graph_args(subparser):
@@ -119,5 +118,16 @@ def common_graph_args(subparser):
                            help='Directly provide requires instead of a conanfile')
     subparser.add_argument("--tool-requires", action='append',
                            help='Directly provide tool-requires instead of a conanfile')
-    _add_common_install_arguments(subparser, build_help=_help_build_policies.format("never"))
+    add_common_install_arguments(subparser)
     add_lockfile_args(subparser)
+
+
+def validate_common_graph_args(args):
+    if args.requires and (args.name or args.version or args.user or args.channel):
+        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
+                             "--requires")
+    if not args.path and not args.requires and not args.tool_requires:
+        raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
+    if args.path and (args.requires or args.tool_requires):
+        raise ConanException("--requires and --tool-requires arguments are incompatible with "
+                             f"[path] '{args.path}' argument")

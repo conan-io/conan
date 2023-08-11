@@ -40,10 +40,12 @@ class TestValidate(unittest.TestCase):
 
         client.run("graph info --require pkg/0.1 -s os=Windows")
         self.assertIn("binary: Invalid", client.out)
+        assert "info_invalid: Windows not supported" in client.out
 
         client.run("graph info --require pkg/0.1 -s os=Windows --format json")
         myjson = json.loads(client.stdout)
-        self.assertEqual(myjson["nodes"][1]["binary"], BINARY_INVALID)
+        self.assertEqual(myjson["graph"]["nodes"]["1"]["binary"], BINARY_INVALID)
+        assert myjson["graph"]["nodes"]["1"]["info_invalid"] == "Windows not supported" in client.out
 
     def test_validate_header_only(self):
         client = TestClient()
@@ -276,7 +278,6 @@ class TestValidate(unittest.TestCase):
         client.run("graph info --requires=pkg/0.1@ -s os=Windows -s build_type=Debug")
         assert "binary: Invalid" in client.out
 
-    @pytest.mark.xfail(reason="The way to check options of transitive deps has changed")
     def test_validate_options(self):
         # The dependency option doesn't affect pkg package_id, so it could find a valid binary
         # in the cache. So ConanInvalidConfiguration will solve this issue.
@@ -292,7 +293,7 @@ class TestValidate(unittest.TestCase):
                requires = "dep/0.1"
 
                def validate(self):
-                   if self.options["dep"].myoption == 2:
+                   if self.dependencies["dep"].options.myoption == 2:
                        raise ConanInvalidConfiguration("Option 2 of 'dep' not supported")
            """)
 
@@ -300,15 +301,14 @@ class TestValidate(unittest.TestCase):
         client.run("create . --name=pkg1 --version=0.1 -o dep/*:myoption=1")
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")
-                                                   .with_default_option("dep:myoption", 2)})
+                                                   .with_default_option("dep/*:myoption", 2)})
         client.run("create . --name=pkg2 --version=0.1")
 
-        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg2/0.1", "pkg1/0.1")})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("pkg1/0.1: ConfigurationError: Option 2 of 'dep' not supported", client.out)
+        self.assertIn("pkg1/0.1: Invalid: Option 2 of 'dep' not supported", client.out)
 
-    @pytest.mark.xfail(reason="The way to check versions of transitive deps has changed")
     def test_validate_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -321,16 +321,23 @@ class TestValidate(unittest.TestCase):
                requires = "dep/0.1"
 
                def validate(self):
-                   # FIXME: This is a ugly interface DO NOT MAKE IT PUBLIC
-                   # if self.info.requires["dep"].full_version ==
-                   if self.requires["dep"].ref.version > "0.1":
+                   if self.dependencies["dep"].ref.version > "0.1":
                        raise ConanInvalidConfiguration("dep> 0.1 is not supported")
            """)
 
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg1 --version=0.1")
 
-        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "dep/0.2")})
+        client.save({"conanfile.py": GenConanfile()
+                    .with_requirement("pkg1/0.1")
+                    .with_requirement("dep/0.2", override=True)})
+        error = client.run("install .", assert_error=True)
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        self.assertIn("pkg1/0.1: Invalid: dep> 0.1 is not supported", client.out)
+
+        client.save({"conanfile.py": GenConanfile()
+                    .with_requirement("pkg1/0.1")
+                    .with_requirement("dep/0.2", force=True)})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: Invalid: dep> 0.1 is not supported", client.out)
@@ -358,8 +365,7 @@ class TestValidate(unittest.TestCase):
                                                  "Invalid")})
         client.assert_listed_binary({"pkg/0.1": ("19ad5731bb09f24646c81060bd7730d6cb5b6108",
                                                  "Build")})
-        self.assertIn("ERROR: There are invalid packages (packages that cannot "
-                      "exist for this configuration):", client.out)
+        self.assertIn("ERROR: There are invalid packages:", client.out)
         self.assertIn("dep/0.1: Invalid: Windows not supported", client.out)
 
     def test_validate_export_pkg(self):
@@ -560,10 +566,10 @@ class TestValidateCppstd:
         client.run(f"create engine {settings} -s compiler.cppstd=17")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
-        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.run(f"install app {settings} -s compiler.cppstd=17 -v")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
-        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.run(f"install app {settings} -s compiler.cppstd=14 -v")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
         # No binary for engine exist for cppstd=11
@@ -635,18 +641,18 @@ class TestValidateCppstd:
                                                     "Build")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
-        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.run(f"install app {settings} -s compiler.cppstd=17 -v")
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
                                                     "Cache")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
-        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.run(f"install app {settings} -s compiler.cppstd=14 -v")
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
                                                     "Cache")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
         # No binary for engine exist for cppstd=11
-        client.run(f"install app {settings} -s compiler.cppstd=11")
+        client.run(f"install app {settings} -s compiler.cppstd=11 -v")
         client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
                                                  "Skip")})
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",

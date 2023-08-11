@@ -4,6 +4,7 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -346,9 +347,9 @@ def test_single_config_decentralized(client_setup):
                 package_id = package["package_id"]
                 if binary != "Build":
                     continue
-                # TODO: The options are completely missing
-                c.run("install --requires=%s@ --build=%s@ --lockfile=app1_b_changed.lock  -s os=Windows"
-                      % (ref, ref))
+                build_args = package["build_args"]
+                c.run(f"install {build_args} --lockfile=app1_b_changed.lock -s os=Windows")
+
                 c.assert_listed_binary(
                     {str(ref): (package_id, "Build"),
                      "pkgawin/0.1": (pkgawin_01_id, "Cache"),
@@ -448,3 +449,68 @@ def test_multi_config_decentralized(client_setup):
 
     # Just to make sure that the for-loops have been executed
     assert "app1/0.1: DEP FILE pkgb: ByeB World!!" in c.out
+
+
+def test_single_config_decentralized_overrides():
+    r""" same scenario as "test_single_config_centralized()", but distributing the build in
+    different build servers, using the "build-order"
+    Now with overrides
+
+    pkga -> toola/1.0 -> toolb/1.0 -> toolc/1.0
+                \------override-----> toolc/2.0
+    pkgb -> toola/2.0 -> toolb/1.0 -> toolc/1.0
+                \------override-----> toolc/3.0
+    pkgc -> toola/3.0 -> toolb/1.0 -> toolc/1.0
+    """
+    c = TestClient()
+    c.save({"toolc/conanfile.py": GenConanfile("toolc"),
+            "toolb/conanfile.py": GenConanfile("toolb").with_requires("toolc/1.0"),
+            "toola/conanfile.py": GenConanfile("toola", "1.0").with_requirement("toolb/1.0")
+                                                              .with_requirement("toolc/2.0",
+                                                                                override=True),
+            "toola2/conanfile.py": GenConanfile("toola", "2.0").with_requirement("toolb/1.0")
+                                                               .with_requirement("toolc/3.0",
+                                                                                 override=True),
+            "toola3/conanfile.py": GenConanfile("toola", "3.0").with_requirement("toolb/1.0"),
+            "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_tool_requires("toola/1.0"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0")
+                                                            .with_tool_requires("toola/2.0"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0")
+                                                            .with_tool_requires("toola/3.0"),
+            })
+    c.run("export toolc --version=1.0")
+    c.run("export toolc --version=2.0")
+    c.run("export toolc --version=3.0")
+
+    c.run("export toolb --version=1.0")
+
+    c.run("export toola")
+    c.run("export toola2")
+    c.run("export toola3")
+
+    c.run("export pkga")
+    c.run("export pkgb")
+    c.run("lock create pkgc")
+    lock = json.loads(c.load("pkgc/conan.lock"))
+    requires = "\n".join(lock["build_requires"])
+    assert "toolc/3.0" in requires
+    assert "toolc/2.0" in requires
+    assert "toolc/1.0" in requires
+    assert len(lock["overrides"]) == 1
+    assert set(lock["overrides"]["toolc/1.0"]) == {"toolc/3.0", "toolc/2.0", None}
+
+    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
+    to_build = json.loads(c.stdout)
+    for level in to_build:
+        for elem in level:
+            for package in elem["packages"][0]:  # assumes no dependencies between packages
+                binary = package["binary"]
+                if binary != "Build":
+                    continue
+                build_args = package["build_args"]
+                c.run(f"install {build_args} --lockfile=pkgc/conan.lock")
+
+    c.run("install pkgc --lockfile=pkgc/conan.lock")
+    # All works, all binaries exist now
+    assert "pkga/1.0: Already installed!" in c.out
+    assert "pkgb/1.0: Already installed!" in c.out

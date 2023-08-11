@@ -19,3 +19,4 @@ def test_unzip_can_xz():
     unzip(ConanFileMock(), txz, dest_folder)
     content = load(os.path.join(dest_folder, "a_file.txt"))
     assert content == "my content!"
+

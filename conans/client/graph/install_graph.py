@@ -4,7 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID
+    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -29,10 +29,13 @@ class _InstallPackageReference:
         # to cross compile, there will be a dependency from the current "self" (host context)
         # to that "build" package_id.
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
+        self.overrides = Overrides()
+        self.ref = None
 
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
+        result.ref = node.ref
         result.package_id = node.pref.package_id
         result.prev = node.pref.revision
         result.binary = node.binary
@@ -40,6 +43,7 @@ class _InstallPackageReference:
         # self_options are the minimum to reproduce state
         result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
+        result.overrides = node.overrides()
         return result
 
     def add(self, node):
@@ -50,6 +54,17 @@ class _InstallPackageReference:
         # assert self.context == node.context
         self.nodes.append(node)
 
+    def _build_args(self):
+        if self.binary != BINARY_BUILD:
+            return None
+        cmd = f"--require={self.ref}" if self.context == "host" else f"--tool-require={self.ref}"
+        cmd += f" --build={self.ref}"
+        if self.options:
+            cmd += " " + " ".join(f"-o {o}" for o in self.options)
+        if self.overrides:
+            cmd += f' --lockfile-overrides="{self.overrides}"'
+        return cmd
+
     def serialize(self):
         return {"package_id": self.package_id,
                 "prev": self.prev,
@@ -57,11 +72,14 @@ class _InstallPackageReference:
                 "binary": self.binary,
                 "options": self.options,
                 "filenames": self.filenames,
-                "depends": self.depends}
+                "depends": self.depends,
+                "overrides": self.overrides.serialize(),
+                "build_args": self._build_args()}
 
     @staticmethod
-    def deserialize(data, filename):
+    def deserialize(data, filename, ref):
         result = _InstallPackageReference()
+        result.ref = ref
         result.package_id = data["package_id"]
         result.prev = data["prev"]
         result.binary = data["binary"]
@@ -69,6 +87,7 @@ class _InstallPackageReference:
         result.options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
+        result.overrides = Overrides.deserialize(data["overrides"])
         return result
 
 
@@ -154,7 +173,7 @@ class _InstallRecipeReference:
             result.depends.append(RecipeReference.loads(d))
         for level in data["packages"]:
             for p in level:
-                install_node = _InstallPackageReference.deserialize(p, filename)
+                install_node = _InstallPackageReference.deserialize(p, filename, result.ref)
                 result.packages[install_node.package_id] = install_node
         return result
 
@@ -166,8 +185,10 @@ class InstallGraph:
     def __init__(self, deps_graph=None):
         self._nodes = {}  # ref with rev: _InstallGraphNode
 
+        self._is_test_package = False
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
+            self._is_test_package = deps_graph.root.conanfile.tested_reference_str is not None
 
     @staticmethod
     def load(filename):
@@ -247,7 +268,7 @@ class InstallGraph:
                     invalid.append(package)
 
         if invalid:
-            msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
+            msg = ["There are invalid packages:"]
             for package in invalid:
                 node = package.nodes[0]
                 if node.cant_build and node.should_build:
@@ -259,8 +280,7 @@ class InstallGraph:
         if missing:
             self._raise_missing(missing)
 
-    @staticmethod
-    def _raise_missing(missing):
+    def _raise_missing(self, missing):
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
         missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
@@ -280,15 +300,22 @@ class InstallGraph:
               f"{conanfile.info.dumps()}"
         conanfile.output.warning(msg)
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
-        if len(missing_prefs) >= 5:
-            build_str = "--build=missing"
+        if self._is_test_package:
+            build_msg = "'conan test' tested packages must exist, and '--build' argument " \
+                        "is used only for the 'test_package' dependencies, not for the tested " \
+                        "dependencies"
         else:
-            build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref) for pref in missing_prefs])))
+            if len(missing_prefs) >= 5:
+                build_str = "--build=missing"
+            else:
+                build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
+                                                  for pref in missing_prefs])))
+            build_msg = f"or try to build locally from sources using the '{build_str}' argument"
 
-        raise ConanException(textwrap.dedent('''\
-           Missing prebuilt package for '%s'
-           Use 'conan list packages %s --format=html -r=remote > table.html' and open the table.html file to see available packages
-           Or try to build locally from sources with '%s'
+        raise ConanException(textwrap.dedent(f'''\
+           Missing prebuilt package for '{missing_pkgs}'
+           Check the available packages using 'conan list {ref}:* -r=remote'
+           {build_msg}
 
-           More Info at 'https://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package'
-           ''' % (missing_pkgs, ref, build_str)))
+           More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
+           '''))

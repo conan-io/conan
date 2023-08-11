@@ -56,20 +56,3 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         self.assertIn('conanfile.py: Buffer got msgs Hello', client.out)
-
-    def test_credentials_removed(self):
-        conanfile = textwrap.dedent("""
-            import os
-            from conan import ConanFile
-
-            class Recipe(ConanFile):
-                def export(self):
-                    self.output.info(">> key: {}<<".format(os.getenv('CONAN_LOGIN_ENCRYPTION_KEY')))
-                    self.output.info(">> var: {}<<".format(os.getenv('OTHER_VAR')))
-        """)
-        with environment_update({'CONAN_LOGIN_ENCRYPTION_KEY': 'secret!', 'OTHER_VAR': 'other_var'}):
-            client = TestClient()
-            client.save({"conanfile.py": conanfile})
-            client.run("export . --name=name --version=version")
-            self.assertIn("name/version: >> key: None<<", client.out)
-            self.assertIn("name/version: >> var: other_var<<", client.out)

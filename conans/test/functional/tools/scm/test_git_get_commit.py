@@ -17,6 +17,7 @@ def test_change_branch_in_root_commit():
     conanfile = MockConanfile({})
     c.save({"root.txt": "", "subfolder/subfolder.txt": ""})
     c.run_command("git init .")
+    c.run_command("git checkout -B master")
     c.run_command('git config user.name myname')
     c.run_command('git config user.email myname@mycompany.com')
     c.run_command("git add .")
@@ -123,7 +124,6 @@ def test_relative_folder_repo():
     c.save({"root_change": ""})
     c.run_command("git add .")
     c.run_command('git commit -m "root change"')
-    print(c.current_folder)
 
     # Relative paths for folders, from the current_folder
     with chdir(c.current_folder):

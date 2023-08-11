@@ -3,7 +3,7 @@ import os
 from conans.client.cache.cache import ClientCache
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
-from conans.util.files import rmdir
+from conans.util.files import rmdir, mkdir
 
 
 def _find_deployer(d, cache_deploy_folder):
@@ -36,6 +36,7 @@ def _find_deployer(d, cache_deploy_folder):
 
 
 def do_deploys(conan_api, graph, deploy, deploy_folder):
+    mkdir(deploy_folder)
     # Handle the deploys
     cache = ClientCache(conan_api.cache_folder)
     for d in deploy or []:
@@ -58,7 +59,7 @@ def full_deploy(graph, output_folder):
     for dep in conanfile.dependencies.values():
         if dep.package_folder is None:
             continue
-        folder_name = os.path.join(dep.context, dep.ref.name, str(dep.ref.version))
+        folder_name = os.path.join("full_deploy", dep.context, dep.ref.name, str(dep.ref.version))
         build_type = dep.info.settings.get_safe("build_type")
         arch = dep.info.settings.get_safe("arch")
         if build_type:
@@ -67,7 +68,7 @@ def full_deploy(graph, output_folder):
             folder_name = os.path.join(folder_name, arch)
         new_folder = os.path.join(output_folder, folder_name)
         rmdir(new_folder)
-        shutil.copytree(dep.package_folder, new_folder)
+        shutil.copytree(dep.package_folder, new_folder, symlinks=True)
         dep.set_deploy_folder(new_folder)
 
 
@@ -80,6 +81,7 @@ def direct_deploy(graph, output_folder):
     import os
     import shutil
 
+    output_folder = os.path.join(output_folder, "direct_deploy")
     conanfile = graph.root.conanfile
     conanfile.output.info(f"Conan built-in pkg deployer to {output_folder}")
     # If the argument is --requires, the current conanfile is a virtual one with 1 single
@@ -88,5 +90,5 @@ def direct_deploy(graph, output_folder):
     for dep in conanfile.dependencies.filter({"direct": True}).values():
         new_folder = os.path.join(output_folder, dep.ref.name)
         rmdir(new_folder)
-        shutil.copytree(dep.package_folder, new_folder)
+        shutil.copytree(dep.package_folder, new_folder, symlinks=True)
         dep.set_deploy_folder(new_folder)

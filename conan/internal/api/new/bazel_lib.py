@@ -9,6 +9,7 @@ from conan.tools.files import copy
 class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
+    package_type = "library"
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
@@ -21,7 +22,11 @@ class {{package_name}}Recipe(ConanFile):
 
     def config_options(self):
         if self.settings.os == "Windows":
-            del self.options.fPIC
+            self.options.rm_safe("fPIC")
+
+    def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
 
     def layout(self):
         bazel_layout(self)

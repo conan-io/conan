@@ -4,7 +4,6 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
@@ -20,6 +19,8 @@ def filter_packages(query, results: Dict[PkgReference, dict]):
     try:
         if "!" in query:
             raise ConanException("'!' character is not allowed")
+        if "~" in query:
+            raise ConanException("'~' character is not allowed")
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
@@ -56,17 +57,14 @@ def _evaluate(prop_name, prop_value, binary_info):
         return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
     # TODO: Necessary to generalize this query evaluation to include all possible fields
-    info_settings = binary_info.get("settings")
-    info_options = binary_info.get("options")
-    properties = ["os", "compiler", "arch", "build_type"]
+    info_settings = binary_info.get("settings", {})
+    info_options = binary_info.get("options", {})
 
-    def starts_with_common_settings(_prop_name):
-        return any(_prop_name.startswith(setting + '.') for setting in properties)
-
-    if prop_name in properties or starts_with_common_settings(prop_name):
-        return compatible_prop(info_settings.get(prop_name, None), prop_value)
+    if not prop_name.startswith("options."):
+        return compatible_prop(info_settings.get(prop_name), prop_value)
     else:
-        return compatible_prop(info_options.get(prop_name, None), prop_value)
+        prop_name = prop_name[len("options."):]
+        return compatible_prop(info_options.get(prop_name), prop_value)
 
 
 def search_recipes(cache, pattern=None, ignorecase=True):
@@ -119,8 +117,8 @@ def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
-            ConanOutput().error("There is no conaninfo.txt: %s" % str(info_path))
-            continue
+            raise ConanException(f"Corrupted package '{pkg_layout.reference}' "
+                                 f"without conaninfo.txt in: {info_path}")
         conan_info_content = load(info_path)
 
         info = load_binary_info(conan_info_content)

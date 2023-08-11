@@ -13,7 +13,7 @@ class TestOtherCommands:
         t = TestClient(default_server_user=True)
         t.save({'conanfile.py': GenConanfile("lib", "0.1"),
                 "test_package/conanfile.py": GenConanfile().with_test("pass")})
-        t.run('editable add . lib/0.1')
+        t.run('editable add .')
 
         # Nothing in the cache
         t.run("list *")
@@ -22,7 +22,7 @@ class TestOtherCommands:
         assert "ERROR: Recipe 'lib/0.1' not found" in t.out
 
         t.run('export . ')
-        assert "lib/0.1: Exported revision" in t.out
+        assert "lib/0.1: Exported" in t.out
         t.run("list *")
         assert "lib/0.1" in t.out
         t.run('list lib/0.1:*')
@@ -60,7 +60,7 @@ class TestOtherCommands:
         t.save({'conanfile.py': conanfile,
                 "test_package/conanfile.py": GenConanfile().with_test("pass"),
                 "consumer/conanfile.txt": "[requires]\nlib/0.1"})
-        t.run('editable add . lib/0.1')
+        t.run('editable add .')
 
         t.run("list *")
         assert "There are no matching" in t.out

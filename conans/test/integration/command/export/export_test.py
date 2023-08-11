@@ -29,7 +29,7 @@ class ExportSettingsTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=lib --version=1.0 --user=lasote --channel=channel")
-        self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0@lasote/channel: Exported", client.out)
 
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
         client.run("export . --user=lasote")
@@ -55,10 +55,9 @@ class ExportSettingsTest(unittest.TestCase):
 
         client.run("export . --user=lasote --channel=stable")
 
-        ref = RecipeReference.loads("hello/1.2@lasote/stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
-        export_src_path = client.cache.ref_layout(latest_rrev).export_sources()
+        layout = client.exported_layout()
+        export_path = layout.export()
+        export_src_path = layout.export_sources()
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
@@ -74,9 +73,9 @@ class ExportSettingsTest(unittest.TestCase):
                      "file2.txt": "file2"})
         client.run("export . --user=lasote --channel=stable")
 
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
-        export_src_path = client.cache.ref_layout(latest_rrev).export_sources()
+        layout = client.exported_layout()
+        export_path = layout.export()
+        export_src_path = layout.export_sources()
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "file1")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "file2")
@@ -90,9 +89,9 @@ class ExportSettingsTest(unittest.TestCase):
         os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 & ~stat.S_IWRITE)
         client.run("export . --user=lasote --channel=stable")
 
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
-        export_src_path = client.cache.ref_layout(latest_rrev).export_sources()
+        layout = client.exported_layout()
+        export_path = layout.export()
+        export_src_path = layout.export_sources()
 
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
@@ -118,9 +117,8 @@ class TestConan(ConanFile):
                          "sibling/file.txt": "Hello World!"})
             client.current_folder = os.path.join(client.current_folder, "recipe")
             client.run("export . --user=lasote --channel=stable")
-            ref = RecipeReference("hello", "1.2", "lasote", "stable")
-            latest_rrev = client.cache.get_latest_recipe_reference(ref)
-            export_path = client.cache.ref_layout(latest_rrev).export()
+            layout = client.exported_layout()
+            export_path = layout.export()
             content = load(os.path.join(export_path, "sibling/file.txt"))
             self.assertEqual("Hello World!", content)
 
@@ -143,9 +141,8 @@ class TestConan(ConanFile):
         client.save(files)
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . --user=lasote --channel=stable")
-        ref = RecipeReference("hello", "1.2", "lasote", "stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
+        layout = client.exported_layout()
+        export_path = layout.export()
         content = load(os.path.join(export_path, "file.txt"))
         self.assertEqual("Hello World!", content)
 
@@ -175,9 +172,8 @@ class TestConan(ConanFile):
                      "include/file.h": "Hello World!"})
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . --user=lasote --channel=stable")
-        ref = RecipeReference("hello", "1.2", "lasote", "stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export_sources()
+        layout = client.exported_layout()
+        export_path = layout.export_sources()
         self.assertEqual(sorted(['file.txt', 'file.cpp', 'file.h']),
                          sorted(os.listdir(export_path)))
 
@@ -186,10 +182,9 @@ class TestConan(ConanFile):
         client = TestClient()
         client.save({filename: GenConanfile("hello", "1.2")})
         client.run("export %s --user=user --channel=stable" % filename)
-        self.assertIn("hello/1.2@user/stable: A new conanfile.py version was exported", client.out)
-        ref = RecipeReference("hello", "1.2", "user", "stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
+        self.assertIn("hello/1.2@user/stable: Exported", client.out)
+        layout = client.exported_layout()
+        export_path = layout.export()
         conanfile = load(os.path.join(export_path, "conanfile.py"))
         self.assertIn("name = 'hello'", conanfile)
         manifest = load(os.path.join(export_path, "conanmanifest.txt"))
@@ -212,10 +207,9 @@ class TestConan(ConanFile):
                      "file.cpp": "",
                      "file_temp.cpp": ""})
         client.run("export . --user=lasote --channel=stable")
-        ref = RecipeReference("hello", "1.2", "lasote", "stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
-        exports_sources_path = client.cache.ref_layout(latest_rrev).export_sources()
+        layout = client.exported_layout()
+        export_path = layout.export()
+        exports_sources_path = layout.export_sources()
         self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
         self.assertFalse(os.path.exists(os.path.join(export_path, "file1.txt")))
         self.assertTrue(os.path.exists(os.path.join(exports_sources_path, "file.cpp")))
@@ -236,9 +230,8 @@ class TestConan(ConanFile):
                      "any/temp/file1.txt": "",
                      "other/sub/file2.txt": ""})
         client.run("export . --user=lasote --channel=stable")
-        ref = RecipeReference("hello", "1.2", "lasote", "stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        export_path = client.cache.ref_layout(latest_rrev).export()
+        layout = client.exported_layout()
+        export_path = layout.export()
         self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
         self.assertFalse(os.path.exists(os.path.join(export_path, "any/temp/file1.txt")))
         self.assertTrue(os.path.exists(os.path.join(export_path, "other/sub/file2.txt")))
@@ -257,13 +250,12 @@ class ExportTest(unittest.TestCase):
         self.client.run("export . --user=lasote --channel=stable")
 
     def test_basic(self):
-        latest_rrev = self.client.cache.get_latest_recipe_reference(self.ref)
-        reg_path = self.client.cache.ref_layout(latest_rrev).export()
+        reg_path = self.client.exported_layout().export()
         manif = FileTreeManifest.load(reg_path)
 
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
+        self.assertIn('%s: Exported' % str(self.ref),
                       self.client.out)
-        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path), self.client.out)
+        self.assertIn('%s: Exported to cache folder: %s' % (str(self.ref), reg_path), self.client.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in list(self.files.keys()):
@@ -279,15 +271,14 @@ class ExportTest(unittest.TestCase):
         self.ref = RecipeReference("hello0", "0.1", "lasote", "stable")
         self.client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*")})
         self.client.run("export . --user=lasote --channel=stable")
-        self.assertIn("hello0/0.1@lasote/stable: Exported revision", self.client.out)
+        self.assertIn("hello0/0.1@lasote/stable: Exported", self.client.out)
 
     def test_export_filter(self):
         self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
         self.client.run("export . --user=lasote --channel=stable")
-        ref = RecipeReference.loads('openssl/2.0.1@lasote/stable')
-        latest_rrev = self.client.cache.get_latest_recipe_reference(ref)
-        reg_path = self.client.cache.ref_layout(latest_rrev).export()
-        self.assertEqual(sorted(os.listdir(reg_path)), [CONANFILE, CONAN_MANIFEST])
+        layout = self.client.exported_layout()
+        export_path = layout.export()
+        self.assertEqual(sorted(os.listdir(export_path)), [CONANFILE, CONAN_MANIFEST])
 
         content = """
 from conan import ConanFile
@@ -299,9 +290,9 @@ class OpenSSLConan(ConanFile):
 """
         self.client.save({CONANFILE: content})
         self.client.run("export . --user=lasote --channel=stable")
-        latest_rrev = self.client.cache.get_latest_recipe_reference(ref)
-        reg_path = self.client.cache.ref_layout(latest_rrev).export()
-        self.assertEqual(sorted(os.listdir(reg_path)), ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST])
+        layout = self.client.exported_layout()
+        export_path = layout.export()
+        self.assertEqual(sorted(os.listdir(export_path)), ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST])
 
         # Now exports being a list instead a tuple
         content = """
@@ -314,102 +305,10 @@ class OpenSSLConan(ConanFile):
 """
         self.client.save({CONANFILE: content})
         self.client.run("export . --user=lasote --channel=stable")
-        latest_rrev = self.client.cache.get_latest_recipe_reference(ref)
-        reg_path = self.client.cache.ref_layout(latest_rrev).export()
-        self.assertEqual(sorted(os.listdir(reg_path)),
+        layout = self.client.exported_layout()
+        export_path = layout.export()
+        self.assertEqual(sorted(os.listdir(export_path)),
                          ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST])
-
-    @pytest.mark.xfail(reason="cache2.0")
-    def test_export_the_same_code(self):
-        file_list = self._create_packages_and_builds()
-        # Export the same conans
-        # Do not adjust cpu_count, it is reusing a cache
-        client2 = TestClient(self.client.cache_folder, cpu_count=False)
-        files2 = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
-                  "main.cpp": "MyMain",
-                  "CMakeLists.txt": "MyCmake",
-                  "executable": "myexe"}
-        client2.save(files2)
-        client2.run("export . --user=lasote --channel=stable")
-        reg_path2 = client2.get_latest_ref_layout(self.ref).export()
-        digest2 = FileTreeManifest.load(client2.get_latest_ref_layout(self.ref).export())
-
-        self.assertNotIn('A new Conan version was exported', client2.out)
-        self.assertNotIn('Cleaning the old builds ...', client2.out)
-        self.assertNotIn('Cleaning the old packs ...', client2.out)
-        self.assertNotIn('All the previous packs were cleaned', client2.out)
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
-                      self.client.out)
-        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path2), self.client.out)
-        self.assertTrue(os.path.exists(reg_path2))
-
-        for name in list(files2.keys()):
-            self.assertTrue(os.path.exists(os.path.join(reg_path2, name)))
-
-        expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
-                         'conanfile.py': '73eb512b9f02ac18278823a217cfff79',
-                         'executable': 'db299d5f0d82f113fad627a21f175e59',
-                         'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
-        self.assertEqual(expected_sums, digest2.file_sums)
-
-        for f in file_list:
-            self.assertTrue(os.path.exists(f))
-
-    @pytest.mark.xfail(reason="cache2.0")
-    def test_export_a_new_version(self):
-        self._create_packages_and_builds()
-        # Export an update of the same conans
-
-        # Do not adjust cpu_count, it is reusing a cache
-        client2 = TestClient(self.client.cache_folder, cpu_count=False)
-        files2 = {"conanfile.py": "# insert comment\n" +
-                                  str(GenConanfile("hello0", "0.1").with_exports("*")),
-                  "main.cpp": "MyMain",
-                  "CMakeLists.txt": "MyCmake",
-                  "executable": "myexe"}
-
-        client2.save(files2)
-        client2.run("export . --user=lasote --channel=stable")
-
-        reg_path3 = client2.get_latest_ref_layout(self.ref).export()
-        digest3 = FileTreeManifest.load(client2.get_latest_ref_layout(self.ref).export())
-
-        self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
-                      self.client.out)
-        self.assertIn('%s: Folder: %s' % (str(self.ref), reg_path3), self.client.out)
-
-        self.assertTrue(os.path.exists(reg_path3))
-
-        for name in list(files2.keys()):
-            self.assertTrue(os.path.exists(os.path.join(reg_path3, name)))
-
-        expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
-                         'conanfile.py': 'dd0b69a21ef8b37ed93fce4d5a470ba0',
-                         'executable': 'db299d5f0d82f113fad627a21f175e59',
-                         'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
-        self.assertEqual(expected_sums, digest3.file_sums)
-
-        # for f in file_list:
-        #    self.assertFalse(os.path.exists(f))
-
-    def _create_packages_and_builds(self):
-        pref = self.client.get_latest_package_reference(self.ref)
-        pkg_layout = self.client.get_latest_pkg_layout(pref)
-        reg_builds = pkg_layout.build()
-        reg_packs = pkg_layout.package()
-
-        folders = [os.path.join(reg_builds, '342525g4f52f35f'),
-                   os.path.join(reg_builds, 'ew9o8asdf908asdf80'),
-                   os.path.join(reg_packs, '342525g4f52f35f'),
-                   os.path.join(reg_packs, 'ew9o8asdf908asdf80')]
-
-        file_list = []
-        for f in folders:
-            for name, content in {'file1.h': 'asddfasdf', 'file1.dll': 'asddfasdf'}.items():
-                file_path = os.path.join(f, name)
-                save(file_path, content)
-                file_list.append(file_path)
-        return file_list
 
 
 class ExportMetadataTest(unittest.TestCase):
@@ -428,8 +327,8 @@ class ExportMetadataTest(unittest.TestCase):
 
         ref = RecipeReference.loads("name/version@user/channel")
         t.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
-        latest_rrev = t.cache.get_latest_recipe_reference(ref)
-        self.assertEqual(latest_rrev.revision, self.summary_hash)
+        layout = t.exported_layout()
+        self.assertEqual(layout.reference.revision, self.summary_hash)
 
     def test_revision_mode_invalid(self):
         conanfile = self.conanfile.format(revision_mode="auto")
@@ -443,14 +342,14 @@ class ExportMetadataTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
         client.run('export .')
-        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0: Exported", client.out)
 
     def test_export_with_name_and_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=lib --version=1.0')
-        self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0: Exported", client.out)
 
     def test_export_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
@@ -458,20 +357,20 @@ class ExportMetadataTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
 
         client.run('export .  --version= --user=user --channel=channel')
-        self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("lib/1.0@user/channel: Exported", client.out)
 
     def test_export_conflict_no_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=pkg --version=0.1 --user=user --channel=channel')
-        self.assertIn("pkg/0.1@user/channel: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/0.1@user/channel: Exported", client.out)
         client.run('export . --name=pkg --version=0.1 --user=other --channel=stable')
-        self.assertIn("pkg/0.1@other/stable: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/0.1@other/stable: Exported", client.out)
         client.run('export . --name=pkg --version=0.1')
-        self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)
+        self.assertIn("pkg/0.1: Exported", client.out)
         client.run('export . --name=pkg --version=0.1')
-        self.assertIn("pkg/0.1: Exported revision", client.out)
+        self.assertIn("pkg/0.1: Exported", client.out)
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")
@@ -495,11 +394,11 @@ def test_export_casing():
     assert client.load("file1") == "file1 lowercase"
     assert client.load("FILE1") == "file1 UPPERCASE"
     client.run("export . --name=pkg --version=0.1")
-    ref = RecipeReference.loads("pkg/0.1@")
-    export_src_folder = client.get_latest_ref_layout(ref).export_sources()
+    layout = client.exported_layout()
+    export_src_folder = layout.export_sources()
     assert load(os.path.join(export_src_folder, "test")) == "some lowercase"
     assert load(os.path.join(export_src_folder, "TEST")) == "some UPPERCASE"
-    exports_folder = client.get_latest_ref_layout(ref).export()
+    exports_folder = layout.export()
     assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
     assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"
 

@@ -42,8 +42,15 @@ class {{package_name}}Recipe(ConanFile):
 
     {% if requires is defined -%}
     def requirements(self):
-        {% for require in as_iterable(requires) -%}
+        {% for require in requires -%}
         self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+
+    {% if tool_requires is defined -%}
+    def build_requirements(self):
+        {% for require in tool_requires -%}
+        self.tool_requires("{{ require }}")
         {% endfor %}
     {%- endif %}
 '''
@@ -52,7 +59,7 @@ cmake_exe_v2 = """cmake_minimum_required(VERSION 3.15)
 project({{name}} CXX)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 find_package({{as_name(require)}} CONFIG REQUIRED)
 {% endfor %}
 {%- endif %}
@@ -60,7 +67,7 @@ find_package({{as_name(require)}} CONFIG REQUIRED)
 add_executable({{name}} src/{{name}}.cpp src/main.cpp)
 
 {% if requires is defined -%}
-{% for require in as_iterable(requires) -%}
+{% for require in requires -%}
 target_link_libraries({{name}} PRIVATE {{as_name(require)}}::{{as_name(require)}})
 {% endfor %}
 {%- endif %}

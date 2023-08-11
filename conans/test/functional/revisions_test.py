@@ -796,35 +796,6 @@ class UploadPackagesWithRevisions(unittest.TestCase):
                          pref2.revision)
 
 
-class SCMRevisions(unittest.TestCase):
-
-    def test_auto_revision_even_without_scm_git(self):
-        """
-        Can't do conan create/export with uncommited changes if using revision_mode=scm
-        """
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
-        client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
-        commit = client.init_git_repo(files={"file.txt": "hey", "conanfile.py": str(conanfile)},
-                                      origin_url="http://myrepo.git")
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-
-        # Change the conanfile and make another create, the revision should be the same
-        client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
-        client.create(ref, conanfile=conanfile, assert_error=True)
-        self.assertIn("Can't have a dirty repository using revision_mode='scm' and doing", client.out)
-
-    def test_auto_revision_without_commits(self):
-        """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
-        client = TurboTestClient()
-        client.run_command('git init .')
-        client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("scm")})
-        client.run("create .", assert_error=True)
-        # It error, because the revision_mode is explicitly set to scm
-        self.assertIn("Cannot detect revision using 'scm' mode from repository", client.out)
-
-
 class CapabilitiesRevisionsTest(unittest.TestCase):
     def test_server_with_only_v2_capability(self):
         server = TestServer(server_capabilities=[])
@@ -990,3 +961,45 @@ def test_touching_other_server():
     c.run("install --requires=pkg/0.1@conan/channel -r=remote1 -s os=Windows")
     c.run("install --requires=pkg/0.1@conan/channel -r=remote1 -s os=Linux", assert_error=True)
     assert "ERROR: Missing binary: pkg/0.1@conan/channel" in c.out
+
+
+def test_reupload_older_revision():
+    """ upload maintains the server history
+        https://github.com/conan-io/conan/issues/7331
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+    rrev1 = c.exported_recipe_revision()
+    c.run("upload * -r=default -c")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("potato = 42")})
+    c.run("export .")
+    rrev2 = c.exported_recipe_revision()
+    c.run("upload * -r=default -c")
+
+    def check_order(inverse=False):
+        c.run("list pkg/0.1#* -r=default")
+        out = str(c.out)
+        assert rrev1 in out
+        assert rrev2 in out
+        if inverse:
+            assert out.find(rrev1) > out.find(rrev2)
+        else:
+            assert out.find(rrev1) < out.find(rrev2)
+
+    check_order()
+
+    # If we create the same older revision, and upload, still the same order
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+    c.run("upload * -r=default -c")
+    check_order()
+
+    # Force doesn't change it, same order
+    c.run("upload * -r=default -c --force")
+    check_order()
+
+    # the only way is to remove it, then upload
+    c.run(f"remove pkg/0.1#{rrev1} -r=default -c")
+    c.run("upload * -r=default -c --force")
+    check_order(inverse=True)

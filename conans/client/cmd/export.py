@@ -2,12 +2,11 @@ import os
 import shutil
 
 from conan.tools.files import copy
-from conan.tools.files.copy_pattern import report_files_copied
 from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import CONANFILE, DATA_YML
+from conans.paths import DATA_YML
 from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 from conans.util.runners import check_output_runner
 
@@ -33,13 +32,16 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
     hook_manager.execute("pre_export", conanfile=conanfile)
 
-    scoped_output.highlight("Exporting package recipe")
+    scoped_output.info(f"Exporting package recipe: {conanfile_path}")
 
     export_folder = recipe_layout.export()
     export_src_folder = recipe_layout.export_sources()
     # TODO: cache2.0 move this creation to other place
     mkdir(export_folder)
     mkdir(export_src_folder)
+    recipe_metadata = recipe_layout.metadata()
+    mkdir(recipe_metadata)
+    conanfile.folders.set_base_recipe_metadata(recipe_metadata)
     export_recipe(conanfile, export_folder)
     export_source(conanfile, export_src_folder)
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
@@ -52,21 +54,19 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     # Compute the new digest
     manifest = FileTreeManifest.create(export_folder, export_src_folder)
     manifest.save(export_folder)
+    manifest.report_summary(scoped_output)
 
     # Compute the revision for the recipe
-    revision = calc_revision(scoped_output=conanfile.output,
-                             path=os.path.dirname(conanfile_path),
-                             manifest=manifest,
-                             revision_mode=conanfile.revision_mode)
+    revision = _calc_revision(scoped_output=conanfile.output,
+                              path=os.path.dirname(conanfile_path),
+                              manifest=manifest,
+                              revision_mode=conanfile.revision_mode)
 
     ref.revision = revision
     recipe_layout.reference = ref
     cache.assign_rrev(recipe_layout)
-    # TODO: cache2.0 check if this is the message we want to output
-    scoped_output.success('A new %s version was exported' % CONANFILE)
-    scoped_output.info('Folder: %s' % recipe_layout.export())
+    scoped_output.info('Exported to cache folder: %s' % recipe_layout.export())
 
-    # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     # TODO: cache2.0: check this part
     source_folder = recipe_layout.source()
     if os.path.exists(source_folder):
@@ -81,34 +81,31 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
             scoped_output.warning(str(e))
             set_dirty(source_folder)
 
-    scoped_output.info("Exported revision: %s" % revision)
+    scoped_output.success(f"Exported: {ref.repr_humantime()}")
     return ref, conanfile
 
 
-def calc_revision(scoped_output, path, manifest, revision_mode):
-    if revision_mode not in ["scm", "hash"]:
+def _calc_revision(scoped_output, path, manifest, revision_mode):
+    if revision_mode not in ["scm", "scm_folder", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
         revision = manifest.summary_hash
-        scoped_output.info("Using the exported files summary hash as the recipe"
-                           " revision: {} ".format(revision))
     else:
+        f = '-- "."' if revision_mode == "scm_folder" else ""
         try:
             with chdir(path):
-                rev_detected = check_output_runner('git rev-list HEAD -n 1 --full-history').strip()
+                revision = check_output_runner(f'git rev-list HEAD -n 1 --full-history {f}').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
             raise ConanException("{}: {}".format(error_msg, exc))
 
         with chdir(path):
-            if bool(check_output_runner('git status -s').strip()):
+            if bool(check_output_runner(f'git status -s {f}').strip()):
                 raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
                                      " 'conan export', please commit the changes and run again.")
-
-        revision = rev_detected
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 
@@ -142,8 +139,6 @@ def export_source(conanfile, destination_source_folder):
                     dst=destination_source_folder, excludes=excluded_sources)
         copied.extend(_tmp)
 
-    package_output = ConanOutput(scope="%s exports_sources" % conanfile.output.scope)
-    report_files_copied(copied, package_output)
     conanfile.folders.set_base_export_sources(destination_source_folder)
     _run_method(conanfile, "export_sources")
 
@@ -154,7 +149,7 @@ def export_recipe(conanfile, destination_folder):
     if isinstance(conanfile.exports, str):
         conanfile.exports = (conanfile.exports,)
 
-    package_output = ConanOutput(scope="%s exports" % conanfile.output.scope)
+    package_output = ConanOutput(scope="%s: exports" % conanfile.output.scope)
 
     if os.path.exists(os.path.join(conanfile.recipe_folder, DATA_YML)):
         package_output.info("File '{}' found. Exporting it...".format(DATA_YML))
@@ -170,7 +165,6 @@ def export_recipe(conanfile, destination_folder):
         tmp = copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
                    excludes=excluded_exports)
         copied.extend(tmp)
-    report_files_copied(copied, package_output)
 
     conanfile.folders.set_base_export(destination_folder)
     _run_method(conanfile, "export")

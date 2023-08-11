@@ -5,7 +5,7 @@ from conans.errors import ConanException
 
 def bad_value_msg(name, value, value_range):
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s\n"
-            'Read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
+            'Read "http://docs.conan.io/2/knowledge/faq.html#error-invalid-setting"'
             # value range can be either a list or a dict, we only want to list the keys
             % (value, name, [v for v in value_range if v is not None]))
 
@@ -152,12 +152,12 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
-    def get_definition(self):
+    def possible_values(self):
         if isinstance(self._definition, list):
-            return [e if e != 'None' else None for e in self.values_range]
+            return self.values_range.copy()
         ret = {}
         for key, value in self._definition.items():
-            ret[key] = value.get_definition()
+            ret[key] = value.possible_values()
         return ret
 
     def rm_safe(self, name):
@@ -175,10 +175,14 @@ class Settings(object):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
         definition = definition or {}
+        if not isinstance(definition, dict):
+            val = "" if parent_value == "settings" else f"={parent_value}"
+            raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
         self._data = {k: SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+        self._frozen = False
 
     def serialize(self):
         """
@@ -272,6 +276,8 @@ class Settings(object):
             return super(Settings, self).__setattr__(field, value)
 
         self._check_field(field)
+        if self._frozen:
+            raise ConanException(f"Tried to define '{field}' setting inside recipe")
         self._data[field].value = value
 
     @property
@@ -290,6 +296,7 @@ class Settings(object):
         """ receives a list of tuples (compiler.version, value)
         This is more an updated than a setter
         """
+        self._frozen = False  # Could be restored at the end, but not really necessary
         assert isinstance(vals, (list, tuple)), vals
         for (name, value) in vals:
             list_settings = name.split(".")
@@ -334,11 +341,10 @@ class Settings(object):
                 result.append("%s=%s" % (name, value))
         return '\n'.join(result)
 
-    def get_definition(self):
-        """Check the range of values of the definition of a setting. e.g:
-           get_definition_values("compiler.gcc.version") """
-
+    def possible_values(self):
+        """Check the range of values of the definition of a setting
+        """
         ret = {}
         for key, element in self._data.items():
-            ret[key] = element.get_definition()
+            ret[key] = element.possible_values()
         return ret

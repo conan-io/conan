@@ -1,9 +1,7 @@
-# coding=utf-8
-
 import unittest
 
-from conan.tools.files.copy_pattern import report_files_copied
 from conan.api.output import ConanOutput
+from conans.model.manifest import FileTreeManifest
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 
@@ -11,21 +9,20 @@ from conans.test.utils.tools import redirect_output
 class ReportCopiedFilesTestCase(unittest.TestCase):
 
     def test_output_string(self):
-
+        manifest = FileTreeManifest(0,
+                                    file_sums={'/abs/path/to/file.pdf': "",
+                                               '../rel/path/to/file2.pdf': "",
+                                               '../rel/path/to/file3.pdf': "",
+                                               '../rel/path/to/file4.pdf': "",
+                                               '../rel/path/to/file5.pdf': "",
+                                               '../rel/path/to/file6.pdf': "",
+                                               '../rel/path/to/file7.pdf': "",
+                                               '/without/ext/no_ext1': "",
+                                               'no_ext2': "",
+                                               'a/other.txt': ""})
         output = RedirectedTestOutput()
         with redirect_output(output):
-            files = ['/abs/path/to/file.pdf',
-                     '../rel/path/to/file2.pdf',
-                     '../rel/path/to/file3.pdf',
-                     '../rel/path/to/file4.pdf',
-                     '../rel/path/to/file5.pdf',
-                     '../rel/path/to/file6.pdf',
-                     '../rel/path/to/file7.pdf',
-                     '/without/ext/no_ext1',
-                     'no_ext2',
-                     'a/other.txt']
-
-            report_files_copied(files, ConanOutput())
+            manifest.report_summary(ConanOutput())
             lines = sorted(str(output).splitlines())
             self.assertEqual("Copied 7 '.pdf' files", lines[2])
             self.assertEqual("Copied 2 files: no_ext1, no_ext2", lines[1])

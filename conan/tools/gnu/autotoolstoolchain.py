@@ -1,14 +1,13 @@
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch
+from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, apple_sdk_path
 from conan.tools.apple.apple import get_apple_sdk_fullname
-from conan.tools.build import cmd_args_to_string
+from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
-from conan.tools.files.files import save_toolchain_args
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conans.errors import ConanException
+from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path
+from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 
 
@@ -77,9 +76,9 @@ class AutotoolsToolchain:
             # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
-            if os_build == "Macos":
+            if os_build == "Macos" and is_apple_os(conanfile):
                 # SDK path is mandatory for cross-building
-                sdk_path = conanfile.conf.get("tools.apple:sdk_path")
+                sdk_path = apple_sdk_path(self._conanfile)
                 if not sdk_path:
                     raise ConanException("You must provide a valid SDK path for cross-compilation.")
                 apple_arch = to_apple_arch(self._conanfile)
@@ -153,7 +152,10 @@ class AutotoolsToolchain:
             compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
-                    env.define(env_var, compilers_by_conf[comp])
+                    compiler = compilers_by_conf[comp]
+                    # https://github.com/conan-io/conan/issues/13780
+                    compiler = unix_path(self._conanfile, compiler)
+                    env.define(env_var, compiler)
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)

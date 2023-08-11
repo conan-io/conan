@@ -1,5 +1,4 @@
 import os
-import platform
 
 import pytest
 import requests
@@ -165,9 +164,8 @@ class TestDownload:
 
     def test_download_localfile(self):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
 
-        file_location =  os.path.join(temp_folder(), "file.txt")
+        file_location = os.path.join(temp_folder(), "file.txt")
         save(file_location, "this is some content")
 
         file_url = f"file:///{file_location}"
@@ -180,7 +178,6 @@ class TestDownload:
 
     def test_download_localfile_notfound(self):
         conanfile = ConanFileMock()
-        conanfile._conan_requester = requests
 
         file_url = "file:///path/to/missing/file.txt"
         dest = os.path.join(temp_folder(), "file.txt")
@@ -189,6 +186,7 @@ class TestDownload:
             download(conanfile, file_url, dest)
 
         assert "No such file" in str(exc.value)
+
 
 @pytest.fixture()
 def bottle_server_zip():

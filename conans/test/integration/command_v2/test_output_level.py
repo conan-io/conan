@@ -1,15 +1,7 @@
 import json
 
-from conan.api.conan_api import ConanAPI
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.tools import TestClient, redirect_output
-
-
-def set_conan_output_level(level, activate_logger=False):
-    from conan.api import output
-    output.conan_output_level = level
-    output.conan_output_logger_format = activate_logger
+from conans.test.utils.tools import TestClient
 
 
 def test_invalid_output_level():
@@ -45,7 +37,7 @@ def test_output_level():
     assert "This is a warning" in t.out
     assert "This is a error" in t.out
 
-    # Print also verbose traces
+    # Check if -v argument is equal to VERBOSE level
     t.run("create . --name foo --version 1.0 -v")
     assert "This is a trace" not in t.out
     assert "This is a debug" not in t.out
@@ -150,51 +142,3 @@ def test_output_level():
     assert "This is a success" not in t.out
     assert "This is a warning" not in t.out
     assert "This is a error" in t.out
-
-
-def test_logger_output_format():
-    t = TestClient()
-    t.save({"conanfile.py": GenConanfile()})
-
-    # By default, it prints > info
-    t.run("create . --name foo --version 1.0 --logger -vvv")
-    lines = t.out.splitlines()
-    for line in lines:
-        data = json.loads(line)
-        assert "json" in data
-        assert "level" in data["json"]
-        assert "time" in data["json"]
-        assert "data" in data["json"]
-        if data["json"]["level"] == "TRACE":
-            assert "_action" in data["json"]["data"]
-
-
-def test_python_api_log_change():
-    t = TestClient()
-    t.save({"conanfile.py": GenConanfile()})
-    t.run("create . --name foo --version 1.0")
-
-    stderr = RedirectedTestOutput()
-    stdout = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        set_conan_output_level(10)
-        api = ConanAPI(cache_folder=t.cache_folder)
-        api.remotes.list()
-        assert "_action: CONAN_API, name: remotes.list, parameters" in stderr
-
-    stderr = RedirectedTestOutput()
-    stdout = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        set_conan_output_level(20)
-        api = ConanAPI(cache_folder=t.cache_folder)
-        api.remotes.list()
-        assert "_action: CONAN_API, name: remotes.list, parameters" not in stderr
-
-    stderr = RedirectedTestOutput()
-    stdout = RedirectedTestOutput()
-    with redirect_output(stderr, stdout):
-        set_conan_output_level(10, activate_logger=True)
-        api = ConanAPI(cache_folder=t.cache_folder)
-        api.remotes.list()
-        assert "_action: CONAN_API, name: remotes.list, parameters" not in stderr
-        assert '{"json": ' in stderr

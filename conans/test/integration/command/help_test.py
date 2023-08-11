@@ -29,12 +29,12 @@ class TestHelp:
     def test_help_command(self):
         c = TestClient()
         c.run("new -h")
-        assert "Create a new recipe" in c.out
+        assert "Create a new example recipe" in c.out
 
     def test_help_subcommand(self):
         c = TestClient()
         c.run("cache -h")
         # When listing subcommands, but line truncated
-        assert "Performs file operations in the local cache (of recipes and packages)" in c.out
+        assert "Perform file operations in the local cache (of recipes and/or packages)" in c.out
         c.run("cache path -h")
-        assert "Shows the path in the Conan cache af a given reference" in c.out
+        assert "Show the path to the Conan cache for a given reference" in c.out

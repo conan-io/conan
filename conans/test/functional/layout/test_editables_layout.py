@@ -1,9 +1,7 @@
 import textwrap
 
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 def test_cpp_info_editable():
@@ -51,11 +49,7 @@ def test_cpp_info_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = client.exported_recipe_revision()
-    ref = RecipeReference.loads("hello/1.0")
-    ref.revision = rrev
-    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
+    package_folder = client.created_layout().package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -95,7 +89,7 @@ def test_cpp_info_editable():
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . --name=lib --version=1.0")
@@ -176,11 +170,7 @@ def test_cpp_info_components_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = client.exported_recipe_revision()
-    ref = RecipeReference.loads("hello/1.0")
-    ref.revision = rrev
-    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
+    package_folder = client.created_layout().package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -236,7 +226,7 @@ def test_cpp_info_components_editable():
 
     # When hello is editable
     client.save({"conanfile.py": conan_hello})
-    client.run("editable add . hello/1.0@")
+    client.run("editable add . --name=hello --version=1.0")
 
     # Create the consumer again, now it will use the hello editable
     client2.run("create . --name=lib --version=1.0")
@@ -284,6 +274,6 @@ def test_editable_package_folder():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-    c.run("editable add . pkg/0.1")
+    c.run("editable add .")
     c.run("install --requires=pkg/0.1@")
     assert "pkg/0.1: PKG FOLDER=None!!!"

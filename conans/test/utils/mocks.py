@@ -1,5 +1,4 @@
 import os
-from collections import namedtuple
 from io import StringIO
 
 
@@ -63,6 +62,9 @@ class MockSettings(object):
         except KeyError:
             raise ConanException("'%s' value not defined" % name)
 
+    def rm_safe(self, name):
+        self.values.pop(name, None)
+
 
 class MockCppInfo(object):
     def __init__(self):
@@ -82,6 +84,7 @@ class MockConanfile(ConanFile):
     def __init__(self, settings, options=None, runner=None):
         self.display_name = ""
         self._conan_node = None
+        self.package_type = "unknown"
         self.folders = Folders()
         self.settings = settings
         self.settings_build = settings
@@ -91,9 +94,15 @@ class MockConanfile(ConanFile):
         self.conf = Conf()
 
         class MockConanInfo:
-            pass
+            settings = None
+            options = None
+
+            def clear(self):
+                self.settings = {}
+                self.options = {}
         self.info = MockConanInfo()
         self.info.settings = settings  # Incomplete, only settings for Cppstd Min/Max tests
+        self.info.options = options
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -103,8 +112,8 @@ class MockConanfile(ConanFile):
 
 class ConanFileMock(ConanFile):
 
-    def __init__(self, shared=None):
-        self.display_name = ""
+    def __init__(self, display_name=""):
+        self.display_name = display_name
         self._conan_node = None
         self.command = None
         self._commands = []
@@ -113,8 +122,6 @@ class ConanFileMock(ConanFile):
         self.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
         self.settings_target = None
         self.options = Options()
-        if shared is not None:
-            self.options = namedtuple("options", "shared")(shared)
         self.generators = []
         self.captured_env = {}
         self.folders = Folders()
@@ -126,9 +133,10 @@ class ConanFileMock(ConanFile):
         self._conan_user = None
         self._conan_channel = None
         self.env_scripts = {}
+        self.system_requires = {}
         self.win_bash = None
         self.conf = ConfDefinition().get_conanfile_conf(None)
-        self._conan_helpers = ConanFileHelpers(None, None)
+        self._conan_helpers = ConanFileHelpers(None, None, self.conf, None)
         self.cpp = Infos()
 
     def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):

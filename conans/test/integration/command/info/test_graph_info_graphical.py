@@ -177,3 +177,35 @@ def test_user_templates():
     assert template_folder in c.stdout
     c.run("graph info --requires=lib/0.1 --format=dot")
     assert template_folder in c.stdout
+
+
+def test_graph_info_html_output():
+    tc = TestClient()
+    tc.save({"lib/conanfile.py": GenConanfile("lib"),
+             "ui/conanfile.py": GenConanfile("ui", "1.0").with_requirement("lib/1.0"),
+             "math/conanfile.py": GenConanfile("math", "1.0").with_requirement("lib/2.0"),
+             "libiconv/conanfile.py": GenConanfile("libiconv", "1.0").with_requirement("lib/2.0"),
+             "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("libiconv/1.0"),
+             "openimageio/conanfile.py": GenConanfile("openimageio", "1.0").with_requirement("boost/1.0").with_requirement("lib/1.0")})
+    tc.run("export lib/ --version=1.0")
+    tc.run("export lib/ --version=2.0")
+    tc.run("export ui")
+    tc.run("export math")
+    tc.run("export libiconv")
+    tc.run("export boost")
+    tc.run("export openimageio")
+
+    tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
+    assert "// Add error conflict node" in tc.out
+    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
+    assert "// Add edge from base node to the new error node" not in tc.out
+    assert "// Add edge from previous node that already had conflicting dependency" in tc.out
+
+    tc.run("graph info openimageio/ --format=html", assert_error=True)
+    assert "// Add error conflict node" in tc.out
+    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
+    assert "// Add edge from base node to the new error node" in tc.out
+    assert "// Add edge from previous node that already had conflicting dependency" not in tc.out
+    # There used to be a few bugs with weird graphs, check for regressions
+    assert "jinja2.exceptions.UndefinedError" not in tc.out
+    assert "from: ," not in tc.out

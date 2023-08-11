@@ -25,7 +25,11 @@ class MesonToolchainTest(TestMesonBase):
 
         def config_options(self):
             if self.settings.os == "Windows":
-                del self.options.fPIC
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
 
         def layout(self):
             self.folders.generators = 'build/gen_folder'
@@ -158,7 +162,12 @@ class MesonToolchainTest(TestMesonBase):
                      "conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile,
                      "src/file1.txt": "", "src/file2.txt": ""})
-        self.t.run("create .")
+        self.t.run("create . -c tools.build:verbosity=quiet -c tools.compilation:verbosity=verbose")
+        # Check verbosity control
+        assert "unrecognized arguments" not in self.t.out
+        assert re.search("meson compile .*? --verbose", self.t.out)
+        assert re.search("meson install .*? --quiet", self.t.out)
+
         # Check if all the files are in the final directories
         ref = RecipeReference.loads("hello/1.0")
         pref = self.t.get_latest_package_reference(ref)
@@ -226,3 +235,64 @@ def test_meson_and_additional_machine_files_composition():
     # Checking the order of the appended user file (the order matters)
     match = re.search(r"meson setup --native-file .* --native-file \"myfilename\.ini\"", client.out)
     assert match
+
+
+@pytest.mark.tool("meson")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
+def test_meson_using_prefix_path_in_application():
+    """
+    Issue related https://github.com/conan-io/conan/issues/14213
+    """
+    meson_build = textwrap.dedent("""
+    project('myhello ', 'c')
+    executable('myhello', 'src/main.c', install: true)
+
+    prefix_dir = get_option('prefix')
+    cfg_var = configuration_data()
+    cfg_var.set_quoted('MYHELLO_PREFIX', prefix_dir)
+
+    config_file = configure_file(
+        configuration: cfg_var,
+        output: 'config.h'
+    )
+    """)
+    main_c = textwrap.dedent("""
+    #include <config.h>
+
+    int main(void) {
+        return 0;
+    }
+
+    char *issue_func() {
+        return (MYHELLO_PREFIX);
+    }
+    """)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import Meson
+    from conan.tools.layout import basic_layout
+
+    class myhelloConan(ConanFile):
+        name = "demo"
+        version = "0.1"
+        settings = "os", "compiler", "build_type", "arch"
+        exports_sources = "meson.build", "*.c"
+        package_type = "application"
+        generators = "MesonToolchain"
+
+        def layout(self):
+            basic_layout(self)
+
+        def build(self):
+            meson = Meson(self)
+            meson.configure()
+            meson.build()
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "src/main.c": main_c,
+                 "meson.build": meson_build})
+    client.run("build .")
+    assert "unrecognized character escape sequence" not in str(client.out)  # if Visual
+    assert "unknown escape sequence" not in str(client.out)  # if mingw

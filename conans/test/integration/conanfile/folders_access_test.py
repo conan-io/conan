@@ -82,8 +82,6 @@ class AConan(ConanFile):
         assert(self.package_folder == os.getcwd())
         assert(isinstance(self.package_path, Path))
         assert(str(self.package_path) == self.package_folder)
-        assert(self.source_folder is None)
-        assert(self.build_folder is None)
 """
 
 
@@ -191,7 +189,7 @@ class RecipeFolderTest(unittest.TestCase):
                      "pkg/file.txt": "MYFILE!",
                      "consumer/conanfile.py":
                          GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("editable add pkg pkg/0.1@user/stable")
+        client.run("editable add pkg --name=pkg --version=0.1 --user=user --channel=stable")
 
         client.run("install consumer")
         client.assert_listed_require({"pkg/0.1@user/stable": "Editable"})

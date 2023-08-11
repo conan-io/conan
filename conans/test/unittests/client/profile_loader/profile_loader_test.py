@@ -103,10 +103,51 @@ def test_profiles_includes():
     profile = profile_loader.load_profile("./profile4.txt", tmp)
 
     assert profile.settings == {"os": "1"}
-    assert profile.options["zlib/1.2.11"].aoption == 1
-    assert profile.options["zlib/*"].otheroption == 12
+    assert profile.options["zlib*"].aoption == 1
+    assert profile.options["zlib*"].otheroption == 12
     assert profile.tool_requires == {"*": [RecipeReference.loads("one/1.5@lasote/stable"),
                                            RecipeReference.loads("two/1.2@lasote/stable")]}
+
+
+def test_profile_compose_system_tools():
+    tmp = temp_folder()
+    save(os.path.join(tmp, "profile0"), "[system_tools]\ntool1/1.0")
+    save(os.path.join(tmp, "profile1"), "[system_tools]\ntool2/2.0")
+    save(os.path.join(tmp, "profile2"), "include(./profile0)\n[system_tools]\ntool3/3.0")
+    save(os.path.join(tmp, "profile3"), "include(./profile0)\n[system_tools]\ntool1/1.1")
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile2 = profile_loader.load_profile("./profile2", tmp)
+    assert profile2.system_tools == [RecipeReference.loads("tool1/1.0"),
+                                     RecipeReference.loads("tool3/3.0")]
+    profile3 = profile_loader.load_profile("./profile3", tmp)
+    assert profile3.system_tools == [RecipeReference.loads("tool1/1.1")]
+    profile0 = profile_loader.load_profile("./profile0", tmp)
+    profile1 = profile_loader.load_profile("./profile1", tmp)
+    profile0.compose_profile(profile1)
+    assert profile0.system_tools == [RecipeReference.loads("tool1/1.0"),
+                                     RecipeReference.loads("tool2/2.0")]
+
+
+def test_profile_compose_tool_requires():
+    tmp = temp_folder()
+    save(os.path.join(tmp, "profile0"), "[tool_requires]\ntool1/1.0")
+    save(os.path.join(tmp, "profile1"), "[tool_requires]\ntool2/2.0")
+    save(os.path.join(tmp, "profile2"), "include(./profile0)\n[tool_requires]\ntool3/3.0")
+    save(os.path.join(tmp, "profile3"), "include(./profile0)\n[tool_requires]\ntool1/1.1")
+
+    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile2 = profile_loader.load_profile("./profile2", tmp)
+    assert profile2.tool_requires == {"*": [RecipeReference.loads("tool1/1.0"),
+                                            RecipeReference.loads("tool3/3.0")]}
+    profile3 = profile_loader.load_profile("./profile3", tmp)
+    assert profile3.tool_requires == {"*": [RecipeReference.loads("tool1/1.1")]}
+
+    profile0 = profile_loader.load_profile("./profile0", tmp)
+    profile1 = profile_loader.load_profile("./profile1", tmp)
+    profile0.compose_profile(profile1)
+    assert profile0.tool_requires == {"*": [RecipeReference.loads("tool1/1.0"),
+                                            RecipeReference.loads("tool2/2.0")]}
 
 
 def test_profile_include_order():
@@ -198,8 +239,8 @@ def test_profile_buildenv():
 
 
 @pytest.mark.parametrize("conf_name", [
-    "core.doesnotexist:never",
-    "core:doesnotexist"
+    "core.gzip:compresslevel=5",
+    "core.gzip:compresslevel"
 ])
 def test_profile_core_confs_error(conf_name):
     tmp = temp_folder()
@@ -209,5 +250,5 @@ def test_profile_core_confs_error(conf_name):
     profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
 
     with pytest.raises(ConanException) as exc:
-        profile_loader.from_cli_args([], [], [], [], [conf_name], None)
+        profile_loader.from_cli_args([], [], [], [conf_name], None)
     assert "[conf] 'core.*' configurations are not allowed in profiles" in str(exc.value)

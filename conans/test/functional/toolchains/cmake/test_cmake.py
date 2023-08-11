@@ -34,11 +34,12 @@ def test_simple_cmake_mingw():
         compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
+    build_folder = client.created_test_build_folder("hello/1.0")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
     check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
                   subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
-    check_vs_runtime("test_package/test_output/build/Release/example.exe", client, "15",
+    check_vs_runtime(f"test_package/{build_folder}/example.exe", client, "15",
                      build_type="Release", static_runtime=False, subsystem="mingw64")
 
 # TODO: How to link with mingw statically?
@@ -56,6 +57,7 @@ class Base(unittest.TestCase):
             generators = "CMakeDeps"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
+            implements = ["auto_shared_fpic", "auto_header_only"]
 
             def generate(self):
                 tc = CMakeToolchain(self)
@@ -216,12 +218,11 @@ class WinTest(Base):
         options = {"shared": shared}
         save(self.client.cache.new_config_path, "tools.build:jobs=1")
         install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
+        self.assertIn('cmake -G "Visual Studio 15 2017" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
@@ -313,11 +314,10 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         install_out = self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
         self.assertIn("The C compiler identification is GNU", self.client.out)
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
+        self.assertIn('cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
         assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
@@ -373,7 +373,7 @@ class LinuxTest(Base):
         self._run_build(settings, {"shared": shared})
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
+        self.assertIn('cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
@@ -395,7 +395,9 @@ class LinuxTest(Base):
                 "CMAKE_SHARED_LINKER_FLAGS": arch_str,
                 "CMAKE_EXE_LINKER_FLAGS": arch_str,
                 "COMPILE_DEFINITIONS": defines,
-                "CMAKE_POSITION_INDEPENDENT_CODE": "ON"
+                # fPIC is managed automatically depending on the shared option value
+                # if implements = ["auto_shared_fpic", "auto_header_only"]
+                "CMAKE_POSITION_INDEPENDENT_CODE": "ON" if not shared else ""
                 }
 
         def _verify_out(marker=">>"):
@@ -430,7 +432,7 @@ class AppleTest(Base):
 
         toolchain_path = os.path.join(self.client.current_folder, "build",
                                       "conan_toolchain.cmake").replace("\\", "/")
-        self.assertIn('CMake command: cmake -G "Unix Makefiles" '
+        self.assertIn('cmake -G "Unix Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "OFF" if cppstd else ""
@@ -556,11 +558,12 @@ class CMakeInstallTest(unittest.TestCase):
                      "header.h": "# my header file"})
 
         # The create flow must work
-        client.run("create . --name=pkg --version=0.1")
-        self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
-        ref = RecipeReference.loads("pkg/0.1")
-        pref = client.get_latest_package_reference(ref)
-        package_folder = client.get_latest_pkg_layout(pref).package()
+        client.run("create . --name=pkg --version=0.1 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+        assert "--loglevel=VERBOSE" in client.out
+        assert "unrecognized option" not in client.out
+        assert "--verbose" in client.out
+        self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
+        package_folder = client.created_layout().package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
     def test_install_in_build(self):
@@ -595,7 +598,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         # The create flow must work
         client.run("build .")
-        assert "conanfile.py: CMake command: cmake --install" in client.out
+        assert "conanfile.py: RUN: cmake --install" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -636,7 +639,7 @@ class TestCmakeTestMethod:
             """)
         c = TestClient()
         c.run("new cmake_lib -d name=test -d version=0.1")
-        c.run("create .  -tf=None -o test*:shared=True")
+        c.run("create .  -tf=\"\" -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": cmakelist,
@@ -729,3 +732,4 @@ class TestCMakeFindPackagePreferConfig:
 
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
+

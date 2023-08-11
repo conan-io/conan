@@ -54,11 +54,11 @@ def test_cmake_config(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_cmake_config_error(client):
@@ -71,11 +71,11 @@ def test_cmake_config_error(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=non-existing
+        tools.build:verbosity=non-existing
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile", assert_error=True)
-    assert "Unknown msbuild verbosity: non-existing" in client.out
+    assert "Unknown value 'non-existing' for 'tools.build:verbosity'" in client.out
 
 
 def test_cmake_config_package(client):
@@ -88,13 +88,13 @@ def test_cmake_config_package(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        dep*:tools.microsoft.msbuild:verbosity=Minimal
+        dep*:tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "/verbosity" not in client.out
     client.run("create . --name=dep --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_cmake_config_package_not_scoped(client):
@@ -107,13 +107,13 @@ def test_cmake_config_package_not_scoped(client):
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
     client.run("create . --name=dep --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 def test_config_profile_forbidden(client):
@@ -149,11 +149,11 @@ def test_msbuild_config():
         compiler.runtime=dynamic
         build_type=Release
         [conf]
-        tools.microsoft.msbuild:verbosity=Minimal
+        tools.build:verbosity=quiet
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Quiet" in client.out
 
 
 @pytest.mark.tool("visual_studio")
@@ -303,3 +303,35 @@ def test_config_package_append(client):
     assert "mypkg/0.1: MYCONFBUILD: ['a', 'b', 'c', 'd']" in client.out
     client.run("create . --name=mydep --version=0.1 -pr=profile2")
     assert "mydep/0.1: MYCONFBUILD: ['e', 'a', 'b', 'c']" in client.out
+
+
+def test_conf_patterns_user_channel():
+    # https://github.com/conan-io/conan/issues/14139
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            def configure(self):
+                self.output.info(f"CONF: {self.conf.get('user.myteam:myconf')}")
+                self.output.info(f"CONF2: {self.conf.get('user.myteam:myconf2')}")
+        """)
+    profile = textwrap.dedent("""\
+        [conf]
+        user.myteam:myconf=myvalue1
+        user.myteam:myconf2=other1
+        *@user/channel:user.myteam:myconf=myvalue2
+        *@*/*:user.myteam:myconf2=other2
+        """)
+    client.save({"dep/conanfile.py": conanfile,
+                 "app/conanfile.py": GenConanfile().with_requires("dep1/0.1",
+                                                                  "dep2/0.1@user/channel"),
+                 "profile": profile})
+
+    client.run("create dep --name=dep1 --version=0.1")
+    client.run("create dep --name=dep2 --version=0.1 --user=user --channel=channel")
+    client.run("install app -pr=profile")
+    assert "dep1/0.1: CONF: myvalue1" in client.out
+    assert "dep2/0.1@user/channel: CONF: myvalue2" in client.out
+    assert "dep1/0.1: CONF2: other1" in client.out
+    assert "dep2/0.1@user/channel: CONF2: other2" in client.out

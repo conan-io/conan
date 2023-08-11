@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -30,7 +31,7 @@ def test_editable_envvars():
                                               .with_requires("dep/1.0")
                                               .with_generator("VirtualBuildEnv")
                                               .with_generator("VirtualRunEnv")})
-    c.run("editable add dep dep/1.0")
+    c.run("editable add dep  --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     build_path = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
     buildenv = c.load("pkg/conanbuildenv.sh")
@@ -43,7 +44,7 @@ def test_editable_envvars():
     run_path = os.path.join(c.current_folder, "dep", "mysource", "mylocalsrc")
     assert f'export MYRUNPATH="$MYRUNPATH:{run_path}"' in runenv
 
-    c.run("editable remove dep/1.0")
+    c.run("editable remove dep")
     c.run("create dep")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     buildenv = c.load("pkg/conanbuildenv.sh")
@@ -84,7 +85,7 @@ def test_editable_conf():
         """)
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
-    c.run("editable add dep dep/1.0")
+    c.run("editable add dep --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     out = str(c.out).replace("\\\\", "\\")
     conf_source = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
@@ -95,3 +96,37 @@ def test_editable_conf():
     assert conf_build in out
     assert confdict1 in out
     assert confdict2 in out
+
+
+def test_editable_conf_tool_require_builtin():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "androidndk"
+            version = "1.0"
+            def layout(self):
+                self.layouts.build.conf_info.define_path("tools.android:ndk_path", "mybuild")
+                self.layouts.package.conf_info.define_path("tools.android:ndk_path", "mypkg")
+        """)
+
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "androidndk/1.0"
+            def generate(self):
+                ndk = self.conf.get("tools.android:ndk_path")
+                self.output.info(f"NDK: {ndk}!!!")
+        """)
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("editable add dep")
+    c.run("install pkg -s os=Linux -s:b os=Linux")
+    ndk_path = os.path.join(c.current_folder, "dep", "mybuild")
+    assert f"conanfile.py: NDK: {ndk_path}!!!" in c.out
+
+    c.run("editable remove dep")
+    c.run("create dep")
+    c.run("install pkg -s os=Linux -s:b os=Linux")
+    assert re.search("conanfile.py: NDK: .*mypkg!!!", str(c.out))

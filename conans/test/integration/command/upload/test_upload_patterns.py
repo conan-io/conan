@@ -167,7 +167,7 @@ class TestUploadPatternErrors:
 
     def test_pid_not_found(self, client):
         rrev = "485dad6cb11e2fa99d9afbe44a57a164"
-        error = f"ERROR: Package ID 'pkg/0.1#{rrev}:pid1' not found"
+        error = "ERROR: Binary package not found: 'pkg/0.1:pid1"
         self.assert_error(f"pkg/0.1#{rrev}:pid1", error, client)
 
     def test_prev_not_found(self, client):
@@ -175,3 +175,7 @@ class TestUploadPatternErrors:
         pid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
         error = f"ERROR: Package revision 'pkg/0.1#{rrev}:{pid}#prev' not found"
         self.assert_error(f"pkg/0.1#{rrev}:{pid}#prev", error, client)
+
+    def test_bad_package_query(self, client):
+        error = "Invalid package query: blah. Invalid expression: blah"
+        self.assert_error("* -p blah", error, client)

@@ -1,9 +1,11 @@
 import platform
 import textwrap
+import os
 
-from conans.util.env import environment_update
+from conan import conan_version
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.env import environment_update
 
 
 def test_profile_template():
@@ -36,7 +38,7 @@ def test_profile_template_variables():
     assert "os=FreeBSD" in client.out
 
 
-def test_profile_template_inclusion():
+def test_profile_template_import():
     client = TestClient()
     tpl1 = textwrap.dedent("""
         {% import "profile_vars" as vars %}
@@ -45,6 +47,23 @@ def test_profile_template_inclusion():
         """)
     tpl2 = textwrap.dedent("""
         {% set a = "FreeBSD" %}
+        """)
+    client.save({"conanfile.py": GenConanfile(),
+                 "profile1": tpl1,
+                 "profile_vars": tpl2})
+    client.run("install . -pr=profile1")
+    assert "os=FreeBSD" in client.out
+
+
+def test_profile_template_include():
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        {% include "profile_vars" %}
+        """)
+    tpl2 = textwrap.dedent("""
+        {% set a = "FreeBSD" %}
+        [settings]
+        os = {{ a }}
         """)
     client.save({"conanfile.py": GenConanfile(),
                  "profile1": tpl1,
@@ -72,3 +91,73 @@ def test_profile_template_profile_dir():
                  "anysubfolder/toolchain.cmake": "MyToolchainCMake!!!"})
     client.run("install . -pr=anysubfolder/profile1")
     assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
+
+
+def test_profile_version():
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        [options]
+        *:myoption={{conan_version}}
+        *:myoption2={{conan_version<13 and conan_version>1.0}}
+        """)
+
+    client.save({"conanfile.py": GenConanfile(),
+                 "profile1.jinja": tpl1})
+    client.run("install . -pr=profile1.jinja")
+    assert f"*:myoption={conan_version}" in client.out
+    assert "*:myoption2=True" in client.out
+
+
+def test_profile_template_profile_name():
+    """
+        The property profile_name should be parsed as the profile file name when rendering profiles
+    """
+    client = TestClient()
+    tpl1 = textwrap.dedent("""
+        [conf]
+        user.profile:name = {{ profile_name }}
+        """)
+    tpl2 = textwrap.dedent("""
+        include(default)
+        [conf]
+        user.profile:name = {{ profile_name }}
+        """)
+    default = textwrap.dedent("""
+        [settings]
+        os=Windows
+        [conf]
+        user.profile:name = {{ profile_name }}
+        """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def configure(self):
+                self.output.info("PROFILE NAME: {}".format(self.conf.get("user.profile:name")))
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile_folder/foobar": tpl1,
+                 "another_folder/foo.profile": tpl1,
+                 "include_folder/include_default": tpl2,
+                 os.path.join(client.cache.profiles_path, "baz"): tpl1,
+                 os.path.join(client.cache.profiles_path, "default"): default})
+
+    # show only file name as profile name
+    client.run("install . -pr=profile_folder/foobar")
+    assert "conanfile.py: PROFILE NAME: foobar" in client.out
+
+    # profile_name should include file extension
+    client.run("install . -pr=another_folder/foo.profile")
+    assert "conanfile.py: PROFILE NAME: foo.profile" in client.out
+
+    # default profile should compute profile_name by default too
+    client.run("install . -pr=default")
+    assert "conanfile.py: PROFILE NAME: default" in client.out
+
+    # profile names should show only their names
+    client.run("install . -pr=baz")
+    assert "conanfile.py: PROFILE NAME: baz" in client.out
+
+    # included profiles should respect the inherited profile name
+    client.run("install . -pr=include_folder/include_default")
+    assert "conanfile.py: PROFILE NAME: include_default" in client.out

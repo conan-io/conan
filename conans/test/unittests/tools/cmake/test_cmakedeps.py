@@ -22,6 +22,7 @@ def test_cpp_info_name_cmakedeps():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo(set_defaults=True)
     cpp_info.set_property("cmake_target_name", "MySuperPkg1::MySuperPkg1")
@@ -62,6 +63,7 @@ def test_cpp_info_name_cmakedeps_components():
                                    "arch": ["x86", "x64"]})
     conanfile.settings.build_type = "Debug"
     conanfile.settings.arch = "x64"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo()
     cpp_info.set_property("cmake_file_name", "ComplexFileName1")
@@ -111,6 +113,7 @@ def test_cmake_deps_links_flags():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo()
     # https://github.com/conan-io/conan/issues/8811 regression, fix with explicit - instead of /
@@ -158,6 +161,7 @@ def test_component_name_same_package():
                                    "arch": ["x86"]})
     conanfile.settings.build_type = "Release"
     conanfile.settings.arch = "x86"
+    conanfile.folders.set_base_generators("/some/abs/path")  # non-existing to not relativize
 
     cpp_info = CppInfo(set_defaults=True)
 

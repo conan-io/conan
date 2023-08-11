@@ -15,17 +15,35 @@ from conan import ConanFile
 class BasicConanfile(ConanFile):
 ''' + _conanfile_header + '''\
 
+    # Check the documentation for the rest of the available attributes
+
+
     # The requirements method allows you to define the dependencies of your recipe
     def requirements(self):
         # Each call to self.requires() will add the corresponding requirement
         # to the current list of requirements
         {% if requires is defined -%}
-        {% for require in as_iterable(requires) -%}
+        {% for require in requires -%}
         self.requires("{{ require }}")
         {% endfor %}
         {% else -%}
         # Uncommenting this line will add the zlib/1.2.13 dependency to your project
         # self.requires("zlib/1.2.13")
+        pass
+        {%- endif %}
+
+    # The build_requirements() method is functionally equivalent to the requirements() one,
+    # being executed just after it. It's a good place to define tool requirements,
+    # dependencies necessary at build time, not at application runtime
+    def build_requirements(self):
+        # Each call to self.tool_requires() will add the corresponding build requirement
+        {% if tool_requires is defined -%}
+        {% for require in tool_requires -%}
+        self.tool_requires("{{ require }}")
+        {% endfor %}
+        {% else -%}
+        # Uncommenting this line will add the cmake >=3.15 build dependency to your project
+        # self.requires("cmake/[>=3.15]")
         pass
         {%- endif %}
 
