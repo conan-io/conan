@@ -345,7 +345,8 @@ class GraphBinariesAnalyzer(object):
                         continue
                 self._evaluate_node(node, build_mode)
 
-        self._skip_binaries(deps_graph)
+        if self._cache.new_config.get("core.graph:skip_binaries", check_type=bool, default=True):
+            self._skip_binaries(deps_graph)
 
     @staticmethod
     def _skip_binaries(graph):

@@ -17,6 +17,14 @@ def test_private_skip():
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
+    # Ensure the skip_binaries conf is able to avoid skips
+    client.save_home({"global.conf": "core.graph:skip_binaries=False"})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . --name=dep --version=1.0")
+    client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
+    client.run("create . --name=app --version=1.0 -v")
+    client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
+
 
 def test_private_no_skip():
     # app -> pkg -(private)-> dep
