@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, MultiPackagesList
+from conan.api.model import ListPattern, MultiPackagesList, PackagesList
 from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
@@ -62,6 +62,7 @@ def remove(conan_api: ConanAPI, parser, *args):
 
     ui = UserInput(conan_api.config.get("core:non_interactive"))
     remote = conan_api.remotes.get(args.remote) if args.remote else None
+    cache_name = "Local Cache" if not remote else remote.name
 
     def confirmation(message):
         return args.confirm or ui.request_boolean(message)
@@ -69,7 +70,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
-        package_list = multi_package_list["Local Cache" if not remote else remote.name]
+        package_list = multi_package_list[cache_name]
         refs_to_remove = package_list.refs()
         if not refs_to_remove:  # the package list might contain only refs, no revs
             ConanOutput().warning("Nothing to remove, package list do not contain recipe revisions")
@@ -79,18 +80,25 @@ def remove(conan_api: ConanAPI, parser, *args):
             raise ConanException('--package-query supplied but the pattern does not match packages')
         package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
         multi_package_list = MultiPackagesList()
-        multi_package_list.add("Local Cache" if not remote else remote.name, package_list)
+        multi_package_list.add(cache_name, package_list)
 
+    results_pkg_list = PackagesList() 
+    results = MultiPackagesList()
+    results.add(cache_name, results_pkg_list)
+    
     for ref, ref_bundle in package_list.refs().items():
         if ref_bundle.get("packages") is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
                 conan_api.remove.recipe(ref, remote=remote)
+                results_pkg_list.add_refs([ref])
             continue
         for pref, _ in package_list.prefs(ref, ref_bundle).items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
                 conan_api.remove.package(pref, remote=remote)
+                results_pkg_list.add_refs([ref])
+                results_pkg_list.add_prefs(ref, [pref])
 
     return {
-        "results": multi_package_list.serialize(),
+        "results": results.serialize(),
         "conan_api": conan_api
     }
