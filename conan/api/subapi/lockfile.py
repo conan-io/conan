@@ -83,6 +83,12 @@ class LockfileAPI:
         if lockfile is None:
             lockfile = Lockfile()  # create a new lockfile
             lockfile.partial = True
+        if requires:
+            [r.validate_ref() for r in requires]
+        if build_requires:
+            [r.validate_ref() for r in build_requires]
+        if python_requires:
+            [r.validate_ref() for r in python_requires]
 
         lockfile.add(requires=requires, build_requires=build_requires,
                      python_requires=python_requires)
