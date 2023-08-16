@@ -95,8 +95,12 @@ class VersionRange:
                 prereleases = True
                 break
             else:
+                t = t.strip()
                 from conan.api.output import ConanOutput
-                ConanOutput().warning(f'Unrecognized version range option "{t}" in "{expression}"')
+                if len(t) == 0 or t[0].isalpha():
+                    ConanOutput().warning(f'Unrecognized version range option "{t}" in "{expression}"')
+                else:
+                    ConanOutput().error(f'"{t}" in version range "{expression}" is not a valid option')
         version_expr = tokens[0]
         self.condition_sets = []
         for alternative in version_expr.split("||"):
