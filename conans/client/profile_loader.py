@@ -112,6 +112,10 @@ class ProfileLoader:
 
     def _load_profile_plugin(self):
         profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
+        if not os.path.exists(profile_plugin):
+            raise ConanException("The 'profile.py' plugin file doesn't exist. If you want "
+                                 "to disable it, edit its contents instead of removing it")
+
         mod, _ = load_python_file(profile_plugin)
         if hasattr(mod, "profile_plugin"):
             return mod.profile_plugin
