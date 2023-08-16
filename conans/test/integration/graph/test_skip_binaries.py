@@ -149,7 +149,7 @@ def test_conf_skip():
     client.run("create . --name=libb --version=1.0")
 
     client.save({"conanfile.py": GenConanfile().with_requires("liba/1.0", "libb/1.0")})
-    client.run("create . --name=app --version=1.0 -v")
+    client.run("create . --name=app --version=0.0 -v")
     client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
@@ -161,6 +161,6 @@ def test_conf_skip():
     client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
     client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
-    client.run("create . --name=app --version=1.0 -v -c *:tools.graph:skip_binaries=True")
+    client.run("create . --name=app --version=3.0 -v -c *:tools.graph:skip_binaries=True")
     client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
