@@ -7,9 +7,9 @@ from conan.errors import ConanException
 
 
 def is_apple_os(conanfile):
-    """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
+    """returns True if OS is Apple one (Macos, iOS, watchOS, tvOS or visionOS)"""
     os_ = conanfile.settings.get_safe("os")
-    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
+    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS']
 
 
 def _to_apple_arch(arch, default=None):
@@ -78,6 +78,10 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
         flag = '-mtvos-version-min'
     elif 'appletvsimulator' in os_sdk:
         flag = '-mtvos-simulator-version-min'
+    elif 'xros' in os_sdk:
+        flag = '-mxros-version-min'
+    elif 'xrsimulator' in os_sdk:
+        flag = '-mxros-simulator-version-min'
 
     if subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
