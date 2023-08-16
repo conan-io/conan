@@ -7,6 +7,7 @@ _meson_system_map = {
     'iOS': 'darwin',
     'watchOS': 'darwin',
     'tvOS': 'darwin',
+    'visionOS': 'darwin',
     'FreeBSD': 'freebsd',
     'Emscripten': 'emscripten',
     'Linux': 'linux',

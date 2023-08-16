@@ -8,9 +8,9 @@ from conans.errors import ConanException
 
 
 def is_apple_os(conanfile):
-    """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
+    """returns True if OS is Apple one (Macos, iOS, watchOS, tvOS or visionOS)"""
     os_ = conanfile.settings.get_safe("os")
-    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
+    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS']
 
 
 def to_apple_arch(conanfile):
@@ -24,12 +24,14 @@ def _guess_apple_sdk_name(os_, arch):
         return {'Macos': 'macosx',
                 'iOS': 'iphonesimulator',
                 'watchOS': 'watchsimulator',
-                'tvOS': 'appletvsimulator'}.get(str(os_))
+                'tvOS': 'appletvsimulator',
+                'visionOS': 'xrsimulator'}.get(str(os_))
     else:
         return {'Macos': 'macosx',
                 'iOS': 'iphoneos',
                 'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(os_), None)
+                'tvOS': 'appletvos',
+                'visionOS': 'xros'}.get(str(os_), None)
 
 
 def apple_sdk_name(settings):
@@ -62,7 +64,9 @@ def apple_min_version_flag(conanfile):
             'watchos': '-mwatchos-version-min',
             'watchsimulator': '-mwatchos-simulator-version-min',
             'appletvos': '-mtvos-version-min',
-            'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+            'appletvsimulator': '-mtvos-simulator-version-min',
+            'xros': '-mxros-version-min',
+            'xrsimulator': '-mxros-simulator-version-min'}.get(str(os_sdk))
     if os_subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
         flag = '-mios-version-min'

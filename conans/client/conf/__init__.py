@@ -19,7 +19,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
 
     # Only for building cross compilation tools, 'os_target/arch_target' is the system for
     # which the tools generate code
-    os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
+    os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, visionOS, FreeBSD, SunOS, AIX, Arduino, Neutrino]
     arch_target: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, sparc, sparcv9, mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le, e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7, xtensalx6, xtensalx106, xtensalx7]
 
     # Rest of the settings are "host" settings:
@@ -58,6 +58,10 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             sdk: [None, "appletvos", "appletvsimulator"]
             sdk_version: [None, "11.3", "11.4", "12.0", "12.1", "12.2", "12.4",
                           "13.0", "13.1", "13.2", "13.4", "14.0", "14.2", "14.3", "14.5", "15.0", "15.2", "15.4", "16.0", "16.1"]
+        visionOS:
+            version: ["1.0"]
+            sdk: [None, "xros", "xrsimulator"]
+            sdk_version: [None, "1.0"]
         Macos:
             version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "12.0", "13.0"]
             sdk: [None, "macosx"]
@@ -126,7 +130,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             runtime_type: [None, Debug, Release]
             runtime_version: [None, v140, v141, v142, v143]
         apple-clang: &apple_clang
-            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0"]
+            version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0", "15", "15.0"]
             libcxx: [libstdc++, libc++]
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         intel:

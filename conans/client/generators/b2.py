@@ -245,7 +245,7 @@ class B2Generator(Generator):
                 'Linux': 'linux',
                 'Macos': 'darwin',
                 'Android': 'android',
-                'iOS': 'darwin', 'watchOS': 'darwin', 'tvOS': 'darwin',
+                'iOS': 'darwin', 'watchOS': 'darwin', 'tvOS': 'darwin', 'visionOS': 'darwin',
                 'FreeBSD': 'freebsd',
                 'SunOS': 'solaris',
                 'Arduino': 'linux',

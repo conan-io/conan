@@ -221,6 +221,7 @@ class CMakeDefinitionsBuilder(object):
                                          "iOS": apple_system_name or "iOS",
                                          "tvOS": apple_system_name or "tvOS",
                                          "watchOS": apple_system_name or "watchOS",
+                                         "visionOS": apple_system_name or "visionOS",
                                          "Neutrino": "QNX",
                                          "": "Generic",
                                          None: "Generic"}

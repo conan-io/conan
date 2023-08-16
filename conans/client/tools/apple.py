@@ -6,8 +6,8 @@ from conans.util.runners import check_output_runner
 
 
 def is_apple_os(os_):
-    """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
-    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS']
+    """returns True if OS is Apple one (Macos, iOS, watchOS, tvOS or visionOS)"""
+    return str(os_) in ['Macos', 'iOS', 'watchOS', 'tvOS', 'visionOS']
 
 
 def to_apple_arch(arch):
@@ -27,12 +27,14 @@ def _guess_apple_sdk_name(os_, arch):
         return {'Macos': 'macosx',
                 'iOS': 'iphonesimulator',
                 'watchOS': 'watchsimulator',
-                'tvOS': 'appletvsimulator'}.get(str(os_))
+                'tvOS': 'appletvsimulator',
+                'visionOS': 'xrsimulator'}.get(str(os_))
     else:
         return {'Macos': 'macosx',
                 'iOS': 'iphoneos',
                 'watchOS': 'watchos',
-                'tvOS': 'appletvos'}.get(str(os_), None)
+                'tvOS': 'appletvos',
+                'visionOS': 'xros'}.get(str(os_), None)
 
 
 def apple_sdk_name(settings):
@@ -49,7 +51,8 @@ def apple_deployment_target_env(os_, os_version):
     env_name = {'Macos': 'MACOSX_DEPLOYMENT_TARGET',
                 'iOS': 'IOS_DEPLOYMENT_TARGET',
                 'watchOS': 'WATCHOS_DEPLOYMENT_TARGET',
-                'tvOS': 'TVOS_DEPLOYMENT_TARGET'}.get(str(os_))
+                'tvOS': 'TVOS_DEPLOYMENT_TARGET',
+                'visionOS': 'XROS_DEPLOYMENT_TARGET'}.get(str(os_))
     if not env_name:
         return {}
     return {env_name: os_version}
@@ -64,7 +67,9 @@ def apple_deployment_target_flag(os_, os_version, os_sdk=None, os_subsystem=None
             'watchos': '-mwatchos-version-min',
             'watchsimulator': '-mwatchos-simulator-version-min',
             'appletvos': '-mtvos-version-min',
-            'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+            'appletvsimulator': '-mtvos-simulator-version-min',
+            'xros': '-mxros-version-min',
+            'xrsimulator': '-mxros-simulator-version-min'}.get(str(os_sdk))
     if os_subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
         flag = '-mios-version-min'
