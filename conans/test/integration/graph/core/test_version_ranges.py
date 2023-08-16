@@ -414,3 +414,10 @@ def test_different_user_channel_resolved_correctly():
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out
+
+
+def test_unknown_options():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requirement("lib/[>1.2, <1.4]")})
+    c.run("install .", assert_error=True)
+    assert 'Unrecognized version range option " <1.4" in ">1.2, <1.4"' in c.out
