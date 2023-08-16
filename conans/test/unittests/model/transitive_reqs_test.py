@@ -1737,7 +1737,7 @@ class SayConan(ConanFile):
         self.assertIn(bad_value_msg("settings.os", "Linux",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Macos',
                                      'Neutrino', 'SunOS', 'VxWorks', 'Windows', 'WindowsCE',
-                                     'WindowsStore', 'baremetal', 'iOS', 'tvOS', 'watchOS']),
+                                     'WindowsStore', 'baremetal', 'iOS', 'tvOS', 'visionOS', 'watchOS']),
                       str(cm.exception))
 
     def test_config_remove2(self):

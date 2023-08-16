@@ -319,7 +319,7 @@ class SayConan(ConanFile):
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
                                      'SunOS', 'VxWorks', 'Windows', 'WindowsCE', 'WindowsStore', 'baremetal', 'iOS', 'tvOS',
-                                     'watchOS']),
+                                     'visionOS', 'watchOS']),
                       client.out)
 
         # Now add new settings to config and try again
