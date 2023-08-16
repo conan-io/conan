@@ -16,7 +16,7 @@ from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 from conans.client.cmd.user import update_localdb
-from conans.client.userio import UserInput
+from conans.client.rest.remote_credentials import RemoteCredentials
 from conans.errors import AuthenticationException, ConanException, ForbiddenException
 
 LOGIN_RETRIES = 3
@@ -70,8 +70,8 @@ class ConanApiAuthManager(object):
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
-            ui = UserInput(self._cache.new_config.get("core:non_interactive", check_type=bool))
-            input_user, input_password = ui.request_login(remote.name, user)
+            creds = RemoteCredentials(self._cache)
+            input_user, input_password = creds.auth(remote.name)
             try:
                 self._authenticate(remote, input_user, input_password)
             except AuthenticationException:
