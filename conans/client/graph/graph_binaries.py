@@ -345,8 +345,7 @@ class GraphBinariesAnalyzer(object):
                         continue
                 self._evaluate_node(node, build_mode)
 
-        if self._cache.new_config.get("core.graph:skip_binaries", check_type=bool, default=True):
-            self._skip_binaries(deps_graph)
+        self._skip_binaries(deps_graph)
 
     @staticmethod
     def _skip_binaries(graph):
@@ -363,5 +362,5 @@ class GraphBinariesAnalyzer(object):
                     required_nodes.add(dep_node)
 
         for node in graph.nodes:
-            if node not in required_nodes:
+            if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries", check_type=bool, default=True):
                 node.binary = BINARY_SKIP
