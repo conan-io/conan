@@ -54,6 +54,7 @@ class RangeResolver:
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]
+            local_found.extend(self._cache.editable_packages.edited_refs)
             self._cached_cache[pattern] = local_found
         if local_found:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
