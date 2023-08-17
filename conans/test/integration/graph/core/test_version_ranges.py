@@ -418,11 +418,11 @@ def test_different_user_channel_resolved_correctly():
 
 def test_unknown_options():
     c = TestClient()
+    c.save({"conanfile.py": GenConanfile("lib", "2.0")})
+    c.run("create .")
 
     c.run("graph info --requires=lib/[>1.2,<1.4]", assert_error=True)
     assert '"<1.4" in version range ">1.2,<1.4" is not a valid option' in c.out
 
-    c.save({"conanfile.py": GenConanfile("lib", "2.0")})
-    c.run("create .")
     c.run("graph info --requires=lib/[>1.2,unknown_conf]")
     assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out
