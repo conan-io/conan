@@ -336,3 +336,11 @@ class TestErrorsCompatibility:
         assert "Error while processing 'compatibility.py' plugin for 'dep/0.1', line 3" in c.out
         assert "while calling 'debug_compat', line 2" in c.out
         assert "while calling 'other', line 5" in c.out
+
+    def test_remove_plugin_file(self):
+        c = TestClient()
+        c.run("version")  # to trigger the creation
+        os.remove(os.path.join(c.cache.plugins_path, "compatibility", "compatibility.py"))
+        c.save({"conanfile.txt": ""})
+        c.run("install .", assert_error=True)
+        assert "ERROR: The 'compatibility.py' plugin file doesn't exist" in c.out
