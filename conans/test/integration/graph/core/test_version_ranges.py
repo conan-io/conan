@@ -420,7 +420,7 @@ def test_unknown_options():
     c = TestClient()
 
     c.run("graph info --requires=lib/[>1.2,<1.4]", assert_error=True)
-    assert 'ERROR: "<1.4" in version range ">1.2,<1.4" is not a valid option' in c.out
+    assert '"<1.4" in version range ">1.2,<1.4" is not a valid option' in c.out
 
     c.run("graph info --requires=lib/[>1.2,unknown_conf]", assert_error=True)
     assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out
