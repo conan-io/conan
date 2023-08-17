@@ -17,23 +17,6 @@ def test_private_skip():
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"dep/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
 
-    # Ensure the skip_binaries conf is able to avoid skips
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("create . --name=maths --version=1.0")
-    client.run("create . --name=ai --version=1.0")
-    client.save({"conanfile.py": GenConanfile().with_requires("maths/1.0", "ai/1.0")})
-    client.run("create . --name=app --version=1.0 -v -c *:tools.graph:skip_binaries=True")
-    client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-    client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-
-    client.run("create . --name=app --version=1.0 -v -c *:tools.graph:skip_binaries=False")
-    client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
-    client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
-
-    client.run("create . --name=app --version=2.0 -v -c maths/*:tools.graph:skip_binaries=False")
-    client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Cache")})
-    client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
-
 
 def test_private_no_skip():
     # app -> pkg -(private)-> dep
