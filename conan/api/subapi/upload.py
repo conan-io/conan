@@ -15,14 +15,14 @@ class UploadAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def check_upstream(self, package_list, remote, force=False):
+    def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
         app = ConanApp(self.conan_api.cache_folder)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
-            conanfile = app.loader.load_basic(conanfile_path)
+            conanfile = app.loader.load_basic(conanfile_path, remotes=enabled_remotes)
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")

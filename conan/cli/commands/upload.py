@@ -101,7 +101,7 @@ def upload(conan_api: ConanAPI, parser, *args):
         if args.check:
             conan_api.cache.check_integrity(package_list)
         # Check if the recipes/packages are in the remote
-        conan_api.upload.check_upstream(package_list, remote, args.force)
+        conan_api.upload.check_upstream(package_list, remote, enabled_remotes, args.force)
         conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
 
         if not args.dry_run:
