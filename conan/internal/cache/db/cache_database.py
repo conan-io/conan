@@ -5,8 +5,6 @@ from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
-CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
-
 
 class CacheDatabase:
 

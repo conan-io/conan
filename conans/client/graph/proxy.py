@@ -135,7 +135,7 @@ class ConanProxy:
 
     def _download(self, ref, remote):
         assert ref.revision
+        assert ref.timestamp
         self._remote_manager.get_recipe(ref, remote)
-        self._cache.update_recipe_timestamp(ref)
         output = ConanOutput(scope=str(ref))
         output.info("Downloaded recipe revision %s" % ref.revision)

@@ -11,7 +11,9 @@ def test_db_error():
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1")})
     c.run("create liba")
     c.run("install --requires=liba/0.1 --format=json", redirect_stdout="graph.json")
+    print(c.load("graph.json"))
     c.run("list --graph=graph.json --format=json", redirect_stdout="installed.json")
+    print(c.load("installed.json"))
     c.run("upload --list=installed.json -r=default --format=json -c", redirect_stdout="upload.json")
 
     c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
