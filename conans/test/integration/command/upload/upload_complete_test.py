@@ -72,7 +72,8 @@ def test_upload_with_pattern():
 
 def test_check_upload_confirm_question():
     server = TestServer()
-    client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "admin", "password", "n", "n", "n"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
@@ -80,7 +81,7 @@ def test_check_upload_confirm_question():
     assert "Uploading recipe 'hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
-    client.run("export . --user=frodo --channel=stable")
+    client.run("create . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
     assert "Uploading recipe 'hello2/1.2.1@frodo/stable" not in client.out
