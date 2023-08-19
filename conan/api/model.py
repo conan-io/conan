@@ -93,6 +93,21 @@ class MultiPackagesList:
             if any(r == "*" or r == recipe for r in recipes):
                 cache_list.add_refs([ref])
 
+            # We need to add the python_requires too
+            python_requires = node["python_requires"]
+            if python_requires is not None:
+                for pyref, pyreq in python_requires.items():
+                    pyrecipe = pyreq["recipe"]
+                    if pyrecipe == RECIPE_EDITABLE:
+                        continue
+                    pyref = RecipeReference.loads(pyref)
+                    if any(r == "*" or r == pyrecipe for r in recipes):
+                        cache_list.add_refs([pyref])
+                    pyremote = pyreq["remote"]
+                    if pyremote:
+                        remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
+                        remote_list.add_refs([pyref])
+
             remote = node["remote"]
             if remote:
                 remote_list = pkglist.lists.setdefault(remote, PackagesList())
