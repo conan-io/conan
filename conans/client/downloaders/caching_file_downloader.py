@@ -108,6 +108,7 @@ class SourcesCachingDownloader:
         don't want silently skipping a backup because it is down.
         """
         try:
+            backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
             self._file_downloader.download(backup_url + sha256, cached_path, sha256=sha256)
             self._file_downloader.download(backup_url + sha256 + ".json", cached_path + ".json")
             self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
@@ -158,10 +159,10 @@ class ConanInternalCacheDownloader:
             raise ConanException("core.download:download_cache must be an absolute path")
         self._file_downloader = FileDownloader(requester, scope=scope)
 
-    def download(self, url, file_path, auth, verify_ssl, retry, retry_wait):
-        if not self._download_cache:
+    def download(self, url, file_path, auth, verify_ssl, retry, retry_wait, metadata=False):
+        if not self._download_cache or metadata:  # Metadata not cached and can be overwritten
             self._file_downloader.download(url, file_path, retry=retry, retry_wait=retry_wait,
-                                           verify_ssl=verify_ssl, auth=auth, overwrite=False)
+                                           verify_ssl=verify_ssl, auth=auth, overwrite=metadata)
             return
 
         download_cache = DownloadCache(self._download_cache)

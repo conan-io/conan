@@ -26,9 +26,9 @@ class UploadUpstreamChecker:
         self._output = ConanOutput()
 
     def check(self, upload_bundle, remote, force):
-        for ref, recipe_bundle in upload_bundle.refs():
+        for ref, recipe_bundle in upload_bundle.refs().items():
             self._check_upstream_recipe(ref, recipe_bundle, remote, force)
-            for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle):
+            for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle).items():
                 self._check_upstream_package(pref, prev_bundle, remote, force)
 
     def _check_upstream_recipe(self, ref, ref_bundle, remote, force):
@@ -80,14 +80,14 @@ class PackagePreparator:
 
     def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
-        for ref, bundle in upload_bundle.refs():
-            layout = self._app.cache.ref_layout(ref)
+        for ref, bundle in upload_bundle.refs().items():
+            layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
 
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for pref, prev_bundle in upload_bundle.prefs(ref, bundle):
+            for pref, prev_bundle in upload_bundle.prefs(ref, bundle).items():
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 
@@ -97,7 +97,7 @@ class PackagePreparator:
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            recipe_layout = self._app.cache.ref_layout(ref)
+            recipe_layout = self._app.cache.recipe_layout(ref)
             retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
@@ -216,10 +216,10 @@ class UploadExecutor:
 
     def upload(self, upload_data, remote):
         self._output.info("Uploading artifacts")
-        for ref, bundle in upload_data.refs():
+        for ref, bundle in upload_data.refs().items():
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
-            for pref, prev_bundle in upload_data.prefs(ref, bundle):
+            for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
                 if prev_bundle.get("upload"):
                     self.upload_package(pref, prev_bundle, remote)
 

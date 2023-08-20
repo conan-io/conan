@@ -22,7 +22,7 @@ class CacheAPI:
     def recipe_metadata_path(self, ref: RecipeReference):
         app = ConanApp(self.conan_api.cache_folder)
         ref = _resolve_latest_ref(app, ref)
-        ref_layout = app.cache.ref_layout(ref)
+        ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.metadata()
 
     def export_source_path(self, ref: RecipeReference):
@@ -86,13 +86,13 @@ class CacheAPI:
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
 
-        for ref, ref_bundle in package_list.refs():
-            ref_layout = app.cache.ref_layout(ref)
+        for ref, ref_bundle in package_list.refs().items():
+            ref_layout = app.cache.recipe_layout(ref)
             if source:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
-            for pref, _ in package_list.prefs(ref, ref_bundle):
+            for pref, _ in package_list.prefs(ref, ref_bundle).items():
                 pref_layout = app.cache.pkg_layout(pref)
                 if build:
                     rmdir(pref_layout.build())

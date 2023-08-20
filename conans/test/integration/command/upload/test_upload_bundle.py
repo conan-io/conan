@@ -40,7 +40,7 @@ def test_upload_bundle():
                 raise ConanException("No recipes found matching pattern '{}'".format(args.reference))
 
             # Check if the recipes/packages are in the remote
-            conan_api.upload.check_upstream(package_list, remote)
+            conan_api.upload.check_upstream(package_list, remote, enabled_remotes)
             conan_api.upload.prepare(package_list, enabled_remotes)
             cli_out_write(json.dumps(package_list.serialize(), indent=4))
         """)

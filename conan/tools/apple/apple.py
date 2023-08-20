@@ -1,4 +1,5 @@
 import os
+from io import StringIO
 
 from conans.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
@@ -85,7 +86,7 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
     return f"{flag}={os_version}" if flag else ''
 
 
-class XCRun(object):
+class XCRun:
     """
     XCRun is a wrapper for the Apple **xcrun** tool used to get information for building.
     """
@@ -95,31 +96,28 @@ class XCRun(object):
         :param conanfile: Conanfile instance.
         :param sdk: Will skip the flag when ``False`` is passed and will try to adjust the
             sdk it automatically if ``None`` is passed.
-        :param target_settings: Try to use ``settings_target`` in case they exist (``False`` by default)
+        :param use_settings_target: Try to use ``settings_target`` in case they exist (``False`` by default)
         """
-        settings = None
-        if conanfile:
-            settings = conanfile.settings
-            if use_settings_target and conanfile.settings_target is not None:
-                settings = conanfile.settings_target
+        settings = conanfile.settings
+        if use_settings_target and conanfile.settings_target is not None:
+            settings = conanfile.settings_target
 
-            if sdk is None and settings:
-                sdk = settings.get_safe('os.sdk')
+        if sdk is None and settings:
+            sdk = settings.get_safe('os.sdk')
 
+        self._conanfile = conanfile
         self.settings = settings
         self.sdk = sdk
 
     def _invoke(self, args):
-        def cmd_output(cmd):
-            from conans.util.runners import check_output_runner
-            cmd_str = cmd_args_to_string(cmd)
-            return check_output_runner(cmd_str).strip()
-
         command = ['xcrun']
         if self.sdk:
             command.extend(['-sdk', self.sdk])
         command.extend(args)
-        return cmd_output(command)
+        output = StringIO()
+        cmd_str = cmd_args_to_string(command)
+        self._conanfile.run(f"{cmd_str}", stdout=output, quiet=True)
+        return output.getvalue().strip()
 
     def find(self, tool):
         """find SDK tools (e.g. clang, ar, ranlib, lipo, codesign, etc.)"""
@@ -175,9 +173,19 @@ class XCRun(object):
         """path to libtool"""
         return self.find('libtool')
 
+    @property
+    def otool(self):
+        """path to otool"""
+        return self.find('otool')
 
-def _get_dylib_install_name(path_to_dylib):
-    command = "otool -D {}".format(path_to_dylib)
+    @property
+    def install_name_tool(self):
+        """path to install_name_tool"""
+        return self.find('install_name_tool')
+
+
+def _get_dylib_install_name(otool, path_to_dylib):
+    command = f"{otool} -D {path_to_dylib}"
     output =  iter(check_output_runner(command).splitlines())
     # Note: if otool return multiple entries for different architectures
     # assume they are the same and pick the first one.
@@ -194,26 +202,33 @@ def fix_apple_shared_install_name(conanfile):
     *install_name_tool* utility available in macOS to set ``@rpath``.
     """
 
+    if not is_apple_os(conanfile):
+        return
+
+    xcrun = XCRun(conanfile)
+    otool = xcrun.otool
+    install_name_tool = xcrun.install_name_tool
+
     def _darwin_is_binary(file, binary_type):
         if binary_type not in ("DYLIB", "EXECUTE") or os.path.islink(file) or os.path.isdir(file):
             return False
-        check_file = f"otool -hv {file}"
+        check_file = f"{otool} -hv {file}"
         return binary_type in check_output_runner(check_file)
 
     def _darwin_collect_binaries(folder, binary_type):
         return [os.path.join(folder, f) for f in os.listdir(folder) if _darwin_is_binary(os.path.join(folder, f), binary_type)]
 
     def _fix_install_name(dylib_path, new_name):
-        command = f"install_name_tool {dylib_path} -id {new_name}"
+        command = f"{install_name_tool} {dylib_path} -id {new_name}"
         conanfile.run(command)
 
     def _fix_dep_name(dylib_path, old_name, new_name):
-        command = f"install_name_tool {dylib_path} -change {old_name} {new_name}"
+        command = f"{install_name_tool} {dylib_path} -change {old_name} {new_name}"
         conanfile.run(command)
 
     def _get_rpath_entries(binary_file):
         entries = []
-        command = "otool -l {}".format(binary_file)
+        command = f"{otool} -l {binary_file}"
         otool_output = check_output_runner(command).splitlines()
         for count, text in enumerate(otool_output):
             pass
@@ -223,7 +238,7 @@ def fix_apple_shared_install_name(conanfile):
         return entries
 
     def _get_shared_dependencies(binary_file):
-        command = "otool -L {}".format(binary_file)
+        command = f"{otool} -L {binary_file}"
         all_shared = check_output_runner(command).strip().split(":")[1].strip()
         ret = [s.split("(")[0].strip() for s in all_shared.splitlines()]
         return ret
@@ -239,7 +254,7 @@ def fix_apple_shared_install_name(conanfile):
             shared_libs = _darwin_collect_binaries(full_folder, "DYLIB")
             # fix LC_ID_DYLIB in first pass
             for shared_lib in shared_libs:
-                install_name = _get_dylib_install_name(shared_lib)
+                install_name = _get_dylib_install_name(otool, shared_lib)
                 #TODO: we probably only want to fix the install the name if
                 # it starts with `/`.
                 rpath_name = f"@rpath/{os.path.basename(install_name)}"
@@ -282,13 +297,12 @@ def fix_apple_shared_install_name(conanfile):
                 existing_rpaths = _get_rpath_entries(executable)
                 rpaths_to_add = list(set(rel_paths) - set(existing_rpaths))
                 for entry in rpaths_to_add:
-                    command = f"install_name_tool {executable} -add_rpath {entry}"
+                    command = f"{install_name_tool} {executable} -add_rpath {entry}"
                     conanfile.run(command)
 
-    if is_apple_os(conanfile):
-        substitutions = _fix_dylib_files(conanfile)
+    substitutions = _fix_dylib_files(conanfile)
 
-        # Only "fix" executables if dylib files were patched, otherwise
-        # there is nothing to do.
-        if substitutions:
-            _fix_executables(conanfile, substitutions)
+    # Only "fix" executables if dylib files were patched, otherwise
+    # there is nothing to do.
+    if substitutions:
+        _fix_executables(conanfile, substitutions)

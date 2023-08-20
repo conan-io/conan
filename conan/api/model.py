@@ -25,10 +25,8 @@ class Remote:
     def __eq__(self, other):
         if other is None:
             return False
-        return self.name == other.name and \
-               self.url == other.url and \
-               self.verify_ssl == other.verify_ssl and \
-               self.disabled == other.disabled
+        return (self.name == other.name and self.url == other.url and
+                self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
         return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
@@ -162,7 +160,7 @@ class PackagesList:
                 if t is not None:
                     recipe.timestamp = t
                 result[recipe] = rrev_dict
-        return result.items()
+        return result
 
     @staticmethod
     def prefs(ref, recipe_bundle):
@@ -173,7 +171,7 @@ class PackagesList:
                 t = prev_bundle.get("timestamp")
                 pref = PkgReference(ref, package_id, prev, t)
                 result[pref] = prev_bundle
-        return result.items()
+        return result
 
     def serialize(self):
         return self.recipes

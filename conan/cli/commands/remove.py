@@ -81,12 +81,12 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list = MultiPackagesList()
         multi_package_list.add("Local Cache" if not remote else remote.name, package_list)
 
-    for ref, ref_bundle in package_list.refs():
+    for ref, ref_bundle in package_list.refs().items():
         if ref_bundle.get("packages") is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
                 conan_api.remove.recipe(ref, remote=remote)
             continue
-        for pref, _ in package_list.prefs(ref, ref_bundle):
+        for pref, _ in package_list.prefs(ref, ref_bundle).items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
                 conan_api.remove.package(pref, remote=remote)
 

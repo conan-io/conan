@@ -1,9 +1,7 @@
 import textwrap
 
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 def test_cpp_info_editable():
@@ -51,11 +49,7 @@ def test_cpp_info_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = client.exported_recipe_revision()
-    ref = RecipeReference.loads("hello/1.0")
-    ref.revision = rrev
-    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
+    package_folder = client.created_layout().package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os
@@ -176,11 +170,7 @@ def test_cpp_info_components_editable():
 
     client.save({"conanfile.py": conan_hello})
     client.run("create . --name=hello --version=1.0")
-    rrev = client.exported_recipe_revision()
-    ref = RecipeReference.loads("hello/1.0")
-    ref.revision = rrev
-    pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.get_latest_pkg_layout(pref).package().replace("\\", "/") + "/"
+    package_folder = client.created_layout().package().replace("\\", "/") + "/"
 
     conan_consumer = textwrap.dedent("""
     import os

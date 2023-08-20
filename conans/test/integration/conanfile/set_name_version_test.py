@@ -190,3 +190,26 @@ def test_set_version_carriage_return():
             "version.txt": "1.0\n"})
     c.run("export .", assert_error=True)
     assert "ERROR: Invalid package version '1.0" in c.out
+
+
+def test_set_version_channel():
+    """
+    Dynamically setting the user and channel is possible with the ``set_version()``
+    not recommended, but possible.
+    """
+    c = TestClient()
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import load
+        class Lib(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            def set_version(self):
+                self.user = "myuser"
+                self.channel = "mychannel"
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("export .")
+    assert "pkg/0.1@myuser/mychannel: Exported" in c.out

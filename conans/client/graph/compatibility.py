@@ -3,8 +3,7 @@ from collections import OrderedDict
 
 from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
-from conans.errors import conanfile_exception_formatter
-
+from conans.errors import conanfile_exception_formatter, ConanException, scoped_traceback
 
 # TODO: Define other compatibility besides applications
 _default_compat = """\
@@ -52,17 +51,11 @@ def cppstd_compat(conanfile):
 """
 
 
-def get_binary_compatibility_file_paths(cache):
+def migrate_compatibility_files(cache):
+    from conans.client.migrations import update_file
     compatible_folder = os.path.join(cache.plugins_path, "compatibility")
     compatibility_file = os.path.join(compatible_folder, "compatibility.py")
     cppstd_compat_file = os.path.join(compatible_folder, "cppstd_compat.py")
-    return compatibility_file, cppstd_compat_file
-
-
-def migrate_compatibility_files(cache):
-    from conans.client.migrations import update_file
-
-    compatibility_file, cppstd_compat_file = get_binary_compatibility_file_paths(cache)
     update_file(compatibility_file, _default_compat)
     update_file(cppstd_compat_file, _default_cppstd_compat)
 
@@ -70,7 +63,10 @@ def migrate_compatibility_files(cache):
 class BinaryCompatibility:
 
     def __init__(self, cache):
-        compatibility_file, cppstd_compat_file = get_binary_compatibility_file_paths(cache)
+        compatibility_file = os.path.join(cache.plugins_path, "compatibility", "compatibility.py")
+        if not os.path.exists(compatibility_file):
+            raise ConanException("The 'compatibility.py' plugin file doesn't exist. If you want "
+                                 "to disable it, edit its contents instead of removing it")
         mod, _ = load_python_file(compatibility_file)
         self._compatibility = mod.compatibility
 
@@ -81,7 +77,12 @@ class BinaryCompatibility:
                 recipe_compatibles = conanfile.compatibility()
                 compat_infos.extend(self._compatible_infos(conanfile, recipe_compatibles))
 
-        plugin_compatibles = self._compatibility(conanfile)
+        try:
+            plugin_compatibles = self._compatibility(conanfile)
+        except Exception as e:
+            msg = f"Error while processing 'compatibility.py' plugin for '{conanfile}'"
+            msg = scoped_traceback(msg, e, scope="plugins/compatibility")
+            raise ConanException(msg)
         compat_infos.extend(self._compatible_infos(conanfile, plugin_compatibles))
         if not compat_infos:
             return {}

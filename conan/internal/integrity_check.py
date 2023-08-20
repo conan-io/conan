@@ -20,15 +20,15 @@ class IntegrityChecker:
 
     def check(self, upload_data):
         corrupted = False
-        for ref, recipe_bundle in upload_data.refs():
+        for ref, recipe_bundle in upload_data.refs().items():
             corrupted = self._recipe_corrupted(ref) or corrupted
-            for pref, prev_bundle in upload_data.prefs(ref, recipe_bundle):
+            for pref, prev_bundle in upload_data.prefs(ref, recipe_bundle).items():
                 corrupted = self._package_corrupted(pref) or corrupted
         if corrupted:
             raise ConanException("There are corrupted artifacts, check the error logs")
 
     def _recipe_corrupted(self, ref: RecipeReference):
-        layout = self._app.cache.ref_layout(ref)
+        layout = self._app.cache.recipe_layout(ref)
         output = ConanOutput()
         read_manifest, expected_manifest = layout.recipe_manifests()
 

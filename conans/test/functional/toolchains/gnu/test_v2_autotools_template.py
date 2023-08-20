@@ -1,12 +1,10 @@
 import platform
-import re
 import os
 import shutil
 import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -21,10 +19,8 @@ def test_autotools_lib_template():
     client.run("build .")
 
     client.run("export-pkg .")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    pkg_layout = client.created_layout()
+    package_folder = pkg_layout.package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
     assert os.path.exists(os.path.join(package_folder, "lib", "libhello.a"))
 
@@ -34,10 +30,8 @@ def test_autotools_lib_template():
     client.run("install . -o hello/*:shared=True")
     client.run("build . -o hello/*:shared=True")
     client.run("export-pkg . -o hello/*:shared=True")
-    ref = RecipeReference.loads("hello/0.1")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    pkg_layout = client.created_layout()
+    package_folder = pkg_layout.package()
 
     if platform.system() == "Darwin":
         # Ensure that install name of dylib is patched
@@ -97,11 +91,8 @@ def test_autotools_relocatable_libs_darwin():
     client.run("create . -o hello/*:shared=True")
 
     build_folder = client.created_test_build_folder("hello/0.1")
-    package_id = re.search(r"Package (\S+) created", str(client.out)).group(1)
-    package_id = package_id.replace("'", "")
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref, package_id)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    pkg_layout = client.created_layout()
+    package_folder = pkg_layout.package()
 
     dylib = os.path.join(package_folder, "lib", "libhello.0.dylib")
     if platform.system() == "Darwin":
@@ -322,9 +313,7 @@ def test_autotools_fix_shared_libs():
 
     client.run("create . -o hello/*:shared=True -tf=\"\"")
 
-    ref = RecipeReference.loads("hello/0.1")
-    pref = client.get_latest_package_reference(ref)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.created_layout().package()
 
     # install name fixed
     client.run_command("otool -D {}".format(os.path.join(package_folder, "lib", "libhello.0.dylib")))
