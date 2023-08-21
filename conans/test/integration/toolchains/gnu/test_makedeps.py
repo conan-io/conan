@@ -306,14 +306,12 @@ def test_makedeps_with_test_requires():
         from conan import ConanFile
         class TestMakeDeps(ConanFile):
             def package_info(self):
-                self.cpp_info.libs = ["lib%s"]
+                self.cpp_info.libs = [f"lib{self.name}"]
         """)
-    with client.chdir("app"):
-        client.save({"conanfile.py": conanfile % "app"})
-        client.run("create . --name=app --version=1.0")
-    with client.chdir("test"):
-        client.save({"conanfile.py": conanfile % "test"})
-        client.run("create . --name=test --version=1.0")
+
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=app --version=1.0")
+    client.run("create . --name=test --version=1.0")
     # Create library having build and test requires
     conanfile = textwrap.dedent("""
         from conan import ConanFile
