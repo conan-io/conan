@@ -610,7 +610,7 @@ class MakeDeps:
 
     def generate(self) -> None:
         """
-        Parse a ConanFile object, collecting all dependencies and components, then, generating a Makefile
+        Collects all dependencies and components, then, generating a Makefile
         """
         check_duplicated_generator(self, self._conanfile)
 
