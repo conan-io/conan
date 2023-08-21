@@ -37,9 +37,7 @@ def test_make_dirs_with_abs_path():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g MakeDeps")
 
-    makefile_path = os.path.join(client.current_folder, CONAN_MAKEFILE_FILENAME)
-    assert os.path.isfile(makefile_path)
-    makefile_content = load(makefile_path)
+    makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
     prefix = pathlib.Path.home().drive if platform.system() == "Windows" else ""
     assert 'CONAN_NAME_MYLIB = mylib' in makefile_content
     assert 'CONAN_VERSION_MYLIB = 0.1' in makefile_content
