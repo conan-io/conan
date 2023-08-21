@@ -14,11 +14,18 @@ class PyRequire(object):
         self.recipe = recipe_status
         self.remote = remote
 
+    def serialize(self):
+        return {"remote": self.remote.name if self.remote is not None else None,
+                "recipe": self.recipe}
+
 
 class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
+
+    def serialize(self):
+        return {r.ref.repr_notime(): r.serialize() for r in self._pyrequires.values()}
 
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
