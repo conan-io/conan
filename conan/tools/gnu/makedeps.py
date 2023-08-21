@@ -16,7 +16,7 @@ For better customization, it allows appending prefixes as flags variables:
 
 The conandeps.mk file layout is as follows:
 
-- CONAN_DEPS: list all transitive and intransitive dependencies names without version (e.g. zlib)
+- CONAN_DEPS: list all transitive and direct dependencies names without version (e.g. zlib)
 - Iterate over each dependency and its components:
     - Prints name, version, root folder, regular folders, libs and flags
     - Components are rootified to avoid repeating same prefix twice for the root folder
