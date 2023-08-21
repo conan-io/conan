@@ -36,6 +36,7 @@ class RecipesDBTable(BaseDbTable):
     def create(self, path, ref: RecipeReference):
         assert ref is not None
         assert ref.revision is not None
+        assert ref.timestamp is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         with self.db_connection() as conn:
             try:

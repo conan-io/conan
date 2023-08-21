@@ -41,6 +41,7 @@ class RemoteManager(object):
 
     def get_recipe(self, ref, remote, metadata=None):
         assert ref.revision, "get_recipe without revision specified"
+        assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()

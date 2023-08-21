@@ -26,12 +26,13 @@ class DownloadAPI:
             return False
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
+        if ref.timestamp is None:  # we didnt obtain the timestamp before (in general it should be)
+            # Respect the timestamp of the server, the ``get_recipe()`` doesn't do it internally
+            # Best would be that ``get_recipe()`` returns the timestamp in the same call
+            server_ref = app.remote_manager.get_recipe_revision_reference(ref, remote)
+            assert server_ref == ref
+            ref.timestamp = server_ref.timestamp
         app.remote_manager.get_recipe(ref, remote, metadata)
-        # Respect the timestamp of the server, the ``get_recipe()`` doesn't do it internally
-        # Best would be that ``get_recipe()`` returns the timestamp in the same call
-        server_ref = app.remote_manager.get_recipe_revision_reference(ref, remote)
-        assert server_ref == ref
-        app.cache.update_recipe_timestamp(server_ref)
 
         # Download the sources too, don't be lazy
         output.info(f"Downloading '{str(ref)}' sources")
@@ -54,6 +55,12 @@ class DownloadAPI:
             if metadata:
                 app.remote_manager.get_package_metadata(pref, remote, metadata)
             return False
+
+        if pref.timestamp is None:  # we didnt obtain the timestamp before (in general it should be)
+            # Respect the timestamp of the server
+            server_pref = app.remote_manager.get_package_revision_reference(pref, remote)
+            assert server_pref == pref
+            pref.timestamp = server_pref.timestamp
 
         output.info(f"Downloading package '{pref.repr_notime()}'")
         app.remote_manager.get_package(pref, remote, metadata)

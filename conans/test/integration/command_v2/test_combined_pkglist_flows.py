@@ -91,8 +91,8 @@ class TestCreateGraphToPkgList:
         c.run("list --graph=graph.json --graph-recipes=* --format=json")
         pkglist = json.loads(c.stdout)["Local Cache"]
         assert len(pkglist) == 2
-        assert len(pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]) == 0
-        assert len(pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]) == 0
+        assert "packages" not in pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]
+        assert "packages" not in pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
 
 
 class TestGraphInfoToPkgList:
