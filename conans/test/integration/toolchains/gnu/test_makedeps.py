@@ -417,3 +417,28 @@ def test_makefile_sysroot(pattern, result, expected):
     client.run("install --requires=package/0.1.0 -pr:h default -pr:b default -g MakeDeps")
     makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
     assert (expected in makefile_content) == result
+
+
+def test_makefile_reference():
+    """
+    The MakeDeps should generate the correct package reference as variable
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Testing(ConanFile):
+                pass
+            """)
+    client.save({"conanfile.py": conanfile})
+
+    # official packages <name>/<version>
+    client.run("create . --name package --version 0.1.0")
+    client.run("install --requires=package/0.1.0 -pr:h default -pr:b default -g MakeDeps")
+    makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
+    assert 'CONAN_REFERENCE_PACKAGE = package/0.1.0\n' in makefile_content
+
+    # custom packages <name>/<version>@<user>/<channel>
+    client.run("create . --name package --version 0.1.0 --user user --channel channel")
+    client.run("install --requires=package/0.1.0@user/channel -pr:h default -pr:b default -g MakeDeps")
+    makefile_content = client.load(CONAN_MAKEFILE_FILENAME)
+    assert 'CONAN_REFERENCE_PACKAGE = package/0.1.0@user/channel\n' in makefile_content

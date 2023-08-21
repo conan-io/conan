@@ -360,10 +360,11 @@ class DepContentGenerator:
 
         # {{ dep.ref.name }}/{{ dep.ref.version }}
 
-
         CONAN_NAME_{{ name }} = {{ dep.ref.name }}
 
         CONAN_VERSION_{{ name }} = {{ dep.ref.version }}
+
+        CONAN_REFERENCE_{{ name }} = {{ dep.ref }}
 
         CONAN_ROOT_{{ name }} = {{ root }}
 
