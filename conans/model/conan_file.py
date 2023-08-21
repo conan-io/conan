@@ -149,8 +149,11 @@ class ConanFile:
             result["license"] = list(self.license) if not isinstance(self.license, str) else self.license
 
         result["requires"] = self.requires.serialize()
+
         if hasattr(self, "python_requires"):
-            result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
+            result["python_requires"] = self.python_requires.serialize()
+        else:
+            result["python_requires"] = None
         result["system_requires"] = self.system_requires
 
         result["recipe_folder"] = self.recipe_folder
