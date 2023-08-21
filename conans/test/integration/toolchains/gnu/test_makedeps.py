@@ -45,17 +45,14 @@ def test_make_dirs_with_abs_path():
     assert f'CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIR_FLAG){prefix}/my_absoulte_path/fake/mylib/include' in makefile_content
     assert 'CONAN_BIN_DIRS_MYLIB = $(CONAN_BIN_DIR_FLAG)$(CONAN_ROOT_MYLIB)/bin' in makefile_content
 
-    def assert_is_abs(path):
-        assert os.path.isabs(path) is True
-
     lines = makefile_content.splitlines()
     for line_no, line in enumerate(lines):
         includedir_pattern = "CONAN_INCLUDE_DIRS_MYLIB = $(CONAN_INCLUDE_DIRS_FLAG)"
         if line.startswith(includedir_pattern):
-            assert_is_abs(line[len(includedir_pattern):])
+            assert os.path.isabs(line[len(includedir_pattern):])
             assert line.endswith("include")
         elif line.startswith("\t$(CONAN_LIB_DIRS_FLAG)") and 'my_absoulte_path' in line:
-            assert_is_abs(line[len("\t$(CONAN_LIB_DIRS_FLAG)"):-2])
+            assert os.path.isabs(line[len("\t$(CONAN_LIB_DIRS_FLAG)"):-2])
             assert line.endswith("lib \\")
         elif line.startswith("\t$(CONAN_LIB_DIRS_FLAG)") and line.endswith('lib2'):
             assert "\t$(CONAN_LIB_DIRS_FLAG)$(CONAN_ROOT_MYLIB)/lib2" in line
