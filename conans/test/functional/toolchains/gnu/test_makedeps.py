@@ -41,18 +41,13 @@ def test_makedeps_with_tool_requires():
         from conan import ConanFile
         class HelloLib(ConanFile):
             def package_info(self):
-                self.cpp_info.libs = ["libname"]
+                self.cpp_info.libs = [self.name]
         ''')
     client = TestClient(path_with_spaces=False)
-    with client.chdir("lib"):
-        client.save({"conanfile.py": conanfile.replace("libname", "hello")})
-        client.run("create . --name=hello --version=0.1.0 -tf=\"\"")
-    with client.chdir("test"):
-        client.save({"conanfile.py": conanfile.replace("libname", "test")})
-        client.run("create . --name=test --version=0.1.0 -tf=\"\"")
-    with client.chdir("tool"):
-        client.save({"conanfile.py": conanfile.replace("libname", "tool")})
-        client.run("create . --name=tool --version=0.1.0 -tf=\"\"")
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=hello --version=0.1.0")
+    client.run("create . --name=test --version=0.1.0")
+    client.run("create . --name=tool --version=0.1.0")
     # Create library having build and test requires
     conanfile = textwrap.dedent(r'''
         from conan import ConanFile
