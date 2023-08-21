@@ -358,7 +358,7 @@ class DepContentGenerator:
 
     template = textwrap.dedent("""\
 
-        # {{ dep.ref.name }}/{{ dep.ref.version }}
+        # {{ dep.ref }}
 
         CONAN_NAME_{{ name }} = {{ dep.ref.name }}
 
