@@ -317,12 +317,13 @@ def test_makedeps_with_test_requires():
         from conan import ConanFile
         class HelloLib(ConanFile):
             def build_requirements(self):
-                self.test_requires('app/1.0')
+                self.tool_requires('app/1.0')
                 self.test_requires('test/1.0')
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g MakeDeps")
-    assert 'CONAN_DEPS = \\\n\tapp \\\n\ttest\n' in client.load(CONAN_MAKEFILE_FILENAME)
+    assert 'CONAN_DEPS = test\n' in client.load(CONAN_MAKEFILE_FILENAME)
+    assert 'app' not in client.load(CONAN_MAKEFILE_FILENAME)
 
 
 def test_makedeps_with_editable_layout():
