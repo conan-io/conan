@@ -1,6 +1,8 @@
 import os
 
+from conan import conan_version
 from conan.api.output import ConanOutput
+from conans.client.loader import load_python_file
 from conans.errors import ConanException, ConanMigrationError
 from conans.model.version import Version
 from conans.util.files import load, save
@@ -19,9 +21,14 @@ class Migrator(object):
     def migrate(self):
         try:
             old_version = self._load_old_version()
-            if old_version != self.current_version:
+            if old_version is None or old_version < self.current_version:
                 self._update_version_file()
                 self._apply_migrations(old_version)
+            elif self.current_version < old_version:  # backwards migrations
+                ConanOutput().warning(f"Downgrading cache from Conan {old_version} to "
+                                      f"{self.current_version}")
+                self._update_version_file()
+                self._apply_back_migrations()
         except Exception as e:
             ConanOutput().error(str(e))
             raise ConanMigrationError(e)
@@ -48,3 +55,31 @@ class Migrator(object):
         :param old_version: ``str`` previous Conan version.
         """
         pass
+
+    def _apply_back_migrations(self):
+        migrations = os.path.join(self.conf_path, "migrations")
+        if not os.path.exists(migrations):
+            return
+
+        # Order by versions, and filter only newer than the current version
+        migration_files = []
+        for f in os.listdir(migrations):
+            if not f.endswith(".py"):
+                continue
+            version, remain = f.split("_", 1)
+            version = Version(version)
+            if version > conan_version:
+                migration_files.append((version, remain))
+        migration_files = [f"{v}_{r}" for (v, r) in reversed(sorted(migration_files))]
+
+        for migration in migration_files:
+            ConanOutput().warning(f"Applying downgrade migration {migration}")
+            migration = os.path.join(migrations, migration)
+            try:
+                migrate_module, _ = load_python_file(migration)
+                migrate_method = migrate_module.migrate
+                migrate_method(self.conf_path)
+            except Exception as e:
+                ConanOutput().error(f"There was an error running downgrade migration: {e}. "
+                                    f"Recommended to remove the cache and start from scratch")
+            os.remove(migration)

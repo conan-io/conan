@@ -1,7 +1,9 @@
 import os
+import textwrap
 
 import pytest
 
+from conan import conan_version
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
@@ -58,3 +60,32 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     assert "This file is from ACME corp, " in contents
     assert string_replace not in contents
     assert new_string in contents
+
+
+def test_back_migrations():
+    t = TestClient()
+
+    # add 3 migrations
+    for number in (1, 2, 3):
+        migration_file = os.path.join(t.cache_folder, "migrations", f"2.100.0_{number}-migrate.py")
+        migrate = textwrap.dedent(f"""
+            import os
+            def migrate(cache_folder):
+                os.remove(os.path.join(cache_folder, "file{number}.txt"))
+            """)
+        save(migration_file, migrate)
+        save(os.path.join(t.cache_folder, f"file{number}.txt"), "some content")
+        # Some older versions migrations that shouldn't be applied if we downgrade to current
+        wrong_migration_file = os.path.join(t.cache_folder, "migrations", f"2.0_{number}-migrate.py")
+        save(wrong_migration_file, "this is not python, it would crash")
+
+    # Let's change the old version
+    version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
+    save(version_txt_file_path, "200.0")
+    t.run("-v")  # Fire the backward migration
+    assert f"WARN: Downgrading cache from Conan 200.0 to {conan_version}" in t.out
+    for number in (1, 2, 3):
+        assert f"WARN: Applying downgrade migration 2.100.0_{number}-migrate.py" in t.out
+        assert not os.path.exists(os.path.join(t.cache_folder, f"file{number}.txt"))
+        migration_file = os.path.join(t.cache_folder, "migrations", f"2.100.0_{number}-migrate.py")
+        assert not os.path.exists(migration_file)

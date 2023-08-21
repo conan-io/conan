@@ -85,7 +85,7 @@ def upload(conan_api: ConanAPI, parser, *args):
         if args.check:
             conan_api.cache.check_integrity(package_list)
         # Check if the recipes/packages are in the remote
-        conan_api.upload.check_upstream(package_list, remote, args.force)
+        conan_api.upload.check_upstream(package_list, remote, enabled_remotes, args.force)
 
         # If only if search with "*" we ask for confirmation
         if not args.list and not args.confirm and "*" in args.pattern:

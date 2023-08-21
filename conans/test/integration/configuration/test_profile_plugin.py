@@ -19,3 +19,10 @@ class TestErrorsProfilePlugin:
         c.run("install --requires=zlib/1.2.3", assert_error=True)
         assert "Error while processing 'profile.py' plugin, line 2" in c.out
         assert "settings = profile.kk" in c.out
+
+    def test_remove_plugin_file(self):
+        c = TestClient()
+        c.run("version")  # to trigger the creation
+        os.remove(os.path.join(c.cache.plugins_path, "profile.py"))
+        c.run("profile show", assert_error=True)
+        assert "ERROR: The 'profile.py' plugin file doesn't exist" in c.out
