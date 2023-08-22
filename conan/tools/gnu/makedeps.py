@@ -46,7 +46,7 @@ def _get_formatted_dirs(folders: list, prefix_path_: str, name: str) -> list:
     :return: list of formatted directories
     """
     ret = []
-    for _, directory in enumerate(folders):
+    for directory in folders:
         directory = os.path.normpath(directory).replace("\\", "/")
         prefix = ""
         if not os.path.isabs(directory):
@@ -125,9 +125,17 @@ def _jinja_format_list_values() -> str:
         value2
     """
     return textwrap.dedent("""\
+            {%- macro define_variable_value_safe(var, object, attribute) -%}
+            {%- if attribute in object -%}
+            {{ define_variable_value("{}".format(var), object[attribute]) }}
+            {%- endif -%}
+            {%- endmacro %}
+
             {%- macro define_variable_value(var, values) -%}
+            {%- if values is not none -%}
             {%- if values|length > 0 -%}
             {{ var }} = {{ format_list_values(values) }}
+            {%- endif -%}
             {%- endif -%}
             {%- endmacro %}
 
@@ -203,23 +211,23 @@ class GlobalContentGenerator:
             # Aggregated global variables
 
 
-            {{ define_variable_value("CONAN_INCLUDE_DIRS", include_dirs) -}}
-            {{- define_variable_value("CONAN_LIB_DIRS", lib_dirs) -}}
-            {{- define_variable_value("CONAN_BIN_DIRS", bin_dirs) -}}
-            {{- define_variable_value("CONAN_SRC_DIRS", src_dirs) -}}
-            {{- define_variable_value("CONAN_BUILD_DIRS", build_dirs) -}}
-            {{- define_variable_value("CONAN_RES_DIRS", res_dirs) -}}
-            {{- define_variable_value("CONAN_FRAMEWORK_DIRS", framework_dirs) -}}
-            {{- define_variable_value("CONAN_OBJECTS", objects) -}}
-            {{- define_variable_value("CONAN_LIBS", libs) -}}
-            {{- define_variable_value("CONAN_DEFINES", defines) -}}
-            {{- define_variable_value("CONAN_CFLAGS", cflags) -}}
-            {{- define_variable_value("CONAN_CXXFLAGS", cxxflags) -}}
-            {{- define_variable_value("CONAN_SHAREDLINKFLAGS", sharedlinkflags) -}}
-            {{- define_variable_value("CONAN_EXELINKFLAGS", exelinkflags) -}}
-            {{- define_variable_value("CONAN_FRAMEWORKS", frameworks) -}}
-            {{- define_variable_value("CONAN_REQUIRES", requires) -}}
-            {{- define_variable_value("CONAN_SYSTEM_LIBS", system_libs) -}}
+            {{ define_variable_value("CONAN_INCLUDE_DIRS", deps_cpp_info_dirs.include_dirs) -}}
+            {{- define_variable_value("CONAN_LIB_DIRS", deps_cpp_info_dirs.lib_dirs) -}}
+            {{- define_variable_value("CONAN_BIN_DIRS", deps_cpp_info_dirs.bin_dirs) -}}
+            {{- define_variable_value("CONAN_SRC_DIRS", deps_cpp_info_dirs.src_dirs) -}}
+            {{- define_variable_value("CONAN_BUILD_DIRS", deps_cpp_info_dirs.build_dirs) -}}
+            {{- define_variable_value("CONAN_RES_DIRS", deps_cpp_info_dirs.res_dirs) -}}
+            {{- define_variable_value("CONAN_FRAMEWORK_DIRS", deps_cpp_info_dirs.framework_dirs) -}}
+            {{- define_variable_value("CONAN_OBJECTS", deps_cpp_info_flags.objects) -}}
+            {{- define_variable_value("CONAN_LIBS", deps_cpp_info_flags.libs) -}}
+            {{- define_variable_value("CONAN_DEFINES", deps_cpp_info_flags.defines) -}}
+            {{- define_variable_value("CONAN_CFLAGS", deps_cpp_info_flags.cflags) -}}
+            {{- define_variable_value("CONAN_CXXFLAGS", deps_cpp_info_flags.cxxflags) -}}
+            {{- define_variable_value("CONAN_SHAREDLINKFLAGS", deps_cpp_info_flags.sharedlinkflags) -}}
+            {{- define_variable_value("CONAN_EXELINKFLAGS", deps_cpp_info_flags.exelinkflags) -}}
+            {{- define_variable_value("CONAN_FRAMEWORKS", deps_cpp_info_flags.frameworks) -}}
+            {{- define_variable_value("CONAN_REQUIRES", deps_cpp_info_flags.requires) -}}
+            {{- define_variable_value("CONAN_SYSTEM_LIBS", deps_cpp_info_flags.system_libs) -}}
             """)
 
     template_deps = textwrap.dedent("""\
@@ -233,23 +241,8 @@ class GlobalContentGenerator:
         :param deps_cpp_info_dirs: Formatted dependencies folders
         :param deps_cpp_info_flags: Formatted dependencies variables
         """
-        context = {"include_dirs": deps_cpp_info_dirs.get("include_dirs", []),
-                   "lib_dirs": deps_cpp_info_dirs.get("lib_dirs", []),
-                   "bin_dirs": deps_cpp_info_dirs.get("bin_dirs", []),
-                   "src_dirs": deps_cpp_info_dirs.get("src_dirs", []),
-                   "build_dirs": deps_cpp_info_dirs.get("build_dirs", []),
-                   "res_dirs": deps_cpp_info_dirs.get("res_dirs", []),
-                   "framework_dirs": deps_cpp_info_dirs.get("framework_dirs", []),
-                   "objects": deps_cpp_info_flags.get("objects", []),
-                   "libs": deps_cpp_info_flags.get("libs", []),
-                   "defines": deps_cpp_info_flags.get("defines", []),
-                   "cflags": deps_cpp_info_flags.get("cflags", []),
-                   "cxxflags": deps_cpp_info_flags.get("cxxflags", []),
-                   "sharedlinkflags": deps_cpp_info_flags.get("sharedlinkflags", []),
-                   "exelinkflags": deps_cpp_info_flags.get("exelinkflags", []),
-                   "frameworks": deps_cpp_info_flags.get("frameworks", []),
-                   "requires": deps_cpp_info_flags.get("requires", []),
-                   "system_libs": deps_cpp_info_flags.get("system_libs", [])}
+        context = {"deps_cpp_info_dirs": deps_cpp_info_dirs,
+                   "deps_cpp_info_flags": deps_cpp_info_flags}
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
@@ -319,23 +312,23 @@ class DepComponentContentGenerator:
     template = textwrap.dedent("""\
         # {{ dep.ref.name }}::{{ comp_name }}
 
-        {{  define_variable_value("CONAN_INCLUDE_DIRS_{}_{}".format(dep_name, name), include_dirs) -}}
-        {{- define_variable_value("CONAN_LIB_DIRS_{}_{}".format(dep_name, name), lib_dirs) -}}
-        {{- define_variable_value("CONAN_BIN_DIRS_{}_{}".format(dep_name, name), bin_dirs) -}}
-        {{- define_variable_value("CONAN_SRC_DIRS_{}_{}".format(dep_name, name), src_dirs) -}}
-        {{- define_variable_value("CONAN_BUILD_DIRS_{}_{}".format(dep_name, name), build_dirs) -}}
-        {{- define_variable_value("CONAN_RES_DIRS_{}_{}".format(dep_name, name), res_dirs) -}}
-        {{- define_variable_value("CONAN_FRAMEWORK_DIRS_{}_{}".format(dep_name, name), framework_dirs) -}}
-        {{- define_variable_value("CONAN_OBJECTS_{}_{}".format(dep_name, name), objects) -}}
-        {{- define_variable_value("CONAN_LIBS_{}_{}".format(dep_name, name), libs) -}}
-        {{- define_variable_value("CONAN_DEFINES_{}_{}".format(dep_name, name), defines) -}}
-        {{- define_variable_value("CONAN_CFLAGS_{}_{}".format(dep_name, name), cflags) -}}
-        {{- define_variable_value("CONAN_CXXFLAGS_{}_{}".format(dep_name, name), cxxflags) -}}
-        {{- define_variable_value("CONAN_SHAREDLINKFLAGS_{}_{}".format(dep_name, name), sharedlinkflags) -}}
-        {{- define_variable_value("CONAN_EXELINKFLAGS_{}_{}".format(dep_name, name), exelinkflags) -}}
-        {{- define_variable_value("CONAN_FRAMEWORKS_{}_{}".format(dep_name, name), frameworks) -}}
-        {{- define_variable_value("CONAN_REQUIRES_{}_{}".format(dep_name, name), requires) -}}
-        {{- define_variable_value("CONAN_SYSTEM_LIBS_{}_{}".format(dep_name, name), system_libs) -}}
+        {{  define_variable_value_safe("CONAN_INCLUDE_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'include_dirs') -}}
+        {{- define_variable_value_safe("CONAN_LIB_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'lib_dirs') -}}
+        {{- define_variable_value_safe("CONAN_BIN_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'bin_dirs') -}}
+        {{- define_variable_value_safe("CONAN_SRC_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'src_dirs') -}}
+        {{- define_variable_value_safe("CONAN_BUILD_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'build_dirs') -}}
+        {{- define_variable_value_safe("CONAN_RES_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'res_dirs') -}}
+        {{- define_variable_value_safe("CONAN_FRAMEWORK_DIRS_{}_{}".format(dep_name, name), cpp_info_dirs, 'framework_dirs') -}}
+        {{- define_variable_value_safe("CONAN_OBJECTS_{}_{}".format(dep_name, name), cpp_info_flags, 'objects') -}}
+        {{- define_variable_value_safe("CONAN_LIBS_{}_{}".format(dep_name, name), cpp_info_flags, 'libs') -}}
+        {{- define_variable_value_safe("CONAN_DEFINES_{}_{}".format(dep_name, name), cpp_info_flags, 'defines') -}}
+        {{- define_variable_value_safe("CONAN_CFLAGS_{}_{}".format(dep_name, name), cpp_info_flags, 'cflags') -}}
+        {{- define_variable_value_safe("CONAN_CXXFLAGS_{}_{}".format(dep_name, name), cpp_info_flags, 'cxxflags') -}}
+        {{- define_variable_value_safe("CONAN_SHAREDLINKFLAGS_{}_{}".format(dep_name, name), cpp_info_flags, 'sharedlinkflags') -}}
+        {{- define_variable_value_safe("CONAN_EXELINKFLAGS_{}_{}".format(dep_name, name), cpp_info_flags, 'exelinkflags') -}}
+        {{- define_variable_value_safe("CONAN_FRAMEWORKS_{}_{}".format(dep_name, name), cpp_info_flags, 'frameworks') -}}
+        {{- define_variable_value_safe("CONAN_REQUIRES_{}_{}".format(dep_name, name), cpp_info_flags, 'requires') -}}
+        {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}_{}".format(dep_name, name), cpp_info_flags, 'system_libs') -}}
         """)
 
     def __init__(self, dependency: object, component_name: str, dirs: dict, flags: dict):
@@ -359,23 +352,8 @@ class DepComponentContentGenerator:
             "comp_name": self._name,
             "dep_name": _makefy(self._dep.ref.name),
             "name": _makefy(self._name),
-            "include_dirs": self._dirs.get("include_dirs", []),
-            "lib_dirs": self._dirs.get("lib_dirs", []),
-            "bin_dirs": self._dirs.get("bin_dirs", []),
-            "src_dirs": self._dirs.get("src_dirs", []),
-            "build_dirs": self._dirs.get("build_dirs", []),
-            "res_dirs": self._dirs.get("res_dirs", []),
-            "framework_dirs": self._dirs.get("framework_dirs", []),
-            "objects": self._flags.get("objects", []),
-            "libs": self._flags.get("libs", []),
-            "defines": self._flags.get("defines", []),
-            "cflags": self._flags.get("cflags", []),
-            "cxxflags": self._flags.get("cxxflags", []),
-            "sharedlinkflags": self._flags.get("sharedlinkflags", []),
-            "exelinkflags": self._flags.get("exelinkflags", []),
-            "frameworks": self._flags.get("frameworks", []),
-            "requires": self._flags.get("requires", []),
-            "system_libs": self._flags.get("system_libs", [])
+            "cpp_info_dirs": self._dirs,
+            "cpp_info_flags": self._flags
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
@@ -399,23 +377,23 @@ class DepContentGenerator:
         CONAN_ROOT_{{ name }} = {{ root }}
 
         {{  define_variable_value("CONAN_SYSROOT_{}".format(name), sysroot) -}}
-        {{- define_variable_value("CONAN_INCLUDE_DIRS_{}".format(name), include_dirs) -}}
-        {{- define_variable_value("CONAN_LIB_DIRS_{}".format(name), lib_dirs) -}}
-        {{- define_variable_value("CONAN_BIN_DIRS_{}".format(name), bin_dirs) -}}
-        {{- define_variable_value("CONAN_SRC_DIRS_{}".format(name), src_dirs) -}}
-        {{- define_variable_value("CONAN_BUILD_DIRS_{}".format(name), build_dirs) -}}
-        {{- define_variable_value("CONAN_RES_DIRS_{}".format(name), res_dirs) -}}
-        {{- define_variable_value("CONAN_FRAMEWORK_DIRS_{}".format(name), framework_dirs) -}}
-        {{- define_variable_value("CONAN_OBJECTS_{}".format(name), objects) -}}
-        {{- define_variable_value("CONAN_LIBS_{}".format(name), libs) -}}
-        {{- define_variable_value("CONAN_DEFINES_{}".format(name), defines) -}}
-        {{- define_variable_value("CONAN_CFLAGS_{}".format(name), cflags) -}}
-        {{- define_variable_value("CONAN_CXXFLAGS_{}".format(name), cxxflags) -}}
-        {{- define_variable_value("CONAN_SHAREDLINKFLAGS_{}".format(name), sharedlinkflags) -}}
-        {{- define_variable_value("CONAN_EXELINKFLAGS_{}".format(name), exelinkflags) -}}
-        {{- define_variable_value("CONAN_FRAMEWORKS_{}".format(name), frameworks) -}}
-        {{- define_variable_value("CONAN_REQUIRES_{}".format(name), requires) -}}
-        {{- define_variable_value("CONAN_SYSTEM_LIBS_{}".format(name), system_libs) -}}
+        {{- define_variable_value_safe("CONAN_INCLUDE_DIRS_{}".format(name), cpp_info_dirs, 'include_dirs') -}}
+        {{- define_variable_value_safe("CONAN_LIB_DIRS_{}".format(name), cpp_info_dirs, 'lib_dirs') -}}
+        {{- define_variable_value_safe("CONAN_BIN_DIRS_{}".format(name), cpp_info_dirs, 'bin_dirs') -}}
+        {{- define_variable_value_safe("CONAN_SRC_DIRS_{}".format(name), cpp_info_dirs, 'src_dirs') -}}
+        {{- define_variable_value_safe("CONAN_BUILD_DIRS_{}".format(name), cpp_info_dirs, 'build_dirs') -}}
+        {{- define_variable_value_safe("CONAN_RES_DIRS_{}".format(name), cpp_info_dirs, 'res_dirs') -}}
+        {{- define_variable_value_safe("CONAN_FRAMEWORK_DIRS_{}".format(name), cpp_info_dirs, 'framework_dirs') -}}
+        {{- define_variable_value_safe("CONAN_OBJECTS_{}".format(name), cpp_info_flags, 'objects') -}}
+        {{- define_variable_value_safe("CONAN_LIBS_{}".format(name), cpp_info_flags, 'libs') -}}
+        {{- define_variable_value_safe("CONAN_DEFINES_{}".format(name), cpp_info_flags, 'defines') -}}
+        {{- define_variable_value_safe("CONAN_CFLAGS_{}".format(name), cpp_info_flags, 'cflags') -}}
+        {{- define_variable_value_safe("CONAN_CXXFLAGS_{}".format(name), cpp_info_flags, 'cxxflags') -}}
+        {{- define_variable_value_safe("CONAN_SHAREDLINKFLAGS_{}".format(name), cpp_info_flags, 'sharedlinkflags') -}}
+        {{- define_variable_value_safe("CONAN_EXELINKFLAGS_{}".format(name), cpp_info_flags, 'exelinkflags') -}}
+        {{- define_variable_value_safe("CONAN_FRAMEWORKS_{}".format(name), cpp_info_flags, 'frameworks') -}}
+        {{- define_variable_value_safe("CONAN_REQUIRES_{}".format(name), cpp_info_flags, 'requires') -}}
+        {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}".format(name), cpp_info_flags, 'system_libs') -}}
         {{- define_variable_value("CONAN_COMPONENTS_{}".format(name), components) -}}
         """)
 
@@ -435,24 +413,9 @@ class DepContentGenerator:
             "name": _makefy(self._dep.ref.name),
             "root": self._root,
             "sysroot": self._sysroot,
-            "include_dirs": self._dirs.get("include_dirs", []),
-            "lib_dirs": self._dirs.get("lib_dirs", []),
-            "bin_dirs": self._dirs.get("bin_dirs", []),
-            "src_dirs": self._dirs.get("src_dirs", []),
-            "build_dirs": self._dirs.get("build_dirs", []),
-            "res_dirs": self._dirs.get("res_dirs", []),
-            "framework_dirs": self._dirs.get("framework_dirs", []),
-            "objects": self._flags.get("objects", []),
-            "libs": self._flags.get("libs", []),
-            "defines": self._flags.get("defines", []),
-            "cflags": self._flags.get("cflags", []),
-            "cxxflags": self._flags.get("cxxflags", []),
-            "sharedlinkflags": self._flags.get("sharedlinkflags", []),
-            "exelinkflags": self._flags.get("exelinkflags", []),
-            "frameworks": self._flags.get("frameworks", []),
-            "requires": self._flags.get("requires", []),
-            "system_libs": self._flags.get("system_libs", []),
-            "components": list(self._dep.cpp_info.get_sorted_components().keys())
+            "components": list(self._dep.cpp_info.get_sorted_components().keys()),
+            "cpp_info_dirs": self._dirs,
+            "cpp_info_flags": self._flags,
         }
         template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)

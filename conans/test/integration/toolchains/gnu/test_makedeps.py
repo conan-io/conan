@@ -6,7 +6,6 @@ import pathlib
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
 
