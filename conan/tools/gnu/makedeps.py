@@ -540,7 +540,7 @@ class DepGenerator:
         for var, prefix_var in _common_cppinfo_variables().items():
             cppinfo_value = getattr(dependency.cpp_info, var)
             # Use component cpp_info info when does not provide any value
-            if not cppinfo_value and hasattr(dependency.cpp_info, "components"):
+            if not cppinfo_value:
                 cppinfo_value = [f"$(CONAN_{var.upper()}_{_makefy(dependency.ref.name)}_{_makefy(name)})" for name, obj in dependency.cpp_info.components.items() if getattr(obj, var.lower())]
                 # avoid repeating same prefix twice
                 prefix_var = ""
