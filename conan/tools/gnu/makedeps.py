@@ -158,9 +158,39 @@ class MakeInfo:
         :param dirs: cpp_info folders supported by the dependency
         :param flags: cpp_info variables supported by the dependency
         """
-        self.name = name
-        self.dirs = dirs
-        self.flags = flags
+        self._name = name
+        self._dirs = dirs
+        self._flags = flags
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def dirs(self) -> list:
+        """
+        :return: List of cpp_info folders supported by the dependency without duplicates
+        """
+        return list(set(self._dirs))
+
+    @property
+    def flags(self) -> list:
+        """
+        :return: List of cpp_info variables supported by the dependency without duplicates
+        """
+        return list(set(self._flags))
+
+    def dirs_append(self, directory: str):
+        """
+        Add a new cpp_info folder to the dependency
+        """
+        self._dirs.append(directory)
+
+    def flags_append(self, flag: str):
+        """
+        Add a new cpp_info variable to the dependency
+        """
+        self._flags.append(flag)
 
 
 class GlobalContentGenerator:
@@ -457,7 +487,7 @@ class DepComponentGenerator:
             cppinfo_value = getattr(self._comp, var)
             formatted_dirs = _get_formatted_dirs(cppinfo_value, self._root, _makefy(self._name))
             if formatted_dirs:
-                self._makeinfo.dirs.append(var)
+                self._makeinfo.dirs_append(var)
                 var = var.replace("dirs", "_dirs")
                 formatted_dirs = self._rootify(self._root, self._dep.ref.name, cppinfo_value)
                 dirs[var] = [_conan_prefix_flag(flag) + it for it in formatted_dirs]
@@ -490,7 +520,7 @@ class DepComponentGenerator:
                 cppinfo_value = [var.replace('"', '\\"') for var in cppinfo_value]
             if cppinfo_value:
                 flags[var] = [_conan_prefix_flag(prefix_var) + it for it in cppinfo_value]
-                self._makeinfo.flags.append(var)
+                self._makeinfo.flags_append(var)
         return flags
 
     def generate(self) -> str:
@@ -514,13 +544,11 @@ class DepGenerator:
         self._dep = dependency
         self._info = MakeInfo(self._dep.ref.name, [], [])
 
-    def make_global_info(self) -> MakeInfo:
+    @property
+    def makeinfo(self) -> MakeInfo:
         """
-        Remove duplicated folders and flags from current MakeInfo
         :return: Dependency folder and flags
         """
-        self._info.dirs = list(set(self._info.dirs))
-        self._info.flags = list(set(self._info.flags))
         return self._info
 
     def _get_dependency_dirs(self, root: str, dependency: object) -> dict:
@@ -535,7 +563,7 @@ class DepGenerator:
             cppinfo_value = getattr(dependency.cpp_info, var)
             formatted_dirs = _get_formatted_dirs(cppinfo_value, root, _makefy(dependency.ref.name))
             if formatted_dirs:
-                self._info.dirs.append(var)
+                self._info.dirs_append(var)
                 var = var.replace("dirs", "_dirs")
                 dirs[var] = [_conan_prefix_flag(prefix) + it for it in formatted_dirs]
         return dirs
@@ -556,7 +584,7 @@ class DepGenerator:
             if "flags" in var:
                 cppinfo_value = [var.replace('"', '\\"') for var in cppinfo_value]
             if cppinfo_value:
-                self._info.flags.append(var)
+                self._info.flags_append(var)
                 flags[var] = [_conan_prefix_flag(prefix_var) + it for it in cppinfo_value]
         return flags
 
@@ -633,7 +661,7 @@ class MakeDeps:
                 continue
 
             dep_gen = DepGenerator(dep)
-            make_infos.append(dep_gen.make_global_info())
+            make_infos.append(dep_gen.makeinfo)
             deps_buffer += dep_gen.generate()
 
         glob_gen = GlobalGenerator(self._conanfile, make_infos)
