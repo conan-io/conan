@@ -385,7 +385,7 @@ class AppleSystemBlock(Block):
         if host_os_version:
             # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
             # Despite the OSX part in the variable name(s) they apply also to other SDKs than
-            # macOS like iOS, tvOS, or watchOS.
+            # macOS like iOS, tvOS, watchOS or visionOS.
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
         return ctxt_toolchain
@@ -734,7 +734,7 @@ class GenericSystemBlock(Block):
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
         os_build = self._conanfile.settings_build.get_safe("os")
-        return os_host in ('iOS', 'watchOS', 'tvOS') or (
+        return os_host in ('iOS', 'watchOS', 'tvOS', 'visionOS') or (
                 os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
     def _get_cross_build(self):
