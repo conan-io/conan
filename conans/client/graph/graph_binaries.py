@@ -360,5 +360,5 @@ class GraphBinariesAnalyzer(object):
                     required_nodes.add(dep_node)
 
         for node in graph.nodes:
-            if node not in required_nodes:
+            if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries", check_type=bool, default=True):
                 node.binary = BINARY_SKIP

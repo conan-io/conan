@@ -264,7 +264,7 @@ class DepsGraphBuilder(object):
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
             dep_conanfile._conan_is_consumer = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
-                                     require.build, new_ref)
+                                     require.build, new_ref, parent=node.conanfile)
 
         context = CONTEXT_BUILD if require.build else node.context
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)

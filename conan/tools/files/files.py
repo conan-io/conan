@@ -193,6 +193,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry = config.get("tools.files.download:retry", check_type=int, default=retry)
     retry_wait = retry_wait if retry_wait is not None else 5
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
+    verify = config.get("tools.files.download:verify", check_type=bool, default=verify)
 
     filename = os.path.abspath(filename)
     downloader = SourcesCachingDownloader(conanfile)
