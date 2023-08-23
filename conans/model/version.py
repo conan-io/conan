@@ -63,7 +63,9 @@ class Version:
             value = items[0]
             self._build = None
 
-        items = value.rsplit("-", 1)  # split for pre-release
+        # split for pre-release, from the left, semver allows hyphens in identifiers :(
+        items = value.split("-", 1)
+
         if len(items) == 2:
             value, pre = items
             self._pre = Version(pre)  # This is a nested version by itself
