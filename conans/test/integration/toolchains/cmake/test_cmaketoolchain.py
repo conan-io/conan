@@ -122,6 +122,41 @@ def test_cross_build_user_toolchain():
     assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
 
 
+def test_cross_build_user_toolchain_confs():
+    # When a user_toolchain is defined in [conf], but other confs are defined, they will be used
+    windows_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        """)
+    rpi_profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+        [conf]
+        tools.cmake.cmaketoolchain:user_toolchain+=rpi_toolchain.cmake
+        tools.cmake.cmaketoolchain:system_name=Linux
+        tools.cmake.cmaketoolchain:system_processor=aarch64
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "rpi": rpi_profile,
+                 "windows": windows_profile})
+    client.run("install . --profile:build=windows --profile:host=rpi")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+
+
 def test_no_cross_build():
     windows_profile = textwrap.dedent("""
         [settings]
