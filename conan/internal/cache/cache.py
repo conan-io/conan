@@ -23,11 +23,8 @@ class DataCache:
     def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
         if os.path.exists(path) and remove_contents:
-            self._remove_path(relative_path)
+            rmdir(path)
         os.makedirs(path, exist_ok=True)
-
-    def _remove_path(self, relative_path):
-        rmdir(self._full_path(relative_path))
 
     def _full_path(self, relative_path):
         # This one is used only for rmdir and mkdir operations, not returned to user

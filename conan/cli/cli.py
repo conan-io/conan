@@ -173,7 +173,7 @@ class Cli:
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
-                print(traceback.format_exc())
+                print(traceback.format_exc(), file=sys.stderr)
             self._conan2_migrate_recipe_msg(e)
             raise
 
