@@ -22,7 +22,7 @@ def create(conan_api, parser, *args):
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the package being created is a build-require (to be used'
-                             'as tool_requires() by other packages)')
+                             ' as tool_requires() by other packages)')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
