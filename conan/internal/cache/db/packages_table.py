@@ -98,12 +98,8 @@ class PackagesDBTable(BaseDbTable):
 
     def remove_build_id(self, pref):
         where_clause = self._where_clause(pref)
-        set_dict = {
-            self.columns.build_id: "null",
-        }
-        set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
         query = f"UPDATE {self.table_name} " \
-                f"SET {set_expr} " \
+                f'SET {self.columns.build_id} = "null" ' \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             try:
