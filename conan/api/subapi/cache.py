@@ -96,6 +96,7 @@ class CacheAPI:
                 pref_layout = app.cache.pkg_layout(pref)
                 if build:
                     rmdir(pref_layout.build())
+                    app.cache.remove_build_id(pref)
                 if download:
                     rmdir(pref_layout.download_package())
 

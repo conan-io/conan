@@ -171,6 +171,9 @@ class DataCache:
         layout.remove()
         self._db.remove_package(layout.reference)
 
+    def remove_build_id(self, pref):
+        self._db.remove_build_id(pref)
+
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
 
@@ -185,7 +188,7 @@ class DataCache:
             # This was exported before, making it latest again, update timestamp
             pkg_layout = self.get_package_layout(pref)
             pkg_layout.remove()
-            self._db.update_package_timestamp(pref, path=relpath)
+            self._db.update_package_timestamp(pref, path=relpath, build_id=build_id)
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it

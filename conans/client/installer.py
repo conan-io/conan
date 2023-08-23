@@ -67,6 +67,7 @@ class _PackageBuilder(object):
             conanfile.output.warning("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
+            skip_build = False
 
         if skip_build and os.path.exists(build_folder):
             conanfile.output.info("Won't be built, using previous build folder as defined "

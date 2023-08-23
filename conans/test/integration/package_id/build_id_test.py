@@ -73,33 +73,35 @@ class TestBuildIdTest:
         assert "Building my code!" in client.out
         assert "Packaging Release!" in client.out
 
-        # But if the build folder is removed, the packages are there, do nothing
-        client.run("cache clean -b")
+        # But if the packages are removed, and we change the order, keeps working
+        client.run("remove *:* -c")
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
+
         client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
         assert "Building my code!" not in client.out
-        assert "Packaging Debug!" not in client.out
+        assert "Packaging Debug!" in client.out
 
+    def test_clean_build(self):
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export . ")
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
+        # Package Windows Release, it will reuse the previous build
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
+        assert "Building my code!" not in client.out
+        assert "Packaging Release!" in client.out
+
+        client.run("cache clean")  # packages are still there
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
+        assert "Building my code!" not in client.out
+        assert "Packaging Release!" not in client.out
         client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
         assert "Building my code!" not in client.out
         assert "Packaging Release!" not in client.out
 
-        client.run('install --requires=pkg/0.1 -s os=Linux -s build_type=Debug')
-        assert "Building my code!" not in client.out
-        assert "Packaging Debug!" not in client.out
-
-        client.run('install --requires=pkg/0.1 -s os=Linux -s build_type=Release')
-        assert "Building my code!" not in client.out
-        assert "Packaging Release!" not in client.out
-
         # Lets force the first rebuild, different order Linux first
-        client.run('install --requires=pkg/0.1 -s os=Linux -s build_type=Release --build=pkg*')
-        assert "Building my code!" in client.out
-        assert "Packaging Release!" in client.out
-
-        client.run('install --requires=pkg/0.1 -s os=Linux -s build_type=Debug --build=pkg*')
-        assert "Building my code!" in client.out
-        assert "Packaging Debug!" in client.out
-
         client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release --build=pkg*')
         assert "Building my code!" in client.out
         assert "Packaging Release!" in client.out
