@@ -739,16 +739,12 @@ class GenericSystemBlock(Block):
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-        if user_toolchain is not None:
-            return None, None, None  # Will be provided by user_toolchain
 
         system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        assert hasattr(self._conanfile, "settings_build")
-        # TODO: Remove unused if
-        if hasattr(self._conanfile, "settings_build"):
+        if not user_toolchain:  # try to detect automatically
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
             if arch_host == "armv8":
