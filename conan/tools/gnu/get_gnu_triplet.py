@@ -78,6 +78,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
                  "iOS": "apple-ios",
                  "watchOS": "apple-watchos",
                  "tvOS": "apple-tvos",
+                 "visionOS": "apple-xros",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
                  "Emscripten": "local-emscripten",
