@@ -1315,3 +1315,40 @@ def test_cmaketoolchain_conf_from_tool_require():
     toolchain = c.load("test_package/conan_toolchain.cmake")
     assert "set(CMAKE_SYSTEM_NAME GENERIC-POTATO)" in toolchain
     assert "set(CMAKE_SYSTEM_PROCESSOR ARM-POTATO)" in toolchain
+
+
+def test_inject_user_toolchain_profile():
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class AppConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt"
+            name = "foo"
+            version = "1.0"
+            generators = "CMakeToolchain"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    cmake = """
+        cmake_minimum_required(VERSION 3.15)
+        project(foo LANGUAGES NONE)
+        message(STATUS "MYVAR1 ${MY_USER_VAR1}!!")
+    """
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.cmake.cmaketoolchain:user_toolchain+={{profile_dir}}/myvars.cmake""")
+    save(os.path.join(client.cache.profiles_path, "myprofile"), profile)
+    save(os.path.join(client.cache.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmake})
+    client.run("create . -pr=myprofile")
+    assert "-- MYVAR1 MYVALUE1!!" in client.out
