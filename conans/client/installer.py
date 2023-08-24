@@ -47,10 +47,12 @@ class _PackageBuilder(object):
         recipe_build_id = build_id(conanfile)
         pref = package_layout.reference
         if recipe_build_id is not None and pref.package_id != recipe_build_id:
-            package_layout.build_id = recipe_build_id
+            conanfile.output.info(f"build_id() computed {recipe_build_id}")
             # check if we already have a package with the calculated build_id
             recipe_ref = pref.ref
             build_prev = self._cache.get_matching_build_id(recipe_ref, recipe_build_id)
+            if build_prev is None:  # Only store build_id of the first one actually building it
+                package_layout.build_id = recipe_build_id
             build_prev = build_prev or pref
 
             # We are trying to build a package id different from the one that has the
@@ -65,10 +67,11 @@ class _PackageBuilder(object):
             conanfile.output.warning("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
+            skip_build = False
 
         if skip_build and os.path.exists(build_folder):
             conanfile.output.info("Won't be built, using previous build folder as defined "
-                                  "in build_id()")
+                                  f"in build_id(): {build_folder}")
 
         return build_folder, skip_build
 
@@ -136,7 +139,6 @@ class _PackageBuilder(object):
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
         with chdir(base_build):
-            conanfile.output.info('Building your package in %s' % base_build)
             try:
                 src = base_source if getattr(conanfile, 'no_copy_source', False) else base_build
                 conanfile.folders.set_base_source(src)
@@ -147,6 +149,7 @@ class _PackageBuilder(object):
                 conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
 
                 if not skip_build:
+                    conanfile.output.info('Building your package in %s' % base_build)
                     # In local cache, install folder always is build_folder
                     self._build(conanfile, pref)
                     clean_dirty(base_build)

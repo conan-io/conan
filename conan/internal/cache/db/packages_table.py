@@ -82,13 +82,24 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
-    def update_timestamp(self, pref: PkgReference, path: str):
+    def update_timestamp(self, pref: PkgReference, path: str, build_id: str):
         assert pref.revision
         assert pref.timestamp
         where_clause = self._where_clause(pref)
-        set_clause = self._set_clause(pref, path=path)
+        set_clause = self._set_clause(pref, path=path, build_id=build_id)
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
+                f"WHERE {where_clause};"
+        with self.db_connection() as conn:
+            try:
+                conn.execute(query)
+            except sqlite3.IntegrityError:
+                raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
+
+    def remove_build_id(self, pref):
+        where_clause = self._where_clause(pref)
+        query = f"UPDATE {self.table_name} " \
+                f'SET {self.columns.build_id} = "null" ' \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             try:
