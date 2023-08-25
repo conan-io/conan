@@ -26,13 +26,15 @@ v = [("1.2.3",
       '', None, None),
      ("+build2",
       '', None, "build2"),
+     ("1.2.3-pre.4-5-6+build.7-8-9",
+      "1.2.3", "pre.4-5-6", "build.7-8-9")
      ]
 
 
-@pytest.mark.parametrize("v_str, main, build, pre", v)
-def test_parse(v_str, main, build, pre):
+@pytest.mark.parametrize("v_str, main, pre, build", v)
+def test_parse(v_str, main, pre, build):
     v1 = Version(v_str)
     assert v1.main == main if type(main) is tuple else tuple([main])
-    assert v1.pre == build
-    assert v1.build == pre
+    assert v1.pre == pre
+    assert v1.build == build
     assert str(v1) == str(v_str)
