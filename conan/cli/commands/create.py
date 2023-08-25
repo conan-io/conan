@@ -58,8 +58,13 @@ def create(conan_api, parser, *args):
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
 
-    deps_graph = None
-    if not is_python_require:
+    if is_python_require:
+        deps_graph = conan_api.graph.load_graph_requires([ref], [],
+                                                         profile_host=profile_host,
+                                                         profile_build=profile_build,
+                                                         lockfile=lockfile,
+                                                         remotes=remotes, update=args.update)
+    else:
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         # FIXME: Dirty: package type still raw, not processed yet

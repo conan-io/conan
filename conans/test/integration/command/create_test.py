@@ -770,3 +770,20 @@ def test_create_both_host_build_require():
     # it used to fail, now it works and builds the test_package "tools_requires" in Release
     c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Build")},
                            build=True, test_package=True)
+
+
+def test_python_requires_json_format():
+    """Check python requires does not crash when calling conan create . --format=json
+    See https://github.com/conan-io/conan/issues/14577"""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("basepy", "1.0")
+           .with_package_type("python-require")})
+    c.run("create .")
+    c.save({"conanfile.py": GenConanfile("pyreq", "1.0")
+           .with_package_type("python-require")
+           .with_python_requires("basepy/1.0")})
+    # Having format=json when creating a python-requires used to crash
+    c.run("create . --format=json", redirect_stdout="output.json")
+    data = json.loads(load(os.path.join(c.current_folder, "output.json")))
+    assert len(data["graph"]["nodes"]) == 2
+    assert len(data["graph"]["nodes"]["1"]["python_requires"]) == 1
