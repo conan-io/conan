@@ -161,3 +161,28 @@ def test_profile_template_profile_name():
     # included profiles should respect the inherited profile name
     client.run("install . -pr=include_folder/include_default")
     assert "conanfile.py: PROFILE NAME: include_default" in client.out
+
+
+class TestProfileDetectAPI:
+    def test_profile_detect_os_arch(self):
+        """ testing OS & ARCH just to test the UX and interface
+        """
+        client = TestClient()
+        tpl1 = textwrap.dedent("""
+            [settings]
+            os={{detect_api.detect_os()}}
+            arch={{detect_api.detect_architecture()}}
+            """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1")
+        pr = client.get_default_host_profile()
+        the_os = pr.settings['os']
+        arch = pr.settings['arch']
+        expected = textwrap.dedent(f"""\
+            Host profile:
+            [settings]
+            arch={arch}
+            os={the_os}
+            """)
+        assert expected in client.out

@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
+from conan.internal.api import detect_api
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
 from conans.errors import ConanException, scoped_traceback
@@ -171,7 +172,8 @@ class ProfileLoader:
                    "os": os,
                    "profile_dir": base_path,
                    "profile_name": file_path,
-                   "conan_version": conan_version}
+                   "conan_version": conan_version,
+                   "detect_api": detect_api}
         rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
         text = rtemplate.render(context)
 
