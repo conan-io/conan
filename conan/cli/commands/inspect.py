@@ -25,8 +25,8 @@ def inspect(conan_api, parser, *args):
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
-    group.add_argument("-nr", "--no-remote", action="store_true",
-                       help='Do not use remote, resolve exclusively in the cache')
+    parser.add_argument("-nr", "--no-remote", action="store_true",
+                        help='Do not use remote, resolve exclusively in the cache')
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                              "existing 'conan.lock' file")
