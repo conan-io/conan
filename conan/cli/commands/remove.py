@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern, MultiPackagesList, PackagesList
+from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
@@ -82,23 +82,36 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list = MultiPackagesList()
         multi_package_list.add(cache_name, package_list)
 
-    results_pkg_list = PackagesList() 
-    results = MultiPackagesList()
-    results.add(cache_name, results_pkg_list)
-    
     for ref, ref_bundle in package_list.refs().items():
-        if ref_bundle.get("packages") is None:
+        ref_dict = package_list.recipes[str(ref)]["revisions"]
+        packages = ref_bundle.get("packages")
+        if packages is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
                 conan_api.remove.recipe(ref, remote=remote)
-                results_pkg_list.add_refs([ref])
+            else:
+                ref_dict.pop(ref.revision)
+                if not ref_dict:
+                    package_list.recipes.pop(str(ref))
             continue
-        for pref, _ in package_list.prefs(ref, ref_bundle).items():
+        prefs = package_list.prefs(ref, ref_bundle)
+        if not prefs:
+            ConanOutput().warning(f"No binaries to remove for '{ref.repr_notime()}', "
+                                  "package list do not contain package revisions")
+            ref_dict.pop(ref.revision)
+            if not ref_dict:
+                package_list.recipes.pop(str(ref))
+            continue
+
+        for pref, _ in prefs.items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
                 conan_api.remove.package(pref, remote=remote)
-                results_pkg_list.add_refs([ref])
-                results_pkg_list.add_prefs(ref, [pref])
+            else:
+                pref_dict = packages[pref.package_id]["revisions"]
+                pref_dict.pop(pref.revision)
+                if not pref_dict:
+                    packages.pop(pref.package_id)
 
     return {
-        "results": results.serialize(),
+        "results": multi_package_list.serialize(),
         "conan_api": conan_api
     }

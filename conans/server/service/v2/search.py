@@ -43,6 +43,8 @@ def _get_local_infos_min(server_store, ref, look_in_all_rrevs):
                 ConanOutput().error("Package %s has no ConanInfo file" % str(pref))
                 if str(exc):
                     ConanOutput().error(str(exc))
+                raise
+
     return result
 
 
