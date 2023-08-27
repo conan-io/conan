@@ -326,3 +326,15 @@ def test_add_duplicated_name_url():
     assert "WARN: Remote 'remote1' already exists in remotes" in c.out
     c.run("remote list")
     assert 1 == str(c.out).count("remote1")
+
+
+def test_add_wrong_conancenter():
+    """ Avoid common error of adding the wrong ConanCenter URL
+    """
+    c = TestClient()
+    c.run("remote add whatever https://conan.io/center", assert_error=True)
+    assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
+    assert "the correct remote API is https://center.conan.io" in c.out
+    c.run("remote update conancenter --url=https://conan.io/center", assert_error=True)
+    assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
+    assert "the correct remote API is https://center.conan.io" in c.out

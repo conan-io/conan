@@ -291,6 +291,7 @@ class GraphBinariesAnalyzer(object):
             node.binary = BINARY_CACHE
             node.binary_remote = None
             node.prev = cache_latest_prev.revision
+            node.pref_timestamp = cache_latest_prev.timestamp
             assert node.prev, "PREV for %s is None" % str(node.pref)
 
     def _evaluate_package_id(self, node):
@@ -359,5 +360,5 @@ class GraphBinariesAnalyzer(object):
                     required_nodes.add(dep_node)
 
         for node in graph.nodes:
-            if node not in required_nodes:
+            if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries", check_type=bool, default=True):
                 node.binary = BINARY_SKIP

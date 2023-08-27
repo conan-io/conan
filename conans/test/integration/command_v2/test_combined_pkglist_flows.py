@@ -91,8 +91,29 @@ class TestCreateGraphToPkgList:
         c.run("list --graph=graph.json --graph-recipes=* --format=json")
         pkglist = json.loads(c.stdout)["Local Cache"]
         assert len(pkglist) == 2
-        assert len(pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]) == 0
-        assert len(pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]) == 0
+        assert "packages" not in pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]
+        assert "packages" not in pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
+
+    def test_graph_pkg_list_python_requires(self):
+        """
+        include python_requires too
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"pytool/conanfile.py": GenConanfile("pytool", "0.1"),
+                "zlib/conanfile.py": GenConanfile("zlib", "1.0").with_python_requires("pytool/0.1"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create pytool")
+        c.run("create zlib")
+        c.run("upload * -c -r=default")
+        c.run("remove * -c")
+        c.run("create app --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 3
+        assert "96aec08148a2392127462c800e1c8af6" in pkglist["pytool/0.1"]["revisions"]
+        pkglist = json.loads(c.stdout)["default"]
+        assert len(pkglist) == 2
+        assert "96aec08148a2392127462c800e1c8af6" in pkglist["pytool/0.1"]["revisions"]
 
 
 class TestGraphInfoToPkgList:

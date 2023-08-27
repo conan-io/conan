@@ -414,3 +414,15 @@ def test_different_user_channel_resolved_correctly():
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out
+
+
+def test_unknown_options():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("lib", "2.0")})
+    c.run("create .")
+
+    c.run("graph info --requires=lib/[>1.2,<1.4]", assert_error=True)
+    assert '"<1.4" in version range ">1.2,<1.4" is not a valid option' in c.out
+
+    c.run("graph info --requires=lib/[>1.2,unknown_conf]")
+    assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out

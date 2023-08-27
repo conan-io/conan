@@ -114,7 +114,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         reuse = textwrap.dedent("""
             from conan import ConanFile
             class PkgTest(ConanFile):
-                python_requires = "base/[>1.0,<1.2]@user/testing"
+                python_requires = "base/[>1.0 <1.2]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
             """)
 

@@ -89,15 +89,31 @@ class MultiPackagesList:
 
             ref = node["ref"]
             ref = RecipeReference.loads(ref)
+            ref.timestamp = node["rrev_timestamp"]
             recipe = recipe.lower()
             if any(r == "*" or r == recipe for r in recipes):
                 cache_list.add_refs([ref])
+
+            # We need to add the python_requires too
+            python_requires = node["python_requires"]
+            if python_requires is not None:
+                for pyref, pyreq in python_requires.items():
+                    pyrecipe = pyreq["recipe"]
+                    if pyrecipe == RECIPE_EDITABLE:
+                        continue
+                    pyref = RecipeReference.loads(pyref)
+                    if any(r == "*" or r == pyrecipe for r in recipes):
+                        cache_list.add_refs([pyref])
+                    pyremote = pyreq["remote"]
+                    if pyremote:
+                        remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
+                        remote_list.add_refs([pyref])
 
             remote = node["remote"]
             if remote:
                 remote_list = pkglist.lists.setdefault(remote, PackagesList())
                 remote_list.add_refs([ref])
-            pref = PkgReference(ref, node["package_id"], node["prev"])
+            pref = PkgReference(ref, node["package_id"], node["prev"], node["prev_timestamp"])
             binary_remote = node["binary_remote"]
             if binary_remote:
                 remote_list = pkglist.lists.setdefault(binary_remote, PackagesList())

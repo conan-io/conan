@@ -128,6 +128,10 @@ class RemoteRegistry(object):
         :param url: URL to be validated
         """
         if url:
+            if url.startswith("https://conan.io/center"):
+                raise ConanException("Wrong ConanCenter remote URL. You are adding the web "
+                                     "https://conan.io/center the correct remote API is "
+                                     "https://center.conan.io")
             address = urlparse(url)
             if not all([address.scheme, address.netloc]):
                 self._output.warning("The URL '%s' is invalid. It must contain scheme and hostname."

@@ -5,8 +5,6 @@ from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
-CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
-
 
 class CacheDatabase:
 
@@ -29,8 +27,8 @@ class CacheDatabase:
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 
-    def update_package_timestamp(self, pref: PkgReference, path: str):
-        self._packages.update_timestamp(pref, path=path)
+    def update_package_timestamp(self, pref: PkgReference, path: str, build_id: str):
+        self._packages.update_timestamp(pref, path=path, build_id=build_id)
 
     def remove_recipe(self, ref: RecipeReference):
         # Removing the recipe must remove all the package binaries too from DB
@@ -40,6 +38,9 @@ class CacheDatabase:
     def remove_package(self, ref: PkgReference):
         # Removing the recipe must remove all the package binaries too from DB
         self._packages.remove(ref)
+
+    def remove_build_id(self, pref):
+        self._packages.remove_build_id(pref)
 
     def get_matching_build_id(self, ref, build_id):
         # TODO: This can also be done in a single query in DB

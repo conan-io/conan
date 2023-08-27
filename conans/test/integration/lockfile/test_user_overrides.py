@@ -204,3 +204,10 @@ def test_timestamps_are_updated():
     assert f" math/1.0#{rev} - Cache" in c.out
     new_lock = c.load("conan.lock")
     assert "%0.123" not in new_lock
+
+
+def test_lock_add_error():
+    # https://github.com/conan-io/conan/issues/14465
+    c = TestClient()
+    c.run(f"lock add --requires=math/1.0:pid1", assert_error=True)
+    assert "ERROR: Invalid recipe reference 'math/1.0:pid1' is a package reference" in c.out

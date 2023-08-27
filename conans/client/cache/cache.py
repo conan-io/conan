@@ -103,6 +103,9 @@ class ClientCache(object):
     def remove_package_layout(self, layout):
         self._data_cache.remove_package(layout)
 
+    def remove_build_id(self, pref):
+        self._data_cache.remove_build_id(pref)
+
     def update_recipe_timestamp(self, ref):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
         that would affect its order in our cache """
