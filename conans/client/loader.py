@@ -258,9 +258,7 @@ class ConanFileLoader:
                 conanfile.requires(repr(reference))
 
         if python_requires:
-            conanfile.python_requires = []
-            for python_require in python_requires:
-                conanfile.python_requires.append(python_require.repr_notime())
+            conanfile.python_requires = [pr.repr_notime() for pr in python_requires]
 
         if self._pyreq_loader:
             self._pyreq_loader.load_py_requires(conanfile, self, graph_lock, remotes,
