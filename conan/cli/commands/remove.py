@@ -82,6 +82,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list = MultiPackagesList()
         multi_package_list.add(cache_name, package_list)
 
+    # TODO: This iteration and removal of not-confirmed is ugly and complicated, improve it
     for ref, ref_bundle in package_list.refs().items():
         ref_dict = package_list.recipes[str(ref)]["revisions"]
         packages = ref_bundle.get("packages")
@@ -95,8 +96,7 @@ def remove(conan_api: ConanAPI, parser, *args):
             continue
         prefs = package_list.prefs(ref, ref_bundle)
         if not prefs:
-            ConanOutput().warning(f"No binaries to remove for '{ref.repr_notime()}', "
-                                  "package list do not contain package revisions")
+            ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
             ref_dict.pop(ref.revision)
             if not ref_dict:
                 package_list.recipes.pop(str(ref))

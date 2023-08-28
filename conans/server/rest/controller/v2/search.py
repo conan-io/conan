@@ -27,8 +27,8 @@ class SearchControllerV2(object):
         @app.route(r.common_search_packages, method=["GET"])
         @app.route(r.common_search_packages_revision, method=["GET"])
         def search_packages(name, version, username, channel, auth_user, revision=None):
-            query = request.params.get("q", None)
+            # query is no longer server side
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
             ref = RecipeReference(name, version, username, channel, revision)
-            info = search_service.search_packages(ref, query)
+            info = search_service.search_packages(ref)
             return info

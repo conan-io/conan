@@ -236,7 +236,6 @@ class TestListRemove:
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c")
-        print(client.out)
         assert "No binaries to remove for 'zli/1.0.0#f034dc90894493961d92dd32a9ee3b78'" in client.out
         assert "No binaries to remove for 'zlib/1.0.0@user/channel" \
                "#ffd4bc45820ddb320ab224685b9ba3fb" in client.out
@@ -247,13 +246,11 @@ class TestListRemove:
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c")
-        print(client.out)
 
         assert "Removed recipe and all binaries" not in client.out
         assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78: Removed binaries" in client.out
         assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb: " \
                "Removed binaries" in client.out
         client.run(f"list *:* {remote}")
-        print(client.out)
         assert "zli/1.0.0" in client.out
         assert "zlib/1.0.0@user/channel" in client.out
