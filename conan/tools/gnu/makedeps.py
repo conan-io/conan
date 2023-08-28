@@ -210,7 +210,6 @@ class GlobalContentGenerator:
 
             # Aggregated global variables
 
-
             {{ define_variable_value("CONAN_INCLUDE_DIRS", deps_cpp_info_dirs.include_dirs) -}}
             {{- define_variable_value("CONAN_LIB_DIRS", deps_cpp_info_dirs.lib_dirs) -}}
             {{- define_variable_value("CONAN_BIN_DIRS", deps_cpp_info_dirs.bin_dirs) -}}
@@ -243,7 +242,8 @@ class GlobalContentGenerator:
         """
         context = {"deps_cpp_info_dirs": deps_cpp_info_dirs,
                    "deps_cpp_info_flags": deps_cpp_info_flags}
-        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
+                            lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
     def deps_content(self, dependencies_names: list) -> str:
@@ -252,7 +252,8 @@ class GlobalContentGenerator:
         :param dependencies_names: Non-formatted dependencies names
         """
         context = {"deps": dependencies_names}
-        template = Template(_jinja_format_list_values() + self.template_deps, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template_deps, trim_blocks=True,
+                            lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -272,7 +273,8 @@ class GlobalGenerator:
         dirs = {}
         for var in _common_cppinfo_dirs():
             key = var.replace("dirs", "_dirs")
-            dirs[key] = [f"$(CONAN_{key.upper()}_{_makefy(makeinfo.name)})" for makeinfo in self._make_infos if var in makeinfo.dirs]
+            dirs[key] = [f"$(CONAN_{key.upper()}_{_makefy(makeinfo.name)})"
+                         for makeinfo in self._make_infos if var in makeinfo.dirs]
         return dirs
 
     def _get_dependency_flags(self) -> dict:
@@ -282,7 +284,8 @@ class GlobalGenerator:
         flags = {}
         for var in _common_cppinfo_variables():
             key = var.replace("dirs", "_dirs")
-            flags[key] = [f"$(CONAN_{key.upper()}_{_makefy(makeinfo.name)})" for makeinfo in self._make_infos if var in makeinfo.flags]
+            flags[key] = [f"$(CONAN_{key.upper()}_{_makefy(makeinfo.name)})"
+                          for makeinfo in self._make_infos if var in makeinfo.flags]
         return flags
 
     def generate(self) -> str:
@@ -299,7 +302,8 @@ class GlobalGenerator:
         Process dependencies names and generates its Makefile content.
         It should be added as first variable in the Makefile.
         """
-        dependencies = [makeinfo.name for makeinfo in self._make_infos if makeinfo.name != self._conanfile.name]
+        dependencies = [makeinfo.name for makeinfo in self._make_infos
+                        if makeinfo.name != self._conanfile.name]
         glob_content_gen = GlobalContentGenerator()
         return glob_content_gen.deps_content(dependencies)
 
@@ -331,7 +335,7 @@ class DepComponentContentGenerator:
         {{- define_variable_value_safe("CONAN_SYSTEM_LIBS_{}_{}".format(dep_name, name), cpp_info_flags, 'system_libs') -}}
         """)
 
-    def __init__(self, dependency: object, component_name: str, dirs: dict, flags: dict):
+    def __init__(self, dependency, component_name: str, dirs: dict, flags: dict):
         """
         :param dependency: The dependency object that owns the component
         :param component_name: component raw name e.g. poco::poco_json
@@ -355,7 +359,8 @@ class DepComponentContentGenerator:
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags
         }
-        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
+                            lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -367,13 +372,9 @@ class DepContentGenerator:
     template = textwrap.dedent("""\
 
         # {{ dep.ref }}
-
         CONAN_NAME_{{ name }} = {{ dep.ref.name }}
-
         CONAN_VERSION_{{ name }} = {{ dep.ref.version }}
-
         CONAN_REFERENCE_{{ name }} = {{ dep.ref }}
-
         CONAN_ROOT_{{ name }} = {{ root }}
 
         {{  define_variable_value("CONAN_SYSROOT_{}".format(name), sysroot) -}}
@@ -397,7 +398,7 @@ class DepContentGenerator:
         {{- define_variable_value("CONAN_COMPONENTS_{}".format(name), components) -}}
         """)
 
-    def __init__(self, dependency: object, root: str, sysroot: str, dirs: dict, flags: dict):
+    def __init__(self, dependency, root: str, sysroot, dirs: dict, flags: dict):
         self._dep = dependency
         self._root = root
         self._sysroot = sysroot
@@ -417,7 +418,8 @@ class DepContentGenerator:
             "cpp_info_dirs": self._dirs,
             "cpp_info_flags": self._flags,
         }
-        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True, lstrip_blocks=True, undefined=StrictUndefined)
+        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
+                            lstrip_blocks=True, undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -426,7 +428,7 @@ class DepComponentGenerator:
     Generates Makefile content for a dependency component
     """
 
-    def __init__(self, dependency: object, makeinfo: MakeInfo, component_name: str, component: object, root: str):
+    def __init__(self, dependency, makeinfo: MakeInfo, component_name: str, component, root: str):
         """
         :param dependency: The dependency object that owns the component
         :param makeinfo: Makeinfo to store component variables
@@ -456,7 +458,8 @@ class DepComponentGenerator:
                 dirs[var] = [_conan_prefix_flag(flag) + it for it in formatted_dirs]
         return dirs
 
-    def _rootify(self, root: str, root_id: str, path_list: list) -> list:
+    @staticmethod
+    def _rootify(root: str, root_id: str, path_list: list) -> list:
         """
         Replaces component folder path by its root node folder path in case they match
         :param root: root folder path for component's father
@@ -467,7 +470,8 @@ class DepComponentGenerator:
         root_len = len(root)
         root_with_sep = root + os.sep
         root_var_ref = f"$(CONAN_ROOT_{_makefy(root_id)})"
-        return [root_var_ref + path[root_len:].replace("\\", "/") if path.startswith(root_with_sep) else path for path in path_list]
+        return [root_var_ref + path[root_len:].replace("\\", "/") if path.startswith(root_with_sep)
+                else path for path in path_list]
 
     def _get_component_flags(self) -> dict:
         """
@@ -503,7 +507,7 @@ class DepGenerator:
     Process a dependency cpp_info variables and generate its Makefile content
     """
 
-    def __init__(self, dependency: object):
+    def __init__(self, dependency):
         self._dep = dependency
         self._info = MakeInfo(self._dep.ref.name, [], [])
 
@@ -514,11 +518,11 @@ class DepGenerator:
         """
         return self._info
 
-    def _get_dependency_dirs(self, root: str, dependency: object) -> dict:
+    def _get_dependency_dirs(self, root: str, dependency) -> dict:
         """
         List regular directories from cpp_info and format them to be used in the makefile
         :param root: Package root folder
-        :param dep: Dependency object
+        :param dependency: Dependency object
         :return: A dictionary with regular folder name and its formatted path
         """
         dirs = {}
@@ -531,10 +535,10 @@ class DepGenerator:
                 dirs[var] = [_conan_prefix_flag(prefix) + it for it in formatted_dirs]
         return dirs
 
-    def _get_dependency_flags(self, dependency: object) -> dict:
+    def _get_dependency_flags(self, dependency) -> dict:
         """
         List common variables from cpp_info and format them to be used in the makefile
-        :param dep: Dependency object
+        :param dependency: Dependency object
         """
         flags = {}
         for var, prefix_var in _common_cppinfo_variables().items():
@@ -594,7 +598,7 @@ class MakeDeps:
 
     _title = "# This Makefile has been generated by Conan. DO NOT EDIT!\n"
 
-    def __init__(self, conanfile: object):
+    def __init__(self, conanfile):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
