@@ -51,7 +51,6 @@ class RestApiClient(object):
         revisions = self._capable(REVISIONS)
 
         if not revisions:
-            # TODO: port conan_v2_error to 1.X if not revisions
             raise ConanException("The remote doesn't support revisions. "
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")

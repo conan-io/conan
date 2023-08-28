@@ -23,12 +23,13 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     elif "auto_shared_fpic" in conanfile.implements:
         auto_shared_fpic_configure(conanfile)
 
-    self_options, up_options = conanfile.options.get_upstream_options(down_options, ref,
-                                                                      is_consumer)
+    result = conanfile.options.get_upstream_options(down_options, ref, is_consumer)
+    self_options, up_options, private_up_options = result
     # self_options are the minimum to reproduce state, as defined from downstream (not profile)
     conanfile.self_options = self_options
     # up_options are the minimal options that should be propagated to dependencies
     conanfile.up_options = up_options
+    conanfile.private_up_options = private_up_options
 
     PackageType.compute_package_type(conanfile)
 

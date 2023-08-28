@@ -9,6 +9,7 @@ from requests import ConnectionError
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)
+from conans.util.env import environment_update
 from conans.util.files import load
 
 
@@ -71,7 +72,8 @@ def test_upload_with_pattern():
 
 def test_check_upload_confirm_question():
     server = TestServer()
-    client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "admin", "password", "n", "n", "n"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
@@ -79,10 +81,27 @@ def test_check_upload_confirm_question():
     assert "Uploading recipe 'hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
-    client.run("export . --user=frodo --channel=stable")
+    client.run("create . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
     assert "Uploading recipe 'hello2/1.2.1@frodo/stable" not in client.out
+
+
+def test_check_upload_confirm_question_yes():
+    server = TestServer()
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "yes", "yes", "yes", "yes", "admin", "password"])
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
+    client.run("create . ")
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1").with_package_file("file.txt",
+                                                                                   env_var="MYVAR")})
+
+    with environment_update({"MYVAR": "0"}):
+        client.run("create . ")
+    with environment_update({"MYVAR": "1"}):
+        client.run("create . ")
+    client.run("upload hello*#*:*#* -r default")
+    assert str(client.out).count("(Uploaded)") == 5
 
 
 class UploadTest(unittest.TestCase):

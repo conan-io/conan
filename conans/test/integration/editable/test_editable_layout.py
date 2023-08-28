@@ -103,3 +103,48 @@ def test_editable_matching_folder_names():
     assert f'set(say_PACKAGE_FOLDER_RELEASE "{hello_say_folder}")' in data
     env = client.load("hello/conanbuildenv-release.sh")
     assert "$script_folder/deactivate_conanbuildenv-release.sh" in env.replace("\\", "/")
+
+
+def test_install_editable_build_folder_vars():
+    """ Make sure that the consumer generates the editable files following build_folder_vars
+    """
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        [conf]
+        tools.cmake.cmake_layout:build_folder_vars=['settings.os', 'settings.arch']
+        """)
+    lib = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class Lib(ConanFile):
+            name = "lib"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+            """)
+    app = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+        class App(ConanFile):
+            settings = "os", "arch", "build_type"
+            requires = "lib/0.1"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+            """)
+    c.save({"lib/conanfile.py": lib,
+            "app/conanfile.py": app,
+            "profile": profile})
+    c.run("editable add lib")
+    c.run("build lib -pr=profile")
+    c.run("install app -pr=profile")
+    path = os.path.join(c.current_folder, "lib", "build", "windows-x86_64", "Release", "generators")
+    assert f"lib/0.1: Writing generators to {path}" in c.out

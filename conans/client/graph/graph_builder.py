@@ -55,7 +55,6 @@ class DepsGraphBuilder(object):
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
-            self._compute_test_package_deps(dep_graph)
         except GraphError as e:
             dep_graph.error = e
         dep_graph.resolved_ranges = self._resolver.resolved_ranges
@@ -148,14 +147,12 @@ class DepsGraphBuilder(object):
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
-        tool_requires = profile.tool_requires
-        for pattern, tool_requires in tool_requires.items():
+        for pattern, tool_requires in profile.tool_requires.items():
             if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):
                 for tool_require in tool_requires:  # Do the override
                     if str(tool_require) == str(ref):  # FIXME: Ugly str comparison
                         continue  # avoid self-loop of build-requires in build context
-                    # FIXME: converting back to string?
-                    node.conanfile.requires.tool_require(str(tool_require),
+                    node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
     def _initialize_requires(self, node, graph, graph_lock):
@@ -267,7 +264,7 @@ class DepsGraphBuilder(object):
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
             dep_conanfile._conan_is_consumer = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
-                                     require.build, new_ref)
+                                     require.build, new_ref, parent=node.conanfile)
 
         context = CONTEXT_BUILD if require.build else node.context
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
@@ -284,11 +281,16 @@ class DepsGraphBuilder(object):
             # options["dep"].opt=value only propagate to visible and host dependencies
             # we will evaluate if necessary a potential "build_options", but recall that it is
             # now possible to do "self.build_requires(..., options={k:v})" to specify it
-            if require.visible and context == CONTEXT_HOST:
+            if require.visible:
                 # Only visible requirements in the host context propagate options from downstream
                 down_options.update_options(node.conanfile.up_options)
         else:
-            down_options = node.conanfile.up_options if require.visible else Options()
+            if require.visible:
+                down_options = node.conanfile.up_options
+            elif not require.build:  # for requires in "host", like test_requires, pass myoptions
+                down_options = node.conanfile.private_up_options
+            else:
+                down_options = Options(options_values=node.conanfile.default_build_options)
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
         require.process_package_type(node, new_node)
@@ -310,31 +312,3 @@ class DepsGraphBuilder(object):
             to_remove = [r for r in node.transitive_deps if r.override]
             for r in to_remove:
                 node.transitive_deps.pop(r)
-
-    @staticmethod
-    def _compute_test_package_deps(graph):
-        """ compute and tag the graph nodes that belong exclusively to test_package
-        dependencies but not the main graph
-        """
-        root_node = graph.root
-        tested_ref = root_node.conanfile.tested_reference_str
-        if tested_ref is None:
-            return
-        tested_ref = RecipeReference.loads(root_node.conanfile.tested_reference_str)
-        tested_ref = str(tested_ref)
-        # We classify direct dependencies in the "tested" main ones and the "test_package" specific
-        direct_nodes = [n.node for n in root_node.transitive_deps.values() if n.require.direct]
-        main_nodes = [n for n in direct_nodes if tested_ref == str(n.ref)]
-        test_package_nodes = [n for n in direct_nodes if tested_ref != str(n.ref)]
-
-        # Accumulate the transitive dependencies of the 2 subgraphs ("main", and "test_package")
-        main_graph_nodes = set(main_nodes)
-        for n in main_nodes:
-            main_graph_nodes.update(t.node for t in n.transitive_deps.values())
-        test_graph_nodes = set(test_package_nodes)
-        for n in test_package_nodes:
-            test_graph_nodes.update(t.node for t in n.transitive_deps.values())
-        # Some dependencies in "test_package" might be "main" graph too, "main" prevails
-        test_package_only = test_graph_nodes.difference(main_graph_nodes)
-        for t in test_package_only:
-            t.test_package = True

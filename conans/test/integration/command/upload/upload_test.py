@@ -8,7 +8,6 @@ import pytest
 import requests
 from mock import patch
 
-from conans import REVISIONS
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -477,8 +476,7 @@ class UploadTest(unittest.TestCase):
                 else:
                     return requests.get(url, **kwargs)
 
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")],
-                            server_capabilities=[REVISIONS])
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
         client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
                             inputs=["user", "password"])
@@ -515,3 +513,17 @@ def test_upload_only_without_user_channel():
     c.run("search * -r=default")
     assert "lib/1.0@user/channel" in c.out
     assert "lib/1.0" in c.out
+
+
+def test_upload_with_python_requires():
+    # https://github.com/conan-io/conan/issues/14503
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "dep/conanfile.py": GenConanfile("dep", "0.1").with_python_requires("tool/[>=0.1]")})
+    c.run("create tool")
+    c.run("create dep")
+    c.run("upload tool* -c -r=default")
+    c.run("remove tool* -c")
+    c.run("upload dep* -c -r=default")
+    # This used to fail, but adding the enabled remotes to python_requires resolution, it works
+    assert "tool/0.1: Downloaded recipe" in c.out

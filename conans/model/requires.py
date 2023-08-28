@@ -147,10 +147,13 @@ class Requirement:
         return "{}, Traits: {}".format(self.ref, traits)
 
     def serialize(self):
-        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+        result = {"ref": str(self.ref)}
+        serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
                         "package_id_mode", "visible")
-        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
+        for attribute in serializable:
+            result[attribute] = getattr(self, attribute)
+        return result
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
@@ -408,8 +411,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None, options=None):
-        self._requires.test_require(ref, run=run, options=options)
+    def __call__(self, ref, run=None, options=None, force=None):
+        self._requires.test_require(ref, run=run, options=options, force=force)
 
 
 class Requirements:
@@ -510,7 +513,7 @@ class Requirements:
             req.override = True
             self._requires[req] = req
 
-    def test_require(self, ref, run=None, options=None):
+    def test_require(self, ref, run=None, options=None, force=None):
         """
              Represent a testing framework like gtest
 
@@ -526,7 +529,7 @@ class Requirements:
         # libs = True => We need to link with it
         # headers = True => We need to include it
         req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
-                          test=True, package_id_mode=None, options=options)
+                          test=True, package_id_mode=None, options=options, force=force)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

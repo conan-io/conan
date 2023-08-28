@@ -29,6 +29,9 @@ def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.run("install --requires=pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    client.run("install . --channel=testing", assert_error=True)
+    assert "ERROR: Can't specify --channel without --user" in client.out
 
 
 def test_install_args_error():
@@ -485,3 +488,25 @@ def test_upload_skip_binaries_not_hit_server():
     c.run("install --requires=pkg/0.1 --build=missing")
     # This would crash if hits the server, but it doesnt
     assert "pkg/0.1: Created package" in c.out
+
+
+def test_install_json_format():
+    # https://github.com/conan-io/conan/issues/14414
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "build_type"
+
+            def package_info(self):
+                self.conf_info.define("user.myteam:myconf", "myvalue")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.run("install --requires=pkg/0.1 --format=json")
+    data = json.loads(client.stdout)
+    conf_info = data["graph"]["nodes"]["1"]["conf_info"]
+    assert {'user.myteam:myconf': 'myvalue'} == conf_info

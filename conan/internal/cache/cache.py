@@ -23,11 +23,8 @@ class DataCache:
     def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
         if os.path.exists(path) and remove_contents:
-            self._remove_path(relative_path)
+            rmdir(path)
         os.makedirs(path, exist_ok=True)
-
-    def _remove_path(self, relative_path):
-        rmdir(self._full_path(relative_path))
 
     def _full_path(self, relative_path):
         # This one is used only for rmdir and mkdir operations, not returned to user
@@ -174,6 +171,9 @@ class DataCache:
         layout.remove()
         self._db.remove_package(layout.reference)
 
+    def remove_build_id(self, pref):
+        self._db.remove_build_id(pref)
+
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
 
@@ -188,7 +188,7 @@ class DataCache:
             # This was exported before, making it latest again, update timestamp
             pkg_layout = self.get_package_layout(pref)
             pkg_layout.remove()
-            self._db.update_package_timestamp(pref, path=relpath)
+            self._db.update_package_timestamp(pref, path=relpath, build_id=build_id)
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it

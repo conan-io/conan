@@ -86,16 +86,18 @@ class CacheAPI:
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
 
-        for ref, ref_bundle in package_list.refs():
+        for ref, ref_bundle in package_list.refs().items():
             ref_layout = app.cache.recipe_layout(ref)
             if source:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
-            for pref, _ in package_list.prefs(ref, ref_bundle):
+            for pref, _ in package_list.prefs(ref, ref_bundle).items():
                 pref_layout = app.cache.pkg_layout(pref)
                 if build:
                     rmdir(pref_layout.build())
+                    # It is important to remove the "build_id" identifier if build-folder is removed
+                    app.cache.remove_build_id(pref)
                 if download:
                     rmdir(pref_layout.download_package())
 

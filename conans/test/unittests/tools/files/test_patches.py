@@ -179,6 +179,19 @@ def test_multiple_no_version(mock_patch_ng):
            in output.getvalue()
 
 
+def test_patch_user(mock_patch_ng):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        conanfile = ConanFileMock()
+        conanfile.display_name = 'mocked/ref'
+        conanfile.conan_data = {'patches': [
+            {'patch_user': 'some replace command, the user will handle',
+             'myuserthings': 'other things', },
+        ]}
+        apply_conandata_patches(conanfile)
+        # it doesn't do anything, but it doesn't crash
+
+
 def test_multiple_with_version(mock_patch_ng):
     output = RedirectedTestOutput()
     with redirect_output(output):

@@ -27,16 +27,16 @@ def editable_cmake(generator, build_folder=None):
 
     with c.chdir("dep"):
         c.run("editable add . {}".format(output_folder))
-
         build_dep()
 
-    def build_pkg(msg):
-        c.run("build .")
+    def build_pkg(msg, build_editable=False):
+        build_editable = "--build=editable" if build_editable else ""
+        c.run(f"build . {build_editable}")
         folder = os.path.join("build", "Release")
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
-        c.run("build . -s build_type=Debug")
+        c.run(f"build . -s build_type=Debug {build_editable}")
         folder = os.path.join("build", "Debug")
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
@@ -54,6 +54,13 @@ def editable_cmake(generator, build_folder=None):
 
     with c.chdir("pkg"):
         build_pkg("SUPERDEP")
+
+    # Do a source change in the editable, but do NOT build yet
+    with c.chdir("dep"):
+        c.save({"src/dep.cpp": gen_function_cpp(name="dep", msg="MEGADEP")})
+    # And build with --build=editable
+    with c.chdir("pkg"):
+        build_pkg("MEGADEP", build_editable=True)
 
     # Check that create is still possible
     c.run("editable remove dep")

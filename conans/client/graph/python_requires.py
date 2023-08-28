@@ -14,11 +14,18 @@ class PyRequire(object):
         self.recipe = recipe_status
         self.remote = remote
 
+    def serialize(self):
+        return {"remote": self.remote.name if self.remote is not None else None,
+                "recipe": self.recipe}
+
 
 class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
+
+    def serialize(self):
+        return {r.ref.repr_notime(): r.serialize() for r in self._pyrequires.values()}
 
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
@@ -102,7 +109,7 @@ class PyRequireLoader(object):
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement)
         # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
-        self._range_resolver.resolve(requirement, "py_require", remotes, update)
+        self._range_resolver.resolve(requirement, "python_requires", remotes, update)
         ref = requirement.ref
         return ref
 
