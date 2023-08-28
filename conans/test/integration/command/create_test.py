@@ -780,10 +780,13 @@ def test_python_requires_json_format():
            .with_package_type("python-require")})
     c.run("create . --format=json", redirect_stdout="output.json")
     data = json.loads(load(os.path.join(c.current_folder, "output.json")))
+    # There's a graph and the python requires is there
+    assert len(data["graph"]["nodes"]["0"]["python_requires"]) == 1
 
 
 def test_python_requires_with_test_package():
     c = TestClient()
+    # Code comes from the docs
     conanfile = textwrap.dedent("""
     from conan import ConanFile
 
@@ -806,5 +809,5 @@ def test_python_requires_with_test_package():
     """)
     c.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
     c.run("create .")
-    # Ensure that creating a deps graph does not break the testings
+    # Ensure that creating a deps graph does not break the testing
     assert "pyreq/1.0 (test package): 42!!!" in c.out

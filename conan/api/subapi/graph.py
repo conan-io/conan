@@ -91,11 +91,10 @@ class GraphAPI:
         app = ConanApp(self.conan_api.cache_folder)
         conanfile = app.loader.load_virtual(requires=requires,
                                             tool_requires=tool_requires,
-                                            python_requires=python_requires)
-        if app.loader._pyreq_loader:
-            app.loader._pyreq_loader.load_py_requires(conanfile, app.loader,
-                                                      lockfile, remotes,
-                                                      update, check_updates)
+                                            python_requires=python_requires,
+                                            graph_lock=lockfile, remotes=remotes,
+                                            update=update, check_updates=check_updates)
+
         consumer_definer(conanfile, profile_host, profile_build)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
