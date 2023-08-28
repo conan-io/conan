@@ -722,9 +722,14 @@ class TestCMakeFindPackagePreferConfig:
                      "FindComandante.cmake": find,
                      "ComandanteConfig.cmake": config,
                      "profile_true": profile.format(True),
-                     "profile_false": profile.format(False)})
+                     "profile_false": profile.format(False),
+                     "profile_None": profile.format(None),
+                     })
 
         client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("build . --profile=profile_None")
         assert "using ComandanteConfig.cmake" in client.out
 
         client.run("build . --profile=profile_true")
