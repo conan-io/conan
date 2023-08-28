@@ -776,14 +776,35 @@ def test_python_requires_json_format():
     """Check python requires does not crash when calling conan create . --format=json
     See https://github.com/conan-io/conan/issues/14577"""
     c = TestClient()
-    c.save({"conanfile.py": GenConanfile("basepy", "1.0")
-           .with_package_type("python-require")})
-    c.run("create .")
     c.save({"conanfile.py": GenConanfile("pyreq", "1.0")
-           .with_package_type("python-require")
-           .with_python_requires("basepy/1.0")})
-    # Having format=json when creating a python-requires used to crash
+           .with_package_type("python-require")})
     c.run("create . --format=json", redirect_stdout="output.json")
     data = json.loads(load(os.path.join(c.current_folder, "output.json")))
-    assert len(data["graph"]["nodes"]) == 2
-    assert len(data["graph"]["nodes"]["1"]["python_requires"]) == 1
+
+
+def test_python_requires_with_test_package():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    def mynumber():
+        return 42
+
+    class PyReq(ConanFile):
+        name = "pyreq"
+        version = "1.0"
+        package_type = "python-require"
+    """)
+    test_conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Tool(ConanFile):
+        def test(self):
+            pyreq = self.python_requires["pyreq"].module
+            mynumber = pyreq.mynumber()
+            self.output.info("{}!!!".format(mynumber))
+    """)
+    c.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
+    c.run("create .")
+    # Ensure that creating a deps graph does not break the testings
+    assert "pyreq/1.0 (test package): 42!!!" in c.out

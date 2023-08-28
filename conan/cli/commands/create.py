@@ -59,11 +59,12 @@ def create(conan_api, parser, *args):
         args.build_test = args.build
 
     if is_python_require:
-        deps_graph = conan_api.graph.load_graph_requires([ref], [],
+        deps_graph = conan_api.graph.load_graph_requires([], [],
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
                                                          lockfile=lockfile,
-                                                         remotes=remotes, update=args.update)
+                                                         remotes=remotes, update=args.update,
+                                                         python_requires=[ref])
     else:
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
