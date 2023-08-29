@@ -1355,7 +1355,7 @@ def test_inject_user_toolchain_profile():
 
 
 class TestCMakeTry:
-    @pytest.mark.tool("cmake")
+
     def test_cmake_check_cxx_compile(self):
         client = TestClient()
 
@@ -1382,7 +1382,16 @@ class TestCMakeTry:
 
             include(CheckCXXSourceCompiles)
             check_cxx_source_compiles("
+            #if defined(_MSC_VER)
+            #include <intrin.h>
+            #else  // !defined(_MSC_VER)
+            #include <xmmintrin.h>
+            #endif  // defined(_MSC_VER)
+
             int main() {
+              char data = 0;
+              const char* address = &data;
+              _mm_prefetch(address, _MM_HINT_NTA);
               return 0;
             }
             "  HAVE_MY_FEATURE)
@@ -1392,7 +1401,7 @@ class TestCMakeTry:
 
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmake})
-        client.run("create . -s arch=x86")
+        client.run("create . ")
         assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
         assert "-- MY_FEATURE 1!!!" in client.out
 
@@ -1401,7 +1410,7 @@ class TestCMakeTry:
     def test_cmake_check_cxx_compile_with_deps(self):
         client = TestClient()
         client.run("new cmake_lib -d name=lib -d version=0.1")
-        client.run("create . -s arch=x86 -tf=")
+        client.run("create . -tf=")
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -1429,7 +1438,16 @@ class TestCMakeTry:
 
             include(CheckCXXSourceCompiles)
             check_cxx_source_compiles("
+            #if defined(_MSC_VER)
+            #include <intrin.h>
+            #else  // !defined(_MSC_VER)
+            #include <xmmintrin.h>
+            #endif  // defined(_MSC_VER)
+
             int main() {
+              char data = 0;
+              const char* address = &data;
+              _mm_prefetch(address, _MM_HINT_NTA);
               return 0;
             }
             "  HAVE_MY_FEATURE)
@@ -1439,7 +1457,7 @@ class TestCMakeTry:
 
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmake}, clean_first=True)
-        client.run("create . -s arch=x86")
+        client.run("create . ")
         print(client.out)
         assert "-- Performing Test HAVE_MY_FEATURE - Success" in client.out
         assert "-- MY_FEATURE 1!!!" in client.out
