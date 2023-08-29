@@ -83,19 +83,8 @@ class MultiPackagesList:
 
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
-            recipe = node["recipe"]
-            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_SYSTEM_TOOL):
-                continue
-
-            ref = node["ref"]
-            ref = RecipeReference.loads(ref)
-            ref.timestamp = node["rrev_timestamp"]
-            recipe = recipe.lower()
-            if any(r == "*" or r == recipe for r in recipes):
-                cache_list.add_refs([ref])
-
             # We need to add the python_requires too
-            python_requires = node["python_requires"]
+            python_requires = node.get("python_requires")
             if python_requires is not None:
                 for pyref, pyreq in python_requires.items():
                     pyrecipe = pyreq["recipe"]
@@ -108,6 +97,17 @@ class MultiPackagesList:
                     if pyremote:
                         remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
                         remote_list.add_refs([pyref])
+
+            recipe = node["recipe"]
+            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_SYSTEM_TOOL):
+                continue
+
+            ref = node["ref"]
+            ref = RecipeReference.loads(ref)
+            ref.timestamp = node["rrev_timestamp"]
+            recipe = recipe.lower()
+            if any(r == "*" or r == recipe for r in recipes):
+                cache_list.add_refs([ref])
 
             remote = node["remote"]
             if remote:
