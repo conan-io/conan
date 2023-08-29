@@ -21,6 +21,7 @@ _generators = {"CMakeToolchain": "conan.tools.cmake", "CMakeDeps": "conan.tools.
                "IntelCC": "conan.tools.intel",
                "XcodeDeps": "conan.tools.apple", "XcodeToolchain": "conan.tools.apple",
                "PremakeDeps": "conan.tools.premake",
+               "MakeDeps": "conan.tools.gnu",
                }
 
 
