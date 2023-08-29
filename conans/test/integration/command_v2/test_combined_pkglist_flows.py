@@ -115,6 +115,18 @@ class TestCreateGraphToPkgList:
         assert len(pkglist) == 2
         assert "96aec08148a2392127462c800e1c8af6" in pkglist["pytool/0.1"]["revisions"]
 
+    def test_graph_pkg_list_create_python_requires(self):
+        """
+        include python_requires too
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
+        c.run("create . --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 1
+        assert "62a6a9e5347b789bfc6572948ea19f85" in pkglist["pytool/0.1"]["revisions"]
+
 
 class TestGraphInfoToPkgList:
     def test_graph_pkg_list_only_built(self):
@@ -231,16 +243,26 @@ class TestListRemove:
         assert "There are no matching recipe references" in client.out
 
     @pytest.mark.parametrize("remote", [False, True])
-    def test_remove_packages(self, client, remote):
+    def test_remove_packages_no_revisions(self, client, remote):
         # It is necessary to do *#* for actually removing something
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c")
+        assert "No binaries to remove for 'zli/1.0.0#f034dc90894493961d92dd32a9ee3b78'" in client.out
+        assert "No binaries to remove for 'zlib/1.0.0@user/channel" \
+               "#ffd4bc45820ddb320ab224685b9ba3fb" in client.out
+
+    @pytest.mark.parametrize("remote", [False, True])
+    def test_remove_packages(self, client, remote):
+        # It is necessary to do *#* for actually removing something
+        remote = "-r=default" if remote else ""
+        client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
+        client.run(f"remove --list=pkglist.json {remote} -c")
+
         assert "Removed recipe and all binaries" not in client.out
-        assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78:" \
-               " Removed binaries" in client.out
-        assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb:" \
-               " Removed binaries" in client.out
+        assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78: Removed binaries" in client.out
+        assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb: " \
+               "Removed binaries" in client.out
         client.run(f"list *:* {remote}")
         assert "zli/1.0.0" in client.out
         assert "zlib/1.0.0@user/channel" in client.out

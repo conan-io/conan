@@ -244,7 +244,8 @@ class ConanFileLoader:
 
         return conanfile
 
-    def load_virtual(self, requires=None, tool_requires=None):
+    def load_virtual(self, requires=None, tool_requires=None, python_requires=None, graph_lock=None,
+                     remotes=None, update=None, check_updates=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(display_name="cli")
@@ -255,6 +256,13 @@ class ConanFileLoader:
         if requires:
             for reference in requires:
                 conanfile.requires(repr(reference))
+
+        if python_requires:
+            conanfile.python_requires = [pr.repr_notime() for pr in python_requires]
+
+        if self._pyreq_loader:
+            self._pyreq_loader.load_py_requires(conanfile, self, graph_lock, remotes,
+                                                update, check_updates)
 
         conanfile._conan_is_consumer = True
         conanfile.generators = []  # remove the default txt generator
