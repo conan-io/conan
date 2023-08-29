@@ -115,6 +115,18 @@ class TestCreateGraphToPkgList:
         assert len(pkglist) == 2
         assert "96aec08148a2392127462c800e1c8af6" in pkglist["pytool/0.1"]["revisions"]
 
+    def test_graph_pkg_list_create_python_requires(self):
+        """
+        include python_requires too
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
+        c.run("create . --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 1
+        assert "62a6a9e5347b789bfc6572948ea19f85" in pkglist["pytool/0.1"]["revisions"]
+
 
 class TestGraphInfoToPkgList:
     def test_graph_pkg_list_only_built(self):
