@@ -122,6 +122,6 @@ class BinaryCompatibility:
                     compat_info.options.update(options_values=OrderedDict(options))
                 result.append(compat_info)
                 settings_target = elem.get("settings_target")
-                if settings_target:
+                if settings_target and compat_info.settings_target:
                     compat_info.settings_target.update_values(settings_target)
         return result
