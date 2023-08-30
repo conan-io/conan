@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 PKG_ID_NO_CONF = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
 PKG_ID_1 = "89d32f25195a77f4ae2e77414b870781853bdbc1"
@@ -68,3 +68,33 @@ def test_same_package_id_configurations_but_changing_values(cxx_flags, package_i
     client.save({"conanfile.py": conanfile, "profile": profile})
     client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
     client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})
+
+
+def test_package_id_confs_header_only():
+    """
+    The tools.info.package_id:confs cannot affect header-only libraries
+    and any other library that does ``self.info.clear()`` in ``package_id()`` method
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            package_type = "header-library"
+            implements = ["auto_header_only"]
+        """)
+    profile = textwrap.dedent(f"""
+        include(default)
+        [conf]
+        tools.info.package_id:confs=["tools.build:cxxflags"]
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('create . --name=pkg --version=0.1 -pr profile -c tools.build:cxxflags=["--flag1"]')
+    client.assert_listed_binary({"pkg/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+    client.run("list *:*")
+    assert "tools.build:cxxflags" not in client.out
+    client.run('create . --name=pkg --version=0.1 -pr profile -c tools.build:cxxflags=["--flag2"]')
+    client.assert_listed_binary({"pkg/0.1": (NO_SETTINGS_PACKAGE_ID, "Build")})
+    client.run("list *:*")
+    assert "tools.build:cxxflags" not in client.out
+
+
