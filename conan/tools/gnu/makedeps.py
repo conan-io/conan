@@ -230,7 +230,6 @@ class GlobalContentGenerator:
             """)
 
     template_deps = textwrap.dedent("""\
-
             {{ define_variable_value("CONAN_DEPS", deps) }}
             """)
 
@@ -371,10 +370,12 @@ class DepContentGenerator:
 
     template = textwrap.dedent("""\
 
-        # {{ dep.ref }}
+        # {{ dep.ref }}{% if not req.direct %} (indirect dependency){% endif +%}
+
         CONAN_NAME_{{ name }} = {{ dep.ref.name }}
         CONAN_VERSION_{{ name }} = {{ dep.ref.version }}
         CONAN_REFERENCE_{{ name }} = {{ dep.ref }}
+
         CONAN_ROOT_{{ name }} = {{ root }}
 
         {{  define_variable_value("CONAN_SYSROOT_{}".format(name), sysroot) -}}
@@ -398,8 +399,9 @@ class DepContentGenerator:
         {{- define_variable_value("CONAN_COMPONENTS_{}".format(name), components) -}}
         """)
 
-    def __init__(self, dependency, root: str, sysroot, dirs: dict, flags: dict):
+    def __init__(self, dependency, require, root: str, sysroot, dirs: dict, flags: dict):
         self._dep = dependency
+        self._req = require
         self._root = root
         self._sysroot = sysroot
         self._dirs = dirs or {}
@@ -411,6 +413,7 @@ class DepContentGenerator:
         """
         context = {
             "dep": self._dep,
+            "req": self._req,
             "name": _makefy(self._dep.ref.name),
             "root": self._root,
             "sysroot": self._sysroot,
@@ -507,8 +510,9 @@ class DepGenerator:
     Process a dependency cpp_info variables and generate its Makefile content
     """
 
-    def __init__(self, dependency):
+    def __init__(self, dependency, require):
         self._dep = dependency
+        self._req = require
         self._info = MakeInfo(self._dep.ref.name, [], [])
 
     @property
@@ -581,7 +585,7 @@ class DepGenerator:
         sysroot = self._get_sysroot(root)
         dirs = self._get_dependency_dirs(root, self._dep)
         flags = self._get_dependency_flags(self._dep)
-        dep_content_gen = DepContentGenerator(self._dep, root, sysroot, dirs, flags)
+        dep_content_gen = DepContentGenerator(self._dep, self._req, root, sysroot, dirs, flags)
         content = dep_content_gen.content()
 
         for comp_name, comp in self._dep.cpp_info.get_sorted_components().items():
@@ -627,7 +631,7 @@ class MakeDeps:
             if require.build:
                 continue
 
-            dep_gen = DepGenerator(dep)
+            dep_gen = DepGenerator(dep, require)
             make_infos.append(dep_gen.makeinfo)
             deps_buffer += dep_gen.generate()
 
