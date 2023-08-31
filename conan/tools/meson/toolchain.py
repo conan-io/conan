@@ -3,6 +3,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
     apple_sdk_path
@@ -11,7 +12,6 @@ from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conan.errors import ConanException
 from conans.util.files import save
 
 

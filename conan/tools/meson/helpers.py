@@ -1,4 +1,6 @@
 from conan.tools.build.flags import cppstd_msvc_flag
+from conans.errors import ConanException
+from conans.model.options import _PackageOption
 
 __all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag"]
 
@@ -90,12 +92,18 @@ def to_meson_value(value):
     :return: formatted value as a ``str``.
     """
     # https://mesonbuild.com/Machine-files.html#data-types
+    # we don't need to transform the integer values
     if isinstance(value, str):
-        return "'%s'" % value
+        return f"'{value}'"
     elif isinstance(value, bool):
-        return 'true' if value else "false"
+        return 'true' if value else 'false'
     elif isinstance(value, list):
-        return '[%s]' % ', '.join([str(to_meson_value(val)) for val in value])
+        return '[{}]'.format(', '.join([str(to_meson_value(val)) for val in value]))
+    elif isinstance(value, dict):
+        return '{{{}}}'.format(', '.join([f'{k}: {str(to_meson_value(v))}' for k, v in value.items()]))
+    elif isinstance(value, _PackageOption):
+        raise ConanException("Conan options cannot be specified directly as a valid Meson data type."
+                             " Please, use another Python data type like int, str, list or boolean.")
     return value
 
 
