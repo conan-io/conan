@@ -99,8 +99,6 @@ def to_meson_value(value):
         return 'true' if value else 'false'
     elif isinstance(value, list):
         return '[{}]'.format(', '.join([str(to_meson_value(val)) for val in value]))
-    elif isinstance(value, dict):
-        return '{{{}}}'.format(', '.join([f'{k}: {str(to_meson_value(v))}' for k, v in value.items()]))
     elif isinstance(value, _PackageOption):
         raise ConanException("Conan options cannot be specified directly as a valid Meson data type."
                              " Please, use another Python data type like int, str, list or boolean.")

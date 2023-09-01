@@ -296,3 +296,57 @@ def test_meson_using_prefix_path_in_application():
     client.run("build .")
     assert "unrecognized character escape sequence" not in str(client.out)  # if Visual
     assert "unknown escape sequence" not in str(client.out)  # if mingw
+
+
+@pytest.mark.tool("meson")
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
+def test_meson_and_data_types():
+    """
+    It tests that Meson checks if consumer enters a
+    Issue related: https://github.com/conan-io/conan/issues/14453
+    """
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain, Meson
+    from conan.tools.layout import basic_layout
+
+    class myhelloConan(ConanFile):
+        name = "demo"
+        version = "0.1"
+        settings = "os", "compiler", "build_type", "arch"
+        exports_sources = "meson.build"
+        options = {{
+            "foo": ["ANY"],
+            "bar": ["ANY"],
+        }}
+        default_options = {{
+            "foo": "/var/run/foo",
+            "bar": "BAR",
+        }}
+        def layout(self):
+            basic_layout(self)
+
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.project_options["foo"] = {foo}
+            tc.project_options["bar"] = {bar}
+            tc.project_options["nums"] = 10
+            tc.generate()
+
+        def build(self):
+            meson = Meson(self)
+            meson.configure()
+            meson.build()
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile.format(foo="self.options.foo",
+                                                  bar="self.options.bar"),
+                 "meson.build": "project('myhello ', 'cpp')"})
+    client.run("build .", assert_error=True)
+    assert "Conan options cannot be specified directly as a valid Meson data type" in client.out
+    # Let's transform the Conan options into strings to solve the issue
+    client.save({"conanfile.py": conanfile.format(foo="str(self.options.foo)",
+                                                  bar="str(self.options.bar)")})
+    client.run("build .")
+    # Now, it worked!
+    assert "ninja: no work to do." in client.out
