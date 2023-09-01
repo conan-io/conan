@@ -661,6 +661,7 @@ class TestValidateCppstd:
                    assert_error=True)
         assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out
 
+
 class TestCompatibleSettingsTarget(unittest.TestCase):
     """ aims to be a very close to real use case of tool being used across different settings_target
     """
@@ -677,17 +678,17 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
                 def compatibility(self):
                     if self.settings_target.arch == "armv7":
                         return [{"settings_target": [("arch", "armv6")]}]
-                
+
                 def package_id(self):
                     self.info.settings_target = self.settings_target
                     for field in self.info.settings_target.fields:
                         if field != "arch":
                             self.info.settings_target.rm_safe(field)
             """)
-        
+
         client.save({"conanfile.py": tool_conanfile})
-        package_id = "44fbc30cf7c3dc16d6ebd6e6d2ef26dcba8e2712"
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
+        package_id = client.created_package_id("tool/0.1")
         assert f"tool/0.1: Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
@@ -729,8 +730,9 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": tool_conanfile})
-        package_id = "44fbc30cf7c3dc16d6ebd6e6d2ef26dcba8e2712"
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
+        package_id = client.created_package_id("tool/0.1")
+
         assert f"tool/0.1: Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
@@ -765,8 +767,8 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": tool_conanfile})
-        package_id = "e0a05e2c5c453286adecbc0715588349557b4e88"
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6")
+        package_id = client.created_package_id("tool/0.1")
         assert f"tool/0.1: Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
@@ -805,8 +807,8 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": tool_conanfile})
-        package_id = "e0a05e2c5c453286adecbc0715588349557b4e88"
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6")
+        package_id = client.created_package_id("tool/0.1")
         assert f"tool/0.1: Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
@@ -822,7 +824,6 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
         error = client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7", assert_error=True)
         self.assertEqual(error, ERROR_GENERAL)
         self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1'", client.out)
-
 
     def test_three_packages_with_and_without_settings_target(self):
         client = TestClient()
@@ -852,10 +853,9 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": tool_a_conanfile})
-        package_id_tool_a = "44fbc30cf7c3dc16d6ebd6e6d2ef26dcba8e2712"
-        client.run("create . --name=tool_a --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
+        client.run("create . --name=tool_a --version=0.1 -s os=Linux -s:h arch=armv6 -s:b arch=x86_64 --build-require")
+        package_id_tool_a = client.created_package_id("tool_a/0.1")
         assert f"tool_a/0.1: Package '{package_id_tool_a}' created" in client.out
-
 
         tool_b_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -865,8 +865,8 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": tool_b_conanfile})
-        package_id_tool_b = "62e589af96a19807968167026d906e63ed4de1f5"
-        client.run("create . --name=tool_b --version=0.1 -s os=Linux -s arch=x86_64")
+        client.run("create . --name=tool_b --version=0.1 -s os=Linux -s arch=x86_64 -s:b arch=x86_64")
+        package_id_tool_b = client.created_package_id("tool_b/0.1")
         assert f"tool_b/0.1: Package '{package_id_tool_b}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
