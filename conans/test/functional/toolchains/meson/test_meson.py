@@ -13,94 +13,99 @@ from conans.test.utils.tools import TestClient
 
 
 class MesonToolchainTest(TestMesonBase):
-    _conanfile_py = textwrap.dedent("""
-    from conan import ConanFile
-    from conan.tools.meson import Meson, MesonToolchain
-
-
-    class App(ConanFile):
-        settings = "os", "arch", "compiler", "build_type"
-        options = {"shared": [True, False], "fPIC": [True, False]}
-        default_options = {"shared": False, "fPIC": True}
-
-        def config_options(self):
-            if self.settings.os == "Windows":
-                self.options.rm_safe("fPIC")
-
-        def configure(self):
-            if self.options.shared:
-                self.options.rm_safe("fPIC")
-
-        def layout(self):
-            self.folders.generators = 'build/gen_folder'
-            self.folders.build = "build"
-
-        def generate(self):
-            tc = MesonToolchain(self)
-            tc.project_options["STRING_DEFINITION"] = "Text"
-            tc.project_options["TRUE_DEFINITION"] = True
-            tc.project_options["FALSE_DEFINITION"] = False
-            tc.project_options["INT_DEFINITION"] = 42
-            tc.project_options["ARRAY_DEFINITION"] = ["Text1", "Text2"]
-            tc.generate()
-
-        def build(self):
-            meson = Meson(self)
-            meson.configure()
-            meson.build(target='hello')
-            meson.build(target='demo')
-    """)
-
-    _meson_options_txt = textwrap.dedent("""
-    option('STRING_DEFINITION', type : 'string', description : 'a string option')
-    option('INT_DEFINITION', type : 'integer', description : 'an integer option', value: 0)
-    option('FALSE_DEFINITION', type : 'boolean', description : 'a boolean option (false)')
-    option('TRUE_DEFINITION', type : 'boolean', description : 'a boolean option (true)')
-    option('ARRAY_DEFINITION', type : 'array', description : 'an array option')
-    option('HELLO_MSG', type : 'string', description : 'message to print')
-    """)
-
-    _meson_build = textwrap.dedent("""
-    project('tutorial', 'cpp')
-    add_global_arguments('-DSTRING_DEFINITION="' + get_option('STRING_DEFINITION') + '"',
-                         language : 'cpp')
-    add_global_arguments('-DHELLO_MSG="' + get_option('HELLO_MSG') + '"', language : 'cpp')
-    hello = library('hello', 'hello.cpp')
-    executable('demo', 'main.cpp', link_with: hello)
-    """)
 
     def test_definition_of_global_options(self):
+        conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import Meson, MesonToolchain
+
+
+        class App(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            options = {{"shared": [True, False], "fPIC": [True, False]}}
+            default_options = {{"shared": False, "fPIC": True}}
+
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    self.options.rm_safe("fPIC")
+
+            def configure(self):
+                if self.options.shared:
+                    self.options.rm_safe("fPIC")
+
+            def layout(self):
+                self.folders.generators = 'build/gen_folder'
+                self.folders.build = "build"
+
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.project_options["STRING_DEFINITION"] = "Text"
+                tc.project_options["TRUE_DEFINITION"] = True
+                tc.project_options["FALSE_DEFINITION"] = False
+                tc.project_options["INT_DEFINITION"] = 42
+                tc.project_options["ARRAY_DEFINITION"] = ["Text1", "Text2"]
+                tc.project_options["DYNAMIC"] = {dynamic}
+                tc.generate()
+
+            def build(self):
+                meson = Meson(self)
+                meson.configure()
+                meson.build(target='hello')
+                meson.build(target='demo')
+        """)
+
+        meson_options_txt = textwrap.dedent("""
+        option('STRING_DEFINITION', type : 'string', description : 'a string option')
+        option('INT_DEFINITION', type : 'integer', description : 'an integer option', value: 0)
+        option('FALSE_DEFINITION', type : 'boolean', description : 'a boolean option (false)')
+        option('TRUE_DEFINITION', type : 'boolean', description : 'a boolean option (true)')
+        option('ARRAY_DEFINITION', type : 'array', description : 'an array option')
+        option('HELLO_MSG', type : 'string', description : 'message to print')
+        option('DYNAMIC', type : 'boolean', description : 'shared to true or false')
+        """)
+
+        meson_build = textwrap.dedent("""
+        project('tutorial', 'cpp')
+        add_global_arguments('-DSTRING_DEFINITION="' + get_option('STRING_DEFINITION') + '"',
+                             language : 'cpp')
+        add_global_arguments('-DHELLO_MSG="' + get_option('HELLO_MSG') + '"', language : 'cpp')
+        hello = library('hello', 'hello.cpp')
+        executable('demo', 'main.cpp', link_with: hello)
+        """)
+
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
-        self.t.save({"conanfile.py": self._conanfile_py,
-                     "meson.build": self._meson_build,
-                     "meson_options.txt": self._meson_options_txt,
+        # Issue related: https://github.com/conan-io/conan/issues/14453
+        # At first, let's add a raw option to see that it fails
+        self.t.save({"conanfile.py": conanfile_py.format(dynamic="self.options.shared"),
+                     "meson.build": meson_build,
+                     "meson_options.txt": meson_options_txt,
                      "hello.h": hello_h,
                      "hello.cpp": hello_cpp,
                      "main.cpp": app})
-
-        self.t.run("install .")
-
+        self.t.run("build .", assert_error=True)
+        assert "Conan options cannot be specified directly as a valid Meson data type. " \
+               "Please, use another Python data type like int, str, list or boolean." in self.t.out
+        # Let's transform the Conan option into other allowed data type to solve the issue
+        self.t.save({"conanfile.py": conanfile_py.format(dynamic="True if self.options.shared "
+                                                                 "else False")})
+        self.t.run("build .")
         content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
-
         self.assertIn("[project options]", content)
         self.assertIn("STRING_DEFINITION = 'Text'", content)
         self.assertIn("TRUE_DEFINITION = true", content)
         self.assertIn("FALSE_DEFINITION = false", content)
+        self.assertIn("DYNAMIC = false", content)
         self.assertIn("INT_DEFINITION = 42", content)
         self.assertIn("ARRAY_DEFINITION = ['Text1', 'Text2']", content)
-
         self.assertIn("[built-in options]", content)
         self.assertIn("buildtype = 'release'", content)
 
-        self.t.run("build .")
         self.t.run_command(os.path.join("build", "demo"))
-
         self.assertIn("hello: Release!", self.t.out)
         self.assertIn("STRING_DEFINITION: Text", self.t.out)
-
         self.assertIn("[properties]", content)
         self.assertNotIn("needs_exe_wrapper", content)
 
@@ -296,60 +301,3 @@ def test_meson_using_prefix_path_in_application():
     client.run("build .")
     assert "unrecognized character escape sequence" not in str(client.out)  # if Visual
     assert "unknown escape sequence" not in str(client.out)  # if mingw
-
-
-@pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
-def test_meson_and_data_types():
-    """
-    It tests that Conan raises an exception if consumer uses raw options.
-
-    Issue related: https://github.com/conan-io/conan/issues/14453
-    """
-    conanfile = textwrap.dedent("""
-    from conan import ConanFile
-    from conan.tools.meson import MesonToolchain, Meson
-    from conan.tools.layout import basic_layout
-
-    class myhelloConan(ConanFile):
-        name = "demo"
-        version = "0.1"
-        settings = "os", "compiler", "build_type", "arch"
-        exports_sources = "meson.build"
-        options = {{
-            "foo": ["ANY"],
-            "bar": ["ANY"],
-        }}
-        default_options = {{
-            "foo": "/var/run/foo",
-            "bar": "BAR",
-        }}
-        def layout(self):
-            basic_layout(self)
-
-        def generate(self):
-            tc = MesonToolchain(self)
-            tc.project_options["foo"] = {foo}
-            tc.project_options["bar"] = {bar}
-            tc.project_options["nums"] = 10
-            tc.generate()
-
-        def build(self):
-            meson = Meson(self)
-            meson.configure()
-            meson.build()
-    """)
-    client = TestClient()
-    # Adding raw options, so it'll fail due to this is not a supported data type
-    client.save({"conanfile.py": conanfile.format(foo="self.options.foo",
-                                                  bar="self.options.bar"),
-                 "meson.build": "project('myhello ', 'cpp')"})
-    client.run("build .", assert_error=True)
-    assert "Conan options cannot be specified directly as a valid Meson data type. " \
-           "Please, use another Python data type like int, str, list or boolean." in client.out
-    # Let's transform the Conan options into strings to solve the issue
-    client.save({"conanfile.py": conanfile.format(foo="str(self.options.foo)",
-                                                  bar="str(self.options.bar)")})
-    client.run("build .")
-    # Now, it worked!
-    assert "ninja: no work to do." in client.out
