@@ -591,3 +591,30 @@ def test_revision_timestamp():
     locked_ref = RecipeReference.loads(lock["requires"][0])
     assert locked_ref == ref
     assert locked_ref.timestamp and locked_ref.timestamp != server_timestamp
+
+
+class TestLockfileUpdate:
+    """
+    Check that --update works
+    """
+
+    @pytest.mark.parametrize("requires", ["requires", "tool_requires"])
+    def test_conanfile_txt_deps_ranges(self, requires):
+        """
+        conanfile.txt locking it dependencies (with version ranges)
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg"),
+                "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]"})
+        c.run("create pkg --version=0.1")
+        c.run("create pkg --version=0.2")
+        c.run("upload pkg/0.2 -r=default -c")
+        c.run("remove pkg/0.2 -c")
+        c.run("list *")
+        assert "pkg/0.2" not in c.out
+        c.run("lock create consumer/conanfile.txt --update")
+        assert "pkg/0.1" not in c.out
+        assert "pkg/0.2" in c.out
+        lock = c.load("consumer/conan.lock")
+        assert "pkg/0.1" not in lock
+        assert "pkg/0.2" in lock
