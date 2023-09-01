@@ -302,7 +302,8 @@ def test_meson_using_prefix_path_in_application():
 @pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
 def test_meson_and_data_types():
     """
-    It tests that Meson checks if consumer enters a
+    It tests that Conan raises an exception if consumer uses raw options.
+
     Issue related: https://github.com/conan-io/conan/issues/14453
     """
     conanfile = textwrap.dedent("""
@@ -339,11 +340,13 @@ def test_meson_and_data_types():
             meson.build()
     """)
     client = TestClient()
+    # Adding raw options, so it'll fail due to this is not a supported data type
     client.save({"conanfile.py": conanfile.format(foo="self.options.foo",
                                                   bar="self.options.bar"),
                  "meson.build": "project('myhello ', 'cpp')"})
     client.run("build .", assert_error=True)
-    assert "Conan options cannot be specified directly as a valid Meson data type" in client.out
+    assert "Conan options cannot be specified directly as a valid Meson data type. " \
+           "Please, use another Python data type like int, str, list or boolean." in client.out
     # Let's transform the Conan options into strings to solve the issue
     client.save({"conanfile.py": conanfile.format(foo="str(self.options.foo)",
                                                   bar="str(self.options.bar)")})
