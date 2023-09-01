@@ -473,10 +473,12 @@ class Conf:
         # Reading the list of all the configurations selected by the user to use for the package_id
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
-            value = self.get(conf_name)
-            # Pruning any empty values, those should not affect package ID
-            if value:
-                result.define(conf_name, value)
+            matching_confs = [c for c in self._values if re.match(conf_name, c)] or [conf_name]
+            for name in matching_confs:
+                value = self.get(name)
+                # Pruning any empty values, those should not affect package ID
+                if value:
+                    result.define(name, value)
         return result
 
     def set_relative_base_folder(self, folder):
