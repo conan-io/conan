@@ -12,10 +12,10 @@ from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, zipdir
 from conans.util.files import load, mkdir, save, save_files
-from utils.file_server import TestFileServer
 
 
 def make_file_read_only(file_path):
