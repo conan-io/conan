@@ -91,7 +91,7 @@ def _filecopy(src, filename, dst):
     shutil.copyfile(src, dst)
 
 
-def _process_file(directory, filename, config, cache, folder):
+def _process_file(directory, filename, config, cache, folder, strategy):
     output = ConanOutput()
     if filename == "settings.yml":
         output.info("Installing settings.yml")
@@ -210,21 +210,21 @@ def _is_compressed_file(filename):
     return False
 
 
-def _process_config(config, cache, requester):
+def _process_config(config, cache, requester, strategy):
     try:
         if config.type == "git":
-            _process_git_repo(config, cache)
+            _process_git_repo(config, cache, strategy)
         elif config.type == "dir":
-            _process_folder(config, config.uri, cache)
+            _process_folder(config, config.uri, cache, strategy)
         elif config.type == "file":
             if _is_compressed_file(config.uri):
                 with tmp_config_install_folder(cache) as tmp_folder:
-                    _process_zip_file(config, config.uri, cache, tmp_folder)
+                    _process_zip_file(config, config.uri, cache, tmp_folder, strategy)
             else:
                 dirname, filename = os.path.split(config.uri)
-                _process_file(dirname, filename, config, cache, dirname)
+                _process_file(dirname, filename, config, cache, dirname, strategy)
         elif config.type == "url":
-            _process_download(config, cache, requester=requester)
+            _process_download(config, cache, requester=requester, strategy)
         else:
             raise ConanException("Unable to process config install: %s" % config.uri)
     except Exception as e:
@@ -232,10 +232,10 @@ def _process_config(config, cache, requester):
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
-                          args=None, source_folder=None, target_folder=None):
+                          args=None, source_folder=None, target_folder=None, strategy=None):
     cache, requester = app.cache, app.requester
 
     # Execute and store the new one
     config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
                                      source_folder, target_folder)
-    _process_config(config, cache, requester)
+    _process_config(config, cache, requester, strategy)

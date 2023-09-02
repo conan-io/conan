@@ -38,11 +38,14 @@ def config_install(conan_api, parser, subparser, *args):
                                 'specified origin')
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
+    subparser.add_argument("--strategy", choices=["append", "merge"], type=str, default="append",
+                           help="Which installation strategy to follow (append, clear-first, merge)")
     args = parser.parse_args(*args)
     verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) else get_bool_from_text(args.verify_ssl)
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
                              source_folder=args.source_folder,
-                             target_folder=args.target_folder)
+                             target_folder=args.target_folder,
+                             strategy=args.strategy)
 
 
 def list_text_formatter(confs):
