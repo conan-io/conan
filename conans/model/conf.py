@@ -271,6 +271,9 @@ class Conf:
         """
         return other._values == self._values
 
+    def clear(self):
+        self._values.clear()
+
     def validate(self):
         for conf in self._values:
             self._check_conf_name(conf)
