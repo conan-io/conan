@@ -330,7 +330,7 @@ class TestLinear(GraphManagerTest):
 
         with pytest.raises(ConanException) as exc:
             self.build_consumer(consumer)
-        assert "Package type is 'library', but no 'shared' option declared" in str(exc)
+        assert "liba/0.1: Package type is 'library', but no 'shared' option declared" in str(exc)
 
     def test_build_script_requirement(self):
         # app -> libb0.1 -br-> liba0.1 (build-scripts)
