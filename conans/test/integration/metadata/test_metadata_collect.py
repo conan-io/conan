@@ -7,8 +7,8 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 # TODO: Simplify API for simpler command
-collect = '''
-import os, shutil
+collect = '''\
+import os, shutil, glob
 from conan.errors import ConanException
 from conan.cli.command import conan_command
 from conan.api.output import ConanOutput
@@ -44,6 +44,7 @@ def collect(conan_api, parser, *args):
         path = None
 
     output_folder = None
+    metadata = args.metadata if args.metadata else ["*"]
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
@@ -71,42 +72,54 @@ def collect(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     install_graph = InstallGraph(deps_graph)
-    install_order = install_graph.install_order()
+    install_order = install_graph.install_order(by_levels=False)
 
-    remote = None
-    metadata_remote = args.metadata_remote
-    if metadata_remote:
-        out.title(f"Downloading metadata from {metadata_remote}")
-        remote = conan_api.remotes.get(metadata_remote)
+    if args.metadata_remote:
+        out.title(f"Downloading metadata from {args.metadata_remote}")
+        remote = conan_api.remotes.get(args.metadata_remote)
 
-    output_folder = args.output_folder or os.path.join(os.getcwd(), "metadata")
-    for level in install_order:
-        for install_reference in level:
-            if remote:
-                try:
-                    conan_api.download.recipe(install_reference.ref, remote, args.metadata)
-                except ConanException as e:
-                    out.warning(f"Recipe {install_reference.ref} not found in remote: {e}")
+        for install_reference in install_order:
+            if install_reference.ref.revision is None:  # Is an editable, do not download
+                continue
+            try:
+                conan_api.download.recipe(install_reference.ref, remote, metadata)
+            except ConanException as e:
+                out.warning(f"Recipe {install_reference.ref} not found in remote: {e}")
             for package in install_reference.packages.values():
                 node = package.nodes[0]
-                if remote:
-                    try:
-                        conan_api.download.package(node.pref, remote, args.metadata)
-                    except ConanException as e:
-                        out.warning(f"Package {node.pref} not found in remote: {e}")
-                _copy_metadata(node.conanfile, output_folder)
+                try:
+                    conan_api.download.package(node.pref, remote, metadata)
+                except ConanException as e:
+                    out.warning(f"Package {node.pref} not found in remote: {e}")
 
+    # Copying and collecting metadata from all packages into local copy
+    def _copy_metadata(src, dst):
+        os.makedirs(dst, exist_ok=True)
+        for root, dirs, files in os.walk(src):
 
-def _copy_metadata(conanfile, output_folder):
-    new_folder = os.path.join(output_folder, conanfile.ref.name, str(conanfile.ref.version))
-    if os.path.exists(new_folder):
-        conanfile.output.warning(f"Folder for {conanfile} already exist, removing it: {new_folder}")
-        shutil.rmtree(new_folder)
-    conanfile.output.info(f"Copying metadata for {conanfile}")
-    conanfile.output.info(f"Copying recipe metadata from {conanfile.recipe_metadata_folder}")
-    shutil.copytree(conanfile.recipe_metadata_folder, os.path.join(new_folder, "recipe"))
-    conanfile.output.info(f"Copying package metadata from {conanfile.package_metadata_folder}")
-    shutil.copytree(conanfile.package_metadata_folder, os.path.join(new_folder, "package"))
+        all_files = glob.glob(os.path.join(src, "**/*"), recursive=True)
+        print("ALL FILES", all_files)
+        for m in metadata:
+            print("PATTERN ", m)
+            files = glob.glob(os.path.join(src, "**"), recursive=True)
+            print("FILES: ", files)
+            for f in files:
+                print("F: ", f)
+                shutil.copy2(f, dst)
+
+    output_folder = args.output_folder or os.path.join(os.getcwd(), "metadata")
+    for install_reference in install_order:
+        conanfile = install_reference.node.conanfile
+        folder = os.path.join(output_folder, conanfile.ref.name, str(conanfile.ref.version))
+        if os.path.exists(folder):
+            conanfile.output.warning(f"Folder for {conanfile} already exist, removing it: {folder}")
+            shutil.rmtree(folder)
+        conanfile.output.info(f"Copying recipe metadata from {conanfile.recipe_metadata_folder}")
+        _copy_metadata(conanfile.recipe_metadata_folder, os.path.join(folder, "recipe"))
+        for package in install_reference.packages.values():
+            pkg_metadata_folder = package.nodes[0].conanfile.package_metadata_folder
+            conanfile.output.info(f"Copying package metadata from {pkg_metadata_folder}")
+            _copy_metadata(pkg_metadata_folder, os.path.join(folder, "package"))
 '''
 
 

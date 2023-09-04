@@ -98,12 +98,18 @@ class _InstallRecipeReference:
     same recipe revision (repo+commit) are to be built grouped together"""
     def __init__(self):
         self.ref = None
+        self._node = None
         self.packages = {}  # {package_id: _InstallPackageReference}
         self.depends = []  # Other REFs, defines the graph topology and operation ordering
+
+    @property
+    def node(self):
+        return self._node
 
     @staticmethod
     def create(node):
         result = _InstallRecipeReference()
+        result._node = node
         result.ref = node.ref
         result.add(node)
         return result
@@ -229,7 +235,7 @@ class InstallGraph:
             else:
                 existing.add(node)
 
-    def install_order(self):
+    def install_order(self, by_levels=True):
         # a topological order by levels, returns a list of list, in order of processing
         levels = []
         opened = self._nodes
@@ -246,7 +252,8 @@ class InstallGraph:
                 levels.append(current_level)
             # now initialize new level
             opened = {k: v for k, v in opened.items() if v not in closed}
-
+        if not by_levels:
+            return [r for level in levels for r in level]
         return levels
 
     def install_build_order(self):
