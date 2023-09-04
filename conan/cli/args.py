@@ -133,3 +133,5 @@ def validate_common_graph_args(args):
     if args.path and (args.requires or args.tool_requires):
         raise ConanException("--requires and --tool-requires arguments are incompatible with "
                              f"[path] '{args.path}' argument")
+    if not args.path and args.build_require:
+        raise ConanException("--build-require should only be used with <path> argument")
