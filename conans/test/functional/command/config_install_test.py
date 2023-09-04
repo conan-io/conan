@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import stat
@@ -619,3 +620,63 @@ class TestConfigInstall:
             client.save({"profiles/debug/address-sanitizer": ""})
             client.run("config install .")
         assert os.path.isdir(debug_cache_folder)
+
+    def test_config_install_merge_remotes_folder(self):
+        tc = TestClient()
+        base_remotes = json.dumps({"remotes": [{
+            "name": "conancenter",
+            "url": "https://center.conan.io",
+            "verify_ssl": True
+        }],
+            "another_key": "Here"})
+
+        different_remotes = json.dumps({"remotes": [{
+            "name": "other",
+            "url": "fake.url",
+            "verify_ssl": True
+        }]})
+
+        updated_remotes = json.dumps({"remotes": [{
+            "name": "conancenter",
+            "url": "wrong.url",
+            "verify_ssl": True
+        }]})
+
+        empty_remotes = json.dumps({"remotes": [], "extra_key": "Present"})
+
+        tc.save_home({"remotes.json": base_remotes})
+        tc.save({"different/remotes.json": different_remotes,
+                 "updated/remotes.json": updated_remotes,
+                 "empty/remotes.json": empty_remotes})
+
+        tc.run("config install different --strategy=merge")
+        assert "Merging remotes from existing and new remotes.json" in tc.out
+        result_remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+
+        assert len(result_remotes["remotes"]) == 2
+        assert any(remote["name"] == "conancenter" and remote["url"] == "https://center.conan.io"
+                   for remote in result_remotes["remotes"])
+        assert any(remote["name"] == "other" and remote["url"] == "fake.url"
+                   for remote in result_remotes["remotes"])
+        assert "another_key" in result_remotes
+
+        tc.run("config install updated --strategy=merge")
+        result_remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+
+        assert len(result_remotes["remotes"]) == 2
+        assert any(remote["name"] == "conancenter" and remote["url"] == "wrong.url"
+                   for remote in result_remotes["remotes"])
+        assert any(remote["name"] == "other" and remote["url"] == "fake.url"
+                   for remote in result_remotes["remotes"])
+        assert "another_key" in result_remotes
+
+        tc.run("config install empty --strategy=merge")
+        result_remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+
+        assert len(result_remotes["remotes"]) == 2
+        assert any(remote["name"] == "conancenter" and remote["url"] == "wrong.url"
+                   for remote in result_remotes["remotes"])
+        assert any(remote["name"] == "other" and remote["url"] == "fake.url"
+                   for remote in result_remotes["remotes"])
+        assert "extra_key" in result_remotes
+        assert "another_key" in result_remotes

@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import fnmatch
@@ -8,7 +9,7 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir, load, save
 from conans.util.runners import detect_runner
 
 
@@ -56,7 +57,7 @@ def tmp_config_install_folder(cache):
         rmdir(tmp_folder)
 
 
-def _process_git_repo(config, cache):
+def _process_git_repo(config, cache, strategy):
     output = ConanOutput()
     output.info("Trying to clone repo: %s" % config.uri)
     with tmp_config_install_folder(cache) as tmp_folder:
@@ -66,14 +67,14 @@ def _process_git_repo(config, cache):
             if ret != 0:
                 raise ConanException("Can't clone repo: {}".format(out))
             output.info("Repo cloned!")
-        _process_folder(config, tmp_folder, cache)
+        _process_folder(config, tmp_folder, cache, strategy)
 
 
-def _process_zip_file(config, zippath, cache, tmp_folder, first_remove=False):
+def _process_zip_file(config, zippath, cache, tmp_folder, strategy, first_remove=False):
     unzip(zippath, tmp_folder)
     if first_remove:
         os.unlink(zippath)
-    _process_folder(config, tmp_folder, cache)
+    _process_folder(config, tmp_folder, cache, strategy)
 
 
 def _filecopy(src, filename, dst):
@@ -91,13 +92,47 @@ def _filecopy(src, filename, dst):
     shutil.copyfile(src, dst)
 
 
+def _merge_remotes(src, filename, dst):
+    original_remotes = json.loads(load(os.path.join(dst, filename)))
+    new_remotes = json.loads(load(os.path.join(src, filename)))
+    # We can't just .extend() original_remotes because we need to deal with duplicates to properly override them
+    transformed_original = {remote["name"]: remote for remote in original_remotes.get("remotes", [])}
+    transformed_new = {remote["name"]: remote for remote in new_remotes.get("remotes", [])}
+    transformed_original.update(transformed_new)
+    new_remotes["remotes"] = list(transformed_original.values())
+    save(os.path.join(src, filename), json.dumps(new_remotes))
+
+
+def _merge_conanignore(src, filename, dst):
+    original_ignores = set(load(os.path.join(dst, filename)))
+    new_ignores = set(load(os.path.join(src, filename)))
+    # Remove duplicates
+    merged_content = "".join(original_ignores) + "\n" + "".join(new_ignores.difference(original_ignores))
+    save(os.path.join(src, filename), merged_content)
+
+
+def _merge_globalconf(src, filename, dst):
+    original_conf = load(os.path.join(dst, filename))
+    new_conf = load(os.path.join(src, filename))
+    merged_content = original_conf + "\n" + new_conf
+    save(os.path.join(src, filename), merged_content)
+
+
 def _process_file(directory, filename, config, cache, folder, strategy):
     output = ConanOutput()
     if filename == "settings.yml":
         output.info("Installing settings.yml")
         _filecopy(directory, filename, cache.cache_folder)
     elif filename == "remotes.json":
-        output.info("Defining remotes from remotes.json")
+        if strategy == "merge":
+            output.info("Merging remotes from existing and new remotes.json")
+            _merge_remotes(directory, filename, cache.cache_folder)
+        else:
+            output.info("Defining remotes from remotes.json")
+        _filecopy(directory, filename, cache.cache_folder)
+    elif filename == "global.conf":
+        if strategy == "merge":
+            _merge_globalconf(directory, filename, cache.cache_folder)
         _filecopy(directory, filename, cache.cache_folder)
     else:
         relpath = os.path.relpath(directory, folder)
@@ -115,7 +150,7 @@ def _process_file(directory, filename, config, cache, folder, strategy):
         _filecopy(directory, filename, target_folder)
 
 
-def _process_folder(config, folder, cache):
+def _process_folder(config, folder, cache, strategy):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
@@ -130,10 +165,10 @@ def _process_folder(config, folder, cache):
         for f in files:
             rel_path = os.path.relpath(os.path.join(root, f), folder)
             if conanignore is None or not conanignore.matches(rel_path):
-                _process_file(root, f, config, cache, folder)
+                _process_file(root, f, config, cache, folder, strategy)
 
 
-def _process_download(config, cache, requester):
+def _process_download(config, cache, requester, strategy):
     output = ConanOutput()
     with tmp_config_install_folder(cache) as tmp_folder:
         output.info("Trying to download  %s" % _hide_password(config.uri))
@@ -144,7 +179,7 @@ def _process_download(config, cache, requester):
             downloader = FileDownloader(requester=requester)
             downloader.download(url=config.uri, file_path=zippath, verify_ssl=config.verify_ssl,
                                 retry=1)
-            _process_zip_file(config, zippath, cache, tmp_folder, first_remove=True)
+            _process_zip_file(config, zippath, cache, tmp_folder, strategy, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
@@ -224,7 +259,7 @@ def _process_config(config, cache, requester, strategy):
                 dirname, filename = os.path.split(config.uri)
                 _process_file(dirname, filename, config, cache, dirname, strategy)
         elif config.type == "url":
-            _process_download(config, cache, requester=requester, strategy)
+            _process_download(config, cache, requester=requester, strategy=strategy)
         else:
             raise ConanException("Unable to process config install: %s" % config.uri)
     except Exception as e:
@@ -232,7 +267,7 @@ def _process_config(config, cache, requester, strategy):
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
-                          args=None, source_folder=None, target_folder=None, strategy=None):
+                          args=None, source_folder=None, target_folder=None, strategy="replace"):
     cache, requester = app.cache, app.requester
 
     # Execute and store the new one

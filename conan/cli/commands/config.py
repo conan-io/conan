@@ -38,8 +38,10 @@ def config_install(conan_api, parser, subparser, *args):
                                 'specified origin')
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
-    subparser.add_argument("--strategy", choices=["append", "merge"], type=str, default="append",
-                           help="Which installation strategy to follow (append, clear-first, merge)")
+    subparser.add_argument("--strategy", choices=["replace", "merge"],
+                           type=str, default="replace",
+                           help="Which installation strategy to follow (append, clear-first, merge)."
+                                " This only applies to the remotes.json file")
     args = parser.parse_args(*args)
     verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) else get_bool_from_text(args.verify_ssl)
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,

@@ -10,7 +10,7 @@ class ConfigAPI:
         return self.conan_api.cache_folder
 
     def install(self, path_or_url, verify_ssl, config_type=None, args=None,
-                source_folder=None, target_folder=None, strategy="append"):
+                source_folder=None, target_folder=None, strategy="replace"):
         # TODO: We probably want to split this into git-folder-http cases?
         from conans.client.conf.config_installer import configuration_install
         app = ConanApp(self.conan_api.cache_folder)
