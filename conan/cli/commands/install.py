@@ -41,7 +41,7 @@ def install(conan_api, parser, *args):
     # basic paths
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
-    source_folder = os.path.dirname(path) if args.path else None
+    source_folder = os.path.dirname(path) if args.path else cwd
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
 
     # Basic collaborators: remotes, lockfile, profiles
