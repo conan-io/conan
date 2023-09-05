@@ -4,7 +4,7 @@ import traceback
 import importlib
 
 from conans.client.subsystems import deduce_subsystem, subsystem_path
-from conans.errors import ConanException, conanfile_exception_formatter
+from conans.errors import ConanException, conanfile_exception_formatter, conanfile_remove_attr
 from conans.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake", "CMakeDeps": "conan.tools.cmake",
@@ -106,7 +106,9 @@ def write_generators(conanfile, app):
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
             with conanfile_exception_formatter(conanfile, "generate"):
+                setattr(conanfile, "_conan_generate_package_folder", True)
                 conanfile.generate()
+                delattr(conanfile, "_conan_generate_package_folder")
 
     if conanfile.virtualbuildenv:
         mkdir(new_gen_folder)

@@ -301,6 +301,9 @@ class ConanFile:
 
         :return: A string with the path to the package folder.
         """
+        if hasattr(self, "_conan_generate_package_folder"):
+            self.output.error("'self.package_folder' can't be used in 'generate()', "
+                              "please remove it, use 'self.build_folder' instead")
         return self.folders.base_package
 
     @property
