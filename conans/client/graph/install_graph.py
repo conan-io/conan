@@ -6,6 +6,7 @@ from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
@@ -31,6 +32,14 @@ class _InstallPackageReference:
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
         self.overrides = Overrides()
         self.ref = None
+
+    @property
+    def pref(self):
+        return PkgReference(self.ref, self.package_id, self.prev)
+
+    @property
+    def conanfile(self):
+        return self.nodes[0].conanfile
 
     @staticmethod
     def create(node):

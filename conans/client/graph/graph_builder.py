@@ -1,4 +1,5 @@
 import copy
+import os
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
@@ -261,7 +262,10 @@ class DepsGraphBuilder(object):
         new_ref, dep_conanfile, recipe_status, remote = resolved
         # TODO: Proxy could return the recipe_layout() and it can be reused
         # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
-        if recipe_status not in (RECIPE_EDITABLE, RECIPE_SYSTEM_TOOL):
+        if recipe_status == RECIPE_EDITABLE:
+            recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
+            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
+        elif recipe_status != RECIPE_SYSTEM_TOOL:
             recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
             dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         # If the node is virtual or a test package, the require is also "root"
