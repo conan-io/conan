@@ -383,3 +383,27 @@ class TestRemoteAuth:
             other_server:
                 user: None""")
         assert text in c.out
+
+    def test_remote_auth_error(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"user": "password"})
+        c = TestClient(servers=servers, inputs=["user1", "pass", "user2", "pass", "user3", "pass"])
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_remote_auth_server_expire_token(self):
+        server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password",
+                                                            "myotheruser", "otherpass",
+                                                            "user", "pass", "user", "pass",
+                                                            "user", "pass"])
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # Invalidate server secret
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato"
+        c.run("remote auth *")
+        assert "user: myotheruser" in c.out
+        # Invalidate server secret again
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato2"
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out

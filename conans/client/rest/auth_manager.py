@@ -79,8 +79,7 @@ class ConanApiAuthManager(object):
                 if user is None:
                     out.error('Wrong user or password')
                 else:
-                    out.error('Wrong password for user "%s"' % user)
-                    out.info('You can change username with "conan remote login <remote> <username>"')
+                    out.error('Wrong password for user "%s"' % input_user)
             else:
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
