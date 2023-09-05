@@ -1,13 +1,10 @@
 from collections import OrderedDict
 
-import pytest
-
 from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save
 
 
 class TestVersionRanges(GraphManagerTest):
@@ -389,13 +386,6 @@ def test_remote_version_ranges():
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
         t.assert_listed_binary({f"dep/{solution}": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                     "Download (default)")})
-
-
-@pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
-def test_remote_version_ranges_optimized():
-    t = TestClient(default_server_user=True)
-    save(t.cache.default_profile_path, "")
-    save(t.cache.settings_path, "")
 
 
 def test_different_user_channel_resolved_correctly():
