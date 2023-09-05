@@ -196,8 +196,11 @@ class GeneratorManager(object):
             try:
                 generator.output_path = old_gen_folder
                 content = generator.content
-                conanfile.output.warning(f"**** The '{generator_name}' generator is deprecated. "
-                                         "Please update your code and remove it. ****")
+                conanfile.output.warn(f"\n"
+                                      f"     ************************************************\n"
+                                      f"     The '{generator_name}' generator is deprecated.\n"
+                                      f"     Please update your code and remove it.\n"
+                                      f"     *************************************************\n")
                 if isinstance(content, dict):
                     if generator.filename:
                         output.warn("Generator %s is multifile. Property 'filename' not used"
