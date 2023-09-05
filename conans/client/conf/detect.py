@@ -331,6 +331,8 @@ def _detected_architecture():
         return "sparc"
     elif "aarch64" in machine:
         return "armv8"
+    elif "ARM64" in machine:
+        return "armv8"
     elif "arm64" in machine:
         return "armv8"
     elif "64" in machine:
