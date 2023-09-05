@@ -43,7 +43,7 @@ class _SystemPackageManagerTool(object):
                            "apk": ["alpine"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
