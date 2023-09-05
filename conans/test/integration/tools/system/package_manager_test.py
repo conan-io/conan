@@ -48,6 +48,7 @@ def test_msys2():
     ("pidora", "yum"),
     ("rocky", "yum"),
     ("fedora", "dnf"),
+    ("nobara", "dnf"),
     ("arch", "pacman"),
     ("opensuse", "zypper"),
     ("sles", "zypper"),
