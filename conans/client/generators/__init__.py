@@ -35,7 +35,6 @@ from .visualstudio_multi import VisualStudioMultiGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
-from ..output import Color
 from ..tools import chdir
 
 
