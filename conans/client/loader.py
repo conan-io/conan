@@ -349,7 +349,7 @@ class ConanFileLoader(object):
         conanfile.settings = profile_host.processed_settings.copy_values()
 
         if is_build_require:
-            conanfile.build_requires = [str(r) for r in references]
+            conanfile.build_requires = [r for r in references]
         else:
             for reference in references:
                 conanfile.requires.add_ref(reference)
