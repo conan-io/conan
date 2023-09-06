@@ -171,8 +171,6 @@ def test_deactivate_nowrap():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
-# @pytest.mark.tool("visual_studio", "17")
-# @pytest.mark.tool("clang", "16")
 @pytest.mark.parametrize("build_type,runtime,vscrt", [
     ("Debug", "dynamic", "mdd"),
     ("Debug", "static", "mtd"),
@@ -187,7 +185,6 @@ def test_clang_cl_vscrt(build_type, runtime, vscrt):
         build_type={build_type}
         compiler=clang
         compiler.runtime={runtime}
-        compiler.runtime_type={build_type}
         compiler.runtime_version=v143
         compiler.version=16
 

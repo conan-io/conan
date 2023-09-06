@@ -30,7 +30,7 @@ _default_profile_plugin = """\
 
 def profile_plugin(profile):
     settings = profile.settings
-    if settings.get("compiler") == "msvc" and settings.get("compiler.runtime"):
+    if settings.get("compiler") in ("msvc", "clang") and settings.get("compiler.runtime"):
         if settings.get("compiler.runtime_type") is None:
             runtime = "Debug" if settings.get("build_type") == "Debug" else "Release"
             try:
