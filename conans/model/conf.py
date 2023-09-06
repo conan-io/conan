@@ -42,8 +42,11 @@ BUILT_IN_CONFS = {
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
-    # Gzip compression
+    # Compression for `conan upload`
+    "core.upload:compression_format": "The compression format used when uploading Conan packages. "
+                                      "Possible values: 'zstd', 'gzip' (default=gzip)",
     "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
+    "core.zstd:compresslevel": "The zstd compression level for Conan artifacts",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",

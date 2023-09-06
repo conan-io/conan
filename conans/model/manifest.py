@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 
-from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME
 from conans.util.dates import timestamp_now, timestamp_to_str
 from conans.util.files import load, md5, md5sum, save, gather_files
 
@@ -91,7 +91,7 @@ class FileTreeManifest(object):
         """
         files, _ = gather_files(folder)
         # The folders symlinks are discarded for the manifest
-        for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
+        for f in (PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
             files.pop(f, None)
 
         file_dict = {}

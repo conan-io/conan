@@ -1,5 +1,6 @@
 import os
 import shutil
+import tarfile
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -14,7 +15,7 @@ from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import rmdir, human_size
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME
 from conans.util.files import mkdir, tar_extract
 
 
@@ -148,14 +149,18 @@ class RemoteManager(object):
                                              metadata, only_metadata=False)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             # quick server package integrity check:
-            for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
+            for f in ("conaninfo.txt", "conanmanifest.txt"):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
+            accepted_package_files = [PACKAGE_TZSTD_NAME, PACKAGE_TGZ_NAME]
+            package_file = next((f for f in zipped_files if f in accepted_package_files), None)
+            if not package_file:
+                raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {accepted_package_files} found")
             self._signer.verify(pref, download_pkg_folder, zipped_files)
 
-            tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
+            package_file = zipped_files.pop(package_file, None)
             package_folder = layout.package()
-            uncompress_file(tgz_file, package_folder, scope=str(pref.ref))
+            uncompress_file(package_file, package_folder, scope=str(pref.ref))
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -255,8 +260,23 @@ def uncompress_file(src_path, dest_folder, scope=None):
         if big_file:
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
+
         with open(src_path, mode='rb') as file_handler:
-            tar_extract(file_handler, dest_folder)
+            if src_path.endswith(".tar.zst"):
+                # Decompress using python-zstandard and tarfile.
+                try:
+                    import zstandard
+                except ModuleNotFoundError as e:
+                    raise ConanException("zstd decompression requires python-zstandard. "
+                                         "Run `pip install python-zstandard` and retry. "
+                                         f"Exception details: {e}")
+
+                dctx = zstandard.ZstdDecompressor()
+                stream_reader = dctx.stream_reader(file_handler)
+                with tarfile.open(fileobj=stream_reader, mode='r|') as the_tar:
+                    the_tar.extractall(dest_folder)
+            else:
+                tar_extract(file_handler, dest_folder)
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))
