@@ -353,23 +353,22 @@ class GraphBinariesAnalyzer(object):
             if node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE) \
                     and node is not graph.root:
                 continue
-            for req, dep in node.transitive_deps.items():
-                dep_node = dep.node
-                require = dep.require
-                if require.files:
-                    required_nodes.add(dep_node)
+            # The nodes that are directly required by this one to build correctly
+            deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
 
-        # second pass, transitive affected. Packages that have some dependency that is required
-        # cannot be skipped either. In theory the binary could be skipped, but build system
-        # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
-        for node in graph.nodes:
-            if any(dep.node in required_nodes for dep in node.transitive_deps.values()):
-                required_nodes.add(node)
+            # second pass, transitive affected. Packages that have some dependency that is required
+            # cannot be skipped either. In theory the binary could be skipped, but build system
+            # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
+            indirect = (d.node for d in node.transitive_deps.values()
+                        if any(t.node in deps_required for t in d.node.transitive_deps.values()))
+            deps_required.update(indirect)
 
-        # Third pass, mark requires as skippeable
-        for node in graph.nodes:
+            # Third pass, mark requires as skippeable
             for dep in node.transitive_deps.values():
-                dep.require.skip = dep.node not in required_nodes
+                dep.require.skip = dep.node not in deps_required
+
+            # Finally accumulate for marking binaries as SKIP download
+            required_nodes.update(deps_required)
 
         for node in graph.nodes:
             if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries",
