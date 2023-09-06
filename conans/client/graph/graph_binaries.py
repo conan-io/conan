@@ -356,9 +356,22 @@ class GraphBinariesAnalyzer(object):
             for req, dep in node.transitive_deps.items():
                 dep_node = dep.node
                 require = dep.require
-                if not require.skip:
+                if require.files:
                     required_nodes.add(dep_node)
 
+        # second pass, transitive affected. Packages that have some dependency that is required
+        # cannot be skipped either. In theory the binary could be skipped, but build system
+        # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
         for node in graph.nodes:
-            if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries", check_type=bool, default=True):
+            if any(dep.node in required_nodes for dep in node.transitive_deps.values()):
+                required_nodes.add(node)
+
+        # Third pass, mark requires as skippeable
+        for node in graph.nodes:
+            for dep in node.transitive_deps.values():
+                dep.require.skip = dep.node not in required_nodes
+
+        for node in graph.nodes:
+            if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries",
+                                                                      check_type=bool, default=True):
                 node.binary = BINARY_SKIP
