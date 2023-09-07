@@ -25,6 +25,8 @@ class _ConditionSet:
     def _parse_expression(expression):
         if expression == "" or expression == "*":
             return [_Condition(">=", Version("0.0.0"))]
+        elif len(expression) == 1:
+            raise ConanException(f'Error parsing version range "{expression}"')
 
         operator = expression[0]
         if operator not in (">", "<", "^", "~", "="):
@@ -38,7 +40,7 @@ class _ConditionSet:
                 index = 2
         version = expression[index:]
         if version == "":
-            raise ConanException(f"Error parsing version range {expression}")
+            raise ConanException(f'Error parsing version range "{expression}"')
         if operator == "~":  # tilde minor
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0

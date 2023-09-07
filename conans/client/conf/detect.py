@@ -1,15 +1,13 @@
 import os
 import platform
 import re
-import tempfile
-import textwrap
 
 from conan.api.output import ConanOutput
-from conan.internal.api.detect_api import detect_os, detect_architecture
+from conan.internal.api.detect_api import detect_os, detect_architecture, default_msvc_runtime, \
+    detect_libcxx, default_cppstd
 from conans.client.conf.detect_vs import latest_visual_studio_version_installed
 from conans.model.version import Version
-from conans.util.files import save
-from conans.util.runners import detect_runner, check_output_runner
+from conans.util.runners import detect_runner
 
 
 def _gcc_compiler(compiler_exe="gcc"):
@@ -35,6 +33,7 @@ def _gcc_compiler(compiler_exe="gcc"):
             return compiler, installed_version
     except Exception:
         return None
+
 
 def _msvc_cl_compiler(compiler_exe="cl"):
     try:
@@ -165,42 +164,6 @@ def _get_profile_compiler_version(compiler, version):
     return version
 
 
-def _detect_gcc_libcxx(version, executable):
-    output = ConanOutput()
-    # Assumes a working g++ executable
-    if executable == "g++":  # we can rule out old gcc versions
-        new_abi_available = version >= "5.1"
-        if not new_abi_available:
-            return "libstdc++"
-
-    main = textwrap.dedent("""
-        #include <string>
-
-        using namespace std;
-        static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
-        int main(){}
-        """)
-    t = tempfile.mkdtemp()
-    filename = os.path.join(t, "main.cpp")
-    save(filename, main)
-    old_path = os.getcwd()
-    os.chdir(t)
-    try:
-        error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
-        if error:
-            if "using libstdc++" in out_str:
-                output.info("gcc C++ standard library: libstdc++")
-                return "libstdc++"
-            # Other error, but can't know, lets keep libstdc++11
-            output.warning("compiler.libcxx check error: %s" % out_str)
-            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
-        else:
-            output.info("gcc C++ standard library: libstdc++11")
-        return "libstdc++11"
-    finally:
-        os.chdir(old_path)
-
-
 def _detect_compiler_version(result):
     try:
         compiler, version = _get_default_compiler()
@@ -215,55 +178,17 @@ def _detect_compiler_version(result):
     result.append(("compiler", compiler))
     result.append(("compiler.version", _get_profile_compiler_version(compiler, version)))
 
-    # Get compiler C++ stdlib
-    if compiler == "apple-clang":
-        result.append(("compiler.libcxx", "libc++"))
-    elif compiler == "gcc":
-        libcxx = _detect_gcc_libcxx(version, "g++")
+    runtime, runtime_version = default_msvc_runtime(compiler)
+    if runtime:
+        result.append(("compiler.runtime", runtime))
+    if runtime_version:
+        result.append(("compiler.runtime_version", runtime_version))
+    libcxx = detect_libcxx(compiler, version)
+    if libcxx:
         result.append(("compiler.libcxx", libcxx))
-    elif compiler == "cc":
-        if platform.system() == "SunOS":
-            result.append(("compiler.libstdcxx", "libstdcxx4"))
-    elif compiler == "clang":
-        if platform.system() == "FreeBSD":
-            result.append(("compiler.libcxx", "libc++"))
-        elif platform.system() == "Darwin":
-            result.append(("compiler.libcxx", "libc++"))
-        elif platform.system() == "Windows":
-            # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
-            result.append(("compiler.runtime", "dynamic"))
-            result.append(("compiler.runtime_type", "Release"))
-            result.append(("compiler.runtime_version", "v143"))
-            ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
-            ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
-                                  "define compiler.libcxx")
-        else:
-            libcxx = _detect_gcc_libcxx(version, "clang++")
-            result.append(("compiler.libcxx", libcxx))
-    elif compiler == "sun-cc":
-        result.append(("compiler.libcxx", "libCstd"))
-    elif compiler == "mcst-lcc":
-        result.append(("compiler.libcxx", "libstdc++"))
-    elif compiler == "msvc":
-        # Add default mandatory fields for MSVC compiler
-        result.append(("compiler.cppstd", "14"))
-        result.append(("compiler.runtime", "dynamic"))
-
-    if compiler != "msvc":
-        cppstd = _cppstd_default(compiler, version)
-        if compiler == "apple-clang" and version >= "11":
-            # forced auto-detection, gnu98 is too old
-            cppstd = "gnu17"
+    cppstd = default_cppstd(compiler, version)
+    if cppstd:
         result.append(("compiler.cppstd", cppstd))
-
-
-def _detect_os_arch(result):
-    the_os = detect_os()
-    result.append(("os", the_os))
-
-    arch = detect_architecture()
-    if arch:
-        result.append(("arch", arch))
 
 
 def detect_defaults_settings():
@@ -271,49 +196,12 @@ def detect_defaults_settings():
     :return: A list with default settings
     """
     result = []
-    _detect_os_arch(result)
+    the_os = detect_os()
+    result.append(("os", the_os))
+
+    arch = detect_architecture()
+    if arch:
+        result.append(("arch", arch))
     _detect_compiler_version(result)
     result.append(("build_type", "Release"))
-
     return result
-
-
-def _cppstd_default(compiler, compiler_version):
-    assert isinstance(compiler_version, Version)
-    default = {"gcc": _gcc_cppstd_default(compiler_version),
-               "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",
-               "msvc": _visual_cppstd_default(compiler_version),
-               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
-    return default
-
-
-def _clang_cppstd_default(compiler_version):
-    if compiler_version >= "16":
-        return "gnu17"
-    # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
-    return "gnu98" if compiler_version < "6" else "gnu14"
-
-
-def _gcc_cppstd_default(compiler_version):
-    if compiler_version >= "11":
-        return "gnu17"
-    return "gnu98" if compiler_version < "6" else "gnu14"
-
-
-def _visual_cppstd_default(compiler_version):
-    if compiler_version >= "190":  # VS 2015 update 3 only
-        return "14"
-    return None
-
-
-def _intel_visual_cppstd_default(_):
-    return None
-
-
-def _intel_gcc_cppstd_default(_):
-    return "gnu98"
-
-
-def _mcst_lcc_cppstd_default(compiler_version):
-    return "gnu14" if compiler_version >= "1.24" else "gnu98"

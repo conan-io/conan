@@ -1,6 +1,12 @@
+import os
 import platform
+import tempfile
+import textwrap
 
-from conans.util.runners import check_output_runner
+from conan.api.output import ConanOutput
+from conans.model.version import Version
+from conans.util.files import save
+from conans.util.runners import check_output_runner, detect_runner
 
 
 def detect_os():
@@ -11,7 +17,6 @@ def detect_os():
 
 
 def detect_architecture():
-    # FIXME: Very weak check but not very common to run conan in other architectures
     machine = platform.machine()
     arch = None
     system = platform.system()
@@ -41,6 +46,8 @@ def detect_architecture():
     elif "aarch64" in machine:
         return "armv8"
     elif "arm64" in machine:
+        return "armv8"
+    elif "ARM64" in machine:
         return "armv8"
     elif "64" in machine:
         return "x86_64"
@@ -80,7 +87,8 @@ def _get_aix_conf(options=None):
     try:
         ret = check_output_runner("getconf%s" % options).strip()
         return ret
-    except Exception:
+    except Exception as e:
+        ConanOutput().warning(f"Couldn't get aix getconf {e}")
         return None
 
 
@@ -107,3 +115,114 @@ def _get_e2k_architecture():
         "E16C": "e2k-v6",  # Elbrus 16C
         "E32C": "e2k-v7",  # Elbrus 32C
     }.get(platform.processor())
+
+
+def detect_libcxx(compiler, version):
+    assert isinstance(version, Version)
+    # This is not really a detection in most cases
+    # Get compiler C++ stdlib
+    if compiler == "apple-clang":
+        return "libc++"
+    elif compiler == "gcc":
+        libcxx = _detect_gcc_libcxx(version, "g++")
+        return libcxx
+    elif compiler == "cc":
+        if platform.system() == "SunOS":
+            return "libstdcxx4"
+    elif compiler == "clang":
+        if platform.system() == "FreeBSD":
+            return "libc++"
+        elif platform.system() == "Darwin":
+            return "libc++"
+        elif platform.system() == "Windows":
+            return  # by default windows will assume LLVM/Clang with VS backend
+        else:  # Linux
+            libcxx = _detect_gcc_libcxx(version, "clang++")
+            return libcxx
+    elif compiler == "sun-cc":
+        return "libCstd"
+    elif compiler == "mcst-lcc":
+        return "libstdc++"
+
+
+def _detect_gcc_libcxx(version, executable):
+    output = ConanOutput()
+    # Assumes a working g++ executable
+    if executable == "g++":  # we can rule out old gcc versions
+        new_abi_available = version >= "5.1"
+        if not new_abi_available:
+            return "libstdc++"
+
+    main = textwrap.dedent("""
+        #include <string>
+
+        using namespace std;
+        static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
+        int main(){}
+        """)
+    t = tempfile.mkdtemp()
+    filename = os.path.join(t, "main.cpp")
+    save(filename, main)
+    old_path = os.getcwd()
+    os.chdir(t)
+    try:
+        error, out_str = detect_runner("%s main.cpp -std=c++11" % executable)
+        if error:
+            if "using libstdc++" in out_str:
+                output.info("gcc C++ standard library: libstdc++")
+                return "libstdc++"
+            # Other error, but can't know, lets keep libstdc++11
+            output.warning("compiler.libcxx check error: %s" % out_str)
+            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+        else:
+            output.info("gcc C++ standard library: libstdc++11")
+        return "libstdc++11"
+    finally:
+        os.chdir(old_path)
+
+
+def default_msvc_runtime(compiler):
+    if platform.system() != "Windows":
+        return None, None
+    if compiler == "clang":
+        # It could be LLVM/Clang with VS runtime or Msys2 with libcxx
+        ConanOutput().warning("Assuming LLVM/Clang in Windows with VS 17 2022")
+        ConanOutput().warning("If Msys2/Clang need to remove compiler.runtime* and "
+                              "define compiler.libcxx")
+        return "dynamic", "v143"
+    elif compiler == "msvc":
+        # Add default mandatory fields for MSVC compiler
+        return "dynamic", None
+    return None, None
+
+
+def default_cppstd(compiler, compiler_version):
+    default = {"gcc": _gcc_cppstd_default(compiler_version),
+               "clang": _clang_cppstd_default(compiler_version),
+               "apple-clang": "gnu98",
+               "msvc": _visual_cppstd_default(compiler_version),
+               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
+    return default
+
+
+def _clang_cppstd_default(compiler_version):
+    if compiler_version >= "16":
+        return "gnu17"
+    # Official docs are wrong, in 6.0 the default is gnu14 to follow gcc's choice
+    return "gnu98" if compiler_version < "6" else "gnu14"
+
+
+def _gcc_cppstd_default(compiler_version):
+    if compiler_version >= "11":
+        return "gnu17"
+    return "gnu98" if compiler_version < "6" else "gnu14"
+
+
+def _visual_cppstd_default(compiler_version):
+    if compiler_version >= "190":  # VS 2015 update 3 only
+        return "14"
+    return None
+
+
+def _mcst_lcc_cppstd_default(compiler_version):
+    return "gnu14" if compiler_version >= "1.24" else "gnu98"

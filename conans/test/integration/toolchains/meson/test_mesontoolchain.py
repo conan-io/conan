@@ -1,4 +1,7 @@
+import platform
 import textwrap
+
+import pytest
 
 from conan.tools.meson import MesonToolchain
 from conans.test.utils.tools import TestClient
@@ -165,3 +168,37 @@ def test_deactivate_nowrap():
     content = t.load(MesonToolchain.native_filename)
     assert "wrap_mode " not in content
     assert "nofallback" not in content
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
+@pytest.mark.parametrize("build_type,runtime,vscrt", [
+    ("Debug", "dynamic", "mdd"),
+    ("Debug", "static", "mtd"),
+    ("Release", "dynamic", "md"),
+    ("Release", "static", "mt")
+])
+def test_clang_cl_vscrt(build_type, runtime, vscrt):
+    profile = textwrap.dedent(f"""
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type={build_type}
+        compiler=clang
+        compiler.runtime={runtime}
+        compiler.runtime_version=v143
+        compiler.version=16
+
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Visual Studio 17
+
+        [buildenv]
+        CC=clang-cl
+        CXX=clang-cl
+   """)
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
+            "profile": profile})
+
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert f"b_vscrt = '{vscrt}'" in content

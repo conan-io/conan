@@ -325,6 +325,7 @@ class ConanInfo:
         result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
         result.conf = self.conf.copy()
+        result.settings_target = self.settings_target.copy() if self.settings_target else None
         return result
 
     def dumps(self):
@@ -392,6 +393,7 @@ class ConanInfo:
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+        self.conf.clear()
 
     def validate(self):
         # If the options are not fully defined, this is also an invalid case

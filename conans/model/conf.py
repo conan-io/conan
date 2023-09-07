@@ -43,7 +43,7 @@ BUILT_IN_CONFS = {
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Gzip compression
-    "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
+    "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -65,7 +65,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake:cmake_program": "Path to CMake executable",
-    "tools.cmake:install_strip": "Add --strip to cmake.instal()",
+    "tools.cmake:install_strip": "Add --strip to cmake.install()",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -271,6 +271,9 @@ class Conf:
         """
         return other._values == self._values
 
+    def clear(self):
+        self._values.clear()
+
     def validate(self):
         for conf in self._values:
             self._check_conf_name(conf)
@@ -473,10 +476,12 @@ class Conf:
         # Reading the list of all the configurations selected by the user to use for the package_id
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
-            value = self.get(conf_name)
-            # Pruning any empty values, those should not affect package ID
-            if value:
-                result.define(conf_name, value)
+            matching_confs = [c for c in self._values if re.match(conf_name, c)] or [conf_name]
+            for name in matching_confs:
+                value = self.get(name)
+                # Pruning any empty values, those should not affect package ID
+                if value:
+                    result.define(name, value)
         return result
 
     def set_relative_base_folder(self, folder):
