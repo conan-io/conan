@@ -663,6 +663,34 @@ def test_list_empty_settings():
     assert pkgs == {NO_SETTINGS_PACKAGE_ID: {"info": {}}}
 
 
+def test_list_package_filter_profile():
+    c = TestClient(default_server_user=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+            "other/conanfile.py": GenConanfile("other", "1.0").with_settings("os"),
+            "windows": "[settings]\nos=Windows",
+            "linux": "[settings]\nos=Linux"})
+    c.run("create pkg")
+    c.run("create other -s os=Linux")
+
+    c.run("list *:* -pr windows --format=json")
+    cache = json.loads(c.stdout)["Local Cache"]
+    revisions = cache["pkg/1.0"]["revisions"]
+    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
+    revisions = cache["other/1.0"]["revisions"]
+    pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
+    assert pkgs == {}
+
+    c.run("list *:* -pr linux --format=json")
+    cache = json.loads(c.stdout)["Local Cache"]
+    revisions = cache["pkg/1.0"]["revisions"]
+    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
+    revisions = cache["other/1.0"]["revisions"]
+    pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
+    assert "9a4eb3c8701508aa9458b1a73d0633783ecc2270" in pkgs
+
+
 class TestListNoUserChannel:
     def test_no_user_channel(self):
         c = TestClient(default_server_user=True)

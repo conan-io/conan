@@ -84,9 +84,23 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
-    def select(self, pattern, package_query=None, remote=None):
-        if package_query and pattern.package_id and "*" not in pattern.package_id:
-            raise ConanException("Cannot specify '-p' package queries, "
+    @staticmethod
+    def filter_packages_profile(pkg_configurations, profile):
+        profile_settings = profile.settings
+
+        def _matches(d):  # Only implements settings matching at this moment
+            settings = d.get("settings", {})
+            for k, v in settings.items():
+                profile_value = profile_settings.get(k)
+                if profile_value is not None and profile_value != v:
+                    return False
+            return True
+
+        return {pref: data for pref, data in pkg_configurations.items() if _matches(data)}
+
+    def select(self, pattern, package_query=None, profile=None, remote=None):
+        if (package_query or profile) and pattern.package_id and "*" not in pattern.package_id:
+            raise ConanException("Cannot specify '-p' package queries or profile, "
                                  "if 'package_id' is not a pattern")
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
@@ -128,6 +142,8 @@ class ListAPI:
                     packages = self.packages_configurations(rrev, remote)
                     if package_query is not None:
                         packages = self.filter_packages_configurations(packages, package_query)
+                    if profile is not None:
+                        packages = self.filter_packages_profile(packages, profile)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
                     packages = {pref: conf for pref, conf in packages.items() if pref in prefs}

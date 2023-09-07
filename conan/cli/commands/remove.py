@@ -78,7 +78,7 @@ def remove(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, rrev="*", prev="*")
         if ref_pattern.package_id is None and args.package_query is not None:
             raise ConanException('--package-query supplied but the pattern does not match packages')
-        package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+        package_list = conan_api.list.select(ref_pattern, args.package_query, remote=remote)
         multi_package_list = MultiPackagesList()
         multi_package_list.add(cache_name, package_list)
 
