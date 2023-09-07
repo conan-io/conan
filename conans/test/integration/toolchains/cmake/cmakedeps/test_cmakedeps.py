@@ -597,3 +597,95 @@ class TestCMakeVersionConfigCompat:
         c.run("create .")
         c.run("install --requires=dep/0.1 -g CMakeDeps", assert_error=True)
         assert "Unknown cmake_config_version_compat=Unknown in dep/0.1" in c.out
+
+
+def test_cmakedeps_test_requires_transitivity():
+
+    c = TestClient()
+    lib_1 = textwrap.dedent("""\
+        from conan import ConanFile
+        class CMakeLibraryRecipe(ConanFile):
+            name = "lib_1"
+            version = "1.0"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True} # all libraries are shared
+            package_type = 'library'
+            def package_info(self):
+                self.cpp_info.libs = ["mylib1"]
+        """)
+    lib_2 = textwrap.dedent("""\
+        from conan import ConanFile
+        class CMakeLibraryRecipe(ConanFile):
+            name = "lib_2"
+            version = "1.0"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True} # all libraries are shared
+            package_type = 'library'
+            def requirements(self):
+                self.requires('lib_1/[*]', transitive_libs=True, transitive_headers=True) # ok
+        """)
+
+    lib_3 = textwrap.dedent("""\
+        from conan import ConanFile
+        class CMakeLibraryRecipe(ConanFile):
+            name = "lib_3"
+            version = "1.0"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True} # all libraries are shared
+            package_type = 'library'
+            def requirements(self):
+                self.requires('lib_2/[*]', transitive_libs=True, transitive_headers=True) # ok
+        """)
+
+    lib_4 = textwrap.dedent("""\
+        from conan import ConanFile
+        class CMakeLibraryRecipe(ConanFile):
+            name = "lib_4"
+            version = "1.0"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True} # all libraries are shared
+            package_type = 'library'
+            def requirements(self):
+                self.requires('lib_1/[*]', transitive_libs=True, transitive_headers=True) # ok
+            def build_requirements(self):
+                self.test_requires('lib_3/[*]')
+        """)
+    lib_5 = textwrap.dedent("""\
+        from conan import ConanFile
+        class CMakeLibraryRecipe(ConanFile):
+            name = "lib_5"
+            version = "1.0"
+            settings = "build_type"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True} # all libraries are shared
+            package_type = 'library'
+            generators = "CMakeDeps"
+            def generate(self):
+                for req, dep in self.dependencies.items():
+                    print(req)
+            def requirements(self):
+                self.requires('lib_2/[*]', transitive_libs=True, transitive_headers=True) # ok
+            def build_requirements(self):
+                self.test_requires('lib_4/[*]')
+        """)
+
+    c.save({"lib1/conanfile.py": lib_1,
+            "lib2/conanfile.py": lib_2,
+            "lib3/conanfile.py": lib_3,
+            "lib4/conanfile.py": lib_4,
+            "lib5/conanfile.py": lib_5})
+
+    c.run("create lib1")
+    c.run("create lib2")
+    c.run("create lib3")
+    c.run("create lib4")
+    c.run("install lib5")
+    print(c.out)
+    print(c.current_folder)
+    lib2 = c.load("lib5/lib_2-release-data.cmake")
+    print(lib2)
+    assert "list(APPEND lib_2_FIND_DEPENDENCY_NAMES lib_1)" in lib2
+    lib1 = c.load("lib5/lib_1-release-data.cmake")
+    print(lib1)
+    # because transitive_libs=True, I will have it
+    assert "set(lib_1_LIBS_RELEASE mylib1)" in lib1
