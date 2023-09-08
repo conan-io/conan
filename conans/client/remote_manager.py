@@ -1,6 +1,8 @@
 import os
 import shutil
 import tarfile
+import time
+import zstandard
 from typing import List
 
 from requests.exceptions import ConnectionError
@@ -160,7 +162,10 @@ class RemoteManager(object):
 
             package_file = zipped_files.pop(package_file, None)
             package_folder = layout.package()
+            t1 = time.time()
             uncompress_file(package_file, package_folder, scope=str(pref.ref))
+            duration = time.time() - t1
+            scoped_output.debug(f"Decompressed {package_file} in {duration} seconds")
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -263,14 +268,6 @@ def uncompress_file(src_path, dest_folder, scope=None):
 
         with open(src_path, mode='rb') as file_handler:
             if src_path.endswith(".tar.zst"):
-                # Decompress using python-zstandard and tarfile.
-                try:
-                    import zstandard
-                except ModuleNotFoundError as e:
-                    raise ConanException("zstd decompression requires python-zstandard. "
-                                         "Run `pip install python-zstandard` and retry. "
-                                         f"Exception details: {e}")
-
                 dctx = zstandard.ZstdDecompressor()
                 stream_reader = dctx.stream_reader(file_handler)
                 with tarfile.open(fileobj=stream_reader, mode='r|') as the_tar:

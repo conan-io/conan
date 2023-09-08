@@ -2,6 +2,7 @@ import os
 import shutil
 import tarfile
 import time
+import zstandard
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
@@ -270,13 +271,6 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, compress
         ConanOutput().info(f"Compressing {ref_name}{name}")
 
     if compressformat == "zstd":
-        try:
-            import zstandard
-        except ModuleNotFoundError as e:
-            raise ConanException("zstd compression requires python-zstandard. "
-                                 "Run `pip install python-zstandard` and retry. "
-                                 f"Exception details: {e}")
-
         with open(tar_path, "wb") as tarfile_obj:
             def reset_tarinfo(tarinfo):
                 """
