@@ -7,4 +7,4 @@ fasteners>=0.15
 distro>=1.4.0, <=1.8.0; sys_platform == 'linux' or sys_platform == 'linux2'
 Jinja2>=3.0, <4.0.0
 python-dateutil>=2.8.0, <3
-zstandard==0.21.0
+zstandard==0.20.0
