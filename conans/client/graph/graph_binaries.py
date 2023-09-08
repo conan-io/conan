@@ -341,7 +341,7 @@ class GraphBinariesAnalyzer(object):
                     if locked_prev:
                         self._process_locked_node(node, build_mode, locked_prev)
                         continue
-                self._evaluate_node(node, build_mode, remotes, update)
+                self._evaluate_node(node, build_mode, remotes or [], update)
 
         self._skip_binaries(deps_graph)
 
