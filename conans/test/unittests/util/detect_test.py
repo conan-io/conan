@@ -4,6 +4,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.client.conf.detect import detect_defaults_settings
+from conans.model.version import Version
 from conans.test.utils.mocks import RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 from conans.util.env import environment_update
@@ -47,18 +48,11 @@ class DetectTest(unittest.TestCase):
             result = dict(result)
             self.assertEqual(expected_arch, result['arch'])
 
-    @mock.patch("conans.client.conf.detect._clang_compiler", return_value=("clang", "9"))
+    @mock.patch("conan.internal.api.detect_api._clang_compiler",
+                return_value=("clang", Version("9")))
     def test_detect_clang_gcc_toolchain(self, _):
         output = RedirectedTestOutput()
         with redirect_output(output):
             with environment_update({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
                 detect_defaults_settings()
                 self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)
-
-    def test_vs2022(self):
-        with mock.patch("conans.client.conf.detect._get_default_compiler",
-                        mock.MagicMock(return_value=("Visual Studio", "17"))):
-            result = detect_defaults_settings()
-            result = dict(result)
-            self.assertEqual('Visual Studio', result['compiler'])
-            self.assertEqual('17', result['compiler.version'])
