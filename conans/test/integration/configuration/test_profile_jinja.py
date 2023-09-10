@@ -171,7 +171,7 @@ class TestProfileDetectAPI:
         tpl1 = textwrap.dedent("""
             [settings]
             os={{detect_api.detect_os()}}
-            arch={{detect_api.detect_architecture()}}
+            arch={{detect_api.detect_arch()}}
             """)
 
         client.save({"profile1": tpl1})
