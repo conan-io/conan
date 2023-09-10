@@ -264,7 +264,7 @@ def detect_compiler():
         return None, None
 
     if platform.system() == "Windows":
-        version = detect_vs_ide_version()
+        version = _detect_vs_ide_version()
         version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
         if version:
             return 'msvc', Version(version)
@@ -286,7 +286,13 @@ def detect_compiler():
         return _clang_compiler()
 
 
-def detect_vs_ide_version():
+def default_msvc_ide_version(version):
+    version = {"193": "17", "192": "16", "191": "15"}.get(str(version))
+    if version:
+        return Version(version)
+
+
+def _detect_vs_ide_version():
     from conans.client.conf.detect_vs import vs_installation_path
     msvc_versions = "17", "16", "15"
     for version in msvc_versions:
