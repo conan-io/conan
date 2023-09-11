@@ -4,7 +4,7 @@ from conans.model.new_build_info import NewCppInfo
 from conans.util.files import save
 
 
-class SconsDeps:
+class SConsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._ordered_deps = []

@@ -157,8 +157,8 @@ class GeneratorManager(object):
             from conan.tools.microsoft import NMakeDeps
             return NMakeDeps
         elif generator_name == "SConsDeps":
-            from conan.tools.scons import SconsDeps
-            return SconsDeps
+            from conan.tools.scons import SConsDeps
+            return SConsDeps
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))

@@ -1,1 +1,1 @@
-from conan.tools.scons.sconsdeps import SconsDeps
+from conan.tools.scons.sconsdeps import SConsDeps
