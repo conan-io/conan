@@ -628,3 +628,45 @@ class TestBuildTrackHost:
         c.save({"conanfile.py": GenConanfile("pkg").with_requirement("protobuf/<host_version>")})
         c.run(f"install . {build_profile}", assert_error=True)
         assert "uses '<host_version>' in requires" in c.out
+
+    @pytest.mark.parametrize("build_profile", [False, True])
+    def test_host_version_test_package(self, build_profile):
+        """
+        https://github.com/conan-io/conan/issues/14704
+        """
+        c = TestClient()
+        pkg = textwrap.dedent("""
+                from conan import ConanFile
+                class ProtoBuf(ConanFile):
+                    name = "pkg"
+                    version = "0.1"
+                    def requirements(self):
+                        self.requires("protobuf/[>=1.0]")
+                    def build_requirements(self):
+                        self.tool_requires("protobuf/<host_version>")
+                """)
+        # regular requires test_package
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg,
+                "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
+        c.run("create protobuf 1.0@")
+        build_profile = "-pr:b default" if build_profile else ""
+        c.run(f"create pkg {build_profile}")
+        # works without problem
+
+        test = textwrap.dedent("""
+                from conan import ConanFile
+                class Test(ConanFile):
+                    test_type = "explicit"
+
+                    def build_requirements(self):
+                        self.tool_requires(self.tested_reference_str)
+                    def test(self):
+                        pass
+                """)
+        c.save({"pkg/test_package/conanfile.py": test})
+        c.run("create protobuf 1.0@")
+        build_profile = "-pr:b default" if build_profile else ""
+        # This used to fail
+        c.run(f"create pkg {build_profile}")
+        assert "protobuf/1.0 from local cache - Cache" in c.out
