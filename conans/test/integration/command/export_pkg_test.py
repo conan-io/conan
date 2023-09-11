@@ -593,3 +593,32 @@ def test_export_pkg_remote_python_requires():
     c.run("remove * -c")
     c.run("export-pkg pkg")
     assert "conanfile.py (pkg/1.0): Exported package binary" in c.out
+
+
+def test_remote_none():
+    # https://github.com/conan-io/conan/pull/14705
+    c = TestClient(default_server_user=True)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass").with_requires("dep/0.1")})
+    c.run("create dep")
+    c.run("upload dep* -r=default -c")
+    c.run("build pkg")
+    c.run("remove dep*:* -c")
+    c.run("export-pkg pkg")    # This used to crash
+    # No longer crash
+    assert "pkg/0.1 (test package): Running test()" in c.out
+
+
+def test_remote_none_tool_requires():
+    # https://github.com/conan-io/conan/pull/14705
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_settings("compiler"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_tool_requires("tool/0.1"),
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
+    settings = "-s:b compiler=gcc -s:b compiler.version=9 -s:b compiler.libcxx=libstdc++11"
+    c.run(f"create tool {settings} -s:b compiler.cppstd=20 --build-require")
+    c.run(f"build pkg {settings} -s:b compiler.cppstd=17")
+    c.run(f"export-pkg pkg {settings} -s:b compiler.cppstd=17")  # This used to crash
+    # No longer crash
+    assert "pkg/0.1 (test package): Running test()" in c.out
