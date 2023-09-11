@@ -46,12 +46,12 @@ class SconsDeps:
         {% if dep_version is not none %}"{{dep_name}}_version" : "{{dep_version}}",{% endif %}
         """)
         sections = ["conan = {\n"]
-        all_flags = template.render(dep_name="conan-aggregated", dep_version=None, info=self._get_cpp_info())
+        all_flags = template.render(dep_name="conandeps", dep_version=None, info=self._get_cpp_info())
         sections.append(all_flags)
-        host_req = self._conanfile.dependencies.host
-        test_req = self._conanfile.dependencies.test
-        all_deps = list(host_req.values()) + list(test_req.values())
-        for dep in all_deps:
+
+        # TODO: Add here in 2.0 the "skip": False trait
+        host_req = self._conanfile.dependencies.filter({"build": False}).values()
+        for dep in host_req:
             dep_flags = template.render(dep_name=dep.ref.name, dep_version=dep.ref.version, info=dep.cpp_info)
             sections.append(dep_flags)
         sections.append("}\n")
