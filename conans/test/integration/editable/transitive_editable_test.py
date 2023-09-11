@@ -36,7 +36,7 @@ class TransitiveEditableTest(unittest.TestCase):
         mkdir(client2.current_folder)
         client2.run("install ..")
 
-    def test_transitive_editables_build(self)
+    def test_transitive_editables_build(self):
         # https://github.com/conan-io/conan/issues/6064
         c = TestClient()
         c.run("config set general.default_package_id_mode=package_revision_mode")
