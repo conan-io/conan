@@ -649,9 +649,9 @@ class TestBuildTrackHost:
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg,
                 "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
-        c.run("create protobuf 1.0@ -s compiler.version=14 -s:b compiler.version=14")
+        c.run("create protobuf 1.0@")
         build_profile = "-pr:b default" if build_profile else ""
-        c.run(f"create pkg {build_profile} -s compiler.version=14 -s:b compiler.version=14")
+        c.run(f"create pkg {build_profile}")
         # works without problem
 
         test = textwrap.dedent("""
@@ -665,7 +665,8 @@ class TestBuildTrackHost:
                         pass
                 """)
         c.save({"pkg/test_package/conanfile.py": test})
-        c.run("create protobuf 1.0@ -s compiler.version=14 -s:b compiler.version=14")
+        c.run("create protobuf 1.0@")
         build_profile = "-pr:b default" if build_profile else ""
-        c.run(f"create pkg {build_profile} -s compiler.version=14 -s:b compiler.version=14")
-        # works without problem
+        # This used to fail
+        c.run(f"create pkg {build_profile}")
+        assert "protobuf/1.0 from local cache - Cache" in c.out
