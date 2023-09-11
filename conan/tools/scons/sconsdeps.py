@@ -3,11 +3,12 @@ from conan.tools._check_build_profile import check_using_build_profile
 from conans.model.new_build_info import NewCppInfo
 from conans.util.files import save
 
+
 class SconsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._ordered_deps = []
-        self._generator_file = 'SConscript_conan'
+        self._generator_file = 'SConscript_conandeps'
         check_using_build_profile(self._conanfile)
 
     @property
@@ -46,13 +47,15 @@ class SconsDeps:
         {% if dep_version is not none %}"{{dep_name}}_version" : "{{dep_version}}",{% endif %}
         """)
         sections = ["conan = {\n"]
-        all_flags = template.render(dep_name="conandeps", dep_version=None, info=self._get_cpp_info())
+        all_flags = template.render(dep_name="conandeps", dep_version=None,
+                                    info=self._get_cpp_info())
         sections.append(all_flags)
 
         # TODO: Add here in 2.0 the "skip": False trait
         host_req = self._conanfile.dependencies.filter({"build": False}).values()
         for dep in host_req:
-            dep_flags = template.render(dep_name=dep.ref.name, dep_version=dep.ref.version, info=dep.cpp_info)
+            dep_flags = template.render(dep_name=dep.ref.name, dep_version=dep.ref.version,
+                                        info=dep.cpp_info)
             sections.append(dep_flags)
         sections.append("}\n")
         sections.append("Return('conan')\n")
