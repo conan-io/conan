@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import textwrap
 import unittest
 
 from conans.model.ref import ConanFileReference
@@ -34,3 +35,32 @@ class TransitiveEditableTest(unittest.TestCase):
         client2.current_folder = os.path.join(client2.current_folder, "build")
         mkdir(client2.current_folder)
         client2.run("install ..")
+
+    def test_transitive_editables_build(self)
+        # https://github.com/conan-io/conan/issues/6064
+        c = TestClient()
+        c.run("config set general.default_package_id_mode=package_revision_mode")
+        libb = textwrap.dedent("""\
+            from conan import ConanFile
+            class LibB(ConanFile):
+                name = "libb"
+                version = "0.1"
+                build_policy = "missing"
+                settings = "os", "compiler", "arch"
+
+                def build_requirements(self):
+                    self.build_requires("liba/[>=0.0]")
+
+                def requirements(self):
+                    self.requires("liba/[>=0.0]")
+            """)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
+                "libb/conanfile.py": libb,
+                "app/conanfile.txt": "[requires]\nlibb/0.1"})
+        c.run("editable add liba liba/0.1")
+        c.run("editable add libb libb/0.1")
+        c.run("install app --build=*")
+        # It doesn't crash
+        # Try also with 2 profiles
+        c.run("install app -s:b os=Windows --build=*")
+        # it doesn't crash

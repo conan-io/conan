@@ -256,9 +256,7 @@ class GraphBinariesAnalyzer(object):
             return
 
         conanfile = node.conanfile
-        if node.recipe == RECIPE_EDITABLE:
-            node.binary = BINARY_EDITABLE  # TODO: PREV?
-            return
+        assert node.recipe != RECIPE_EDITABLE
 
         if pref.id == PACKAGE_ID_INVALID:
             # annotate pattern, so unused patterns in --build are not displayed as errors
@@ -449,6 +447,9 @@ class GraphBinariesAnalyzer(object):
 
             self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+                continue
+            if node.recipe == RECIPE_EDITABLE:
+                node.binary = BINARY_EDITABLE
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
                 assert node.binary is None, "Node.binary should be None"
