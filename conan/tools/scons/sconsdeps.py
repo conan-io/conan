@@ -1,9 +1,7 @@
 from jinja2 import Template
-
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.model.new_build_info import NewCppInfo
 from conans.util.files import save
-
 
 class SconsDeps:
     def __init__(self, conanfile):
@@ -32,29 +30,29 @@ class SconsDeps:
     @property
     def _content(self):
         template = Template("""
-        "{{dep}}" : {
-            "CPPPATH" : {{info.includedirs}},
-            "LIBPATH" : {{info.libdirs}},
-            "BINPATH" : {{info.bindirs}},
-            "LIBS" : {{info.libs + info.system_libs}},
-            "FRAMEWORKS" : {{info.frameworks}},
+        "{{dep_name}}" : {
+            "CPPPATH"     : {{info.includedirs}},
+            "LIBPATH"     : {{info.libdirs}},
+            "BINPATH"     : {{info.bindirs}},
+            "LIBS"        : {{info.libs + info.system_libs}},
+            "FRAMEWORKS"  : {{info.frameworks}},
             "FRAMEWORKPATH" : {{info.frameworkdirs}},
-            "CPPDEFINES" : {{info.defines}},
-            "CXXFLAGS" : {{info.cxxflags}},
-            "CCFLAGS" : {{info.cflags}},
+            "CPPDEFINES"  : {{info.defines}},
+            "CXXFLAGS"    : {{info.cxxflags}},
+            "CCFLAGS"     : {{info.cflags}},
             "SHLINKFLAGS" : {{info.sharedlinkflags}},
-            "LINKFLAGS" : {{info.exelinkflags}},
+            "LINKFLAGS"   : {{info.exelinkflags}},
         },
-        "{{dep}}_version" : "{{info.version}}",
+        {% if dep_version is not none %}"{{dep_name}}_version" : "{{dep_version}}",{% endif %}
         """)
         sections = ["conan = {\n"]
-        all_flags = template.render(dep="conan", info=self._get_cpp_info())
+        all_flags = template.render(dep_name="conan-aggregated", dep_version=None, info=self._get_cpp_info())
         sections.append(all_flags)
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
         all_deps = list(host_req.values()) + list(test_req.values())
         for dep in all_deps:
-            dep_flags = template.render(dep=dep.ref.name, info=dep.cpp_info)
+            dep_flags = template.render(dep_name=dep.ref.name, dep_version=dep.ref.version, info=dep.cpp_info)
             sections.append(dep_flags)
         sections.append("}\n")
         sections.append("Return('conan')\n")
