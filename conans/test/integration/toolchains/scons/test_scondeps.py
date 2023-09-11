@@ -44,8 +44,9 @@ def test_sconsdeps():
 
     # remove all cache paths from the output but the last component
     def clean_paths(text):
+        text = text.replace("\\", "/")
         pattern = r"'/[^']+/([^'/]+)'"
-        return re.sub(pattern, r"'\1'", text.replace("\\", "/"))
+        return re.sub(pattern, r"'\1'", text)
 
     expected_content = ["""
         "conandeps" : {
