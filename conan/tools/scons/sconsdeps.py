@@ -32,17 +32,17 @@ class SConsDeps:
     def _content(self):
         template = Template("""
         "{{dep_name}}" : {
-            "CPPPATH"     : {{info.includedirs}},
-            "LIBPATH"     : {{info.libdirs}},
-            "BINPATH"     : {{info.bindirs}},
-            "LIBS"        : {{info.libs + info.system_libs}},
-            "FRAMEWORKS"  : {{info.frameworks}},
-            "FRAMEWORKPATH" : {{info.frameworkdirs}},
-            "CPPDEFINES"  : {{info.defines}},
-            "CXXFLAGS"    : {{info.cxxflags}},
-            "CCFLAGS"     : {{info.cflags}},
-            "SHLINKFLAGS" : {{info.sharedlinkflags}},
-            "LINKFLAGS"   : {{info.exelinkflags}},
+            "CPPPATH"     : {{info.includedirs or []}},
+            "LIBPATH"     : {{info.libdirs or []}},
+            "BINPATH"     : {{info.bindirs or []}},
+            "LIBS"        : {{(info.libs or []) + (info.system_libs or [])}},
+            "FRAMEWORKS"  : {{info.frameworks or []}},
+            "FRAMEWORKPATH" : {{info.frameworkdirs or []}},
+            "CPPDEFINES"  : {{info.defines or []}},
+            "CXXFLAGS"    : {{info.cxxflags or []}},
+            "CCFLAGS"     : {{info.cflags or []}},
+            "SHLINKFLAGS" : {{info.sharedlinkflags or []}},
+            "LINKFLAGS"   : {{info.exelinkflags or []}},
         },
         {% if dep_version is not none %}"{{dep_name}}_version" : "{{dep_version}}",{% endif %}
         """)
