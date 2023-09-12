@@ -45,7 +45,7 @@ def test_sconsdeps():
     # remove all cache paths from the output but the last component
     def clean_paths(text):
         text = text.replace("\\", "/")
-        pattern = r"'/[^']+/([^'/]+)'"
+        pattern = r"'[A-Za-z]?[:]?[/]?[^']+/([^'/]+)'"
         return re.sub(pattern, r"'\1'", text)
 
     expected_content = ["""
