@@ -7,13 +7,13 @@ from conans.util.files import save
 class SConsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._ordered_deps = []
+        self._ordered_deps = None
         self._generator_file = 'SConscript_conandeps'
         check_using_build_profile(self._conanfile)
 
     @property
     def ordered_deps(self):
-        if not self._ordered_deps:
+        if self._ordered_deps is None:
             deps = self._conanfile.dependencies.host.topological_sort
             self._ordered_deps = [dep for dep in reversed(deps.values())]
         return self._ordered_deps
