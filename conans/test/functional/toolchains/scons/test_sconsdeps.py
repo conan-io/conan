@@ -117,9 +117,9 @@ def test_sconsdeps():
 
         build_path_relative_to_sconstruct = Dir('.').path
 
-        conan = SConscript('./SConscript_conandeps')
+        conandeps = SConscript('./SConscript_conandeps')
 
-        flags = conan["conandeps"]
+        flags = conandeps["conandeps"]
         env.MergeFlags(flags)
 
         env.Program("main", "main.cpp")

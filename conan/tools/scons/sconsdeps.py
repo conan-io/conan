@@ -46,7 +46,7 @@ class SConsDeps:
         },
         {% if dep_version is not none %}"{{dep_name}}_version" : "{{dep_version}}",{% endif %}
         """)
-        sections = ["conan = {\n"]
+        sections = ["conandeps = {\n"]
         all_flags = template.render(dep_name="conandeps", dep_version=None,
                                     info=self._get_cpp_info())
         sections.append(all_flags)
@@ -58,5 +58,5 @@ class SConsDeps:
                                         info=dep.cpp_info)
             sections.append(dep_flags)
         sections.append("}\n")
-        sections.append("Return('conan')\n")
+        sections.append("Return('conandeps')\n")
         return "\n".join(sections)
