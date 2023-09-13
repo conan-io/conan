@@ -840,8 +840,20 @@ class ToolchainBlocks:
             for name, block in items:
                 self._blocks[name] = block(conanfile, toolchain)
 
-    def remove(self, name):
+    def keys(self):
+        return self._blocks.keys()
+
+    def items(self):
+        return self._blocks.items()
+
+    def remove(self, name, *args):
         del self._blocks[name]
+        for arg in args:
+            del self._blocks[arg]
+
+    def filter(self, name, *args):
+        to_keep = [name] + list(args)
+        self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 
     def __setitem__(self, name, block_type):
         # Create a new class inheriting Block with the elements of the provided one
