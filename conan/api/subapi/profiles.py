@@ -32,17 +32,26 @@ class ProfilesAPI:
         build = [self.get_default_build()] if not args.profile_build else args.profile_build
         host = [self.get_default_host()] if not args.profile_host else args.profile_host
         both = [] if not args.profile_all else args.profile_all
-        profile_all = self.get_profile(profiles=both, settings=args.settings_all,
-                                       options=args.options_all, conf=args.conf_all)
+
+        profile_all_build = self.get_profile(profiles=both, settings=args.settings_all,
+                                             options=args.options_all, conf=args.conf_all,
+                                             with_global_conf=False)
         profile_build = self.get_profile(profiles=build, settings=args.settings_build,
-                                         options=args.options_build, conf=args.conf_build)
-        profile_build.compose_profile(profile_all)
+                                         options=args.options_build, conf=args.conf_build,
+                                         with_global_conf=True)
+        profile_build.compose_profile(profile_all_build)
+
+        # Generate twice, as composing copies references to the objects!
+        profile_all_host = self.get_profile(profiles=both, settings=args.settings_all,
+                                            options=args.options_all, conf=args.conf_all,
+                                            with_global_conf=False)
         profile_host = self.get_profile(profiles=host, settings=args.settings_host,
-                                        options=args.options_host, conf=args.conf_host)
-        profile_host.compose_profile(profile_all)
+                                        options=args.options_host, conf=args.conf_host,
+                                        with_global_conf=True)
+        profile_host.compose_profile(profile_all_host)
         return profile_host, profile_build
 
-    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
+    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None, with_global_conf=False):
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
@@ -52,9 +61,10 @@ class ProfilesAPI:
         loader = ProfileLoader(cache)
         profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
         profile.conf.validate()
-        cache.new_config.validate()
-        # Apply the new_config to the profiles the global one, so recipes get it too
-        profile.conf.rebase_conf_definition(cache.new_config)
+        if with_global_conf:
+            cache.new_config.validate()
+            # Apply the new_config to the profiles the global one, so recipes get it too
+            profile.conf.rebase_conf_definition(cache.new_config)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
