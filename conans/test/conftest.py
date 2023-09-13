@@ -156,9 +156,6 @@ tools_locations = {
         "system": {"path": {'Windows': 'C:/bazel/bin',
                             "Darwin": '/Users/jenkins/bin'}},
     },
-    'scons': {
-        "default": "system"
-    },
     'premake': {
         "exe": "premake5",
         "default": "5.0.0",
