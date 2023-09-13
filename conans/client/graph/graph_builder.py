@@ -201,6 +201,7 @@ class DepsGraphBuilder(object):
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
 
+
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         conanfile_path, recipe_status, remote, new_ref = result
