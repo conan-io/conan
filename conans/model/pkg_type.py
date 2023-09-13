@@ -55,7 +55,7 @@ class PackageType(Enum):
             if conanfile_type is PackageType.LIBRARY:
                 conanfile_type = deduce_from_options()
                 if conanfile_type is PackageType.UNKNOWN:
-                    raise ConanException("Package type is 'library',"
+                    raise ConanException(f"{conanfile}: Package type is 'library',"
                                          " but no 'shared' option declared")
             conanfile.package_type = conanfile_type
         else:  # automatic default detection with option shared/header-only

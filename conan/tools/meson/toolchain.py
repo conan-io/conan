@@ -3,6 +3,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
     apple_sdk_path
@@ -11,7 +12,6 @@ from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conan.errors import ConanException
 from conans.util.files import save
 
 
@@ -124,11 +124,12 @@ class MesonToolchain(object):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
 
-        if compiler == "msvc":
+        self._b_vscrt = None
+        if compiler in ("msvc", "clang"):
             vscrt = msvc_runtime_flag(self._conanfile)
-            self._b_vscrt = str(vscrt).lower()
-        else:
-            self._b_vscrt = None
+            if vscrt:
+                self._b_vscrt = str(vscrt).lower()
+
         #: Dict-like object that defines Meson``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
