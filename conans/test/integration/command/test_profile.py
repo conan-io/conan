@@ -28,3 +28,16 @@ def test_ignore_paths_when_listing_profiles():
     c.run("profile list")
 
     assert ignore_path not in c.out
+
+
+def test_shorthand_syntax():
+    tc = TestClient()
+    tc.save({"profile": "[conf]\nuser.profile=True"})
+    tc.run("profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf.cli=True")
+
+    # All of them show up twice, once per context
+    assert tc.out.count("both_options=True") == 2
+    assert tc.out.count("os=WindowsCE") == 2
+    assert tc.out.count("os.platform=conan") == 2
+    assert tc.out.count("user.conf.cli=True") == 2
+    assert tc.out.count("user.profile=True") == 2
