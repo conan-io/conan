@@ -95,6 +95,7 @@ def add_profiles_args(parser):
                 "")  # By default it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")
+        item_fn("all", ":a", ":all")
 
 
 def add_reference_args(parser):

@@ -31,10 +31,15 @@ class ProfilesAPI:
     def get_profiles_from_args(self, args):
         build = [self.get_default_build()] if not args.profile_build else args.profile_build
         host = [self.get_default_host()] if not args.profile_host else args.profile_host
+        both = [] if not args.profile_all else args.profile_all
+        profile_all = self.get_profile(profiles=both, settings=args.settings_all,
+                                       options=args.options_all, conf=args.conf_all)
         profile_build = self.get_profile(profiles=build, settings=args.settings_build,
                                          options=args.options_build, conf=args.conf_build)
+        profile_build.compose_profile(profile_all)
         profile_host = self.get_profile(profiles=host, settings=args.settings_host,
                                         options=args.options_host, conf=args.conf_host)
+        profile_host.compose_profile(profile_all)
         return profile_host, profile_build
 
     def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
