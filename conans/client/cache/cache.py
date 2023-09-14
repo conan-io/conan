@@ -8,6 +8,7 @@ from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
 from conan.api.output import ConanOutput
+from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -168,7 +169,8 @@ class ClientCache(object):
                 template = Environment(loader=FileSystemLoader(self.cache_folder)).from_string(text)
                 content = template.render({"platform": platform, "os": os, "distro": distro,
                                            "conan_version": conan_version,
-                                           "conan_home_folder": self.cache_folder})
+                                           "conan_home_folder": self.cache_folder,
+                                           "detect_api": detect_api})
                 self._new_config.loads(content)
             else:  # creation of a blank global.conf file for user convenience
                 default_global_conf = textwrap.dedent("""\

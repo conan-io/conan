@@ -22,11 +22,6 @@ def profiles_list_cli_output(profiles):
         cli_out_write(p)
 
 
-def detected_profile_cli_output(detect_profile):
-    cli_out_write("Detected profile:")
-    cli_out_write(detect_profile.dumps())
-
-
 @conan_subcommand(formatters={"text": print_profiles})
 def profile_show(conan_api, parser, subparser, *args):
     """
@@ -63,7 +58,9 @@ def profile_detect(conan_api, parser, subparser, *args):
         raise ConanException(f"Profile '{profile_pathname}' already exists")
 
     detected_profile = conan_api.profiles.detect()
-    detected_profile_cli_output(detected_profile)
+    ConanOutput().success("\nDetected profile:")
+    cli_out_write(detected_profile.dumps())
+
     contents = detected_profile.dumps()
     ConanOutput().warning("This profile is a guess of your environment, please check it.")
     if detected_profile.settings.get("os") == "Macos":

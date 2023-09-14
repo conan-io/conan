@@ -2,8 +2,8 @@ import unittest
 
 import pytest
 
+from conan.internal.api.detect_api import default_cppstd
 from conan.tools.build.flags import cppstd_flag
-from conans.client.conf.detect import _cppstd_default
 from conans.model.version import Version
 from conans.test.utils.mocks import MockSettings
 
@@ -16,7 +16,7 @@ def _make_cppstd_flag(compiler, compiler_version, cppstd=None):
 
 
 def _make_cppstd_default(compiler, compiler_version):
-    return _cppstd_default(compiler, Version(compiler_version))
+    return default_cppstd(compiler, Version(compiler_version))
 
 
 class CompilerFlagsTest(unittest.TestCase):

@@ -6,6 +6,7 @@ import pytest
 from mock import patch
 
 from conan import conan_version
+from conan.internal.api import detect_api
 from conans.errors import ConanException
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
@@ -223,6 +224,23 @@ def test_jinja_global_conf_paths():
     save(c.cache.new_config_path, global_conf)
     c.run("config show *")
     assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
+
+
+def test_profile_detect_os_arch():
+    """ testing OS & ARCH just to test that detect_api is injected
+    """
+    c = TestClient()
+    global_conf = textwrap.dedent("""
+        user.myteam:myconf1={{detect_api.detect_os()}}
+        user.myteam:myconf2={{detect_api.detect_arch()}}
+        """)
+
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    _os = detect_api.detect_os()
+    _arch = detect_api.detect_arch()
+    assert f"user.myteam:myconf1: {_os}" in c.out
+    assert f"user.myteam:myconf2: {_arch}" in c.out
 
 
 def test_empty_conf_valid():
