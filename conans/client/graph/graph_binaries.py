@@ -1,3 +1,5 @@
+from multiprocessing.pool import ThreadPool
+
 from conan.api.output import ConanOutput
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compatibility import BinaryCompatibility
@@ -97,7 +99,6 @@ class GraphBinariesAnalyzer(object):
 
     def _process_compatible_packages(self, node, remotes, update):
         conanfile = node.conanfile
-        original_binary = node.binary
         original_package_id = node.package_id
 
         compatibles = self._compatibility.compatibles(conanfile)
@@ -106,28 +107,38 @@ class GraphBinariesAnalyzer(object):
             conanfile.output.info(f"Compatible package ID {original_package_id} equal to "
                                   "the default package ID")
 
+        def check_compatible(new_node, package_id, compatible_package):
+            new_node._package_id = package_id
+            new_node.binary = None
+            self._process_compatible_node(new_node, remotes, update)
+            return new_node, compatible_package
+
         if compatibles:
             conanfile.output.info(f"Checking {len(compatibles)} compatible configurations:")
-        for package_id, compatible_package in compatibles.items():
-            conanfile.output.info(f"'{package_id}': "
-                                  f"{conanfile.info.dump_diff(compatible_package)}")
-            node._package_id = package_id  # Modifying package id under the hood, FIXME
-            node.binary = None  # Invalidate it
-            self._process_compatible_node(node, remotes, update)
-            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                conanfile.output.info("Main binary package '%s' missing. Using "
-                                      "compatible package '%s'" % (original_package_id, package_id))
-                # So they are available in package_info() method
-                conanfile.info = compatible_package  # Redefine current
-                conanfile.settings.update_values(compatible_package.settings.values_list)
-                # Trick to allow mutating the options (they were freeze=True)
-                # TODO: Improve this interface
-                conanfile.options = conanfile.options.copy_conaninfo_options()
-                conanfile.options.update_options(compatible_package.options)
-                break
-        else:  # If no compatible is found, restore original state
-            node.binary = original_binary
-            node._package_id = original_package_id
+
+            thread_pool = ThreadPool(4)
+            import copy
+            result = thread_pool.starmap(check_compatible, [(copy.copy(node), pkg_id, compatible_package)
+                                                            for pkg_id, compatible_package in
+                                                            compatibles.items()])
+            thread_pool.close()
+            thread_pool.join()
+            for compat_node, compatible_package in result:
+                conanfile.output.info(f"'{compat_node.package_id}': "
+                                      f"{conanfile.info.dump_diff(compatible_package)}")
+                if compat_node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
+                    conanfile.output.info(f"Main binary package '{original_package_id}' missing. "
+                                          f"Using compatible package '{compat_node.package_id}'")
+                    node.binary = compat_node.binary
+                    node._package_id = compat_node._package_id
+                    # So they are available in package_info() method
+                    conanfile.info = compatible_package  # Redefine current
+                    conanfile.settings.update_values(compatible_package.settings.values_list)
+                    # Trick to allow mutating the options (they were freeze=True)
+                    # TODO: Improve this interface
+                    conanfile.options = conanfile.options.copy_conaninfo_options()
+                    conanfile.options.update_options(compatible_package.options)
+                    break
 
     def _evaluate_node(self, node, build_mode, remotes, update):
         assert node.binary is None, "Node.binary should be None"
