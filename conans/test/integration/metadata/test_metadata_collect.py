@@ -70,7 +70,7 @@ def collect(conan_api, parser, *args):
     metadata = args.metadata if args.metadata else ["*"]
     # TODO: This InstallGraph API is EXPERIMENTAL and will change in future versions
     install_graph = InstallGraph(deps_graph)
-    install_order = install_graph.install_order(by_levels=False)
+    install_order = install_graph.install_order(flat=True)
 
     if args.metadata_remote:
         out = ConanOutput()

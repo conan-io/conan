@@ -244,7 +244,7 @@ class InstallGraph:
             else:
                 existing.add(node)
 
-    def install_order(self, by_levels=True):
+    def install_order(self, flat=False):
         # a topological order by levels, returns a list of list, in order of processing
         levels = []
         opened = self._nodes
@@ -261,7 +261,7 @@ class InstallGraph:
                 levels.append(current_level)
             # now initialize new level
             opened = {k: v for k, v in opened.items() if v not in closed}
-        if not by_levels:
+        if flat:
             return [r for level in levels for r in level]
         return levels
 
