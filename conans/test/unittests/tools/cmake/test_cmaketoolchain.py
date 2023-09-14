@@ -49,6 +49,40 @@ def test_remove(conanfile):
     toolchain.blocks.remove("generic_system")
     content = toolchain.content
     assert 'CMAKE_SYSTEM_NAME' not in content
+    assert "CMAKE_CXX_FLAGS_INIT" in content
+    assert "_CMAKE_IN_TRY_COMPILE" in content
+
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.remove("generic_system", "cmake_flags_init")
+    content = toolchain.content
+    assert 'CMAKE_SYSTEM_NAME' not in content
+    assert "CMAKE_CXX_FLAGS_INIT" not in content
+    assert "_CMAKE_IN_TRY_COMPILE" in content
+
+
+def test_filter(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.select("generic_system")
+    content = toolchain.content
+    assert 'CMAKE_SYSTEM_NAME' in content
+    assert "CMAKE_CXX_FLAGS_INIT" not in content
+    assert "_CMAKE_IN_TRY_COMPILE" not in content
+
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.select("generic_system", "cmake_flags_init")
+    content = toolchain.content
+    assert 'CMAKE_SYSTEM_NAME' in content
+    assert "CMAKE_CXX_FLAGS_INIT" in content
+    assert "_CMAKE_IN_TRY_COMPILE" not in content
+
+
+def test_dict_keys(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    assert "generic_system" in toolchain.blocks.keys()
+    items = dict(toolchain.blocks.items())
+    assert "generic_system" in items
 
 
 def test_template_remove(conanfile):
