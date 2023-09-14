@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
 from conans.errors import ConanException
 from conans.model.options import _PackageOption
@@ -100,8 +101,9 @@ def to_meson_value(value):
     elif isinstance(value, list):
         return '[{}]'.format(', '.join([str(to_meson_value(val)) for val in value]))
     elif isinstance(value, _PackageOption):
-        raise ConanException("Conan options cannot be specified directly as a valid Meson data type."
-                             " Please, use another Python data type like int, str, list or boolean.")
+        ConanOutput().warning(f"Please, do not use a Conan option value directly. "
+                              f"Convert 'options.{value.name}' into a valid Python"
+                              f"data type, e.g, bool(self.options.shared)", warn_tag="deprecated")
     return value
 
 

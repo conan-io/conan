@@ -48,6 +48,7 @@ def test_msys2():
     ("pidora", "yum"),
     ("rocky", "yum"),
     ("fedora", "dnf"),
+    ("nobara", "dnf"),
     ("arch", "pacman"),
     ("opensuse", "zypper"),
     ("sles", "zypper"),
@@ -99,7 +100,7 @@ def test_apt_install_recommends(recommends, recommends_str):
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         apt = Apt(conanfile)
-        apt.install(["package1", "package2"], recommends=recommends)
+        apt.install(["package1", "package2"], recommends=recommends, check=False)
     assert apt._conanfile.command == "apt-get install -y {}package1 package2".format(recommends_str)
 
 

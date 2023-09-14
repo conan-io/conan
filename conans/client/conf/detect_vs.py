@@ -3,30 +3,8 @@ import os
 from shutil import which
 
 from conan.tools.build import cmd_args_to_string
-from conan.api.output import ConanOutput
 from conans.errors import ConanException
-from conans.model.version import Version
 from conans.util.env import get_env
-
-
-def _visual_compiler(version):
-    """"version have to be 8.0, or 9.0 or... anything .0"""
-    if Version(version) >= "15":
-        vs_path = os.getenv('vs%s0comntools' % version)
-        path = vs_path or vs_installation_path(version)
-        if path:
-            ConanOutput().success("Found msvc %s" % version)
-            return version
-    return None
-
-
-def latest_visual_studio_version_installed():
-    msvc_sersions = "17", "16", "15"
-    for version in msvc_sersions:
-        vs = _visual_compiler(version)
-        if vs:
-            return {"17": "193", "16": "192", "15": "191"}.get(vs)
-    return None
 
 
 def vs_installation_path(version):

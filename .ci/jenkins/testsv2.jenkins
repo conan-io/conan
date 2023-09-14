@@ -96,6 +96,10 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     try {
                         def dockerImage = getDockerImage(module)
                         docker.image(dockerImage).inside("--entrypoint=") {
+
+                            // we only test scons in Linux
+                            pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
+
                             def sourcedir = "/home/conan/"
                             def pyenvdir = "${sourcedir}.pyenv"
                             sh(script: "cp -R ./ ${sourcedir}")

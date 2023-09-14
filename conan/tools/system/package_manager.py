@@ -43,7 +43,7 @@ class _SystemPackageManagerTool(object):
                            "apk": ["alpine"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
@@ -234,7 +234,7 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    def install(self, packages, update=False, check=False, recommends=False):
+    def install(self, packages, update=False, check=True, recommends=False):
         """
         Will try to install the list of packages passed as a parameter. Its
         behaviour is affected by the value of ``tools.system.package_manager:mode``

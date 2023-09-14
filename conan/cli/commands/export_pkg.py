@@ -91,7 +91,7 @@ def export_pkg(conan_api, parser, *args):
     if test_conanfile_path:
         from conan.cli.commands.test import run_test
         deps_graph = run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build,
-                              remotes=None, lockfile=lockfile, update=False, build_modes=None)
+                              remotes=remotes, lockfile=lockfile, update=False, build_modes=None)
         # TODO: Do something with lockfile, same as create()
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
