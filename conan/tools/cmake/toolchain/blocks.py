@@ -851,7 +851,10 @@ class ToolchainBlocks:
         for arg in args:
             del self._blocks[arg]
 
-    def filter(self, name, *args):
+    def select(self, name, *args):
+        """
+        keep the blocks provided as arguments, remove the others
+        """
         to_keep = [name] + list(args)
         self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 

@@ -63,7 +63,7 @@ def test_remove(conanfile):
 
 def test_filter(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks.filter("generic_system")
+    toolchain.blocks.select("generic_system")
     content = toolchain.content
     assert 'CMAKE_SYSTEM_NAME' in content
     assert "CMAKE_CXX_FLAGS_INIT" not in content
@@ -71,7 +71,7 @@ def test_filter(conanfile):
 
     # remove multiple
     toolchain = CMakeToolchain(conanfile)
-    toolchain.blocks.filter("generic_system", "cmake_flags_init")
+    toolchain.blocks.select("generic_system", "cmake_flags_init")
     content = toolchain.content
     assert 'CMAKE_SYSTEM_NAME' in content
     assert "CMAKE_CXX_FLAGS_INIT" in content
