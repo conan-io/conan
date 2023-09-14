@@ -140,10 +140,9 @@ def test_new_config_file_required_version():
         core:required_conan_version=>=2.0
         """)
     save(client.cache.new_config_path, conf)
-    with pytest.raises(ConanException) as excinfo:
-        client.run("install .")
+    client.run("install .", assert_error=True)
     assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
-            in str(excinfo.value))
+            in client.out)
 
 
 def test_composition_conan_conf_overwritten_by_cli_arg(client):
