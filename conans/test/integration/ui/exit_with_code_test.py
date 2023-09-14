@@ -2,6 +2,7 @@ import unittest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class ExitWithCodeTest(unittest.TestCase):
@@ -27,3 +28,10 @@ class HelloConan(ConanFile):
         error_code = client.run("build .", assert_error=True)
         self.assertEqual(error_code, 34)
         self.assertIn("Exiting with code: 34", client.out)
+
+
+def test_wrong_home_error():
+    client = TestClient()
+    save(client.cache.new_config_path, "core.cache:storage_path=P:")
+    client.run("--version")
+    assert "Error in Conan initialization: Couldn't initialize storage in" in client.out
