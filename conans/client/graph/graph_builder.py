@@ -1,9 +1,10 @@
 import copy
+import os
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -259,6 +260,14 @@ class DepsGraphBuilder(object):
                 raise GraphMissingError(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
+        # TODO: Proxy could return the recipe_layout() and it can be reused
+        # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
+        if recipe_status == RECIPE_EDITABLE:
+            recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
+            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
+        elif recipe_status != RECIPE_SYSTEM_TOOL:
+            recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
+            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
