@@ -115,6 +115,7 @@ def test_supported_cppstd_qcc(compiler, compiler_version, values):
     sot = supported_cppstd(conanfile)
     assert sot == values
 
+
 @pytest.mark.parametrize("compiler,compiler_version,result", [
     ("gcc", "5", 'gnu98'),
     ("gcc", "8", "gnu14"),
