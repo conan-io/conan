@@ -1,3 +1,4 @@
+import json
 import os
 
 from conan.api.output import ConanOutput, cli_out_write
@@ -22,7 +23,14 @@ def profiles_list_cli_output(profiles):
         cli_out_write(p)
 
 
-@conan_subcommand(formatters={"text": print_profiles})
+def json_profiles(profiles):
+    host, build = profiles
+    result = {"host": host.serialize(),
+              "build": build.serialize()}
+    cli_out_write(json.dumps(result))
+
+
+@conan_subcommand(formatters={"text": print_profiles, "json": json_profiles})
 def profile_show(conan_api, parser, subparser, *args):
     """
     Show aggregated profiles from the passed arguments.
