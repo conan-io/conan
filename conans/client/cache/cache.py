@@ -48,9 +48,12 @@ class ClientCache(object):
         self._store_folder = self.new_config.get("core.cache:storage_path") or \
                              os.path.join(self.cache_folder, "p")
 
-        mkdir(self._store_folder)
-        db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
-        self._data_cache = DataCache(self._store_folder, db_filename)
+        try:
+            mkdir(self._store_folder)
+            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            self._data_cache = DataCache(self._store_folder, db_filename)
+        except Exception as e:
+            raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 
     @property
     def temp_folder(self):
