@@ -187,11 +187,17 @@ class MesonToolchain(object):
         prev_status = self._conanfile.virtualbuildenv
         build_env = VirtualBuildEnv(self._conanfile).vars()
         self._conanfile.virtualbuildenv = prev_status
-        #: Defines the Meson ``c`` variable. Defaulted to ``CC`` build environment value
+        #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
-        #: Defines the Meson ``cpp`` variable. Defaulted to ``CXX`` build environment value
+        #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
-        #: Defines the Meson ``ld`` variable. Defaulted to ``LD`` build environment value
+        #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.ld = build_env.get("LD")
         # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
         # Issue related: https://github.com/mesonbuild/meson/issues/6442
