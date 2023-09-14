@@ -234,7 +234,7 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    def install(self, packages, recommends=False, **kwargs):
+    def install(self, packages, update=False, check=True, recommends=False):
         """
         Will try to install the list of packages passed as a parameter. Its
         behaviour is affected by the value of ``tools.system.package_manager:mode``
@@ -248,7 +248,8 @@ class Apt(_SystemPackageManagerTool):
         :return: the return code of the executed apt command.
         """
         recommends_str = '' if recommends else '--no-install-recommends '
-        return super(Apt, self).install(packages, recommends=recommends_str, **kwargs)
+        return super(Apt, self).install(packages, update=update, check=check,
+                                        recommends=recommends_str)
 
 
 class Yum(_SystemPackageManagerTool):
