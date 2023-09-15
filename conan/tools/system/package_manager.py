@@ -56,9 +56,11 @@ class _SystemPackageManagerTool(object):
                 if d in os_name:
                     return tool
 
-    def get_package_name(self, package):
-        # TODO: should we only add the arch if cross-building?
-        if self._arch in self._arch_names and cross_building(self._conanfile):
+    def get_package_name(self, package, host_tool=True):        
+        # Only if the package is for building, for example a library,
+        # we should add the destination arch (important especially in cross building).
+        # If the package is a tool that should be installed on the host we should not add the arch.
+        if self._arch in self._arch_names and not host_tool:
             return "{}{}{}".format(package, self._arch_separator,
                                    self._arch_names.get(self._arch))
         return package
@@ -103,9 +105,9 @@ class _SystemPackageManagerTool(object):
             self._conanfile.output.warn(str(error))
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
-    def _install(self, packages, update=False, check=True, **kwargs):
+    def _install(self, packages, update=False, check=True, host_tool=True, **kwargs):
         if check:
-            packages = self.check(packages)
+            packages = self.check(packages, host_tool)
 
         if self._mode == self.mode_check and packages:
             raise ConanException("System requirements: '{0}' are missing but can't install "
@@ -121,7 +123,7 @@ class _SystemPackageManagerTool(object):
             if update:
                 self.update()
 
-            packages_arch = [self.get_package_name(package) for package in packages]
+            packages_arch = [self.get_package_name(package, host_tool) for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
                                                       tool=self.tool_name,
@@ -139,8 +141,8 @@ class _SystemPackageManagerTool(object):
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
             return self._conanfile_run(command, self.accepted_update_codes)
 
-    def _check(self, packages):
-        missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
+    def _check(self, packages, host_tool=True):
+        missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg, host_tool)) != 0]
         return missing
 
     def check_package(self, package):
