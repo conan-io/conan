@@ -62,9 +62,8 @@ def add_profiles_args(parser):
         parser.add_argument("-pr{}".format(short_suffix),
                             "--profile{}".format(long_suffix),
                             default=None, action="append",
-                            metavar="PROFILE",
                             dest='profile_{}'.format(machine),
-                            help=argparse.SUPPRESS if suppress_help else
+                            help="" if suppress_help else
                                  'Apply the specified profile. '
                                  'By default, or if specifying -pr:h (--profile:host), it applies to the host context. '
                                  'Use -pr:b (--profile:build) to specify the build context, '
@@ -74,9 +73,8 @@ def add_profiles_args(parser):
         parser.add_argument("-s{}".format(short_suffix),
                             "--settings{}".format(long_suffix),
                             action="append",
-                            metavar="SETTINGS",
                             dest='settings_{}'.format(machine),
-                            help=argparse.SUPPRESS if suppress_help else
+                            help="" if suppress_help else
                                  'Settings for the package, overwriting the defaults. '
                                  'By default, or if specifying -s:h (--settings:host), it applies to the host context. '
                                  'Use -s:b (--settings:build) to specify the build context, '
@@ -87,9 +85,8 @@ def add_profiles_args(parser):
         parser.add_argument("-o{}".format(short_suffix),
                             "--options{}".format(long_suffix),
                             action="append",
-                            metavar="OPTIONS",
                             dest="options_{}".format(machine),
-                            help=argparse.SUPPRESS if suppress_help else
+                            help="" if suppress_help else
                                  'Define options values. '
                                  'By default, or if specifying -o:h (--options:host), it applies to the host context. '
                                  'Use -o:b (--options:build) to specify the build context, '
@@ -100,7 +97,6 @@ def add_profiles_args(parser):
         parser.add_argument("-c{}".format(short_suffix),
                             "--conf{}".format(long_suffix),
                             action="append",
-                            metavar="CONF",
                             dest='conf_{}'.format(machine),
                             help=argparse.SUPPRESS if suppress_help else
                                  'Configuration to build the package, overwriting the defaults'
