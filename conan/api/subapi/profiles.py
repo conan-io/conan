@@ -29,29 +29,29 @@ class ProfilesAPI:
         return loader.get_default_build()
 
     def get_profiles_from_args(self, args):
-        build = [self.get_default_build()] if not args.profile_build else args.profile_build
-        host = [self.get_default_host()] if not args.profile_host else args.profile_host
-        both = [] if not args.profile_all else args.profile_all
+        all_profiles = [] if not args.profile_all else args.profile_all
+        all_settings = [] if not args.settings_all else args.settings_all
+        all_options = [] if not args.options_all else args.options_all
+        all_conf = [] if not args.conf_all else args.conf_all
 
-        profile_all_build = self.get_profile(profiles=both, settings=args.settings_all,
-                                             options=args.options_all, conf=args.conf_all,
-                                             with_global_conf=False)
-        profile_build = self.get_profile(profiles=build, settings=args.settings_build,
-                                         options=args.options_build, conf=args.conf_build,
-                                         with_global_conf=True)
-        profile_build.compose_profile(profile_all_build)
+        build_profiles = all_profiles + ([self.get_default_build()] if not args.profile_build else args.profile_build)
+        build_settings = all_settings + ([] if not args.settings_build else args.settings_build)
+        build_options = all_options + ([] if not args.options_build else args.options_build)
+        build_conf = all_conf + ([] if not args.conf_build else args.conf_build)
 
-        # Generate twice, as composing copies references to the objects!
-        profile_all_host = self.get_profile(profiles=both, settings=args.settings_all,
-                                            options=args.options_all, conf=args.conf_all,
-                                            with_global_conf=False)
-        profile_host = self.get_profile(profiles=host, settings=args.settings_host,
-                                        options=args.options_host, conf=args.conf_host,
-                                        with_global_conf=True)
-        profile_host.compose_profile(profile_all_host)
+        host_profiles = all_profiles + ([self.get_default_host()] if not args.profile_host else args.profile_host)
+        host_settings = all_settings + ([] if not args.settings_host else args.settings_host)
+        host_options = all_options + ([] if not args.options_host else args.options_host)
+        host_conf = all_conf + ([] if not args.conf_host else args.conf_host)
+
+        profile_build = self.get_profile(profiles=build_profiles, settings=build_settings,
+                                         options=build_options, conf=build_conf)
+
+        profile_host = self.get_profile(profiles=host_profiles, settings=host_settings,
+                                        options=host_options, conf=host_conf)
         return profile_host, profile_build
 
-    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None, with_global_conf=False):
+    def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
@@ -61,10 +61,9 @@ class ProfilesAPI:
         loader = ProfileLoader(cache)
         profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
         profile.conf.validate()
-        if with_global_conf:
-            cache.new_config.validate()
-            # Apply the new_config to the profiles the global one, so recipes get it too
-            profile.conf.rebase_conf_definition(cache.new_config)
+        cache.new_config.validate()
+        # Apply the new_config to the profiles the global one, so recipes get it too
+        profile.conf.rebase_conf_definition(cache.new_config)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
