@@ -1,3 +1,5 @@
+import argparse
+
 from conan.cli.command import OnceArgument
 from conan.errors import ConanException
 
@@ -56,46 +58,63 @@ def add_common_install_arguments(parser):
 
 
 def add_profiles_args(parser):
-    def profile_args(machine, short_suffix="", long_suffix=""):
+    def profile_args(machine, short_suffix="", long_suffix="", suppress_help=False):
         parser.add_argument("-pr{}".format(short_suffix),
                             "--profile{}".format(long_suffix),
                             default=None, action="append",
+                            metavar="PROFILE",
                             dest='profile_{}'.format(machine),
-                            help='Apply the specified profile to the {} machine'.format(machine))
+                            help=argparse.SUPPRESS if suppress_help else
+                                 'Apply the specified profile. '
+                                 'By default, or if specifying -pr:h (--profile:host), it applies to the host context. '
+                                 'Use -pr:b (--profile:build) to specify the build context, '
+                                 'or -pr:a (--profile:all) to specify both contexts at once')
 
-    def settings_args(machine, short_suffix="", long_suffix=""):
+    def settings_args(machine, short_suffix="", long_suffix="", suppress_help=False):
         parser.add_argument("-s{}".format(short_suffix),
                             "--settings{}".format(long_suffix),
                             action="append",
+                            metavar="SETTINGS",
                             dest='settings_{}'.format(machine),
-                            help='Settings to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
-                                                                                 short_suffix))
+                            help=argparse.SUPPRESS if suppress_help else
+                                 'Settings for the package, overwriting the defaults. '
+                                 'By default, or if specifying -s:h (--settings:host), it applies to the host context. '
+                                 'Use -s:b (--settings:build) to specify the build context, '
+                                 'or -s:a (--settings:all) to specify both contexts at once. '
+                                 'Example: -s compiler=gcc')
 
-    def options_args(machine, short_suffix="", long_suffix=""):
+    def options_args(machine, short_suffix="", long_suffix="", suppress_help=False):
         parser.add_argument("-o{}".format(short_suffix),
                             "--options{}".format(long_suffix),
                             action="append",
+                            metavar="OPTIONS",
                             dest="options_{}".format(machine),
-                            help='Define options values ({} machine), e.g.:'
-                                 ' -o{} Pkg:with_qt=true'.format(machine, short_suffix))
+                            help=argparse.SUPPRESS if suppress_help else
+                                 'Define options values. '
+                                 'By default, or if specifying -o:h (--options:host), it applies to the host context. '
+                                 'Use -o:b (--options:build) to specify the build context, '
+                                 'or -o:a (--options:all) to specify both contexts at once. '
+                                 'Example: -o pkg:with_qt=true')
 
-    def conf_args(machine, short_suffix="", long_suffix=""):
+    def conf_args(machine, short_suffix="", long_suffix="", suppress_help=False):
         parser.add_argument("-c{}".format(short_suffix),
                             "--conf{}".format(long_suffix),
                             action="append",
+                            metavar="CONF",
                             dest='conf_{}'.format(machine),
-                            help='Configuration to build the package, overwriting the defaults'
-                                 ' ({} machine). e.g.: -c{} '
-                                 'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
-                                                                                     short_suffix))
+                            help=argparse.SUPPRESS if suppress_help else
+                                 'Configuration to build the package, overwriting the defaults'
+                                 'By default, or if specifying -c:h (--conf:host), it applies to the host context. '
+                                 'Use -c:b (--conf:build) to specify the build context, '
+                                 'or -c:a (--conf:all) to specify both contexts at once. '
+                                 'Example: -c tools.cmake.cmaketoolchain:generator=Xcode')
 
     for item_fn in [options_args, profile_args, settings_args, conf_args]:
-        item_fn("host", "",
-                "")  # By default it is the HOST, the one we are building binaries for
-        item_fn("build", ":b", ":build")
-        item_fn("host", ":h", ":host")
-        item_fn("all", ":a", ":all")
+        # By default, it is the HOST, the one we are building binaries for
+        item_fn("host", "", "")
+        item_fn("build", ":b", ":build", suppress_help=True)
+        item_fn("host", ":h", ":host", suppress_help=True)
+        item_fn("all", ":a", ":all", suppress_help=True)
 
 
 def add_reference_args(parser):
