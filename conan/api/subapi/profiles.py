@@ -29,20 +29,20 @@ class ProfilesAPI:
         return loader.get_default_build()
 
     def get_profiles_from_args(self, args):
-        all_profiles = [] if not args.profile_all else args.profile_all
-        all_settings = [] if not args.settings_all else args.settings_all
-        all_options = [] if not args.options_all else args.options_all
-        all_conf = [] if not args.conf_all else args.conf_all
+        all_profiles = args.profile_all or []
+        all_settings = args.settings_all or []
+        all_options = args.options_all or []
+        all_conf = args.conf_all or []
 
-        build_profiles = all_profiles + ([self.get_default_build()] if not args.profile_build else args.profile_build)
-        build_settings = all_settings + ([] if not args.settings_build else args.settings_build)
-        build_options = all_options + ([] if not args.options_build else args.options_build)
-        build_conf = all_conf + ([] if not args.conf_build else args.conf_build)
+        build_profiles = all_profiles + (args.profile_build or [self.get_default_build()])
+        build_settings = all_settings + (args.settings_build or [])
+        build_options = all_options + (args.options_build or [])
+        build_conf = all_conf + (args.conf_build or [])
 
-        host_profiles = all_profiles + ([self.get_default_host()] if not args.profile_host else args.profile_host)
-        host_settings = all_settings + ([] if not args.settings_host else args.settings_host)
-        host_options = all_options + ([] if not args.options_host else args.options_host)
-        host_conf = all_conf + ([] if not args.conf_host else args.conf_host)
+        host_profiles = all_profiles + (args.profile_host or [self.get_default_host()])
+        host_settings = all_settings + (args.settings_host or [])
+        host_options = all_options + (args.options_host or [])
+        host_conf = all_conf + (args.conf_host or [])
 
         profile_build = self.get_profile(profiles=build_profiles, settings=build_settings,
                                          options=build_options, conf=build_conf)
