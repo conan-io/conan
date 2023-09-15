@@ -1,3 +1,4 @@
+import json
 import os
 
 from conans.test.utils.tools import TestClient
@@ -41,3 +42,13 @@ def test_shorthand_syntax():
     assert tc.out.count("os.platform=conan") == 2
     assert tc.out.count("user.conf.cli=True") == 2
     assert tc.out.count("user.profile=True") == 2
+
+    
+def test_profile_show_json():
+    c = TestClient()
+    c.save({"myprofilewin": "[settings]\nos=Windows",
+            "myprofilelinux": "[settings]\nos=Linux"})
+    c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
+    profile = json.loads(c.stdout)
+    assert profile["build"]["settings"] ==  {"os": "Windows"}
+    assert profile["host"]["settings"] == {"os": "Linux"}
