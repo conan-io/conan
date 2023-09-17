@@ -9,8 +9,8 @@ from conans.errors import ConanException
 
 
 def summary_remove_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
     cli_out_write("Remove summary:")
     info = results["results"]
@@ -51,6 +51,8 @@ def remove(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-r', '--remote', action=OnceArgument,
                         help='Will remove from the specified remote')
     parser.add_argument("-l", "--list", help="Package list file")
+    parser.add_argument("--dry-run", default=False, action="store_true",
+                        help="Do not remove any items, only print those which would be removed")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -65,7 +67,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     cache_name = "Local Cache" if not remote else remote.name
 
     def confirmation(message):
-        return args.confirm or ui.request_boolean(message)
+        return not args.dry_run and (args.confirm or ui.request_boolean(message))
 
     if args.list:
         listfile = make_abs_path(args.list)

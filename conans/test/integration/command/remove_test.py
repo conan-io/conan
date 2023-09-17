@@ -28,22 +28,25 @@ conaninfo = '''
 '''
 
 
-class RemoveWithoutUserChannel(unittest.TestCase):
+class TestRemoveWithoutUserChannel:
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.test_server = TestServer(users={"admin": "password"},
                                       write_permissions=[("lib/1.0@*/*", "admin")])
         servers = {"default": self.test_server}
         self.client = TestClient(servers=servers, inputs=["admin", "password"])
 
-    def test_local(self):
+    @pytest.mark.parametrize("dry_run", [True, False])
+    def test_local(self, dry_run):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . --name=lib --version=1.0")
         ref_layout = self.client.exported_layout()
         pkg_layout = self.client.created_layout()
-        self.client.run("remove lib/1.0 -c")
-        self.assertFalse(os.path.exists(ref_layout.base_folder))
-        self.assertFalse(os.path.exists(pkg_layout.base_folder))
+        extra = " --dry-run" if dry_run else ""
+        self.client.run("remove lib/1.0 -c" + extra)
+        assert os.path.exists(ref_layout.base_folder) == dry_run
+        assert os.path.exists(pkg_layout.base_folder) == dry_run
 
     @pytest.mark.artifactory_ready
     def test_remote(self):
@@ -53,14 +56,22 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         self.client.run("remove lib/1.0 -c")
         # we can still install it
         self.client.run("install --requires=lib/1.0@")
-        self.assertIn("lib/1.0: Retrieving package", self.client.out)
+        assert "lib/1.0: Retrieving package" in self.client.out
         self.client.run("remove lib/1.0 -c")
 
-        # Now remove remotely
-        self.client.run("remove lib/1.0 -c -r default")
-        self.client.run("install --requires=lib/1.0@", assert_error=True)
+        # Now remove remotely, dry run first
+        self.client.run("remove lib/1.0 -c -r default --dry-run")
 
-        self.assertIn("Unable to find 'lib/1.0' in remotes", self.client.out)
+        # we can still install it
+        self.client.run("install --requires=lib/1.0@")
+        assert "lib/1.0: Retrieving package" in self.client.out
+        self.client.run("remove lib/1.0 -c")
+
+        # Now remove remotely, for real this time
+        self.client.run("remove lib/1.0 -c -r default")
+
+        self.client.run("install --requires=lib/1.0@", assert_error=True)
+        assert "Unable to find 'lib/1.0' in remotes" in self.client.out
 
 
 class RemovePackageRevisionsTest(unittest.TestCase):
