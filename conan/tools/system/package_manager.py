@@ -237,7 +237,7 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    def install(self, packages, update=False, check=True, host_package=True, recommends=False):
+    def install(self, packages, update=False, check=True, recommends=False, host_package=True):
         """
         Will try to install the list of packages passed as a parameter. Its
         behaviour is affected by the value of ``tools.system.package_manager:mode``
