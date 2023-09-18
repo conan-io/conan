@@ -767,7 +767,7 @@ class TestCMakeBuildType:
         if build_args:
             assert "Specifying 'build_type' does not have " + \
                    "any effect for single-config build systems" in client.out
-        assert "CMAKE_BUILD_TYPE: ''" in client.out
+        assert "CMAKE_BUILD_TYPE: 'Release'" in client.out
         assert "Created package" in client.out
 
 

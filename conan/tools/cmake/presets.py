@@ -95,11 +95,11 @@ class _CMakePresets:
     @staticmethod
     def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
                           preset_prefix):
-        build_type = conanfile.settings.get_safe("build_type")
+        build_type = conanfile.settings.get_safe("build_type") or "Release"
         name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
         if preset_prefix:
             name = f"{preset_prefix}-{name}"
-        if not multiconfig and build_type:
+        if not multiconfig:
             if not "CMAKE_BUILD_TYPE" in cache_variables:
                 cache_variables["CMAKE_BUILD_TYPE"] = build_type
         ret = {
