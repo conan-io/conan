@@ -62,12 +62,16 @@ def test_build_type_empty():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import CMake
+        from conan.tools.cmake import CMake, CMakeToolchain
         class Pkg(ConanFile):
             name = "pkg"
             version = "0.1"
             settings = "os", "compiler", "arch"
-            generators = "CMakeToolchain"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.cache_variables["CMAKE_BUILD_TYPE"] = "MinSizeRel"
+                tc.generate()
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -78,5 +82,6 @@ def test_build_type_empty():
                 self.output.info("MYRUN: {}".format(*args))
             """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . ")
-    assert "Created package" in client.out
+    client.run("create . -s build_type=Debug")
+    assert '-DCMAKE_BUILD_TYPE="MinSizeRel"' in client.out
+    assert 'Created package' in client.out
