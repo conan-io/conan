@@ -229,7 +229,7 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
             return ["package1", "package2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
-            tool.install(["package1", "package2"], host_package=True)
+            tool.install(["package1", "package2"])
 
     assert tool._conanfile.command == result
 
