@@ -1,9 +1,9 @@
 import os
-from io import StringIO
 
 from conan.tools.files import chdir
 from conan.errors import ConanException
 from conans.util.files import mkdir
+from conans.util.runners import check_output_runner
 
 
 class Git:
@@ -25,9 +25,10 @@ class Git:
         :return: The console output of the command.
         """
         with chdir(self._conanfile, self.folder):
-            output = StringIO()
-            self._conanfile.run(f"git {cmd}", stdout=output, quiet=True)
-            return output.getvalue().strip()
+            # We tried to use self.conanfile.run(), but it didn't work:
+            #  - when using win_bash, crashing because access to .settings (forbidden in source())
+            #  - the ``conan source`` command, not passing profiles, buildenv not injected
+            return check_output_runner("git {}".format(cmd)).strip()
 
     def get_commit(self):
         """
