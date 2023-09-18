@@ -733,3 +733,91 @@ class TestCMakeFindPackagePreferConfig:
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
 
+
+@pytest.mark.tool("cmake")
+class TestCMakeBuildType:
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg C CXX)
+        message(STATUS "CMAKE_BUILD_TYPE: '${CMAKE_BUILD_TYPE}'")
+    """)
+
+    def test_build_type_single_config_warn(self):
+        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler", "arch"
+                exports_sources = '*'
+                generators = "CMakeToolchain"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build(build_type="Release")
+                """)
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": self.cmakelists})
+        client.run("create . -s build_type=Debug")
+        assert "Specifying 'build_type' does not have " + \
+               "any effect for single-config build systems" in client.out
+        assert "CMAKE_BUILD_TYPE: ''" in client.out
+        assert "Created package" in client.out
+
+
+    @pytest.mark.parametrize(
+        "setting_build_type", [True, False],
+    )
+    def test_build_type_enforced(self, setting_build_type):
+        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                if {}:
+                    settings = "os", "compiler", "arch", "build_type"
+                else:
+                    settings = "os", "compiler", "arch"
+                exports_sources = '*'
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.cache_variables["CMAKE_BUILD_TYPE"] = "MinSizeRel"
+                    tc.generate()
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    cmake.install()
+                """).format(setting_build_type)
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": self.cmakelists})
+        client.run("create . -s build_type=Debug")
+        assert "CMAKE_BUILD_TYPE: 'MinSizeRel'" in client.out
+        assert 'Created package' in client.out
+
+    def test_build_type_setting(self):
+        client = TestClient()
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "compiler", "arch"
+                generators = "CMakeToolchain"
+                exports_sources = '*'
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    cmake.install()
+                """)
+        client.save({"conanfile.py": conanfile, "CMakeLists.txt": self.cmakelists})
+        client.run("create . -s build_type=Debug")
+        assert "CMAKE_BUILD_TYPE: ''" in client.out
+        assert "Created package" in client.out

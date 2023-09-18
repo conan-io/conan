@@ -100,7 +100,8 @@ class _CMakePresets:
         if preset_prefix:
             name = f"{preset_prefix}-{name}"
         if not multiconfig and build_type:
-            cache_variables["CMAKE_BUILD_TYPE"] = build_type
+            if not "CMAKE_BUILD_TYPE" in cache_variables:
+                cache_variables["CMAKE_BUILD_TYPE"] = build_type
         ret = {
             "name": name,
             "displayName": "'{}' config".format(name),
