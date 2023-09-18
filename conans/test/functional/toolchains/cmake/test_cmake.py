@@ -742,7 +742,10 @@ class TestCMakeBuildType:
         message(STATUS "CMAKE_BUILD_TYPE: '${CMAKE_BUILD_TYPE}'")
     """)
 
-    def test_build_type_single_config_warn(self):
+    @pytest.mark.parametrize(
+        "build_args", ["", "build_type='Release'"]
+    )
+    def test_build_type_no_setting(self, build_args):
         client = TestClient()
 
         conanfile = textwrap.dedent("""
@@ -757,12 +760,13 @@ class TestCMakeBuildType:
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-                    cmake.build(build_type="Release")
-                """)
+                    cmake.build({})
+                """).format(build_args)
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": self.cmakelists})
         client.run("create . -s build_type=Debug")
-        assert "Specifying 'build_type' does not have " + \
-               "any effect for single-config build systems" in client.out
+        if build_args:
+            assert "Specifying 'build_type' does not have " + \
+                   "any effect for single-config build systems" in client.out
         assert "CMAKE_BUILD_TYPE: ''" in client.out
         assert "Created package" in client.out
 
@@ -798,26 +802,3 @@ class TestCMakeBuildType:
         client.run("create . -s build_type=Debug")
         assert "CMAKE_BUILD_TYPE: 'MinSizeRel'" in client.out
         assert 'Created package' in client.out
-
-    def test_build_type_setting(self):
-        client = TestClient()
-
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import CMake
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-                settings = "os", "compiler", "arch"
-                generators = "CMakeToolchain"
-                exports_sources = '*'
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-                    cmake.install()
-                """)
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": self.cmakelists})
-        client.run("create . -s build_type=Debug")
-        assert "CMAKE_BUILD_TYPE: ''" in client.out
-        assert "Created package" in client.out
