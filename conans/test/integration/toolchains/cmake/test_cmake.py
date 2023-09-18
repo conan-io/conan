@@ -32,3 +32,52 @@ def test_configure_args():
     assert "-something" in client.out
     assert "--testverbose" in client.out
     assert "-testok" in client.out
+
+def test_build_type_single_config_warn():
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "arch"
+            generators = "CMakeToolchain"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build(build_type="Release")
+
+            def run(self, *args, **kwargs):
+                self.output.info("MYRUN: {}".format(*args))
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . ")
+    assert "Specifying 'build_type' does not have " + \
+           "any effect for single-config build systems" in client.out
+    assert "Created package" in client.out
+
+def test_build_type_empty():
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "arch"
+            generators = "CMakeToolchain"
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+                cmake.install()
+
+            def run(self, *args, **kwargs):
+                self.output.info("MYRUN: {}".format(*args))
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . ")
+    assert "Created package" in client.out

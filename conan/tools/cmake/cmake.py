@@ -104,11 +104,10 @@ class CMake(object):
         bf = self._conanfile.build_folder
         is_multi = is_multi_configuration(self._generator)
         if build_type and not is_multi:
-            self._conanfile.output.error("Don't specify 'build_type' at build time for "
-                                         "single-config build systems")
-
+            self._conanfile.output.warning("Specifying 'build_type' does not have "
+                                           "any effect for single-config build systems")
         bt = build_type or self._conanfile.settings.get_safe("build_type")
-        if not bt:
+        if not bt and is_multi:
             raise ConanException("build_type setting should be defined.")
         build_config = "--config {}".format(bt) if bt and is_multi else ""
 
@@ -137,9 +136,9 @@ class CMake(object):
         mkdir(self._conanfile, self._conanfile.package_folder)
 
         bt = build_type or self._conanfile.settings.get_safe("build_type")
-        if not bt:
-            raise ConanException("build_type setting should be defined.")
         is_multi = is_multi_configuration(self._generator)
+        if not bt and is_multi:
+            raise ConanException("build_type setting should be defined.")
         build_config = "--config {}".format(bt) if bt and is_multi else ""
 
         pkg_folder = '"{}"'.format(self._conanfile.package_folder.replace("\\", "/"))
