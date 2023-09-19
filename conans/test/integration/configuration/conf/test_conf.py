@@ -8,6 +8,7 @@ from mock import patch
 from conan import conan_version
 from conan.internal.api import detect_api
 from conans.errors import ConanException
+from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
@@ -305,3 +306,40 @@ def test_global_conf_auto_created():
     c.run("config list")  # all commands will trigger
     global_conf = load(c.cache.new_config_path)
     assert "# core:non_interactive = True" in global_conf
+
+
+def test_build_test_consumer_only():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                skip = self.conf.get("tools.build:skip_test", check_type=bool)
+                self.output.info(f'SKIP-TEST: {skip}')
+        """)
+    pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                requires = "dep/0.1"
+                def generate(self):
+                    self.output.info(f'SKIP-TEST: {self.conf.get("tools.build:skip_test")}')
+            """)
+    save(c.cache.new_config_path, "tools.build:skip_test=True\n&:tools.build:skip_test=False")
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg,
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("create dep")
+    assert "dep/0.1: SKIP-TEST: False" in c.out
+    c.run('create pkg --build=* -tf=""')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    c.run('create pkg --build=*')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    c.run('install pkg --build=*')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "conanfile.py (pkg/0.1): SKIP-TEST: False" in c.out
