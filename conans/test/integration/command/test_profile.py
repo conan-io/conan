@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 
 from conans.test.utils.tools import TestClient
 
@@ -34,6 +35,11 @@ def test_ignore_paths_when_listing_profiles():
 def test_shorthand_syntax():
     tc = TestClient()
     tc.save({"profile": "[conf]\nuser.profile=True"})
+    tc.run("profile show -h")
+    assert "[-pr:b" in tc.out
+    assert "[-pr:h" in tc.out
+    assert "[-pr:a" in tc.out
+
     tc.run("profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf.cli=True")
 
     # All of them show up twice, once per context
@@ -43,7 +49,36 @@ def test_shorthand_syntax():
     assert tc.out.count("user.conf.cli=True") == 2
     assert tc.out.count("user.profile=True") == 2
 
-    
+    tc.save({"pre": textwrap.dedent("""
+            [settings]
+            os = Linux
+            compiler = gcc
+            compiler.version = 11
+            """),
+             "mid": textwrap.dedent("""
+            [settings]
+            compiler = clang
+            compiler.version = 14
+            """),
+             "post": textwrap.dedent("""
+            [settings]
+            compiler.version = 13
+            """)})
+    tc.run("profile show -pr:a=pre -pr:a=mid -pr:a=post")
+    assert textwrap.dedent("""
+    Host profile:
+    [settings]
+    compiler=clang
+    compiler.version=13
+    os=Linux
+
+    Build profile:
+    [settings]
+    compiler=clang
+    compiler.version=13
+    os=Linux""") in tc.out
+
+
 def test_profile_show_json():
     c = TestClient()
     c.save({"myprofilewin": "[settings]\nos=Windows",

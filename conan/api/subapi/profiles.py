@@ -29,26 +29,14 @@ class ProfilesAPI:
         return loader.get_default_build()
 
     def get_profiles_from_args(self, args):
-        all_profiles = args.profile_all or []
-        all_settings = args.settings_all or []
-        all_options = args.options_all or []
-        all_conf = args.conf_all or []
+        build_profiles = args.profile_build or [self.get_default_build()]
+        host_profiles = args.profile_host or [self.get_default_host()]
 
-        build_profiles = all_profiles + (args.profile_build or [self.get_default_build()])
-        build_settings = all_settings + (args.settings_build or [])
-        build_options = all_options + (args.options_build or [])
-        build_conf = all_conf + (args.conf_build or [])
+        profile_build = self.get_profile(profiles=build_profiles, settings=args.settings_build,
+                                         options=args.options_build, conf=args.conf_build)
 
-        host_profiles = all_profiles + (args.profile_host or [self.get_default_host()])
-        host_settings = all_settings + (args.settings_host or [])
-        host_options = all_options + (args.options_host or [])
-        host_conf = all_conf + (args.conf_host or [])
-
-        profile_build = self.get_profile(profiles=build_profiles, settings=build_settings,
-                                         options=build_options, conf=build_conf)
-
-        profile_host = self.get_profile(profiles=host_profiles, settings=host_settings,
-                                        options=host_options, conf=host_conf)
+        profile_host = self.get_profile(profiles=host_profiles, settings=args.settings_host,
+                                        options=args.options_host, conf=args.conf_host)
         return profile_host, profile_build
 
     def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):

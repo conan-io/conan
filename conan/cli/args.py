@@ -58,59 +58,76 @@ def add_common_install_arguments(parser):
 
 
 def add_profiles_args(parser):
-    def profile_args(machine, short_suffix="", long_suffix="", suppress_help=False):
-        parser.add_argument("-pr{}".format(short_suffix),
-                            "--profile{}".format(long_suffix),
-                            default=None, action="append",
-                            dest='profile_{}'.format(machine),
-                            help="" if suppress_help else
-                                 'Apply the specified profile. '
-                                 'By default, or if specifying -pr:h (--profile:host), it applies to the host context. '
-                                 'Use -pr:b (--profile:build) to specify the build context, '
-                                 'or -pr:a (--profile:all) to specify both contexts at once')
+    class ContextAllAction(argparse.Action):
+        def __init__(self,
+                     option_strings,
+                     dest,
+                     nargs=None,
+                     const=None,
+                     default=None,
+                     type=None,
+                     choices=None,
+                     required=False,
+                     help=None,
+                     metavar=None,
+                     contexts=None):
+            if nargs == 0:
+                raise ValueError('nargs for append actions must be != 0; if arg '
+                                 'strings are not supplying the value to append, '
+                                 'the append const action may be more appropriate')
+            if const is not None and nargs != argparse.OPTIONAL:
+                raise ValueError('nargs must be %r to supply const' % argparse.OPTIONAL)
+            super(ContextAllAction, self).__init__(
+                option_strings=option_strings,
+                dest=dest,
+                nargs=nargs,
+                const=const,
+                default=default,
+                type=type,
+                choices=choices,
+                required=required,
+                help=help,
+                metavar=metavar)
+            self.contexts = contexts
 
-    def settings_args(machine, short_suffix="", long_suffix="", suppress_help=False):
-        parser.add_argument("-s{}".format(short_suffix),
-                            "--settings{}".format(long_suffix),
+        def __call__(self, action_parser, namespace, values, option_string=None):
+            for context in self.contexts:
+                items = getattr(namespace, self.dest + "_" + context, None)
+                items = items[:] if items else []
+                items.append(values)
+                setattr(namespace, self.dest + "_" + context, items)
+
+    def create_config(short, long, example=None):
+        parser.add_argument(f"-{short}", f"--{long}",
+                            default=None,
                             action="append",
-                            dest='settings_{}'.format(machine),
-                            help="" if suppress_help else
-                                 'Settings for the package, overwriting the defaults. '
-                                 'By default, or if specifying -s:h (--settings:host), it applies to the host context. '
-                                 'Use -s:b (--settings:build) to specify the build context, '
-                                 'or -s:a (--settings:all) to specify both contexts at once. '
-                                 'Example: -s compiler=gcc')
+                            dest=f"{long}_host",
+                            metavar=long.upper(),
+                            help='Apply the specified profile. '
+                                 f'By default, or if specifying -{short}:h (--{long}:host), it applies to the host context. '
+                                 f'Use -{short}:b (--{long}:build) to specify the build context, '
+                                 f'or -{short}:a (--{long}:all) to specify both contexts at once'
+                                  + ('' if not example else f". Example: {example}"))
+        contexts = ["build", "host"]
+        for context in contexts:
+            parser.add_argument(f"-{short}:{context[0]}", f"--{short}:{context}",
+                                default=None,
+                                action="append",
+                                dest=f"{long}_{context}",
+                                help="")
 
-    def options_args(machine, short_suffix="", long_suffix="", suppress_help=False):
-        parser.add_argument("-o{}".format(short_suffix),
-                            "--options{}".format(long_suffix),
-                            action="append",
-                            dest="options_{}".format(machine),
-                            help="" if suppress_help else
-                                 'Define options values. '
-                                 'By default, or if specifying -o:h (--options:host), it applies to the host context. '
-                                 'Use -o:b (--options:build) to specify the build context, '
-                                 'or -o:a (--options:all) to specify both contexts at once. '
-                                 'Example: -o pkg:with_qt=true')
+        parser.add_argument(f"-{short}:a", f"--{long}:all",
+                            default=None,
+                            action=ContextAllAction,
+                            dest=long,
+                            metavar=f"{long.upper()}_ALL",
+                            help="",
+                            contexts=contexts)
 
-    def conf_args(machine, short_suffix="", long_suffix="", suppress_help=False):
-        parser.add_argument("-c{}".format(short_suffix),
-                            "--conf{}".format(long_suffix),
-                            action="append",
-                            dest='conf_{}'.format(machine),
-                            help=argparse.SUPPRESS if suppress_help else
-                                 'Configuration to build the package, overwriting the defaults'
-                                 'By default, or if specifying -c:h (--conf:host), it applies to the host context. '
-                                 'Use -c:b (--conf:build) to specify the build context, '
-                                 'or -c:a (--conf:all) to specify both contexts at once. '
-                                 'Example: -c tools.cmake.cmaketoolchain:generator=Xcode')
-
-    for item_fn in [options_args, profile_args, settings_args, conf_args]:
-        # By default, it is the HOST, the one we are building binaries for
-        item_fn("host", "", "")
-        item_fn("build", ":b", ":build", suppress_help=True)
-        item_fn("host", ":h", ":host", suppress_help=True)
-        item_fn("all", ":a", ":all", suppress_help=True)
+    create_config("pr", "profile")
+    create_config("o", "options", "-o pkg:with_qt=true")
+    create_config("s", "settings", "-s compiler=gcc")
+    create_config("c", "conf", "-c tools.cmake.cmaketoolchain:generator=Xcode")
 
 
 def add_reference_args(parser):
