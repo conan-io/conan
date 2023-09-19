@@ -79,9 +79,11 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
     elif 'appletvsimulator' in os_sdk:
         flag = '-mtvos-simulator-version-min'
     elif 'xros' in os_sdk:
-        flag = '-mxros-version-min'
+        # need early return as string did not fit into the "normal" schema
+        return f'--target arm64-apple-xros{os_version}'
     elif 'xrsimulator' in os_sdk:
-        flag = '-mxros-simulator-version-min'
+        # need early return as string did not fit into the "normal" schema
+        return f'-target arm64-apple-xros{os_version}-simulator'
 
     if subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
