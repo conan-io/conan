@@ -24,7 +24,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cli.exit_codes import SUCCESS
+from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPI
@@ -32,7 +32,7 @@ from conan.api.model import Remote
 from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
 from conans.util.env import environment_update
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
@@ -489,8 +489,12 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = ConanAPI(cache_folder=self.cache_folder)
-        command = Cli(self.api)
+        try:
+            self.api = ConanAPI(cache_folder=self.cache_folder)
+            command = Cli(self.api)
+        except ConanException as e:
+            sys.stderr.write("Error in Conan initialization: {}".format(e))
+            return ERROR_GENERAL
 
         error = SUCCESS
         trace = None

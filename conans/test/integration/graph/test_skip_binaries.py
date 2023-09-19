@@ -147,3 +147,34 @@ def test_conf_skip():
     client.run("create . --name=app --version=3.0 -v -c *:tools.graph:skip_binaries=True")
     client.assert_listed_binary({"maths/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
     client.assert_listed_binary({"ai/1.0": (NO_SETTINGS_PACKAGE_ID, "Skip")})
+
+
+def test_skipped_intermediate_header():
+    c = TestClient()
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library")
+                                                            .with_package_info(cpp_info={"libs":
+                                                                                         ["liba"]},
+                                                                               env_info={}),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_package_type("header-library")
+                                                            .with_requires("liba/0.1"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_package_type("static-library")
+                                                            .with_requires("libb/0.1"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_requires("libc/0.1")
+                                                          .with_settings("build_type")})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("install app -g CMakeDeps")
+    c.assert_listed_binary({"liba/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                            "libb/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                            "libc/0.1": ("0f9f8919daed27aacd18c33199957e8882a87fd7", "Cache")})
+    libc_data = c.load("app/libc-release-data.cmake")
+    assert "list(APPEND libc_FIND_DEPENDENCY_NAMES libb)" in libc_data
+    libb_data = c.load("app/libb-release-data.cmake")
+    # libb brings no headers nor libraries
+    assert "set(libb_INCLUDE_DIRS_RELEASE )" in libb_data
+    assert "set(libb_LIBS_RELEASE )" in libb_data
+    liba_data = c.load("app/liba-release-data.cmake")
+    # liba brings only libraries
+    assert "set(liba_INCLUDE_DIRS_RELEASE )" in liba_data
+    assert "set(liba_LIBS_RELEASE liba)" in liba_data

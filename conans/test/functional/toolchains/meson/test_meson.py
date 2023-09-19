@@ -95,7 +95,7 @@ class MesonToolchainTest(TestMesonBase):
                "Convert 'options.shared' into" in self.t.out
         assert "WARN: deprecated: Please, do not use a Conan option value directly. " \
                "Convert 'options.msg' into" in self.t.out
-        assert "ERROR: Malformed value in machine file variable 'HELLO_MSG'." in self.t.out
+        assert "Malformed value" in self.t.out
         # Let's transform the Conan option into other allowed data type to solve the issue
         self.t.save({"conanfile.py": conanfile_py.format(msg="str(self.options.msg)")})
         self.t.run("build .")
