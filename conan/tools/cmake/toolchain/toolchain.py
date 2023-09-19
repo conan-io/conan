@@ -13,6 +13,7 @@ from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, G
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -174,6 +175,10 @@ class CMakeToolchain(object):
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
         content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
+
+    @property
+    def is_multi_configuration(self):
+        return is_multi_configuration(self.generator)
 
     def generate(self):
         """
