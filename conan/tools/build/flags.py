@@ -309,6 +309,10 @@ def _cppstd_clang(clang_version, cppstd):
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
+    if clang_version >= "17":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
