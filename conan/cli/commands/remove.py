@@ -67,7 +67,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     cache_name = "Local Cache" if not remote else remote.name
 
     def confirmation(message):
-        return (args.confirm or ui.request_boolean(message)) and not args.dry_run
+        return args.confirm or ui.request_boolean(message)
 
     if args.list:
         listfile = make_abs_path(args.list)
@@ -90,8 +90,9 @@ def remove(conan_api: ConanAPI, parser, *args):
         packages = ref_bundle.get("packages")
         if packages is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
-                conan_api.remove.recipe(ref, remote=remote)
-            elif not args.dry_run:
+                if not args.dry_run:
+                    conan_api.remove.recipe(ref, remote=remote)
+            else:
                 ref_dict.pop(ref.revision)
                 if not ref_dict:
                     package_list.recipes.pop(str(ref))
@@ -106,8 +107,9 @@ def remove(conan_api: ConanAPI, parser, *args):
 
         for pref, _ in prefs.items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
-                conan_api.remove.package(pref, remote=remote)
-            elif not args.dry_run:
+                if not args.dry_run:
+                    conan_api.remove.package(pref, remote=remote)
+            else:
                 pref_dict = packages[pref.package_id]["revisions"]
                 pref_dict.pop(pref.revision)
                 if not pref_dict:
