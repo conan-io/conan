@@ -663,32 +663,82 @@ def test_list_empty_settings():
     assert pkgs == {NO_SETTINGS_PACKAGE_ID: {"info": {}}}
 
 
-def test_list_package_filter_profile():
-    c = TestClient(default_server_user=True)
-    c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
-            "other/conanfile.py": GenConanfile("other", "1.0").with_settings("os"),
-            "windows": "[settings]\nos=Windows",
-            "linux": "[settings]\nos=Linux"})
-    c.run("create pkg")
-    c.run("create other -s os=Linux")
+class TestFilterProfile:
+    @pytest.fixture(scope="class")
+    def client(self):
+        c = TestClient()
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+                "other/conanfile.py": GenConanfile("other", "1.0").with_settings("os"),
+                "lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")
+                                                              .with_shared_option()})
+        c.run("create pkg")
+        c.run("create other -s os=Linux")
+        c.run("create lib -s os=Linux")
+        c.run("create lib -s os=Linux -o *:shared=True")
+        return c
 
-    c.run("list *:* -pr windows --format=json")
-    cache = json.loads(c.stdout)["Local Cache"]
-    revisions = cache["pkg/1.0"]["revisions"]
-    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
-    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
-    revisions = cache["other/1.0"]["revisions"]
-    pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
-    assert pkgs == {}
+    def test_settings_windows(self, client):
+        c = client
+        c.save({"windows": "[settings]\nos=Windows"})
+        c.run("list *:* -pr windows --format=json")
+        cache = json.loads(c.stdout)["Local Cache"]
+        revisions = cache["pkg/1.0"]["revisions"]
+        pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+        assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
+        revisions = cache["other/1.0"]["revisions"]
+        pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
+        assert pkgs == {}
+        revisions = cache["lib/1.0"]["revisions"]
+        pkgs = revisions["3614eeeaeda58bb16c225d0981949188"]["packages"]
+        assert pkgs == {}
 
-    c.run("list *:* -pr linux --format=json")
-    cache = json.loads(c.stdout)["Local Cache"]
-    revisions = cache["pkg/1.0"]["revisions"]
-    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
-    assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
-    revisions = cache["other/1.0"]["revisions"]
-    pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
-    assert "9a4eb3c8701508aa9458b1a73d0633783ecc2270" in pkgs
+    def test_settings_linux(self, client):
+        c = client
+        c.save({"linux": "[settings]\nos=Linux"})
+        c.run("list *:* -pr linux --format=json")
+        cache = json.loads(c.stdout)["Local Cache"]
+        revisions = cache["pkg/1.0"]["revisions"]
+        pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+        assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
+        revisions = cache["other/1.0"]["revisions"]
+        pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
+        assert "9a4eb3c8701508aa9458b1a73d0633783ecc2270" in pkgs
+        revisions = cache["lib/1.0"]["revisions"]
+        pkgs = revisions["3614eeeaeda58bb16c225d0981949188"]["packages"]
+        assert "9e0f8140f0fe6b967392f8d5da9881e232e05ff8" in pkgs
+        assert "be9159ec1b28b14f4784fccdb1e13b31e06a5de1" in pkgs
+
+    def test_settings_per_package(self, client):
+        c = client
+        c.save({"linux": "[settings]\nos=Windows\nlib/*:os=Linux"})
+        c.run("list *:* -pr linux --format=json")
+        cache = json.loads(c.stdout)["Local Cache"]
+        revisions = cache["pkg/1.0"]["revisions"]
+        pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+        assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
+        revisions = cache["other/1.0"]["revisions"]
+        pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
+        assert pkgs == {}
+        revisions = cache["lib/1.0"]["revisions"]
+        pkgs = revisions["3614eeeaeda58bb16c225d0981949188"]["packages"]
+        assert "9e0f8140f0fe6b967392f8d5da9881e232e05ff8" in pkgs
+        assert "be9159ec1b28b14f4784fccdb1e13b31e06a5de1" in pkgs
+
+    def test_options_shared(self, client):
+        c = client
+        c.save({"linux_static": "[settings]\nos=Linux\n[options]\n*:shared=False"})
+        c.run("list *:* -pr linux_static --format=json")
+        cache = json.loads(c.stdout)["Local Cache"]
+        revisions = cache["pkg/1.0"]["revisions"]
+        pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
+        assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in pkgs
+        revisions = cache["other/1.0"]["revisions"]
+        pkgs = revisions["de88e3cc9893934e52db4bca09605c0e"]["packages"]
+        assert "9a4eb3c8701508aa9458b1a73d0633783ecc2270" in pkgs
+        revisions = cache["lib/1.0"]["revisions"]
+        pkgs = revisions["3614eeeaeda58bb16c225d0981949188"]["packages"]
+        assert "9e0f8140f0fe6b967392f8d5da9881e232e05ff8" in pkgs
+        assert "be9159ec1b28b14f4784fccdb1e13b31e06a5de1" not in pkgs  # shared not here now
 
 
 class TestListNoUserChannel:

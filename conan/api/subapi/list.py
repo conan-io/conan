@@ -4,7 +4,7 @@ from conan.api.model import PackagesList
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
+from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.search.search import get_cache_packages_binary_info, filter_packages
 
 
@@ -85,18 +85,31 @@ class ListAPI:
         return filter_packages(query, pkg_configurations)
 
     @staticmethod
-    def filter_packages_profile(pkg_configurations, profile):
+    def filter_packages_profile(ref, pkg_configurations, profile):
         profile_settings = profile.settings
+        profile_options = profile.options
+        profile_pkg_settings = profile.package_settings
 
-        def _matches(d):  # Only implements settings matching at this moment
+        def _distance(d):
+            result = 0
             settings = d.get("settings", {})
             for k, v in settings.items():
                 profile_value = profile_settings.get(k)
+                for pattern, pattern_settings in profile_pkg_settings.items():
+                    if ref_matches(ref, pattern, is_consumer=False):
+                        profile_value = pattern_settings.get(k) or profile_value
                 if profile_value is not None and profile_value != v:
-                    return False
-            return True
+                    result += (100 if k in ("os", "arch") else 10)
+            options = d.get("options", {})
+            for k, v in options.items():
+                for pattern, opts in profile_options._deps_package_options.items():
+                    if ref_matches(ref, pattern, is_consumer=False):
+                        for profile_opt, profile_val in opts.items():
+                            if profile_opt == k and profile_val != v:
+                                result += 1
+            return result
 
-        return {pref: data for pref, data in pkg_configurations.items() if _matches(data)}
+        return {pref: data for pref, data in pkg_configurations.items() if _distance(data) == 0}
 
     def select(self, pattern, package_query=None, profile=None, remote=None):
         if (package_query or profile) and pattern.package_id and "*" not in pattern.package_id:
@@ -143,7 +156,7 @@ class ListAPI:
                     if package_query is not None:
                         packages = self.filter_packages_configurations(packages, package_query)
                     if profile is not None:
-                        packages = self.filter_packages_profile(packages, profile)
+                        packages = self.filter_packages_profile(rrev, packages, profile)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
                     packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
