@@ -1385,7 +1385,7 @@ def test_no_build_type():
             def package(self):
                 cmake = CMake(self)
                 build_type = "Release" if cmake.is_multi_configuration else None
-                cmake.install(build_type="Release")
+                cmake.install(build_type=build_type)
         """)
 
     cmake = """
