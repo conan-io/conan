@@ -13,7 +13,7 @@ def build(conan_api, parser, *args):
     """
     Install dependencies and call the build() method.
     """
-    parser.add_argument("path", nargs="?",
+    parser.add_argument("path",
                         help='Path to a python-based recipe file or a folder '
                              'containing a conanfile.py recipe. conanfile.txt '
                              'cannot be used with conan build.')
