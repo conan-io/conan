@@ -51,32 +51,46 @@ def test_shorthand_syntax():
 
     tc.save({"pre": textwrap.dedent("""
             [settings]
-            os = Linux
-            compiler = gcc
-            compiler.version = 11
+            os=Linux
+            compiler=gcc
+            compiler.version=11
             """),
              "mid": textwrap.dedent("""
             [settings]
-            compiler = clang
-            compiler.version = 14
+            compiler=clang
+            compiler.version=14
             """),
              "post": textwrap.dedent("""
             [settings]
-            compiler.version = 13
+            compiler.version=13
             """)})
+
     tc.run("profile show -pr:a=pre -pr:a=mid -pr:a=post")
     assert textwrap.dedent("""
-    Host profile:
-    [settings]
-    compiler=clang
-    compiler.version=13
-    os=Linux
+        Host profile:
+        [settings]
+        compiler=clang
+        compiler.version=13
+        os=Linux
 
-    Build profile:
-    [settings]
-    compiler=clang
-    compiler.version=13
-    os=Linux""") in tc.out
+        Build profile:
+        [settings]
+        compiler=clang
+        compiler.version=13
+        os=Linux""") in tc.out
+
+    tc.run("profile show -pr:a=pre -pr:h=post")
+    assert textwrap.dedent("""Host profile:
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=13
+
+        Build profile:
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=11""") in tc.out
 
 
 def test_profile_show_json():
