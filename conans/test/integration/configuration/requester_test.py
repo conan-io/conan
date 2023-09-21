@@ -22,25 +22,19 @@ class MockRequesterGet(Mock):
 
 
 class ConanRequesterCacertPathTests(unittest.TestCase):
-
-    @staticmethod
-    def _create_requesters(cache_folder=None):
-        cache = ClientCache(cache_folder or temp_folder())
-        mock_requester = MockRequesterGet()
-        requester = ConanRequester(cache.new_config)
-        return requester, mock_requester, cache
-
     def test_default_no_verify(self):
-        requester, mocked_requester, _ = self._create_requesters()
+        mocked_requester = MockRequesterGet()
         with mock.patch("conans.client.rest.conan_requester.requests", mocked_requester):
+            requester = ConanRequester(ClientCache(temp_folder()).new_config)
             requester.get(url="aaa", verify=False)
-            self.assertEqual(mocked_requester.verify, False)
+            self.assertEqual(requester._http_requester.verify, False)
 
     def test_default_verify(self):
-        requester, mocked_requester, cache = self._create_requesters()
+        mocked_requester = MockRequesterGet()
         with mock.patch("conans.client.rest.conan_requester.requests", mocked_requester):
+            requester = ConanRequester(ClientCache(temp_folder()).new_config)
             requester.get(url="aaa", verify=True)
-            self.assertEqual(mocked_requester.verify, True)
+            self.assertEqual(requester._http_requester.verify, True)
 
     def test_cache_config(self):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
@@ -51,7 +45,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         with mock.patch("conans.client.rest.conan_requester.requests", mocked_requester):
             requester = ConanRequester(config)
             requester.get(url="bbbb", verify=True)
-        self.assertEqual(mocked_requester.verify, file_path)
+        self.assertEqual(requester._http_requester.verify, file_path)
 
 
 class ConanRequesterHeadersTests(unittest.TestCase):
@@ -62,9 +56,9 @@ class ConanRequesterHeadersTests(unittest.TestCase):
         with mock.patch("conans.client.rest.conan_requester.requests", mock_http_requester):
             requester = ConanRequester(cache.new_config)
             requester.get(url="aaa")
-            headers = mock_http_requester.get.call_args[1]["headers"]
+            headers = requester._http_requester.get.call_args[1]["headers"]
             self.assertIn("Conan/%s" % __version__, headers["User-Agent"])
 
             requester.get(url="aaa", headers={"User-Agent": "MyUserAgent"})
-            headers = mock_http_requester.get.call_args[1]["headers"]
+            headers = requester._http_requester.get.call_args[1]["headers"]
             self.assertEqual("MyUserAgent", headers["User-Agent"])
