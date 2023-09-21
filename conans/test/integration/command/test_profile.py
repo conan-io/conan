@@ -1,3 +1,4 @@
+import json
 import os
 
 from conans.test.utils.tools import TestClient
@@ -28,3 +29,13 @@ def test_ignore_paths_when_listing_profiles():
     c.run("profile list")
 
     assert ignore_path not in c.out
+
+
+def test_profile_show_json():
+    c = TestClient()
+    c.save({"myprofilewin": "[settings]\nos=Windows",
+            "myprofilelinux": "[settings]\nos=Linux"})
+    c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
+    profile = json.loads(c.stdout)
+    assert profile["build"]["settings"] ==  {"os": "Windows"}
+    assert profile["host"]["settings"] == {"os": "Linux"}

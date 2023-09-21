@@ -277,3 +277,43 @@ def test_editable_package_folder():
     c.run("editable add .")
     c.run("install --requires=pkg/0.1@")
     assert "pkg/0.1: PKG FOLDER=None!!!"
+
+
+def test_editable_components_absolute_paths():
+    """
+    this was failing in https://github.com/conan-io/conan/issues/14777
+    because components aggregation had a bug
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "alpha"
+            version = "1.0"
+
+            def layout(self):
+                self.cpp.source.components["headers"].includedirs = ["include222"]
+                self.cpp.build.components["alpha1"].libdirs = ["alpha1",]
+                self.cpp.build.components["alpha2"].libdirs = ["alpha2"]
+                self.cpp.build.components["alpha_exe"].bindirs = ["alpha_exe"]
+        """)
+    test = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeDeps"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def test(self):
+                pass
+            """)
+    c.save({"conanfile.py": conanfile,
+            "test_package/conanfile.py": test})
+    c.run("editable add .")
+    c.run("create .")
+    # This used to crash due to "include" is not absolute path, now it works
+    assert "Testing the package" in c.out
