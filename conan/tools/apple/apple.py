@@ -80,7 +80,7 @@ def apple_min_version_flag(os_version, os_sdk, subsystem):
         flag = '-mtvos-simulator-version-min'
     elif 'xros' in os_sdk:
         # need early return as string did not fit into the "normal" schema
-        return f'--target arm64-apple-xros{os_version}'
+        return f'-target arm64-apple-xros{os_version}'
     elif 'xrsimulator' in os_sdk:
         # need early return as string did not fit into the "normal" schema
         return f'-target arm64-apple-xros{os_version}-simulator'
