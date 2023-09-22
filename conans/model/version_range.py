@@ -12,13 +12,9 @@ class _ConditionSet:
 
     def __init__(self, expression, prerelease):
         expressions = expression.split()
-        self.prerelease = prerelease
         self.conditions = []
         for e in expressions:
             e = e.strip()
-            if e[-1] == "-":  # Include pre-releases
-                e = e[:-1]
-                self.prerelease = True
             self.conditions.extend(self._parse_expression(e))
 
     @staticmethod
@@ -60,7 +56,7 @@ class _ConditionSet:
             return [_Condition(operator, Version(version))]
 
     def _valid(self, version, conf_resolve_prepreleases):
-        if version.pre:
+        """if version.pre:
             # Follow the expression desires only if core.version_ranges:resolve_prereleases is None,
             # else force to the conf's value
             if conf_resolve_prepreleases is None:
@@ -68,6 +64,10 @@ class _ConditionSet:
                     return False
             elif conf_resolve_prepreleases is False:
                 return False
+        """
+        def accept_pre(v, cond):
+
+
         for condition in self.conditions:
             if condition.operator == ">":
                 if not version > condition.version:
