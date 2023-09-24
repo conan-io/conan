@@ -91,7 +91,7 @@ class ListAPI:
         profile_pkg_settings = profile.package_settings
 
         def _distance(d):
-            result = 0
+            diff = {"distance": 0}
             settings = d.get("settings", {})
             for k, v in settings.items():
                 profile_value = profile_settings.get(k)
@@ -99,17 +99,27 @@ class ListAPI:
                     if ref_matches(ref, pattern, is_consumer=False):
                         profile_value = pattern_settings.get(k) or profile_value
                 if profile_value is not None and profile_value != v:
-                    result += (100 if k in ("os", "arch") else 10)
+                    diff["distance"] += (100 if k in ("os", "arch") else 10)
+                    diff.setdefault("settings", {})[k] = profile_value
             options = d.get("options", {})
             for k, v in options.items():
                 for pattern, opts in profile_options._deps_package_options.items():
                     if ref_matches(ref, pattern, is_consumer=False):
                         for profile_opt, profile_val in opts.items():
                             if profile_opt == k and profile_val != v:
-                                result += 1
-            return result
+                                diff["distance"] += 1
+                                diff.setdefault("options", {})[k] = profile_opt
+            return diff
 
-        return {pref: data for pref, data in pkg_configurations.items() if _distance(data) == 0}
+        candidates = [(_distance(data), data, pref) for pref, data in pkg_configurations.items()]
+        candidates.sort(key=lambda x: x[0]["distance"])
+        final_result = {}
+        for candidate in candidates:
+            pref = candidate[2]
+            data = candidate[1]
+            data["diff"] = candidate[0]
+            final_result[pref] = data
+        return final_result
 
     def select(self, pattern, package_query=None, profile=None, remote=None):
         if (package_query or profile) and pattern.package_id and "*" not in pattern.package_id:

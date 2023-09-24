@@ -28,7 +28,7 @@ def print_serial(item, indent=None, color_index=None):
     color = color_array[color_index % len(color_array)]
     if isinstance(item, dict):
         for k, v in item.items():
-            if isinstance(v, str):
+            if isinstance(v, (str, int)):
                 if k.lower() == "error":
                     color = Color.BRIGHT_RED
                     k = "ERROR"
@@ -42,6 +42,8 @@ def print_serial(item, indent=None, color_index=None):
     elif isinstance(item, type([])):
         for elem in item:
             cli_out_write(f"{indent}{elem}", fg=color)
+    elif isinstance(item, int):  # Can print 0
+        cli_out_write(f"{indent}{item}", fg=color)
     elif item:
         cli_out_write(f"{indent}{item}", fg=color)
 
@@ -104,6 +106,8 @@ def list(conan_api: ConanAPI, parser, *args):
                              "(arch=x86 OR compiler=gcc)")
     parser.add_argument('-pr', '--profile', default=None, action="append",
                         help="Profiles to filter the package binaries")
+    parser.add_argument('-a', '--approx', type=int,
+                        help="How many binaries are shown if an exact match is not found")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
@@ -121,6 +125,8 @@ def list(conan_api: ConanAPI, parser, *args):
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
     if args.package_query and args.profile:
         raise ConanException("--package-query and --profile are mutually exclusive")
+    if args.approx and not args.profile:
+        raise ConanException("--approx can only be used with --profile")
 
     if args.graph:
         graphfile = make_abs_path(args.graph)
