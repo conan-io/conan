@@ -35,8 +35,6 @@ values = [
                             [['>=', '3.2'], ['<', '4.0-']]],   ["1.5-a1", "3.3"],  ["3.3-a1"]],
     ['^1.1.2-',  [[['>=', '1.1.2'], ['<', '2.0.0-']]], ["1.2.3", "1.2.0-alpha1"],  ["2.0.0-alpha1"]],
     ['~1.1.2-',  [[['>=', '1.1.2'], ['<', '1.2.0-']]], ["1.1.3", "1.1.3-alpha1"],  ["1.2.0-alpha1"]],
-    ['>=2.0-pre.0',  [[['>=', '2.0-pre.0']]], ["2.1", "2.0-pre.1"],  ["1.5"]],
-    ['>1.999 <=2.0-',  [[['>', '1.999'], ['<=', '2.0']]], ["2.0-pre.1"],  ["1.5"]],
 ]
 
 
@@ -45,6 +43,31 @@ def test_range(version_range, conditions, versions_in, versions_out):
     r = VersionRange(version_range)
     for condition_set, expected_condition_set in zip(r.condition_sets, conditions):
         for condition, expected_condition in zip(condition_set.conditions, expected_condition_set):
+            assert condition.operator == expected_condition[0]
+            assert condition.version == expected_condition[1]
+
+    for v in versions_in:
+        assert r.contains(Version(v), None)
+
+    for v in versions_out:
+        assert not r.contains(Version(v), None)
+
+
+values_prereleases = [
+    # We can indicate to accept pre-releases with trailing - upper limit
+    ['>=2.0-pre.0 <3-',  [[['>=', '2.0-pre.0'], ['<', '3']]],
+                          ["2.1", "2.0-pre.1"],  ["1.5", "2.0-alpha.1"]],
+    # Or explicitly
+    ['>=2.0-pre.0, include_prerelease',  [[['>=', '2.0-pre.0']]], ["2.1", "2.0-pre.1"],  ["1.5"]]
+]
+
+
+@pytest.mark.parametrize("version_range, conditions, versions_in, versions_out", values_prereleases)
+def test_range_prereleases_bound(version_range, conditions, versions_in, versions_out):
+    r = VersionRange(version_range)
+    for condition_set, expected_condition_set in zip(r.condition_sets, conditions):
+        for condition, expected_condition in zip(condition_set.conditions,
+                                                 expected_condition_set):
             assert condition.operator == expected_condition[0]
             assert condition.version == expected_condition[1]
 
