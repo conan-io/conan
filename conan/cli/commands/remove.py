@@ -9,8 +9,8 @@ from conans.errors import ConanException
 
 
 def summary_remove_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
     cli_out_write("Remove summary:")
     info = results["results"]
@@ -51,6 +51,8 @@ def remove(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-r', '--remote', action=OnceArgument,
                         help='Will remove from the specified remote')
     parser.add_argument("-l", "--list", help="Package list file")
+    parser.add_argument("--dry-run", default=False, action="store_true",
+                        help="Do not remove any items, only print those which would be removed")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -88,7 +90,8 @@ def remove(conan_api: ConanAPI, parser, *args):
         packages = ref_bundle.get("packages")
         if packages is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
-                conan_api.remove.recipe(ref, remote=remote)
+                if not args.dry_run:
+                    conan_api.remove.recipe(ref, remote=remote)
             else:
                 ref_dict.pop(ref.revision)
                 if not ref_dict:
@@ -104,7 +107,8 @@ def remove(conan_api: ConanAPI, parser, *args):
 
         for pref, _ in prefs.items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
-                conan_api.remove.package(pref, remote=remote)
+                if not args.dry_run:
+                    conan_api.remove.package(pref, remote=remote)
             else:
                 pref_dict = packages[pref.package_id]["revisions"]
                 pref_dict.pop(pref.revision)
