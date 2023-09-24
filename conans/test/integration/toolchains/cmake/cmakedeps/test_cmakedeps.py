@@ -597,3 +597,34 @@ class TestCMakeVersionConfigCompat:
         c.run("create .")
         c.run("install --requires=dep/0.1 -g CMakeDeps", assert_error=True)
         assert "Unknown cmake_config_version_compat=Unknown in dep/0.1" in c.out
+
+    def test_cmake_version_config_compatibility_consumer(self):
+        c = TestClient()
+        app = textwrap.dedent("""\
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            class Pkg(ConanFile):
+                settings = "build_type"
+                requires = "dep/0.1"
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "cmake_config_version_compat", "AnyNewerVersion")
+                    deps.generate()
+                """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app")
+        dep = c.load("app/dep-config-version.cmake")
+        expected = textwrap.dedent("""\
+            if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+                set(PACKAGE_VERSION_COMPATIBLE FALSE)
+            else()
+                set(PACKAGE_VERSION_COMPATIBLE TRUE)
+
+                if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+                    set(PACKAGE_VERSION_EXACT TRUE)
+                endif()
+            endif()""")
+        assert expected in dep
