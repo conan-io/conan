@@ -628,3 +628,37 @@ class TestCMakeVersionConfigCompat:
                 endif()
             endif()""")
         assert expected in dep
+
+
+def test_cmakedeps_set_property_overrides():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            settings = "build_type"
+            requires = "dep/0.1", "other/0.1"
+            def generate(self):
+                deps = CMakeDeps(self)
+                # Need the absolute path inside package
+                dep = self.dependencies["dep"].package_folder
+                deps.set_property("dep", "cmake_build_modules", [os.path.join(dep, "my_module1")])
+                deps.set_property("dep", "nosoname", True)
+                deps.set_property("other::mycomp1", "nosoname", True)
+                deps.generate()
+            """)
+
+    pkg_info = {"components": {"mycomp1": {"libs": ["mylib"]}}}
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
+            "other/conanfile.py": GenConanfile("other", "0.1").with_package_type("shared-library")
+                                                              .with_package_info(pkg_info, {}),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create other")
+    c.run("install app")
+    dep = c.load("app/dep-release-data.cmake")
+    assert 'set(dep_BUILD_MODULES_PATHS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/my_module1")' in dep
+    assert 'set(dep_NO_SONAME_MODE_RELEASE TRUE)' in dep
+    other = c.load("app/other-release-data.cmake")
+    assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other
