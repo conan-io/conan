@@ -20,7 +20,7 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        policy = self.conanfile.cpp_info.get_property("cmake_config_version_compat")
+        policy = self.cmakedeps.get_property("cmake_config_version_compat", self.conanfile)
         if policy is None:
             policy = "SameMajorVersion"
         if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
