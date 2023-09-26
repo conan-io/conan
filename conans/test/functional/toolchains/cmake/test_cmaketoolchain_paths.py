@@ -160,8 +160,79 @@ def test_cmaketoolchain_path_find_package_editable():
         assert "Conan: Target declared" not in client.out
         assert "HELLO FROM THE hello FIND PACKAGE!" in client.out
 
-
 @pytest.mark.tool("cmake")
+def test_cmaketoolchain_path_find_package_override_sysroot():
+    """ make sure a package in editable mode that contains a xxxConfig.cmake file can find that
+    file in the user folder
+    """
+    client = TestClient(path_with_spaces=False)
+
+    find_sysroot = textwrap.dedent("""
+        MESSAGE(FATAL_ERROR "this hello should not be found")
+        """)
+    conanfile_sysroot = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class TestConan(ConanFile):
+            name = "sysroot"
+            version = "0.1"
+            exports_sources = "*"
+            def package(self):
+                copy(self, "*", self.source_folder, self.package_folder)
+            def package_info(self):
+                self.conf_info.define("tools.build:sysroot", self.package_folder)
+        """)
+    conanfile_hello = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "*"
+            def package(self):
+                copy(self, "*", self.source_folder, self.package_folder)
+            def package_info(self):
+                self.cpp_info.builddirs.append("cmake")
+        """)
+    find_hello = textwrap.dedent("""
+        SET(hello_FOUND 1)
+        MESSAGE("HELLO FROM THE hello FIND PACKAGE!")
+        """)
+    conanfile_consumer = textwrap.dedent("""
+        [requires]
+        hello/0.1
+        [generators]
+        CMakeToolchain
+        """)
+    cmake_consumer = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 3.15)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        project(MyHello CXX)
+        find_package(hello REQUIRED)
+        """)
+    profile_sysroot = textwrap.dedent("""
+        [tool_requires]
+        sysroot/0.1@
+        """)
+    client.save({"sysroot/conanfile.py": conanfile_sysroot,
+                 "sysroot/lib/cmake/hello/helloConfig.cmake": find_sysroot,
+                 "dep/conanfile.py": conanfile_hello,
+                 "dep/cmake/helloConfig.cmake": find_hello,
+                 "consumer/conanfile.txt": conanfile_consumer,
+                 "consumer/CMakeLists.txt": cmake_consumer,
+                 "consumer/sysroot.profile": profile_sysroot,
+                 })
+
+    with client.chdir("sysroot"):
+        client.run("create . --name sysroot --version 0.1")
+    with client.chdir("dep"):
+        client.run("export . --name hello --version 0.1")
+    with client.chdir("consumer"):
+        client.run("install . -pr:h=default -pr:h=sysroot.profile --build=missing")
+        with client.chdir("build"):
+            client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
+    assert "HELLO FROM THE hello FIND PACKAGE!" in client.out
+
+
 @pytest.mark.parametrize(
     "settings",
     [

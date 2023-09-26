@@ -428,6 +428,12 @@ class FindFiles(Block):
         list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
 
+        # The CMAKE_SYSROOT should not be prefixed to conan cache directories.
+        # Therefore prepend each CMAKE_MODULE_PATH to CMAKE_FIND_ROOT_PATH as well
+        if(CMAKE_SYSROOT)
+            list(PREPEND CMAKE_FIND_ROOT_PATH ${CMAKE_MODULE_PATH})
+        endif()
+
         {% if cross_building %}
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PACKAGE OR CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
             set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
