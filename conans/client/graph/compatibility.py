@@ -90,6 +90,7 @@ class BinaryCompatibility:
         result = OrderedDict()
         original_info = conanfile.info
         original_settings = conanfile.settings
+        original_settings_target = conanfile.settings_target
         original_options = conanfile.options
         for c in compat_infos:
             # we replace the conanfile, so ``validate()`` and ``package_id()`` can
@@ -105,6 +106,7 @@ class BinaryCompatibility:
         # Restore the original state
         conanfile.info = original_info
         conanfile.settings = original_settings
+        conanfile.settings_target = original_settings_target
         conanfile.options = original_options
         return result
 
