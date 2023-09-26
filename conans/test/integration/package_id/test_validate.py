@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
+from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.client.graph.graph import BINARY_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save
@@ -883,3 +883,29 @@ class TestCompatibleSettingsTarget(unittest.TestCase):
         client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7 -s:b arch=x86_64")
         assert f"Using compatible package '{package_id_tool_a}'" in client.out
         assert package_id_tool_b in client.out
+
+    def test_settings_target_in_compatibility_method_within_recipe_package_info(self):
+        # https://github.com/conan-io/conan/issues/14823
+        client = TestClient()
+        tool_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+
+                def compatibility(self):
+                    return [{'settings': [('arch', 'armv6')]}]
+
+                def package_info(self):
+                    # This used to crash
+                    self.settings_target.get_safe('compiler.link_time_optimization')
+            """)
+
+        client.save({"conanfile.py": tool_conanfile})
+        client.run("create . --name=tool --version=0.1 -s os=Linux -s:b arch=armv6 --build-require")
+        package_id = client.created_package_id("tool/0.1")
+        assert f"tool/0.1: Package '{package_id}' created" in client.out
+
+        client.run("install --tool-requires=tool/0.1 -s os=Linux -s:b arch=armv7")
+        # This used to crash, not anymore
+        assert f"Using compatible package '{package_id}'" in client.out
