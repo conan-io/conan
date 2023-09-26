@@ -33,7 +33,6 @@ class {{package_name}}Recipe(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
         bazel.build(label="//main:{{name}}")
 
     def package(self):
@@ -68,7 +67,6 @@ class {{package_name}}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
         bazel.build(label="//main:example")
 
     def layout(self):
@@ -106,7 +104,7 @@ cc_library(
 
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
 _test_bazel_workspace = """
-load("@//:dependencies.bzl", "load_conan_dependencies")
+load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
 load_conan_dependencies()
 """
 

@@ -1,4 +1,5 @@
 import platform
+import os
 
 from conan.tools.build import load_toolchain_args
 
@@ -10,6 +11,7 @@ class Bazel(object):
         self._get_bazel_project_configuration()
 
     def configure(self, args=None):
+        # TODO: to delete
         pass
 
     def build(self, args=None, label=None):
@@ -18,24 +20,11 @@ class Bazel(object):
         bazelrc_path = '--bazelrc={}'.format(self._bazelrc_path) if self._bazelrc_path else ''
         bazel_config = " ".join(['--config={}'.format(conf) for conf in self._bazel_config])
 
-        # arch = self._conanfile.settings.get_safe("arch")
-        # cpu = {
-        #     "armv8": "arm64",
-        #     "x86_64": ""
-        # }.get(arch, arch)
-        #
-        # command = 'bazel {} build --sandbox_debug --subcommands=pretty_print --cpu={} {} {}'.format(
-        #     bazelrc_path,
-        #     cpu,
-        #     bazel_config,
-        #     label
-        # )
         command = 'bazel {} build {} {}'.format(
             bazelrc_path,
             bazel_config,
             label
         )
-
         self._conanfile.run(command)
         # This is very important for Windows, as otherwise the bazel server locks files
         if platform.system() == "Windows":
