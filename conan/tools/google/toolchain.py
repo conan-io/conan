@@ -4,6 +4,8 @@ from conan.tools.build import save_toolchain_args
 
 class BazelToolchain(object):
 
+    filename = "conan_bzl.rc"
+
     def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
         self._namespace = namespace
