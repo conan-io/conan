@@ -459,7 +459,8 @@ class CppInfo:
         self._package.sysroot = self._package.sysroot or other._package.sysroot
         # COMPONENTS
         for cname, c in other.components.items():
-            self.components[cname].merge(c, overwrite)
+            # Make sure each component created on the fly does not bring new defaults
+            self.components.setdefault(cname, _Component(set_defaults=False)).merge(c, overwrite)
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories definitions, that are relative"""

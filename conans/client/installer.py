@@ -367,6 +367,7 @@ class BinaryInstaller:
             # New editables mechanism based on Folders
             conanfile.folders.set_base_package(output_folder or rooted_base_path)
             conanfile.folders.set_base_folders(base_path, output_folder)
+            conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"

@@ -81,6 +81,8 @@ class ConanRequester(object):
             adapter = HTTPAdapter(max_retries=self._get_retries(config))
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
+        else:
+            self._http_requester = requests
 
         self._url_creds = URLCredentials(cache_folder)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
@@ -171,7 +173,7 @@ class ConanRequester(object):
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(requests, method)(url, **all_kwargs)
+            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             return tmp
         finally:
             if popped:
