@@ -82,7 +82,7 @@ def add_profiles_args(parser):
                                  f'or -{short}:a (--{long}:all) to specify both contexts at once'
                                    + ('' if not example else f". Example: {example}"))
         for context in contexts:
-            parser.add_argument(f"-{short}:{context[0]}", f"--{short}:{context}",
+            parser.add_argument(f"-{short}:{context[0]}", f"--{long}:{context}",
                                 default=None,
                                 action="append",
                                 dest=f"{long}_{context}",

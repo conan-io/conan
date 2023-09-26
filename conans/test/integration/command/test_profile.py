@@ -40,14 +40,22 @@ def test_shorthand_syntax():
     assert "[-pr:h" in tc.out
     assert "[-pr:a" in tc.out
 
-    tc.run("profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf.cli=True")
+    tc.run(
+        "profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf.cli=True -f=json")
 
-    # All of them show up twice, once per context
-    assert tc.out.count("both_options=True") == 2
-    assert tc.out.count("os=WindowsCE") == 2
-    assert tc.out.count("os.platform=conan") == 2
-    assert tc.out.count("user.conf.cli=True") == 2
-    assert tc.out.count("user.profile=True") == 2
+    out = json.loads(tc.out)
+    assert out == {'build': {'build_env': '',
+                             'conf': {'user.conf.cli': True, 'user.profile': True},
+                             'options': {'both_options': 'True'},
+                             'package_settings': {},
+                             'settings': {'os': 'WindowsCE', 'os.platform': 'conan'},
+                             'tool_requires': {}},
+                   'host': {'build_env': '',
+                            'conf': {'user.conf.cli': True, 'user.profile': True},
+                            'options': {'both_options': 'True'},
+                            'package_settings': {},
+                            'settings': {'os': 'WindowsCE', 'os.platform': 'conan'},
+                            'tool_requires': {}}}
 
     tc.save({"pre": textwrap.dedent("""
             [settings]
@@ -65,32 +73,43 @@ def test_shorthand_syntax():
             compiler.version=13
             """)})
 
-    tc.run("profile show -pr:a=pre -pr:a=mid -pr:a=post")
-    assert textwrap.dedent("""
-        Host profile:
-        [settings]
-        compiler=clang
-        compiler.version=13
-        os=Linux
+    tc.run("profile show -pr:a=pre -pr:a=mid -pr:a=post -f=json")
+    out = json.loads(tc.out)
+    assert out == {'build': {'build_env': '',
+                             'conf': {},
+                             'options': {},
+                             'package_settings': {},
+                             'settings': {'compiler': 'clang',
+                                          'compiler.version': '13',
+                                          'os': 'Linux'},
+                             'tool_requires': {}},
+                   'host': {'build_env': '',
+                            'conf': {},
+                            'options': {},
+                            'package_settings': {},
+                            'settings': {'compiler': 'clang',
+                                         'compiler.version': '13',
+                                         'os': 'Linux'},
+                            'tool_requires': {}}}
 
-        Build profile:
-        [settings]
-        compiler=clang
-        compiler.version=13
-        os=Linux""") in tc.out
-
-    tc.run("profile show -pr:a=pre -pr:h=post")
-    assert textwrap.dedent("""Host profile:
-        [settings]
-        os=Linux
-        compiler=gcc
-        compiler.version=13
-
-        Build profile:
-        [settings]
-        os=Linux
-        compiler=gcc
-        compiler.version=11""") in tc.out
+    tc.run("profile show -pr:a=pre -pr:h=post -f=json")
+    out = json.loads(tc.out)
+    assert out == {'build': {'build_env': '',
+                             'conf': {},
+                             'options': {},
+                             'package_settings': {},
+                             'settings': {'compiler': 'gcc',
+                                          'compiler.version': '11',
+                                          'os': 'Linux'},
+                             'tool_requires': {}},
+                   'host': {'build_env': '',
+                            'conf': {},
+                            'options': {},
+                            'package_settings': {},
+                            'settings': {'compiler': 'gcc',
+                                         'compiler.version': '13',
+                                         'os': 'Linux'},
+                            'tool_requires': {}}}
 
 
 def test_profile_show_json():
@@ -99,5 +118,5 @@ def test_profile_show_json():
             "myprofilelinux": "[settings]\nos=Linux"})
     c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
     profile = json.loads(c.stdout)
-    assert profile["build"]["settings"] ==  {"os": "Windows"}
+    assert profile["build"]["settings"] == {"os": "Windows"}
     assert profile["host"]["settings"] == {"os": "Linux"}
