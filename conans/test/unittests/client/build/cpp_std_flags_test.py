@@ -237,11 +237,11 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_default("apple-clang", "8"), "gnu98")
         self.assertEqual(_make_cppstd_default("apple-clang", "9"), "gnu98")
         self.assertEqual(_make_cppstd_default("apple-clang", "10"), "gnu98")
-        self.assertEqual(_make_cppstd_default("apple-clang", "11"), "gnu98")
-        self.assertEqual(_make_cppstd_default("apple-clang", "12"), "gnu98")
-        self.assertEqual(_make_cppstd_default("apple-clang", "13"), "gnu98")
-        self.assertEqual(_make_cppstd_default("apple-clang", "14"), "gnu98")
-        self.assertEqual(_make_cppstd_default("apple-clang", "15"), "gnu98")
+        self.assertEqual(_make_cppstd_default("apple-clang", "11"), "gnu17")
+        self.assertEqual(_make_cppstd_default("apple-clang", "12"), "gnu17")
+        self.assertEqual(_make_cppstd_default("apple-clang", "13"), "gnu17")
+        self.assertEqual(_make_cppstd_default("apple-clang", "14"), "gnu17")
+        self.assertEqual(_make_cppstd_default("apple-clang", "15"), "gnu17")
 
     def test_visual_cppstd_flags(self):
         self.assertEqual(_make_cppstd_flag("msvc", "170", "11"), None)
