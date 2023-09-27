@@ -48,3 +48,28 @@ def test_install_recipes():
     assert "pkga/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Download" in client.out
     assert "pkgb/0.1@user/channel:cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23 - Download" in client.out
 
+
+def test_install_txt():
+    """ lock install from a lockfile created from a conanfile path needs that conanfile to be
+    in the place it was to create the lockfile, otherwise it fails. So not really a great
+    use case
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkga", "0.1").with_package_file("file.h", "0.1")})
+    client.run("create . user/channel")
+
+    # Use a consumer with a version range
+    client.save({"conanfile.py":
+                 GenConanfile("pkgb", "0.1").with_require("pkga/[>=0.1]@user/channel")})
+    client.run("create . user/channel")
+    client.save({"conanfile.txt": "[requires]\npkgb/0.1@user/channel"}, clean_first=True)
+    client.run("lock create conanfile.txt --lockfile-out=lock1.lock")
+
+    # We can create a pkga/0.2, but it will not be used
+    client.save({"conanfile.py": GenConanfile("pkga", "0.2").with_package_file("file.h", "0.2")})
+    client.run("create . user/channel")
+
+    client.run("lock install lock1.lock -g deploy")
+    assert "pkga/0.1@user/channel from local cache" in client.out
+    file_h = client.load("pkga/file.h")
+    assert file_h == "0.1"

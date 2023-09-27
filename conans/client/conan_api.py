@@ -1396,6 +1396,8 @@ class ConanAPIV1(object):
         graph_lock = graph_info.graph_lock
         root_id = graph_lock.root_node_id()
         reference = graph_lock.nodes[root_id].ref
+        if reference is None:
+            reference = graph_lock.nodes[root_id].path
         if recipes:
             graph = self.app.graph_manager.load_graph(reference, create_reference=None,
                                                       graph_info=graph_info, build_mode=None,
