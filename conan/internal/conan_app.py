@@ -57,7 +57,7 @@ class ConanApp(object):
         self.proxy = ConanProxy(self)
         self.range_resolver = RangeResolver(self)
 
-        self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
+        self.pyreq_loader = PyRequireLoader(self)
         cmd_wrap = CmdWrapper(self.cache)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
