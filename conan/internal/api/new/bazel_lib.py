@@ -33,7 +33,7 @@ class {{package_name}}Recipe(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.build(label="//main:{{name}}")
+        bazel.build(target="//main:{{name}}")
 
     def package(self):
         dest_lib = os.path.join(self.package_folder, "lib")
@@ -67,7 +67,7 @@ class {{package_name}}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.build(label="//main:example")
+        bazel.build(target="//main:example")
 
     def layout(self):
         bazel_layout(self)
