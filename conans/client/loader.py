@@ -1,5 +1,4 @@
 import fnmatch
-import imp
 import inspect
 import os
 import re
@@ -40,6 +39,9 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
         self._requester = requester
+        if sys.version_info.major >= 3 and sys.version_info.minor >= 12:
+            from importlib import invalidate_caches
+            invalidate_caches()
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
                    display=""):
@@ -439,8 +441,15 @@ def _parse_conanfile(conan_file_path):
             old_dont_write_bytecode = sys.dont_write_bytecode
             try:
                 sys.dont_write_bytecode = True
-                # FIXME: imp is deprecated in favour of implib
-                loaded = imp.load_source(module_id, conan_file_path)
+                # imp is deprecated in favour of importlib, removed in 3.12
+                if sys.version_info.major >= 3 and sys.version_info.minor >= 12:
+                    from importlib import util as imp_util
+                    spec = imp_util.spec_from_file_location(module_id, conan_file_path)
+                    loaded = imp_util.module_from_spec(spec)
+                    spec.loader.exec_module(loaded)
+                else:
+                    import imp
+                    loaded = imp.load_source(module_id, conan_file_path)
                 sys.dont_write_bytecode = old_dont_write_bytecode
             except ImportError:
                 version_txt = _get_required_conan_version_without_loading(conan_file_path)
