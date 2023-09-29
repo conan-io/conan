@@ -95,6 +95,8 @@ def test_lock_pyrequires_prereleases():
     tc.run("export dep")
     dep_rrev = tc.exported_recipe_revision()
     tc.run("lock create app --lockfile-out=app.lock", assert_error=True)
+    # Makes sense, prereleases are not active
+    assert "Version range '>=0' from requirement 'dep/[>=0]' required by 'python_requires' could not be resolved"
 
     tc.save_home({"global.conf": "core.version_ranges:resolve_prereleases=True"})
     # This used to crash even with the conf activated
