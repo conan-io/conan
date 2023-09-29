@@ -26,7 +26,7 @@ def base_profile():
         build_type={build_type}
 
         [conf]
-        tools.google.bazel:bazelrc_path={curdir}/mybazelrc
+        tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
         tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
         """)
 
@@ -127,8 +127,7 @@ def test_transitive_consuming():
 
                 def build(self):
                     bazel = Bazel(self)
-                    bazel.configure()
-                    bazel.build(label="//main:openssl")
+                    bazel.build(target="//main:openssl")
 
                 def package(self):
                     dest_bin = os.path.join(self.package_folder, "bin")
@@ -187,7 +186,7 @@ def test_transitive_consuming():
             """)
 
     bazel_workspace = textwrap.dedent("""
-        load("@//:dependencies.bzl", "load_conan_dependencies")
+        load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
         load_conan_dependencies()
     """)
 
@@ -215,8 +214,7 @@ def test_transitive_consuming():
 
         def build(self):
             bazel = Bazel(self)
-            bazel.configure()
-            bazel.build(label="//main:example")
+            bazel.build(target="//main:example")
 
         def layout(self):
             bazel_layout(self)

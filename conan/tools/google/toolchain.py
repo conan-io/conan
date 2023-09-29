@@ -49,7 +49,7 @@ class BazelToolchain:
     {% if conlyopt %}build:conan-config {{conlyopt}}{% endif %}
     {% if cxxopt %}build:conan-config {{cxxopt}}{% endif %}
     {% if linkopts %}build:conan-config {{linkopts}}{% endif %}
-    {% if force_fpic %}build:conan-config --force_fpic={{force_fpic}}{% endif %}
+    {% if force_pic %}build:conan-config --force_pic={{force_pic}}{% endif %}
     {% if dynamic_mode %}build:conan-config --dynamic_mode={{dynamic_mode}}{% endif %}
     {% if strip %}build:conan-config --strip={{strip}}{% endif %}
     {% if compilation_mode %}build:conan-config --compilation_mode={{compilation_mode}}{% endif %}
@@ -70,7 +70,7 @@ class BazelToolchain:
         # Bazel build parameters
         shared = self._conanfile.options.get_safe("shared")
         fpic = self._conanfile.options.get_safe("fPIC")
-        self.force_fpic = fpic if (not shared and fpic is not None) else None
+        self.force_pic = fpic if (not shared and fpic is not None) else None
         # FIXME: Keeping this option but it's not working as expected. It's not creating the shared
         #        libraries at all.
         self.dynamic_mode = "fully" if shared else "off"
@@ -133,7 +133,7 @@ class BazelToolchain:
             "conlyopt": " ".join(f"--conlyopt={flag}" for flag in (self.conlyopt + self.cflags)),
             "cxxopt": " ".join(f"--cxxopt={flag}" for flag in (self.cxxopt + self.cxxflags)),
             "linkopts": " ".join(f"--linkopts={flag}" for flag in (self.linkopts + self.ldflags)),
-            "force_fpic": self.force_fpic,
+            "force_pic": self.force_pic,
             "dynamic_mode": self.dynamic_mode,
             "strip": self.strip,
             "compilation_mode": self.compilation_mode,
