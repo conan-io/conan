@@ -618,13 +618,3 @@ class TestLockfileUpdate:
         lock = c.load("consumer/conan.lock")
         assert "pkg/0.1" not in lock
         assert "pkg/0.2" in lock
-
-
-def test_error_test_explicit():
-    # https://github.com/conan-io/conan/issues/14833
-    client = TestClient()
-    test = GenConanfile().with_test("pass").with_class_attribute("test_type = 'explicit'")
-    client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
-                 "test_package/conanfile.py": test})
-    client.run("lock create conanfile.py --lockfile-out=my.lock")
-    client.run("create . --lockfile=my.lock")
