@@ -4,6 +4,7 @@ import json
 import os
 import signal
 import sys
+import textwrap
 from argparse import ArgumentError
 from difflib import get_close_matches
 
@@ -318,6 +319,7 @@ class Command(object):
         that the package has been created correctly. Check 'conan test' command
         to know more about 'test_folder' project.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.create.__doc__,
                                          prog="conan create",
                                          formatter_class=SmartFormatter)
@@ -469,6 +471,7 @@ class Command(object):
         the package is installed, Conan will write the files for the specified
         generators.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.install.__doc__,
                                          prog="conan install",
                                          formatter_class=SmartFormatter)
@@ -859,7 +862,7 @@ class Command(object):
         using a build helper, like CMake(), the --package-folder will be
         configured as the destination folder for the install step.
         """
-
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.build.__doc__,
                                          prog="conan build",
                                          formatter_class=SmartFormatter)
@@ -2176,6 +2179,12 @@ class Command(object):
                                             "recommended to use Python >= 3.5 with Conan", width),
                               front=Color.BRIGHT_RED)
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
+
+    def _warn_conan_version(self):
+        width = 70
+        self._out.writeln(textwrap.fill("Conan 1 is on a deprecation path, "
+                                        "please consider migrating to Conan 2", width),
+                          front=Color.BRIGHT_YELLOW)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
