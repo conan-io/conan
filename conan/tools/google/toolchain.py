@@ -70,7 +70,9 @@ class BazelToolchain:
         # Bazel build parameters
         shared = self._conanfile.options.get_safe("shared")
         fpic = self._conanfile.options.get_safe("fPIC")
-        self.force_fpic = fpic if (shared is False and fpic is not None) else None
+        self.force_fpic = fpic if (not shared and fpic is not None) else None
+        # FIXME: Keeping this option but it's not working as expected. It's not creating the shared
+        #        libraries at all.
         self.dynamic_mode = "fully" if shared else "off"
         self.cppstd = cppstd_flag(self._conanfile.settings)
         self.copt = []
