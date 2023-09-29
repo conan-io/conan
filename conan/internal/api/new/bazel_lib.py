@@ -9,12 +9,12 @@ from conan.tools.files import copy
 class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
     version = "{{version}}"
-    package_type = "library"
+    package_type = "static-library"
 
     # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {"fPIC": [True, False]}
+    default_options = {"fPIC": True}
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "main/*", "WORKSPACE"
@@ -22,10 +22,6 @@ class {{package_name}}Recipe(ConanFile):
 
     def config_options(self):
         if self.settings.os == "Windows":
-            self.options.rm_safe("fPIC")
-
-    def configure(self):
-        if self.options.shared:
             self.options.rm_safe("fPIC")
 
     def layout(self):
