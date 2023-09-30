@@ -289,3 +289,4 @@ def test_source_python_requires():
     c.save({"conanfile.py": GenConanfile().with_python_requires("pytool/0.1")}, clean_first=True)
     c.run("source . ")
     assert "pytool/0.1: Not found in local cache, looking in remotes" in c.out
+    assert "pytool/0.1: Downloaded recipe" in c.out
