@@ -3,17 +3,20 @@ import textwrap
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
+from conan.tools.apple import to_apple_arch, is_apple_os
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import cppstd_flag
 from conan.tools.files import save
 
 
-def _get_cpu_name(host, arch):
-    _host = host.lower()
-    if host == "Macos":
-        _host = "darwin"
+def _get_cpu_name(conanfile):
+    host_os = conanfile.settings.get_safe('os').lower()
+    host_arch = conanfile.settings.get_safe('arch')
+    if is_apple_os(conanfile):
+        host_os = "darwin" if host_os == "macos" else host_os
+        host_arch = to_apple_arch(conanfile)
     # FIXME: Probably it's going to fail, but let's try it because it normally follows this syntax
-    return f"{host}_{arch}"
+    return f"{host_os}_{host_arch}"
 
 
 # FIXME: In the future, it could be BazelPlatform instead? Check https://bazel.build/concepts/platforms
@@ -48,7 +51,7 @@ class BazelToolchain:
     {% if copt %}build:conan-config {{copt}}{% endif %}
     {% if conlyopt %}build:conan-config {{conlyopt}}{% endif %}
     {% if cxxopt %}build:conan-config {{cxxopt}}{% endif %}
-    {% if linkopts %}build:conan-config {{linkopts}}{% endif %}
+    {% if linkopt %}build:conan-config {{linkopt}}{% endif %}
     {% if force_pic %}build:conan-config --force_pic={{force_pic}}{% endif %}
     {% if dynamic_mode %}build:conan-config --dynamic_mode={{dynamic_mode}}{% endif %}
     {% if strip %}build:conan-config --strip={{strip}}{% endif %}
@@ -78,7 +81,7 @@ class BazelToolchain:
         self.copt = []
         self.conlyopt = []
         self.cxxopt = []
-        self.linkopts = []
+        self.linkopt = []
         self.strip = 'sometimes'  # 'always', 'sometimes', 'never'
         self.compilation_mode = "fastbuild"  # 'fastbuild', 'dbg', 'opt'
         # Be aware that this parameter does not admit a compiler absolute path
@@ -91,9 +94,7 @@ class BazelToolchain:
         if cross_building(self._conanfile):
             # Bazel is using those toolchains/platforms by default.
             # It's better to let it configure the project in that case
-            host_os = conanfile.settings.get_safe('os')
-            host_arch = conanfile.settings.get_safe('arch')
-            self.cpu = _get_cpu_name(host_os, host_arch)
+            self.cpu = _get_cpu_name(conanfile)
         # This is itself a toolchain but just in case
         self.crosstool_top = None
         # TODO: Have a look at https://bazel.build/reference/be/make-variables
@@ -132,7 +133,7 @@ class BazelToolchain:
             "copt": " ".join(f"--copt={flag}" for flag in self.copt),
             "conlyopt": " ".join(f"--conlyopt={flag}" for flag in (self.conlyopt + self.cflags)),
             "cxxopt": " ".join(f"--cxxopt={flag}" for flag in (self.cxxopt + self.cxxflags)),
-            "linkopts": " ".join(f"--linkopts={flag}" for flag in (self.linkopts + self.ldflags)),
+            "linkopt": " ".join(f"--linkopt={flag}" for flag in (self.linkopt + self.ldflags)),
             "force_pic": self.force_pic,
             "dynamic_mode": self.dynamic_mode,
             "strip": self.strip,
