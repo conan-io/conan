@@ -12,7 +12,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
 - Docs: https://docs.conan.io
-- Slack: https://cpplang.slack.com (#conan channel)
+- Slack: https://cpplang.slack.com (#conan channel. See how to join below)
 - Twitter: https://twitter.com/conan_io
 
 
@@ -27,7 +27,7 @@ Conan is a package manager for C and C++ developers:
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its Python-based recipes, together with extension points allow for great power and flexibility.
-- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cpplang-inviter.cppalliance.org/ #conan channel).
+- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cppalliance.org/slack/ #conan channel).
   This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
 - Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
