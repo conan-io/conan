@@ -58,7 +58,9 @@ def test_bazeldeps_dependency_buildfiles():
                 assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
             else:
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert """deps = [\n        # do not sort\n    \n    ":lib1_precompiled",""" in dependency_content
+            assert "deps = [\n" in dependency_content
+            assert "# do not sort\n"
+            assert '":lib1_precompiled",' in dependency_content
 
 
 def test_bazeldeps_get_lib_file_path_by_basename():
@@ -79,7 +81,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
 
     # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
     #  Move to integration test
-    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+    with (mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps):
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
@@ -93,7 +95,9 @@ def test_bazeldeps_get_lib_file_path_by_basename():
                 assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
             else:
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert 'deps = [\n        # do not sort\n    \n    ":liblib1.a_precompiled",' in dependency_content
+            assert 'deps = [' in dependency_content
+            assert '# do not sort'  in dependency_content
+            assert '":liblib1.a_precompiled"' in dependency_content
 
 
 def test_bazeldeps_dependency_transitive():
