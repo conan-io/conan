@@ -277,21 +277,19 @@ class _ProfileValueParser(object):
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         if doc.system_tools:
-            system_tools = [RecipeReference.loads(r.strip())
-                            for r in doc.system_tools.splitlines() if r.strip()]
+            system_tools = [RecipeReference.loads(r) for r in doc.system_tools.splitlines()]
         else:
             system_tools = []
 
         system_deps = {}
         if doc.system_deps:
             for r in doc.system_deps.splitlines():
-                r = r.strip()
-                if not r:
-                    continue
                 tokens = r.split(":", 1)
-                src, target = tokens if len(tokens) == 2 else (r, None)
-                if target is not None:
+                if len(tokens) == 2:
+                    src, target = tokens
                     target = RecipeReference.loads(target.strip())
+                else:
+                    src, target = r, None
                 system_deps[RecipeReference.loads(src.strip())] = target
 
         if doc.conf:
