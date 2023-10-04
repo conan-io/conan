@@ -268,7 +268,7 @@ class _ProfileValueParser(object):
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
-                                                         "settings",
+                                                         "system_deps", "settings",
                                                          "options", "conf", "buildenv", "runenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
@@ -281,6 +281,18 @@ class _ProfileValueParser(object):
                             for r in doc.system_tools.splitlines() if r.strip()]
         else:
             system_tools = []
+
+        system_deps = {}
+        if doc.system_deps:
+            for r in doc.system_deps.splitlines():
+                r = r.strip()
+                if not r:
+                    continue
+                tokens = r.split(":", 1)
+                src, target = tokens if len(tokens) == 2 else (r, None)
+                if target is not None:
+                    target = RecipeReference.loads(target.strip())
+                system_deps[RecipeReference.loads(src.strip())] = target
 
         if doc.conf:
             conf = ConfDefinition()
@@ -295,6 +307,7 @@ class _ProfileValueParser(object):
         current_system_tools = {r.name: r for r in base_profile.system_tools}
         current_system_tools.update({r.name: r for r in system_tools})
         base_profile.system_tools = list(current_system_tools.values())
+        base_profile.system_deps.update(system_deps)
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
