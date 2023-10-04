@@ -85,7 +85,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.cache.clean(package_list)
 
 
-@conan_subcommand(formatters={"text": cli_out_write})
+@conan_subcommand()
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the integrity of the local cache for the given references
