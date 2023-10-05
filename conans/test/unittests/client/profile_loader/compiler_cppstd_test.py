@@ -4,6 +4,7 @@ import unittest
 
 from jinja2 import Template
 
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import get_default_settings_yml
 from conans.client.profile_loader import ProfileLoader
@@ -17,10 +18,11 @@ class SettingsCppStdTests(unittest.TestCase):
     def setUp(self):
         self.tmp_folder = temp_folder()
         self.cache = ClientCache(self.tmp_folder)
-        save(os.path.join(self.cache.plugins_path, "profile.py"), "")
+        self.home_paths = HomePaths(self.tmp_folder)
+        save(self.home_paths.profile_plugin_path, "")
 
     def _save_profile(self, compiler_cppstd=None, filename="default"):
-        fullpath = os.path.join(self.cache.profiles_path, filename)
+        fullpath = os.path.join(self.home_paths.profiles_path, filename)
 
         t = Template(textwrap.dedent("""
             [settings]
@@ -37,7 +39,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
     def test_no_compiler_cppstd(self):
         # https://github.com/conan-io/conan/issues/5128
-        fullpath = os.path.join(self.cache.profiles_path, "default")
+        fullpath = os.path.join(self.home_paths.profiles_path, "default")
         t = textwrap.dedent("""
             [settings]
             os=Macos

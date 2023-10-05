@@ -3,6 +3,9 @@ import os
 from conan.api.output import ConanOutput
 
 EXTENSIONS_FOLDER = "extensions"
+HOOKS_EXTENSION_FOLDER = "hooks"
+PROFILES_FOLDER = "profiles"
+REMOTES = "remotes.json"
 
 
 class HomePaths:
@@ -23,3 +26,39 @@ class HomePaths:
                                   warn_tag="deprecated")
             return deploy
         return os.path.join(self._home, EXTENSIONS_FOLDER, "deployers")
+
+    @property
+    def custom_generators_path(self):
+        return os.path.join(self._home, EXTENSIONS_FOLDER, "generators")
+
+    @property
+    def hooks_path(self):
+        return os.path.join(self._home, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
+
+    @property
+    def wrapper_path(self):
+        return os.path.join(self._home, "extensions", "plugins", "cmd_wrapper.py")
+
+    @property
+    def profiles_path(self):
+        return os.path.join(self._home, PROFILES_FOLDER)
+
+    @property
+    def profile_plugin_path(self):
+        return os.path.join(self._home, "extensions", "plugins", "profile.py")
+
+    @property
+    def sign_plugin_path(self):
+        return os.path.join(self._home, "extensions", "plugins", "sign", "sign.py")
+
+    @property
+    def remotes_path(self):
+        return os.path.join(self._home, REMOTES)
+
+    @property
+    def compatibility_plugin_path(self):
+        return os.path.join(self._home, "extensions", "plugins", "compatibility")
+
+    @property
+    def default_sources_backup_folder(self):
+        return os.path.join(self._home, "sources")

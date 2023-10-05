@@ -6,6 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
 from conan.internal.api import detect_api
+from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
 from conans.errors import ConanException, scoped_traceback
@@ -82,15 +83,15 @@ def _check_correct_cppstd(settings):
 class ProfileLoader:
     def __init__(self, cache):
         self._cache = cache
+        self._home_paths = HomePaths(cache.cache_folder)
+        self._global_conf = cache.new_config
 
     def get_default_host(self):
-        cache = self._cache
-
         default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
         if default_profile is None:
-            default_profile = cache.new_config.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
+            default_profile = self._global_conf.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
 
-        default_profile = os.path.join(cache.profiles_path, default_profile)
+        default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
         if not os.path.exists(default_profile):
             msg = ("The default host profile '{}' doesn't exist.\n"
                    "You need to create a default profile (type 'conan profile detect' command)\n"
@@ -100,9 +101,8 @@ class ProfileLoader:
         return default_profile
 
     def get_default_build(self):
-        cache = self._cache
-        default_profile = cache.new_config.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
-        default_profile = os.path.join(cache.profiles_path, default_profile)
+        default_profile = self._global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
+        default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
         if not os.path.exists(default_profile):
             msg = ("The default build profile '{}' doesn't exist.\n"
                    "You need to create a default profile (type 'conan profile detect' command)\n"
@@ -112,7 +112,7 @@ class ProfileLoader:
         return default_profile
 
     def _load_profile_plugin(self):
-        profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
+        profile_plugin = self._home_paths.profile_plugin_path
         if not os.path.exists(profile_plugin):
             raise ConanException("The 'profile.py' plugin file doesn't exist. If you want "
                                  "to disable it, edit its contents instead of removing it")
@@ -220,7 +220,7 @@ class ProfileLoader:
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
             return valid_path(profile_path, profile_name)
 
-        default_folder = self._cache.profiles_path
+        default_folder = self._home_paths.profiles_path
         if not os.path.exists(default_folder):
             mkdir(default_folder)
         profile_path = os.path.join(default_folder, profile_name)
@@ -406,8 +406,8 @@ def _profile_parse_args(settings, options, conf):
     return result
 
 
-def migrate_profile_plugin(cache):
+def migrate_profile_plugin(cache_folder):
     from conans.client.migrations import update_file
 
-    profile_plugin_file = os.path.join(cache.plugins_path, "profile.py")
+    profile_plugin_file = HomePaths(cache_folder).profile_plugin_path
     update_file(profile_plugin_file, _default_profile_plugin)

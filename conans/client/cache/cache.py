@@ -10,7 +10,6 @@ from conan import conan_version
 from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import RemoteRegistry
 from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
@@ -18,17 +17,11 @@ from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.files import load, save, mkdir
 
 
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
-REMOTES = "remotes.json"
-PROFILES_FOLDER = "profiles"
-EXTENSIONS_FOLDER = "extensions"
-HOOKS_EXTENSION_FOLDER = "hooks"
-PLUGINS_FOLDER = "plugins"
 
 
 # TODO: Rename this to ClientHome
@@ -140,18 +133,6 @@ class ClientCache(object):
         return self._store_folder
 
     @property
-    def default_sources_backup_folder(self):
-        return os.path.join(self.cache_folder, "sources")
-
-    @property
-    def remotes_path(self):
-        return os.path.join(self.cache_folder, REMOTES)
-
-    @property
-    def remotes_registry(self) -> RemoteRegistry:
-        return RemoteRegistry(self)
-
-    @property
     def new_config_path(self):
         return os.path.join(self.cache_folder, "global.conf")
 
@@ -191,29 +172,8 @@ class ClientCache(object):
         return LocalDB.create(localdb_filename)
 
     @property
-    def profiles_path(self):
-        return os.path.join(self.cache_folder, PROFILES_FOLDER)
-
-    @property
     def settings_path(self):
         return os.path.join(self.cache_folder, CONAN_SETTINGS)
-
-    @property
-    def custom_generators_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "generators")
-
-    @property
-    def plugins_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, PLUGINS_FOLDER)
-
-    @property
-    def default_profile_path(self):
-        # Used only in testing, and this class "reset_default_profile"
-        return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
-
-    @property
-    def hooks_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
 
     @property
     def settings(self):

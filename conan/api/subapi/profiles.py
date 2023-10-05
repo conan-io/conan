@@ -1,5 +1,6 @@
 import os
 
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
 from conans.client.profile_loader import ProfileLoader
 from conans.model.profile import Profile
@@ -72,8 +73,7 @@ class ProfilesAPI:
         paths_to_ignore = ['.DS_Store']
 
         profiles = []
-        cache = ClientCache(self._conan_api.cache_folder)
-        profiles_path = cache.profiles_path
+        profiles_path = HomePaths(self._conan_api.cache_folder).profiles_path
         if os.path.exists(profiles_path):
             for current_directory, _, files in os.walk(profiles_path, followlinks=True):
                 files = filter(lambda file: os.path.relpath(
