@@ -3,24 +3,19 @@ import platform
 import textwrap
 from typing import List
 
-import yaml
 from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
 from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
-from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
 from conans.util.files import load, save, mkdir
 
-
-CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 
 
@@ -170,50 +165,3 @@ class ClientCache(object):
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
         return LocalDB.create(localdb_filename)
-
-    @property
-    def settings_path(self):
-        return os.path.join(self.cache_folder, CONAN_SETTINGS)
-
-    @property
-    def settings(self):
-        """Returns {setting: [value, ...]} defining all the possible
-           settings without values"""
-        self.initialize_settings()
-
-        def _load_settings(path):
-            try:
-                return yaml.safe_load(load(path)) or {}
-            except yaml.YAMLError as ye:
-                raise ConanException("Invalid settings.yml format: {}".format(ye))
-
-        settings = _load_settings(self.settings_path)
-        user_settings_file = os.path.join(self.cache_folder, "settings_user.yml")
-        if os.path.exists(user_settings_file):
-            settings_user = _load_settings(user_settings_file)
-
-            def appending_recursive_dict_update(d, u):
-                # Not the same behavior as conandata_update, because this append lists
-                for k, v in u.items():
-                    if isinstance(v, list):
-                        current = d.get(k) or []
-                        d[k] = current + [value for value in v if value not in current]
-                    elif isinstance(v, dict):
-                        current = d.get(k) or {}
-                        if isinstance(current, list):  # convert to dict lists
-                            current = {k: None for k in current}
-                        d[k] = appending_recursive_dict_update(current, v)
-                    else:
-                        d[k] = v
-                return d
-
-            appending_recursive_dict_update(settings, settings_user)
-
-        return Settings(settings)
-
-    def initialize_settings(self):
-        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
-        if not os.path.exists(self.settings_path):
-            settings_yml = default_settings_yml
-            save(self.settings_path, settings_yml)
-            save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations

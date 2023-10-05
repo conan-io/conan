@@ -6,6 +6,7 @@ EXTENSIONS_FOLDER = "extensions"
 HOOKS_EXTENSION_FOLDER = "hooks"
 PROFILES_FOLDER = "profiles"
 REMOTES = "remotes.json"
+CONAN_SETTINGS = "settings.yml"
 
 
 class HomePaths:
@@ -62,3 +63,11 @@ class HomePaths:
     @property
     def default_sources_backup_folder(self):
         return os.path.join(self._home, "sources")
+
+    @property
+    def settings_path(self):
+        return os.path.join(self._home, CONAN_SETTINGS)
+
+    @property
+    def settings_path_user(self):
+        return os.path.join(self._home, "settings_user.yml")

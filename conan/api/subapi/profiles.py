@@ -1,41 +1,77 @@
 import os
 
+import yaml
+
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
+from conans.client.conf import default_settings_yml
+from conans.client.loader import load_python_file
 from conans.client.profile_loader import ProfileLoader
+from conans.errors import ConanException, scoped_traceback
 from conans.model.profile import Profile
+from conans.model.settings import Settings
+from conans.util.files import save, load
+
+DEFAULT_PROFILE_NAME = "default"
 
 
 class ProfilesAPI:
 
     def __init__(self, conan_api):
         self._conan_api = conan_api
+        self._home_paths = HomePaths(conan_api.cache_folder)
 
     def get_default_host(self):
         """
         :return: the path to the default "host" profile, either in the cache or as defined
             by the user in configuration
         """
-        cache = ClientCache(self._conan_api.cache_folder)
-        loader = ProfileLoader(cache)
-        return loader.get_default_host()
+        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
+        if default_profile is None:
+            global_conf = ClientCache(self._conan_api.cache_folder).new_config
+            default_profile = global_conf.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
+
+        default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default host profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:host=<myprofile>'")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
 
     def get_default_build(self):
         """
         :return: the path to the default "build" profile, either in the cache or as
             defined by the user in configuration
         """
-        cache = ClientCache(self._conan_api.cache_folder)
-        loader = ProfileLoader(cache)
-        return loader.get_default_build()
+        global_conf = ClientCache(self._conan_api.cache_folder).new_config
+        default_profile = global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
+        default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
+        if not os.path.exists(default_profile):
+            msg = ("The default build profile '{}' doesn't exist.\n"
+                   "You need to create a default profile (type 'conan profile detect' command)\n"
+                   "or specify your own profile with '--profile:build=<myprofile>'")
+            # TODO: Add detailed instructions when cli is improved
+            raise ConanException(msg.format(default_profile))
+        return default_profile
 
     def get_profiles_from_args(self, args):
         build = [self.get_default_build()] if not args.profile_build else args.profile_build
         host = [self.get_default_host()] if not args.profile_host else args.profile_host
-        profile_build = self.get_profile(profiles=build, settings=args.settings_build,
-                                         options=args.options_build, conf=args.conf_build)
-        profile_host = self.get_profile(profiles=host, settings=args.settings_host,
-                                        options=args.options_host, conf=args.conf_host)
+
+        cache = ClientCache(self._conan_api.cache_folder)
+        global_conf = cache.new_config
+        global_conf.validate()  # TODO: Remove this from here
+        cache_settings = self._settings()
+        profile_plugin = self._load_profile_plugin()
+        cwd = os.getcwd()
+        profile_build = self._get_profile(build, args.settings_build, args.options_build,
+                                          args.conf_build, cwd, cache_settings,
+                                          profile_plugin, global_conf)
+        profile_host = self._get_profile(host, args.settings_host, args.options_host, args.conf_host,
+                                         cwd, cache_settings, profile_plugin, global_conf)
+
         return profile_host, profile_build
 
     def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):
@@ -45,12 +81,30 @@ class ProfilesAPI:
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
         cache = ClientCache(self._conan_api.cache_folder)
-        loader = ProfileLoader(cache)
+        global_conf = cache.new_config
+        global_conf.validate()  # TODO: Remove this from here
+        cache_settings = self._settings()
+        profile_plugin = self._load_profile_plugin()
+
+        profile = self._get_profile(profiles, settings, options, conf, cwd, cache_settings,
+                                    profile_plugin, global_conf)
+        return profile
+
+    def _get_profile(self, profiles, settings, options, conf, cwd, cache_settings,
+                     profile_plugin, global_conf):
+        loader = ProfileLoader(self._conan_api.cache_folder)
         profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
+        profile.process_settings(cache_settings)
+        if profile_plugin is not None:
+            try:
+                profile_plugin(profile)
+            except Exception as e:
+                msg = f"Error while processing 'profile.py' plugin"
+                msg = scoped_traceback(msg, e, scope="/extensions/plugins")
+                raise ConanException(msg)
         profile.conf.validate()
-        cache.new_config.validate()
         # Apply the new_config to the profiles the global one, so recipes get it too
-        profile.conf.rebase_conf_definition(cache.new_config)
+        profile.conf.rebase_conf_definition(global_conf)
         return profile
 
     def get_path(self, profile, cwd=None, exists=True):
@@ -58,10 +112,9 @@ class ProfilesAPI:
         :return: the resolved path of the given profile name, that could be in the cache,
             or local, depending on the "cwd"
         """
-        cache = ClientCache(self._conan_api.cache_folder)
-        loader = ProfileLoader(cache)
         cwd = cwd or os.getcwd()
-        profile_path = loader.get_profile_path(profile, cwd, exists=exists)
+        profiles_folder = self._home_paths.profiles_path
+        profile_path = ProfileLoader.get_profile_path(profiles_folder, profile, cwd, exists=exists)
         return profile_path
 
     def list(self):
@@ -73,7 +126,7 @@ class ProfilesAPI:
         paths_to_ignore = ['.DS_Store']
 
         profiles = []
-        profiles_path = HomePaths(self._conan_api.cache_folder).profiles_path
+        profiles_path = self._home_paths.profiles_path
         if os.path.exists(profiles_path):
             for current_directory, _, files in os.walk(profiles_path, followlinks=True):
                 files = filter(lambda file: os.path.relpath(
@@ -100,3 +153,51 @@ class ProfilesAPI:
         # TODO: This profile is very incomplete, it doesn't have the processed_settings
         #  good enough at the moment for designing the API interface, but to improve
         return profile
+
+    def _settings(self):
+        """Returns {setting: [value, ...]} defining all the possible
+           settings without values"""
+        settings_path = self._home_paths.settings_path
+        if not os.path.exists(settings_path):
+            save(settings_path, default_settings_yml)
+            save(settings_path + ".orig", default_settings_yml)  # stores a copy, to check migrations
+
+        def _load_settings(path):
+            try:
+                return yaml.safe_load(load(path)) or {}
+            except yaml.YAMLError as ye:
+                raise ConanException("Invalid settings.yml format: {}".format(ye))
+
+        settings = _load_settings(settings_path)
+        user_settings_file = self._home_paths.settings_path_user
+        if os.path.exists(user_settings_file):
+            settings_user = _load_settings(user_settings_file)
+
+            def appending_recursive_dict_update(d, u):
+                # Not the same behavior as conandata_update, because this append lists
+                for k, v in u.items():
+                    if isinstance(v, list):
+                        current = d.get(k) or []
+                        d[k] = current + [value for value in v if value not in current]
+                    elif isinstance(v, dict):
+                        current = d.get(k) or {}
+                        if isinstance(current, list):  # convert to dict lists
+                            current = {k: None for k in current}
+                        d[k] = appending_recursive_dict_update(current, v)
+                    else:
+                        d[k] = v
+                return d
+
+            appending_recursive_dict_update(settings, settings_user)
+
+        return Settings(settings)
+
+    def _load_profile_plugin(self):
+        profile_plugin = self._home_paths.profile_plugin_path
+        if not os.path.exists(profile_plugin):
+            raise ConanException("The 'profile.py' plugin file doesn't exist. If you want "
+                                 "to disable it, edit its contents instead of removing it")
+
+        mod, _ = load_python_file(profile_plugin)
+        if hasattr(mod, "profile_plugin"):
+            return mod.profile_plugin

@@ -8,13 +8,11 @@ from conan import conan_version
 from conan.internal.api import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.loader import load_python_file
-from conans.errors import ConanException, scoped_traceback
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import mkdir, load_user_encoded
 
@@ -81,45 +79,8 @@ def _check_correct_cppstd(settings):
 
 
 class ProfileLoader:
-    def __init__(self, cache):
-        self._cache = cache
-        self._home_paths = HomePaths(cache.cache_folder)
-        self._global_conf = cache.new_config
-
-    def get_default_host(self):
-        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
-        if default_profile is None:
-            default_profile = self._global_conf.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
-
-        default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
-        if not os.path.exists(default_profile):
-            msg = ("The default host profile '{}' doesn't exist.\n"
-                   "You need to create a default profile (type 'conan profile detect' command)\n"
-                   "or specify your own profile with '--profile:host=<myprofile>'")
-            # TODO: Add detailed instructions when cli is improved
-            raise ConanException(msg.format(default_profile))
-        return default_profile
-
-    def get_default_build(self):
-        default_profile = self._global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
-        default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
-        if not os.path.exists(default_profile):
-            msg = ("The default build profile '{}' doesn't exist.\n"
-                   "You need to create a default profile (type 'conan profile detect' command)\n"
-                   "or specify your own profile with '--profile:build=<myprofile>'")
-            # TODO: Add detailed instructions when cli is improved
-            raise ConanException(msg.format(default_profile))
-        return default_profile
-
-    def _load_profile_plugin(self):
-        profile_plugin = self._home_paths.profile_plugin_path
-        if not os.path.exists(profile_plugin):
-            raise ConanException("The 'profile.py' plugin file doesn't exist. If you want "
-                                 "to disable it, edit its contents instead of removing it")
-
-        mod, _ = load_python_file(profile_plugin)
-        if hasattr(mod, "profile_plugin"):
-            return mod.profile_plugin
+    def __init__(self, cache_folder):
+        self._home_paths = HomePaths(cache_folder)
 
     def from_cli_args(self, profiles, settings, options, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
@@ -135,16 +96,6 @@ class ProfileLoader:
 
         args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
-        # Only after everything has been aggregated, try to complete missing settings
-        profile_plugin = self._load_profile_plugin()
-        if profile_plugin is not None:
-            try:
-                profile_plugin(result)
-            except Exception as e:
-                msg = f"Error while processing 'profile.py' plugin"
-                msg = scoped_traceback(msg, e, scope="/extensions/plugins")
-                raise ConanException(msg)
-        result.process_settings(self._cache)
         return result
 
     def load_profile(self, profile_name, cwd=None):
@@ -158,8 +109,8 @@ class ProfileLoader:
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
         """
-
-        profile_path = self.get_profile_path(profile_name, cwd)
+        profiles_folder = self._home_paths.profiles_path
+        profile_path = self.get_profile_path(profiles_folder, profile_name, cwd)
         try:
             text = load_user_encoded(profile_path)
         except Exception as e:
@@ -206,8 +157,8 @@ class ProfileLoader:
         except Exception as exc:
             raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
-    def get_profile_path(self, profile_name, cwd, exists=True):
-
+    @staticmethod
+    def get_profile_path(profiles_path, profile_name, cwd, exists=True):
         def valid_path(_profile_path, _profile_name=None):
             if exists and not os.path.isfile(_profile_path):
                 raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
@@ -220,7 +171,7 @@ class ProfileLoader:
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
             return valid_path(profile_path, profile_name)
 
-        default_folder = self._home_paths.profiles_path
+        default_folder = profiles_path
         if not os.path.exists(default_folder):
             mkdir(default_folder)
         profile_path = os.path.join(default_folder, profile_name)
