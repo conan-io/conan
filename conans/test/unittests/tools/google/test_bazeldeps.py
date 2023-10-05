@@ -81,7 +81,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
 
     # FIXME: This will run infinite loop if conanfile.dependencies.host.topological_sort.
     #  Move to integration test
-    with (mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps):
+    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
         mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
