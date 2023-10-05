@@ -81,10 +81,14 @@ class BazelDeps(object):
                 {%- endif %}
                 {%- if includes %}
                 includes = [{{ includes }}],
-                {%- endif %}
-                {%- if defines %}
-                defines = [{{ defines }}],
                 {% endif %}
+                {%- if defines %}
+                defines = [
+                    {%- for define in defines %}
+                    {{ define }},
+                    {%- endfor %}
+                ],
+                {%- endif %}
                 {%- if linkopts %}
                 linkopts = [
                     {%- for linkopt in linkopts %}
@@ -134,9 +138,10 @@ class BazelDeps(object):
         headers = ', '.join(headers)
         includes = ', '.join(includes)
 
-        defines = ('"{}"'.format(define.replace('"', '\\' * 3 + '"'))
-                   for define in cpp_info.defines)
-        defines = ', '.join(defines)
+        defines = []
+        for define in cpp_info.defines:
+            defines.append('"{}"'.format(define.replace('"', '\\' * 3 + '"')))
+
 
         linkopts = []
         for system_lib in cpp_info.system_libs:

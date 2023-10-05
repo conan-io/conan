@@ -53,7 +53,7 @@ def test_bazeldeps_dependency_buildfiles():
         for dependency in bazeldeps._conanfile.dependencies.host.values():
             dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
-            assert """defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""]""" in dependency_content
+            assert """defines = [\n        "DUMMY_DEFINE=\\\\\\"string/value\\\\\\"",\n    ]""" in dependency_content
             if platform.system() == "Windows":
                 assert 'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n    ]' in dependency_content
             else:
@@ -65,7 +65,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
     conanfile = ConanFile(Mock(), None)
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
+    cpp_info.defines = ["DUMMY_DEFINE=\"string/value\"", "SECOND_DUMMY_DEFINE"]
     cpp_info.system_libs = ["system_lib1", "system_lib2"]
     cpp_info.libs = ["liblib1.a", "liblib2.a"]
 
@@ -88,7 +88,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
         for dependency in bazeldeps._conanfile.dependencies.host.values():
             dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
-            assert """defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""]""" in dependency_content
+            assert """defines = [\n        "DUMMY_DEFINE=\\\\\\"string/value\\\\\\"",\n        "SECOND_DUMMY_DEFINE",\n    ]""" in dependency_content
             if platform.system() == "Windows":
                 assert 'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n        "/DEFAULTLIB:system_lib1",\n    ]' in dependency_content
             else:
@@ -140,7 +140,7 @@ def test_bazeldeps_dependency_transitive():
     for dependency in bazeldeps._conanfile.dependencies.host.values():
         dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
         assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
-        assert 'defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""],' in dependency_content
+        assert 'defines = [\n        "DUMMY_DEFINE=\\\\\\"string/value\\\\\\"",\n    ],' in dependency_content
         if platform.system() == "Windows":
             assert 'linkopts = [\n        "/DEFAULTLIB:system_lib1"\n    ],' in dependency_content
         else:
