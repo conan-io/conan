@@ -10,8 +10,8 @@ from shutil import which
 
 
 from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
-from conans.errors import ConanException
-from conans.util.files import rmdir as _internal_rmdir
+from conan.errors import ConanException
+from conans.util.files import rmdir as _internal_rmdir, human_size
 from conans.util.sha import check_with_algorithm_sum
 
 
@@ -193,6 +193,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry = config.get("tools.files.download:retry", check_type=int, default=retry)
     retry_wait = retry_wait if retry_wait is not None else 5
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
+    verify = config.get("tools.files.download:verify", check_type=bool, default=verify)
 
     filename = os.path.abspath(filename)
     downloader = SourcesCachingDownloader(conanfile)
@@ -321,9 +322,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
 
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
-            output.info("Unzipping %s, this can take a while" % _human_size(uncompress_size))
+            output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
         else:
-            output.info("Unzipping %s" % _human_size(uncompress_size))
+            output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
 
         print_progress.last_size = -1
@@ -382,34 +383,6 @@ def untargz(filename, destination=".", pattern=None, strip_root=False):
                 members = list(filter(lambda m: fnmatch(m.name, pattern),
                                       tarredgzippedFile.getmembers()))
             tarredgzippedFile.extractall(destination, members=members)
-
-
-def _human_size(size_bytes):
-    """
-    format a size in bytes into a 'human' file size, e.g. B, KB, MB, GB, TB, PB
-    Note that bytes will be reported in whole numbers but KB and above will have
-    greater precision.  e.g. 43 B, 443 KB, 4.3 MB, 4.43 GB, etc
-    """
-    UNIT_SIZE = 1000.0
-
-    suffixes_table = [('B', 0), ('KB', 1), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
-
-    num = float(size_bytes)
-    the_precision = None
-    the_suffix = None
-    for suffix, precision in suffixes_table:
-        the_precision = precision
-        the_suffix = suffix
-        if num < UNIT_SIZE:
-            break
-        num /= UNIT_SIZE
-
-    if the_precision == 0:
-        formatted_size = "%d" % num
-    else:
-        formatted_size = str(round(num, ndigits=the_precision))
-
-    return "%s%s" % (formatted_size, the_suffix)
 
 
 def check_sha1(conanfile, file_path, signature):
@@ -522,11 +495,10 @@ def collect_libs(conanfile, folder=None):
     return result
 
 
-# TODO: Do NOT document this yet. It is unclear the interface, maybe should be split
-def move_folder_contents(src_folder, dst_folder):
-    """ replaces the current folder contents with the contents of one child folder. This
-    is used in the SCM monorepo flow, when it is necessary to use one subproject subfolder
-    to replace the whole cloned git repo
+def move_folder_contents(conanfile, src_folder, dst_folder):
+    """ replaces the dst_folder contents with the contents of the src_folder, which can be a
+    child folder of dst_folder. This is used in the SCM monorepo flow, when it is necessary
+    to use one subproject subfolder to replace the whole cloned git repo
     /base-folder                       /base-folder
         /pkg  (src folder)                 /other/<otherfiles>
           /other/<otherfiles>              /pkg/<pkgfiles>

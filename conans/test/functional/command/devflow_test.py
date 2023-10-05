@@ -1,7 +1,6 @@
 import os
 import unittest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
@@ -60,9 +59,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
-        pref = client.get_latest_package_reference(ref)
-        cache_package_folder = client.get_latest_pkg_layout(pref).package()
+        cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
@@ -79,9 +76,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
-        pref = client.get_latest_package_reference(ref)
-        cache_package_folder = client.get_latest_pkg_layout(pref).package()
+        cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)
 
     def test_child_build(self):
@@ -98,9 +93,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("build ..")
         client.run("export-pkg .. --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
-        pref = client.get_latest_package_reference(ref)
-        cache_package_folder = client.get_latest_pkg_layout(pref).package()
+        cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)
 
 
@@ -160,9 +153,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
-        pref = client.get_latest_package_reference(ref)
-        cache_package_folder = client.get_latest_pkg_layout(pref).package()
+        cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
@@ -178,9 +169,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
         client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
-        pref = client.get_latest_package_reference(ref)
-        cache_package_folder = client.get_latest_pkg_layout(pref).package()
+        cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)
 
     def test_child_build(self):
@@ -204,7 +193,5 @@ class DevOutSourceFlowTest(unittest.TestCase):
 
         client.run("export-pkg . --name=pkg --version=0.1 --user=lasote --channel=testing")
 
-        ref = RecipeReference.loads("pkg/0.1@lasote/testing")
-        pref = client.get_latest_package_reference(ref)
-        cache_package_folder = client.get_latest_pkg_layout(pref).package()
+        cache_package_folder = client.created_layout().package()
         self._assert_pkg(cache_package_folder)

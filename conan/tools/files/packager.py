@@ -1,6 +1,6 @@
 import os
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class _PatternEntry(object):
@@ -38,13 +38,16 @@ class AutoPackager(object):
         self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
         self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.patterns.build.bin = ["*.exe", "*.dll"]
+        conanfile.output.warning("AutoPackager is **** deprecated ****", warn_tag="deprecated")
+        conanfile.output.warning("AutoPackager **** will be removed ****", warn_tag="deprecated")
+        conanfile.output.warning("Use explicit copy() calls instead", warn_tag="deprecated")
 
     def run(self):
         cf = self._conanfile
         # Check that the components declared in source/build are in package
-        cnames = set(cf.cpp.source.component_names)
-        cnames = cnames.union(set(cf.cpp.build.component_names))
-        if cnames.difference(set(cf.cpp.package.component_names)):
+        cnames = set(cf.cpp.source.components)
+        cnames = cnames.union(set(cf.cpp.build.components))
+        if cnames.difference(set(cf.cpp.package.components)):
             # TODO: Raise? Warning? Ignore?
             raise ConanException("There are components declared in cpp.source.components"
                                  " or in cpp.build.components that are not declared in"
@@ -58,8 +61,8 @@ class AutoPackager(object):
                     self._package_cppinfo("build", cf.cpp.build.components[cname],
                                           cf.cpp.package.components[cname])
         else:  # No components declared
-           self._package_cppinfo("source", cf.cpp.source, cf.cpp.package)
-           self._package_cppinfo("build", cf.cpp.build, cf.cpp.package)
+            self._package_cppinfo("source", cf.cpp.source, cf.cpp.package)
+            self._package_cppinfo("build", cf.cpp.build, cf.cpp.package)
 
     def _package_cppinfo(self, origin_name, origin_cppinfo, dest_cppinfo):
         """

@@ -28,11 +28,15 @@ class Requirement:
         self._override = override
         self._direct = direct
         self.options = options
+        # Meta and auxiliary information
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
+        self.override_ref = None  # to store if the requirement has been overriden (store new ref)
+        self.is_test = test  # to store that it was a test, even if used as regular requires too
+        self.skip = False
 
     @property
-    def skip(self):
-        return not (self.headers or self.libs or self.run or self.build)
+    def files(self):  # require needs some files in dependency package
+        return self.headers or self.libs or self.run or self.build
 
     @staticmethod
     def _default_if_none(field, default_value):
@@ -144,10 +148,13 @@ class Requirement:
         return "{}, Traits: {}".format(self.ref, traits)
 
     def serialize(self):
-        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+        result = {"ref": str(self.ref)}
+        serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
                         "package_id_mode", "visible")
-        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
+        for attribute in serializable:
+            result[attribute] = getattr(self, attribute)
+        return result
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
@@ -195,7 +202,7 @@ class Requirement:
             set_if_none("_libs", False)
             set_if_none("_headers", True)
         elif pkg_type is PackageType.BUILD_SCRIPTS:
-            set_if_none("_run", False)
+            set_if_none("_run", True)
             set_if_none("_libs", False)
             set_if_none("_headers", False)
             set_if_none("_visible", False)  # Conflicts might be allowed for this kind of package
@@ -217,8 +224,8 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 (self.visible and other.visible) or
-                 (self.ref == other.ref)))
+                 ((self.visible or self.test) and (other.visible or other.test)) or
+                 (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
         """ when closing loop and finding the same dependency on a node, the information needs
@@ -273,20 +280,7 @@ class Requirement:
             return
 
         # Regular and test requires
-        if dep_pkg_type is PackageType.SHARED:
-            if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
-            elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
-            elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
-            elif pkg_type is PackageType.HEADER:
-                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
-            else:
-                assert pkg_type == PackageType.UNKNOWN
-                # TODO: This is undertested, changing it did not break tests
-                downstream_require = require.copy_requirement()
-        elif dep_pkg_type is PackageType.STATIC:
+        if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
@@ -352,13 +346,15 @@ class Requirement:
         if self.package_id_mode:
             return
 
+        if self.test:
+            return  # test_requires never affect the binary_id
         dep_conanfile = dep_node.conanfile
         dep_pkg_type = dep_conanfile.package_type
         if self.build:
             build_mode = getattr(dep_conanfile, "build_mode", build_mode)
             if build_mode and self.direct:
                 self.package_id_mode = build_mode
-            return  # At the moment no defaults
+            return
 
         if pkg_type is PackageType.HEADER:
             self.package_id_mode = "unrelated_mode"
@@ -392,10 +388,11 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None):
+    def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
+                 override=None):
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                     options=options)
+                                     options=options, override=override)
 
 
 class ToolRequirements:
@@ -415,8 +412,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None, options=None):
-        self._requires.test_require(ref, run=run, options=options)
+    def __call__(self, ref, run=None, options=None, force=None):
+        self._requires.test_require(ref, run=run, options=options, force=force)
 
 
 class Requirements:
@@ -485,7 +482,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                      run=None, options=None):
+                      run=None, options=None, override=None):
         """
              Represent a generic build require, could be a tool, like "cmake" or a bundle of build
              scripts.
@@ -501,7 +498,7 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options)
+                          package_id_mode=package_id_mode, options=options, override=override)
 
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
@@ -517,7 +514,7 @@ class Requirements:
             req.override = True
             self._requires[req] = req
 
-    def test_require(self, ref, run=None, options=None):
+    def test_require(self, ref, run=None, options=None, force=None):
         """
              Represent a testing framework like gtest
 
@@ -533,7 +530,7 @@ class Requirements:
         # libs = True => We need to link with it
         # headers = True => We need to include it
         req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
-                          test=True, package_id_mode=None, options=options)
+                          test=True, package_id_mode=None, options=options, force=force)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

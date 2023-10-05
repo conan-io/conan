@@ -7,6 +7,7 @@ import yaml
 from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
+from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -46,9 +47,12 @@ class ClientCache(object):
         self._store_folder = self.new_config.get("core.cache:storage_path") or \
                              os.path.join(self.cache_folder, "p")
 
-        mkdir(self._store_folder)
-        db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
-        self._data_cache = DataCache(self._store_folder, db_filename)
+        try:
+            mkdir(self._store_folder)
+            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            self._data_cache = DataCache(self._store_folder, db_filename)
+        except Exception as e:
+            raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 
     @property
     def temp_folder(self):
@@ -56,6 +60,10 @@ class ClientCache(object):
         is computed"""
         # TODO: Improve the path definitions, this is very hardcoded
         return os.path.join(self.cache_folder, "p", "t")
+
+    @property
+    def builds_folder(self):
+        return os.path.join(self.cache_folder, "p", "b")
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
@@ -69,8 +77,19 @@ class ClientCache(object):
     def assign_prev(self, layout: PackageLayout):
         return self._data_cache.assign_prev(layout)
 
-    def ref_layout(self, ref: RecipeReference):
-        return self._data_cache.get_reference_layout(ref)
+    # Recipe methods
+    def recipe_layout(self, ref: RecipeReference):
+        return self._data_cache.get_recipe_layout(ref)
+
+    def get_latest_recipe_reference(self, ref):
+        # TODO: We keep this for testing only, to be removed
+        assert ref.revision is None
+        return self._data_cache.get_recipe_layout(ref).reference
+
+    def get_recipe_revisions_references(self, ref):
+        # For listing multiple revisions only
+        assert ref.revision is None
+        return self._data_cache.get_recipe_revisions_references(ref)
 
     def pkg_layout(self, ref: PkgReference):
         return self._data_cache.get_package_layout(ref)
@@ -87,11 +106,8 @@ class ClientCache(object):
     def remove_package_layout(self, layout):
         self._data_cache.remove_package(layout)
 
-    def get_recipe_timestamp(self, ref):
-        return self._data_cache.get_recipe_timestamp(ref)
-
-    def get_package_timestamp(self, ref):
-        return self._data_cache.get_package_timestamp(ref)
+    def remove_build_id(self, pref):
+        self._data_cache.remove_build_id(pref)
 
     def update_recipe_timestamp(self, ref):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
@@ -100,10 +116,6 @@ class ClientCache(object):
 
     def all_refs(self):
         return self._data_cache.list_references()
-
-    def exists_rrev(self, ref):
-        # Used just by inspect to check before calling get_recipe()
-        return self._data_cache.exists_rrev(ref)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
@@ -119,12 +131,6 @@ class ClientCache(object):
 
     def get_matching_build_id(self, ref, build_id):
         return self._data_cache.get_matching_build_id(ref, build_id)
-
-    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
-        return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
-
-    def get_latest_recipe_reference(self, ref):
-        return self._data_cache.get_latest_recipe_reference(ref)
 
     def get_latest_package_reference(self, pref):
         return self._data_cache.get_latest_package_reference(pref)
@@ -165,7 +171,8 @@ class ClientCache(object):
                 template = Environment(loader=FileSystemLoader(self.cache_folder)).from_string(text)
                 content = template.render({"platform": platform, "os": os, "distro": distro,
                                            "conan_version": conan_version,
-                                           "conan_home_folder": self.cache_folder})
+                                           "conan_home_folder": self.cache_folder,
+                                           "detect_api": detect_api})
                 self._new_config.loads(content)
             else:  # creation of a blank global.conf file for user convenience
                 default_global_conf = textwrap.dedent("""\

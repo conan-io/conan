@@ -1,4 +1,4 @@
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
     BINARY_SYSTEM_TOOL
 
@@ -18,16 +18,16 @@ def print_graph_basic(graph):
     for node in graph.nodes:
         if hasattr(node.conanfile, "python_requires"):
             for r in node.conanfile.python_requires._pyrequires.values():  # TODO: improve interface
-                python_requires[r.ref] = r.recipe, r.remote, False
+                python_requires[r.ref] = r.recipe, r.remote
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
-            build_requires[node.ref] = node.recipe, node.remote, node.test_package
+            build_requires[node.ref] = node.recipe, node.remote
         else:
             if node.test:
-                test_requires[node.ref] = node.recipe, node.remote, node.test_package
+                test_requires[node.ref] = node.recipe, node.remote
             else:
-                requires[node.ref] = node.recipe, node.remote, node.test_package
+                requires[node.ref] = node.recipe, node.remote
         if node.conanfile.deprecated:
             deprecated[node.ref] = node.conanfile.deprecated
 
@@ -39,11 +39,9 @@ def print_graph_basic(graph):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
-        for ref, (recipe, remote, test_package) in sorted(reqs_to_print.items()):
+        for ref, (recipe, remote) in sorted(reqs_to_print.items()):
             if remote is not None:
                 recipe = "{} ({})".format(recipe, remote.name)
-            if test_package:
-                recipe = f"(tp) {recipe}"
             output.info("    {} - {}".format(ref.repr_notime(), recipe), Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
@@ -86,27 +84,41 @@ def print_graph_packages(graph):
     requires = {}
     build_requires = {}
     test_requires = {}
+    skipped_requires = []
+    tab = "    "
     for node in graph.nodes:
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             continue
         if node.context == CONTEXT_BUILD:
-            build_requires[node.pref] = node.binary, node.binary_remote
+            existing = build_requires.setdefault(node.pref, [node.binary, node.binary_remote])
         else:
             if node.test:
-                test_requires[node.pref] = node.binary, node.binary_remote
+                existing = test_requires.setdefault(node.pref, [node.binary, node.binary_remote])
             else:
-                requires[node.pref] = node.binary, node.binary_remote
+                existing = requires.setdefault(node.pref, [node.binary, node.binary_remote])
+        # TO avoid showing as "skip" something that is used in other node of the graph
+        if existing[0] == BINARY_SKIP:
+            existing[0] = node.binary
 
     def _format_requires(title, reqs_to_print):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            if remote is not None and status != BINARY_SKIP:
-                status = "{} ({})".format(status, remote.name)
             name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
-            output.info("    {} - {}".format(name, status), Color.BRIGHT_CYAN)
+            msg = f"{tab}{name} - {status}"
+            if remote is not None and status != BINARY_SKIP:
+                msg += f" ({remote.name})"
+            if status == BINARY_SKIP:
+                skipped_requires.append(str(pref.ref))
+                output.verbose(msg, Color.BRIGHT_CYAN)
+            else:
+                output.info(msg, Color.BRIGHT_CYAN)
 
     _format_requires("Requirements", requires)
     _format_requires("Test requirements", test_requires)
     _format_requires("Build requirements", build_requires)
+
+    if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
+        output.info("Skipped binaries", Color.BRIGHT_YELLOW)
+        output.info(f"{tab}{', '.join(skipped_requires)}", Color.BRIGHT_CYAN)

@@ -1,7 +1,7 @@
 import jinja2
 from jinja2 import Template
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 class CMakeDepsFileTemplate(object):
@@ -30,22 +30,20 @@ class CMakeDepsFileTemplate(object):
             return ""
         return self.cmakedeps.build_context_suffix.get(self.conanfile.ref.name, "")
 
-    @property
-    def build_modules_activated(self):
-        if self.require.build:
-            return self.conanfile.ref.name in self.cmakedeps.build_context_build_modules
-        else:
-            return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
-
     def render(self):
         try:
             context = self.context
         except Exception as e:
             raise ConanException("error generating context for '{}': {}".format(self.conanfile, e))
-        if context is None:
-            return
-        return Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                        undefined=jinja2.StrictUndefined).render(context)
+
+        # Cache the template instance as a class attribute to greatly speed up the rendering
+        # NOTE: this assumes that self.template always returns the same string
+        template_instance = getattr(type(self), "template_instance", None)
+        if template_instance is None:
+            template_instance = Template(self.template, trim_blocks=True, lstrip_blocks=True,
+                                         undefined=jinja2.StrictUndefined)
+            setattr(type(self), "template_instance", template_instance)
+        return template_instance.render(context)
 
     def context(self):
         raise NotImplementedError()

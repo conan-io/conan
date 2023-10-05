@@ -3,16 +3,18 @@ import os
 
 from jinja2 import Template, select_autoescape
 
-
 from conan.api.output import cli_out_write
 from conan.cli.formatters.graph.graph_info_text import filter_graph
 from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
 from conan.cli.formatters.graph.info_graph_html import graph_info_html
 from conans.client.graph.graph import BINARY_CACHE, \
     BINARY_DOWNLOAD, BINARY_BUILD, BINARY_MISSING, BINARY_UPDATE
+from conans.client.graph.graph_error import GraphConflictError
 from conans.client.installer import build_id
 from conans.util.files import load
 
+
+# FIXME: Check all this code when format_graph_[html/dot] use serialized graph
 
 class _PrinterGraphItem(object):
     def __init__(self, _id, node, is_build_time_node):
@@ -39,19 +41,13 @@ class _PrinterGraphItem(object):
         return self._is_build_time_node
 
     def data(self):
-
-        def ensure_iterable(value):
-            if isinstance(value, (list, tuple)):
-                return value
-            return value,
-
         return {
             'build_id': build_id(self._conanfile),
             'url': self._conanfile.url,
             'homepage': self._conanfile.homepage,
             'license': self._conanfile.license,
             'author': self._conanfile.author,
-            'topics': ensure_iterable(self._conanfile.topics) if self._conanfile.topics else None
+            'topics': self._conanfile.topics
         }
 
 
@@ -90,11 +86,12 @@ class _Grapher(object):
         return color
 
 
-def _render_graph(graph, template, template_folder):
+def _render_graph(graph, error, template, template_folder):
     graph = _Grapher(graph)
     from conans import __version__ as client_version
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
-    return template.render(graph=graph, base_template_path=template_folder, version=client_version)
+    return template.render(graph=graph, error=error, base_template_path=template_folder,
+                           version=client_version)
 
 
 def format_graph_html(result):
@@ -108,7 +105,15 @@ def format_graph_html(result):
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
-    cli_out_write(_render_graph(graph, template, template_folder))
+    error = {
+        "type": "unknown",
+        "context": graph.error,
+        "should_highlight_node": lambda node: False
+    }
+    if isinstance(graph.error, GraphConflictError):
+        error["type"] = "conflict"
+        error["should_highlight_node"] = lambda node: node.id == graph.error.node.id
+    cli_out_write(_render_graph(graph, error, template, template_folder))
     if graph.error:
         raise graph.error
 
@@ -124,18 +129,18 @@ def format_graph_dot(result):
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot
-    cli_out_write(_render_graph(graph, template, template_folder))
+    cli_out_write(_render_graph(graph, None, template, template_folder))
     if graph.error:
         raise graph.error
 
 
 def format_graph_json(result):
     graph = result["graph"]
-    field_filter = result["field_filter"]
-    package_filter = result["package_filter"]
+    field_filter = result.get("field_filter")
+    package_filter = result.get("package_filter")
     serial = graph.serialize()
-    serial = filter_graph(serial, package_filter, field_filter)
-    json_result = json.dumps(serial, indent=4)
+    serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
+    json_result = json.dumps({"graph": serial}, indent=4)
     cli_out_write(json_result)
     if graph.error:
         raise graph.error

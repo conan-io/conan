@@ -4,11 +4,12 @@ import shutil
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
+from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import NotFoundException, ConanException, AuthenticationException, \
     ForbiddenException
-from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty
+from conans.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size
 
 
 class SourcesCachingDownloader:
@@ -18,7 +19,7 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
-        self._file_downloader = FileDownloader(helpers.requester)
+        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name)
         self._cache = helpers.cache
         self._output = conanfile.output
         self._conanfile = conanfile
@@ -43,7 +44,7 @@ class SourcesCachingDownloader:
                           download_cache_folder, backups_urls):
         """
         this download will first check in the local cache, if not there, it will go to the list
-        of backup_urls defined by user conf (by default ["origin"], and iterate it until
+        of backup_urls defined by user conf (by default ["origin"]), and iterate it until
         something is found.
         """
         # We are going to use the download_urls definition for backups
@@ -62,7 +63,11 @@ class SourcesCachingDownloader:
                 self._output.info(f"Source {urls} retrieved from local download cache")
             else:
                 with set_dirty_context_manager(cached_path):
+                    if None in backups_urls:
+                        raise ConanException("Trying to download sources from None backup remote."
+                                             f" Remotes were: {backups_urls}")
                     for backup_url in backups_urls:
+
                         is_last = backup_url is backups_urls[-1]
                         if backup_url == "origin":  # recipe defined URLs
                             if self._origin_download(urls, cached_path, retry, retry_wait,
@@ -104,6 +109,7 @@ class SourcesCachingDownloader:
         don't want silently skipping a backup because it is down.
         """
         try:
+            backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
             self._file_downloader.download(backup_url + sha256, cached_path, sha256=sha256)
             self._file_downloader.download(backup_url + sha256 + ".json", cached_path + ".json")
             self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
@@ -112,7 +118,7 @@ class SourcesCachingDownloader:
             if is_last:
                 raise NotFoundException(f"File {urls} not found in {backups_urls}")
             else:
-                self._output.warning(f"Sources not found in backup {backup_url}")
+                self._output.warning(f"File {urls} not found in {backup_url}")
         except (AuthenticationException, ForbiddenException) as e:
             raise ConanException(f"The source backup server '{backup_url}' "
                                  f"needs authentication: {e}. "
@@ -148,16 +154,17 @@ class SourcesCachingDownloader:
 class ConanInternalCacheDownloader:
     """ This is used for the download of Conan packages from server, not for sources/backup sources
     """
-    def __init__(self, requester, config):
+    def __init__(self, requester, config, scope=None):
         self._download_cache = config.get("core.download:download_cache")
         if self._download_cache and not os.path.isabs(self._download_cache):
             raise ConanException("core.download:download_cache must be an absolute path")
-        self._file_downloader = FileDownloader(requester)
+        self._file_downloader = FileDownloader(requester, scope=scope)
+        self._scope = scope
 
-    def download(self, url, file_path, auth, verify_ssl, retry, retry_wait):
-        if not self._download_cache:
+    def download(self, url, file_path, auth, verify_ssl, retry, retry_wait, metadata=False):
+        if not self._download_cache or metadata:  # Metadata not cached and can be overwritten
             self._file_downloader.download(url, file_path, retry=retry, retry_wait=retry_wait,
-                                           verify_ssl=verify_ssl, auth=auth, overwrite=False)
+                                           verify_ssl=verify_ssl, auth=auth, overwrite=metadata)
             return
 
         download_cache = DownloadCache(self._download_cache)
@@ -170,6 +177,15 @@ class ConanInternalCacheDownloader:
                     self._file_downloader.download(url, cached_path, retry=retry,
                                                    retry_wait=retry_wait, verify_ssl=verify_ssl,
                                                    auth=auth, overwrite=False)
+            else:  # Found in cache!
+                total_length = os.path.getsize(cached_path)
+                is_large_file = total_length > 10000000  # 10 MB
+                if is_large_file:
+                    base_name = os.path.basename(file_path)
+                    hs = human_size(total_length)
+                    ConanOutput(scope=self._scope).info(f"Copying {hs} {base_name} from download "
+                                                        f"cache, instead of downloading it")
+
             # Everything good, file in the cache, just copy it to final destination
             mkdir(os.path.dirname(file_path))
             shutil.copy2(cached_path, file_path)

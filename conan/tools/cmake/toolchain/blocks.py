@@ -15,7 +15,7 @@ from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import load
 
 
@@ -385,7 +385,7 @@ class AppleSystemBlock(Block):
         if host_os_version:
             # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
             # Despite the OSX part in the variable name(s) they apply also to other SDKs than
-            # macOS like iOS, tvOS, or watchOS.
+            # macOS like iOS, tvOS, watchOS or visionOS.
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
         return ctxt_toolchain
@@ -708,7 +708,8 @@ class GenericSystemBlock(Block):
             return {"x86": "Win32",
                     "x86_64": "x64",
                     "armv7": "ARM",
-                    "armv8": "ARM64"}.get(arch)
+                    "armv8": "ARM64",
+                    "arm64ec": "ARM64EC"}.get(arch)
         return None
 
     def _get_generic_system_name(self):
@@ -732,22 +733,23 @@ class GenericSystemBlock(Block):
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
-        return os_host in ('iOS', 'watchOS', 'tvOS') or (
-                os_host == 'Macos' and arch_host != arch_build)
+        os_build = self._conanfile.settings_build.get_safe("os")
+        return os_host in ('iOS', 'watchOS', 'tvOS', 'visionOS') or (
+                os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-        if user_toolchain is not None:
-            return None, None, None  # Will be provided by user_toolchain
 
         system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        assert hasattr(self._conanfile, "settings_build")
-        if hasattr(self._conanfile, "settings_build"):
+        if not user_toolchain:  # try to detect automatically
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
+            if arch_host == "armv8":
+                arch_host = {"Windows": "ARM64", "Macos": "arm64"}.get(os_host, "aarch64")
+
             if system_name is None:  # Try to deduce
                 _system_version = None
                 _system_processor = None
@@ -838,8 +840,23 @@ class ToolchainBlocks:
             for name, block in items:
                 self._blocks[name] = block(conanfile, toolchain)
 
-    def remove(self, name):
+    def keys(self):
+        return self._blocks.keys()
+
+    def items(self):
+        return self._blocks.items()
+
+    def remove(self, name, *args):
         del self._blocks[name]
+        for arg in args:
+            del self._blocks[arg]
+
+    def select(self, name, *args):
+        """
+        keep the blocks provided as arguments, remove the others
+        """
+        to_keep = [name] + list(args)
+        self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 
     def __setitem__(self, name, block_type):
         # Create a new class inheriting Block with the elements of the provided one

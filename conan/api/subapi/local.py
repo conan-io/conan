@@ -42,10 +42,10 @@ class LocalAPI:
         return path
 
     def editable_add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
-                     output_folder=None):
+                     output_folder=None, remotes=None):
         path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api.cache_folder)
-        conanfile = app.loader.load_named(path, name, version, user, channel)
+        conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         # Retrieve conanfile.py from target_path
         target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
@@ -64,12 +64,13 @@ class LocalAPI:
         app = ConanApp(self._conan_api.cache_folder)
         return app.cache.editable_packages.edited_refs
 
-    def source(self, path, name=None, version=None, user=None, channel=None):
+    def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
         """ calls the 'source()' method of the current (user folder) conanfile.py
         """
         app = ConanApp(self._conan_api.cache_folder)
         conanfile = app.loader.load_consumer(path, name=name, version=version,
-                                             user=user, channel=channel, graph_lock=None)
+                                             user=user, channel=channel, graph_lock=None,
+                                             remotes=remotes)
         # This profile is empty, but with the conf from global.conf
         profile = self._conan_api.profiles.get_profile([])
         initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)

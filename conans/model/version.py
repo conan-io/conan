@@ -51,25 +51,25 @@ class Version:
     This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
-    def __init__(self, value):
+    def __init__(self, value, qualifier=False):
         value = str(value)
         self._value = value
+        self._build = None
+        self._pre = None
+        self._qualifier = qualifier  # it is a prerelease or build qualifier, not a main version
 
-        items = value.rsplit("+", 1)  # split for build
-        if len(items) == 2:
-            value, build = items
-            self._build = Version(build)  # This is a nested version by itself
-        else:
-            value = items[0]
-            self._build = None
+        if not qualifier:
+            items = value.rsplit("+", 1)  # split for build
+            if len(items) == 2:
+                value, build = items
+                self._build = Version(build, qualifier=True)  # This is a nested version by itself
 
-        items = value.rsplit("-", 1)  # split for pre-release
-        if len(items) == 2:
-            value, pre = items
-            self._pre = Version(pre)  # This is a nested version by itself
-        else:
-            value = items[0]
-            self._pre = None
+            # split for pre-release, from the left, semver allows hyphens in identifiers :(
+            items = value.split("-", 1)
+            if len(items) == 2:
+                value, pre = items
+                self._pre = Version(pre, qualifier=True)  # This is a nested version by itself
+
         items = value.split(".")
         items = [_VersionItem(item) for item in items]
         self._items = tuple(items)
@@ -99,8 +99,7 @@ class Version:
         items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         # prerelease and build are dropped while bumping digits
-        result = Version(v)
-        return result
+        return Version(v)
 
     def upper_bound(self, index):
         items = list(self._items[:index])
@@ -111,8 +110,7 @@ class Version:
         items.extend([0] * (len(items) - index - 1))
         v = ".".join(str(i) for i in items)
         v += "-"  # Exclude prereleases
-        result = Version(v)
-        return result
+        return Version(v)
 
     @property
     def pre(self):
@@ -164,7 +162,7 @@ class Version:
         if other is None:
             return False
         if not isinstance(other, Version):
-            other = Version(other)
+            other = Version(other, self._qualifier)
 
         return (self._nonzero_items, self._pre, self._build) ==\
                (other._nonzero_items, other._pre, other._build)

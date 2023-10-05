@@ -33,7 +33,7 @@ def architecture_flag(settings):
             if apple_arch:
                 # TODO: Could we define anything like `to_apple_target()`?
                 #       Check https://github.com/rust-lang/rust/issues/48862
-                return '--target=%s-apple-ios%s-macabi' % (apple_arch, subsystem_ios_version)
+                return f'--target={apple_arch}-apple-ios{subsystem_ios_version}-macabi'
         elif arch in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif arch in ['x86', 'sparc']:
@@ -69,7 +69,7 @@ def libcxx_flags(conanfile):
     lib = stdlib11 = None
     if compiler == "apple-clang":
         # In apple-clang 2 only values atm are "libc++" and "libstdc++"
-        lib = "-stdlib={}".format(libcxx)
+        lib = f'-stdlib={libcxx}'
     elif compiler == "clang" or compiler == "intel-cc":
         if libcxx == "libc++":
             lib = "-stdlib=libc++"
@@ -83,7 +83,7 @@ def libcxx_flags(conanfile):
                "libstdc++": "-library=stdcpp"
                }.get(libcxx)
     elif compiler == "qcc":
-        lib = "-Y _{}".format(libcxx)
+        lib = f'-Y _{libcxx}'
 
     if compiler in ['clang', 'apple-clang', 'gcc']:
         if libcxx == "libstdc++":
@@ -162,7 +162,7 @@ def build_type_flags(settings):
                      "MinSizeRel": ["-xO2", "-xspace"],
                      }.get(build_type, [])
             return flags
-    return ""
+    return []
 
 
 def cppstd_flag(settings):
@@ -178,7 +178,7 @@ def cppstd_flag(settings):
             "apple-clang": _cppstd_apple_clang,
             "msvc": _cppstd_msvc,
             "intel-cc": _cppstd_intel_cc,
-            "mcst-lcc": _cppstd_mcst_lcc}.get(compiler, None)
+            "mcst-lcc": _cppstd_mcst_lcc}.get(compiler)
     flag = None
     if func:
         flag = func(Version(compiler_version), str(cppstd))
@@ -187,27 +187,29 @@ def cppstd_flag(settings):
 
 def cppstd_msvc_flag(visual_version, cppstd):
     # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
-    v14 = None
-    v17 = None
-    v20 = None
-    v23 = None
+    if cppstd == "23":
+        if visual_version >= "193":
+            return "c++latest"
+    elif cppstd == "20":
+        if visual_version >= "192":
+            return "c++20"
+        elif visual_version >= "191":
+            return "c++latest"
+    elif cppstd == "17":
+        if visual_version >= "191":
+            return "c++17"
+        elif visual_version >= "190":
+            return "c++latest"
+    elif cppstd == "14":
+        if visual_version >= "190":
+            return "c++14"
 
-    if visual_version >= "190":
-        v14 = "c++14"
-        v17 = "c++latest"
-    if visual_version >= "191":
-        v17 = "c++17"
-        v20 = "c++latest"
-    if visual_version >= "192":
-        v20 = "c++20"
-    if visual_version >= "193":
-        v23 = "c++latest"
+    return None
 
-    return {"14": v14, "17": v17, "20": v20, "23": v23}.get(str(cppstd), None)
 
 def _cppstd_msvc(visual_version, cppstd):
     flag = cppstd_msvc_flag(visual_version, cppstd)
-    return "/std:%s" % flag if flag else None
+    return f'/std:{flag}' if flag else None
 
 
 def _cppstd_apple_clang(clang_version, cppstd):
@@ -233,21 +235,21 @@ def _cppstd_apple_clang(clang_version, cppstd):
 
     # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
     # Note: cmake allows c++17 since version 10.0
-    if Version(clang_version) >= "9.1":
+    if clang_version >= "9.1":
         v17 = "c++17"
         vgnu17 = "gnu++17"
-    elif Version(clang_version) >= "6.1":
+    elif clang_version >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
-    if Version(clang_version) >= "13.0":
+    if clang_version >= "13.0":
         v20 = "c++20"
         vgnu20 = "gnu++20"
-    elif Version(clang_version) >= "10.0":
+    elif clang_version >= "10.0":
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if Version(clang_version) >= "13.0":
+    if clang_version >= "13.0":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
@@ -256,9 +258,9 @@ def _cppstd_apple_clang(clang_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
 
-    return "-std=%s" % flag if flag else None
+    return f'-std={flag}' if flag else None
 
 
 def _cppstd_clang(clang_version, cppstd):
@@ -307,13 +309,17 @@ def _cppstd_clang(clang_version, cppstd):
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
+    if clang_version >= "17":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
-    return "-std=%s" % flag if flag else None
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
+    return f'-std={flag}' if flag else None
 
 
 def _cppstd_gcc(gcc_version, cppstd):
@@ -355,7 +361,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
 
-    if Version(gcc_version) >= "12":
+    if gcc_version >= "12":
         v20 = "c++20"
         vgnu20 = "gnu++20"
 
@@ -365,7 +371,7 @@ def _cppstd_gcc(gcc_version, cppstd):
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
             "23": v23, "gnu23": vgnu23}.get(cppstd)
-    return "-std=%s" % flag if flag else None
+    return f'-std={flag}' if flag else None
 
 
 def _cppstd_intel_common(intel_version, cppstd, vgnu98, vgnu0x):
@@ -397,12 +403,12 @@ def _cppstd_intel_common(intel_version, cppstd, vgnu98, vgnu0x):
 
 def _cppstd_intel_gcc(intel_version, cppstd):
     flag = _cppstd_intel_common(intel_version, cppstd, "gnu++98", "gnu++0x")
-    return "-std=%s" % flag if flag else None
+    return f'-std={flag}' if flag else None
 
 
 def _cppstd_intel_visualstudio(intel_version, cppstd):
     flag = _cppstd_intel_common(intel_version, cppstd, None, None)
-    return "/Qstd=%s" % flag if flag else None
+    return f'/Qstd={flag}' if flag else None
 
 
 def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
@@ -429,7 +435,7 @@ def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20}.get(cppstd)
-    return "-std=%s" % flag if flag else None
+    return f'-std={flag}' if flag else None
 
 
 def _cppstd_intel_cc(_, cppstd):
@@ -461,5 +467,5 @@ def _cppstd_intel_cc(_, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd, None)
-    return "-std=%s" % flag if flag else None
+            "23": v23, "gnu23": vgnu23}.get(cppstd)
+    return f'-std={flag}' if flag else None

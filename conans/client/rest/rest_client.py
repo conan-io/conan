@@ -51,7 +51,6 @@ class RestApiClient(object):
         revisions = self._capable(REVISIONS)
 
         if not revisions:
-            # TODO: port conan_v2_error to 1.X if not revisions
             raise ConanException("The remote doesn't support revisions. "
                                  "Conan 2.0 is no longer compatible with "
                                  "remotes that don't accept revisions.")
@@ -60,14 +59,14 @@ class RestApiClient(object):
                              self._requester, self._config, self._verify_ssl,
                              checksum_deploy)
 
-    def get_recipe(self, ref, dest_folder):
-        return self._get_api().get_recipe(ref, dest_folder)
+    def get_recipe(self, ref, dest_folder, metadata, only_metadata):
+        return self._get_api().get_recipe(ref, dest_folder, metadata, only_metadata)
 
     def get_recipe_sources(self, ref, dest_folder):
         return self._get_api().get_recipe_sources(ref, dest_folder)
 
-    def get_package(self, pref, dest_folder):
-        return self._get_api().get_package(pref, dest_folder)
+    def get_package(self, pref, dest_folder, metadata, only_metadata):
+        return self._get_api().get_package(pref, dest_folder, metadata, only_metadata)
 
     def upload_recipe(self, ref, files_to_upload):
         return self._get_api().upload_recipe(ref, files_to_upload)

@@ -7,13 +7,13 @@ _help_build_policies = '''Optional, specify which packages to build from source.
 
     --build="*"        Force build from source for all packages.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
-                       package is not found. Cannot be combined with other '--build' options.
+                       package is not found, it cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
     --build=cascade    Build packages from source that have at least one dependency being built from
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
-    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+    --build=~[pattern] Excluded packages, which will not be built from the source, whose package
                        reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
     --build=missing:[pattern] Build from source if a compatible binary does not exist, only for
                               packages matching pattern.
@@ -32,6 +32,8 @@ def add_lockfile_args(parser):
                         help="Lock package-id and package-revision information")
     parser.add_argument("--lockfile-clean", action="store_true",
                         help="Remove unused entries from the lockfile")
+    parser.add_argument("--lockfile-overrides",
+                        help="Overwrite lockfile overrides")
 
 
 def add_common_install_arguments(parser):
@@ -124,8 +126,12 @@ def validate_common_graph_args(args):
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
+    if args.channel and not args.user:
+        raise ConanException("Can't specify --channel without --user")
     if not args.path and not args.requires and not args.tool_requires:
         raise ConanException("Please specify a path to a conanfile or a '--requires=<ref>'")
     if args.path and (args.requires or args.tool_requires):
         raise ConanException("--requires and --tool-requires arguments are incompatible with "
                              f"[path] '{args.path}' argument")
+    if not args.path and args.build_require:
+        raise ConanException("--build-require should only be used with <path> argument")

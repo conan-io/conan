@@ -4,17 +4,17 @@ from collections import OrderedDict
 from conan.api.output import ConanOutput
 
 
-def filter_graph(graph, package_filter, field_filter=None):
+def filter_graph(graph, package_filter=None, field_filter=None):
     if package_filter is not None:
-        graph["nodes"] = [n for n in graph["nodes"]
-                          if any(fnmatch.fnmatch(n["ref"] or "", p) for p in package_filter)]
+        graph["nodes"] = {id_: n for id_, n in graph["nodes"].items()
+                          if any(fnmatch.fnmatch(n["ref"] or "", p) for p in package_filter)}
     if field_filter is not None:
         if "ref" not in field_filter:
             field_filter.append("ref")
-        result = []
-        for n in graph["nodes"]:
+        result = {}
+        for id_, n in graph["nodes"].items():
             new_node = OrderedDict((k, v) for k, v in n.items() if k in field_filter)
-            result.append(new_node)
+            result[id_] = new_node
         graph["nodes"] = result
     return graph
 
@@ -31,7 +31,7 @@ def format_graph_info(result):
     out.title("Basic graph information")
     serial = graph.serialize()
     serial = filter_graph(serial, package_filter, field_filter)
-    for n in serial["nodes"]:
+    for n in serial["nodes"].values():
         out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
         _serial_pretty_printer(n, indent="  ")
     if graph.error:

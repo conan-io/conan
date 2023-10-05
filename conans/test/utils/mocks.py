@@ -1,5 +1,4 @@
 import os
-from collections import namedtuple
 from io import StringIO
 
 
@@ -63,6 +62,9 @@ class MockSettings(object):
         except KeyError:
             raise ConanException("'%s' value not defined" % name)
 
+    def rm_safe(self, name):
+        self.values.pop(name, None)
+
 
 class MockCppInfo(object):
     def __init__(self):
@@ -77,69 +79,38 @@ class MockCppInfo(object):
         self.framework_paths = []
 
 
-class MockConanfile(ConanFile):
-
-    def __init__(self, settings, options=None, runner=None):
-        self.display_name = ""
+class ConanFileMock(ConanFile):
+    def __init__(self, settings=None, options=None, runner=None, display_name=""):
+        self.display_name = display_name
         self._conan_node = None
-        self.folders = Folders()
-        self.settings = settings
-        self.settings_build = settings
+        self.package_type = "unknown"
+        self.settings = settings or MockSettings({"os": "Linux", "arch": "x86_64"})
+        self.settings_build = settings or MockSettings({"os": "Linux", "arch": "x86_64"})
+        self.settings_target = None
         self.runner = runner
-        self.options = options or MockOptions({})
+        self.options = options or Options()
         self.generators = []
         self.conf = Conf()
-
-        class MockConanInfo:
-            pass
-        self.info = MockConanInfo()
-        self.info.settings = settings  # Incomplete, only settings for Cppstd Min/Max tests
-
-    def run(self, *args, **kwargs):
-        if self.runner:
-            kwargs["output"] = None
-            self.runner(*args, **kwargs)
-
-
-class ConanFileMock(ConanFile):
-
-    def __init__(self, shared=None):
-        self.display_name = ""
-        self._conan_node = None
-        self.command = None
-        self._commands = []
-        self.path = None
-        self.settings = None
-        self.settings_build = MockSettings({"os": "Linux", "arch": "x86_64"})
-        self.settings_target = None
-        self.options = Options()
-        if shared is not None:
-            self.options = namedtuple("options", "shared")(shared)
-        self.generators = []
-        self.captured_env = {}
         self.folders = Folders()
         self.folders.set_base_source(".")
         self.folders.set_base_export_sources(".")
         self.folders.set_base_build(".")
         self.folders.set_base_generators(".")
         self.cpp = Infos()
-        self._conan_user = None
-        self._conan_channel = None
         self.env_scripts = {}
         self.system_requires = {}
         self.win_bash = None
-        self.conf = ConfDefinition().get_conanfile_conf(None)
+        self.command = None
+        self._commands = []
         self._conan_helpers = ConanFileHelpers(None, None, self.conf, None)
-        self.cpp = Infos()
 
-    def run(self, command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
-        assert win_bash is False
-        assert subsystem is None
-        self.command = command
-        self._commands.append(command)
-        self.path = os.environ["PATH"]
-        self.captured_env = {key: value for key, value in os.environ.items()}
-        return 0
+    def run(self, *args, **kwargs):
+        self.command = args[0]
+        self._commands.append(args[0])
+        if self.runner:
+            kwargs.pop("quiet", None)
+            return self.runner(*args, **kwargs)
+        return 0  # simulating it was OK!
 
     @property
     def commands(self):

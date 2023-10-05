@@ -1,6 +1,5 @@
 import json
 import os
-
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
@@ -51,10 +50,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -66,6 +67,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.build, args.update)
+    print_graph_basic(deps_graph)
+    deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
                                      lockfile=lockfile)
     print_graph_packages(deps_graph)
@@ -77,8 +80,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
-    conanfile_path = os.path.dirname(deps_graph.root.path) if deps_graph.root.path else os.getcwd()
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, conanfile_path)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
     return install_order_serialized
 
@@ -118,6 +120,8 @@ def graph_info(conan_api, parser, subparser, *args):
                            help='Print information only for packages that match the patterns')
     subparser.add_argument("-d", "--deployer", action="append",
                            help='Deploy using the provided deployer to the output folder')
+    subparser.add_argument("-df", "--deployer-folder",
+                           help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
@@ -132,10 +136,12 @@ def graph_info(conan_api, parser, subparser, *args):
 
     # Basic collaborators, remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
                                                cwd=cwd,
-                                               partial=args.lockfile_partial)
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -164,9 +170,9 @@ def graph_info(conan_api, parser, subparser, *args):
 
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
-        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, os.getcwd())
+        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
         if args.deployer:
-            base_folder = os.getcwd()
+            base_folder = args.deployer_folder or os.getcwd()
             do_deploys(conan_api, deps_graph, args.deployer, base_folder)
 
     return {"graph": deps_graph,

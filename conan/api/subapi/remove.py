@@ -17,7 +17,7 @@ class RemoveAPI:
             app.remote_manager.remove_recipe(ref, remote)
         else:
             self.all_recipe_packages(ref)
-            recipe_layout = app.cache.ref_layout(ref)
+            recipe_layout = app.cache.recipe_layout(ref)
             app.cache.remove_recipe_layout(recipe_layout)
 
     def all_recipe_packages(self, ref: RecipeReference, remote: Remote = None):
@@ -33,11 +33,8 @@ class RemoveAPI:
     @staticmethod
     def _remove_all_local_packages(app, ref):
         # Get all the prefs and all the prevs
-        pkg_ids = app.cache.get_package_references(ref)
-        all_package_revisions = []
-        for pkg_id in pkg_ids:
-            all_package_revisions.extend(app.cache.get_package_revisions_references(pkg_id))
-        for pref in all_package_revisions:
+        pkg_ids = app.cache.get_package_references(ref, only_latest_prev=False)
+        for pref in pkg_ids:
             package_layout = app.cache.pkg_layout(pref)
             app.cache.remove_package_layout(package_layout)
 

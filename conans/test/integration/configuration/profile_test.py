@@ -46,24 +46,6 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
-    @pytest.mark.xfail(reason="New environment changed")
-    def test_profile_conanfile_txt(self):
-        """
-        Test prepended env variables are applied correctrly from a profile
-        """
-        self.client.save({"conanfile.txt": ""})
-        create_profile(self.client.cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE"), ("PREPEND_VAR", ["new_path", "other_path"])],
-                       package_env={"hello0": [("OTHER_VAR", "2")]})
-        self.client.run("install . -pr envs -g virtualenv")
-        content = self.client.load("environment.sh.env")
-        self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
-                      "${PREPEND_VAR:+:$PREPEND_VAR}", content)
-        if platform.system() == "Windows":
-            content = self.client.load("environment.bat.env")
-            self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
-                          content)
-
     def test_profile_relative_cwd(self):
         self.client.save({"conanfile.txt": "", "sub/sub/profile": ""})
         self.client.current_folder = os.path.join(self.client.current_folder, "sub")
@@ -126,40 +108,6 @@ class ProfileTest(unittest.TestCase):
         self.client.run('install . -pr "%sscopes_env"' % path, assert_error=True)
         self.assertIn("ERROR: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)
-
-    @pytest.mark.xfail(reason="New environment changed")
-    def test_install_profile_env(self):
-        create_profile(self.client.cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE"),
-                            ("PREPEND_VAR", ["new_path", "other_path"])],
-                       package_env={"hello0": [("OTHER_VAR", "2")]})
-
-        self.client.save({"conanfile.py": conanfile_scope_env})
-        self.client.run("export . --user=lasote --channel=stable")
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build missing -pr envs")
-        self._assert_env_variable_printed("PREPEND_VAR",
-                                          os.pathsep.join(["new_path", "other_path"]))
-        self.assertEqual(1, str(self.client.out).count("PREPEND_VAR=new_path"))  # prepended once
-        self._assert_env_variable_printed("A_VAR", "A_VALUE")
-        self._assert_env_variable_printed("OTHER_VAR", "2")
-
-        # Override with package var
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build "
-                        "-pr envs -e hello0:A_VAR=OTHER_VALUE")
-        self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
-        self._assert_env_variable_printed("OTHER_VAR", "2")
-
-        # Override package var with package var
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build -pr envs "
-                        "-e hello0:A_VAR=OTHER_VALUE -e hello0:OTHER_VAR=3")
-        self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
-        self._assert_env_variable_printed("OTHER_VAR", "3")
-
-        # Pass a variable with "=" symbol
-        self.client.run("install --requires=hello0/0.1@lasote/stable --build -pr envs "
-                        "-e hello0:A_VAR=Valuewith=equal -e hello0:OTHER_VAR=3")
-        self._assert_env_variable_printed("A_VAR", "Valuewith=equal")
-        self._assert_env_variable_printed("OTHER_VAR", "3")
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows profiles")
     def test_install_profile_settings(self):
@@ -319,66 +267,6 @@ class ProfileTest(unittest.TestCase):
         assert os.environ.get("CC", None) != "/path/tomy/gcc"
         assert os.environ.get("CXX", None) != "/path/tomy/g++"
 
-    @pytest.mark.xfail(reason="New environment changed")
-    def test_test_package(self):
-        test_conanfile = '''from conans.model.conan_file import ConanFile
-from conans import CMake
-import os
-
-class DefaultNameConan(ConanFile):
-    name = "DefaultName"
-    version = "0.1"
-    settings = "os", "compiler", "arch", "build_type"
-    generators = "VirtualBuildEnv"
-
-    def build(self):
-        # Print environment vars
-        if self.settings.os == "Windows":
-            self.run('echo "My var is %ONE_VAR%"')
-        else:
-            self.run('echo "My var is $ONE_VAR"')
-
-    def test(self):
-        pass
-
-'''
-        files = {"conanfile.py": conanfile_scope_env,
-                 "test_package/conanfile.py": test_conanfile}
-        # Create a profile and use it
-        create_profile(self.client.cache.profiles_path, "scopes_env", settings={},
-                       env=[("ONE_VAR", "ONE_VALUE")])
-
-        self.client.save(files)
-        self.client.run("create . --user=lasote --channel=stable --profile scopes_env")
-
-        self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
-        self.assertIn("My var is ONE_VALUE", str(self.client.out))
-
-        # Try now with package environment vars
-        create_profile(self.client.cache.profiles_path, "scopes_env2", settings={},
-                       package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
-                                    "hello0": [("ONE_VAR", "PACKAGE VALUE")]})
-
-        self.client.run("create . --user=lasote --channel=stable --profile scopes_env2")
-
-        self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
-        self.assertIn("My var is IN_TEST_PACKAGE", str(self.client.out))
-
-        # Try now overriding some variables with command line
-        self.client.run("create . --user=lasote --channel=stable --profile scopes_env2 "
-                        "-e DefaultName:ONE_VAR=InTestPackageOverride "
-                        "-e hello0:ONE_VAR=PackageValueOverride ")
-
-        self._assert_env_variable_printed("ONE_VAR", "PackageValueOverride")
-        self.assertIn("My var is InTestPackageOverride", str(self.client.out))
-
-        # A global setting in command line won't override a scoped package variable
-        self.client.run("create . --user=lasote --channel=stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
-        self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
-
-    def _assert_env_variable_printed(self, name, value):
-        self.assertIn("%s=%s" % (name, value), self.client.out)
-
     def test_info_with_profiles(self):
 
         self.client.run("remove '*' -c")
@@ -478,19 +366,6 @@ class ProfileAggregationTest(unittest.TestCase):
                           "profile1": self.profile1, "profile2": self.profile2})
         self._pkg_lib_10_id = "9b7f1e80c96289e8d9a3e7ded02830525090d5d4"
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_create(self):
-        # The latest declared profile has priority
-        self.client.run("create . --name=lib --version=1.0 --user=user --channel=channel --profile profile1 -pr profile2")
-        self.assertIn(dedent("""
-        [env]
-        ENV1=foo2
-        ENV2=bar
-        ENV3=bar2
-        """), self.client.out)
-        self.client.run("search lib/1.0@user/channel")
-        self.assertIn("arch: x86", self.client.out)
-
     def test_info(self):
         # The latest declared profile has priority
         self.client.run("create . --name=lib --version=1.0 --user=user --channel=channel --profile profile1 -pr profile2")
@@ -498,31 +373,6 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.save({CONANFILE: self.consumer})
         self.client.run("graph info . --profile profile1 --profile profile2")
         self.assertIn(self._pkg_lib_10_id, self.client.out)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_install(self):
-        self.client.run("export . --name=lib --version=1.0 --user=user --channel=channel")
-        # Install ref
-        self.client.run("install --requires=lib/1.0@user/channel -pr profile1 -pr profile2 --build missing")
-        self.assertIn(dedent("""
-               [env]
-               ENV1=foo2
-               ENV2=bar
-               ENV3=bar2
-               """), self.client.out)
-        self.client.run("search lib/1.0@user/channel")
-        self.assertIn("arch: x86", self.client.out)
-
-        # Install project
-        self.client.save({CONANFILE: self.consumer})
-        self.client.run("install . -pr profile1 -pr profile2 --build")
-        self.assertIn("arch=x86", self.client.out)
-        self.assertIn(dedent("""
-                       [env]
-                       ENV1=foo2
-                       ENV2=bar
-                       ENV3=bar2
-                       """), self.client.out)
 
     def test_export_pkg(self):
         self.client.run("export-pkg . --name=lib --version=1.0 --user=user --channel=channel -pr profile1 -pr profile2")

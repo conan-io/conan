@@ -22,8 +22,8 @@ def test_package_python_files():
                  "myfile.pyo": "",
                  ".DS_Store": ""})
     client.run("create . --name=pkg --version=0.1")
-    ref = RecipeReference.loads("pkg/0.1")
-    ref_layout = client.get_latest_ref_layout(ref)
+    ref_layout = client.exported_layout()
+    pkg_layout = client.created_layout()
     export = ref_layout.export()
     export_sources = ref_layout.export_sources()
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
@@ -33,8 +33,7 @@ def test_package_python_files():
     assert "myfile.pyc" in manifest
     assert "myfile.pyo" in manifest
     assert ".DS_Store" not in manifest
-    pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
-    pkg_folder = client.get_latest_pkg_layout(pref).package()
+    pkg_folder = pkg_layout.package()
     assert os.path.isfile(os.path.join(pkg_folder, "myfile.pyc"))
     assert os.path.isfile(os.path.join(pkg_folder, "myfile.pyo"))
     assert os.path.isfile(os.path.join(pkg_folder, ".DS_Store"))
@@ -46,6 +45,11 @@ def test_package_python_files():
     client.run("upload * -r=default --confirm")
     client.run("remove * -c")
     client.run("download pkg/0.1#*:* -r default")
+
+    # The download will be in a different pkg folder now.
+    ref = RecipeReference.loads("pkg/0.1")
+    pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
+    pkg_folder = client.get_latest_pkg_layout(pref).package()
 
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyc"))
     assert os.path.isfile(os.path.join(export_sources, "myfile.pyo"))

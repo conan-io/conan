@@ -1,6 +1,7 @@
 import operator
 
-from conans.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanInvalidConfiguration, ConanException
+from conan.internal.api.detect_api import default_cppstd as default_cppstd_
 from conans.model.version import Version
 
 
@@ -88,8 +89,7 @@ def default_cppstd(conanfile, compiler=None, compiler_version=None):
     compiler_version = compiler_version or conanfile.settings.get_safe("compiler.version")
     if not compiler or not compiler_version:
         raise ConanException("Called default_cppstd with no compiler or no compiler.version")
-    from conans.client.conf.detect import _cppstd_default
-    return _cppstd_default(compiler, Version(compiler_version))
+    return default_cppstd_(compiler, Version(compiler_version))
 
 
 def supported_cppstd(conanfile, compiler=None, compiler_version=None):

@@ -14,7 +14,6 @@ RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
-RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
 RECIPE_SYSTEM_TOOL = "System tool"
 
 BINARY_CACHE = "Cache"
@@ -58,7 +57,6 @@ class Node(object):
         self.binary_remote = None
         self.context = context
         self.test = test
-        self.test_package = False  # True if it is a test_package only package
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
@@ -214,6 +212,11 @@ class Node(object):
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
+        result["rrev"] = self.ref.revision if self.ref is not None else None
+        result["rrev_timestamp"] = self.ref.timestamp if self.ref is not None else None
+        result["prev_timestamp"] = self.pref_timestamp
+        result["remote"] = self.remote.name if self.remote else None
+        result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
         from conans.client.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
@@ -222,10 +225,29 @@ class Node(object):
         result["info_invalid"] = getattr(getattr(self.conanfile, "info", None), "invalid", None)
         # Adding the conanfile information: settings, options, etc
         result.update(self.conanfile.serialize())
+        result.pop("requires", None)  # superseded by "dependencies" (graph.transitive_deps)
+        result["dependencies"] = {d.node.id: d.require.serialize()
+                                  for d in self.transitive_deps.values() if d.node is not None}
         result["context"] = self.context
         result["test"] = self.test
-        result["requires"] = {n.id: n.ref.repr_notime() for n in self.neighbors()}
         return result
+
+    def overrides(self):
+
+        def transitive_subgraph():
+            result = set()
+            opened = {self}
+            while opened:
+                new_opened = set()
+                for o in opened:
+                    result.add(o)
+                    new_opened.update(set(o.neighbors()).difference(result))
+                opened = new_opened
+
+            return result
+
+        nodes = transitive_subgraph()
+        return Overrides.create(nodes)
 
 
 class Edge(object):
@@ -242,6 +264,9 @@ class Overrides:
     def __bool__(self):
         return bool(self._overrides)
 
+    def __repr__(self):
+        return repr(self.serialize())
+
     @staticmethod
     def create(nodes):
         overrides = {}
@@ -250,7 +275,7 @@ class Overrides:
                 if r.override:
                     continue
                 if r.overriden_ref and not r.force:
-                    overrides.setdefault(r.overriden_ref, set()).add(r.ref)
+                    overrides.setdefault(r.overriden_ref, set()).add(r.override_ref)
                 else:
                     overrides.setdefault(r.ref, set()).add(None)
 
@@ -359,8 +384,10 @@ class DepsGraph(object):
 
     def serialize(self):
         for i, n in enumerate(self.nodes):
-            n.id = i
+            n.id = str(i)
         result = OrderedDict()
-        result["nodes"] = [n.serialize() for n in self.nodes]
+        result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
+        result["overrides"] = self.overrides().serialize()
+        result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
         return result

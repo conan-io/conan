@@ -4,7 +4,6 @@ import textwrap
 import pytest
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -23,9 +22,8 @@ def test_basic(relative_path):
         client.run("export source --name=hello --version=0.1 --user=lasote --channel=stable")
 
     # The result should be the same in both cases
-    ref = RecipeReference("hello", "0.1", "lasote", "stable")
-    latest_rrev = client.cache.get_latest_recipe_reference(ref)
-    ref_layoyt = client.cache.ref_layout(latest_rrev)
+    ref_layoyt = client.exported_layout()
+    ref = ref_layoyt.reference
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)
 
@@ -62,9 +60,7 @@ def test_path(relative_path):
                      "source/main.cpp": "mymain"})
         with client.chdir("current"):
             client.run("export . --name=hello --version=0.1 --user=lasote --channel=stable")
-    ref = RecipeReference("hello", "0.1", "lasote", "stable")
-    latest_rrev = client.cache.get_latest_recipe_reference(ref)
-    ref_layoyt = client.cache.ref_layout(latest_rrev)
+    ref_layoyt = client.exported_layout()
     reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)
 

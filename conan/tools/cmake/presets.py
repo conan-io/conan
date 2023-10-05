@@ -7,7 +7,7 @@ from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.microsoft import is_msvc
 from conans.client.graph.graph import RECIPE_CONSUMER
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 
@@ -28,11 +28,11 @@ class _CMakePresets:
             if "CMAKE_SH" not in cache_variables:
                 cache_variables["CMAKE_SH"] = "CMAKE_SH-NOTFOUND"
 
-            cmake_make_program = conanfile.conf.get("tools.gnu:make_program",
-                                                    default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
-            if cmake_make_program:
-                cmake_make_program = cmake_make_program.replace("\\", "/")
-                cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
+        cmake_make_program = conanfile.conf.get("tools.gnu:make_program",
+                                                default=cache_variables.get("CMAKE_MAKE_PROGRAM"))
+        if cmake_make_program:
+            cmake_make_program = cmake_make_program.replace("\\", "/")
+            cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
 
         if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
             cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
@@ -263,7 +263,7 @@ class _IncludingPresets:
         # so things doesn't break for multi-platform, when inherits don't exist
         collected_targets = {}
         types = "configurePresets", "buildPresets", "testPresets"
-        for file in ("CMakePresets.json", "CMakeUserPresests.json"):
+        for file in ("CMakePresets.json", "CMakeUserPresets.json"):
             user_file = os.path.join(output_dir, file)
             if os.path.exists(user_file):
                 user_json = json.loads(load(user_file))
@@ -272,9 +272,13 @@ class _IncludingPresets:
                         inherits = preset.get("inherits", [])
                         if isinstance(inherits, str):
                             inherits = [inherits]
-                        conan_inherits = [i for i in inherits if i.startswith(preset_prefix)]
-                        if conan_inherits:
-                            collected_targets.setdefault(preset_type, []).extend(conan_inherits)
+                        inherits = [i for i in inherits if i.startswith(preset_prefix)]
+                        if inherits:
+                            existing = collected_targets.setdefault(preset_type, [])
+                            for i in inherits:
+                                if i not in existing:
+                                    existing.append(i)
+
         return collected_targets
 
     @staticmethod

@@ -1,19 +1,11 @@
 from conans.test.assets.genconanfile import GenConanfile
-from utils.tools import TestClient
-import textwrap
+from conans.test.utils.tools import TestClient
 
 
 def test_version_range_conf_nonexplicit_expression():
     tc = TestClient()
 
-    base = textwrap.dedent("""
-    from conan import ConanFile
-
-    class Base(ConanFile):
-        name = "base"
-    """)
-
-    tc.save({"base/conanfile.py": base})
+    tc.save({"base/conanfile.py": GenConanfile("base")})
     tc.run("create base/conanfile.py --version=1.5.1")
     tc.run("create base/conanfile.py --version=2.5.0-pre")
 
@@ -43,14 +35,7 @@ def test_version_range_conf_nonexplicit_expression():
 def test_version_range_conf_explicit_expression():
     tc = TestClient()
 
-    base = textwrap.dedent("""
-    from conan import ConanFile
-
-    class Base(ConanFile):
-        name = "base"
-    """)
-
-    tc.save({"base/conanfile.py": base})
+    tc.save({"base/conanfile.py": GenConanfile("base")})
     tc.run("create base/conanfile.py --version=1.5.1")
     tc.run("create base/conanfile.py --version=2.5.0-pre")
 

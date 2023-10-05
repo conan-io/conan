@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION
+from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conans.client.graph.graph import BINARY_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save
@@ -44,8 +44,8 @@ class TestValidate(unittest.TestCase):
 
         client.run("graph info --require pkg/0.1 -s os=Windows --format json")
         myjson = json.loads(client.stdout)
-        self.assertEqual(myjson["nodes"][1]["binary"], BINARY_INVALID)
-        assert myjson["nodes"][1]["info_invalid"] == "Windows not supported" in client.out
+        self.assertEqual(myjson["graph"]["nodes"]["1"]["binary"], BINARY_INVALID)
+        assert myjson["graph"]["nodes"]["1"]["info_invalid"] == "Windows not supported" in client.out
 
     def test_validate_header_only(self):
         client = TestClient()
@@ -309,7 +309,6 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: Invalid: Option 2 of 'dep' not supported", client.out)
 
-    @pytest.mark.xfail(reason="The way to check versions of transitive deps has changed")
     def test_validate_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -322,16 +321,23 @@ class TestValidate(unittest.TestCase):
                requires = "dep/0.1"
 
                def validate(self):
-                   # FIXME: This is a ugly interface DO NOT MAKE IT PUBLIC
-                   # if self.info.requires["dep"].full_version ==
-                   if self.requires["dep"].ref.version > "0.1":
+                   if self.dependencies["dep"].ref.version > "0.1":
                        raise ConanInvalidConfiguration("dep> 0.1 is not supported")
            """)
 
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg1 --version=0.1")
 
-        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "dep/0.2")})
+        client.save({"conanfile.py": GenConanfile()
+                    .with_requirement("pkg1/0.1")
+                    .with_requirement("dep/0.2", override=True)})
+        error = client.run("install .", assert_error=True)
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        self.assertIn("pkg1/0.1: Invalid: dep> 0.1 is not supported", client.out)
+
+        client.save({"conanfile.py": GenConanfile()
+                    .with_requirement("pkg1/0.1")
+                    .with_requirement("dep/0.2", force=True)})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: Invalid: dep> 0.1 is not supported", client.out)
@@ -560,10 +566,10 @@ class TestValidateCppstd:
         client.run(f"create engine {settings} -s compiler.cppstd=17")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
-        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.run(f"install app {settings} -s compiler.cppstd=17 -v")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
-        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.run(f"install app {settings} -s compiler.cppstd=14 -v")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
         # No binary for engine exist for cppstd=11
@@ -635,18 +641,18 @@ class TestValidateCppstd:
                                                     "Build")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Cache")})
-        client.run(f"install app {settings} -s compiler.cppstd=17")
+        client.run(f"install app {settings} -s compiler.cppstd=17 -v")
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
                                                     "Cache")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
-        client.run(f"install app {settings} -s compiler.cppstd=14")
+        client.run(f"install app {settings} -s compiler.cppstd=14 -v")
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
                                                     "Cache")})
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Skip")})
         # No binary for engine exist for cppstd=11
-        client.run(f"install app {settings} -s compiler.cppstd=11")
+        client.run(f"install app {settings} -s compiler.cppstd=11 -v")
         client.assert_listed_binary({"pkg/0.1": ("8415595b7485d90fc413c2f47298aa5fb05a5468",
                                                  "Skip")})
         client.assert_listed_binary({"engine/0.1": ("493976208e9989b554704f94f9e7b8e5ba39e5ab",
@@ -654,3 +660,252 @@ class TestValidateCppstd:
         client.run(f"install app {settings} -s compiler.cppstd=11 --build=engine*",
                    assert_error=True)
         assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out
+
+
+class TestCompatibleSettingsTarget(unittest.TestCase):
+    """ aims to be a very close to real use case of tool being used across different settings_target
+    """
+    def test_settings_target_in_compatibility_method_within_recipe(self):
+        client = TestClient()
+        """
+        test setting_target in recipe's compatibility method
+        """
+        tool_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def compatibility(self):
+                    if self.settings_target.arch == "armv7":
+                        return [{"settings_target": [("arch", "armv6")]}]
+
+                def package_id(self):
+                    self.info.settings_target = self.settings_target
+                    for field in self.info.settings_target.fields:
+                        if field != "arch":
+                            self.info.settings_target.rm_safe(field)
+            """)
+
+        client.save({"conanfile.py": tool_conanfile})
+        client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
+        package_id = client.created_package_id("tool/0.1")
+        assert f"tool/0.1: Package '{package_id}' created" in client.out
+
+        app_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def requirements(self):
+                    self.tool_requires("tool/0.1")
+            """)
+
+        client.save({"conanfile.py": app_conanfile})
+        client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7")
+        assert f"Using compatible package '{package_id}'" in client.out
+
+    def test_settings_target_in_compatibility_in_global_compatibility_py(self):
+        client = TestClient()
+        """
+        test setting_target in global compatibility method
+        """
+        compat = textwrap.dedent("""\
+            def compatibility(self):
+                if self.settings_target.arch == "armv7":
+                    return [{"settings_target": [("arch", "armv6")]}]
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+
+        tool_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+
+                def package_id(self):
+                    self.info.settings_target = self.settings_target
+                    for field in self.info.settings_target.fields:
+                        if field != "arch":
+                            self.info.settings_target.rm_safe(field)
+            """)
+
+        client.save({"conanfile.py": tool_conanfile})
+        client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
+        package_id = client.created_package_id("tool/0.1")
+
+        assert f"tool/0.1: Package '{package_id}' created" in client.out
+
+        app_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def requirements(self):
+                    self.tool_requires("tool/0.1")
+            """)
+
+        client.save({"conanfile.py": app_conanfile})
+        client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7")
+        assert f"Using compatible package '{package_id}'" in client.out
+
+    def test_no_settings_target_in_recipe_but_in_compatibility_method(self):
+        client = TestClient()
+        """
+        test settings_target in compatibility method when recipe is not a build-require
+        this should not crash. When building down-stream package it should end up with
+        ERROR_GENERAL instead of crash
+        """
+
+        tool_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def compatibility(self):
+                    if self.settings_target.arch == "armv7":
+                        return [{"settings_target": [("arch", "armv6")]}]
+            """)
+
+        client.save({"conanfile.py": tool_conanfile})
+        client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6")
+        package_id = client.created_package_id("tool/0.1")
+        assert f"tool/0.1: Package '{package_id}' created" in client.out
+
+        app_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def requirements(self):
+                    self.tool_requires("tool/0.1")
+            """)
+
+        client.save({"conanfile.py": app_conanfile})
+        error = client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7", assert_error=True)
+        self.assertEqual(error, ERROR_GENERAL)
+        self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1'", client.out)
+
+    def test_no_settings_target_in_recipe_but_in_global_compatibility(self):
+        client = TestClient()
+        """
+        test settings_target in global compatibility method when recipe is not a build-require
+        this should not crash. When building down-stream package it should end up with
+        ERROR_GENERAL instead of crash
+        """
+        compat = textwrap.dedent("""\
+            def compatibility(self):
+                if self.settings_target.arch == "armv7":
+                    return [{"settings_target": [("arch", "armv6")]}]
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+
+        tool_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+            """)
+
+        client.save({"conanfile.py": tool_conanfile})
+        client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6")
+        package_id = client.created_package_id("tool/0.1")
+        assert f"tool/0.1: Package '{package_id}' created" in client.out
+
+        app_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def requirements(self):
+                    self.tool_requires("tool/0.1")
+            """)
+
+        client.save({"conanfile.py": app_conanfile})
+        error = client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7", assert_error=True)
+        self.assertEqual(error, ERROR_GENERAL)
+        self.assertIn("ERROR: Missing prebuilt package for 'tool/0.1'", client.out)
+
+    def test_three_packages_with_and_without_settings_target(self):
+        client = TestClient()
+        """
+        test 3 packages, tool_a and tool_b have a mutual downstream package (app), and when
+        build app it should find tool_a (a compatible version of it), and find tool_b,
+        and conan create should be successful.
+        """
+        compat = textwrap.dedent("""\
+            def compatibility(self):
+                if self.settings_target.arch == "armv7":
+                    return [{"settings_target": [("arch", "armv6")]}]
+            """)
+        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
+
+        tool_a_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+
+                def package_id(self):
+                    self.info.settings_target = self.settings_target
+                    for field in self.info.settings_target.fields:
+                        if field != "arch":
+                            self.info.settings_target.rm_safe(field)
+            """)
+
+        client.save({"conanfile.py": tool_a_conanfile})
+        client.run("create . --name=tool_a --version=0.1 -s os=Linux -s:h arch=armv6 -s:b arch=x86_64 --build-require")
+        package_id_tool_a = client.created_package_id("tool_a/0.1")
+        assert f"tool_a/0.1: Package '{package_id_tool_a}' created" in client.out
+
+        tool_b_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+            """)
+
+        client.save({"conanfile.py": tool_b_conanfile})
+        client.run("create . --name=tool_b --version=0.1 -s os=Linux -s arch=x86_64 -s:b arch=x86_64")
+        package_id_tool_b = client.created_package_id("tool_b/0.1")
+        assert f"tool_b/0.1: Package '{package_id_tool_b}' created" in client.out
+
+        app_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+                def requirements(self):
+                    self.tool_requires("tool_a/0.1")
+                    self.tool_requires("tool_b/0.1")
+            """)
+
+        client.save({"conanfile.py": app_conanfile})
+        client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7 -s:b arch=x86_64")
+        assert f"Using compatible package '{package_id_tool_a}'" in client.out
+        assert package_id_tool_b in client.out
+
+    def test_settings_target_in_compatibility_method_within_recipe_package_info(self):
+        # https://github.com/conan-io/conan/issues/14823
+        client = TestClient()
+        tool_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "arch"
+
+                def compatibility(self):
+                    return [{'settings': [('arch', 'armv6')]}]
+
+                def package_info(self):
+                    # This used to crash
+                    self.settings_target.get_safe('compiler.link_time_optimization')
+            """)
+
+        client.save({"conanfile.py": tool_conanfile})
+        client.run("create . --name=tool --version=0.1 -s os=Linux -s:b arch=armv6 --build-require")
+        package_id = client.created_package_id("tool/0.1")
+        assert f"tool/0.1: Package '{package_id}' created" in client.out
+
+        client.run("install --tool-requires=tool/0.1 -s os=Linux -s:b arch=armv7")
+        # This used to crash, not anymore
+        assert f"Using compatible package '{package_id}'" in client.out

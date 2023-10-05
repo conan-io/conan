@@ -178,7 +178,7 @@ def test_collect_system_requirements():
                    redirect_stdout="graph.json")
     graph = json.loads(client.load("graph.json"))
     assert {"apt-get": {"install": ["pkg1", "pkg2"], "missing": []}} == \
-           graph["graph"]["nodes"][0]["system_requires"]
+           graph["graph"]["nodes"]["0"]["system_requires"]
 
     # plain report, do not check
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "
@@ -186,7 +186,8 @@ def test_collect_system_requirements():
                redirect_stdout="graph2.json")
     graph2 = json.loads(client.load("graph2.json"))
     # TODO: Unify format of ``graph info`` and ``install``
-    assert {"apt-get": {"install": ["pkg1", "pkg2"]}} == graph2["nodes"][0]["system_requires"]
+    assert {"apt-get": {"install": ["pkg1", "pkg2"]}} == \
+           graph2["graph"]["nodes"]["0"]["system_requires"]
 
     # Check report-installed
     with patch.object(_SystemPackageManagerTool, '_conanfile_run', MagicMock(return_value=True)):
@@ -195,7 +196,7 @@ def test_collect_system_requirements():
                    redirect_stdout="graph2.json")
         graph2 = json.loads(client.load("graph2.json"))
         assert {"apt-get": {"install": ["pkg1", "pkg2"],
-                            'missing': ['pkg1', 'pkg2']}} == graph2["nodes"][0]["system_requires"]
+                            'missing': ['pkg1', 'pkg2']}} == graph2["graph"]["nodes"]["0"]["system_requires"]
 
     # Default "check" will fail, as dpkg-query not installed
     client.run("graph info . -c tools.system.package_manager:tool=apt-get "

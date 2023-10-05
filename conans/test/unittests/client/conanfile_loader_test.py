@@ -4,14 +4,11 @@ import textwrap
 import unittest
 
 import pytest
-from mock.mock import Mock
 from parameterized import parameterized
 
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
 from conans.errors import ConanException
-from conans.model.options import Options
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import create_profile
 from conans.util.files import save, chdir
 
 
@@ -82,8 +79,6 @@ OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
         exp = ['OpenCV/2.4.10@user/stable#RREV1']
         self.assertEqual(parser.requirements, exp)
 
-    @pytest.mark.xfail(reason="The reference validation is not in the model anymore. Where to check "
-                              "now?")
     def test_load_conan_txt(self):
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable
@@ -94,45 +89,23 @@ Mypkg/1.0.0@phil/stable
 one
 two
 [options]
-OpenCV:use_python=True
-OpenCV:other_option=False
-OpenCV2:use_python2=1
-OpenCV2:other_option=Cosa
+OpenCV/*:use_python=True
+OpenCV/*:other_option=False
+OpenCV2/*:use_python2=1
+OpenCV2/*:other_option=Cosa
 '''
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, None)
-        ret = loader.load_conanfile_txt(file_path, create_profile())
-        options1 = Options.loads("""OpenCV:use_python=True
-OpenCV:other_option=False
-OpenCV2:use_python2=1
-OpenCV2:other_option=Cosa""")
+        ret = loader.load_conanfile_txt(file_path)
 
         self.assertEqual(len(ret.requires.values()), 3)
         self.assertEqual(ret.generators, ["one", "two"])
-        self.assertEqual(ret.options.dumps(), options1.dumps())
-
-        # Now something that fails
-        file_content = '''[requires]
-OpenCV/2.4.104phil/stable
-'''
-        tmp_dir = temp_folder()
-        file_path = os.path.join(tmp_dir, "file.txt")
-        save(file_path, file_content)
-        loader = ConanFileLoader(None, None)
-        with self.assertRaisesRegex(ConanException, "The reference has too many '/'"):
-            loader.load_conanfile_txt(file_path, create_profile())
-
-        file_content = '''[requires]
-OpenCV/2.4.10@phil/stable111111111111111111111111111111111111111111111111111111111111111
-'''
-        tmp_dir = temp_folder()
-        file_path = os.path.join(tmp_dir, "file.txt")
-        save(file_path, file_content)
-        loader = ConanFileLoader(None, None)
-        with self.assertRaisesRegex(ConanException, "is too long. Valid names must contain"):
-            loader.load_conanfile_txt(file_path, create_profile())
+        self.assertEqual(ret.options.dumps(), 'OpenCV/*:other_option=False\n'
+                                              'OpenCV/*:use_python=True\n'
+                                              'OpenCV2/*:other_option=Cosa\n'
+                                              'OpenCV2/*:use_python2=1')
 
     def test_load_options_error(self):
         conanfile_txt = textwrap.dedent("""
@@ -242,8 +215,9 @@ class ImportModuleLoaderTest(unittest.TestCase):
         myfunc1, value1 = "recipe1", 42
 
         # Item imported does not exist, but file exists
+        # We use some existing and imported Python stdlib import
         with self.assertRaisesRegex(ConanException, "Unable to load conanfile in"):
-            self._create_and_load(myfunc1, value1, "requests", add_subdir_init)
+            self._create_and_load(myfunc1, value1, "textwrap", add_subdir_init)
 
         # File does not exists in already existing module
         with self.assertRaisesRegex(ConanException, "Unable to load conanfile in"):

@@ -6,9 +6,8 @@ import textwrap
 import unittest
 from textwrap import dedent
 
-from conans.model.package_ref import PkgReference
 from conans.paths import CONANFILE
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load
 
 
@@ -128,11 +127,7 @@ class TestConan(ConanFile):
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
-        rrev = client.exported_recipe_revision()
-        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
-        package_folder = client.cache.pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -159,12 +154,8 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
                    "-s os=Windows")
-        rrev = client.exported_recipe_revision()
-        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
 
-        package_folder = client.cache.pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -199,11 +190,8 @@ class TestConan(ConanFile):
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
         client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
-        rrev = client.exported_recipe_revision()
-        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1@lasote/stable#{rrev}:{package_id}#{prev}")
-        package_folder = client.cache.pkg_layout(pref).package()
+
+        package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -297,7 +285,7 @@ class TestConan(ConanFile):
         # Wrong folders
         client.run("export-pkg . --format=json", redirect_stdout="file.json")
         graph = json.loads(client.load("file.json"))
-        assert "pkg/0.1" in graph["graph"]["nodes"][0]["ref"]
+        assert "pkg/0.1" in graph["graph"]["nodes"]["0"]["ref"]
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
@@ -315,10 +303,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        rrev = client.exported_recipe_revision()
-        prev = re.search(r"Created package revision (\S+)", str(client.out)).group(1)
-        pref = PkgReference.loads(f"hello/0.1#{rrev}:{NO_SETTINGS_PACKAGE_ID}#{prev}")
-        package_folder = client.cache.pkg_layout(pref).package()
+        package_folder = client.created_layout().package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -403,7 +388,7 @@ def test_export_pkg_json_formatter():
     hello_pkg_ref = 'hello/0.1#18d5440ae45afc4c36139a160ac071c7'
     pkg_pkg_ref = 'pkg/0.2#926714b5fb0a994f47ec37e071eba1da'
     hello_cpp_info = pkg_cpp_info = None
-    for n in nodes:
+    for n in nodes.values():
         ref = n["ref"]
         if ref == hello_pkg_ref:
             assert n['binary'] is None  # The exported package has no binary status
@@ -608,3 +593,32 @@ def test_export_pkg_remote_python_requires():
     c.run("remove * -c")
     c.run("export-pkg pkg")
     assert "conanfile.py (pkg/1.0): Exported package binary" in c.out
+
+
+def test_remote_none():
+    # https://github.com/conan-io/conan/pull/14705
+    c = TestClient(default_server_user=True)
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass").with_requires("dep/0.1")})
+    c.run("create dep")
+    c.run("upload dep* -r=default -c")
+    c.run("build pkg")
+    c.run("remove dep*:* -c")
+    c.run("export-pkg pkg")    # This used to crash
+    # No longer crash
+    assert "pkg/0.1 (test package): Running test()" in c.out
+
+
+def test_remote_none_tool_requires():
+    # https://github.com/conan-io/conan/pull/14705
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_settings("compiler"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_tool_requires("tool/0.1"),
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
+    settings = "-s:b compiler=gcc -s:b compiler.version=9 -s:b compiler.libcxx=libstdc++11"
+    c.run(f"create tool {settings} -s:b compiler.cppstd=20 --build-require")
+    c.run(f"build pkg {settings} -s:b compiler.cppstd=17")
+    c.run(f"export-pkg pkg {settings} -s:b compiler.cppstd=17")  # This used to crash
+    # No longer crash
+    assert "pkg/0.1 (test package): Running test()" in c.out

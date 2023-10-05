@@ -1,5 +1,4 @@
 import os
-import re
 import textwrap
 
 import pytest
@@ -117,8 +116,6 @@ def test_create_test_package_with_layout():
     assert "hey! testing" in client.out
 
 
-@pytest.mark.xfail(reason="This test will not pass because during build we use a temporal folder"
-                          "with the new Cache2.0. TODO: cache2.0 must adapt")
 def test_cache_in_layout(conanfile):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
     requires. But by the default, the "package" is not followed
@@ -129,12 +126,10 @@ def test_cache_in_layout(conanfile):
 
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=lib --version=1.0")
-    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
-    ref = RecipeReference.loads("lib/1.0@")
-    pref = PkgReference(ref, package_id)
-    sf = client.get_latest_ref_layout(ref).source()
-    bf = client.get_latest_pkg_layout(pref).build()
-    pf = client.get_latest_pkg_layout(pref).package()
+    pkg_layout = client.created_layout()
+    sf = client.exported_layout().source()
+    bf = pkg_layout.build()
+    pf = pkg_layout.package()
 
     source_folder = os.path.join(sf, "my_sources")
     build_folder = os.path.join(bf, "my_build")
@@ -151,12 +146,7 @@ def test_cache_in_layout(conanfile):
     # Check the conaninfo
     assert os.path.exists(os.path.join(pf, "conaninfo.txt"))
 
-    # Search the package in the cache
-    client.run("search lib/1.0@")
-    assert "Package_ID: {}".format(package_id) in client.out
 
-
-@pytest.mark.xfail(reason="The conan-source command do not handle yet the layout, to do in other PR")
 def test_same_conanfile_local(conanfile):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
@@ -165,19 +155,17 @@ def test_same_conanfile_local(conanfile):
     client.save({"conanfile.py": conanfile})
 
     source_folder = os.path.join(client.current_folder, "my_sources")
-    build_folder = os.path.join(client.current_folder, "my_build")
+    build_folder = os.path.join(client.current_folder, "install", "my_build")
 
-    client.run("install . lib/1.0@ -if=install")
+    client.run("install . --name=lib --version=1.0 -of=install")
     client.run("source .")
     assert "Source folder: {}".format(source_folder) in client.out
     assert os.path.exists(os.path.join(source_folder, "source.h"))
 
-    client.run("build .  -if=install")
+    client.run("build .  -of=install")
     assert "Build folder: {}".format(build_folder) in client.out
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
 
-    client.run("package .  -if=install", assert_error=True)
-    assert "'package' is not a Conan command" in client.out
 
 def test_cpp_package():
     client = TestClient()
@@ -255,8 +243,7 @@ def test_git_clone_with_source_layout():
         client.init_git_repo()
 
     client.run("create . --name=hello --version=1.0")
-    latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/1.0@"))
-    sf = client.cache.ref_layout(latest_rrev).source()
+    sf = client.exported_layout().source()
     assert os.path.exists(os.path.join(sf, "myfile.txt"))
     # The conanfile is cleared from the root before cloning
     assert not os.path.exists(os.path.join(sf, "conanfile.py"))

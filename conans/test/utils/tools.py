@@ -24,7 +24,7 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
-from conan.cli.exit_codes import SUCCESS
+from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPI
@@ -32,7 +32,7 @@ from conan.api.model import Remote
 from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
 from conans.util.env import environment_update
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
@@ -214,7 +214,9 @@ class TestRequester:
             kwargs["expect_errors"] = True
             kwargs.pop("stream", None)
             kwargs.pop("verify", None)
-            kwargs.pop("auth", None)
+            auth = kwargs.pop("auth", None)
+            if auth and isinstance(auth, tuple):
+                app.set_authorization(("Basic", auth))
             kwargs.pop("cert", None)
             kwargs.pop("timeout", None)
             if "data" in kwargs:
@@ -233,6 +235,8 @@ class TestRequester:
     @staticmethod
     def _set_auth_headers(kwargs):
         if kwargs.get("auth"):
+            if isinstance(kwargs.get("auth"), tuple):  # For download(..., auth=(user, paswd))
+                return
             mock_request = Mock()
             mock_request.headers = {}
             kwargs["auth"](mock_request)
@@ -413,7 +417,8 @@ class TestClient(object):
         self.out = ""
         self.stdout = RedirectedTestOutput()
         self.stderr = RedirectedTestOutput()
-        self.user_inputs = RedirectedInputStream(inputs)
+        self.user_inputs = RedirectedInputStream([])
+        self.inputs = inputs or []
 
         # create default profile
         text = default_profiles[platform.system()]
@@ -485,8 +490,12 @@ class TestClient(object):
 
         args = shlex.split(command_line)
 
-        self.api = ConanAPI(cache_folder=self.cache_folder)
-        command = Cli(self.api)
+        try:
+            self.api = ConanAPI(cache_folder=self.cache_folder)
+            command = Cli(self.api)
+        except ConanException as e:
+            sys.stderr.write("Error in Conan initialization: {}".format(e))
+            return ERROR_GENERAL
 
         error = SUCCESS
         trace = None
@@ -505,13 +514,14 @@ class TestClient(object):
         self._handle_cli_result(command_line, assert_error=assert_error, error=error, trace=trace)
         return error
 
-    def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None):
+    def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None, inputs=None):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+            self.user_inputs = RedirectedInputStream(inputs or self.inputs)
             self.stdout = RedirectedTestOutput()  # Initialize each command
             self.stderr = RedirectedTestOutput()
             self.out = ""
@@ -657,8 +667,7 @@ class TestClient(object):
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_recipe_reference(ref)
-        ref_layout = self.cache.ref_layout(latest_rrev)
+        ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
     def get_default_host_profile(self):
@@ -768,6 +777,16 @@ class TestClient(object):
 
     def exported_recipe_revision(self):
         return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)
+
+    def exported_layout(self):
+        m = re.search(r": Exported: (\S+)", str(self.out)).group(1)
+        ref = RecipeReference.loads(m)
+        return self.cache.recipe_layout(ref)
+
+    def created_layout(self):
+        pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
+        pref = PkgReference.loads(pref)
+        return self.cache.pkg_layout(pref)
 
 
 class TurboTestClient(TestClient):

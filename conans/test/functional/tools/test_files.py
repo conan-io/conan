@@ -3,11 +3,10 @@ import textwrap
 
 import patch_ng
 import pytest
-from bottle import static_file
 
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.file_server import TestFileServer
+from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
@@ -59,15 +58,10 @@ class TestConanToolFiles:
         client.run("source .")
 
     def test_download(self):
-        http_server = StoppableThreadBottle()
-        file_path = os.path.join(temp_folder(), "myfile.txt")
-        save(file_path, "some content")
-
-        @http_server.server.get("/myfile.txt")
-        def get_file():
-            return static_file(os.path.basename(file_path), os.path.dirname(file_path))
-
-        http_server.run_server()
+        client = TestClient()
+        file_server = TestFileServer()
+        client.servers["file_server"] = file_server
+        save(os.path.join(file_server.store, "myfile.txt"), "some content")
 
         profile = textwrap.dedent("""\
             [conf]
@@ -84,11 +78,10 @@ class TestConanToolFiles:
                 name = "mypkg"
                 version = "1.0"
                 def source(self):
-                    download(self, "http://localhost:{}/myfile.txt", "myfile.txt")
+                    download(self, "{}/myfile.txt", "myfile.txt")
                     assert os.path.exists("myfile.txt")
-            """.format(http_server.port))
+            """.format(file_server.fake_url))
 
-        client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.save({"profile": profile})
         client.run("create . -pr=profile")

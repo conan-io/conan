@@ -402,7 +402,7 @@ def test_props_from_consumer_build_context_activated():
 def test_skip_transitive_components():
     """ when a transitive depenency is skipped, because its binary is not necessary
     (shared->static), the ``components[].requires`` clause pointing to that skipped dependency
-    was erroring with KeyError, as the dependency info was not there
+    was failing with KeyError, as the dependency info was not there
     """
     c = TestClient()
     pkg = textwrap.dedent("""
@@ -422,7 +422,7 @@ def test_skip_transitive_components():
                                                    .with_requires("pkg/0.1")})
     c.run("create dep")
     c.run("create pkg")
-    c.run("install consumer -g CMakeDeps")
+    c.run("install consumer -g CMakeDeps -v")
     c.assert_listed_binary({"dep": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Skip")})
     # This used to error, as CMakeDeps was raising a KeyError
     assert "'CMakeDeps' calling 'generate()'" in c.out
@@ -549,3 +549,116 @@ def test_system_libs_transitivity():
     app = c.load("app/header-release-data.cmake")
     assert "set(header_SYSTEM_LIBS_RELEASE dl)" in app
     assert "set(header_FRAMEWORKS_RELEASE CoreDriver)" in app
+
+
+class TestCMakeVersionConfigCompat:
+    """
+    https://github.com/conan-io/conan/issues/13809
+    """
+    def test_cmake_version_config_compatibility(self):
+        c = TestClient()
+        dep = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_version_compat", "AnyNewerVersion")
+                """)
+
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run("install --requires=dep/0.1 -g CMakeDeps")
+        dep = c.load("dep-config-version.cmake")
+        expected = textwrap.dedent("""\
+            if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+                set(PACKAGE_VERSION_COMPATIBLE FALSE)
+            else()
+                set(PACKAGE_VERSION_COMPATIBLE TRUE)
+
+                if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+                    set(PACKAGE_VERSION_EXACT TRUE)
+                endif()
+            endif()""")
+        assert expected in dep
+
+    def test_cmake_version_config_compatibility_error(self):
+        c = TestClient()
+        dep = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_version_compat", "Unknown")
+                """)
+
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run("install --requires=dep/0.1 -g CMakeDeps", assert_error=True)
+        assert "Unknown cmake_config_version_compat=Unknown in dep/0.1" in c.out
+
+    def test_cmake_version_config_compatibility_consumer(self):
+        c = TestClient()
+        app = textwrap.dedent("""\
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            class Pkg(ConanFile):
+                settings = "build_type"
+                requires = "dep/0.1"
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "cmake_config_version_compat", "AnyNewerVersion")
+                    deps.generate()
+                """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app")
+        dep = c.load("app/dep-config-version.cmake")
+        expected = textwrap.dedent("""\
+            if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
+                set(PACKAGE_VERSION_COMPATIBLE FALSE)
+            else()
+                set(PACKAGE_VERSION_COMPATIBLE TRUE)
+
+                if(PACKAGE_FIND_VERSION STREQUAL PACKAGE_VERSION)
+                    set(PACKAGE_VERSION_EXACT TRUE)
+                endif()
+            endif()""")
+        assert expected in dep
+
+
+def test_cmakedeps_set_property_overrides():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            settings = "build_type"
+            requires = "dep/0.1", "other/0.1"
+            def generate(self):
+                deps = CMakeDeps(self)
+                # Need the absolute path inside package
+                dep = self.dependencies["dep"].package_folder
+                deps.set_property("dep", "cmake_build_modules", [os.path.join(dep, "my_module1")])
+                deps.set_property("dep", "nosoname", True)
+                deps.set_property("other::mycomp1", "nosoname", True)
+                deps.generate()
+            """)
+
+    pkg_info = {"components": {"mycomp1": {"libs": ["mylib"]}}}
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
+            "other/conanfile.py": GenConanfile("other", "0.1").with_package_type("shared-library")
+                                                              .with_package_info(pkg_info, {}),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create other")
+    c.run("install app")
+    dep = c.load("app/dep-release-data.cmake")
+    assert 'set(dep_BUILD_MODULES_PATHS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/my_module1")' in dep
+    assert 'set(dep_NO_SONAME_MODE_RELEASE TRUE)' in dep
+    other = c.load("app/other-release-data.cmake")
+    assert 'set(other_other_mycomp1_NO_SONAME_MODE_RELEASE TRUE)' in other

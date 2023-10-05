@@ -70,7 +70,7 @@ class TestBasicCliOutput:
                             """)
         client.save({"conanfile.py": conanfile})
         client.run("graph info . --format=json")
-        recipe = json.loads(client.stdout)["nodes"][0]
+        recipe = json.loads(client.stdout)["graph"]["nodes"]["0"]
         assert type(recipe["topics"]) == list
         assert recipe["topics"] == ["foo"]
         assert type(recipe["provides"]) == list
@@ -90,7 +90,7 @@ class TestBasicCliOutput:
                     """)
         client2.save({"conanfile.py": conanfile2})
         client2.run("graph info . --format=json")
-        recipe = json.loads(client2.stdout)["nodes"][0]
+        recipe = json.loads(client2.stdout)["graph"]["nodes"]["0"]
         assert type(recipe["topics"]) == list
         assert recipe["topics"] == ["foo"]
         assert type(recipe["provides"]) == list
@@ -163,10 +163,10 @@ class TestJsonOutput:
         conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
         client.save({"conanfile.py": conanfile})
         client.run("graph info . --package-filter=nothing --format=json")
-        assert '"nodes": []' in client.out
+        assert '"nodes": {}' in client.out
         client.run("graph info . --package-filter=pkg* --format=json")
         graph = json.loads(client.stdout)
-        assert graph["nodes"][0]["ref"] == "pkg/0.1"
+        assert graph["graph"]["nodes"]["0"]["ref"] == "pkg/0.1"
 
     def test_json_info_outputs(self):
         client = TestClient()
@@ -174,7 +174,7 @@ class TestJsonOutput:
         client.save({"conanfile.py": conanfile})
         client.run("graph info . -s build_type=Debug --format=json")
         graph = json.loads(client.stdout)
-        assert graph["nodes"][0]["settings"]["build_type"] == "Debug"
+        assert graph["graph"]["nodes"]["0"]["settings"]["build_type"] == "Debug"
 
 
 class TestAdvancedCliOutput:
@@ -195,11 +195,11 @@ class TestAdvancedCliOutput:
         client.save({"conanfile.py": conanfile})
 
         client.run("graph info .")
-        assert "python_requires: ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']" in client.out
+        assert "python_requires:\n    tool/0.1#4d670581ccb765839f2239cc8dff8fbd" in client.out
 
         client.run("graph info . --format=json")
         info = json.loads(client.stdout)
-        assert info["nodes"][0]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
+        assert "tool/0.1#4d670581ccb765839f2239cc8dff8fbd" in info["graph"]["nodes"]["0"]["python_requires"]
 
     def test_build_id_info(self):
         client = TestClient()
@@ -308,7 +308,7 @@ class TestDeployers:
         c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                               .with_class_attribute("license='GPL'"),
                 "collectlicenses.py": collectlicenses})
-        c.run("graph info . --deploy=collectlicenses")
+        c.run("graph info . --deployer=collectlicenses")
         assert "conanfile.py: LICENSE : GPL!" in c.out
         assert "LICENSE pkg/0.1: MIT!" in c.out
         contents = c.load("licenses.txt")

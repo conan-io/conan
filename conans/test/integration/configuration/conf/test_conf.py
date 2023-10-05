@@ -6,7 +6,9 @@ import pytest
 from mock import patch
 
 from conan import conan_version
+from conan.internal.api import detect_api
 from conans.errors import ConanException
+from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
@@ -35,7 +37,7 @@ def test_basic_composition(client):
         """)
     profile2 = textwrap.dedent("""\
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:max_cpu_count=High
         tools.meson.mesontoolchain:backend=Super
         """)
@@ -47,7 +49,7 @@ def test_basic_composition(client):
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
 
     client.run("install . -pr=profile1 -pr=profile2")
-    assert "tools.build:verbosity$notice" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
@@ -71,7 +73,7 @@ def test_basic_inclusion(client):
     profile2 = textwrap.dedent("""\
         include(profile1)
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:max_cpu_count=High
         tools.meson.mesontoolchain:backend=Super
         """)
@@ -79,7 +81,7 @@ def test_basic_inclusion(client):
                  "profile2": profile2})
 
     client.run("install . -pr=profile2")
-    assert "tools.build:verbosity$notice" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
@@ -95,13 +97,13 @@ def test_composition_conan_conf(client):
     save(client.cache.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:max_cpu_count=High
         tools.meson.mesontoolchain:backend=Super
         """)
     client.save({"profile": profile})
     client.run("install . -pr=profile")
-    assert "tools.build:verbosity$notice" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "tools.microsoft.msbuild:vs_version$Slow" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$High" in client.out
     assert "tools.cmake.cmaketoolchain:generator$Extra" in client.out
@@ -110,17 +112,26 @@ def test_composition_conan_conf(client):
 
 def test_new_config_file(client):
     conf = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.mycompany.myhelper:myconfig=myvalue
         *:tools.cmake.cmaketoolchain:generator=X
-        cache:read_only=True
         """)
     save(client.cache.new_config_path, conf)
     client.run("install .")
-    assert "tools.build:verbosity$notice" in client.out
+    assert "tools.build:verbosity$quiet" in client.out
     assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
     assert "tools.cmake.cmaketoolchain:generator$X" in client.out
     assert "read_only" not in client.out
+
+    conf = textwrap.dedent("""\
+            tools.build:verbosity=notice
+            user.mycompany.myhelper:myconfig=myvalue
+            *:tools.cmake.cmaketoolchain:generator=X
+            cache:read_only=True
+            """)
+    save(client.cache.new_config_path, conf)
+    client.run("install .", assert_error=True)
+    assert "[conf] 'cache:read_only' does not exist in configuration list" in client.out
 
 
 @patch("conans.client.conf.required_version.client_version", "1.26.0")
@@ -130,10 +141,9 @@ def test_new_config_file_required_version():
         core:required_conan_version=>=2.0
         """)
     save(client.cache.new_config_path, conf)
-    with pytest.raises(ConanException) as excinfo:
-        client.run("install .")
+    client.run("install .", assert_error=True)
     assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
-            in str(excinfo.value))
+            in client.out)
 
 
 def test_composition_conan_conf_overwritten_by_cli_arg(client):
@@ -144,13 +154,13 @@ def test_composition_conan_conf_overwritten_by_cli_arg(client):
     save(client.cache.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         tools.microsoft.msbuild:vs_version=High
         """)
     client.save({"profile": profile})
-    client.run("install . -pr=profile -c tools.build:verbosity=debug "
+    client.run("install . -pr=profile -c tools.build:verbosity=verbose "
                "-c tools.meson.mesontoolchain:backend=Super")
-    assert "tools.build:verbosity$debug" in client.out
+    assert "tools.build:verbosity$verbose" in client.out
     assert "tools.microsoft.msbuild:max_cpu_count$Slow" in client.out
     assert "tools.microsoft.msbuild:vs_version$High" in client.out
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
@@ -216,6 +226,23 @@ def test_jinja_global_conf_paths():
     assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
 
 
+def test_profile_detect_os_arch():
+    """ testing OS & ARCH just to test that detect_api is injected
+    """
+    c = TestClient()
+    global_conf = textwrap.dedent("""
+        user.myteam:myconf1={{detect_api.detect_os()}}
+        user.myteam:myconf2={{detect_api.detect_arch()}}
+        """)
+
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    _os = detect_api.detect_os()
+    _arch = detect_api.detect_arch()
+    assert f"user.myteam:myconf1: {_os}" in c.out
+    assert f"user.myteam:myconf2: {_arch}" in c.out
+
+
 def test_empty_conf_valid():
     tc = TestClient()
     profile = textwrap.dedent(r"""
@@ -260,8 +287,10 @@ def test_nonexisting_conf():
     c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run("install . -c tools.unknown:conf=value", assert_error=True)
-    assert "ERROR: Unknown conf 'tools.unknown:conf'" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
     c.run("install . -c user.some:var=value")  # This doesn't fail
+    c.run("install . -c tool.build:verbosity=v", assert_error=True)
+    assert "ERROR: [conf] 'tool.build:verbosity' does not exist in configuration list" in c.out
 
 
 def test_nonexisting_conf_global_conf():
@@ -269,7 +298,7 @@ def test_nonexisting_conf_global_conf():
     save(c.cache.new_config_path, "tools.unknown:conf=value")
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
-    assert "ERROR: Unknown conf 'tools.unknown:conf'" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
 
 
 def test_global_conf_auto_created():
@@ -277,3 +306,40 @@ def test_global_conf_auto_created():
     c.run("config list")  # all commands will trigger
     global_conf = load(c.cache.new_config_path)
     assert "# core:non_interactive = True" in global_conf
+
+
+def test_build_test_consumer_only():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                skip = self.conf.get("tools.build:skip_test", check_type=bool)
+                self.output.info(f'SKIP-TEST: {skip}')
+        """)
+    pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                requires = "dep/0.1"
+                def generate(self):
+                    self.output.info(f'SKIP-TEST: {self.conf.get("tools.build:skip_test")}')
+            """)
+    save(c.cache.new_config_path, "tools.build:skip_test=True\n&:tools.build:skip_test=False")
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg,
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("create dep")
+    assert "dep/0.1: SKIP-TEST: False" in c.out
+    c.run('create pkg --build=* -tf=""')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    c.run('create pkg --build=*')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    c.run('install pkg --build=*')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "conanfile.py (pkg/0.1): SKIP-TEST: False" in c.out

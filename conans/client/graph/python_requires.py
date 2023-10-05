@@ -14,11 +14,18 @@ class PyRequire(object):
         self.recipe = recipe_status
         self.remote = remote
 
+    def serialize(self):
+        return {"remote": self.remote.name if self.remote is not None else None,
+                "recipe": self.recipe}
+
 
 class PyRequires(object):
     """ this is the object that replaces the declared conanfile.py_requires"""
     def __init__(self):
         self._pyrequires = {}  # {pkg-name: PythonRequire}
+
+    def serialize(self):
+        return {r.ref.repr_notime(): r.serialize() for r in self._pyrequires.values()}
 
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
@@ -53,10 +60,11 @@ class PyRequires(object):
 
 
 class PyRequireLoader(object):
-    def __init__(self, proxy, range_resolver):
-        self._proxy = proxy
-        self._range_resolver = range_resolver
+    def __init__(self, conan_app):
+        self._proxy = conan_app.proxy
+        self._range_resolver = conan_app.range_resolver
         self._cached_py_requires = {}
+        self._resolve_prereleases = conan_app.cache.new_config.get("core.version_ranges:resolve_prereleases")
 
     def load_py_requires(self, conanfile, loader, graph_lock, remotes, update, check_update):
         py_requires_refs = getattr(conanfile, "python_requires", None)
@@ -100,9 +108,9 @@ class PyRequireLoader(object):
             raise ConanException("python-requires 'alias' are not supported in Conan 2.0. "
                                  "Please use version ranges instead")
         if graph_lock:
-            graph_lock.resolve_locked_pyrequires(requirement)
-        else:
-            self._range_resolver.resolve(requirement, "py_require", remotes, update)
+            graph_lock.resolve_locked_pyrequires(requirement, self._resolve_prereleases)
+        # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
+        self._range_resolver.resolve(requirement, "python_requires", remotes, update)
         ref = requirement.ref
         return ref
 

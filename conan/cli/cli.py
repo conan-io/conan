@@ -56,6 +56,7 @@ class Cli:
         # layers
         for folder in os.listdir(custom_commands_path):
             layer_folder = os.path.join(custom_commands_path, folder)
+            sys.path.append(layer_folder)
             if not os.path.isdir(layer_folder):
                 continue
             for module in pkgutil.iter_modules([layer_folder]):
@@ -168,11 +169,11 @@ class Cli:
             raise ConanException("Unknown command %s" % str(exc))
 
         try:
-            command.run(self._conan_api, self._commands[command_argument].parser, args[0][1:])
+            command.run(self._conan_api, args[0][1:])
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
-                print(traceback.format_exc())
+                print(traceback.format_exc(), file=sys.stderr)
             self._conan2_migrate_recipe_msg(e)
             raise
 
@@ -186,7 +187,7 @@ class Cli:
             error = "*********************************************************\n" \
                     f"Recipe '{pkg}' seems broken.\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n"\
-                    "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
+                    "If the recipe comes from ConanCenter, report it at https://github.com/conan-io/conan-center-index/issues\n" \
                     "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
@@ -196,7 +197,7 @@ class Cli:
             error = "*********************************************************\n" \
                     f"Recipe '{pkg}' cannot build its binary\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n" \
-                    "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
+                    "If the recipe comes from ConanCenter, report it at https://github.com/conan-io/conan-center-index/issues\n" \
                     "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
@@ -218,7 +219,7 @@ class Cli:
             return exception.code
 
         assert isinstance(exception, Exception)
-        print(traceback.format_exc())
+        output.error(traceback.format_exc())
         msg = exception_message_safe(exception)
         output.error(msg)
         return ERROR_UNEXPECTED

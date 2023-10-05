@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from conans.client.generators import relativize_generated_file
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 from conans.util.files import save
 
@@ -417,7 +417,6 @@ class EnvVars:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep)
-            # To make the script relocatable
             result.append('set "{}={}"'.format(varname, value))
 
         content = "\n".join(result)
@@ -466,6 +465,7 @@ class EnvVars:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "$PSScriptRoot")
         # It is very important to save it correctly with utf-16, the Conan util save() is broken
         # and powershell uses utf-16 files!!!
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
@@ -501,6 +501,8 @@ class EnvVars:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "$script_folder")
+        content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
     def save_script(self, filename):

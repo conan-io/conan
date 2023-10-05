@@ -39,7 +39,9 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
     # TODO: cache2.0 move this creation to other place
     mkdir(export_folder)
     mkdir(export_src_folder)
-    conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
+    recipe_metadata = recipe_layout.metadata()
+    mkdir(recipe_metadata)
+    conanfile.folders.set_base_recipe_metadata(recipe_metadata)
     export_recipe(conanfile, export_folder)
     export_source(conanfile, export_src_folder)
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
@@ -84,27 +86,26 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
 
 
 def _calc_revision(scoped_output, path, manifest, revision_mode):
-    if revision_mode not in ["scm", "hash"]:
+    if revision_mode not in ["scm", "scm_folder", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
         revision = manifest.summary_hash
     else:
+        f = '-- "."' if revision_mode == "scm_folder" else ""
         try:
             with chdir(path):
-                rev_detected = check_output_runner('git rev-list HEAD -n 1 --full-history').strip()
+                revision = check_output_runner(f'git rev-list HEAD -n 1 --full-history {f}').strip()
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
             raise ConanException("{}: {}".format(error_msg, exc))
 
         with chdir(path):
-            if bool(check_output_runner('git status -s').strip()):
+            if bool(check_output_runner(f'git status -s {f}').strip()):
                 raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
                                      " 'conan export', please commit the changes and run again.")
-
-        revision = rev_detected
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 

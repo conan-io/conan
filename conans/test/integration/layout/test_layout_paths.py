@@ -34,7 +34,33 @@ def test_editable_layout_paths():
 
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in data
     pc = c.load("pkg/dep.pc")
-    assert "includedir1=${prefix}/include" in pc
+    assert "includedir=${prefix}/include" in pc
     xcode = c.load("pkg/conan_dep_dep_release_x86_64.xcconfig")
     dep_path = os.path.join(c.current_folder, "dep")
     assert f"PACKAGE_ROOT_dep[config=Release][arch=x86_64][sdk=*] = {dep_path}" in xcode
+
+
+def test_layout_paths_normalized():
+    # make sure the paths doesn't end with trailing ".", and they are identical to the cwd
+    c = TestClient()
+    dep = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+
+        class Dep(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def layout(self):
+                self.folders.source = "."
+                self.folders.build = "."
+                self.folders.generators = "."
+
+            def build(self):
+                assert os.getcwd() == self.source_folder
+                assert os.getcwd() == self.build_folder
+                assert os.getcwd() == self.generators_folder
+
+            """)
+    c.save({"conanfile.py": dep})
+    c.run("build .")
+    # It doesn't assert in the build()

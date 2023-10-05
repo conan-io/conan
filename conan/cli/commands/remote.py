@@ -7,7 +7,8 @@ from conan.api.model import Remote
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
-from conans.client.userio import UserInput
+from conans.client.cache.cache import ClientCache
+from conans.client.rest.remote_credentials import RemoteCredentials
 from conan.errors import ConanException
 
 
@@ -75,9 +76,7 @@ def remote_add(conan_api, parser, subparser, *args):
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
     r = Remote(args.name, args.url, args.secure, disabled=False)
-    conan_api.remotes.add(r, force=args.force)
-    if args.index is not None:
-        conan_api.remotes.move(r, args.index)
+    conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
 @conan_subcommand()
@@ -108,14 +107,7 @@ def remote_update(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
     if args.url is None and args.secure is None and args.index is None:
         subparser.error("Please add at least one argument to update")
-    r = conan_api.remotes.get(args.remote)
-    if args.url is not None:
-        r.url = args.url
-    if args.secure is not None:
-        r.verify_ssl = args.secure
-    conan_api.remotes.update(r)
-    if args.index is not None:
-        conan_api.remotes.move(r, args.index)
+    conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index)
 
 
 @conan_subcommand()
@@ -126,8 +118,7 @@ def remote_rename(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Current name of the remote")
     subparser.add_argument("new_name", help="New name for the remote")
     args = parser.parse_args(*args)
-    r = conan_api.remotes.get(args.remote)
-    conan_api.remotes.rename(r, args.new_name)
+    conan_api.remotes.rename(args.remote, args.new_name)
 
 
 @conan_subcommand(formatters={"text": print_remote_list, "json": formatter_remote_list_json})
@@ -176,8 +167,8 @@ def remote_login(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("remote", help="Pattern or name of the remote to login into. "
                                           "The pattern uses 'fnmatch' style wildcards.")
-    subparser.add_argument("username", help='Username')
-    subparser.add_argument("-p", "--password", nargs='?', const="", type=str, action=OnceArgument,
+    subparser.add_argument("username", nargs="?", help='Username')
+    subparser.add_argument("-p", "--password", nargs='?', type=str, action=OnceArgument,
                            help='User password. Use double quotes if password with spacing, '
                                 'and escape quotes if existing. If empty, the password is '
                                 'requested interactively (not exposed)')
@@ -187,15 +178,17 @@ def remote_login(conan_api, parser, subparser, *args):
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
-    password = args.password
-    if not password:
-        ui = UserInput(conan_api.config.get("core:non_interactive"))
-        _, password = ui.request_login(remote_name=args.remote, username=args.username)
+    cache = ClientCache(conan_api.cache_folder)
+    creds = RemoteCredentials(cache)
+    user, password = creds.auth(args.remote, args.username, args.password)
+    if args.username is not None and args.username != user:
+        raise ConanException(f"User '{args.username}' doesn't match user '{user}' in "
+                             f"credentials.json or environment variables")
 
     ret = OrderedDict()
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
-        conan_api.remotes.login(r, args.username, password)
+        conan_api.remotes.login(r, user, password)
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
 

@@ -256,6 +256,25 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
 
+    def test_revision_build_requires(self):
+        conanfile = GenConanfile()
+
+        refs = []
+        for _ in range(1, 4):  # create different revisions
+            conanfile.with_build_msg("any change to get another rrev")
+            pref = self.c_v2.create(self.ref, conanfile=conanfile)
+            self.c_v2.upload_all(pref.ref)
+            refs.append(pref.ref)
+            assert refs.count(pref.ref) == 1 # make sure that all revisions are different
+
+        client = self.c_v2  # revisions enabled
+        client.remove_all()
+
+        for ref in refs:
+            command = "install --update --tool-require={}".format(repr(ref))
+            client.run(command)
+            self.assertIn("Downloaded recipe revision {}".format(ref.revision), client.out)
+
 
 class RemoveWithRevisionsTest(unittest.TestCase):
 
@@ -794,35 +813,6 @@ class UploadPackagesWithRevisions(unittest.TestCase):
         client.upload_all(self.ref)
         self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
                          pref2.revision)
-
-
-class SCMRevisions(unittest.TestCase):
-
-    def test_auto_revision_even_without_scm_git(self):
-        """
-        Can't do conan create/export with uncommited changes if using revision_mode=scm
-        """
-        ref = RecipeReference.loads("lib/1.0@conan/testing")
-        client = TurboTestClient()
-        conanfile = GenConanfile().with_revision_mode("scm")
-        commit = client.init_git_repo(files={"file.txt": "hey", "conanfile.py": str(conanfile)},
-                                      origin_url="http://myrepo.git")
-        client.create(ref, conanfile=conanfile)
-        self.assertEqual(client.recipe_revision(ref), commit)
-
-        # Change the conanfile and make another create, the revision should be the same
-        client.save({"conanfile.py": str(conanfile.with_build_msg("New changes!"))})
-        client.create(ref, conanfile=conanfile, assert_error=True)
-        self.assertIn("Can't have a dirty repository using revision_mode='scm' and doing", client.out)
-
-    def test_auto_revision_without_commits(self):
-        """If we have a repo but without commits, it has to fail when the revision_mode=scm"""
-        client = TurboTestClient()
-        client.run_command('git init .')
-        client.save({"conanfile.py": GenConanfile("lib", "0.1").with_revision_mode("scm")})
-        client.run("create .", assert_error=True)
-        # It error, because the revision_mode is explicitly set to scm
-        self.assertIn("Cannot detect revision using 'scm' mode from repository", client.out)
 
 
 class CapabilitiesRevisionsTest(unittest.TestCase):

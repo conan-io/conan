@@ -1,5 +1,5 @@
 # coding=utf-8
-
+import json
 import unittest
 
 import pytest
@@ -127,3 +127,21 @@ class VersionRangeOverrideFailTestCase(unittest.TestCase):
         t.run("create .  --build=missing --build=pkga")
         self.assertIn("ros_core/pr-53@3rdparty/snapshot", t.out)
         self.assertIn("ros_perception/1.1.4@3rdparty/unstable", t.out)
+
+        # Check information got by graph info
+        t.run("graph info . --format json")
+        info = json.loads(t.stdout)
+        expected_overrides = {
+            "ros_core/[~1.1]@3rdparty/unstable": [
+                "ros_core/pr-53@3rdparty/snapshot"
+            ],
+            "ros_core/1.1.4@3rdparty/unstable": [
+                "ros_core/pr-53@3rdparty/snapshot#4d670581ccb765839f2239cc8dff8fbd"
+            ]
+        }
+        self.assertEqual(info['graph']["overrides"], expected_overrides)
+        expected_resolved_ranges = {
+            "pkgb/[~0]@common/unstable": "pkgb/0.1@common/unstable",
+            "ros_perception/[~1.1]@3rdparty/unstable": "ros_perception/1.1.4@3rdparty/unstable"
+        }
+        self.assertEqual(info['graph']["resolved_ranges"], expected_resolved_ranges)

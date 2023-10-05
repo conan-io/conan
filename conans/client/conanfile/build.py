@@ -4,6 +4,7 @@ from conans.util.files import chdir, mkdir
 
 def run_build_method(conanfile, hook_manager):
     mkdir(conanfile.build_folder)
+    mkdir(conanfile.package_metadata_folder)
     with chdir(conanfile.build_folder):
         hook_manager.execute("pre_build", conanfile=conanfile)
         if hasattr(conanfile, "build"):

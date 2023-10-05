@@ -3,13 +3,13 @@ import pytest
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import MockConanfile, RedirectedTestOutput
+from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 
 
 @pytest.fixture
 def conanfile():
-    return MockConanfile(None)
+    return ConanFileMock(None)
 
 
 def test_skip_package(conanfile):
@@ -134,7 +134,7 @@ def test_allowed(conanfile):
     build_mode = BuildMode(["missing"])
     assert build_mode.allowed(conanfile) is True
 
-    build_mode = BuildMode([])
+    build_mode = BuildMode(None)
     assert build_mode.allowed(conanfile) is False
 
 

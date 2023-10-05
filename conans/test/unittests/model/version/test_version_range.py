@@ -1,7 +1,7 @@
 import pytest
 
 from conans.errors import ConanException
-from conans.model.recipe_ref import Version
+from conans.model.version import Version
 from conans.model.version_range import VersionRange
 
 values = [
@@ -87,8 +87,22 @@ def test_range_prereleases_conf(version_range, resolve_prereleases, versions_in,
     for v in versions_out:
         assert not r.contains(Version(v), resolve_prereleases), f"Expected '{version_range}' NOT to contain '{v}' (conf.ranges_resolve_prereleases={resolve_prereleases})"
 
-
-def test_wrong_range_syntax():
-    # https://github.com/conan-io/conan/issues/12692
+@pytest.mark.parametrize("version_range", [
+    ">= 1.0",  # https://github.com/conan-io/conan/issues/12692
+    ">=0.0.1 < 1.0"  # https://github.com/conan-io/conan/issues/14612
+])
+def test_wrong_range_syntax(version_range):
     with pytest.raises(ConanException):
-        VersionRange(">= 1.0")
+        VersionRange(version_range)
+
+
+@pytest.mark.parametrize("version_range", [
+    ">=0.1, include_prerelease",
+    ">=0.1, include_prerelease=True",
+    ">=0.1, include_prerelease=False",
+])
+def test_wrong_range_option_syntax(version_range):
+    """We don't error out on bad options, maybe we should,
+    but for now this test ensures we don't change it without realizing"""
+    vr = VersionRange(version_range)
+    assert all(cs.prerelease for cs in vr.condition_sets)
