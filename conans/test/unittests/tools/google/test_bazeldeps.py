@@ -114,7 +114,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
             )
             if platform.system() == "Windows":
                 assert (
-                    'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n        "/DEFAULTLIB:system_lib1",\n    ]'
+                    'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n        "/DEFAULTLIB:system_lib2",\n    ]'
                     in dependency_content
                 )
             else:
@@ -183,7 +183,7 @@ def test_bazeldeps_dependency_transitive():
         )
         if platform.system() == "Windows":
             assert (
-                'linkopts = [\n        "/DEFAULTLIB:system_lib1"\n    ],'
+                'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n    ],'
                 in dependency_content
             )
         else:
