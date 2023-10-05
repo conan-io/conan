@@ -55,10 +55,10 @@ def test_bazeldeps_dependency_buildfiles():
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
             assert """defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""]""" in dependency_content
             if platform.system() == "Windows":
-                assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
+                assert 'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n    ]' in dependency_content
             else:
-                assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert """deps = [\n        # do not sort\n        ":lib1_precompiled",""" in dependency_content
+                assert 'linkopts = [\n        "-lsystem_lib1",\n    ],' in dependency_content
+            assert """deps = [\n        # do not sort\n    \n    ":lib1_precompiled",""" in dependency_content
 
 
 def test_bazeldeps_get_lib_file_path_by_basename():
@@ -66,8 +66,8 @@ def test_bazeldeps_get_lib_file_path_by_basename():
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
     cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
-    cpp_info.system_libs = ["system_lib1"]
-    cpp_info.libs = ["liblib1.a"]
+    cpp_info.system_libs = ["system_lib1", "system_lib2"]
+    cpp_info.libs = ["liblib1.a", "liblib2.a"]
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
@@ -90,10 +90,10 @@ def test_bazeldeps_get_lib_file_path_by_basename():
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
             assert """defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""]""" in dependency_content
             if platform.system() == "Windows":
-                assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
+                assert 'linkopts = [\n        "/DEFAULTLIB:system_lib1",\n        "/DEFAULTLIB:system_lib1",\n    ]' in dependency_content
             else:
-                assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert 'deps = [\n        # do not sort\n        ":liblib1.a_precompiled",' in dependency_content
+                assert 'linkopts = [\n        "-lsystem_lib1",\n        "-lsystem_lib2",\n    ],' in dependency_content
+            assert 'deps = [\n        # do not sort\n    \n    ":liblib1.a_precompiled",' in dependency_content
 
 
 def test_bazeldeps_dependency_transitive():
@@ -142,9 +142,9 @@ def test_bazeldeps_dependency_transitive():
         assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
         assert 'defines = ["DUMMY_DEFINE=\\\\\\"string/value\\\\\\""],' in dependency_content
         if platform.system() == "Windows":
-            assert 'linkopts = ["/DEFAULTLIB:system_lib1"],' in dependency_content
+            assert 'linkopts = [\n        "/DEFAULTLIB:system_lib1"\n    ],' in dependency_content
         else:
-            assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+            assert 'linkopts = [\n        "-lsystem_lib1",\n    ],' in dependency_content
 
         # Ensure that transitive dependency is referenced by the 'deps' attribute of the direct
         # dependency

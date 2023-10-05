@@ -86,7 +86,11 @@ class BazelDeps(object):
                 defines = [{{ defines }}],
                 {% endif %}
                 {%- if linkopts %}
-                linkopts = [{{ linkopts }}],
+                linkopts = [
+                    {%- for linkopt in linkopts %}
+                    {{ linkopt }},
+                    {%- endfor %}
+                ],
                 {%- endif %}
                 visibility = ["//visibility:public"],
                 {%- if libs or shared_with_interface_libs %}
@@ -142,7 +146,6 @@ class BazelDeps(object):
             else:
                 linkopts.append('"-l{}"'.format(system_lib))
 
-        linkopts = ', '.join(linkopts)
         lib_dir = 'lib'
 
         dependencies = []
