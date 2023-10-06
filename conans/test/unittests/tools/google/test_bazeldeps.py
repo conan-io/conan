@@ -58,7 +58,7 @@ def test_bazeldeps_dependency_buildfiles():
                 assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
             else:
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert """deps = [\n        # do not sort\n    \n    ":lib1_precompiled",""" in dependency_content
+            assert """deps = [\n        # do not sort\n        ":lib1_precompiled",""" in dependency_content
 
 
 def test_bazeldeps_get_lib_file_path_by_basename():
@@ -93,7 +93,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
                 assert 'linkopts = ["/DEFAULTLIB:system_lib1"]' in dependency_content
             else:
                 assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
-            assert 'deps = [\n        # do not sort\n    \n    ":liblib1.a_precompiled",' in dependency_content
+            assert 'deps = [\n        # do not sort\n        ":liblib1.a_precompiled",' in dependency_content
 
 
 def test_bazeldeps_dependency_transitive():
