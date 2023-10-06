@@ -55,7 +55,6 @@ def test_multiple_targets(argument, output_args):
             settings = "os", "compiler", "build_type", "arch"
             def build(self):
                 cmake = CMake(self)
-                cmake.configure()
                 cmake.build(target=${argument})
 
             def run(self, *args, **kwargs):
