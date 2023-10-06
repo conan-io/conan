@@ -241,7 +241,12 @@ class DepsGraphBuilder(object):
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             if system_replace:
-                                require.ref = system_replace
+                                if require.ref.name != system_replace.name:
+                                    raise ConanException(f"[system_deps] {system_replace} cannot replace package name")
+                                #require.ref.version = system_replace.version
+                                require.ref.user = system_replace.user
+                                require.ref.channel = system_replace.channel
+                                require.ref.revision = system_replace.revision
                             else:
                                 require.ref.version = d.version  # resolved range is replaced by exact
                                 return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
@@ -249,7 +254,12 @@ class DepsGraphBuilder(object):
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
                             if system_replace:
-                                require.ref = system_replace
+                                if require.ref.name != system_replace.name:
+                                    raise ConanException(f"[system_deps] {system_replace} cannot replace package name")
+                                #require.ref.version = system_replace.version
+                                require.ref.user = system_replace.user
+                                require.ref.channel = system_replace.channel
+                                require.ref.revision = system_replace.revision
                             else:
                                 require.ref.revision = d.revision
                                 return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
