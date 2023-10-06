@@ -17,7 +17,31 @@ class TestSystemHostOverrides:
         # Check lockfile
         c.run("lock create pkg -pr=profile")
         lock = c.load("pkg/conan.lock")
-        print(lock)
+        assert f"dep2/1.1@system#{rrev}" in lock
+        assert "dep1/1.0" in lock
+
+        c.run("create dep2 --version=1.2")
+        # with lockfile
+        c.run("install pkg -pr=profile")
+        c.assert_listed_require({"dep1/1.0": "System tool",
+                                 f"dep2/1.1@system#{rrev}": "Cache"})
+
+    def test_replace_zlib_zlibng(self):
+        c = TestClient()
+        c.save({"zlibng/conanfile.py": GenConanfile("zlibng"),
+                "pkg/conanfile.py": GenConanfile().with_requires("zlib/1.2.11"),
+                "profile": "[system_deps]\nzlib/1.2.11: zlibng/1.2.11"})
+        c.run("create zlibng --version=1.2.11")
+        rrev = c.exported_recipe_revision()
+        c.run("install pkg -pr=profile")
+
+
+        c.assert_listed_require({"dep1/1.0": "System tool",
+                                 f"dep2/1.1@system#{rrev}": "Cache"})
+
+        # Check lockfile
+        c.run("lock create pkg -pr=profile")
+        lock = c.load("pkg/conan.lock")
         assert f"dep2/1.1@system#{rrev}" in lock
         assert "dep1/1.0" in lock
 

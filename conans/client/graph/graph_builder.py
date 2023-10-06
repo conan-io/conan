@@ -266,15 +266,14 @@ class DepsGraphBuilder(object):
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
-        if graph_lock is not None:
-            # Here is when the ranges and revisions are resolved
-            graph_lock.resolve_locked(node, require, self._resolve_prereleases)
-
         resolved = self._resolved_system_deps(node, require, profile_build, profile_host,
                                               self._resolve_prereleases)
         if resolved is None:
             resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
                                                   self._resolve_prereleases)
+        if graph_lock is not None:
+            # Here is when the ranges and revisions are resolved
+            graph_lock.resolve_locked(node, require, self._resolve_prereleases)
 
         if resolved is None:
             try:
