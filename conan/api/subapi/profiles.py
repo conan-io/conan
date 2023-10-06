@@ -94,7 +94,6 @@ class ProfilesAPI:
                      profile_plugin, global_conf):
         loader = ProfileLoader(self._conan_api.cache_folder)
         profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
-        profile.process_settings(cache_settings)
         if profile_plugin is not None:
             try:
                 profile_plugin(profile)
@@ -102,6 +101,7 @@ class ProfilesAPI:
                 msg = f"Error while processing 'profile.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
                 raise ConanException(msg)
+        profile.process_settings(cache_settings)
         profile.conf.validate()
         # Apply the new_config to the profiles the global one, so recipes get it too
         profile.conf.rebase_conf_definition(global_conf)
