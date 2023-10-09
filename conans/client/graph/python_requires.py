@@ -16,7 +16,8 @@ class PyRequire(object):
 
     def serialize(self):
         return {"remote": self.remote.name if self.remote is not None else None,
-                "recipe": self.recipe}
+                "recipe": self.recipe,
+                "path": self.path}
 
 
 class PyRequires(object):
