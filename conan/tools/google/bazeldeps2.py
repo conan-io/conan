@@ -102,14 +102,14 @@ def get_requirements(conanfile, build_context_activated, build_context_suffix):
         yield require, dep
 
 
-def get_libs(conanfile, dep, relative_to=None) -> dict:
+def _get_libs(conanfile, dep, relative_to_path=None) -> dict:
     """
     Get the static/shared library paths
 
     :param conanfile: The current recipe object.
     :param dep: <ConanFileInterface obj> of the dependency.
-    :param relative_to: path to any folder to relativize the absolute path
-    :return: tuple of static/shared library absolute paths -> (static_path, shared_path)
+    :param relative_to_path: base path to prune from each lib path
+    :return: dict of static/shared library absolute paths -> {lib_name: (IS_SHARED, LIB_PATH, DLL_PATH)}
     """
     def is_shared_dependency():
         """
@@ -137,7 +137,7 @@ def get_libs(conanfile, dep, relative_to=None) -> dict:
         conanfile.output.debug(f"It was not possible to find the {expected_file} file.")
         return ""
 
-    cpp_info = dep.cpp_info  # dep.cpp_info.aggregated_components()
+    cpp_info = dep.cpp_info.aggregated_components()  # dep.cpp_info
     shared = is_shared_dependency()
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs
@@ -180,10 +180,58 @@ def get_libs(conanfile, dep, relative_to=None) -> dict:
             dll_path = ""
             if shared and ext == ".lib":
                 dll_path = get_dll_file_paths(f"{name}.dll")
-            ret.setdefault(lib, (shared, lib_path, dll_path))
+            ret.setdefault(lib, (shared,
+                                 _relativize_path(lib_path, relative_to_path=relative_to_path),
+                                 _relativize_path(dll_path, relative_to_path=relative_to_path)))
 
     conanfile.output.warning(f"The library/ies {libs} cannot be found in the dependency")
     return ret
+
+
+def _get_headers(cpp_info, package_folder_path):
+    return ', '.join('"{}/**"'.format(_relativize_path(path, package_folder_path))
+                     for path in cpp_info.includedirs)
+
+
+def _get_defines(cpp_info):
+    return ', '.join('"{}"'.format(define.replace('"', '\\' * 3 + '"'))
+                     for define in cpp_info.defines)
+
+
+def _get_linkopt(cpp_info, os_build):
+    link_opt = '"/DEFAULTLIB:{}"' if os_build == "Windows" else '"-l{}"'
+    system_libs = [link_opt.format(l) for l in cpp_info.system_libs]
+    shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
+    return ", ".join(system_libs + shared_flags)
+
+
+def _get_copt(cpp_info):
+    includedirsflags = ['-I"${%s}"' % d for d in cpp_info.includedirs]
+    cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
+    cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
+    return ", ".join(includedirsflags + cxxflags + cflags)
+
+
+# FIXME: Very fragile. Need UTs, and, maybe, move it to conan.tools.files
+def _relativize_path(path, relative_to_path):
+    """
+    Relativize the path with regard to a given base path
+
+    :param path: path to relativize
+    :param relative_to_path: base path to prune from the path
+    :return: Unix-like path relative to ``relative_to_path``. Otherwise, it returns
+             the Unix-like ``path``.
+    """
+    if not path or not relative_to_path:
+        return path
+    p = path.replace("\\", "/")
+    rel = relative_to_path.replace("\\", "/")
+    if p.startswith(rel):
+        return p[len(rel):].lstrip("/")
+    elif rel in p:
+        return p.split(rel)[-1].lstrip("/")
+    else:
+        return p.lstrip("/")
 
 
 class _BazelDependenciesBZLGenerator:
@@ -195,18 +243,18 @@ class _BazelDependenciesBZLGenerator:
         # load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
 
-        {%- macro new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) -%}
+        {%- macro new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) %}
             native.new_local_repository(
                 name="{{pkg_name}}",
                 path="{{pkg_folder}}",
                 build_file="{{pkg_build_file_path}}",
             )
-        {%- endmacro -%}
+        {%- endmacro %}
 
         def load_conan_dependencies():
-            {% for pkg_name, pkg_folder, pkg_build_file_path in dependencies %}
+            {%- for pkg_name, pkg_folder, pkg_build_file_path in dependencies %}
             {{new_local_repository(pkg_name, pkg_folder, pkg_build_file_path)}}
-            {% endfor %}
+            {%- endfor %}
         """)
 
     def __init__(self, conanfile, dependencies):
@@ -220,11 +268,13 @@ class _BazelDependenciesBZLGenerator:
         content = template.render(self._dependencies)
         # Saving the BUILD (empty) and dependencies.bzl files
         save(self.filename, content)
-        save("BUILD", "# This is an empty BUILD file to be able to load the dependencies.bzl one.")
+        save("BUILD.bazel", "# This is an empty BUILD file to be able to load the "
+                            "dependencies.bzl one.")
 
 
 class _BazelBUILDGenerator:
 
+    filename = "BUILD.bazel"
     template = textwrap.dedent("""
     load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
@@ -275,6 +325,46 @@ class _BazelBUILDGenerator:
     )
     """)
 
+    def _get_package_folder(self):
+        # If editable, package_folder can be None
+        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
+            else self._dep.package_folder
+        return root_folder.replace("\\", "/")
+
+    def __int__(self, conanfile, dep, require):
+        self._conanfile = conanfile
+        self._dep = dep
+        self._require = require
+
+    @property
+    def _context(self):
+        cpp_info = self._dep.cpp_info
+        package_folder_path = self._get_package_folder()
+        headers = _get_headers(cpp_info, package_folder_path)
+        copt = _get_copt(cpp_info)
+        defines = _get_defines(cpp_info)
+        linkopt = _get_linkopt(cpp_info, self._dep.settings_build.get_safe("os"))
+        libs = _get_libs(self._conanfile, self._dep, package_folder_path)
+
+        context = {
+            "name": self._dep.ref.name,
+            "libs": libs,
+            "copt": copt,
+            "libdir": lib_dir,
+            "headers": headers,
+            "defines": defines,
+            "linkopts": linkopt,
+            "dependencies": dependencies,
+        }
+        return context
+
+    def generate(self):
+        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
+                            undefined=StrictUndefined)
+        content = template.render(self._dependencies)
+        # Saving the BUILD (empty) and dependencies.bzl files
+        save(self.filename, content)
+
 
 class _BazelGenerator:
 
@@ -291,75 +381,6 @@ class _BazelGenerator:
 
 class BazelDeps:
 
-    library_BUILD_template = textwrap.dedent("""
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
-
-    {% for libname, filepath in libs.items() %}
-    cc_import(
-        name = "{{ libname }}_precompiled",
-        {{ library_type }} = "{{ filepath }}",
-    )
-    {% endfor %}
-
-    {% for libname, (lib_path, dll_path) in shared_with_interface_libs.items() %}
-    cc_import(
-        name = "{{ libname }}_precompiled",
-        interface_library = "{{ lib_path }}",
-        shared_library = "{{ dll_path }}",
-    )
-    {% endfor %}
-
-    cc_library(
-        name = "{{ name }}",
-        {% if headers %}
-        hdrs = glob([{{ headers }}]),
-        {% endif %}
-        {% if includes %}
-        includes = [{{ includes }}],
-        {% endif %}
-        {% if defines %}
-        defines = [{{ defines }}],
-        {% endif %}
-        {% if linkopts %}
-        linkopts = [{{ linkopts }}],
-        {% endif %}
-        visibility = ["//visibility:public"],
-        {% if libs or shared_with_interface_libs %}
-        deps = [
-            # do not sort
-        {% for lib in libs %}
-        ":{{ lib }}_precompiled",
-        {% endfor %}
-        {% for lib in shared_with_interface_libs %}
-        ":{{ lib }}_precompiled",
-        {% endfor %}
-        {% for dep in dependencies %}
-        "@{{ dep }}",
-        {% endfor %}
-        ],
-        {% endif %}
-    )
-    """)
-    dependencies_bzl_template = textwrap.dedent("""
-    # This Bazel module should be loaded by your WORKSPACE file.
-    # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
-    # load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
-    # load_conan_dependencies()
-
-    {%- macro new_local_repository(pkg_name, package_folder, build_file_path) -%}
-        native.new_local_repository(
-            name="{{pkg_name}}",
-            path="{{package_folder}}",
-            build_file="{{build_file_path}}",
-        )
-    {%- endmacro -%}
-
-    def load_conan_dependencies():
-        {% for pkg_name, package_folder, build_file_path in dependencies %}
-        {{new_local_repository(pkg_name, package_folder, build_file_path)}}
-        {% endfor %}
-    """)
-
     def __init__(self, conanfile):
         self._conanfile = conanfile
         # Activate the build *.pc files for the specified libraries
@@ -374,7 +395,8 @@ class BazelDeps:
                                         self.build_context_suffix)
         bazel_files = {}
         for require, dep in requirements:
-            bazel_generator = _BazelGenerator(self._conanfile, dep, build_context_suffix=self.build_context_suffix)
+            bazel_generator = _BazelGenerator(self._conanfile, dep,
+                                              build_context_suffix=self.build_context_suffix)
             bazel_files.update(bazel_generator.bazel_files)
         return bazel_files
 
@@ -389,3 +411,109 @@ class BazelDeps:
         generator_files = self.content
         for generator_file, content in generator_files.items():
             save(generator_file, content)
+
+
+
+"""
+
+The following are the typical use cases:
+1. Linking a static library
+
+
+cc_import(
+  name = "mylib",
+  hdrs = ["mylib.h"],
+  static_library = "libmylib.a",
+  # If alwayslink is turned on,
+  # libmylib.a will be forcely linked into any binary that depends on it.
+  # alwayslink = 1,
+)
+2. Linking a shared library (Unix)
+
+cc_import(
+  name = "mylib",
+  hdrs = ["mylib.h"],
+  shared_library = "libmylib.so",
+)
+3. Linking a shared library with interface library (Windows)
+
+cc_import(
+  name = "mylib",
+  hdrs = ["mylib.h"],
+  # mylib.lib is an import library for mylib.dll which will be passed to linker
+  interface_library = "mylib.lib",
+  # mylib.dll will be available for runtime
+  shared_library = "mylib.dll",
+)
+4. Linking a shared library with system_provided=True (Windows)
+
+cc_import(
+  name = "mylib",
+  hdrs = ["mylib.h"],
+  # mylib.lib is an import library for mylib.dll which will be passed to linker
+  interface_library = "mylib.lib",
+  # mylib.dll is provided by system environment, for example it can be found in PATH.
+  # This indicates that Bazel is not responsible for making mylib.dll available.
+  system_provided = 1,
+)
+5. Linking to static or shared library
+On Unix:
+
+cc_import(
+  name = "mylib",
+  hdrs = ["mylib.h"],
+  static_library = "libmylib.a",
+  shared_library = "libmylib.so",
+)
+
+# first will link to libmylib.a
+cc_binary(
+  name = "first",
+  srcs = ["first.cc"],
+  deps = [":mylib"],
+  linkstatic = 1, # default value
+)
+
+# second will link to libmylib.so
+cc_binary(
+  name = "second",
+  srcs = ["second.cc"],
+  deps = [":mylib"],
+  linkstatic = 0,
+)
+On Windows:
+
+cc_import(
+  name = "mylib",
+  hdrs = ["mylib.h"],
+  static_library = "libmylib.lib", # A normal static library
+  interface_library = "mylib.lib", # An import library for mylib.dll
+  shared_library = "mylib.dll",
+)
+
+# first will link to libmylib.lib
+cc_binary(
+  name = "first",
+  srcs = ["first.cc"],
+  deps = [":mylib"],
+  linkstatic = 1, # default value
+)
+
+# second will link to mylib.dll through mylib.lib
+cc_binary(
+  name = "second",
+  srcs = ["second.cc"],
+  deps = [":mylib"],
+  linkstatic = 0,
+)
+cc_import supports an include attribute. For example:
+
+  cc_import(
+  name = "curl_lib",
+  hdrs = glob(["vendor/curl/include/curl/*.h"]),
+  includes = [ "vendor/curl/include" ],
+  shared_library = "vendor/curl/lib/.libs/libcurl.dylib",
+)
+
+
+"""
