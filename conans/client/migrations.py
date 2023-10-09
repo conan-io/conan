@@ -1,6 +1,7 @@
 import os
 import shutil
 import sqlite3
+import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.cache.cache import ClientCache
@@ -54,7 +55,7 @@ class ClientMigrator(Migrator):
         from conans.client.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(cache)
 
-        if old_version and old_version < "2.0.10":
+        if old_version and old_version < "2.0.14":
             _migrate_pkg_db_lru(cache)
 
 
@@ -77,5 +78,13 @@ def _migrate_pkg_db_lru(cache):
         ConanOutput().error(f"Could not complete the 2.0.10 DB migration."
                             " Please manually remove your .conan2 cache and reinstall packages")
         raise
+    else:  # generate the back-migration script
+        undo_lru = textwrap.dedent("""\
+            import os
+            def migrate(cache_folder):
+                os.remove(os.path.join(cache_folder, "file.txt"))
+            """)
+        path = os.path.join(cache.cache_folder, "migrations", f"2.0.14_1-migrate.py")
+        save(path, undo_lru)
     finally:
         connection.close()
