@@ -32,3 +32,15 @@ class TestEditablePackageTest:
         assert "Reference 'lib/version@user/name' in editable mode" in t.out
         t.run('install --requires=lib/version@user/name')
         t.assert_listed_require({"lib/version@user/name": "Editable"})
+
+    def test_pyrequires_remote(self):
+        t = TestClient(default_server_user=True)
+        t.save({"conanfile.py": GenConanfile("pyreq", "1.0")})
+        t.run("create .")
+        t.run("upload pyreq/1.0 -c -r=default")
+        t.run("remove pyreq/1.0 -c")
+        t.save({"conanfile.py": GenConanfile("pkg", "1.0").with_python_requires("pyreq/1.0")})
+        t.run("editable add . -nr", assert_error=True)
+        assert "Cannot resolve python_requires 'pyreq/1.0': No remote defined" in t.out
+        t.run("editable add .")
+        assert "Reference 'pkg/1.0' in editable mode" in t.out

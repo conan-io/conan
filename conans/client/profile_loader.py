@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
+from conan.internal.api import detect_api
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.loader import load_python_file
 from conans.errors import ConanException, scoped_traceback
@@ -30,7 +31,7 @@ _default_profile_plugin = """\
 
 def profile_plugin(profile):
     settings = profile.settings
-    if settings.get("compiler") == "msvc" and settings.get("compiler.runtime"):
+    if settings.get("compiler") in ("msvc", "clang") and settings.get("compiler.runtime"):
         if settings.get("compiler.runtime_type") is None:
             runtime = "Debug" if settings.get("build_type") == "Debug" else "Release"
             try:
@@ -112,6 +113,10 @@ class ProfileLoader:
 
     def _load_profile_plugin(self):
         profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
+        if not os.path.exists(profile_plugin):
+            raise ConanException("The 'profile.py' plugin file doesn't exist. If you want "
+                                 "to disable it, edit its contents instead of removing it")
+
         mod, _ = load_python_file(profile_plugin)
         if hasattr(mod, "profile_plugin"):
             return mod.profile_plugin
@@ -167,7 +172,8 @@ class ProfileLoader:
                    "os": os,
                    "profile_dir": base_path,
                    "profile_name": file_path,
-                   "conan_version": conan_version}
+                   "conan_version": conan_version,
+                   "detect_api": detect_api}
         rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
         text = rtemplate.render(context)
 

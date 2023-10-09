@@ -114,7 +114,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         reuse = textwrap.dedent("""
             from conan import ConanFile
             class PkgTest(ConanFile):
-                python_requires = "base/[>1.0,<1.2]@user/testing"
+                python_requires = "base/[>1.0 <1.2]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
             """)
 
@@ -1199,3 +1199,14 @@ def test_transitive_range_not_found_in_cache():
     c.run("create . ")
     c.assert_listed_require({"pr/1.0": "Cache"}, python=True)
     assert "pr/[>0]: pr/1.0" in c.out
+
+
+def test_export_pkg():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
+    c.run("export-pkg .", assert_error=True)
+    assert "export-pkg can only be used for binaries, not for 'python-require'" in c.out
+    # Make sure nothing is exported
+    c.run("list *")
+    assert "WARN: There are no matching recipe references" in c.out
+    assert "pytool/0.1" not in c.out

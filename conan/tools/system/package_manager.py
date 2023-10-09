@@ -40,9 +40,10 @@ class _SystemPackageManagerTool(object):
         elif os_name == "Windows" and self._conanfile.conf.get("tools.microsoft.bash:subsystem") == "msys2":
             os_name = "msys2"
         manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian"],
+                           "apk": ["alpine"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
@@ -61,9 +62,12 @@ class _SystemPackageManagerTool(object):
                 if d in os_name:
                     return tool
 
-    def get_package_name(self, package):
-        # TODO: should we only add the arch if cross-building?
-        if self._arch in self._arch_names and cross_building(self._conanfile):
+    def get_package_name(self, package, host_package=True):        
+        # Only if the package is for building, for example a library,
+        # we should add the host arch when cross building.
+        # If the package is a tool that should be installed on the current build 
+        # machine we should not add the arch.
+        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
             return "{}{}{}".format(package, self._arch_separator,
                                    self._arch_names.get(self._arch))
         return package
@@ -148,7 +152,7 @@ class _SystemPackageManagerTool(object):
             self._conanfile.output.warning(str(error))
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
-    def _install(self, packages, update=False, check=True, **kwargs):
+    def _install(self, packages, update=False, check=True, host_package=True, **kwargs):
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
         install_pkgs = pkgs.setdefault("install", [])
         install_pkgs.extend(p for p in packages if p not in install_pkgs)
@@ -156,7 +160,7 @@ class _SystemPackageManagerTool(object):
             return
 
         if check or self._mode in (self.mode_check, self.mode_report_installed):
-            packages = self.check(packages)
+            packages = self.check(packages, host_package=host_package)
             missing_pkgs = pkgs.setdefault("missing", [])
             missing_pkgs.extend(p for p in packages if p not in missing_pkgs)
 
@@ -177,7 +181,7 @@ class _SystemPackageManagerTool(object):
             if update:
                 self.update()
 
-            packages_arch = [self.get_package_name(package) for package in packages]
+            packages_arch = [self.get_package_name(package, host_package=host_package) for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
                                                       tool=self.tool_name,
@@ -195,8 +199,8 @@ class _SystemPackageManagerTool(object):
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
             return self._conanfile_run(command, self.accepted_update_codes)
 
-    def _check(self, packages):
-        missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg)) != 0]
+    def _check(self, packages, host_package=True):
+        missing = [pkg for pkg in packages if self.check_package(self.get_package_name(pkg, host_package=host_package)) != 0]
         return missing
 
     def check_package(self, package):
@@ -233,7 +237,7 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    def install(self, packages, update=False, check=False, recommends=False):
+    def install(self, packages, update=False, check=True, recommends=False, host_package=True):
         """
         Will try to install the list of packages passed as a parameter. Its
         behaviour is affected by the value of ``tools.system.package_manager:mode``
@@ -242,13 +246,15 @@ class Apt(_SystemPackageManagerTool):
         :param packages: try to install the list of packages passed as a parameter.
         :param update: try to update the package manager database before checking and installing.
         :param check: check if the packages are already installed before installing them.
+        :param host_package: install the packages for the host machine architecture (the machine
+               that will run the software), it has an effect when cross building.
         :param recommends: if the parameter ``recommends`` is ``False`` it will add the
                ``'--no-install-recommends'`` argument to the *apt-get* command call.
         :return: the return code of the executed apt command.
         """
         recommends_str = '' if recommends else '--no-install-recommends '
         return super(Apt, self).install(packages, update=update, check=check,
-                                        recommends=recommends_str)
+                                        host_package=host_package, recommends=recommends_str)
 
 
 class Yum(_SystemPackageManagerTool):
@@ -330,6 +336,25 @@ class PacMan(_SystemPackageManagerTool):
         super(PacMan, self).__init__(conanfile)
         self._arch_names = {"x86": "lib32"} if arch_names is None else arch_names
         self._arch_separator = "-"
+
+
+class Apk(_SystemPackageManagerTool):
+    tool_name = "apk"
+    install_command = "{sudo}{tool} add --no-cache {packages}"
+    update_command = "{sudo}{tool} update"
+    check_command = "{tool} info -e {package}"
+
+    def __init__(self, conanfile, _arch_names=None):
+        """
+        Constructor method.
+        Note that *Apk* does not support architecture names since Alpine Linux does not support
+        multiarch. Therefore, the ``arch_names`` argument is ignored.
+
+        :param conanfile: the current recipe object. Always use ``self``.
+        """
+        super(Apk, self).__init__(conanfile)
+        self._arch_names = {}
+        self._arch_separator = ""
 
 
 class Zypper(_SystemPackageManagerTool):

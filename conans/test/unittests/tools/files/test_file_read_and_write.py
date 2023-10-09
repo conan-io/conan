@@ -4,12 +4,12 @@
 import os
 
 from conan.tools.files import replace_in_file, save, load
-from conans.test.utils.mocks import MockConanfile
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 
 
 def test_save_and_load_encoding():
-    conanfile = MockConanfile({})
+    conanfile = ConanFileMock({})
     tmp = temp_folder()
     file_path = os.path.join(tmp, "file.txt")
 
@@ -30,7 +30,7 @@ def test_save_and_load_encoding():
 
 
 def test_replace_in_file():
-    conanfile = MockConanfile({})
+    conanfile = ConanFileMock({})
     tmp = temp_folder()
     file_path = os.path.join(tmp, "file.txt")
 

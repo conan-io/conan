@@ -1,257 +1,114 @@
-import os
 import textwrap
-import unittest
 
-import pytest
-from parameterized.parameterized import parameterized
-
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 conanfile = """import os
 from conan import ConanFile
-from conans.util.files import save
-from conan.tools.files import copy
+
 class MyTest(ConanFile):
     name = "pkg"
     version = "0.1"
     settings = "os", "build_type"
     build_policy = "missing"
+
     def build_id(self):
         if self.settings.os == "Windows":
             self.info_build.settings.build_type = "Any"
+
     def build(self):
         self.output.info("Building my code!")
-        save("debug/file1.txt", "Debug file1")
-        save("release/file1.txt", "Release file1")
+
     def package(self):
         self.output.info("Packaging %s!" % self.settings.build_type)
-        if self.settings.build_type == "Debug":
-            copy(self, "*", os.path.join(self.build_folder, "debug"), self.package_folder,
-                 keep_path=False)
-        else:
-            copy(self, "*", os.path.join(self.build_folder, "release"), self.package_folder,
-                 keep_path=False)
 """
 
-consumer = """[requires]
-pkg/0.1@user/channel
-[imports]
-., * -> .
-"""
 
-consumer_py = """from conan import ConanFile
-class MyTest(ConanFile):
-    name = "mytest"
-    version = "0.1"
-    settings = "os", "build_type"
-    requires = "pkg/0.1@user/channel"
-    def build_id(self):
-        self.info_build.settings.build_type = "Any"
-        self.info_build.requires.clear()
-"""
-
-package_id_windows_release = "14e27355860f077e112e49068497f4cc531ba8c7"
-package_id_windows_debug = "db9edb386f1f47c8c8e08f8f239d73a03313a462"
-package_id_linux_release = "c26ded3c7aa4408e7271e458d65421000e000711"
-package_id_linux_debug = "5978c0d63d2a428ca63ffb710fa2089b8d2f70c8"
-
-
-class BuildIdTest(unittest.TestCase):
-
-    def _check_conaninfo(self, client):
-        # Check that conaninfo is correct
-        latest_rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("pkg/0.1@user/channel"))
-        pref_debug = PkgReference.loads(f"pkg/0.1@user/channel#{latest_rrev.revision}:"
-                                        f"{package_id_windows_debug}")
-        prev_debug = client.cache.get_latest_package_reference(pref_debug)
-        layout = client.cache.pkg_layout(prev_debug)
-        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
-        self.assertIn("os=Windows", conaninfo)
-        self.assertIn("build_type=Debug", conaninfo)
-        self.assertNotIn("Release", conaninfo)
-
-        pref_release = PkgReference.loads(f"pkg/0.1@user/channel#{latest_rrev.revision}:"
-                                          f"{package_id_windows_release}")
-        prev_release = client.cache.get_latest_package_reference(pref_release)
-        layout = client.cache.pkg_layout(prev_release)
-        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
-        self.assertIn("os=Windows", conaninfo)
-        self.assertIn("build_type=Release", conaninfo)
-        self.assertNotIn("Debug", conaninfo)
-
-        pref_debug = PkgReference.loads(f"pkg/0.1@user/channel#{latest_rrev.revision}:"
-                                        f"{package_id_linux_debug}")
-        prev_debug = client.cache.get_latest_package_reference(pref_debug)
-        layout = client.cache.pkg_layout(prev_debug)
-        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
-        self.assertIn("os=Linux", conaninfo)
-        self.assertIn("build_type=Debug", conaninfo)
-        self.assertNotIn("Release", conaninfo)
-
-        pref_release = PkgReference.loads(f"pkg/0.1@user/channel#{latest_rrev.revision}:"f"{package_id_linux_release}")
-        prev_release = client.cache.get_latest_package_reference(pref_release)
-        layout = client.cache.pkg_layout(prev_release)
-        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
-        self.assertIn("os=Linux", conaninfo)
-        self.assertIn("build_type=Release", conaninfo)
-        self.assertNotIn("Debug", conaninfo)
+class TestBuildIdTest:
 
     def test_create(self):
         # Ensure that build_id() works when multiple create calls are made
-
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . --user=user --channel=channel -s os=Windows -s build_type=Release")
-        self.assertIn("pkg/0.1@user/channel: Calling build()", client.out)
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        client.run("create . --user=user --channel=channel -s os=Windows -s build_type=Debug")
+        client.run("create .  -s os=Windows -s build_type=Release")
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
+        # Debug must not build
+        client.run("create .  -s os=Windows -s build_type=Debug")
+        assert "pkg/0.1: Calling build()" not in client.out
+        assert "Building my code!" not in client.out
+        assert "Packaging Debug!" in client.out
 
-        self.assertNotIn("pkg/0.1@user/channel: Calling build()", client.out)
-        self.assertIn("Packaging Debug!", client.out)
+        client.run("create . -s os=Linux -s build_type=Release")
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
+        client.run("create .  -s os=Linux -s build_type=Debug")
+        assert "Building my code!" in client.out
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Packaging Debug!" in client.out
 
-        client.run("create . --user=user --channel=channel -s os=Linux -s build_type=Release")
-
-        self.assertIn("pkg/0.1@user/channel: Calling build()", client.out)
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        client.run("create . --user=user --channel=channel -s os=Linux -s build_type=Debug")
-        self.assertIn("pkg/0.1@user/channel: Calling build()", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        self._check_conaninfo(client)
-
-    @parameterized.expand([(True, ), (False,)])
-    @pytest.mark.xfail(reason="Remove build folders not implemented yet")
-    def test_basic(self, python_consumer):
+    def test_basic_install(self):
         client = TestClient()
-
         client.save({"conanfile.py": conanfile})
-        client.run("export . --user=user --channel=channel")
-        if python_consumer:
-            client.save({"conanfile.py": consumer_py}, clean_first=True)
-        else:
-            client.save({"conanfile.txt": consumer}, clean_first=True)
+        client.run("export . ")
         # Windows Debug
-        client.run('install . -s os=Windows -s build_type=Debug')
-        self.assertIn("Building package from source as defined by build_policy='missing'",
-                      client.out)
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
+        assert "Building my code!" in client.out
+        assert "Packaging Debug!" in client.out
+
         # Package Windows Release, it will reuse the previous build
-        client.run('install . -s os=Windows -s build_type=Release')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
+        assert "Building my code!" not in client.out
+        assert "Packaging Release!" in client.out
 
         # Now Linux Debug
-        client.run('install . -s os=Linux -s build_type=Debug')
-        self.assertIn("Building package from source as defined by build_policy='missing'",
-                      client.out)
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
+        client.run('install --requires=pkg/0.1 -s os=Linux -s build_type=Debug')
+        assert "Building my code!" in client.out
+        assert "Packaging Debug!" in client.out
+
         # Linux Release must build again, as it is not affected by build_id()
-        client.run('install . -s os=Linux -s build_type=Release')
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        self._check_conaninfo(client)
+        client.run('install --requires=pkg/0.1 -s os=Linux -s build_type=Release')
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
 
-        # TODO: cache2.0 check if we will maintain the remove -p
-        # Check that repackaging works, not necessary to re-build
-        # client.run("remove pkg/0.1@user/channel -p -c")
-        # # Windows Debug
-        # client.run('install . -s os=Windows -s build_type=Debug')
-        # self.assertNotIn("Building my code!", client.out)
-        # self.assertIn("Packaging Debug!", client.out)
-        # content = client.load("file1.txt")
-        # self.assertEqual("Debug file1", content)
-        # # Windows Release
-        # client.run('install . -s os=Windows -s build_type=Release')
-        # self.assertNotIn("Building my code!", client.out)
-        # self.assertIn("Packaging Release!", client.out)
-        # content = client.load("file1.txt")
-        # self.assertEqual("Release file1", content)
-        # # Now Linux
-        # client.run('install . -s os=Linux -s build_type=Debug')
-        # self.assertIn("Building package from source as defined by build_policy='missing'",
-        #               client.out)
-        # self.assertIn("Building my code!", client.out)
-        # self.assertIn("Packaging Debug!", client.out)
-        # content = client.load("file1.txt")
-        # self.assertEqual("Debug file1", content)
-        # client.run('install . -s os=Linux -s build_type=Release')
-        # self.assertIn("Building my code!", client.out)
-        # self.assertIn("Packaging Release!", client.out)
-        # content = client.load("file1.txt")
-        # self.assertEqual("Release file1", content)
-        # self._check_conaninfo(client)
+        # But if the packages are removed, and we change the order, keeps working
+        client.run("remove *:* -c")
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
 
-        # But if the build folder is removed, the packages are there, do nothing
-        client.run("remove pkg/0.1@user/channel -b -c")
-        client.run('install . -s os=Windows -s build_type=Debug')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertNotIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
-        client.run('install . -s os=Windows -s build_type=Release')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertNotIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        # Now Linux
-        client.run('install . -s os=Linux -s build_type=Debug')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertNotIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
-        client.run('install . -s os=Linux -s build_type=Release')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertNotIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        self._check_conaninfo(client)
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
+        assert "Building my code!" not in client.out
+        assert "Packaging Debug!" in client.out
 
-    def test_remove_specific_builds(self):
+    def test_clean_build(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run('create . --user=user --channel=channel -s os=Windows -s build_type=Debug')
-        client.run('create . --user=user --channel=channel -s os=Windows -s build_type=Release')
-        ref = RecipeReference.loads("pkg/0.1@user/channel")
+        client.run("export . ")
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
+        # Package Windows Release, it will reuse the previous build
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
+        assert "Building my code!" not in client.out
+        assert "Packaging Release!" in client.out
 
-        def _check_builds():
-            latest_rrev = client.cache.get_latest_recipe_reference(ref)
-            pkg_ids = client.cache.get_package_references(latest_rrev)
-            prevs = []
-            for pkg_id in pkg_ids:
-                prevs.extend(client.cache.get_package_revisions_references(pkg_id))
-            build_folders = []
-            for prev in prevs:
-                if os.path.exists(client.cache.pkg_layout(prev).build()):
-                    build_folders.append(client.cache.pkg_layout(prev).build())
-            self.assertEqual(1, len(build_folders))
-            self.assertEqual(2, len(pkg_ids))
-            return build_folders[0], pkg_ids
+        client.run("cache clean")  # packages are still there
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug')
+        assert "Building my code!" not in client.out
+        assert "Packaging Release!" not in client.out
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release')
+        assert "Building my code!" not in client.out
+        assert "Packaging Release!" not in client.out
 
-        build, packages = _check_builds()
-        # TODO: cache2.0 remove -p and -b is not yet fully implemented
-        # we are commenting the first part of this until it is
-        #client.run("remove pkg/0.1@user/channel -b %s -c" % packages[0])
-        #_check_builds()
-        #client.run("remove pkg/0.1@user/channel -b %s -c" % build)
-        #cache_builds = client.cache.package_layout(ref).conan_builds()
-        #self.assertEqual(0, len(cache_builds))
-        #package_ids = client.cache.package_layout(ref).package_ids()
-        #self.assertEqual(2, len(package_ids))
+        # Lets force the first rebuild, different order Linux first
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Release --build=pkg*')
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
+
+        client.run('install --requires=pkg/0.1 -s os=Windows -s build_type=Debug --build=pkg*')
+        assert "Building my code!" not in client.out
+        assert "Packaging Debug!" in client.out
 
     def test_failed_build(self):
         # Repeated failed builds keep failing
@@ -265,17 +122,17 @@ class BuildIdTest(unittest.TestCase):
         client = TestClient()
         # NORMAL case, every create fails
         client.save({"conanfile.py": fail_conanfile})
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
+        client.run("create . --name=pkg --version=0.1 ", assert_error=True)
+        assert "ERROR: pkg/0.1: Error in build() method, line 5" in client.out
+        client.run("create . --name=pkg --version=0.1 ", assert_error=True)
+        assert "ERROR: pkg/0.1: Error in build() method, line 5" in client.out
         # now test with build_id
         client.save({"conanfile.py": fail_conanfile +
                      "    def build_id(self): self.info_build.settings.build_type = 'any'"})
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=channel", assert_error=True)
-        self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
+        client.run("create . --name=pkg --version=0.1 ", assert_error=True)
+        assert "ERROR: pkg/0.1: Error in build() method, line 5" in client.out
+        client.run("create . --name=pkg --version=0.1 ", assert_error=True)
+        assert "ERROR: pkg/0.1: Error in build() method, line 5" in client.out
 
 
 def test_remove_require():
@@ -293,3 +150,71 @@ def test_remove_require():
             "consumer/conanfile.py": remove})
     c.run("create dep")
     c.run("create consumer")
+
+
+def test_build_id_error():
+    """
+    https://github.com/conan-io/conan/issues/14537
+    This was failing because the ``DB get_matching_build_id()`` function was returning all prefs
+    for a given ref, and the order could be by alphabetic package_id, but only the first one really
+    contains the build folder with the artifacts. It was fixed by defining the DB "build_id" only
+    for the first reference containing that build_id, not all
+    """
+    c = TestClient()
+    myconan = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.scm import Version
+
+        class BuildIdTestConan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "compiler", "build_type"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+
+            def build_id(self):
+                self.info_build.settings.build_type = "Any"
+                self.info_build.options.shared = "Any"
+
+            def package_id(self):
+                compilerVer = Version(str(self.info.settings.compiler.version))
+                if self.info.settings.compiler == "gcc":
+                    if compilerVer >= "7":
+                        self.info.settings.compiler.version = "7+"
+    """)
+    host_profile = textwrap.dedent("""
+        [settings]
+        arch = x86_64
+        build_type = Release
+        compiler = gcc
+        compiler.cppstd = gnu17
+        compiler.libcxx = libstdc++11
+        compiler.version = 8
+        os = Linux
+    """)
+
+    c.save({"conanfile.py": myconan,
+            "myprofile": host_profile})
+    c.run("create . "
+          "-pr:h myprofile -pr:b myprofile "
+          "-s build_type=Debug -o pkg/*:shared=True")
+    c.assert_listed_binary({"pkg/0.1": ("538f60f3919ea9b8ea9e7c63c5948abe44913bec", "Build")})
+    assert "pkg/0.1: build_id() computed 7d169d0d018d239cff27eb081e3f6575554e05c5" in c.out
+    c.run("create . "
+          "-pr:h myprofile -pr:b myprofile "
+          "-s build_type=Debug -o pkg/*:shared=False")
+    c.assert_listed_binary({"pkg/0.1": ("ba41c80b0373ef66e2ca95ed56961153082fbcd9", "Build")})
+    assert "pkg/0.1: build_id() computed 7d169d0d018d239cff27eb081e3f6575554e05c5" in c.out
+    assert "pkg/0.1: Won't be built, using previous build folder as defined in build_id()" in c.out
+    c.run("create . "
+          "-pr:h myprofile -pr:b myprofile "
+          "-s build_type=Release -o pkg/*:shared=True")
+    c.assert_listed_binary({"pkg/0.1": ("2eb252449df37d245568e32e5a41d0540db3c6e2", "Build")})
+    assert "pkg/0.1: build_id() computed 7d169d0d018d239cff27eb081e3f6575554e05c5" in c.out
+    assert "pkg/0.1: Won't be built, using previous build folder as defined in build_id()" in c.out
+    c.run("create . "
+          "-pr:h myprofile -pr:b myprofile "
+          "-s build_type=Release -o pkg/*:shared=False")
+    c.assert_listed_binary({"pkg/0.1": ("978c5442906f96846ccb201129ba1559071ce4ab", "Build")})
+    assert "pkg/0.1: build_id() computed 7d169d0d018d239cff27eb081e3f6575554e05c5" in c.out
+    assert "pkg/0.1: Won't be built, using previous build folder as defined in build_id()" in c.out

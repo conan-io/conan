@@ -8,6 +8,7 @@ from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
 from conan.api.output import ConanOutput
+from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -47,9 +48,12 @@ class ClientCache(object):
         self._store_folder = self.new_config.get("core.cache:storage_path") or \
                              os.path.join(self.cache_folder, "p")
 
-        mkdir(self._store_folder)
-        db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
-        self._data_cache = DataCache(self._store_folder, db_filename)
+        try:
+            mkdir(self._store_folder)
+            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            self._data_cache = DataCache(self._store_folder, db_filename)
+        except Exception as e:
+            raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 
     @property
     def temp_folder(self):
@@ -102,6 +106,9 @@ class ClientCache(object):
 
     def remove_package_layout(self, layout):
         self._data_cache.remove_package(layout)
+
+    def remove_build_id(self, pref):
+        self._data_cache.remove_build_id(pref)
 
     def update_recipe_timestamp(self, ref):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
@@ -177,7 +184,8 @@ class ClientCache(object):
                 template = Environment(loader=FileSystemLoader(self.cache_folder)).from_string(text)
                 content = template.render({"platform": platform, "os": os, "distro": distro,
                                            "conan_version": conan_version,
-                                           "conan_home_folder": self.cache_folder})
+                                           "conan_home_folder": self.cache_folder,
+                                           "detect_api": detect_api})
                 self._new_config.loads(content)
             else:  # creation of a blank global.conf file for user convenience
                 default_global_conf = textwrap.dedent("""\

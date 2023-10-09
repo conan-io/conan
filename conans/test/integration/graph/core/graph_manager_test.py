@@ -330,7 +330,7 @@ class TestLinear(GraphManagerTest):
 
         with pytest.raises(ConanException) as exc:
             self.build_consumer(consumer)
-        assert "Package type is 'library', but no 'shared' option declared" in str(exc)
+        assert "liba/0.1: Package type is 'library', but no 'shared' option declared" in str(exc)
 
     def test_build_script_requirement(self):
         # app -> libb0.1 -br-> liba0.1 (build-scripts)
@@ -841,6 +841,37 @@ class TestLinearFourLevels(GraphManagerTest):
         _check_transitive(app, [(libc, True, False, False, False),
                                 (libb, True, False, False, False),
                                 (liba, True, False, False, run)])
+
+    def test_intermediate_header_only(self):
+        # app -> libc/0.1 (static) -> libb0.1 (header) -> liba0.1 (static)
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("static-library"))
+        self.recipe_conanfile("libb/0.1",  GenConanfile().with_package_type("header-library")
+                                                         .with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_package_type("static-library")
+                                                        .with_requirement("libb/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, False, False, False),
+                                 (liba, True, True, False, False)])
+
+        _check_transitive(app, [(libc, True, True, False, False),
+                                (libb, False, False, False, False),
+                                (liba, False, True, False, False)])
 
 
 class TestLinearFiveLevelsHeaders(GraphManagerTest):

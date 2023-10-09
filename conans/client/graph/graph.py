@@ -57,7 +57,6 @@ class Node(object):
         self.binary_remote = None
         self.context = context
         self.test = test
-        self.test_package = False  # True if it is a test_package only package
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
@@ -213,6 +212,9 @@ class Node(object):
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
+        result["rrev"] = self.ref.revision if self.ref is not None else None
+        result["rrev_timestamp"] = self.ref.timestamp if self.ref is not None else None
+        result["prev_timestamp"] = self.pref_timestamp
         result["remote"] = self.remote.name if self.remote else None
         result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
         from conans.client.installer import build_id

@@ -128,7 +128,9 @@ class CMake(object):
 
         args = []
         if target is not None:
-            args = ["--target", target]
+            target_list = [target] if isinstance(target, str) else target
+            args.extend(["--target"] + target_list)
+
         if cli_args:
             args.extend(cli_args)
 
@@ -163,7 +165,7 @@ class CMake(object):
         self._conanfile.output.info("Running CMake.build()")
         self._build(build_type, target, cli_args, build_tool_args)
 
-    def install(self, build_type=None, component=None):
+    def install(self, build_type=None, component=None, cli_args=None):
         """
         Equivalent to run ``cmake --build . --target=install``
 
@@ -172,6 +174,9 @@ class CMake(object):
                            It can fail if the build is single configuration (e.g. Unix Makefiles),
                            as in that case the build type must be specified at configure time,
                            not build type.
+        :param cli_args: A list of arguments ``[arg1, arg2, ...]`` for the underlying
+                         build system that will be passed to the command line:
+                         ``cmake --install ... arg1 arg2``
         """
         self._conanfile.output.info("Running CMake.install()")
         mkdir(self._conanfile, self._conanfile.package_folder)
@@ -192,6 +197,11 @@ class CMake(object):
         do_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
         if do_strip:
             arg_list.append("--strip")
+
+        if cli_args:
+            if "--install" in cli_args:
+                raise ConanException("Do not pass '--install' argument to 'install()'")
+            arg_list.extend(cli_args)
 
         arg_list = " ".join(filter(None, arg_list))
         command = "%s %s" % (self._cmake_program, arg_list)

@@ -51,17 +51,11 @@ def cppstd_compat(conanfile):
 """
 
 
-def get_binary_compatibility_file_paths(cache):
+def migrate_compatibility_files(cache):
+    from conans.client.migrations import update_file
     compatible_folder = os.path.join(cache.plugins_path, "compatibility")
     compatibility_file = os.path.join(compatible_folder, "compatibility.py")
     cppstd_compat_file = os.path.join(compatible_folder, "cppstd_compat.py")
-    return compatibility_file, cppstd_compat_file
-
-
-def migrate_compatibility_files(cache):
-    from conans.client.migrations import update_file
-
-    compatibility_file, cppstd_compat_file = get_binary_compatibility_file_paths(cache)
     update_file(compatibility_file, _default_compat)
     update_file(cppstd_compat_file, _default_cppstd_compat)
 
@@ -69,7 +63,10 @@ def migrate_compatibility_files(cache):
 class BinaryCompatibility:
 
     def __init__(self, cache):
-        compatibility_file, cppstd_compat_file = get_binary_compatibility_file_paths(cache)
+        compatibility_file = os.path.join(cache.plugins_path, "compatibility", "compatibility.py")
+        if not os.path.exists(compatibility_file):
+            raise ConanException("The 'compatibility.py' plugin file doesn't exist. If you want "
+                                 "to disable it, edit its contents instead of removing it")
         mod, _ = load_python_file(compatibility_file)
         self._compatibility = mod.compatibility
 
@@ -93,12 +90,14 @@ class BinaryCompatibility:
         result = OrderedDict()
         original_info = conanfile.info
         original_settings = conanfile.settings
+        original_settings_target = conanfile.settings_target
         original_options = conanfile.options
         for c in compat_infos:
             # we replace the conanfile, so ``validate()`` and ``package_id()`` can
             # use the compatible ones
             conanfile.info = c
             conanfile.settings = c.settings
+            conanfile.settings_target = c.settings_target
             conanfile.options = c.options
             run_validate_package_id(conanfile)
             pid = c.package_id()
@@ -107,6 +106,7 @@ class BinaryCompatibility:
         # Restore the original state
         conanfile.info = original_info
         conanfile.settings = original_settings
+        conanfile.settings_target = original_settings_target
         conanfile.options = original_options
         return result
 
@@ -123,4 +123,7 @@ class BinaryCompatibility:
                 if options:
                     compat_info.options.update(options_values=OrderedDict(options))
                 result.append(compat_info)
+                settings_target = elem.get("settings_target")
+                if settings_target and compat_info.settings_target:
+                    compat_info.settings_target.update_values(settings_target)
         return result

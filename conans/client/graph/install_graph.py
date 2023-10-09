@@ -6,6 +6,7 @@ from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
@@ -32,6 +33,14 @@ class _InstallPackageReference:
         self.overrides = Overrides()
         self.ref = None
 
+    @property
+    def pref(self):
+        return PkgReference(self.ref, self.package_id, self.prev)
+
+    @property
+    def conanfile(self):
+        return self.nodes[0].conanfile
+
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
@@ -48,7 +57,7 @@ class _InstallPackageReference:
 
     def add(self, node):
         assert self.package_id == node.package_id
-        assert self.binary == node.binary
+        assert self.binary == node.binary, f"Binary for {node}: {self.binary}!={node.binary}"
         assert self.prev == node.prev
         # The context might vary, but if same package_id, all fine
         # assert self.context == node.context
@@ -98,12 +107,18 @@ class _InstallRecipeReference:
     same recipe revision (repo+commit) are to be built grouped together"""
     def __init__(self):
         self.ref = None
+        self._node = None
         self.packages = {}  # {package_id: _InstallPackageReference}
         self.depends = []  # Other REFs, defines the graph topology and operation ordering
+
+    @property
+    def node(self):
+        return self._node
 
     @staticmethod
     def create(node):
         result = _InstallRecipeReference()
+        result._node = node
         result.ref = node.ref
         result.add(node)
         return result
@@ -229,7 +244,7 @@ class InstallGraph:
             else:
                 existing.add(node)
 
-    def install_order(self):
+    def install_order(self, flat=False):
         # a topological order by levels, returns a list of list, in order of processing
         levels = []
         opened = self._nodes
@@ -246,7 +261,8 @@ class InstallGraph:
                 levels.append(current_level)
             # now initialize new level
             opened = {k: v for k, v in opened.items() if v not in closed}
-
+        if flat:
+            return [r for level in levels for r in level]
         return levels
 
     def install_build_order(self):
@@ -301,9 +317,9 @@ class InstallGraph:
         conanfile.output.warning(msg)
         missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
         if self._is_test_package:
-            build_msg = "'conan test' tested packages must exist, and '--build' argument " \
-                        "is used only for the 'test_package' dependencies, not for the tested " \
-                        "dependencies"
+            build_msg = "This is a **test_package** missing binary. You can use --build (for " \
+                        "all dependencies) or --build-test (exclusive for 'test_package' " \
+                        "dependencies) to define what can be built from sources"
         else:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"

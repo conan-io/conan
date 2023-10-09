@@ -37,8 +37,8 @@ class RangeResolver:
                 resolved_ref = remote_resolved_ref
 
         if resolved_ref is None:
-            raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
-                                 "could not be resolved" % (version_range, require, base_conanref))
+            raise ConanException(f"Version range '{version_range}' from requirement '{require.ref}' "
+                                 f"required by '{base_conanref}' could not be resolved")
 
         # To fix Cache behavior, we remove the revision information
         resolved_ref.revision = None  # FIXME: Wasting information already obtained from server?
@@ -54,6 +54,9 @@ class RangeResolver:
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]
+            local_found.extend(r for r in self._cache.editable_packages.edited_refs
+                               if r.name == search_ref.name and r.user == search_ref.user
+                               and r.channel == search_ref.channel)
             self._cached_cache[pattern] = local_found
         if local_found:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)

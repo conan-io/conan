@@ -46,6 +46,7 @@ class ConanFile:
     settings = None
     options = None
     default_options = None
+    default_build_options = None
     package_type = None
 
     implements = []
@@ -148,8 +149,11 @@ class ConanFile:
             result["license"] = list(self.license) if not isinstance(self.license, str) else self.license
 
         result["requires"] = self.requires.serialize()
+
         if hasattr(self, "python_requires"):
-            result["python_requires"] = [r.repr_notime() for r in self.python_requires.all_refs()]
+            result["python_requires"] = self.python_requires.serialize()
+        else:
+            result["python_requires"] = None
         result["system_requires"] = self.system_requires
 
         result["recipe_folder"] = self.recipe_folder
@@ -159,6 +163,7 @@ class ConanFile:
         result["package_folder"] = self.package_folder
 
         result["cpp_info"] = self.cpp_info.serialize()
+        result["conf_info"] = self.conf_info.serialize()
         result["label"] = self.display_name
         return result
 
@@ -325,8 +330,8 @@ class ConanFile:
         envfiles_folder = self.generators_folder or os.getcwd()
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conans.util.runners import conan_run
-        ConanOutput().writeln(f"{self.display_name}: RUN: {command if not quiet else '*hidden*'}",
-                              fg=Color.BRIGHT_BLUE)
+        if not quiet:
+            ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
         ConanOutput().writeln("")
 

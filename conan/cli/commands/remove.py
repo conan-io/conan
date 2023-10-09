@@ -9,8 +9,8 @@ from conans.errors import ConanException
 
 
 def summary_remove_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
     cli_out_write("Remove summary:")
     info = results["results"]
@@ -55,6 +55,8 @@ def remove(conan_api: ConanAPI, parser, *args):
                         help="Remove recipes and binaries that have not been recently used. Use a"
                              " time limit like --lru=5d (days) or --lru=4w (weeks),"
                              " h (hours), m(minutes)")
+    parser.add_argument("--dry-run", default=False, action="store_true",
+                        help="Do not remove any items, only print those which would be removed")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -70,6 +72,7 @@ def remove(conan_api: ConanAPI, parser, *args):
 
     ui = UserInput(conan_api.config.get("core:non_interactive"))
     remote = conan_api.remotes.get(args.remote) if args.remote else None
+    cache_name = "Local Cache" if not remote else remote.name
 
     def confirmation(message):
         return args.confirm or ui.request_boolean(message)
@@ -77,7 +80,7 @@ def remove(conan_api: ConanAPI, parser, *args):
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
-        package_list = multi_package_list["Local Cache" if not remote else remote.name]
+        package_list = multi_package_list[cache_name]
         refs_to_remove = package_list.refs()
         if not refs_to_remove:  # the package list might contain only refs, no revs
             ConanOutput().warning("Nothing to remove, package list do not contain recipe revisions")
@@ -87,16 +90,38 @@ def remove(conan_api: ConanAPI, parser, *args):
             raise ConanException('--package-query supplied but the pattern does not match packages')
         package_list = conan_api.list.select(ref_pattern, args.package_query, remote, lru=args.lru)
         multi_package_list = MultiPackagesList()
-        multi_package_list.add("Local Cache" if not remote else remote.name, package_list)
+        multi_package_list.add(cache_name, package_list)
 
-    for ref, ref_bundle in package_list.refs():
-        if ref_bundle.get("packages") is None:
+    # TODO: This iteration and removal of not-confirmed is ugly and complicated, improve it
+    for ref, ref_bundle in package_list.refs().items():
+        ref_dict = package_list.recipes[str(ref)]["revisions"]
+        packages = ref_bundle.get("packages")
+        if packages is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
-                conan_api.remove.recipe(ref, remote=remote)
+                if not args.dry_run:
+                    conan_api.remove.recipe(ref, remote=remote)
+            else:
+                ref_dict.pop(ref.revision)
+                if not ref_dict:
+                    package_list.recipes.pop(str(ref))
             continue
-        for pref, _ in package_list.prefs(ref, ref_bundle):
+        prefs = package_list.prefs(ref, ref_bundle)
+        if not prefs:
+            ConanOutput().info(f"No binaries to remove for '{ref.repr_notime()}'")
+            ref_dict.pop(ref.revision)
+            if not ref_dict:
+                package_list.recipes.pop(str(ref))
+            continue
+
+        for pref, _ in prefs.items():
             if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
-                conan_api.remove.package(pref, remote=remote)
+                if not args.dry_run:
+                    conan_api.remove.package(pref, remote=remote)
+            else:
+                pref_dict = packages[pref.package_id]["revisions"]
+                pref_dict.pop(pref.revision)
+                if not pref_dict:
+                    packages.pop(pref.package_id)
 
     return {
         "results": multi_package_list.serialize(),
