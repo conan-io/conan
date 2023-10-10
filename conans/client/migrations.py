@@ -55,10 +55,11 @@ class ClientMigrator(Migrator):
         migrate_profile_plugin(cache)
 
         if old_version and old_version < "2.0.14":
-            _migrate_pkg_db_lru(cache)
+            _migrate_pkg_db_lru(cache, old_version)
 
 
-def _migrate_pkg_db_lru(cache):
+def _migrate_pkg_db_lru(cache, old_version):
+    ConanOutput().warning(f"Upgrade cache from Conan version '{old_version}'")
     ConanOutput().warning("Running 2.0.14 Cache DB migration to add LRU column")
     db_filename = os.path.join(cache.store, 'cache.sqlite3')
     connection = sqlite3.connect(db_filename, isolation_level=None,
@@ -69,7 +70,7 @@ def _migrate_pkg_db_lru(cache):
             connection.execute(f"ALTER TABLE {table} ADD COLUMN 'lru' "
                                f"INTEGER DEFAULT '{lru}' NOT NULL;")
     except Exception:
-        ConanOutput().error(f"Could not complete the 2.0.10 DB migration."
+        ConanOutput().error(f"Could not complete the 2.0.14 DB migration."
                             " Please manually remove your .conan2 cache and reinstall packages")
         raise
     else:  # generate the back-migration script
