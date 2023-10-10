@@ -250,7 +250,11 @@ def print_auth(remotes):
                 cli_out_write(f"    {k}: {v}", fg=Color.BRIGHT_RED if k == "error" else Color.WHITE)
 
 
-@conan_subcommand(formatters={"text": print_auth})
+def print_auth_json(results):
+    cli_out_write(json.dumps(results))
+
+
+@conan_subcommand(formatters={"text": print_auth, "json": print_auth_json})
 def remote_auth(conan_api, parser, subparser, *args):
     """
     Authenticate in the defined remotes
