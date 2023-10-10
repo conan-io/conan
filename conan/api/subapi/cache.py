@@ -1,11 +1,17 @@
+import json
 import os
+import tarfile
 
+from conan.api.model import MultiPackagesList
+from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
+from conans.client.cache.cache import ClientCache
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import rmdir
+from conans.util.dates import revision_timestamp_now
+from conans.util.files import rmdir, gzopen_without_timestamps, save, load
 
 
 class CacheAPI:
@@ -100,6 +106,70 @@ class CacheAPI:
                     app.cache.remove_build_id(pref)
                 if download:
                     rmdir(pref_layout.download_package())
+
+    def get(self, package_list):
+        multi_package_list = MultiPackagesList.load(package_list)
+        package_list = multi_package_list["Local Cache"]
+        app = ConanApp(self.conan_api.cache_folder)
+        ref_folders = {}
+        for ref, ref_bundle in package_list.refs().items():
+            ref_layout = app.cache.recipe_layout(ref)
+            base_folder = ref_layout.base_folder
+            ref_folders[ref] = base_folder
+            for pref, _ in package_list.prefs(ref, ref_bundle).items():
+                pref_layout = app.cache.pkg_layout(pref)
+                base_folder = pref_layout.package()
+                # FIXME: Missing metadata
+                ref_folders[pref] = base_folder
+
+        tgz_path = os.path.abspath("cache.tgz")
+        _compress_cache(tgz_path, ref_folders, self.conan_api.cache_folder)
+
+    def put(self, path):
+        with open(path, mode='rb') as file_handler:
+            the_tar = tarfile.open(fileobj=file_handler)
+            # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
+            # "could not change modification time", with time=0
+            # the_tar.errorlevel = 2  # raise exception if any error
+            the_tar.list(verbose=True)
+            the_tar.extractall(path=self.conan_api.cache_folder)
+            the_tar.close()
+
+        manifest_path = os.path.join(self.conan_api.cache_folder, "cache_manifest.json")
+        manifest = load(manifest_path)
+        os.remove(manifest_path)  # remove file from the cache
+        manifest = json.loads(manifest)
+        print(manifest)
+        cache = ClientCache(self.conan_api.cache_folder)
+        for ref, folder in manifest.items():
+            print(repr(ref), folder)
+            if ":" in ref:  # Package
+                pref = PkgReference.loads(ref)
+            else:
+                ref = RecipeReference.loads(ref)
+                ref.timestamp = revision_timestamp_now()
+                recipe_layout = cache.get_or_create_ref_layout(ref)
+                rel_path = os.path.relpath(recipe_layout.base_folder, cache.cache_folder)
+                assert rel_path == folder, f"{rel_path}!={folder}"
+
+
+
+def _compress_cache(tgz_path, ref_folders, cache_folder):
+    name = os.path.basename(tgz_path)
+    out = ConanOutput()
+    serialized = {ref.repr_notime(): os.path.relpath(f, cache_folder)
+                  for ref, f in ref_folders.items()}
+    serialized = json.dumps(serialized, indent=2)
+    manifest_path = os.path.join(cache_folder, "cache_manifest.json")
+    save(manifest_path, serialized)
+    with open(tgz_path, "wb") as tgz_handle:
+        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
+        tgz.add(manifest_path, "cache_manifest.json")
+        for ref, folder in ref_folders.items():
+            rel_path = os.path.relpath(folder, cache_folder)
+            out.info(f"Compressing {ref}: {rel_path}")
+            tgz.add(folder, rel_path, recursive=True)
+        tgz.close()
 
 
 def _resolve_latest_ref(app, ref):

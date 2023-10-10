@@ -1,6 +1,7 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.api.output import cli_out_write
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -99,3 +100,25 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
+
+
+@conan_subcommand()
+def cache_get(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Get the artifacts from a package list and archive them
+    """
+    subparser.add_argument("package_list", help="Package list to be zipped")
+    args = parser.parse_args(*args)
+    package_list = make_abs_path(args.package_list)
+    conan_api.cache.get(package_list)
+
+
+@conan_subcommand()
+def cache_put(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Put  the artifacts from a an archive into the cache
+    """
+    subparser.add_argument("path", help="Path to archive to put in the cache")
+    args = parser.parse_args(*args)
+    path = make_abs_path(args.path)
+    conan_api.cache.put(path)
