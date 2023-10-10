@@ -72,7 +72,7 @@ def test_bazeldeps_dependency_buildfiles():
                     in dependency_content
                 )
             assert (
-                """deps = [\n        # do not sort\n    \n    ":lib1_precompiled","""
+                """deps = [\n        # do not sort\n        ":lib1_precompiled",\n        "@OriginalDepName",\n    ],\n"""
                 in dependency_content
             )
 
@@ -123,7 +123,7 @@ def test_bazeldeps_get_lib_file_path_by_basename():
                     in dependency_content
                 )
             assert (
-                'deps = [\n        # do not sort\n    \n    ":liblib1.a_precompiled",'
+                'deps = [\n        # do not sort\n        ":liblib1.a_precompiled",\n        "@OriginalDepName",\n    ],\n'
                 in dependency_content
             )
 
