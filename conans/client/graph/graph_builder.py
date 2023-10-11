@@ -84,6 +84,7 @@ class DepsGraphBuilder(object):
             else:
                 self._conflicting_version(require, node, prev_require, prev_node,
                                           prev_ref, base_previous, self._resolve_prereleases)
+
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, require, graph, profile_host, profile_build,

@@ -1,4 +1,3 @@
-from collections import namedtuple
 from functools import total_ordering
 from typing import Optional
 
@@ -25,12 +24,19 @@ class _Condition:
         if self.version < other.version:
             return True
         elif self.version == other.version:
-            if self.operator == ">=":
-                return False
-            elif self.operator == "<":
-                return True
-
+            if "<" in self.operator:
+                assert "<" in other.operator  # Only ordering possible
+                return other.operator == "<="
+            else:
+                if ">" in other.operator:
+                    return other.operator == ">"
+                else:  # valid range check lower against upper
+                    return self.operator == ">=" and other.operator == "<="
         return False
+
+    def __eq__(self, other):
+        return (self.version == other.version and
+                self.operator == other.operator)
 
 
 class _ConditionSet:
@@ -158,30 +164,32 @@ class VersionRange:
         return False
 
     def intersection(self, other):
-        lower_limits = [c for c in self.condition_sets[0].conditions if c.operator in (">", ">=")]
-        lower_limits += [c for c in other.condition_sets[0].conditions if c.operator in (">", ">=")]
-        print(lower_limits)
-        lower_limit = sorted(lower_limits, reverse=True)[0]
-        print(lower_limit)
+        # TODO: assumes just 1 condition set
+        if len(self.condition_sets) != 1 or len(other.condition_sets) != 1:
+            return
 
-        upper_limits = [c for c in self.condition_sets[0].conditions if c.operator in ("<", "<=")]
-        upper_limits += [c for c in other.condition_sets[0].conditions if c.operator in ("<", "<=")]
-        print(upper_limits)
-        upper_limit = sorted(upper_limits)[0]
-        print(upper_limit)
+        conditions = []
+        lower_limits = [c for c in self.condition_sets[0].conditions if ">" in c.operator]
+        lower_limits.extend(c for c in other.condition_sets[0].conditions if ">" in c.operator)
+        lower_limit = None
+        if lower_limits:
+            lower_limit = sorted(lower_limits, reverse=True)[0]
+            conditions.append(lower_limit)
 
-        if lower_limit >= upper_limit:
+        upper_limits = [c for c in self.condition_sets[0].conditions if "<" in c.operator]
+        upper_limits.extend(c for c in other.condition_sets[0].conditions if "<" in c.operator)
+        upper_limit = None
+        if upper_limits:
+            upper_limit = sorted(upper_limits)[0]
+            conditions.append(upper_limit)
+
+        if lower_limit and upper_limit and lower_limit > upper_limit:
             return None
 
-        result = VersionRange(f"[{lower_limit.operator}{lower_limit.version} "
-                              f"{upper_limit.operator}{upper_limit.version}]")
-        print(str(result))
+        result = VersionRange(f"{' '.join(str(c) for c in conditions)}")
+        # TODO: Direct definition of conditions not reparsing
         # result.condition_sets = self.condition_sets + other.condition_sets
         return result
 
     def version(self):
-        return Version(self._expression)
-
-    def invalid(self):
-        pass
-
+        return Version(f"[{self._expression}]")
