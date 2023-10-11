@@ -1,11 +1,36 @@
 from collections import namedtuple
+from functools import total_ordering
 from typing import Optional
 
 from conans.errors import ConanException
 from conans.model.recipe_ref import Version
 
 
-_Condition = namedtuple("_Condition", ["operator", "version"])
+@total_ordering
+class _Condition:
+    def __init__(self, operator, version):
+        self.operator = operator
+        self.version = version
+
+    def __str__(self):
+        return f"{self.operator}{self.version}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __hash__(self):
+        return hash((self.operator, self.version))
+
+    def __lt__(self, other):
+        if self.version < other.version:
+            return True
+        elif self.version == other.version:
+            if self.operator == ">=":
+                return False
+            elif self.operator == "<":
+                return True
+
+        return False
 
 
 class _ConditionSet:
@@ -131,4 +156,32 @@ class VersionRange:
             if condition_set._valid(version, resolve_prerelease):
                 return True
         return False
+
+    def intersection(self, other):
+        lower_limits = [c for c in self.condition_sets[0].conditions if c.operator in (">", ">=")]
+        lower_limits += [c for c in other.condition_sets[0].conditions if c.operator in (">", ">=")]
+        print(lower_limits)
+        lower_limit = sorted(lower_limits, reverse=True)[0]
+        print(lower_limit)
+
+        upper_limits = [c for c in self.condition_sets[0].conditions if c.operator in ("<", "<=")]
+        upper_limits += [c for c in other.condition_sets[0].conditions if c.operator in ("<", "<=")]
+        print(upper_limits)
+        upper_limit = sorted(upper_limits)[0]
+        print(upper_limit)
+
+        if lower_limit >= upper_limit:
+            return None
+
+        result = VersionRange(f"[{lower_limit.operator}{lower_limit.version} "
+                              f"{upper_limit.operator}{upper_limit.version}]")
+        print(str(result))
+        # result.condition_sets = self.condition_sets + other.condition_sets
+        return result
+
+    def version(self):
+        return Version(self._expression)
+
+    def invalid(self):
+        pass
 

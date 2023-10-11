@@ -146,6 +146,27 @@ class TestVersionRangesDiamond(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, libc])
 
+    def test_transitive_interval_partially_incompatible(self):
+        # app -> libb/0.1 -(range <=0.3)-> liba/0.2
+        #   \ -----------(range <0.3)--------/
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("liba/0.3")
+        self.recipe_cache("libb/0.1", ["liba/[>0.0.1 <=0.3]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[>=0.1 <0.3]"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba2 = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+
+        assert liba is liba2
+
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
+
     def test_transitive_fixed(self):
         # app -> libb/0.1 --------> liba/0.1
         #   \ -> libc/0.1 -(range <1)---/
