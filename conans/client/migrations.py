@@ -76,8 +76,21 @@ def _migrate_pkg_db_lru(cache, old_version):
     else:  # generate the back-migration script
         undo_lru = textwrap.dedent("""\
             import os
+            import sqlite3
             def migrate(cache_folder):
-                os.remove(os.path.join(cache_folder, "file.txt"))
+                db = os.path.join(cache_folder, 'p', 'cache.sqlite3')
+                connection = sqlite3.connect(db, isolation_level=None, timeout=1,
+                                             check_same_thread=False)
+                rec_cols = 'reference, rrev, path, timestamp'
+                pkg_cols = 'reference, rrev, pkgid, prev, path, timestamp, build_id'
+                try:
+                    for table in ("recipes", "packages"):
+                        columns = pkg_cols if table == "packages" else rec_cols
+                        connection.execute(f"CREATE TABLE {table}_backup AS SELECT {columns} FROM {table};")
+                        connection.execute(f"DROP TABLE {table};")
+                        connection.execute(f"ALTER TABLE {table}_backup RENAME TO {table};")
+                finally:
+                    connection.close()
             """)
         path = os.path.join(cache.cache_folder, "migrations", f"2.0.14_1-migrate.py")
         save(path, undo_lru)
