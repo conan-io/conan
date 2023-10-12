@@ -183,7 +183,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
         return _TargetDataContext(global_cppinfo, pfolder_var_name, self._root_folder,
-                                  self.require, self.cmake_package_type, self.is_host_windows)
+                                  self.require, self.cmake_package_type, self.is_host_windows,
+                                  self.conanfile, self.cmakedeps)
 
     @property
     def _root_folder(self):
@@ -199,7 +200,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
-                                                self.is_host_windows)
+                                                self.is_host_windows, self.conanfile, self.cmakedeps,
+                                                comp_name)
 
             public_comp_deps = []
             for required_pkg, required_comp in comp.parsed_requires():
@@ -260,7 +262,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 class _TargetDataContext(object):
 
     def __init__(self, cpp_info, pfolder_var_name, package_folder, require, library_type,
-                 is_host_windows):
+                 is_host_windows, conanfile, cmakedeps, comp_name=None):
 
         def join_paths(paths):
             """
@@ -346,7 +348,8 @@ class _TargetDataContext(object):
         if require and not require.run:
             self.bin_paths = ""
 
-        build_modules = cpp_info.get_property("cmake_build_modules") or []
+        build_modules = cmakedeps.get_property("cmake_build_modules", conanfile) or []
         self.build_modules_paths = join_paths(build_modules)
         # SONAME flag only makes sense for SHARED libraries
-        self.no_soname = str((cpp_info.get_property("nosoname") if self.library_type == "SHARED" else False) or False).upper()
+        nosoname = cmakedeps.get_property("nosoname", conanfile, comp_name)
+        self.no_soname = str((nosoname if self.library_type == "SHARED" else False) or False).upper()

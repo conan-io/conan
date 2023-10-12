@@ -228,6 +228,16 @@ def default_cppstd(compiler, compiler_version):
     return default
 
 
+def detect_cppstd(compiler, compiler_version):
+    cppstd = default_cppstd(compiler, compiler_version)
+    if compiler == "apple-clang" and compiler_version >= "11":
+        # Conan does not detect the default cppstd for apple-clang,
+        # because it's still 98 for the compiler (eben though xcode uses newer in projects)
+        # and having it be so old would be annoying for users
+        cppstd = "gnu17"
+    return cppstd
+
+
 def detect_compiler():
     """
     find the default compiler on the build machine

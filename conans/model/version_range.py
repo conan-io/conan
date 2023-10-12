@@ -93,6 +93,11 @@ class VersionRange:
         prereleases = False
         for t in tokens[1:]:
             if "include_prerelease" in t:
+                if "include_prerelease=" in t:
+                    from conan.api.output import ConanOutput
+                    ConanOutput().warning(
+                        f'include_prerelease version range option in "{expression}" does not take an attribute, '
+                        'its presence unconditionally enables prereleases')
                 prereleases = True
                 break
             else:
