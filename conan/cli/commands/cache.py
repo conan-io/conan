@@ -107,9 +107,13 @@ def cache_get(conan_api: ConanAPI, parser, subparser, *args):
     """
     Get the artifacts from a package list and archive them
     """
-    subparser.add_argument("package_list", help="Package list to be zipped")
+    parser.add_argument('pattern',
+                        help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                             "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                             "If revision is not specified, it is assumed latest one.")
     args = parser.parse_args(*args)
-    package_list = make_abs_path(args.package_list)
+    ref_pattern = ListPattern(args.pattern)
+    package_list = conan_api.list.select(ref_pattern)
     conan_api.cache.get(package_list)
 
 
