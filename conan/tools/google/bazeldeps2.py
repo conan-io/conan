@@ -105,23 +105,16 @@ def get_requirements(conanfile, build_context_activated, build_context_suffix):
         yield require, dep
 
 
-def _get_libs(conanfile, dep, relative_to_path=None) -> dict:
+def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> dict:
     """
     Get the static/shared library paths
 
     :param conanfile: The current recipe object.
     :param dep: <ConanFileInterface obj> of the dependency.
+    :param cpp_info: <CppInfo obj> of the component.
     :param relative_to_path: base path to prune from each lib path
     :return: dict of static/shared library absolute paths -> {lib_name: (IS_SHARED, LIB_PATH, DLL_PATH)}
     """
-    def is_shared_dependency():
-        """
-        Checking traits and shared option
-        """
-        default_value = dep.options.get_safe("shared") if dep.options else False
-        return {"shared-library": True,
-                "static-library": False}.get(str(dep.package_type), default=default_value)
-
     def get_dll_file_paths(expected_file) -> str:
         """
         (Windows platforms only) Find a given DLL file in bin directories.
@@ -140,8 +133,7 @@ def _get_libs(conanfile, dep, relative_to_path=None) -> dict:
         conanfile.output.debug(f"It was not possible to find the {expected_file} file.")
         return ""
 
-    cpp_info = dep.cpp_info.aggregated_components()  # dep.cpp_info
-    shared = is_shared_dependency()
+    cpp_info = cpp_info
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs
     libs = cpp_info.libs[:]  # copying the values
@@ -181,9 +173,9 @@ def _get_libs(conanfile, dep, relative_to_path=None) -> dict:
             name, ext = os.path.splitext(lib_basename)
             # Windows case: DLL stored in bindirs and .lib == interface
             dll_path = ""
-            if shared and ext == ".lib":
+            if is_shared and ext == ".lib":
                 dll_path = get_dll_file_paths(f"{name}.dll")
-            ret.setdefault(lib, (shared,
+            ret.setdefault(lib, (is_shared,
                                  _relativize_path(lib_path, relative_to_path=relative_to_path),
                                  _relativize_path(dll_path, relative_to_path=relative_to_path)))
 
@@ -237,7 +229,109 @@ def _relativize_path(path, relative_to_path):
         return p.lstrip("/")
 
 
+def _get_package_folder(dep):
+    # If editable, package_folder can be None
+    root_folder = dep.recipe_folder if dep.package_folder is None \
+        else dep.package_folder
+    return root_folder.replace("\\", "/")
+
+
+_DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
+
+
+class _InfoGenerator:
+
+    def __init__(self, conanfile, dep, build_context_suffix=None):
+        self._conanfile = conanfile
+        self._dep = dep
+        self._build_context_suffix = build_context_suffix or {}
+        self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
+
+    def _get_cpp_info_requires_names(self, cpp_info):
+        """
+        Get all the pkg valid names from the requires ones given a CppInfo object.
+
+        For instance, those requires could be coming from:
+
+        ```python
+        from conan import ConanFile
+        class PkgConan(ConanFile):
+            requires = "other/1.0"
+
+            def package_info(self):
+                self.cpp_info.requires = ["other::cmp1"]
+
+            # Or:
+
+            def package_info(self):
+                self.cpp_info.components["cmp"].requires = ["other::cmp1"]
+        ```
+        """
+        dep_ref_name = _get_package_reference_name(self._dep)
+        ret = []
+        for req in cpp_info.requires:
+            pkg_ref_name, comp_ref_name = req.split("::") if "::" in req else (dep_ref_name, req)
+            # For instance, dep == "hello/1.0" and req == "other::cmp1" -> hello != other
+            if dep_ref_name != pkg_ref_name:
+                try:
+                    req_conanfile = self._transitive_reqs[pkg_ref_name]
+                except KeyError:
+                    continue  # If the dependency is not in the transitive, might be skipped
+            else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
+                req_conanfile = self._dep
+            comp_name = _get_component_name(req_conanfile, comp_ref_name, self._build_context_suffix)
+            ret.append(comp_name)
+        return ret
+
+    @property
+    def components_info(self):
+        """
+        Get the whole package and its components information like their own requires, names and even
+        the cpp_info for each component.
+
+        :return: `list` of `_PCInfo` objects with all the components information
+        """
+        if not self._dep.cpp_info.has_components:
+            return []
+        components_info = []
+        # Loop through all the package's components
+        for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
+            # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
+            comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
+            comp_name = _get_component_name(self._dep, comp_ref_name, self._build_context_suffix)
+            # Save each component information
+            components_info.append(_DepInfo(comp_name, comp_requires_names, cpp_info))
+        return components_info
+
+    @property
+    def root_package_info(self):
+        """
+        Get the whole package information
+
+        :return: `_PCInfo` object with the package information
+        """
+        pkg_name = _get_package_name(self._dep, self._build_context_suffix)
+        # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
+        requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
+        # If we have found some component requires it would be enough
+        if not requires:
+            # If no requires were found, let's try to get all the direct dependencies,
+            # e.g., requires = "other_pkg/1.0"
+            requires = [_get_package_name(req, self._build_context_suffix)
+                        for req in self._transitive_reqs.values()]
+        cpp_info = self._dep.cpp_info
+        return _DepInfo(pkg_name, requires, cpp_info)
+
+
 class _BazelDependenciesBZLGenerator:
+    """
+    Bazel needs to know all the dependencies for its current project. So, the only way
+    to do that is to tell the WORKSPACE file how to load all the Conan ones. This is the goal
+    of the function created by this class, the ``load_conan_dependencies`` one.
+
+    More information:
+        * https://bazel.build/reference/be/workspace#new_local_repository
+    """
 
     filename = "dependencies.bzl"
     template = textwrap.dedent("""\
@@ -260,10 +354,9 @@ class _BazelDependenciesBZLGenerator:
             {%- endfor %}
         """)
 
-    def __init__(self, conanfile, root_package_info, components_info):
+    def __init__(self, conanfile, dependencies):
         self._conanfile = conanfile
-        self._root_package_info = root_package_info
-        self._components_info = components_info
+        self._dependencies = dependencies
 
     def generate(self):
         template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
@@ -330,7 +423,7 @@ class _BazelBUILDGenerator:
     {% endfor %}
     # Package library declaration
     cc_library(
-        name = "{{ name }}",
+        name = "{{ pkg["name"] }}",
         {% if headers %}
         hdrs = glob([{{ headers }}]),
         {% endif %}
@@ -357,149 +450,59 @@ class _BazelBUILDGenerator:
     )
     """)
 
-    def __int__(self, conanfile, root_package_info, components_info):
+    def __int__(self, conanfile, dep, build_context_suffix=None):
         self._conanfile = conanfile
-        self._root_package_info = root_package_info
-        self._components_info = components_info
-
-    def _get_package_folder(self):
-        # If editable, package_folder can be None
-        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
-            else self._dep.package_folder
-        return root_folder.replace("\\", "/")
+        self._dep = dep
+        self._build_context_suffix = build_context_suffix or {}
 
     @property
-    def _context(self):
-        cpp_info = self._dep.cpp_info
-        package_folder_path = self._get_package_folder()
-        headers = _get_headers(cpp_info, package_folder_path)
-        copts = _get_copts(cpp_info)
-        defines = _get_defines(cpp_info)
-        linkopts = _get_linkopts(cpp_info, self._dep.settings_build.get_safe("os"))
-        libs = _get_libs(self._conanfile, self._dep, package_folder_path)
+    def _is_shared_dependency(self):
+        """
+        Checking traits and shared option
+        """
+        default_value = self._dep.options.get_safe("shared") if self._dep.options else False
+        return {"shared-library": True,
+                "static-library": False}.get(str(self._dep.package_type), default=default_value)
 
-        context = {
-            "name": self._dep.ref.name,
-            "libs": libs,
-            "headers": headers,
-            "defines": defines,
-            "linkopts": linkopts,
-            "copts": copts,
-            "dependencies": dependencies,
-        }
+    def _get_context(self, root_package_info, components_info):
+        def fill_info(info):
+            cpp_info = info.cpp_info
+            headers = _get_headers(cpp_info, package_folder_path)
+            copts = _get_copts(cpp_info)
+            defines = _get_defines(cpp_info)
+            linkopts = _get_linkopts(cpp_info, self._dep.settings_build.get_safe("os"))
+            libs = _get_libs(self._conanfile, cpp_info, is_shared=is_shared,
+                             relative_to_path=package_folder_path)
+            return {
+                "name": info.name,
+                "libs": libs,
+                "headers": headers,
+                "defines": defines,
+                "linkopts": linkopts,
+                "copts": copts,
+                "dependencies": info.requires
+            }
+
+        is_shared = self._is_shared_dependency
+        package_folder_path = _get_package_folder(self._dep)
+        context = dict()
+        context["root"] = fill_info(root_package_info.cpp_info)
+        context["components"] = []
+        for component in components_info:
+            context["components"].append(fill_info(component.cpp_info))
         return context
 
     def generate(self):
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
-        content = template.render(self._context)
-        save(self.filename, content)
-
-
-_DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
-
-
-class _InfoGenerator:
-
-    def __init__(self, conanfile, dep, build_context_suffix=None):
-        self._conanfile = conanfile
-        self._dep = dep
-        self._build_context_suffix = build_context_suffix or {}
-        self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
-
-    def _get_cpp_info_requires_names(self, cpp_info):
-        """
-        Get all the pkg valid names from the requires ones given a CppInfo object.
-
-        For instance, those requires could be coming from:
-
-        ```python
-        from conan import ConanFile
-        class PkgConan(ConanFile):
-            requires = "other/1.0"
-
-            def package_info(self):
-                self.cpp_info.requires = ["other::cmp1"]
-
-            # Or:
-
-            def package_info(self):
-                self.cpp_info.components["cmp"].requires = ["other::cmp1"]
-        ```
-        """
-        dep_ref_name = _get_package_reference_name(self._dep)
-        ret = []
-        for req in cpp_info.requires:
-            pkg_ref_name, comp_ref_name = req.split("::") if "::" in req else (dep_ref_name, req)
-            # For instance, dep == "hello/1.0" and req == "other::cmp1" -> hello != other
-            if dep_ref_name != pkg_ref_name:
-                try:
-                    req_conanfile = self._transitive_reqs[pkg_ref_name]
-                except KeyError:
-                    continue  # If the dependency is not in the transitive, might be skipped
-            else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
-                req_conanfile = self._dep
-            comp_name = _get_component_name(req_conanfile, comp_ref_name, self._build_context_suffix)
-            ret.append(comp_name)
-        return ret
-
-    @property
-    def components_info(self):
-        """
-        Get the whole package and its components information like their own requires, names and even
-        the cpp_info for each component.
-
-        :return: `list` of `_PCInfo` objects with all the components information
-        """
-        if not self._dep.cpp_info.has_components:
-            return []
-
-        components_info = []
-        # Loop through all the package's components
-        for comp_ref_name, cpp_info in self._dep.cpp_info.get_sorted_components().items():
-            # At first, let's check if we have defined some components requires, e.g., "dep::cmp1"
-            comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
-            comp_name = _get_component_name(self._dep, comp_ref_name, self._build_context_suffix)
-            # Save each component information
-            components_info.append(_DepInfo(comp_name, comp_requires_names, cpp_info))
-        return components_info
-
-    @property
-    def root_package_info(self):
-        """
-        Get the whole package information
-
-        :return: `_PCInfo` object with the package information
-        """
-        pkg_name = _get_package_name(self._dep, self._build_context_suffix)
-        # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
-        requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
-        # If we have found some component requires it would be enough
-        if not requires:
-            # If no requires were found, let's try to get all the direct dependencies,
-            # e.g., requires = "other_pkg/1.0"
-            requires = [_get_package_name(req, self._build_context_suffix)
-                        for req in self._transitive_reqs.values()]
-        cpp_info = self._dep.cpp_info
-        return _DepInfo(pkg_name, requires, cpp_info)
-
-
-class _BazelGenerator:
-
-    def __init__(self, conanfile, dep, build_context_suffix=None):
-        self._conanfile = conanfile
-        self._dep = dep
-        self._build_context_suffix = build_context_suffix or {}
-
-    def generate(self):
-        ret = {}
         info_generator = _InfoGenerator(self._conanfile, self._dep, self._build_context_suffix)
         root_package_info = info_generator.root_package_info
         components_info = info_generator.components_info
-        BUILD_generator = _BazelBUILDGenerator(self._conanfile, root_package_info, components_info)
-        BUILD_generator = _BazelDependenciesBZLGenerator(self._conanfile, root_package_info, components_info)
-
-        return ret
+        context = self._get_context(root_package_info, components_info)
+        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
+                            undefined=StrictUndefined)
+        content = template.render(context)
+        destination = os.path.join(root_package_info.name, self.filename)
+        save(destination, content)
+        return destination
 
 
 class BazelDeps:
@@ -512,17 +515,6 @@ class BazelDeps:
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
-    @property
-    def content(self):
-        requirements = get_requirements(self._conanfile, self.build_context_activated,
-                                        self.build_context_suffix)
-        bazel_files = {}
-        for require, dep in requirements:
-            bazel_generator = _BazelGenerator(self._conanfile, dep,
-                                              build_context_suffix=self.build_context_suffix)
-            bazel_files.update(bazel_generator.bazel_files)
-        return bazel_files
-
     def generate(self):
         """
         Save all the targets BUILD files and the dependencies.bzl one.
@@ -531,9 +523,22 @@ class BazelDeps:
         """
         check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
-        generator_files = self.content
-        for generator_file, content in generator_files.items():
-            save(generator_file, content)
+        requirements = get_requirements(self._conanfile, self.build_context_activated,
+                                        self.build_context_suffix)
+        deps_info = []
+        for require, dep in requirements:
+            bazel_generator = _BazelBUILDGenerator(self._conanfile, dep,
+                                              build_context_suffix=self.build_context_suffix)
+            dest = bazel_generator.generate()
+            deps_info.append({
+                "name": _get_package_name(dep, self.build_context_suffix),
+                "path": "",
+                "build_file_path": ""
+            })
+        # dependencies.bzl has all the information
+        bazel_dependencies_module_generator = _BazelDependenciesBZLGenerator(self._conanfile,
+                                                                             deps_info)
+        bazel_dependencies_module_generator.generate()
 
 
 
