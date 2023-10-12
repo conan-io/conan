@@ -1,6 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.upload_metadata import gather_metadata
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
@@ -60,7 +61,7 @@ class UploadAPI:
             return
         url = url if url.endswith("/") else url + "/"
         download_cache_path = config.get("core.sources:download_cache")
-        download_cache_path = download_cache_path or app.cache.default_sources_backup_folder
+        download_cache_path = download_cache_path or HomePaths(self.conan_api.cache_folder).default_sources_backup_folder
         excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
 
         files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list,

@@ -118,9 +118,9 @@ class RemoteRegistry(object):
     """Store remotes in disk and modify remotes for the 'conan remote' command.
     It never returns an _Remotes object, only Remote model"""
 
-    def __init__(self, cache):
+    def __init__(self, remotes_json):
         self._output = ConanOutput()
-        self._filename = cache.remotes_path
+        self._filename = remotes_json
 
     def _validate_url(self, url):
         """ Check if URL contains protocol and address
