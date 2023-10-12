@@ -1,7 +1,6 @@
 import os
 
 from conan.api.output import ConanOutput
-from conans.client.cache.cache import ClientCache
 from conans.migrations import Migrator
 from conans.util.files import load, save
 
@@ -39,14 +38,13 @@ class ClientMigrator(Migrator):
 
     def _apply_migrations(self, old_version):
         # Migrate the settings if they were the default for that version
-        cache = ClientCache(self.cache_folder)
         # Time for migrations!
         # Update settings.yml
         from conans.client.conf import migrate_settings_file
-        migrate_settings_file(cache)
+        migrate_settings_file(self.cache_folder)
         # Update compatibility.py, app_compat.py, and cppstd_compat.py.
         from conans.client.graph.compatibility import migrate_compatibility_files
-        migrate_compatibility_files(cache)
+        migrate_compatibility_files(self.cache_folder)
         # Update profile plugin
         from conans.client.profile_loader import migrate_profile_plugin
-        migrate_profile_plugin(cache)
+        migrate_profile_plugin(self.cache_folder)
