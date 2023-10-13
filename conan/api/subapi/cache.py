@@ -108,11 +108,10 @@ class CacheAPI:
                 if download:
                     rmdir(pref_layout.download_package())
 
-    def get(self, package_list):
+    def save(self, package_list, tgz_path):
         cache_folder = self.conan_api.cache_folder
         app = ConanApp(cache_folder)
         out = ConanOutput()
-        tgz_path = os.path.abspath("cache.tgz")
         name = os.path.basename(tgz_path)
         with open(tgz_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -121,7 +120,7 @@ class CacheAPI:
                 base_folder = ref_layout.base_folder
                 folder = os.path.relpath(base_folder, cache_folder)
                 ref_bundle["folder"] = folder
-                out.info(f"Compressing {ref}: {folder}")
+                out.info(f"Saving {ref}: {folder}")
                 tgz.add(os.path.join(cache_folder, folder), folder, recursive=True)
                 for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                     pref_layout = app.cache.pkg_layout(pref)
@@ -129,7 +128,7 @@ class CacheAPI:
                     # FIXME: Missing metadata
                     folder = os.path.relpath(pkg_folder, cache_folder)
                     pref_bundle["package_folder"] = folder
-                    out.info(f"Compressing {pref}: {folder}")
+                    out.info(f"Saving {pref}: {folder}")
                     tgz.add(os.path.join(cache_folder, folder), folder, recursive=True)
             serialized = json.dumps(package_list.serialize(), indent=2)
             manifest_path = os.path.join(cache_folder, "pkglist.json")
@@ -138,7 +137,7 @@ class CacheAPI:
             os.remove(manifest_path)  # remove file from the cache
             tgz.close()
 
-    def put(self, path):
+    def restore(self, path):
         with open(path, mode='rb') as file_handler:
             the_tar = tarfile.open(fileobj=file_handler)
             the_tar.extractall(path=self.conan_api.cache_folder)
@@ -160,9 +159,10 @@ class CacheAPI:
                 pref.timestamp = revision_timestamp_now()
                 pkg_layout = cache.get_or_create_pkg_layout(pref)
                 folder = pref_bundle["package_folder"]
-                out.info(f"Put: {pref} in {folder}")
+                out.info(f"Restore: {pref} in {folder}")
                 shutil.move(os.path.join(cache.cache_folder, folder),
                             os.path.join(cache.cache_folder, pkg_layout.package()))
+        return package_list
 
 
 def _resolve_latest_ref(app, ref):
