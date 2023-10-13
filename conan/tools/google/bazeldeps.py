@@ -191,6 +191,11 @@ def _get_headers(cpp_info, package_folder_path):
                      for path in cpp_info.includedirs)
 
 
+def _get_includes(cpp_info, package_folder_path):
+    return ', '.join('"{}"'.format(_relativize_path(path, package_folder_path))
+                     for path in cpp_info.includedirs)
+
+
 def _get_defines(cpp_info):
     return ', '.join('"{}"'.format(define.replace('"', '\\' * 3 + '"'))
                      for define in cpp_info.defines)
@@ -203,12 +208,13 @@ def _get_linkopts(cpp_info, os_build):
     return ", ".join(system_libs + shared_flags)
 
 
-def _get_copts(cpp_info, package_folder_path):
-    includedirsflags = ['"-I{}"'.format(_relativize_path(d, package_folder_path))
-                        for d in cpp_info.includedirs]
+def _get_copts(cpp_info):
+    # FIXME: long discussions between copts (-Iflag) vs includes in Bazel. Not sure yet
+    # includedirsflags = ['"-I{}"'.format(_relativize_path(d, package_folder_path))
+    #                     for d in cpp_info.includedirs]
     cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
     cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
-    return ", ".join(includedirsflags + cxxflags + cflags)
+    return ", ".join(cxxflags + cflags)
 
 
 # FIXME: Very fragile. Need UTs, and, maybe, move it to conan.tools.files
@@ -394,6 +400,9 @@ class _BazelBUILDGenerator:
         {% if obj["headers"] %}
         hdrs = glob([{{ obj["headers"] }}]),
         {% endif %}
+        {% if obj["includes"] %}
+        includes = [{{ obj["includes"] }}],
+        {% endif %}
         {% if obj["defines"] %}
         defines = [{{ obj["defines"] }}],
         {% endif %}
@@ -484,6 +493,7 @@ class _BazelBUILDGenerator:
                 "name": info.name,  # package name and components name
                 "libs": {},
                 "headers": "",
+                "includes": "",
                 "defines": "",
                 "linkopts": "",
                 "copts": "",
@@ -492,7 +502,8 @@ class _BazelBUILDGenerator:
             if info.cpp_info is not None:
                 cpp_info = info.cpp_info
                 headers = _get_headers(cpp_info, package_folder_path)
-                copts = _get_copts(cpp_info, package_folder_path)
+                includes = _get_includes(cpp_info, package_folder_path)
+                copts = _get_copts(cpp_info)
                 defines = _get_defines(cpp_info)
                 linkopts = _get_linkopts(cpp_info, self._dep.settings_build.get_safe("os"))
                 libs = _get_libs(self._conanfile, cpp_info, is_shared=is_shared,
@@ -500,6 +511,7 @@ class _BazelBUILDGenerator:
                 ret.update({
                     "libs": libs,
                     "headers": headers,
+                    "includes": includes,
                     "defines": defines,
                     "linkopts": linkopts,
                     "copts": copts
