@@ -342,6 +342,7 @@ class _BazelDependenciesBZLGenerator:
         # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
         # load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
+
         {% macro new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) %}
             native.new_local_repository(
                 name="{{pkg_name}}",
@@ -417,6 +418,9 @@ class _BazelBUILDGenerator:
         deps = [
             {% for lib in obj["libs"] %}
             ":{{ lib }}_precompiled",
+            {% endfor %}
+            {% for name in obj["component_names"] %}
+            ":{{ name }}",
             {% endfor %}
             {% for dep in obj["dependencies"] %}
             "@{{ dep }}",
@@ -497,7 +501,8 @@ class _BazelBUILDGenerator:
                 "defines": "",
                 "linkopts": "",
                 "copts": "",
-                "dependencies": info.requires
+                "dependencies": info.requires,
+                "component_names": []  # filled only by the root
             }
             if info.cpp_info is not None:
                 cpp_info = info.cpp_info
@@ -524,7 +529,9 @@ class _BazelBUILDGenerator:
         context["root"] = fill_info(self._root_package_info)
         context["components"] = []
         for component in self._components_info:
-            context["components"].append(fill_info(component))
+            component_context = fill_info(component)
+            context["components"].append(component_context)
+            context["root"]["component_names"].append(component_context["name"])
         return context
 
     def generate(self):
@@ -575,109 +582,3 @@ class BazelDeps:
         bazel_dependencies_module_generator = _BazelDependenciesBZLGenerator(self._conanfile,
                                                                              deps_info)
         bazel_dependencies_module_generator.generate()
-
-
-
-"""
-
-The following are the typical use cases:
-1. Linking a static library
-
-
-cc_import(
-  name = "mylib",
-  hdrs = ["mylib.h"],
-  static_library = "libmylib.a",
-  # If alwayslink is turned on,
-  # libmylib.a will be forcely linked into any binary that depends on it.
-  # alwayslink = 1,
-)
-2. Linking a shared library (Unix)
-
-cc_import(
-  name = "mylib",
-  hdrs = ["mylib.h"],
-  shared_library = "libmylib.so",
-)
-3. Linking a shared library with interface library (Windows)
-
-cc_import(
-  name = "mylib",
-  hdrs = ["mylib.h"],
-  # mylib.lib is an import library for mylib.dll which will be passed to linker
-  interface_library = "mylib.lib",
-  # mylib.dll will be available for runtime
-  shared_library = "mylib.dll",
-)
-4. Linking a shared library with system_provided=True (Windows)
-
-cc_import(
-  name = "mylib",
-  hdrs = ["mylib.h"],
-  # mylib.lib is an import library for mylib.dll which will be passed to linker
-  interface_library = "mylib.lib",
-  # mylib.dll is provided by system environment, for example it can be found in PATH.
-  # This indicates that Bazel is not responsible for making mylib.dll available.
-  system_provided = 1,
-)
-5. Linking to static or shared library
-On Unix:
-
-cc_import(
-  name = "mylib",
-  hdrs = ["mylib.h"],
-  static_library = "libmylib.a",
-  shared_library = "libmylib.so",
-)
-
-# first will link to libmylib.a
-cc_binary(
-  name = "first",
-  srcs = ["first.cc"],
-  deps = [":mylib"],
-  linkstatic = 1, # default value
-)
-
-# second will link to libmylib.so
-cc_binary(
-  name = "second",
-  srcs = ["second.cc"],
-  deps = [":mylib"],
-  linkstatic = 0,
-)
-On Windows:
-
-cc_import(
-  name = "mylib",
-  hdrs = ["mylib.h"],
-  static_library = "libmylib.lib", # A normal static library
-  interface_library = "mylib.lib", # An import library for mylib.dll
-  shared_library = "mylib.dll",
-)
-
-# first will link to libmylib.lib
-cc_binary(
-  name = "first",
-  srcs = ["first.cc"],
-  deps = [":mylib"],
-  linkstatic = 1, # default value
-)
-
-# second will link to mylib.dll through mylib.lib
-cc_binary(
-  name = "second",
-  srcs = ["second.cc"],
-  deps = [":mylib"],
-  linkstatic = 0,
-)
-cc_import supports an include attribute. For example:
-
-  cc_import(
-  name = "curl_lib",
-  hdrs = glob(["vendor/curl/include/curl/*.h"]),
-  includes = [ "vendor/curl/include" ],
-  shared_library = "vendor/curl/lib/.libs/libcurl.dylib",
-)
-
-
-"""
