@@ -112,8 +112,11 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> di
     :param conanfile: The current recipe object.
     :param dep: <ConanFileInterface obj> of the dependency.
     :param cpp_info: <CppInfo obj> of the component.
-    :param relative_to_path: base path to prune from each lib path
-    :return: dict of static/shared library absolute paths -> {lib_name: (IS_SHARED, LIB_PATH, DLL_PATH)}
+    :param relative_to_path: base path to prune from each library path
+    :return: dict of static/shared library absolute paths ->
+             {lib_name: (IS_SHARED, LIB_PATH, DLL_PATH)}
+             Note: LIB_PATH could be both static and shared ones in case of UNIX. If Windows it'll be
+                   the interface library xxx.lib linked to the DLL_PATH one.
     """
     def get_dll_file_paths(expected_file) -> str:
         """
@@ -227,13 +230,6 @@ def _relativize_path(path, relative_to_path):
         return p.split(rel)[-1].lstrip("/")
     else:
         return p.lstrip("/")
-
-
-def _get_package_folder(dep):
-    # If editable, package_folder can be None
-    root_folder = dep.recipe_folder if dep.package_folder is None \
-        else dep.package_folder
-    return root_folder.replace("\\", "/")
 
 
 _DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
@@ -369,6 +365,10 @@ class _BazelDependenciesBZLGenerator:
 
 
 class _BazelBUILDGenerator:
+    """
+    This class creates the BUILD.bazel for each dependency where it's declared all the
+    necessary information to load the libraries
+    """
 
     # If both files exist, BUILD.bazel takes precedence over BUILD
     # https://bazel.build/concepts/build-files
@@ -450,10 +450,11 @@ class _BazelBUILDGenerator:
     )
     """)
 
-    def __int__(self, conanfile, dep, build_context_suffix=None):
+    def __int__(self, conanfile, dep, root_package_info, components_info):
         self._conanfile = conanfile
         self._dep = dep
-        self._build_context_suffix = build_context_suffix or {}
+        self._root_package_info = root_package_info
+        self._components_info = components_info
 
     @property
     def _is_shared_dependency(self):
@@ -464,7 +465,38 @@ class _BazelBUILDGenerator:
         return {"shared-library": True,
                 "static-library": False}.get(str(self._dep.package_type), default=default_value)
 
-    def _get_context(self, root_package_info, components_info):
+    @property
+    def BUILD_path(self):
+        """
+        Returns the absolute path to the BUILD file created by Conan
+        """
+        return os.path.join(self._root_package_info.name, self.filename)
+
+    @property
+    def absolute_BUILD_path(self):
+        """
+        Returns the absolute path to the BUILD file created by Conan
+        """
+        return os.path.join(self._conanfile.generators_folder, self.BUILD_path)
+
+    @property
+    def package_folder(self):
+        """
+        Returns the package folder path
+        """
+        # If editable, package_folder can be None
+        root_folder = self._dep.recipe_folder if self._dep.package_folder is None \
+            else self._dep.package_folder
+        return root_folder.replace("\\", "/")
+
+    @property
+    def package_name(self):
+        """
+        Wrapper to get the final name used for the root dependency cc_library declaration
+        """
+        return self._root_package_info.name
+
+    def _get_context(self):
         def fill_info(info):
             cpp_info = info.cpp_info
             headers = _get_headers(cpp_info, package_folder_path)
@@ -474,7 +506,7 @@ class _BazelBUILDGenerator:
             libs = _get_libs(self._conanfile, cpp_info, is_shared=is_shared,
                              relative_to_path=package_folder_path)
             return {
-                "name": info.name,
+                "name": info.name,  # package name and components name
                 "libs": libs,
                 "headers": headers,
                 "defines": defines,
@@ -484,25 +516,20 @@ class _BazelBUILDGenerator:
             }
 
         is_shared = self._is_shared_dependency
-        package_folder_path = _get_package_folder(self._dep)
+        package_folder_path = self.package_folder
         context = dict()
-        context["root"] = fill_info(root_package_info.cpp_info)
+        context["root"] = fill_info(self._root_package_info.cpp_info)
         context["components"] = []
-        for component in components_info:
+        for component in self._components_info:
             context["components"].append(fill_info(component.cpp_info))
         return context
 
     def generate(self):
-        info_generator = _InfoGenerator(self._conanfile, self._dep, self._build_context_suffix)
-        root_package_info = info_generator.root_package_info
-        components_info = info_generator.components_info
-        context = self._get_context(root_package_info, components_info)
+        context = self._get_context()
         template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         content = template.render(context)
-        destination = os.path.join(root_package_info.name, self.filename)
-        save(destination, content)
-        return destination
+        save(self.BUILD_path, content)
 
 
 class BazelDeps:
@@ -527,15 +554,21 @@ class BazelDeps:
                                         self.build_context_suffix)
         deps_info = []
         for require, dep in requirements:
+            # Info generator
+            info_generator = _InfoGenerator(self._conanfile, dep, self.build_context_suffix)
+            root_package_info = info_generator.root_package_info
+            components_info = info_generator.components_info
+            # BUILD file generator per dependency
             bazel_generator = _BazelBUILDGenerator(self._conanfile, dep,
-                                              build_context_suffix=self.build_context_suffix)
-            dest = bazel_generator.generate()
-            deps_info.append({
-                "name": _get_package_name(dep, self.build_context_suffix),
-                "path": "",
-                "build_file_path": ""
-            })
-        # dependencies.bzl has all the information
+                                                   root_package_info, components_info)
+            bazel_generator.generate()
+            # Saving part of the BUILD information
+            deps_info.append((
+                bazel_generator.package_name,  # package name
+                bazel_generator.package_folder,  # path to dependency folder
+                bazel_generator.absolute_BUILD_path  # path to the BUILD file created
+            ))
+        # dependencies.bzl has all the information about where to look for the dependencies
         bazel_dependencies_module_generator = _BazelDependenciesBZLGenerator(self._conanfile,
                                                                              deps_info)
         bazel_dependencies_module_generator.generate()
