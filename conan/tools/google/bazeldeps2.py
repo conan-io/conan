@@ -335,7 +335,6 @@ class _BazelDependenciesBZLGenerator:
         # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
         # load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
-
         {%- macro new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) %}
             native.new_local_repository(
                 name="{{pkg_name}}",
@@ -343,10 +342,9 @@ class _BazelDependenciesBZLGenerator:
                 build_file="{{pkg_build_file_path}}",
             )
         {%- endmacro %}
-
         def load_conan_dependencies():
             {%- for pkg_name, pkg_folder, pkg_build_file_path in dependencies %}
-            {{new_local_repository(pkg_name, pkg_folder, pkg_build_file_path)}}
+            {{ new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) }}
             {%- endfor %}
         """)
 
@@ -373,81 +371,64 @@ class _BazelBUILDGenerator:
     # If both files exist, BUILD.bazel takes precedence over BUILD
     # https://bazel.build/concepts/build-files
     filename = "BUILD.bazel"
-    template = textwrap.dedent("""
-    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
-
-    # Components precompiled libs
-    {% for component_name, is_shared, lib_path, dll_path in components.libs %}
+    template = textwrap.dedent("""\
+    {%- macro cc_import_macro(name, is_shared, lib_path, dll_path) %}
     cc_import(
-        name = "{{ component_name }}_precompiled",
+        name = "{{ name }}_precompiled",
+        {%- if not is_shared %}
         static_library = "{{ lib_path }}",
+        {%- else %}
+        {%- if is_shared and dll_path %}
         interface_library = "{{ lib_path }}",
-        shared_library = "{{ dll_path }}",
+        {%- endif %}
+        shared_library = "{{ dll_path or lib_path }}",
+        {%- endif %}
     )
-    {% endfor %}
-    # Root package precompiled lib
-    cc_import(
-        name = "{{ pkg_name }}_precompiled",
-        static_library = "{{ lib_path }}",
-        interface_library = "{{ lib_path }}",
-        shared_library = "{{ dll_path }}",
-    )
-    # Components libraries declaration
-    {% for component_name, cpp_info in components.info %}
+    {%- endmacro %}
+    {%- macro cc_library_macro(obj) %}
     cc_library(
-        name = "{{ component_name }}",
+        name = "{{ obj["name"] }}",
         {% if headers %}
-        hdrs = glob([{{ headers }}]),
+        hdrs = glob([{{ obj["headers"] }}]),
         {% endif %}
         {% if defines %}
-        defines = [{{ defines }}],
+        defines = [{{ obj["defines"] }}],
         {% endif %}
         {% if linkopts %}
-        linkopts = [{{ linkopts }}],
+        linkopts = [{{ obj["linkopts"] }}],
         {% endif %}
         {% if copts %}
-        copts = [{{ copts }}],
+        copts = [{{ obj["copts"] }}],
         {% endif %}
         visibility = ["//visibility:public"],
         {% if libs or shared_with_interface_libs %}
         deps = [
-            {% for lib in libs %}
+            {% for lib in obj["libs"] %}
             ":{{ lib }}_precompiled",
             {% endfor %}
-            {% for dep in dependencies %}
+            {% for dep in obj["dependencies"] %}
             "@{{ dep }}",
             {% endfor %}
         ],
         {% endif %}
     )
-    {% endfor %}
+    {%- endmacro %}
+    load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+    # Components precompiled libs
+    {%- for component_name, is_shared, lib_path, dll_path in components["libs"] %}
+    {{ cc_import_macro(component_name, is_shared, lib_path, dll_path) }}
+    {%- endfor %}
+    # Root package precompiled libs
+    {%- for root_name, is_shared, lib_path, dll_path in root["libs"] %}
+    {{ cc_import_macro(root_name, is_shared, lib_path, dll_path) }}
+    {%- endfor %}
+    # Components libraries declaration
+    {%- for component in components %}
+    {{ cc_library_macro(component) }}
+    {%- endfor %}
     # Package library declaration
-    cc_library(
-        name = "{{ pkg["name"] }}",
-        {% if headers %}
-        hdrs = glob([{{ headers }}]),
-        {% endif %}
-        {% if defines %}
-        defines = [{{ defines }}],
-        {% endif %}
-        {% if linkopts %}
-        linkopts = [{{ linkopts }}],
-        {% endif %}
-        {% if copts %}
-        copts = [{{ copts }}],
-        {% endif %}
-        visibility = ["//visibility:public"],
-        {% if libs %}
-        deps = [
-            {% for lib in libs %}
-            ":{{ lib }}_precompiled",
-            {% endfor %}
-            {% for dep in dependencies %}
-            "@{{ dep }}",
-            {% endfor %}
-        ],
-        {% endif %}
-    )
+    {{ cc_library_macro(root) }}
     """)
 
     def __int__(self, conanfile, dep, root_package_info, components_info):
