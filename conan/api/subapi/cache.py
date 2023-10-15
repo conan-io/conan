@@ -155,6 +155,7 @@ class CacheAPI:
         cache = ClientCache(self.conan_api.cache_folder)
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
+            ref_bundle["timestamp"] = ref.timestamp
             recipe_layout = cache.get_or_create_ref_layout(ref)
             recipe_folder = ref_bundle["recipe_folder"]
             rel_path = os.path.relpath(recipe_layout.base_folder, cache.cache_folder)
@@ -162,6 +163,7 @@ class CacheAPI:
             out.info(f"Put: {ref} in {recipe_folder}")
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                 pref.timestamp = revision_timestamp_now()
+                pref_bundle["timestamp"] = pref.timestamp
                 pkg_layout = cache.get_or_create_pkg_layout(pref)
                 pkg_folder = pref_bundle["package_folder"]
                 out.info(f"Restore: {pref} in {pkg_folder}")
@@ -173,6 +175,7 @@ class CacheAPI:
                     # We need to put the package in the final location in the cache
                     shutil.move(os.path.join(cache.cache_folder, metadata_folder),
                                 pkg_layout.metadata())
+
         return package_list
 
 

@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 
@@ -90,3 +91,33 @@ def test_cache_save_restore_metadata():
     pkg_metadata_path = str(c2.stdout).strip()
     myfile = os.path.join(pkg_metadata_path, "logs", "mybuildlogs.txt")
     assert load(myfile) == "mybuildlogs!!!!"
+
+
+def test_cache_save_restore_multiple_revisions():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create .")
+    rrev1 = c.exported_recipe_revision()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=42")})
+    c.run("create .")
+    rrev2 = c.exported_recipe_revision()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=123")})
+    c.run("create .")
+    rrev3 = c.exported_recipe_revision()
+
+    def check_ordered_revisions(client):
+        client.run("list *#* --format=json")
+        revisions = json.loads(client.stdout)["Local Cache"]["pkg/0.1"]["revisions"]
+        assert revisions[rrev1]["timestamp"] < revisions[rrev2]["timestamp"]
+        assert revisions[rrev2]["timestamp"] < revisions[rrev3]["timestamp"]
+
+    check_ordered_revisions(c)
+
+    c.run("cache save cache.tgz pkg/*#*:* ")
+    cache_path = os.path.join(c.current_folder, "cache.tgz")
+
+    # restore and check
+    c2 = TestClient()
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run("cache restore cache.tgz")
+    check_ordered_revisions(c2)
