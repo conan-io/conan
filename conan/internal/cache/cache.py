@@ -51,7 +51,7 @@ class DataCache:
     def _get_tmp_path(ref: RecipeReference):
         # The reference will not have revision, but it will be always constant
         h = ref.name[:5] + DataCache._short_hash_path(ref.repr_notime())
-        return os.path.join("t", h)
+        return f"t/{h}"
 
     @staticmethod
     def _get_tmp_path_pref(pref):
@@ -60,7 +60,7 @@ class DataCache:
         assert pref.timestamp is None
         random_id = str(uuid.uuid4())
         h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime() + random_id)
-        return os.path.join("b", h)
+        return f"b/{h}"
 
     @staticmethod
     def _get_path(ref: RecipeReference):
@@ -181,6 +181,7 @@ class DataCache:
         pref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
         relpath = os.path.relpath(layout.base_folder, self._base_folder)
+        relpath = relpath.replace("\\", "/")  # Uniform for Windows and Linux
         try:
             self._db.create_package(relpath, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
