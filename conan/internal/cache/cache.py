@@ -1,5 +1,6 @@
 import hashlib
 import os
+import shutil
 import uuid
 
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
@@ -185,9 +186,16 @@ class DataCache:
             self._db.create_package(relpath, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
             # TODO: Optimize this into 1 single UPSERT operation
-            # This was exported before, making it latest again, update timestamp
+            # There was a previous package folder for this same package reference (and prev)
             pkg_layout = self.get_package_layout(pref)
+            # We remove the old one and move the new one to the path of the previous one
+            # this can be necessary in case of new metadata or build-folder because of "build_id()"
             pkg_layout.remove()
+            shutil.move(layout.base_folder, pkg_layout.base_folder)  # clean unused temporary build
+            layout._base_folder = pkg_layout.base_folder  # reuse existing one
+            # TODO: The relpath would be the same as the previous one, it shouldn't be ncessary to
+            #  update it, the update_package_timestamp() can be simplified and path dropped
+            relpath = os.path.relpath(layout.base_folder, self._base_folder)
             self._db.update_package_timestamp(pref, path=relpath, build_id=build_id)
 
     def assign_rrev(self, layout: RecipeLayout):
