@@ -51,7 +51,7 @@ class DataCache:
     def _get_tmp_path(ref: RecipeReference):
         # The reference will not have revision, but it will be always constant
         h = ref.name[:5] + DataCache._short_hash_path(ref.repr_notime())
-        return f"t/{h}"
+        return os.path.join("t", h)
 
     @staticmethod
     def _get_tmp_path_pref(pref):
@@ -60,7 +60,7 @@ class DataCache:
         assert pref.timestamp is None
         random_id = str(uuid.uuid4())
         h = pref.ref.name[:5] + DataCache._short_hash_path(pref.repr_notime() + random_id)
-        return f"b/{h}"
+        return os.path.join("b", h)
 
     @staticmethod
     def _get_path(ref: RecipeReference):
@@ -111,7 +111,8 @@ class DataCache:
         assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
-        return PackageLayout(pref, os.path.join(self._base_folder, pref_path))
+        # we use abspath to convert cache forward slash in Windows to backslash
+        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
     def get_or_create_ref_layout(self, ref: RecipeReference):
         """ called by RemoteManager.get_recipe()
