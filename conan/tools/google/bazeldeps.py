@@ -10,6 +10,10 @@ from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
 
+_DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
+_LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'interface_path'])
+
+
 def _get_name_with_namespace(namespace, name):
     """
     Build a name with a namespace, e.g., openssl-crypto
@@ -105,7 +109,7 @@ def get_requirements(conanfile, build_context_activated, build_context_suffix):
         yield require, dep
 
 
-def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> dict:
+def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> list:
     """
     Get the static/shared library paths
 
@@ -118,37 +122,19 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> di
              Note: LIB_PATH could be both static and shared ones in case of UNIX. If Windows it'll be
                    the interface library xxx.lib linked to the DLL_PATH one.
     """
-    def get_dll_file_paths(expected_file) -> str:
-        """
-        (Windows platforms only) Find a given DLL file in bin directories.
-        If found return the full path, otherwise return "".
-        """
-        for bin_file in bindirs:
-            if not os.path.exists(bin_file):
-                conanfile.output.debug(f"The bin folder doesn't exist: {bin_file}")
-                continue
-            for f in os.listdir(bin_file):
-                full_path = os.path.join(bin_file, f)
-                if not os.path.isfile(full_path):
-                    continue
-                if f == expected_file:
-                    return full_path
-        conanfile.output.debug(f"It was not possible to find the {expected_file} file.")
-        return ""
-
     cpp_info = cpp_info
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs
     libs = cpp_info.libs[:]  # copying the values
-    ret = {}  # lib: (is_shared, lib_path, dll_path)
+    ret = {}
+    interfaces = {}
 
-    for libdir in libdirs:
+    for libdir in (libdirs + bindirs):
         lib = ""
         if not os.path.exists(libdir):
             conanfile.output.debug("The library folder doesn't exist: {}".format(libdir))
             continue
         files = os.listdir(libdir)
-        lib_basename = None
         lib_path = None
         for f in files:
             full_path = os.path.join(libdir, f)
@@ -159,31 +145,38 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> di
             if f in libs:
                 lib = f
                 libs.remove(f)
-                lib_basename = f
                 lib_path = full_path
                 break
             name, ext = os.path.splitext(f)
-            if ext in (".so", ".a", ".dylib", ".bc"):
-                if name.startswith("lib"):
-                    name = name[3:]
+            if name not in libs and name.startswith("lib"):
+                name = name[3:]
             if name in libs:
-                lib = name
-                libs.remove(name)
-                lib_basename = f
-                lib_path = full_path
-                break
+                # FIXME: Should it read a conf variable to know unexpected extensions?
+                if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
+                   (not is_shared and ext in (".a", ".lib")):
+                    lib = name
+                    libs.remove(name)
+                    lib_path = full_path
+                    break
         if lib_path is not None:
-            name, ext = os.path.splitext(lib_basename)
-            # Windows case: DLL stored in bindirs and .lib == interface
-            dll_path = ""
-            if is_shared and ext == ".lib":
-                dll_path = get_dll_file_paths(f"{name}.dll")
-            ret.setdefault(lib, (is_shared,
-                                 _relativize_path(lib_path, relative_to_path=relative_to_path),
-                                 _relativize_path(dll_path, relative_to_path=relative_to_path)))
+            _, ext = os.path.splitext(lib_path)
+            if is_shared and ext == ".lib":  # Windows interface library
+                interfaces[lib] = _relativize_path(lib_path, relative_to_path=relative_to_path)
+            else:
+                ret[lib] = _relativize_path(lib_path, relative_to_path=relative_to_path)
 
+    libraries = []
+    for lib, lib_path in ret.items():
+        interface_library = None
+        if lib_path.endswith(".dll"):
+            if lib not in interfaces:
+                raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
+                                     f"Only found {lib_path}")
+            interface_library = interfaces.pop(lib)
+        libraries.append(_LibInfo(lib, is_shared, lib_path, interface_library))
+    # TODO: Would we want to manage the cases where DLLs are provided by the system?
     conanfile.output.warning(f"The library/ies {libs} cannot be found in the dependency")
-    return ret
+    return libraries
 
 
 def _get_headers(cpp_info, package_folder_path):
@@ -237,9 +230,6 @@ def _relativize_path(path, relative_to_path):
         return p.split(rel)[-1].lstrip("/")
     else:
         return p.lstrip("/")
-
-
-_DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
 
 
 class _InfoGenerator:
@@ -381,16 +371,16 @@ class _BazelBUILDGenerator:
     filename = "BUILD.bazel"
     template = textwrap.dedent("""\
     {% macro cc_import_macro(libs) %}
-    {% for lib_name, (is_shared, lib_path, dll_path) in libs.items() %}
+    {% for lib_info in libs %}
     cc_import(
-        name = "{{ lib_name }}_precompiled",
-        {% if not is_shared %}
-        static_library = "{{ lib_path }}",
+        name = "{{ lib_info.name }}_precompiled",
+        {% if lib_info.is_shared %}
+        shared_library = "{{ lib_info.lib_path }}",
         {% else %}
-        {% if is_shared and dll_path %}
-        interface_library = "{{ lib_path }}",
+        static_library = "{{ lib_info.lib_path }}",
         {% endif %}
-        shared_library = "{{ dll_path or lib_path }}",
+        {% if lib_info.interface_path %}
+        interface_library = "{{ lib_info.interface_path }}",
         {% endif %}
     )
     {% endfor %}
@@ -417,7 +407,7 @@ class _BazelBUILDGenerator:
         {% if obj["libs"] or obj["dependencies"] %}
         deps = [
             {% for lib in obj["libs"] %}
-            ":{{ lib }}_precompiled",
+            ":{{ lib.name }}_precompiled",
             {% endfor %}
             {% for name in obj["component_names"] %}
             ":{{ name }}",
