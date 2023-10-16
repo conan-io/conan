@@ -112,7 +112,8 @@ class DataCache:
         assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
-        return PackageLayout(pref, os.path.join(self._base_folder, pref_path))
+        # we use abspath to convert cache forward slash in Windows to backslash
+        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
     def get_or_create_ref_layout(self, ref: RecipeReference):
         """ called by RemoteManager.get_recipe()
@@ -182,6 +183,7 @@ class DataCache:
         pref.timestamp = revision_timestamp_now()
         # Wait until it finish to really update the DB
         relpath = os.path.relpath(layout.base_folder, self._base_folder)
+        relpath = relpath.replace("\\", "/")  # Uniform for Windows and Linux
         try:
             self._db.create_package(relpath, pref, build_id)
         except ConanReferenceAlreadyExistsInDB:
