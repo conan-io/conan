@@ -389,19 +389,29 @@ class _BazelBUILDGenerator:
     cc_library(
         name = "{{ obj["name"] }}",
         {% if obj["headers"] %}
-        hdrs = glob([{{ obj["headers"] }}]),
+        hdrs = glob([
+            {{ obj["headers"] }}
+        ]),
         {% endif %}
         {% if obj["includes"] %}
-        includes = [{{ obj["includes"] }}],
+        includes = [
+            {{ obj["includes"] }}
+        ],
         {% endif %}
         {% if obj["defines"] %}
-        defines = [{{ obj["defines"] }}],
+        defines = [
+            {{ obj["defines"] }}
+        ],
         {% endif %}
         {% if obj["linkopts"] %}
-        linkopts = [{{ obj["linkopts"] }}],
+        linkopts = [
+            {{ obj["linkopts"] }}
+        ],
         {% endif %}
         {% if obj["copts"] %}
-        copts = [{{ obj["copts"] }}],
+        copts = [
+            {{ obj["copts"] }}
+        ],
         {% endif %}
         visibility = ["//visibility:public"],
         {% if obj["libs"] or obj["dependencies"] %}
