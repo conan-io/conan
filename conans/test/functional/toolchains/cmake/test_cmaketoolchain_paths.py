@@ -167,8 +167,11 @@ def test_cmaketoolchain_path_find_package_override_sysroot():
     """
     client = TestClient(path_with_spaces=False)
 
-    find_sysroot = textwrap.dedent("""
+    find_sysroot_hello = textwrap.dedent("""
         MESSAGE(FATAL_ERROR "this hello should not be found")
+        """)
+    find_sysroot_world= textwrap.dedent("""
+        MESSAGE(STATUS "HELLO FROM THE SYSROOT WORLD!")
         """)
     conanfile_sysroot = textwrap.dedent("""
         from conan import ConanFile
@@ -207,14 +210,17 @@ def test_cmaketoolchain_path_find_package_override_sysroot():
         cmake_minimum_required(VERSION 3.15)
         set(CMAKE_CXX_COMPILER_WORKS 1)
         project(MyHello CXX)
+        message(STATUS "CMAKE_SYSROOT '${CMAKE_SYSROOT}'")
         find_package(hello REQUIRED)
+        find_package(world REQUIRED)
         """)
     profile_sysroot = textwrap.dedent("""
         [tool_requires]
         sysroot/0.1@
         """)
     client.save({"sysroot/conanfile.py": conanfile_sysroot,
-                 "sysroot/lib/cmake/hello/helloConfig.cmake": find_sysroot,
+                 "sysroot/lib/cmake/hello/helloConfig.cmake": find_sysroot_hello,
+                 "sysroot/lib/cmake/world/worldConfig.cmake": find_sysroot_world,
                  "dep/conanfile.py": conanfile_hello,
                  "dep/cmake/helloConfig.cmake": find_hello,
                  "consumer/conanfile.txt": conanfile_consumer,
@@ -231,6 +237,7 @@ def test_cmaketoolchain_path_find_package_override_sysroot():
         with client.chdir("build"):
             client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_toolchain.cmake")
     assert "HELLO FROM THE hello FIND PACKAGE!" in client.out
+    assert "HELLO FROM THE SYSROOT WORLD!" in client.out
 
 
 @pytest.mark.parametrize(
