@@ -3,33 +3,20 @@ import platform
 import textwrap
 from typing import List
 
-import yaml
 from jinja2 import FileSystemLoader, Environment
 
 from conan import conan_version
-from conan.api.output import ConanOutput
 from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.files import load, save, mkdir
 
-
-CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
-REMOTES = "remotes.json"
-PROFILES_FOLDER = "profiles"
-EXTENSIONS_FOLDER = "extensions"
-HOOKS_EXTENSION_FOLDER = "hooks"
-PLUGINS_FOLDER = "plugins"
 
 
 # TODO: Rename this to ClientHome
@@ -153,18 +140,6 @@ class ClientCache(object):
         return self._store_folder
 
     @property
-    def default_sources_backup_folder(self):
-        return os.path.join(self.cache_folder, "sources")
-
-    @property
-    def remotes_path(self):
-        return os.path.join(self.cache_folder, REMOTES)
-
-    @property
-    def remotes_registry(self) -> RemoteRegistry:
-        return RemoteRegistry(self)
-
-    @property
     def new_config_path(self):
         return os.path.join(self.cache_folder, "global.conf")
 
@@ -202,84 +177,3 @@ class ClientCache(object):
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
         return LocalDB.create(localdb_filename)
-
-    @property
-    def profiles_path(self):
-        return os.path.join(self.cache_folder, PROFILES_FOLDER)
-
-    @property
-    def settings_path(self):
-        return os.path.join(self.cache_folder, CONAN_SETTINGS)
-
-    @property
-    def custom_commands_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "commands")
-
-    @property
-    def custom_generators_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "generators")
-
-    @property
-    def plugins_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, PLUGINS_FOLDER)
-
-    @property
-    def default_profile_path(self):
-        # Used only in testing, and this class "reset_default_profile"
-        return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
-
-    @property
-    def hooks_path(self):
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, HOOKS_EXTENSION_FOLDER)
-
-    @property
-    def deployers_path(self):
-        deploy = os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deploy")
-        if os.path.exists(deploy):
-            ConanOutput().warning("Use 'deployers' cache folder for deployers instead of 'deploy'",
-                                  warn_tag="deprecated")
-            return deploy
-        return os.path.join(self.cache_folder, EXTENSIONS_FOLDER, "deployers")
-
-    @property
-    def settings(self):
-        """Returns {setting: [value, ...]} defining all the possible
-           settings without values"""
-        self.initialize_settings()
-
-        def _load_settings(path):
-            try:
-                return yaml.safe_load(load(path)) or {}
-            except yaml.YAMLError as ye:
-                raise ConanException("Invalid settings.yml format: {}".format(ye))
-
-        settings = _load_settings(self.settings_path)
-        user_settings_file = os.path.join(self.cache_folder, "settings_user.yml")
-        if os.path.exists(user_settings_file):
-            settings_user = _load_settings(user_settings_file)
-
-            def appending_recursive_dict_update(d, u):
-                # Not the same behavior as conandata_update, because this append lists
-                for k, v in u.items():
-                    if isinstance(v, list):
-                        current = d.get(k) or []
-                        d[k] = current + [value for value in v if value not in current]
-                    elif isinstance(v, dict):
-                        current = d.get(k) or {}
-                        if isinstance(current, list):  # convert to dict lists
-                            current = {k: None for k in current}
-                        d[k] = appending_recursive_dict_update(current, v)
-                    else:
-                        d[k] = v
-                return d
-
-            appending_recursive_dict_update(settings, settings_user)
-
-        return Settings(settings)
-
-    def initialize_settings(self):
-        # TODO: This is called by ConfigAPI.init(), maybe move everything there?
-        if not os.path.exists(self.settings_path):
-            settings_yml = default_settings_yml
-            save(self.settings_path, settings_yml)
-            save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations

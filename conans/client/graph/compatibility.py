@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.compute_pid import run_validate_package_id
 from conans.client.loader import load_python_file
 from conans.errors import conanfile_exception_formatter, ConanException, scoped_traceback
@@ -51,9 +52,9 @@ def cppstd_compat(conanfile):
 """
 
 
-def migrate_compatibility_files(cache):
+def migrate_compatibility_files(cache_folder):
     from conans.client.migrations import update_file
-    compatible_folder = os.path.join(cache.plugins_path, "compatibility")
+    compatible_folder = HomePaths(cache_folder).compatibility_plugin_path
     compatibility_file = os.path.join(compatible_folder, "compatibility.py")
     cppstd_compat_file = os.path.join(compatible_folder, "cppstd_compat.py")
     update_file(compatibility_file, _default_compat)
@@ -62,8 +63,8 @@ def migrate_compatibility_files(cache):
 
 class BinaryCompatibility:
 
-    def __init__(self, cache):
-        compatibility_file = os.path.join(cache.plugins_path, "compatibility", "compatibility.py")
+    def __init__(self, compatibility_plugin_folder):
+        compatibility_file = os.path.join(compatibility_plugin_folder, "compatibility.py")
         if not os.path.exists(compatibility_file):
             raise ConanException("The 'compatibility.py' plugin file doesn't exist. If you want "
                                  "to disable it, edit its contents instead of removing it")

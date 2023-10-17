@@ -102,7 +102,7 @@ class PackagesDBTable(BaseDbTable):
 
     def update_lru(self, pref):
         assert pref.revision is not None
-        # FIXME: pref comes here without timestamp, why? assert pref.timestamp is not None
+        assert pref.timestamp is not None
         where_clause = self._where_clause(pref)
         lru = timestamp_now()
         query = f"UPDATE {self.table_name} " \

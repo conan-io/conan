@@ -4,7 +4,6 @@ import unittest
 
 import pytest
 
-from conans.client.cache.cache import PROFILES_FOLDER
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -181,8 +180,7 @@ class MyConanfile(ConanFile):
         env_variable = "env_variable=relative_profile"
         rel_path = os.path.join('..', 'env_rel_profile')
         self.assertFalse(os.path.isabs(rel_path))
-        default_profile_path = os.path.join(client.cache_folder,
-                                            PROFILES_FOLDER, rel_path)
+        default_profile_path = os.path.join(client.cache.profiles_path, rel_path)
         save(default_profile_path, "[settings]\nos=Windows\n[buildenv]\n" + env_variable)
         with environment_update({'CONAN_DEFAULT_PROFILE': rel_path}):
             client.run("create . --name=name --version=version --user=user --channel=channel")
