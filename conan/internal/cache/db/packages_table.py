@@ -102,7 +102,8 @@ class PackagesDBTable(BaseDbTable):
 
     def update_lru(self, pref):
         assert pref.revision is not None
-        assert pref.timestamp is not None
+        # TODO: InstallGraph is dropping the pref.timestamp, cannot be checked here yet
+        # assert pref.timestamp is not None, f"PREF _TIMESSTAMP IS NONE {repr(pref)}"
         where_clause = self._where_clause(pref)
         lru = timestamp_now()
         query = f"UPDATE {self.table_name} " \
