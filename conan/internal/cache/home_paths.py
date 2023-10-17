@@ -13,6 +13,10 @@ class HomePaths:
         self._home = home_folder
 
     @property
+    def global_conf_path(self):
+        return os.path.join(self._home, "global.conf")
+
+    @property
     def custom_commands_path(self):
         return os.path.join(self._home, _EXTENSIONS_FOLDER, "commands")
 

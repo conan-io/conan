@@ -3,7 +3,6 @@ import os
 import yaml
 
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.cache.cache import ClientCache
 from conans.client.conf import default_settings_yml
 from conans.client.loader import load_python_file
 from conans.client.profile_loader import ProfileLoader
@@ -28,7 +27,7 @@ class ProfilesAPI:
         """
         default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
         if default_profile is None:
-            global_conf = ClientCache(self._conan_api.cache_folder).new_config
+            global_conf = self._conan_api.config.global_conf
             default_profile = global_conf.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
 
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
@@ -45,7 +44,7 @@ class ProfilesAPI:
         :return: the path to the default "build" profile, either in the cache or as
             defined by the user in configuration
         """
-        global_conf = ClientCache(self._conan_api.cache_folder).new_config
+        global_conf = self._conan_api.config.global_conf
         default_profile = global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
         if not os.path.exists(default_profile):
@@ -60,8 +59,7 @@ class ProfilesAPI:
         build = [self.get_default_build()] if not args.profile_build else args.profile_build
         host = [self.get_default_host()] if not args.profile_host else args.profile_host
 
-        cache = ClientCache(self._conan_api.cache_folder)
-        global_conf = cache.new_config
+        global_conf = self._conan_api.config.global_conf
         global_conf.validate()  # TODO: Remove this from here
         cache_settings = self._settings()
         profile_plugin = self._load_profile_plugin()
@@ -80,8 +78,7 @@ class ProfilesAPI:
         finally adding the individual settings, options (priority over the profiles)
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
-        cache = ClientCache(self._conan_api.cache_folder)
-        global_conf = cache.new_config
+        global_conf = self._conan_api.config.global_conf
         global_conf.validate()  # TODO: Remove this from here
         cache_settings = self._settings()
         profile_plugin = self._load_profile_plugin()

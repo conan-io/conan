@@ -40,7 +40,7 @@ class UploadAPI:
         :param metadata: A list of patterns of metadata that should be uploaded. Default None
         means all metadata will be uploaded together with the pkg artifacts"""
         app = ConanApp(self.conan_api.cache_folder)
-        preparator = PackagePreparator(app)
+        preparator = PackagePreparator(app, self.conan_api.config.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         gather_metadata(package_list, app.cache, metadata)
         signer = PkgSignaturesPlugin(app.cache)
@@ -55,7 +55,7 @@ class UploadAPI:
 
     def upload_backup_sources(self, package_list):
         app = ConanApp(self.conan_api.cache_folder)
-        config = app.cache.new_config
+        config = self.conan_api.config.global_conf
         url = config.get("core.sources:upload_url")
         if url is None:
             return

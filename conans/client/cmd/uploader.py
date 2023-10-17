@@ -74,9 +74,10 @@ class UploadUpstreamChecker:
 
 
 class PackagePreparator:
-    def __init__(self, app: ConanApp):
+    def __init__(self, app: ConanApp, global_conf):
         self._app = app
         self._output = ConanOutput()
+        self._global_conf = global_conf
 
     def prepare(self, upload_bundle, enabled_remotes):
         self._output.info("Preparing artifacts to upload")
@@ -145,8 +146,7 @@ class PackagePreparator:
             elif tgz_files:
                 if self._output and not self._output.is_terminal:
                     self._output.info(msg)
-                compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel",
-                                                               check_type=int)
+                compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
                 tgz = compress_files(tgz_files, tgz_name, download_export_folder,
                                      compresslevel=compresslevel)
                 result[tgz_name] = tgz
@@ -194,7 +194,7 @@ class PackagePreparator:
             if self._output and not self._output.is_terminal:
                 self._output.info("Compressing package...")
             tgz_files = {f: path for f, path in files.items()}
-            compresslevel = self._app.cache.new_config.get("core.gzip:compresslevel", check_type=int)
+            compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
             tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
                                       compresslevel=compresslevel)
             assert tgz_path == package_tgz
