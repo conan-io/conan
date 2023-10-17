@@ -167,29 +167,26 @@ class VersionRange:
         return False
 
     def intersection(self, other):
-        # TODO: assumes just 1 condition set
-        if len(self.condition_sets) != 1 or len(other.condition_sets) != 1:
-            return
-
         conditions = []
-        lower_limits = [c for c in self.condition_sets[0].conditions if ">" in c.operator]
-        lower_limits.extend(c for c in other.condition_sets[0].conditions if ">" in c.operator)
-        lower_limit = None
-        if lower_limits:
-            lower_limit = sorted(lower_limits, reverse=True)[0]
-            conditions.append(lower_limit)
 
-        upper_limits = [c for c in self.condition_sets[0].conditions if "<" in c.operator]
-        upper_limits.extend(c for c in other.condition_sets[0].conditions if "<" in c.operator)
-        upper_limit = None
-        if upper_limits:
-            upper_limit = sorted(upper_limits)[0]
-            conditions.append(upper_limit)
+        def _calculate_limits(operator, lhs, rhs):
+            limits = ([c for c in lhs.conditions if operator in c.operator]
+                      + [c for c in rhs.conditions if operator in c.operator])
+            if limits:
+                return sorted(limits, reverse=operator == ">")[0]
 
-        if lower_limit and upper_limit and lower_limit > upper_limit:
-            return None
+        for lhs_conditions in self.condition_sets:
+            for rhs_conditions in other.condition_sets:
+                internal_conditions = []
+                lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
+                upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
+                internal_conditions.append(lower_limit)
+                internal_conditions.append(upper_limit)
+                if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
+                    conditions.append(internal_conditions)
 
-        result = VersionRange(f"{' '.join(str(c) for c in conditions)}")
+        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions)
+        result = VersionRange(expression)
         # TODO: Direct definition of conditions not reparsing
         # result.condition_sets = self.condition_sets + other.condition_sets
         return result
