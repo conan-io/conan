@@ -294,7 +294,7 @@ class _BazelBUILDGenerator:
             ":{{ lib.name }}_precompiled",
             {% endfor %}
             {% for name in obj["component_names"] %}
-            "{{ name }}",
+            ":{{ name }}",
             {% endfor %}
             {% for dep in obj["dependencies"] %}
             "{{ dep }}",
