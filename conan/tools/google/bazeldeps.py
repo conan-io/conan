@@ -448,11 +448,12 @@ class _InfoGenerator:
         ret = []
         for req in cpp_info.requires:
             pkg_ref_name, comp_ref_name = req.split("::") if "::" in req else (dep_ref_name, req)
-            prefix = ":"
+            prefix = ":"  # Requirements declared in the same BUILD file
             # For instance, dep == "hello/1.0" and req == "other::cmp1" -> hello != other
             if dep_ref_name != pkg_ref_name:
                 try:
                     req_conanfile = self._transitive_reqs[pkg_ref_name]
+                    # Requirements declared in another dependency BUILD file
                     prefix = f"@{_get_package_name(req_conanfile)}//:"
                 except KeyError:
                     continue  # If the dependency is not in the transitive, might be skipped
@@ -496,8 +497,9 @@ class _InfoGenerator:
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            requires = [f"@{_get_package_name(req)}//:{_get_package_name(req)}"
-                        for req in self._transitive_reqs.values()]
+            for req in self._transitive_reqs.values():
+                req_name = _get_package_name(req)
+                requires.append(f"@{req_name}//:{req_name}")
         cpp_info = self._dep.cpp_info
         return _DepInfo(pkg_name, requires, cpp_info)
 
