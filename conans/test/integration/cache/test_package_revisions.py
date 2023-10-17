@@ -17,22 +17,19 @@ def test_package_revision_latest():
                         return_value="1691760295"):
             c.run("create tool")
     prev1 = c.created_package_revision("tool/0.1")
-    print(prev1)
     with environment_update({"MYVAR": "MYVALUE2"}):
         # Just in case dates were not correctly processed
         with mock.patch("conan.internal.cache.cache.revision_timestamp_now",
                         return_value="1697442658"):
             c.run("create tool")
     prev2 = c.created_package_revision("tool/0.1")
-    print(prev2)
-    c.run("list tool*:*#* ")
-    print(c.stdout)
+
     c.run("create pkg")
-    print(c.out)
+    # The latest is used
     assert prev2 in c.out
     assert prev1 not in c.out
 
     c.run("install --requires=pkg/0.1 --build=pkg*")
-    print(c.out)
+    # The latest is used
     assert prev2 in c.out
     assert prev1 not in c.out
