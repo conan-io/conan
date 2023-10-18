@@ -1154,18 +1154,25 @@ def test_extra_flags():
             settings = "os", "arch", "build_type"
             def generate(self):
                 tc = CMakeToolchain(self)
-                tc.extra_cxxflags = ["flag5"]
-                tc.extra_cflags = ["flag6"]
+                tc.extra_cxxflags = ["extra_cxxflags"]
+                tc.extra_cflags = ["extra_cflags"]
+                tc.extra_sharedlinkflags = ["extra_sharedlinkflags"]
+                tc.extra_exelinkflags = ["extra_exelinkflags"]
                 tc.generate()
         """)
     profile = textwrap.dedent("""
         include(default)
         [conf]
-        tools.build:cxxflags+=['flag1', 'flag2']
-        tools.build:cflags+=['flag3', 'flag4']
+        tools.build:cxxflags+=['cxxflags']
+        tools.build:cflags+=['cflags']
+        tools.build:sharedlinkflags+=['sharedlinkflags']
+        tools.build:exelinkflags+=['exelinkflags']
         """)
     client.save({"conanfile.py": conanfile, "profile": profile})
     client.run('install . -pr=./profile')
     toolchain = client.load("conan_toolchain.cmake")
-    assert 'string(APPEND CONAN_CXX_FLAGS " flag1 flag2 flag5")' in toolchain
-    assert 'string(APPEND CONAN_C_FLAGS " flag3 flag4 flag6")' in toolchain
+
+    assert 'string(APPEND CONAN_CXX_FLAGS " cxxflags extra_cxxflags")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " cflags extra_cflags")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " sharedlinkflags extra_sharedlinkflags")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " exelinkflags extra_exelinkflags")' in toolchain

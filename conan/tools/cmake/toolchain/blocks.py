@@ -567,8 +567,8 @@ class ExtraFlagsBlock(Block):
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list) + self._toolchain.extra_cxxflags
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self._toolchain.extra_cflags
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list) + self._toolchain.extra_sharedlinkflags
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list) + self._toolchain.extra_exelinkflags
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
 
         # See https://github.com/conan-io/conan/issues/13374

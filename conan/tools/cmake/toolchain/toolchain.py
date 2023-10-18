@@ -127,6 +127,8 @@ class CMakeToolchain(object):
 
         self.extra_cxxflags = []
         self.extra_cflags = []
+        self.extra_extra_sharedlinkflags = []
+        self.extra_extra_exelinkflags = []
 
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),
