@@ -83,7 +83,9 @@ class BazelToolchain:
         self.cxxopt = []
         self.linkopt = []
         self.strip = 'sometimes'  # 'always', 'sometimes', 'never'
-        self.compilation_mode = "fastbuild"  # 'fastbuild', 'dbg', 'opt'
+        self.compilation_mode = {'Release': 'opt', 'Debug': 'dbg'}.get(
+            self._conanfile.settings.get_safe("build_type"), "fastbuild"  # Bazel default
+        )
         # Be aware that this parameter does not admit a compiler absolute path
         # If you want to add it, you will have to use a specific Bazel toolchain
         self.compiler = None
