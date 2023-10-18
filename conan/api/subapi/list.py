@@ -95,7 +95,7 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         limit_time = timelimit(lru) if lru else None
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
