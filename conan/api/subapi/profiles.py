@@ -57,8 +57,8 @@ class ProfilesAPI:
         return default_profile
 
     def get_profiles_from_args(self, args):
-        build = [self.get_default_build()] if not args.profile_build else args.profile_build
-        host = [self.get_default_host()] if not args.profile_host else args.profile_host
+        build_profiles = args.profile_build or [self.get_default_build()]
+        host_profiles = args.profile_host or [self.get_default_host()]
 
         cache = ClientCache(self._conan_api.cache_folder)
         global_conf = cache.new_config
@@ -66,12 +66,11 @@ class ProfilesAPI:
         cache_settings = self._settings()
         profile_plugin = self._load_profile_plugin()
         cwd = os.getcwd()
-        profile_build = self._get_profile(build, args.settings_build, args.options_build,
+        profile_build = self._get_profile(build_profiles, args.settings_build, args.options_build,
                                           args.conf_build, cwd, cache_settings,
                                           profile_plugin, global_conf)
-        profile_host = self._get_profile(host, args.settings_host, args.options_host, args.conf_host,
+        profile_host = self._get_profile(host_profiles, args.settings_host, args.options_host, args.conf_host,
                                          cwd, cache_settings, profile_plugin, global_conf)
-
         return profile_host, profile_build
 
     def get_profile(self, profiles, settings=None, options=None, conf=None, cwd=None):

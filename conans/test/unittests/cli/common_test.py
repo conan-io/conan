@@ -23,12 +23,16 @@ def argparse_args():
     return MagicMock(
         profile_build=None,
         profile_host=None,
+        profile_all=None,
         settings_build=None,
         settings_host=None,
+        settings_all=None,
         options_build=None,
         options_host=None,
+        options_all=None,
         conf_build=None,
-        conf_host=None
+        conf_host=None,
+        conf_all=None,
     )
 
 
