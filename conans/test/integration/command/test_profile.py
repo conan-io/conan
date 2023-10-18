@@ -111,6 +111,25 @@ def test_shorthand_syntax():
                                          'os': 'Linux'},
                             'tool_requires': {}}}
 
+    tc.run("profile show -pr:a=pre -o:b foo=False -o:a foo=True -o:h foo=False -f=json")
+    out = json.loads(tc.out)
+    assert out == {'build': {'build_env': '',
+                             'conf': {},
+                             'options': {'foo': 'True'},
+                             'package_settings': {},
+                             'settings': {'compiler': 'gcc',
+                                          'compiler.version': '11',
+                                          'os': 'Linux'},
+                             'tool_requires': {}},
+                   'host': {'build_env': '',
+                            'conf': {},
+                            'options': {'foo': 'False'},
+                            'package_settings': {},
+                            'settings': {'compiler': 'gcc',
+                                         'compiler.version': '11',
+                                         'os': 'Linux'},
+                            'tool_requires': {}}}
+
 
 def test_profile_show_json():
     c = TestClient()
