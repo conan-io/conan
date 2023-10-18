@@ -1,44 +1,56 @@
-from conan.tools.files.files import load_toolchain_args
+import os
+import platform
+
+from conan.tools.google import BazelToolchain
 
 
 class Bazel(object):
-    def __init__(self, conanfile, namespace=None):
-        self._conanfile = conanfile
-        self._namespace = namespace
-        self._get_bazel_project_configuration()
 
-    def configure(self, args=None):
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+
+    def build(self, target=None, cli_args=None):
+        """
+        Runs "bazel <rcpaths> build <configs> <cli_args> <targets>"
+        """
+        # Use BazelToolchain generated file if exists
+        conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
+        use_conan_config = os.path.exists(conan_bazelrc)
+        bazelrc_paths = []
+        bazelrc_configs = []
+        if use_conan_config:
+            bazelrc_paths.append(conan_bazelrc)
+            bazelrc_configs.append(BazelToolchain.bazelrc_config)
+        # User bazelrc paths have more prio than Conan one
+        # See more info in https://bazel.build/run/bazelrc
+        bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path",
+                                                      default=[], check_type=list))
+        command = "bazel"
+        for rc in bazelrc_paths:
+            command += f" --bazelrc='{rc}'"
+        command += " build"
+        bazelrc_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs",
+                                                        default=[], check_type=list))
+        for config in bazelrc_configs:
+            command += f" --config={config}"
+        if cli_args:
+            command += " ".join(f" {arg}" for arg in cli_args)
+        command += f" {target}"
+        self._conanfile.run(command)
+        # This is very important for Windows, as otherwise the bazel server locks files
+        if platform.system() == "Windows":
+            self._conanfile.run("bazel shutdown")
+
+    def install(self):
+        """
+        Bazel does not have any install process as it installs everything in its own cache
+        """
         pass
 
-    def build(self, args=None, label=None):
-        # TODO: Change the directory where bazel builds the project (by default, /var/tmp/_bazel_<username> )
-
-        bazelrc_path = '--bazelrc={}'.format(self._bazelrc_path) if self._bazelrc_path else ''
-        bazel_config = " ".join(['--config={}'.format(conf) for conf in self._bazel_config])
-
-        # arch = self._conanfile.settings.get_safe("arch")
-        # cpu = {
-        #     "armv8": "arm64",
-        #     "x86_64": ""
-        # }.get(arch, arch)
-        #
-        # command = 'bazel {} build --sandbox_debug --subcommands=pretty_print --cpu={} {} {}'.format(
-        #     bazelrc_path,
-        #     cpu,
-        #     bazel_config,
-        #     label
-        # )
-        command = 'bazel {} build {} {}'.format(
-            bazelrc_path,
-            bazel_config,
-            label
-        )
-
-        self._conanfile.run(command)
-
-    def _get_bazel_project_configuration(self):
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
-                                                     namespace=self._namespace)
-        configs = toolchain_file_content.get("bazel_configs")
-        self._bazel_config = configs.split(",") if configs else []
-        self._bazelrc_path = toolchain_file_content.get("bazelrc_path")
+    def test(self, target=None):
+        """
+        Runs "bazel test <target>"
+        """
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool) or target is None:
+            return
+        self._conanfile.run(f'bazel test {target}')
