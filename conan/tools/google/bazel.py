@@ -41,12 +41,6 @@ class Bazel(object):
         if platform.system() == "Windows":
             self._conanfile.run("bazel shutdown")
 
-    def install(self):
-        """
-        Bazel does not have any install process as it installs everything in its own cache
-        """
-        pass
-
     def test(self, target=None):
         """
         Runs "bazel test <target>"

@@ -28,8 +28,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
-        bazel.build(label="//main:{name}")
+        bazel.build(target="//main:{name}")
 
     def package(self):
         dest_lib = os.path.join(self.package_folder, "lib")
@@ -66,8 +65,7 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
-        bazel.build(label="//main:example")
+        bazel.build(target="//main:example")
 
     def layout(self):
         bazel_layout(self)
@@ -104,7 +102,7 @@ cc_library(
 
 _bazel_workspace = ""
 _test_bazel_workspace = """
-load("@//:dependencies.bzl", "load_conan_dependencies")
+load("@//conan:dependencies.bzl", "load_conan_dependencies")
 load_conan_dependencies()
 """
 
@@ -133,8 +131,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
-        bazel.build(label="//main:{name}")
+        bazel.build(target="//main:{name}")
 
     def package(self):
         dest_bin = os.path.join(self.package_folder, "bin")

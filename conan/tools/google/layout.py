@@ -7,7 +7,7 @@ def bazel_layout(conanfile, src_folder="."):
     subproject = conanfile.folders.subproject
     conanfile.folders.source = src_folder if not subproject else os.path.join(subproject, src_folder)
     conanfile.folders.build = "."  # Bazel always build the whole project in the root folder
-    conanfile.folders.generators = "bazel-conan-tools"  # one
+    conanfile.folders.generators = "conan"  # one
     # FIXME: used in test package for example, to know where the binaries are (editables not supported yet)?
     conanfile.cpp.build.bindirs = [os.path.join(conanfile.folders.build, "bazel-bin")]
     conanfile.cpp.build.libdirs = [os.path.join(conanfile.folders.build, "bazel-bin")]
