@@ -37,15 +37,14 @@ class ConanFileHelpers:
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder, global_conf):
 
         self.cache_folder = cache_folder
-        self.cache = ClientCache(self.cache_folder)
+        self.cache = ClientCache(self.cache_folder, global_conf)
 
         home_paths = HomePaths(self.cache_folder)
         self.hook_manager = HookManager(home_paths.hooks_path)
         # Wraps an http_requester to inject proxies, certs, etc
-        global_conf = self.cache.new_config
         ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
         self.requester = ConanRequester(global_conf, cache_folder)
         # To handle remote connections
@@ -56,9 +55,9 @@ class ConanApp(object):
         self.remote_manager = RemoteManager(self.cache, auth_manager)
 
         self.proxy = ConanProxy(self)
-        self.range_resolver = RangeResolver(self)
+        self.range_resolver = RangeResolver(self, global_conf)
 
-        self.pyreq_loader = PyRequireLoader(self)
+        self.pyreq_loader = PyRequireLoader(self, global_conf)
         cmd_wrap = CmdWrapper(home_paths.wrapper_path)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)

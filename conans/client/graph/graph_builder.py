@@ -19,7 +19,7 @@ from conans.model.requires import Requirement
 
 class DepsGraphBuilder(object):
 
-    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update):
+    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
@@ -27,7 +27,7 @@ class DepsGraphBuilder(object):
         self._remotes = remotes  # TODO: pass as arg to load_graph()
         self._update = update
         self._check_update = check_update
-        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
+        self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None

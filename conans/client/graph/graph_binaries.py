@@ -14,8 +14,9 @@ from conans.errors import NoRemoteAvailable, NotFoundException, \
 
 class GraphBinariesAnalyzer(object):
 
-    def __init__(self, conan_app):
+    def __init__(self, conan_app, global_conf):
         self._cache = conan_app.cache
+        self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
@@ -316,7 +317,7 @@ class GraphBinariesAnalyzer(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
 
     def _evaluate_package_id(self, node):
-        compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
+        compute_package_id(node, self._global_conf)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for

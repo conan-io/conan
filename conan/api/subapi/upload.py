@@ -19,7 +19,7 @@ class UploadAPI:
     def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -39,7 +39,7 @@ class UploadAPI:
         :param enabled_remotes:
         :param metadata: A list of patterns of metadata that should be uploaded. Default None
         means all metadata will be uploaded together with the pkg artifacts"""
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         preparator = PackagePreparator(app, self.conan_api.config.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         gather_metadata(package_list, app.cache, metadata)
@@ -48,13 +48,13 @@ class UploadAPI:
         signer.sign(package_list)
 
     def upload(self, package_list, remote):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
 
     def upload_backup_sources(self, package_list):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         config = self.conan_api.config.global_conf
         url = config.get("core.sources:upload_url")
         if url is None:

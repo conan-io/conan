@@ -25,14 +25,14 @@ class ClientCache(object):
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder, global_conf):
         self.cache_folder = cache_folder
 
         # Caching
         self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = self.new_config.get("core.cache:storage_path") or \
+        self._store_folder = global_conf.get("core.cache:storage_path") or \
                              os.path.join(self.cache_folder, "p")
 
         try:
@@ -126,40 +126,6 @@ class ClientCache(object):
     @property
     def store(self):
         return self._store_folder
-
-    @property
-    def new_config_path(self):
-        return os.path.join(self.cache_folder, "global.conf")
-
-    @property
-    def new_config(self):
-        """ this is the new global.conf to replace the old conan.conf that contains
-        configuration defined with the new syntax as in profiles, this config will be composed
-        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
-        """
-        if self._new_config is None:
-            self._new_config = ConfDefinition()
-            if os.path.exists(self.new_config_path):
-                text = load(self.new_config_path)
-                distro = None
-                if platform.system() in ["Linux", "FreeBSD"]:
-                    import distro
-                template = Environment(loader=FileSystemLoader(self.cache_folder)).from_string(text)
-                content = template.render({"platform": platform, "os": os, "distro": distro,
-                                           "conan_version": conan_version,
-                                           "conan_home_folder": self.cache_folder,
-                                           "detect_api": detect_api})
-                self._new_config.loads(content)
-            else:  # creation of a blank global.conf file for user convenience
-                default_global_conf = textwrap.dedent("""\
-                    # Core configuration (type 'conan config list' to list possible values)
-                    # e.g, for CI systems, to raise if user input would block
-                    # core:non_interactive = True
-                    # some tools.xxx config also possible, though generally better in profiles
-                    # tools.android:ndk_path = my/path/to/android/ndk
-                    """)
-                save(self.new_config_path, default_global_conf)
-        return self._new_config
 
     @property
     def localdb(self):

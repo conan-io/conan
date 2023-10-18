@@ -10,6 +10,7 @@ from conans.client.cache.cache import ClientCache
 from conans.client.conf import get_default_settings_yml, default_settings_yml
 from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
@@ -19,7 +20,7 @@ class SettingsCppStdTests(unittest.TestCase):
 
     def setUp(self):
         self.cache_folder = temp_folder()
-        self.cache = ClientCache(self.cache_folder)
+        self.cache = ClientCache(self.cache_folder, ConfDefinition())
         self.home_paths = HomePaths(self.cache_folder)
         save(self.home_paths.profile_plugin_path, "")
 

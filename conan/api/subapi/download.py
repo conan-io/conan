@@ -13,7 +13,7 @@ class DownloadAPI:
 
     def recipe(self, ref: RecipeReference, remote: Remote, metadata=None):
         output = ConanOutput()
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         assert ref.revision, f"Reference '{ref}' must have revision"
         try:
             app.cache.recipe_layout(ref)  # raises if not found
@@ -42,7 +42,7 @@ class DownloadAPI:
 
     def package(self, pref: PkgReference, remote: Remote, metadata=None):
         output = ConanOutput()
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         try:
             app.cache.recipe_layout(pref.ref)  # raises if not found
         except ConanException:
