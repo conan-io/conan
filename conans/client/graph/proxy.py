@@ -45,6 +45,8 @@ class ConanProxy:
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
 
+        self._cache.update_recipe_lru(ref)
+
         # TODO: cache2.0: check with new --update flows
         conanfile_path = recipe_layout.conanfile()
 

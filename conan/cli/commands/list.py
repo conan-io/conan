@@ -108,6 +108,10 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-g", "--graph", help="Graph json file")
     parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
     parser.add_argument("-gr", "--graph-recipes", help="Which recipes are listed", action="append")
+    parser.add_argument('--lru', default=None, action=OnceArgument,
+                        help="List recipes and binaries that have not been recently used. Use a"
+                             " time limit like --lru=5d (days) or --lru=4w (weeks),"
+                             " h (hours), m(minutes)")
 
     args = parser.parse_args(*args)
 
@@ -115,8 +119,12 @@ def list(conan_api: ConanAPI, parser, *args):
         raise ConanException("Missing pattern or graph json file")
     if args.pattern and args.graph:
         raise ConanException("Cannot define both the pattern and the graph json file")
+    if args.graph and args.lru:
+        raise ConanException("Cannot define lru when loading a graph json file")
     if (args.graph_recipes or args.graph_binaries) and not args.graph:
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
+    if args.remote and args.lru:
+        raise ConanException("'--lru' cannot be used in remotes, only in cache")
 
     if args.graph:
         graphfile = make_abs_path(args.graph)
@@ -127,7 +135,8 @@ def list(conan_api: ConanAPI, parser, *args):
         pkglist = MultiPackagesList()
         if args.cache or not args.remote:
             try:
-                cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
+                cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
+                                                   lru=args.lru)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:

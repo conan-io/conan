@@ -232,3 +232,15 @@ class DataCache:
             # This was exported before, making it latest again, update timestamp
             ref = layout.reference
             self._db.update_recipe_timestamp(ref)
+
+    def get_recipe_lru(self, ref):
+        return self._db.get_recipe_lru(ref)
+
+    def update_recipe_lru(self, ref):
+        self._db.update_recipe_lru(ref)
+
+    def get_package_lru(self, pref):
+        return self._db.get_package_lru(pref)
+
+    def update_package_lru(self, pref):
+        self._db.update_package_lru(pref)

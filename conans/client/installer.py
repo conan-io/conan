@@ -324,6 +324,7 @@ class BinaryInstaller:
         elif package.binary == BINARY_CACHE:
             node = package.nodes[0]
             pref = node.pref
+            self._cache.update_package_lru(pref)
             assert node.prev, "PREV for %s is None" % str(pref)
             node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
