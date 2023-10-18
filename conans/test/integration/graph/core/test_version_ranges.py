@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import pytest
 
 from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
@@ -416,3 +417,22 @@ def test_unknown_options():
 
     c.run("graph info --requires=lib/[>1.2,unknown_conf]")
     assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out
+
+
+@pytest.mark.parametrize("version_range,should_warn", [
+    [">=0.1, include_prereleases", False],
+    [">=0.1, include_prerelease=True", True],
+    [">=0.1, include_prerelease=False", True]
+])
+def test_bad_options_syntax(version_range, should_warn):
+    """We don't error out on bad options, maybe we should,
+    but for now this test ensures we don't change it without realizing"""
+    tc = TestClient()
+    tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_requires(f"lib/[{version_range}]")})
+    tc.run("export lib")
+    tc.run("graph info app/conanfile.py")
+    if should_warn:
+        assert "its presence unconditionally enables prereleases" in tc.out
+    else:
+        assert "its presence unconditionally enables prereleases" not in tc.out

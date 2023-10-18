@@ -1,4 +1,5 @@
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compatibility import BinaryCompatibility
 from conans.client.graph.compute_pid import compute_package_id
@@ -18,7 +19,8 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        self._compatibility = BinaryCompatibility(self._cache)
+        compat_folder = HomePaths(self._cache.cache_folder).compatibility_plugin_path
+        self._compatibility = BinaryCompatibility(compat_folder)
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -104,30 +106,48 @@ class GraphBinariesAnalyzer(object):
         existing = compatibles.pop(original_package_id, None)   # Skip main package_id
         if existing:  # Skip the check if same package_id
             conanfile.output.info(f"Compatible package ID {original_package_id} equal to "
-                                  "the default package ID")
+                                  "the default package ID: Skipping it.")
 
-        if compatibles:
-            conanfile.output.info(f"Checking {len(compatibles)} compatible configurations:")
+        if not compatibles:
+            return
+
+        def _compatible_found(pkg_id, compatible_pkg):
+            diff = conanfile.info.dump_diff(compatible_pkg)
+            conanfile.output.info(f"Main binary package '{original_package_id}' missing. Using "
+                                  f"compatible package '{pkg_id}': {diff}")
+            # So they are available in package_info() method
+            conanfile.info = compatible_pkg  # Redefine current
+            conanfile.settings.update_values(compatible_pkg.settings.values_list)
+            # Trick to allow mutating the options (they were freeze=True)
+            # TODO: Improve this interface
+            conanfile.options = conanfile.options.copy_conaninfo_options()
+            conanfile.options.update_options(compatible_pkg.options)
+
+        conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
-            conanfile.output.info(f"'{package_id}': "
-                                  f"{conanfile.info.dump_diff(compatible_package)}")
+            if update:
+                conanfile.output.info(f"'{package_id}': "
+                                      f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
             node.binary = None  # Invalidate it
-            self._process_compatible_node(node, remotes, update)
-            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                conanfile.output.info("Main binary package '%s' missing. Using "
-                                      "compatible package '%s'" % (original_package_id, package_id))
-                # So they are available in package_info() method
-                conanfile.info = compatible_package  # Redefine current
-                conanfile.settings.update_values(compatible_package.settings.values_list)
-                # Trick to allow mutating the options (they were freeze=True)
-                # TODO: Improve this interface
-                conanfile.options = conanfile.options.copy_conaninfo_options()
-                conanfile.options.update_options(compatible_package.options)
-                break
-        else:  # If no compatible is found, restore original state
-            node.binary = original_binary
-            node._package_id = original_package_id
+            self._process_compatible_node(node, remotes, update)  # TODO: what if BINARY_BUILD
+            if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
+                _compatible_found(package_id, compatible_package)
+                return
+        if not update:
+            conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
+            for package_id, compatible_package in compatibles.items():
+                conanfile.output.info(f"'{package_id}': "
+                                      f"{conanfile.info.dump_diff(compatible_package)}")
+                node._package_id = package_id  # Modifying package id under the hood, FIXME
+                node.binary = None  # Invalidate it
+                self._evaluate_download(node, remotes, update)
+                if node.binary == BINARY_DOWNLOAD:
+                    _compatible_found(package_id, compatible_package)
+                    return
+        # If no compatible is found, restore original state
+        node.binary = original_binary
+        node._package_id = original_package_id
 
     def _evaluate_node(self, node, build_mode, remotes, update):
         assert node.binary is None, "Node.binary should be None"
@@ -225,10 +245,11 @@ class GraphBinariesAnalyzer(object):
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 
-        if cache_latest_prev is None:  # This binary does NOT exist in the cache
-            self._evaluate_download(node, remotes, update)
-        else:  # This binary already exists in the cache, maybe can be updated
+        if cache_latest_prev is not None:
+            # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node, remotes, update)
+        elif update:
+            self._evaluate_download(node, remotes, update)
 
     def _process_locked_node(self, node, build_mode, locked_prev):
         # Check that this same reference hasn't already been checked

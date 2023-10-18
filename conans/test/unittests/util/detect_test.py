@@ -3,6 +3,7 @@ import unittest
 
 from parameterized import parameterized
 
+from conan.internal.api.detect_api import detect_cppstd
 from conans.client.conf.detect import detect_defaults_settings
 from conans.model.version import Version
 from conans.test.utils.mocks import RedirectedTestOutput

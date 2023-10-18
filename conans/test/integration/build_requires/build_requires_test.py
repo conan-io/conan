@@ -944,3 +944,28 @@ class TestBuildTrackHost:
                                                  "Cache")})
         c.assert_listed_binary({"protobuf/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Cache")}, build=True)
+
+    def test_overriden_host_version_transitive_deps(self):
+        """
+        Make the tool_requires follow the regular require with the expression "<host_version>" for a transitive_deps
+        """
+        c = TestClient()
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requirement("protobuf/[>=1.0]"),
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1").with_tool_requirement("protobuf/<host_version>")})
+        c.run("create protobuf --version=1.0")
+        c.run("create protobuf --version=1.1")
+        c.run("create pkg")
+        c.run("install pkg")  # make sure it doesn't crash
+        c.run("install app")
+        c.assert_listed_require({"protobuf/1.1": "Cache"})
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+        # verify locks work
+        c.run("lock create app")
+        lock = json.loads(c.load("app/conan.lock"))
+        build_requires = lock["build_requires"]
+        assert len(build_requires) == 1
+        assert "protobuf/1.1" in build_requires[0]
+        # lock can be used
+        c.run("install app --lockfile=app/conan.lock")
+        c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)

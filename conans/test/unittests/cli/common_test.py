@@ -1,19 +1,20 @@
+import os
 from unittest.mock import MagicMock
 
 import pytest
 
 from conan.api.conan_api import ConanAPI
-from conan.tools.files import save
-from conans.client.cache.cache import ClientCache
+from conan.internal.cache.home_paths import HomePaths
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 @pytest.fixture()
 def conan_api():
     tmp_folder = temp_folder()
-    cache = ClientCache(tmp_folder)
-    save(None, cache.default_profile_path, "")
+    home_path = HomePaths(tmp_folder)
+    save(os.path.join(home_path.profiles_path, "default"), "")
     return ConanAPI(tmp_folder)
 
 
