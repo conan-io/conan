@@ -1,20 +1,13 @@
 import os
-import platform
-import textwrap
 from typing import List
 
-from jinja2 import FileSystemLoader, Environment
-
-from conan import conan_version
-from conan.internal.api import detect_api
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load, save, mkdir
+from conans.util.files import mkdir
 
 LOCALDB = ".conan.db"
 
@@ -27,9 +20,6 @@ class ClientCache(object):
 
     def __init__(self, cache_folder, global_conf):
         self.cache_folder = cache_folder
-
-        # Caching
-        self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = global_conf.get("core.cache:storage_path") or \

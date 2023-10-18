@@ -16,7 +16,7 @@ class HomePaths:
     def global_conf_path(self):
         return os.path.join(self._home, "global.conf")
 
-    new_config_path = global_conf_path # for not breaking tests, TODO to remove
+    new_config_path = global_conf_path  # for not breaking tests, TODO to remove
 
     @property
     def custom_commands_path(self):
