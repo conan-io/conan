@@ -26,10 +26,6 @@ class Block(object):
         self._context_values = None
 
     @property
-    def toolchain(self):
-        return self._toolchain
-
-    @property
     def values(self):
         if self._context_values is None:
             self._context_values = self.context()
@@ -569,8 +565,8 @@ class ExtraFlagsBlock(Block):
 
     def context(self):
         # Now, it's time to get all the flags defined by the user
-        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list) + self.toolchain.extra_cxxflags
-        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self.toolchain.extra_cflags
+        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list) + self._toolchain.extra_cxxflags
+        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + self._toolchain.extra_cflags
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
