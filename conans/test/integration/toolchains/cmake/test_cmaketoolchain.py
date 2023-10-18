@@ -1140,3 +1140,32 @@ def test_recipe_build_folders_vars():
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
+
+
+def test_extra_flags():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.extra_cxxflags = ["flag5"]
+                tc.extra_cflags = ["flag6"]
+                tc.generate()
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:cxxflags+=['flag1', 'flag2']
+        tools.build:cflags+=['flag3', 'flag4']
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('install . -pr=./profile')
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_CXX_FLAGS " flag1 flag2 flag5")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " flag3 flag4 flag6")' in toolchain
