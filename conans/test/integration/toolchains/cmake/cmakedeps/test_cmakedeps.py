@@ -630,6 +630,51 @@ class TestCMakeVersionConfigCompat:
         assert expected in dep
 
 
+class TestSystemPackageVersion:
+    def test_component_version(self):
+        c = TestClient()
+        dep = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "dep"
+                version = "system"
+                def package_info(self):
+                    self.cpp_info.set_property("system_package_version", "1.0")
+                    self.cpp_info.components["mycomp"].set_property("component_version", "2.3")
+                """)
+
+        c.save({"conanfile.py": dep})
+        c.run("create .")
+        c.run("install --requires=dep/system -g CMakeDeps -g PkgConfigDeps")
+        dep = c.load("dep-config-version.cmake")
+        assert 'set(PACKAGE_VERSION "1.0")' in dep
+        dep = c.load("dep.pc")
+        assert 'Version: 1.0' in dep
+        dep = c.load("dep-mycomp.pc")
+        assert 'Version: 2.3' in dep
+
+    def test_component_version_consumer(self):
+        c = TestClient()
+        app = textwrap.dedent("""\
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            class Pkg(ConanFile):
+                settings = "build_type"
+                requires = "dep/system"
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "system_package_version", "1.0")
+                    deps.generate()
+                """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "system"),
+                "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app")
+        dep = c.load("app/dep-config-version.cmake")
+        assert 'set(PACKAGE_VERSION "1.0")' in dep
+
+
 def test_cmakedeps_set_property_overrides():
     c = TestClient()
     app = textwrap.dedent("""\
