@@ -34,7 +34,8 @@ def base_profile():
 @pytest.fixture(scope="module")
 def client_exe(bazelrc):
     client = TestClient(path_with_spaces=False)
-    client.run("new bazel_exe -d name=myapp -d version=1.0")
+    # client.run("new bazel_exe -d name=myapp -d version=1.0")
+    client.run("new myapp/1.0 -m bazel_exe")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -44,7 +45,8 @@ def client_exe(bazelrc):
 @pytest.fixture(scope="module")
 def client_lib(bazelrc):
     client = TestClient(path_with_spaces=False)
-    client.run("new bazel_lib -d name=mylib -d version=1.0")
+    # client.run("new bazel_lib -d name=mylib -d version=1.0")
+    client.run("new mylib/1.0 -m bazel_lib")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -91,7 +93,8 @@ def test_transitive_consuming():
     client = TestClient(path_with_spaces=False)
     # A regular library made with CMake
     with client.chdir("zlib"):
-        client.run("new cmake_lib -d name=zlib -d version=1.2.11")
+        # client.run("new cmake_lib -d name=zlib -d version=1.2.11")
+        client.run("new zlib/1.2.11 -m cmake_lib")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")

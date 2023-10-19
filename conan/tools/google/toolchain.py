@@ -2,6 +2,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import cppstd_flag
 from conan.tools.apple import to_apple_arch, is_apple_os
 from conan.tools.build.cross_building import cross_building
@@ -61,6 +62,8 @@ class BazelToolchain:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        # TODO: Remove in Conan 2.x
+        check_using_build_profile(self._conanfile)
 
         # Flags
         # TODO: Should we read the buildenv to get flags?
