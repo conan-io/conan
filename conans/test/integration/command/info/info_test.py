@@ -1,4 +1,5 @@
 import json
+import os
 import textwrap
 
 from conan.cli.exit_codes import ERROR_GENERAL
@@ -199,7 +200,12 @@ class TestAdvancedCliOutput:
 
         client.run("graph info . --format=json")
         info = json.loads(client.stdout)
-        assert "tool/0.1#4d670581ccb765839f2239cc8dff8fbd" in info["graph"]["nodes"]["0"]["python_requires"]
+        pyrequires = info["graph"]["nodes"]["0"]["python_requires"]
+        tool = pyrequires["tool/0.1#4d670581ccb765839f2239cc8dff8fbd"]
+        # lets make sure the path exists
+        assert tool["recipe"] == "Cache"
+        assert tool["remote"] is None
+        assert os.path.exists(tool["path"])
 
     def test_build_id_info(self):
         client = TestClient()

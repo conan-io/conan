@@ -62,10 +62,10 @@ class _SystemPackageManagerTool(object):
                 if d in os_name:
                     return tool
 
-    def get_package_name(self, package, host_package=True):        
+    def get_package_name(self, package, host_package=True):
         # Only if the package is for building, for example a library,
         # we should add the host arch when cross building.
-        # If the package is a tool that should be installed on the current build 
+        # If the package is a tool that should be installed on the current build
         # machine we should not add the arch.
         if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
             return "{}{}{}".format(package, self._arch_separator,
@@ -83,7 +83,8 @@ class _SystemPackageManagerTool(object):
             return method(*args, **kwargs)
 
     def _conanfile_run(self, command, accepted_returns):
-        ret = self._conanfile.run(command, ignore_errors=True)
+        # When checking multiple packages, this is too noisy
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=True)
         if ret not in accepted_returns:
             raise ConanException("Command '%s' failed" % command)
         return ret
