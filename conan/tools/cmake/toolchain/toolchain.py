@@ -125,6 +125,11 @@ class CMakeToolchain(object):
         self.cache_variables = {}
         self.preprocessor_definitions = Variables()
 
+        self.extra_cxxflags = []
+        self.extra_cflags = []
+        self.extra_sharedlinkflags = []
+        self.extra_exelinkflags = []
+
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),
                                        ("generic_system", GenericSystemBlock),
