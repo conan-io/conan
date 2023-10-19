@@ -630,7 +630,7 @@ class TestCMakeVersionConfigCompat:
         assert expected in dep
 
 
-class TestComponentVersion:
+class TestSystemPackageVersion:
     def test_component_version(self):
         c = TestClient()
         dep = textwrap.dedent("""\
@@ -639,16 +639,14 @@ class TestComponentVersion:
                 name = "dep"
                 version = "system"
                 def package_info(self):
-                    self.cpp_info.set_property("component_version", "1.0")
+                    self.cpp_info.set_property("system_package_version", "1.0")
                 """)
 
         c.save({"conanfile.py": dep})
         c.run("create .")
         c.run("install --requires=dep/system -g CMakeDeps")
         dep = c.load("dep-config-version.cmake")
-        expected = textwrap.dedent("""\
-            set(PACKAGE_VERSION "1.0")""")
-        assert expected in dep
+        assert 'set(PACKAGE_VERSION "1.0")' in dep
 
     def test_component_version_consumer(self):
         c = TestClient()
@@ -660,7 +658,7 @@ class TestComponentVersion:
                 requires = "dep/system"
                 def generate(self):
                     deps = CMakeDeps(self)
-                    deps.set_property("dep", "component_version", "1.0")
+                    deps.set_property("dep", "system_package_version", "1.0")
                     deps.generate()
                 """)
 
@@ -669,9 +667,7 @@ class TestComponentVersion:
         c.run("create dep")
         c.run("install app")
         dep = c.load("app/dep-config-version.cmake")
-        expected = textwrap.dedent("""\
-            set(PACKAGE_VERSION "1.0")""")
-        assert expected in dep
+        assert 'set(PACKAGE_VERSION "1.0")' in dep
 
 
 def test_cmakedeps_set_property_overrides():
