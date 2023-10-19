@@ -640,13 +640,18 @@ class TestSystemPackageVersion:
                 version = "system"
                 def package_info(self):
                     self.cpp_info.set_property("system_package_version", "1.0")
+                    self.cpp_info.components["mycomp"].set_property("component_version", "2.3")
                 """)
 
         c.save({"conanfile.py": dep})
         c.run("create .")
-        c.run("install --requires=dep/system -g CMakeDeps")
+        c.run("install --requires=dep/system -g CMakeDeps -g PkgConfigDeps")
         dep = c.load("dep-config-version.cmake")
         assert 'set(PACKAGE_VERSION "1.0")' in dep
+        dep = c.load("dep.pc")
+        assert 'Version: 1.0' in dep
+        dep = c.load("dep-mycomp.pc")
+        assert 'Version: 2.3' in dep
 
     def test_component_version_consumer(self):
         c = TestClient()
