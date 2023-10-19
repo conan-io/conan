@@ -1172,7 +1172,7 @@ def test_extra_flags():
     client.run('install . -pr=./profile')
     toolchain = client.load("conan_toolchain.cmake")
 
-    assert 'string(APPEND CONAN_CXX_FLAGS " cxxflags extra_cxxflags")' in toolchain
-    assert 'string(APPEND CONAN_C_FLAGS " cflags extra_cflags")' in toolchain
-    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " sharedlinkflags extra_sharedlinkflags")' in toolchain
-    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " exelinkflags extra_exelinkflags")' in toolchain
+    assert 'string(APPEND CONAN_CXX_FLAGS " extra_cxxflags cxxflags")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
