@@ -7,8 +7,8 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool("bazel")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Darwin")
+@pytest.mark.tool("bazel")
 def test_bazel_simple_cross_compilation():
     profile = textwrap.dedent("""
     [settings]

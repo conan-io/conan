@@ -9,7 +9,7 @@ class Bazel(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def build(self, target=None, cli_args=None):
+    def build(self, target="//...", cli_args=None):
         """
         Runs "bazel <rcpaths> build <configs> <cli_args> <targets>"
         """
