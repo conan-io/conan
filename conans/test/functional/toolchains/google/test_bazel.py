@@ -26,7 +26,7 @@ def base_profile():
         build_type={build_type}
 
         [conf]
-        tools.google.bazel:bazelrc_path={curdir}/mybazelrc
+        tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
         tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
         """)
 
@@ -34,7 +34,7 @@ def base_profile():
 @pytest.fixture(scope="module")
 def client_exe(bazelrc):
     client = TestClient(path_with_spaces=False)
-    client.run("new myapp/1.0 --template bazel_exe")
+    client.run("new bazel_exe -d name=myapp -d version=1.0")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -44,7 +44,7 @@ def client_exe(bazelrc):
 @pytest.fixture(scope="module")
 def client_lib(bazelrc):
     client = TestClient(path_with_spaces=False)
-    client.run("new mylib/1.0 --template bazel_lib")
+    client.run("new bazel_lib -d name=mylib -d version=1.0")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -91,7 +91,7 @@ def test_transitive_consuming():
     client = TestClient(path_with_spaces=False)
     # A regular library made with CMake
     with client.chdir("zlib"):
-        client.run("new zlib/1.2.11 --template cmake_lib")
+        client.run("new cmake_lib -d name=zlib -d version=1.2.11")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -127,8 +127,7 @@ def test_transitive_consuming():
 
                 def build(self):
                     bazel = Bazel(self)
-                    bazel.configure()
-                    bazel.build(label="//main:openssl")
+                    bazel.build(target="//main:openssl")
 
                 def package(self):
                     dest_bin = os.path.join(self.package_folder, "bin")
@@ -187,7 +186,7 @@ def test_transitive_consuming():
             """)
 
     bazel_workspace = textwrap.dedent("""
-        load("@//:dependencies.bzl", "load_conan_dependencies")
+        load("@//conan:dependencies.bzl", "load_conan_dependencies")
         load_conan_dependencies()
     """)
 
@@ -207,8 +206,6 @@ def test_transitive_consuming():
 
     class OpenSSLTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        # VirtualBuildEnv and VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
-        # (it will be defined in Conan 2.0)
         generators = "BazelToolchain", "BazelDeps", "VirtualBuildEnv", "VirtualRunEnv"
         apply_env = False
 
@@ -217,8 +214,7 @@ def test_transitive_consuming():
 
         def build(self):
             bazel = Bazel(self)
-            bazel.configure()
-            bazel.build(label="//main:example")
+            bazel.build(target="//main:example")
 
         def layout(self):
             bazel_layout(self)
