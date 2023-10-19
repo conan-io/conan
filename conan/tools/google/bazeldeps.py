@@ -5,8 +5,6 @@ from collections import namedtuple
 from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
-from conan.internal import check_duplicated_generator
-from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
 
@@ -90,7 +88,8 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
     for libdir in (libdirs + bindirs):
         lib = ""
         if not os.path.exists(libdir):
-            conanfile.output.debug("The library folder doesn't exist: {}".format(libdir))
+            # Conan 2
+            # conanfile.output.debug("The library folder doesn't exist: {}".format(libdir))
             continue
         files = os.listdir(libdir)
         lib_path = None
@@ -133,7 +132,8 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
             interface_library = interfaces.pop(lib)
         libraries.append(_LibInfo(lib, is_shared, lib_path, interface_library))
     # TODO: Would we want to manage the cases where DLLs are provided by the system?
-    conanfile.output.warning(f"The library/ies {libs} cannot be found in the dependency")
+    # Conan 2
+    # conanfile.output.warning(f"The library/ies {libs} cannot be found in the dependency")
     return libraries
 
 
@@ -331,8 +331,10 @@ class _BazelBUILDGenerator:
         Checking traits and shared option
         """
         default_value = self._dep.options.get_safe("shared") if self._dep.options else False
-        return {"shared-library": True,
-                "static-library": False}.get(str(self._dep.package_type), default_value)
+        # Conan 2.x
+        # return {"shared-library": True,
+        #         "static-library": False}.get(str(self._dep.package_type), default_value)
+        return default_value
 
     @property
     def build_file_pah(self):
@@ -384,7 +386,9 @@ class _BazelBUILDGenerator:
                 includes = _get_includes(cpp_info, package_folder_path)
                 copts = _get_copts(cpp_info)
                 defines = _get_defines(cpp_info)
-                linkopts = _get_linkopts(cpp_info, self._dep.settings_build.get_safe("os"))
+                # Conan 2
+                # linkopts = _get_linkopts(cpp_info, self._dep.settings_build.get_safe("os"))
+                linkopts = _get_linkopts(cpp_info, self._dep.settings.get_safe("os"))
                 libs = _get_libs(self._conanfile, cpp_info, is_shared=is_shared,
                                  relative_to_path=package_folder_path)
                 ret.update({
@@ -421,7 +425,9 @@ class _InfoGenerator:
     def __init__(self, conanfile, dep, build_context_activated=None):
         self._conanfile = conanfile
         self._dep = dep
-        self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
+        # Conan 2.x
+        # self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
+        self._transitive_reqs = self._dep.dependencies.direct_host
         self._build_context_activated = build_context_activated or []
 
     def _get_cpp_info_requires_names(self, cpp_info):
@@ -517,7 +523,8 @@ class BazelDeps:
 
         Important! The dependencies.bzl file should be loaded by the WORKSPACE Bazel file.
         """
-        check_duplicated_generator(self, self._conanfile)
+        # Conan 2
+        # check_duplicated_generator(self, self._conanfile)
         requirements = get_requirements(self._conanfile, self.build_context_activated)
         deps_info = []
         for require, dep in requirements:
