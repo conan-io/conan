@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -86,14 +88,41 @@ def test_cache_path_exist_errors(created_package):
 
 def test_cache_path_arg_errors():
     t = TestClient()
+    t.save({"conanfile.py": GenConanfile().with_settings("build_type")})
+    t.run("create . --name foo --version 1.0 -s build_type=Release")
+    t.run("create . --name foo --version 1.0 -s build_type=Debug")
     # build, cannot obtain build without pref
     t.run("cache path foo/1.0 --folder build", assert_error=True)
-    assert "ERROR: '--folder build' requires a valid package reference" in t.out
+    assert "ERROR: There are 2 binaries for foo/1.0" in t.out
 
     # Invalid reference
     t.run("cache path patata", assert_error=True)
     assert "ERROR: patata is not a valid recipe reference" in t.out
 
-    # source, cannot obtain build without pref
-    t.run("cache path foo/1.0:pid --folder source", assert_error=True)
-    assert "ERROR: '--folder source' requires a recipe reference" in t.out
+
+def test_cache_path_deducing():
+    t = TestClient()
+    t.save({"conanfile.py": GenConanfile().with_settings("build_type")})
+    t.run("create . --name foo --version 1.0 -s build_type=Release")
+    package_id = t.created_package_id("foo/1.0")
+    # Can request recipe folders with package_id
+    t.run(f"cache path foo/1.0:{package_id} --folder recipe")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0:{package_id} --folder source")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0:{package_id} --folder export_source")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0:{package_id} --folder recipe_metadata")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0 --folder metadata")
+    assert os.path.exists(t.out.strip())
+
+    # deduce the package_id
+    t.run(f"cache path foo/1.0 --folder build")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0 --folder package")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0 --folder package_metadata")
+    assert os.path.exists(t.out.strip())
+    t.run(f"cache path foo/1.0:{package_id} --folder metadata")
+    assert os.path.exists(t.out.strip())

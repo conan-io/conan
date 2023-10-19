@@ -37,6 +37,16 @@ class CacheAPI:
         ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.source()
 
+    def unique_binary(self, ref:RecipeReference):
+        app = ConanApp(self.conan_api.cache_folder)
+        ref = _resolve_latest_ref(app, ref)
+        prefs = app.cache.get_package_references(ref, only_latest_prev=True)
+        if len(prefs) != 1:
+            raise ConanException(f"There are {len(prefs)} binaries for {ref}. "
+                                 f"This only works when there is exactly 1 binary. "
+                                 "Please specify the package_id too.")
+        return prefs[0]
+
     def build_path(self, pref: PkgReference):
         app = ConanApp(self.conan_api.cache_folder)
         pref = _resolve_latest_pref(app, pref)
