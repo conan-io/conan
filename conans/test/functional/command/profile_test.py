@@ -101,7 +101,7 @@ def test_detect_default_compilers():
 
 @pytest.mark.tool("gcc")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
-def test_detect_default_in_mac_os_using_gcc_as_default(self):
+def test_detect_default_in_mac_os_using_gcc_as_default():
     """
     Test if gcc in Mac OS X is using apple-clang as frontend
     """
