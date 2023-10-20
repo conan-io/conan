@@ -185,7 +185,7 @@ class VersionRange:
                 if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
                     conditions.append(internal_conditions)
 
-        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions)
+        expression = ' || '.join(' '.join(str(c) for c in cs if c is not None) for cs in conditions)
         result = VersionRange(expression)
         # TODO: Direct definition of conditions not reparsing
         # result.condition_sets = self.condition_sets + other.condition_sets
