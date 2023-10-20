@@ -167,7 +167,7 @@ class PackagePreparator:
         download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
         if is_dirty(package_tgz):
-            output.warning("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
+            output.warning("Removing %s, marked as dirty" % PACKAGE_TGZ_NAME)
             os.remove(package_tgz)
             clean_dirty(package_tgz)
 
