@@ -234,13 +234,13 @@ class UploadTest(unittest.TestCase):
         client.run("create . --name foo --version 1.0")
 
         client.run("upload foo/1.0 -r default")
-        self.assertIn("Compressing recipe", client.out)
-        self.assertIn("Compressing package", str(client.out))
+        self.assertIn("foo/1.0: Compressing conan_sources.tgz", client.out)
+        self.assertIn("foo/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: "
+                      "Compressing conan_package.tgz", client.out)
 
         client.run("upload foo/1.0 -r default")
-        self.assertNotIn("Compressing recipe", client.out)
-        self.assertNotIn("Compressing package", str(client.out))
-        self.assertIn("already in server, skipping upload", str(client.out))
+        self.assertNotIn("Compressing", client.out)
+        self.assertIn("already in server, skipping upload", client.out)
 
     @pytest.mark.xfail(reason="No output json available yet for upload. Also old test, has to be "
                               "upgraded")
