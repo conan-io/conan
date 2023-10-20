@@ -3,8 +3,6 @@ import os
 import platform
 import subprocess
 import textwrap
-import unittest
-
 import pytest
 
 from conans.client.conf.detect import detect_defaults_settings
