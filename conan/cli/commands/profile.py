@@ -58,6 +58,7 @@ def profile_detect(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("--name", help="Profile name, 'default' if not specified")
     subparser.add_argument("-f", "--force", action='store_true', help="Overwrite if exists")
+    add_profiles_args(subparser, multiple_contexts=False)
     args = parser.parse_args(*args)
 
     profile_name = args.name or "default"
@@ -65,13 +66,21 @@ def profile_detect(conan_api, parser, subparser, *args):
     if not args.force and os.path.exists(profile_pathname):
         raise ConanException(f"Profile '{profile_pathname}' already exists")
 
+    cli_profile = conan_api.profiles.load_profile(args.profile_host or [],
+                                                  args.settings_host,
+                                                  args.options_host,
+                                                  args.conf_host,
+                                                  os.getcwd())
+
     detected_profile = conan_api.profiles.detect()
+    detected_profile.compose_profile(cli_profile)
+
     ConanOutput().success("\nDetected profile:")
     cli_out_write(detected_profile.dumps())
 
     contents = detected_profile.dumps()
     ConanOutput().warning("This profile is a guess of your environment, please check it.")
-    if detected_profile.settings.get("os") == "Macos":
+    if detected_profile.settings.get("os") == "Macos" and detected_profile.settings.get("compiler.cppstd") == "gnu17":
         ConanOutput().warning("Defaulted to cppstd='gnu17' for apple-clang.")
     ConanOutput().warning("The output of this command is not guaranteed to be stable and can "
                           "change in future Conan versions.")

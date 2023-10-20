@@ -57,8 +57,8 @@ def add_common_install_arguments(parser):
     add_profiles_args(parser)
 
 
-def add_profiles_args(parser):
-    contexts = ["build", "host"]
+def add_profiles_args(parser, multiple_contexts=True):
+    contexts = ["build", "host"] if multiple_contexts else []
 
     # This comes from the _AppendAction code but modified to add to the contexts
     class ContextAllAction(argparse.Action):
@@ -77,23 +77,26 @@ def add_profiles_args(parser):
                             dest=f"{long}_host",
                             metavar=long.upper(),
                             help='Apply the specified profile. '
-                                 f'By default, or if specifying -{short}:h (--{long}:host), it applies to the host context. '
-                                 f'Use -{short}:b (--{long}:build) to specify the build context, '
-                                 f'or -{short}:a (--{long}:all) to specify both contexts at once'
-                                   + ('' if not example else f". Example: {example}"))
+                                 + ((
+                                         f'By default, or if specifying -{short}:h (--{long}:host), '
+                                         f'it applies to the host context. '
+                                         f'Use -{short}:b (--{long}:build) to specify the build context, '
+                                         f'or -{short}:a (--{long}:all) to specify both contexts at once'
+                                         + ('' if not example else f". Example: {example}"))
+                                     if multiple_contexts else ''))
         for context in contexts:
             parser.add_argument(f"-{short}:{context[0]}", f"--{long}:{context}",
                                 default=None,
                                 action="append",
                                 dest=f"{long}_{context}",
                                 help="")
-
-        parser.add_argument(f"-{short}:a", f"--{long}:all",
-                            default=None,
-                            action=ContextAllAction,
-                            dest=long,
-                            metavar=f"{long.upper()}_ALL",
-                            help="")
+        if multiple_contexts:
+            parser.add_argument(f"-{short}:a", f"--{long}:all",
+                                default=None,
+                                action=ContextAllAction,
+                                dest=long,
+                                metavar=f"{long.upper()}_ALL",
+                                help="")
 
     create_config("pr", "profile")
     create_config("o", "options", "-o pkg:with_qt=true")

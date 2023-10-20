@@ -91,8 +91,7 @@ class ProfilesAPI:
 
     def _get_profile(self, profiles, settings, options, conf, cwd, cache_settings,
                      profile_plugin, global_conf):
-        loader = ProfileLoader(self._conan_api.cache_folder)
-        profile = loader.from_cli_args(profiles, settings, options, conf, cwd)
+        profile = self.load_profile(profiles, settings, options, conf, cwd)
         if profile_plugin is not None:
             try:
                 profile_plugin(profile)
@@ -105,6 +104,10 @@ class ProfilesAPI:
         # Apply the new_config to the profiles the global one, so recipes get it too
         profile.conf.rebase_conf_definition(global_conf)
         return profile
+
+    def load_profile(self, profiles, settings, options, conf, cwd):
+        loader = ProfileLoader(self._conan_api.cache_folder)
+        return loader.from_cli_args(profiles, settings, options, conf, cwd)
 
     def get_path(self, profile, cwd=None, exists=True):
         """
