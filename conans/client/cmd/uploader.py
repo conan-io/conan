@@ -25,6 +25,7 @@ class UploadUpstreamChecker:
         self._app = app
 
     def check(self, upload_bundle, remote, force):
+        ConanOutput().subtitle("Checking server existing packages")
         for ref, recipe_bundle in upload_bundle.refs().items():
             self._check_upstream_recipe(ref, recipe_bundle, remote, force)
             for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle).items():
@@ -79,7 +80,7 @@ class PackagePreparator:
         self._app = app
 
     def prepare(self, upload_bundle, enabled_remotes):
-        ConanOutput().info("Preparing artifacts to upload")
+        ConanOutput().subtitle("Preparing artifacts for upload")
         for ref, bundle in upload_bundle.refs().items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -213,13 +214,14 @@ class UploadExecutor:
         self._output = ConanOutput()
 
     def upload(self, upload_data, remote):
-        self._output.info("Uploading artifacts")
+        ConanOutput().subtitle("Uploading artifacts")
         for ref, bundle in upload_data.refs().items():
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
             for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
                 if prev_bundle.get("upload"):
                     self.upload_package(pref, prev_bundle, remote)
+        ConanOutput().success("Upload complete\n")
 
     def upload_recipe(self, ref, bundle, remote):
         self._output.info(f"Uploading recipe '{ref.repr_notime()}'")
