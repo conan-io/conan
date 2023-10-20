@@ -64,8 +64,15 @@ class UploadAPI:
         download_cache_path = download_cache_path or HomePaths(self.conan_api.cache_folder).default_sources_backup_folder
         excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
 
+        output = ConanOutput()
+        output.subtitle("Uploading backup sources")
+        output.info("Gathering files to upload")
         files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list,
                                                                                       excluded_urls)
+        if not files:
+            output.info("No backup sources files to upload")
+            return files
+
         # TODO: verify might need a config to force it to False
         uploader = FileUploader(app.requester, verify=True, config=config)
         # TODO: For Artifactory, we can list all files once and check from there instead
@@ -76,11 +83,11 @@ class UploadAPI:
             try:
                 # Always upload summary .json but only upload blob if it does not already exist
                 if file.endswith(".json") or not uploader.exists(full_url, auth=None):
-                    ConanOutput().info(f"Uploading file '{basename}' to backup sources server")
+                    output.info(f"Uploading file '{basename}' to backup sources server")
                     uploader.upload(full_url, file, dedup=False, auth=None)
                 else:
-                    ConanOutput().info(f"File '{basename}' already in backup sources server, "
-                                       "skipping upload")
+                    output.info(f"File '{basename}' already in backup sources server, "
+                                "skipping upload")
             except (AuthenticationException, ForbiddenException) as e:
                 raise ConanException(f"The source backup server '{url}' needs authentication"
                                      f"/permissions, please provide 'source_credentials.json': {e}")
