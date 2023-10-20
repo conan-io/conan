@@ -47,14 +47,11 @@ class _ConditionSet:
         self.conditions = []
         for e in expressions:
             e = e.strip()
-            if e[-1] == "-":  # Include pre-releases
-                e = e[:-1]
-                self.prerelease = True
             self.conditions.extend(self._parse_expression(e))
 
     @staticmethod
     def _parse_expression(expression):
-        if expression == "" or expression == "*":
+        if expression in ("", "*"):
             return [_Condition(">=", Version("0.0.0"))]
         elif len(expression) == 1:
             raise ConanException(f'Error parsing version range "{expression}"')
@@ -73,10 +70,14 @@ class _ConditionSet:
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
         if operator == "~":  # tilde minor
+            if "-" not in version:
+                version += "-"
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0
             return [_Condition(">=", v), _Condition("<", v.upper_bound(index))]
         elif operator == "^":  # caret major
+            if "-" not in version:
+                version += "-"
             v = Version(version)
 
             def first_non_zero(main):
@@ -88,6 +89,8 @@ class _ConditionSet:
             initial_index = first_non_zero(v.main)
             return [_Condition(">=", v), _Condition("<", v.upper_bound(initial_index))]
         else:
+            if (operator == ">=" or operator == "<") and "-" not in version:
+                version += "-"
             return [_Condition(operator, Version(version))]
 
     def _valid(self, version, conf_resolve_prepreleases):

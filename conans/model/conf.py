@@ -1,3 +1,4 @@
+import copy
 import re
 import os
 import fnmatch
@@ -153,7 +154,8 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path, self._update)
+        # Using copy for when self._value is a mutable list
+        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
 
     def dumps(self):
         if self._value is None:
@@ -291,6 +293,7 @@ class Conf:
         :param default: Default value in case of conf does not have the conf_name key.
         :param check_type: Check the conf type(value) is the same as the given by this param.
                            There are two default smart conversions for bool and str types.
+        :param choices: list of possible values this conf can have, if value not in it, errors.
         """
         # Skipping this check only the user.* configurations
         self._check_conf_name(conf_name)
@@ -335,7 +338,7 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = self._values.copy()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
         return c
 
     def dumps(self):

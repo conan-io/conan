@@ -1,6 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
@@ -14,8 +15,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 
 
 class CmdWrapper:
-    def __init__(self, cache):
-        wrapper = os.path.join(cache.cache_folder, "extensions", "plugins", "cmd_wrapper.py")
+    def __init__(self, wrapper):
         if os.path.isfile(wrapper):
             mod, _ = load_python_file(wrapper)
             self._wrapper = mod.cmd_wrapper
@@ -42,7 +42,8 @@ class ConanApp(object):
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder)
 
-        self.hook_manager = HookManager(self.cache.hooks_path)
+        home_paths = HomePaths(self.cache_folder)
+        self.hook_manager = HookManager(home_paths.hooks_path)
         # Wraps an http_requester to inject proxies, certs, etc
         global_conf = self.cache.new_config
         ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
@@ -58,6 +59,6 @@ class ConanApp(object):
         self.range_resolver = RangeResolver(self)
 
         self.pyreq_loader = PyRequireLoader(self)
-        cmd_wrap = CmdWrapper(self.cache)
+        cmd_wrap = CmdWrapper(home_paths.wrapper_path)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
