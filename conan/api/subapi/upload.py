@@ -91,4 +91,6 @@ class UploadAPI:
             except (AuthenticationException, ForbiddenException) as e:
                 raise ConanException(f"The source backup server '{url}' needs authentication"
                                      f"/permissions, please provide 'source_credentials.json': {e}")
+
+        output.success("Upload backup sources complete\n")
         return files
