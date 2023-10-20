@@ -71,19 +71,20 @@ def add_profiles_args(parser, multiple_contexts=True):
                 setattr(namespace, self.dest + "_" + context, items)
 
     def create_config(short, long, example=None):
+        help_message = f'Apply the specified {long}. '\
+                       f'By default, or if specifying -{short}:h (--{long}:host), '\
+                       f'it applies to the host context. '\
+                       f'Use -{short}:b (--{long}:build) to specify the build context, '\
+                       f'or -{short}:a (--{long}:all) to specify both contexts at once'\
+                       + ('' if not example else f". Example: {example}")
+
         parser.add_argument(f"-{short}", f"--{long}",
                             default=None,
                             action="append",
                             dest=f"{long}_host",
                             metavar=long.upper(),
-                            help=f'Apply the specified {long}. '
-                                 + ((
-                                         f'By default, or if specifying -{short}:h (--{long}:host), '
-                                         f'it applies to the host context. '
-                                         f'Use -{short}:b (--{long}:build) to specify the build context, '
-                                         f'or -{short}:a (--{long}:all) to specify both contexts at once'
-                                         + ('' if not example else f". Example: {example}"))
-                                     if multiple_contexts else ''))
+                            help=help_message if multiple_contexts else '')
+
         for context in contexts:
             parser.add_argument(f"-{short}:{context[0]}", f"--{long}:{context}",
                                 default=None,
