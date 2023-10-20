@@ -5,6 +5,7 @@ from collections import namedtuple
 from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
+from conan.tools._check_build_profile import check_using_build_profile
 from conans.util.files import save
 
 
@@ -514,6 +515,8 @@ class BazelDeps:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        # TODO: Remove in Conan 2.x
+        check_using_build_profile(self._conanfile)
         # Activate the build context for the specified libraries
         self.build_context_activated = []
 
