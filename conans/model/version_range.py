@@ -180,14 +180,16 @@ class VersionRange:
                 internal_conditions = []
                 lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
                 upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
-                internal_conditions.append(lower_limit)
-                internal_conditions.append(upper_limit)
+                if lower_limit:
+                    internal_conditions.append(lower_limit)
+                if upper_limit:
+                    internal_conditions.append(upper_limit)
                 if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
                     conditions.append(internal_conditions)
 
         if not conditions:
             return None
-        expression = ' || '.join(' '.join(str(c) for c in cs if c is not None) for cs in conditions)
+        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions)
         result = VersionRange(expression)
         # TODO: Direct definition of conditions not reparsing
         # result.condition_sets = self.condition_sets + other.condition_sets
