@@ -126,8 +126,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm -r default --only-recipe")
-        self.assertIn("WARN: hello0/1.2.1@user/testing: Removing conan_sources.tgz, "
-                      "marked as dirty", client.out)
+        self.assertIn("Removing conan_sources.tgz, marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -154,9 +153,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm -r default")
-        self.assertIn("WARN: hello0/1.2.1@user/testing:%s: "
-                      "Removing conan_package.tgz, marked as dirty" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        self.assertIn("WARN: Removing conan_package.tgz, marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
