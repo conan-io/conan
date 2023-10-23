@@ -7,12 +7,13 @@ from conans.model.recipe_ref import Version
 
 @total_ordering
 class _Condition:
-    def __init__(self, operator, version):
+    def __init__(self, operator, version, display_version=None):
         self.operator = operator
         self.version = version
+        self.display_version = display_version if display_version is not None else version
 
     def __str__(self):
-        return f"{self.operator}{self.version}"
+        return f"{self.operator}{self.display_version}"
 
     def __repr__(self):
         return self.__str__()
@@ -67,6 +68,7 @@ class _ConditionSet:
                 operator += "="
                 index = 2
         version = expression[index:]
+        original_version = version
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
         if operator == "~":  # tilde minor
@@ -74,7 +76,7 @@ class _ConditionSet:
                 version += "-"
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0
-            return [_Condition(">=", v), _Condition("<", v.upper_bound(index))]
+            return [_Condition(">=", v, Version(original_version)), _Condition("<", v.upper_bound(index))]
         elif operator == "^":  # caret major
             if "-" not in version:
                 version += "-"
@@ -87,11 +89,11 @@ class _ConditionSet:
                 return len(main)
 
             initial_index = first_non_zero(v.main)
-            return [_Condition(">=", v), _Condition("<", v.upper_bound(initial_index))]
+            return [_Condition(">=", v, Version(original_version)), _Condition("<", v.upper_bound(initial_index))]
         else:
             if (operator == ">=" or operator == "<") and "-" not in version:
                 version += "-"
-            return [_Condition(operator, Version(version))]
+            return [_Condition(operator, Version(version), Version(original_version))]
 
     def _valid(self, version, conf_resolve_prepreleases):
         if version.pre:
