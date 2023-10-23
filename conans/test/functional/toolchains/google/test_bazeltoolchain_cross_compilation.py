@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
@@ -30,12 +31,45 @@ def test_bazel_simple_cross_compilation():
     compiler.version=13.0
     os=Macos
     """)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.google import Bazel, bazel_layout
+
+    class MyappConan(ConanFile):
+        name = "myapp"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "BazelToolchain"
+
+        def config_options(self):
+            if self.settings.os == "Windows":
+                del self.options.fPIC
+
+        def layout(self):
+            bazel_layout(self)
+
+        def build(self):
+            bazel = Bazel(self)
+            bazel.build()
+    """)
+    BUILD = textwrap.dedent("""
+    load("@rules_cc//cc:defs.bzl", "cc_library")
+    cc_library(
+        name = "myapp",
+        srcs = ["myapp.cpp"],
+        hdrs = ["myapp.h"],
+    )
+    """)
     client = TestClient(path_with_spaces=False)
-    # client.run("new bazel_lib -d name=myapp -d version=1.0")
-    client.run("new myapp/1.0 -m bazel_lib")
     client.save({
         "profile": profile,
-        "profile_host": profile_host
+        "profile_host": profile_host,
+        "conanfile.py": conanfile,
+        "WORKSPACE": "",
+        "main/BUILD": BUILD,
+        "main/myapp.cpp": gen_function_cpp(name="myapp"),
+        "main/myapp.h": gen_function_h(name="myapp"),
+
     })
     # client.run("build . -pr:h profile_host -pr:b profile")
     client.run("install . -pr:h profile_host -pr:b profile")
