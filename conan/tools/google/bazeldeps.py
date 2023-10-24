@@ -85,7 +85,6 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
     libs = cpp_info.libs[:]  # copying the values
     ret = {}
     interfaces = {}
-
     for libdir in (libdirs + bindirs):
         lib = ""
         if not os.path.exists(libdir):
@@ -205,7 +204,7 @@ class _BazelDependenciesBZLGenerator:
     template = textwrap.dedent("""\
         # This Bazel module should be loaded by your WORKSPACE file.
         # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
-        # load("@//bazel-conan-tools:dependencies.bzl", "load_conan_dependencies")
+        # load("@//conan:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
 
         {% macro new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) %}
@@ -289,7 +288,7 @@ class _BazelBUILDGenerator:
         ],
         {% endif %}
         visibility = ["//visibility:public"],
-        {% if obj["libs"] or obj["dependencies"] %}
+        {% if obj["libs"] or obj["dependencies"] or obj["component_names"] %}
         deps = [
             {% for lib in obj["libs"] %}
             ":{{ lib.name }}_precompiled",
