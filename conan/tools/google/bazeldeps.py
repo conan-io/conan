@@ -54,7 +54,7 @@ def get_requirements(conanfile, build_context_activated):
     """
     # All the requirements
     host_req = conanfile.dependencies.host
-    build_req = conanfile.dependencies.build  # tool_requires
+    build_req = conanfile.dependencies.direct_build  # tool_requires
     test_req = conanfile.dependencies.test
 
     for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
@@ -85,7 +85,7 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
     libs = cpp_info.libs[:]  # copying the values
     ret = {}
     interfaces = {}
-    for libdir in (libdirs + bindirs):
+    for libdir in set(libdirs + bindirs):
         lib = ""
         if not os.path.exists(libdir):
             # Conan 2
@@ -183,11 +183,13 @@ def _relativize_path(path, relative_to_path):
     p = path.replace("\\", "/")
     rel = relative_to_path.replace("\\", "/")
     if p.startswith(rel):
-        return p[len(rel):].lstrip("/")
+        ret = p[len(rel):].lstrip("/")
     elif rel in p:
-        return p.split(rel)[-1].lstrip("/")
+        ret = p.split(rel)[-1].lstrip("/")
     else:
-        return p.lstrip("/")
+        ret = p.lstrip("/")
+    # Editable mode is getting these kind of results
+    return ret.strip("./").replace("/./", "/")
 
 
 class _BazelDependenciesBZLGenerator:

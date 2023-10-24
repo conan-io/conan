@@ -583,15 +583,18 @@ def test_with_editable_layout():
     dep = textwrap.dedent("""
         import os
         from conan import ConanFile
+        from conan.tools.google import bazel_layout
         from conan.tools.files import save
         class Dep(ConanFile):
             name = "dep"
             version = "0.1"
+
             def layout(self):
+                bazel_layout(self, target_folder="main")
                 self.cpp.source.includedirs = ["include"]
+
             def package_info(self):
                 self.cpp_info.libs = ["mylib"]
-                self.cpp_info.libdirs = ["bazel-bin/main"]
         """)
     client.save({"dep/conanfile.py": dep,
                  "dep/include/header.h": "",
@@ -599,14 +602,39 @@ def test_with_editable_layout():
                  "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
     client.run("create dep")
     client.run("editable add dep dep/0.1")
+    recipes_folder = client.current_folder
     with client.chdir("pkg"):
         client.run("install . -g BazelDeps")
-        breakpoint()
+        content = client.load("dependencies.bzl")
+        assert textwrap.dedent(f"""\
+        def load_conan_dependencies():
+            native.new_local_repository(
+                name="dep",
+                path="{recipes_folder}/dep",
+                build_file="{recipes_folder}/pkg/dep/BUILD.bazel",
+            )""") in content
         content = client.load("dep/BUILD.bazel")
-        # assert "Libs: -lmylib" in pc
-        # assert 'includedir1=' in pc
-        # assert 'Cflags: -I"${includedir1}"' in pc
+        assert textwrap.dedent("""\
+        cc_import(
+            name = "mylib_precompiled",
+            static_library = "bazel-bin/main/libmylib.a",
+        )
 
+        # Components libraries declaration
+        # Package library declaration
+        cc_library(
+            name = "dep",
+            hdrs = glob([
+                "include/**"
+            ]),
+            includes = [
+                "include"
+            ],
+            visibility = ["//visibility:public"],
+            deps = [
+                ":mylib_precompiled",
+            ],
+        )""") in content
 
 
 def test_tool_requires():
@@ -663,23 +691,22 @@ def test_tool_requires():
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
-    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
-    pc_files.sort()
+    breakpoint()
     # Let's check all the PC file names created just in case
-    assert pc_files == ['component1_bo.pc', 'component3_bo.pc',
+    assert [] == ['component1_bo.pc', 'component3_bo.pc',
                         'libother_bo-cmp2.pc', 'libother_bo.pc', 'tool_bt.pc']
     content = client.load("tool_bt.pc")
     assert "Name: tool_bt" in content
     content = client.load("libother_bo.pc")
     assert "Name: libother_bo" in content
-    assert "Requires: component1_bo libother_bo-cmp2 component3_bo" == get_requires_from_content(content)
+    assert "Requires: component1_bo libother_bo-cmp2 component3_bo" in content
     content = client.load("component1_bo.pc")
     assert "Name: component1_bo" in content
     content = client.load("libother_bo-cmp2.pc")
     assert "Name: libother_bo-cmp2" in content
     content = client.load("component3_bo.pc")
     assert "Name: component3_bo" in content
-    assert "Requires: component1_bo" == get_requires_from_content(content)
+    assert "Requires: component1_bo" in content
 
 
 def test_tool_requires_not_created_if_no_activated():
