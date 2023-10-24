@@ -2,6 +2,7 @@ import fnmatch
 import os
 
 from conan.api.output import ConanOutput
+from conan.errors import ConanException
 
 
 def _metadata_files(folder, metadata):
@@ -32,6 +33,8 @@ def gather_metadata(package_list, cache, metadata: list):
 
     if metadata == ['']:
         return
+    elif metadata and '' in metadata:
+        raise ConanException("Empty string is not a valid pattern for metadata upload")
 
     for rref, recipe_bundle in package_list.refs().items():
         if metadata or recipe_bundle["upload"]:

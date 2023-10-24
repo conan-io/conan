@@ -8,6 +8,12 @@ from conans.util.files import save, load
 
 class TestMetadataCommands:
 
+    def _save_metadata_file(self, client, pkg_ref, filename="somefile.log"):
+        client.run(f"cache path {pkg_ref} --folder=metadata")
+        metadata_path = str(client.stdout).strip()
+        myfile = os.path.join(metadata_path, "logs", filename)
+        save(myfile, pkg_ref)
+
     def test_upload(self):
         c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -208,15 +214,25 @@ class TestMetadataCommands:
         client.run("create .")
         pid = client.created_package_id("pkg/0.1")
 
-        def _save_metadata(client, ref):
-            client.run(f"cache path {ref} --folder=metadata")
-            metadata_path = str(client.stdout).strip()
-            myfile = os.path.join(metadata_path, "logs", "somefile.log")
-            save(myfile, ref)
-
-        _save_metadata(client, "pkg/0.1")
-        _save_metadata(client, f"pkg/0.1:{pid}")
+        self._save_metadata_file(client, "pkg/0.1")
+        self._save_metadata_file(client, f"pkg/0.1:{pid}")
 
         client.run('upload * --confirm --remote=default --metadata=""')
         assert "Recipe metadata" not in client.out
         assert "Package metadata" not in client.out
+
+    def test_upload_ignored_metadata_with_pattern(self):
+        """
+        Upload command should ignore metadata files when passing --metadata="".
+        Even if a pattern is passed to the upload command.
+        """
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        client.run("create .")
+        pid = client.created_package_id("pkg/0.1")
+
+        self._save_metadata_file(client, "pkg/0.1")
+        self._save_metadata_file(client, f"pkg/0.1:{pid}")
+
+        client.run('upload * --confirm --remote=default --metadata="" --metadata="logs/*"', assert_error=True)
+        assert "ERROR: Empty string is not a valid pattern for metadata upload" in client.out
