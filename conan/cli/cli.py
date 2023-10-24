@@ -156,7 +156,7 @@ class Cli:
             command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
+                cli_out_write("Conan version %s" % client_version)
                 return
 
             if command_argument in ["-h", "--help"]:

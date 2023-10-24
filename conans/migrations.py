@@ -22,13 +22,13 @@ class Migrator(object):
         try:
             old_version = self._load_old_version()
             if old_version is None or old_version < self.current_version:
-                self._update_version_file()
                 self._apply_migrations(old_version)
+                self._update_version_file()
             elif self.current_version < old_version:  # backwards migrations
                 ConanOutput().warning(f"Downgrading cache from Conan {old_version} to "
                                       f"{self.current_version}")
-                self._update_version_file()
                 self._apply_back_migrations()
+                self._update_version_file()
         except Exception as e:
             ConanOutput().error(str(e))
             raise ConanMigrationError(e)
