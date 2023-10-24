@@ -198,3 +198,25 @@ class TestMetadataCommands:
         assert "mylogs2!!!!" in mylogs
         mybuildlogs = load(os.path.join(c2_pkg_metadata_path, "logs", "mybuildlogs.txt"))
         assert "mybuildlogs2!!!!" in mybuildlogs
+
+    def test_upload_ignored_metadata(self):
+        """
+        Upload command should ignore metadata files when passing --metadata=""
+        """
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        client.run("create .")
+        pid = client.created_package_id("pkg/0.1")
+
+        def _save_metadata(client, ref):
+            client.run(f"cache path {ref} --folder=metadata")
+            metadata_path = str(client.stdout).strip()
+            myfile = os.path.join(metadata_path, "logs", "somefile.log")
+            save(myfile, ref)
+
+        _save_metadata(client, "pkg/0.1")
+        _save_metadata(client, f"pkg/0.1:{pid}")
+
+        client.run('upload * --confirm --remote=default --metadata=""')
+        assert "Recipe metadata" not in client.out
+        assert "Package metadata" not in client.out
