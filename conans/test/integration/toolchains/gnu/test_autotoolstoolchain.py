@@ -46,6 +46,43 @@ def test_extra_flags_via_conf():
         assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
 
 
+def test_extra_flags_order():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            def generate(self):
+                at = AutotoolsToolchain(self)
+                at.extra_cxxflags = ["extra_cxxflags"]
+                at.extra_cflags = ["extra_cflags"]
+                at.extra_ldflags = ["extra_ldflags"]
+                at.extra_defines = ["extra_defines"]
+                at.generate()
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:cxxflags+=['cxxflags']
+        tools.build:cflags+=['cflags']
+        tools.build:sharedlinkflags+=['sharedlinkflags']
+        tools.build:exelinkflags+=['exelinkflags']
+        tools.build:defines+=['defines']
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('install . -pr=./profile')
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if platform.system() == "Windows" else '.sh'))
+
+    assert '-Dextra_defines -Ddefines' in toolchain
+    assert 'extra_cxxflags cxxflags' in toolchain
+    assert 'extra_cflags cflags' in toolchain
+    assert 'extra_ldflags sharedlinkflags exelinkflags' in toolchain
+
+
 def test_autotools_custom_environment():
     client = TestClient()
     conanfile = textwrap.dedent("""
