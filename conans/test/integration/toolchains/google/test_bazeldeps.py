@@ -1,4 +1,3 @@
-import glob
 import os
 import textwrap
 
@@ -186,13 +185,10 @@ def test_pkg_with_public_deps_and_component_requires():
         - Requires: "second/0.1", "other/0.1"
 
     Expected file structure after running BazelDeps as generator:
-        - other.pc
-        - myfirstlib-cmp1.pc
-        - myfirstlib.pc
-        - second-mycomponent.pc
-        - second-myfirstcomp.pc
-        - second.pc
-        - third.pc
+        - second/BUILD.bazel
+        - third/BUILD.bazel
+        - other/BUILD.bazel
+        - myfirstlib/BUILD.bazel
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -365,11 +361,8 @@ def test_pkg_with_public_deps_and_component_requires_2():
         - Requires: "other/0.1" -> "other::cmp1"
 
     Expected file structure after running BazelDeps as generator:
-        - component1.pc
-        - component3.pc
-        - other-cmp2.pc
-        - other.pc
-        - pkg.pc
+        - fancy_name/BUILD.bazel (components: "component1", "fancy_name-cmp2", "component3")
+        - pkg/BUILD.bazel
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -514,7 +507,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
 
 def test_pkgconfigdeps_with_test_requires():
     """
-    BazelDeps has to create any test requires declared on the recipe.
+    BazelDeps has to create any declared test requirements on the recipe.
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -578,7 +571,7 @@ def test_pkgconfigdeps_with_test_requires():
 
 def test_with_editable_layout():
     """
-    https://github.com/conan-io/conan/issues/11435
+    Testing if editable mode is working for a Bazel project (using BazelDeps and bazel_layout)
     """
     client = TestClient()
     dep = textwrap.dedent("""
@@ -640,9 +633,7 @@ def test_with_editable_layout():
 
 def test_tool_requires():
     """
-    Testing if PC files are created for tool requires if build_context_activated/_suffix is used.
-
-    Issue related: https://github.com/conan-io/conan/issues/11710
+    Testing if BUILD files are created for tool requires if build_context_activated=True is used.
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -750,7 +741,7 @@ def test_tool_requires():
 
 def test_tool_requires_not_created_if_no_activated():
     """
-    Testing if there are no PC files created in no context are activated
+    Testing if there are no BUILD files created in no context are activated
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -783,7 +774,7 @@ def test_tool_requires_not_created_if_no_activated():
 
 def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
     """
-    Testing if same dependency exists in both require and build require (without suffix)
+    Testing if same dependency exists in both host and build context
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -824,10 +815,10 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
 
 def test_error_missing_bazel_build_files_in_build_context():
     """
-    BazelDeps was failing, not generating the zlib.pc in the
-    build context, for a test_package that both requires(example/1.0) and
-    tool_requires(example/1.0), which depends on zlib
-    # https://github.com/conan-io/conan/issues/12664
+    BazelDeps should generate BUILD files in the build context for a
+    test_package that both requires(example/1.0) and tool_requires(example/1.0),
+    which depends on other requirements
+    * Issue related: https://github.com/conan-io/conan/issues/12664
     """
     c = TestClient()
     example = textwrap.dedent("""
