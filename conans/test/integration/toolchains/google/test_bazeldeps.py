@@ -1,4 +1,5 @@
 import glob
+import os
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -97,7 +98,7 @@ def test_bazel_exclude_folders():
     assert 'static_library = "lib/libmymath.a"' in build_file
 
 
-def test_bazeldeps_and_build_requires():
+def test_bazeldeps_and_tool_requires():
     """
     Testing that direct build requires are not included in dependencies BUILD.bazel files
 
@@ -128,7 +129,7 @@ def test_bazeldeps_and_build_requires():
             version = "0.1"
 
             def build_requirements(self):
-                self.build_requires("tool/0.1")
+                self.tool_requires("tool/0.1")
             def package(self):
                 save(self, os.path.join(self.package_folder, "lib", "mymath", "otherfile.a"), "")
                 save(self, os.path.join(self.package_folder, "lib", "libmymath.a"), "")
@@ -673,40 +674,78 @@ def test_tool_requires():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.gnu import BazelDeps
+        from conan.tools.google import BazelDeps
 
         class PkgBazelConan(ConanFile):
             name = "demo"
             version = "1.0"
 
             def build_requirements(self):
-                self.build_requires("tool/1.0")
-                self.build_requires("other/1.0")
+                self.tool_requires("tool/1.0")
+                self.tool_requires("other/1.0")
 
             def generate(self):
                 tc = BazelDeps(self)
                 tc.build_context_activated = ["other", "tool"]
-                tc.build_context_suffix = {"tool": "_bt", "other": "_bo"}
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
-    breakpoint()
-    # Let's check all the PC file names created just in case
-    assert [] == ['component1_bo.pc', 'component3_bo.pc',
-                        'libother_bo-cmp2.pc', 'libother_bo.pc', 'tool_bt.pc']
-    content = client.load("tool_bt.pc")
-    assert "Name: tool_bt" in content
-    content = client.load("libother_bo.pc")
-    assert "Name: libother_bo" in content
-    assert "Requires: component1_bo libother_bo-cmp2 component3_bo" in content
-    content = client.load("component1_bo.pc")
-    assert "Name: component1_bo" in content
-    content = client.load("libother_bo-cmp2.pc")
-    assert "Name: libother_bo-cmp2" in content
-    content = client.load("component3_bo.pc")
-    assert "Name: component3_bo" in content
-    assert "Requires: component1_bo" in content
+    assert 'name = "build-tool"' in client.load("build-tool/BUILD.bazel")
+    assert textwrap.dedent("""\
+    # Components libraries declaration
+    cc_library(
+        name = "component1",
+        hdrs = glob([
+            "include/**"
+        ]),
+        includes = [
+            "include"
+        ],
+        visibility = ["//visibility:public"],
+    )
+
+    cc_library(
+        name = "build-libother-cmp2",
+        hdrs = glob([
+            "include/**"
+        ]),
+        includes = [
+            "include"
+        ],
+        visibility = ["//visibility:public"],
+    )
+
+    cc_library(
+        name = "component3",
+        hdrs = glob([
+            "include/**"
+        ]),
+        includes = [
+            "include"
+        ],
+        visibility = ["//visibility:public"],
+        deps = [
+            ":component1",
+        ],
+    )
+
+    # Package library declaration
+    cc_library(
+        name = "build-libother",
+        hdrs = glob([
+            "include/**"
+        ]),
+        includes = [
+            "include"
+        ],
+        visibility = ["//visibility:public"],
+        deps = [
+            ":component1",
+            ":build-libother-cmp2",
+            ":component3",
+        ],
+    )""") in client.load("build-libother/BUILD.bazel")
 
 
 def test_tool_requires_not_created_if_no_activated():
@@ -734,14 +773,12 @@ def test_tool_requires_not_created_if_no_activated():
             generators = "BazelDeps"
 
             def build_requirements(self):
-                self.build_requires("tool/1.0")
+                self.tool_requires("tool/1.0")
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
-    pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
-    pc_files.sort()
-    assert pc_files == []
+    assert not os.path.exists(os.path.join(client.current_folder, "tool"))
 
 
 def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
@@ -762,7 +799,7 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.gnu import BazelDeps
+        from conan.tools.google import BazelDeps
 
         class PkgBazelConan(ConanFile):
             name = "demo"
@@ -772,7 +809,7 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
                 self.requires("tool/1.0")
 
             def build_requirements(self):
-                self.build_requires("tool/1.0")
+                self.tool_requires("tool/1.0")
 
             def generate(self):
                 tc = BazelDeps(self)
@@ -780,11 +817,12 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("install . -pr:h default -pr:b default", assert_error=True)
-    assert "The packages ['tool'] exist both as 'require' and as 'build require'" in client.out
+    client.run("install . -pr:h default -pr:b default")
+    assert 'name = "build-tool"' in client.load("build-tool/BUILD.bazel")
+    assert 'name = "tool"' in client.load("tool/BUILD.bazel")
 
 
-def test_error_missing_pc_build_context():
+def test_error_missing_bazel_build_files_in_build_context():
     """
     BazelDeps was failing, not generating the zlib.pc in the
     build context, for a test_package that both requires(example/1.0) and
@@ -802,9 +840,10 @@ def test_error_missing_pc_build_context():
             generators = "BazelDeps"
             settings = "build_type"
             def build(self):
-                assert os.path.exists("math.pc")
-                assert os.path.exists("engine.pc")
-                assert os.path.exists("game.pc")
+                context = "build-" if self.context == "build" else ""
+                assert os.path.exists(os.path.join(f"{context}math", "BUILD.bazel"))
+                assert os.path.exists(os.path.join(f"{context}engine", "BUILD.bazel"))
+                assert os.path.exists(os.path.join(f"{context}game", "BUILD.bazel"))
             """)
     c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
@@ -824,6 +863,5 @@ def test_error_missing_pc_build_context():
     # The debug binaries are missing, so adding --build=missing
     c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
           "--build=example")
-
     assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
     assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out

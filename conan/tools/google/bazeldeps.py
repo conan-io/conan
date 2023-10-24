@@ -29,7 +29,7 @@ def _get_package_reference_name(dep):
 
 def _get_package_name(dep):
     pkg_name = dep.cpp_info.get_property("bazel_module_name") or _get_package_reference_name(dep)
-    return pkg_name
+    return f"build-{pkg_name}" if dep.context == "build" else pkg_name
 
 
 def _get_component_name(dep, comp_ref_name):
@@ -81,7 +81,7 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
     """
     cpp_info = cpp_info
     libdirs = cpp_info.libdirs
-    bindirs = cpp_info.bindirs
+    bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
     libs = cpp_info.libs[:]  # copying the values
     ret = {}
     interfaces = {}
@@ -424,13 +424,12 @@ class _BazelBUILDGenerator:
 
 class _InfoGenerator:
 
-    def __init__(self, conanfile, dep, build_context_activated=None):
+    def __init__(self, conanfile, dep):
         self._conanfile = conanfile
         self._dep = dep
         # Conan 2.x
         # self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
         self._transitive_reqs = self._dep.dependencies.direct_host
-        self._build_context_activated = build_context_activated or []
 
     def _get_cpp_info_requires_names(self, cpp_info):
         """
