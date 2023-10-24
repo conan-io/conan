@@ -596,7 +596,7 @@ def test_with_editable_layout():
                  "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
     client.run("create dep")
     client.run("editable add dep dep/0.1")
-    recipes_folder = client.current_folder
+    recipes_folder = client.current_folder.replace("\\", "/")
     with client.chdir("pkg"):
         client.run("install . -g BazelDeps")
         content = client.load("dependencies.bzl")

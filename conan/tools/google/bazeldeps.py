@@ -71,7 +71,6 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
     Get the static/shared library paths
 
     :param conanfile: The current recipe object.
-    :param dep: <ConanFileInterface obj> of the dependency.
     :param cpp_info: <CppInfo obj> of the component.
     :param relative_to_path: base path to prune from each library path
     :return: dict of static/shared library absolute paths ->
@@ -79,7 +78,6 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
              Note: LIB_PATH could be both static and shared ones in case of UNIX. If Windows it'll be
                    the interface library xxx.lib linked to the DLL_PATH one.
     """
-    cpp_info = cpp_info
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
     libs = cpp_info.libs[:]  # copying the values
@@ -183,13 +181,13 @@ def _relativize_path(path, relative_to_path):
     p = path.replace("\\", "/")
     rel = relative_to_path.replace("\\", "/")
     if p.startswith(rel):
-        ret = p[len(rel):].lstrip("/")
+        ret = p[len(rel):]
     elif rel in p:
-        ret = p.split(rel)[-1].lstrip("/")
+        ret = p.split(rel)[-1]
     else:
-        ret = p.lstrip("/")
-    # Editable mode is getting these kind of results
-    return ret.strip("./").replace("/./", "/")
+        ret = p
+    # Removes current directories and slashes as prefixes/suffixes
+    return ret.strip("/").strip("./").replace("/./", "/")
 
 
 class _BazelDependenciesBZLGenerator:
@@ -343,14 +341,16 @@ class _BazelBUILDGenerator:
         """
         Returns the absolute path to the BUILD file created by Conan
         """
-        return os.path.join(self._root_package_info.name, self.filename)
+        folder = os.path.join(self._root_package_info.name, self.filename)
+        return folder.replace("\\", "/")
 
     @property
     def absolute_build_file_pah(self):
         """
         Returns the absolute path to the BUILD file created by Conan
         """
-        return os.path.join(self._conanfile.generators_folder, self.build_file_pah)
+        folder = os.path.join(self._conanfile.generators_folder, self.build_file_pah)
+        return folder.replace("\\", "/")
 
     @property
     def package_folder(self):
