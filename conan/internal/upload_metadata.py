@@ -2,7 +2,6 @@ import fnmatch
 import os
 
 from conan.api.output import ConanOutput
-from conan.errors import ConanException
 
 
 def _metadata_files(folder, metadata):
@@ -19,16 +18,7 @@ def _metadata_files(folder, metadata):
     return result
 
 
-def gather_metadata(package_list, cache, metadata: list):
-    """
-    List and configure the metadata files to be uploaded.
-    The metadata supports patterns, so it can be used to upload only a subset of the metadata files.
-    When metadata is not specified, all metadata files are uploaded.
-
-    :param package_list: Package to be uploaded
-    :param cache: Conan client cache
-    :param metadata: A list of patterns of metadata that should be uploaded. Default None
-    """
+def gather_metadata(package_list, cache, metadata):
     for rref, recipe_bundle in package_list.refs().items():
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.recipe_layout(rref).metadata()
