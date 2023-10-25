@@ -146,25 +146,25 @@ def _get_libs(dep, cpp_info=None) -> list:
 
 
 def _get_headers(cpp_info, package_folder_path):
-    return ', '.join('"{}/**"'.format(_relativize_path(path, package_folder_path))
-                     for path in cpp_info.includedirs)
+    return ['"{}/**"'.format(_relativize_path(path, package_folder_path))
+            for path in cpp_info.includedirs]
 
 
 def _get_includes(cpp_info, package_folder_path):
-    return ', '.join('"{}"'.format(_relativize_path(path, package_folder_path))
-                     for path in cpp_info.includedirs)
+    return ['"{}"'.format(_relativize_path(path, package_folder_path))
+            for path in cpp_info.includedirs]
 
 
 def _get_defines(cpp_info):
-    return ', '.join('"{}"'.format(define.replace('"', '\\' * 3 + '"'))
-                     for define in cpp_info.defines)
+    return ['"{}"'.format(define.replace('"', '\\' * 3 + '"'))
+            for define in cpp_info.defines]
 
 
 def _get_linkopts(cpp_info, os_build):
     link_opt = '"/DEFAULTLIB:{}"' if os_build == "Windows" else '"-l{}"'
     system_libs = [link_opt.format(lib) for lib in cpp_info.system_libs]
     shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
-    return ", ".join(system_libs + shared_flags)
+    return system_libs + shared_flags
 
 
 def _get_copts(cpp_info):
@@ -173,7 +173,7 @@ def _get_copts(cpp_info):
     #                     for d in cpp_info.includedirs]
     cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
     cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
-    return ", ".join(cxxflags + cflags)
+    return cxxflags + cflags
 
 
 def _relativize_path(path, pattern):
@@ -272,27 +272,37 @@ class _BazelBUILDGenerator:
         name = "{{ obj["name"] }}",
         {% if obj["headers"] %}
         hdrs = glob([
-            {{ obj["headers"] }}
+            {% for header in obj["headers"] %}
+            {{ header }},
+            {% endfor %}
         ]),
         {% endif %}
         {% if obj["includes"] %}
         includes = [
-            {{ obj["includes"] }}
+            {% for include in obj["includes"] %}
+            {{ include }},
+            {% endfor %}
         ],
         {% endif %}
         {% if obj["defines"] %}
         defines = [
-            {{ obj["defines"] }}
+            {% for define in obj["defines"] %}
+            {{ define }},
+            {% endfor %}
         ],
         {% endif %}
         {% if obj["linkopts"] %}
         linkopts = [
-            {{ obj["linkopts"] }}
+            {% for linkopt in obj["linkopts"] %}
+            {{ linkopt }},
+            {% endfor %}
         ],
         {% endif %}
         {% if obj["copts"] %}
         copts = [
-            {{ obj["copts"] }}
+            {% for copt in obj["copts"] %}
+            {{ copt }},
+            {% endfor %}
         ],
         {% endif %}
         visibility = ["//visibility:public"],
@@ -311,6 +321,19 @@ class _BazelBUILDGenerator:
         {% endif %}
     )
     {% endmacro %}
+    {% macro filegroup_bindirs_macro(obj) %}
+    {% if obj["bindirs"] %}
+    filegroup(
+        name = "{{ obj["name"] }}_binaries",
+        srcs = glob([
+            {% for bindir in obj["bindirs"] %}
+            "{{ bindir }}/**",
+            {% endfor %}
+        ]),
+        visibility = ["//visibility:public"],
+    )
+    {% endif %}
+    {% endmacro %}
     load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
     # Components precompiled libs
@@ -325,6 +348,8 @@ class _BazelBUILDGenerator:
     {% endfor %}
     # Package library declaration
     {{ cc_library_macro(root) }}
+    # Filegroup library declaration
+    {{ filegroup_bindirs_macro(root) }}
     """)
 
     def __init__(self, conanfile, dep, root_package_info, components_info):
@@ -391,6 +416,8 @@ class _BazelBUILDGenerator:
                 linkopts = _get_linkopts(cpp_info, os_build)
                 libs = _get_libs(self._dep, cpp_info)
                 libs_info = []
+                bindirs = [_relativize_path(bindir, package_folder_path)
+                           for bindir in cpp_info.bindirs]
                 for (lib, is_shared, lib_path, interface_lib_path) in libs:
                     # Bazel needs to relativize each path
                     libs_info.append(
@@ -400,6 +427,7 @@ class _BazelBUILDGenerator:
                     )
                 ret.update({
                     "libs": libs_info,
+                    "bindirs": bindirs,
                     "headers": headers,
                     "includes": includes,
                     "defines": defines,

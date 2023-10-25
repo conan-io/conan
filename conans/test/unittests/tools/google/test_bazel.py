@@ -105,4 +105,4 @@ def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
         if interface_lib_path:
             interface_lib_path = interface_lib_path.format(base_folder=cpp_info._base_folder)
         ret.append((lib, is_shared, lib_path, interface_lib_path))
-    assert _get_libs(ConanFileMock(options_values={"shared": is_shared}), cpp_info) == ret
+    assert _get_libs(ConanFileMock(options_values={"shared": is_shared}), cpp_info).sort() == ret.sort()

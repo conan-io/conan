@@ -63,11 +63,20 @@ def test_bazel_relative_paths():
     cc_library(
         name = "dep",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
+        visibility = ["//visibility:public"],
+    )
+
+    # Filegroup library declaration
+    filegroup(
+        name = "dep_binaries",
+        srcs = glob([
+            "bin/**",
+        ]),
         visibility = ["//visibility:public"],
     )
     """)
@@ -134,6 +143,7 @@ def test_bazeldeps_and_tool_requires():
                 save(self, os.path.join(self.package_folder, "lib", "libmymath.a"), "")
             def package_info(self):
                 self.cpp_info.libs = ["mymath"]
+                self.cpp_info.bindirs = ["bin1", "bin2"]
         """)
     c.save({"dep/conanfile.py": dep})
     c.run("export dep")
@@ -154,15 +164,25 @@ def test_bazeldeps_and_tool_requires():
     cc_library(
         name = "dep",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
             ":mymath_precompiled",
         ],
+    )
+
+    # Filegroup library declaration
+    filegroup(
+        name = "dep_binaries",
+        srcs = glob([
+            "bin1/**",
+            "bin2/**",
+        ]),
+        visibility = ["//visibility:public"],
     )
     """)
     assert expected == build_file
@@ -246,10 +266,10 @@ def test_pkg_with_public_deps_and_component_requires():
     cc_library(
         name = "third",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -263,10 +283,10 @@ def test_pkg_with_public_deps_and_component_requires():
     cc_library(
         name = "second-mycomponent",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -277,10 +297,10 @@ def test_pkg_with_public_deps_and_component_requires():
     cc_library(
         name = "second-myfirstcomp",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -292,10 +312,10 @@ def test_pkg_with_public_deps_and_component_requires():
     cc_library(
         name = "second",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -318,10 +338,10 @@ def test_pkg_with_public_deps_and_component_requires():
     cc_library(
         name = "myfirstlib-cmp1",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -333,10 +353,10 @@ def test_pkg_with_public_deps_and_component_requires():
     cc_library(
         name = "myfirstlib",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -418,10 +438,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     cc_library(
         name = "pkg",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -448,10 +468,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     cc_library(
         name = "component1",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -462,10 +482,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     cc_library(
         name = "fancy_name-cmp2",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -476,10 +496,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     cc_library(
         name = "component3",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -491,10 +511,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     cc_library(
         name = "fancy_name",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -555,10 +575,10 @@ def test_pkgconfigdeps_with_test_requires():
     cc_library(
         name = "{0}",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -619,10 +639,10 @@ def test_with_editable_layout():
         cc_library(
             name = "dep",
             hdrs = glob([
-                "include/**"
+                "include/**",
             ]),
             includes = [
-                "include"
+                "include",
             ],
             visibility = ["//visibility:public"],
             deps = [
@@ -688,10 +708,10 @@ def test_tool_requires():
     cc_library(
         name = "component1",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
     )
@@ -699,10 +719,10 @@ def test_tool_requires():
     cc_library(
         name = "build-libother-cmp2",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
     )
@@ -710,10 +730,10 @@ def test_tool_requires():
     cc_library(
         name = "component3",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
@@ -725,10 +745,10 @@ def test_tool_requires():
     cc_library(
         name = "build-libother",
         hdrs = glob([
-            "include/**"
+            "include/**",
         ]),
         includes = [
-            "include"
+            "include",
         ],
         visibility = ["//visibility:public"],
         deps = [
