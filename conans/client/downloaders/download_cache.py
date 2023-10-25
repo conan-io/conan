@@ -44,21 +44,48 @@ class DownloadCache:
             finally:
                 thread_lock.release()
 
-    def get_backup_sources_files_to_upload(self, package_list, excluded_urls):
-        """ from a package_list of packages to upload, collect from the backup-sources cache
-        the matching references to upload those backups too
-        """
-        def should_upload_sources(package):
-            return any(prev["upload"] for prev in package["revisions"].values())
-
-        files_to_upload = []
+    def get_all_backup_sources_files(self, excluded_urls):
         path_backups = os.path.join(self._path, self._SOURCE_BACKUP)
 
         if not os.path.exists(path_backups):
             return []
 
+        def has_excluded_urls(urls, excluded_urls):
+            return all(any(url.startswith(excluded_url)
+                           for excluded_url in excluded_urls)
+                       for url in urls)
+
+        result = []
+        for path in os.listdir(path_backups):
+            path = os.path.join(path_backups, path)
+            if path.endswith(".json"):
+                f = os.path.join(path)
+                content = json.loads(load(f))
+                refs = content["references"]
+                # unknown entries are not uploaded at this moment, the flow is not expected.
+                # use cache upload-backup for that
+                for ref, urls in refs.items():
+                    if not has_excluded_urls(urls, excluded_urls):
+                        result.append(path[:-5])
+        return result
+
+    def get_backup_sources_files_to_upload(self, package_list, excluded_urls):
+        """ from a package_list of packages to upload, collect from the backup-sources cache
+        the matching references to upload those backups too
+        """
+
+        def should_upload_sources(package):
+            return any(prev["upload"] for prev in package["revisions"].values())
+
+        files_to_upload = []
+
         if excluded_urls is None:
             excluded_urls = []
+
+        backup_files = self.get_all_backup_sources_files(excluded_urls)
+
+        if len(backup_files) == 0:
+            return []
 
         all_refs = set()
         for k, ref in package_list.refs().items():
@@ -66,20 +93,17 @@ class DownloadCache:
             if ref.get("upload") or any(should_upload_sources(p) for p in packages):
                 all_refs.add(str(k))
 
-        for f in os.listdir(path_backups):
-            if f.endswith(".json"):
-                f = os.path.join(path_backups, f)
-                content = json.loads(load(f))
-                refs = content["references"]
-                # unknown entries are not uploaded at this moment, the flow is not expected.
-                for ref, urls in refs.items():
-                    is_excluded = all(any(url.startswith(excluded_url)
-                                          for excluded_url in excluded_urls)
-                                      for url in urls)
-                    if not is_excluded and ref in all_refs:
-                        files_to_upload.append(f)
-                        files_to_upload.append(f[:-5])
-                        break
+        for path in backup_files:
+            f = os.path.join(path + ".json")
+            content = json.loads(load(f))
+            refs = content["references"]
+            # unknown entries are not uploaded at this moment, the flow is not expected.
+            # use cache upload-backup for that
+            for ref, urls in refs.items():
+                if ref in all_refs:
+                    files_to_upload.append(f)
+                    files_to_upload.append(path)
+                    break
         return files_to_upload
 
     @staticmethod

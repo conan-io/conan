@@ -106,7 +106,8 @@ def upload(conan_api: ConanAPI, parser, *args):
 
         if not args.dry_run:
             conan_api.upload.upload(package_list, remote)
-            conan_api.upload.upload_backup_sources(package_list)
+            backup_files = conan_api.upload.get_associated_backup_sources(package_list)
+            conan_api.upload.upload_backup_sources(backup_files)
     elif args.list:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded
