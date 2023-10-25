@@ -38,11 +38,15 @@ class UploadAPI:
         :param package_list:
         :param enabled_remotes:
         :param metadata: A list of patterns of metadata that should be uploaded. Default None
-        means all metadata will be uploaded together with the pkg artifacts"""
+        means all metadata will be uploaded together with the pkg artifacts. If metadata is empty
+        string (""), it means that no metadata files should be uploaded."""
+        if metadata and metadata != [''] and '' in metadata:
+            raise ConanException("Empty string and patterns can not be mixed for metadata.")
         app = ConanApp(self.conan_api.cache_folder)
         preparator = PackagePreparator(app)
         preparator.prepare(package_list, enabled_remotes)
-        gather_metadata(package_list, app.cache, metadata)
+        if metadata != ['']:
+            gather_metadata(package_list, app.cache, metadata)
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)

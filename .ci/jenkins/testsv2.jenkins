@@ -119,7 +119,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="M1Macos") {
                     def localDir = "/Users/jenkins"
-                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.12", "PY39=3.9.10",
+                    withEnv(["CONAN_HOME=${workDir}conan_home", "CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.12", "PY39=3.9.10",
                              "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
@@ -136,7 +136,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="Windows") {
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "CONAN_BASH_PATH=c:/tools/msys64/usr/bin/bash",
-                             "CONAN_USER_HOME_SHORT=${workDir}.conan",
+                             "CONAN_HOME=${workDir}conan_home",
                              "PY27=Python27", "PY36=Python36", "PY38=Python38-64"]) {
                         try {
                             bat(script: "if not exist \"${workDir}\" mkdir \"${workDir}\"")
