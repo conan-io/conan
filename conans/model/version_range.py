@@ -26,21 +26,34 @@ class _Condition:
         return hash((self.operator, self.version))
 
     def __lt__(self, other):
+        # Notice that this is done on the modified version, might contain extra prereleases
         if self.version < other.version:
             return True
         elif self.version == other.version:
-            if "<" in self.operator:
-                assert "<" in other.operator  # Only ordering possible
-                return other.operator == "<="
+            if self.operator == "<":
+                if other.operator == "<":
+                    return self.display_version.pre is not None
+                else:
+                    return True
+            elif self.operator == "<=":
+                if other.operator == "<":
+                    return False
+                else:
+                    return self.display_version.pre is None
+            elif self.operator == ">":
+                if other.operator == ">":
+                    return self.display_version.pre is None
+                else:
+                    return False
             else:
-                if ">" in other.operator:
-                    return other.operator == ">"
-                else:  # valid range check lower against upper
-                    return self.operator == ">=" and other.operator == "<="
+                if other.operator == ">":
+                    return True
+                else:
+                    return self.display_version.pre is not None
         return False
 
     def __eq__(self, other):
-        return (self.version == other.version and
+        return (self.display_version == other.display_version and
                 self.operator == other.operator)
 
 
