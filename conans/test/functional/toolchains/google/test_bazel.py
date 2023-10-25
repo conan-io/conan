@@ -34,7 +34,7 @@ def base_profile():
         """)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def client_exe(bazelrc):
     client = TestClient(path_with_spaces=False)
     # client.run("new bazel_exe -d name=myapp -d version=1.0")
@@ -45,7 +45,7 @@ def client_exe(bazelrc):
     return client
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def client_lib(bazelrc):
     client = TestClient(path_with_spaces=False)
     # client.run("new bazel_lib -d name=mylib -d version=1.0")
