@@ -195,10 +195,9 @@ class TestMetadataCommands:
         """
         Upload command should fail when passing --metadata="" and a pattern
         """
-        client, pid = create_conan_pkg
-
-        self.save_metadata_file(client, "pkg/0.1")
-        self.save_metadata_file(client, f"pkg/0.1:{pid}")
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        client.run("export .")
 
         client.run('upload * --confirm --remote=default --metadata="" --metadata="logs/*"', assert_error=True)
         assert "ERROR: Empty string and patterns can not be mixed for metadata." in client.out
