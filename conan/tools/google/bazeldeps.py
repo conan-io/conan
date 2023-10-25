@@ -72,10 +72,12 @@ def _get_libs(dep, cpp_info=None) -> list:
 
     :param dep: normally a <ConanFileInterface obj>
     :param cpp_info: <CppInfo obj> of the component.
-    :return: dict of static/shared library absolute paths ->
-             {lib_name: (IS_SHARED, LIB_PATH, DLL_PATH)}
-             Note: LIB_PATH could be both static and shared ones in case of UNIX. If Windows it'll be
-                   the interface library xxx.lib linked to the DLL_PATH one.
+    :return: list of tuples per static/shared library ->
+             [(lib_name, is_shared, library_path, interface_library_path)]
+             Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
+                    Windows would have:
+                        * shared: library_path as DLL, and interface_library_path as LIB
+                        * static: library_path as LIB, and interface_library_path as None
     """
     def _is_shared():
         """
