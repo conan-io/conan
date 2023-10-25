@@ -48,6 +48,10 @@ class _Condition:
             else:
                 if other.operator == ">":
                     return True
+                # There's a possibility of getting here while validating if a range is non-void
+                # by comparing >= & <= for lower limit <= upper limit
+                elif other.operator == "<=":
+                    return True
                 else:
                     return self.display_version.pre is not None
         return False
