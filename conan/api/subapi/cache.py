@@ -111,7 +111,7 @@ class CacheAPI:
 
     def save(self, package_list, tgz_path):
         cache_folder = self.conan_api.cache_folder
-        app = ConanApp(cache_folder)
+        app = ConanApp(cache_folder, self.conan_api.config.global_conf)
         out = ConanOutput()
         name = os.path.basename(tgz_path)
         with open(tgz_path, "wb") as tgz_handle:
@@ -152,7 +152,7 @@ class CacheAPI:
 
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        cache = ClientCache(self.conan_api.cache_folder)
+        cache = ClientCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
