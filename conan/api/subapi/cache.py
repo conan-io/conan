@@ -1,11 +1,19 @@
+import json
 import os
+import shutil
+import tarfile
+from io import BytesIO
 
+from conan.api.model import PackagesList
+from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
+from conans.client.cache.cache import ClientCache
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import rmdir
+from conans.util.dates import revision_timestamp_now
+from conans.util.files import rmdir, gzopen_without_timestamps
 
 
 class CacheAPI:
@@ -100,6 +108,75 @@ class CacheAPI:
                     app.cache.remove_build_id(pref)
                 if download:
                     rmdir(pref_layout.download_package())
+
+    def save(self, package_list, tgz_path):
+        cache_folder = self.conan_api.cache_folder
+        app = ConanApp(cache_folder)
+        out = ConanOutput()
+        name = os.path.basename(tgz_path)
+        with open(tgz_path, "wb") as tgz_handle:
+            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
+            for ref, ref_bundle in package_list.refs().items():
+                ref_layout = app.cache.recipe_layout(ref)
+                recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
+                ref_bundle["recipe_folder"] = recipe_folder
+                out.info(f"Saving {ref}: {recipe_folder}")
+                tgz.add(os.path.join(cache_folder, recipe_folder), recipe_folder, recursive=True)
+                for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+                    pref_layout = app.cache.pkg_layout(pref)
+                    pkg_folder = pref_layout.package()
+                    folder = os.path.relpath(pkg_folder, cache_folder)
+                    pref_bundle["package_folder"] = folder
+                    out.info(f"Saving {pref}: {folder}")
+                    tgz.add(os.path.join(cache_folder, folder), folder, recursive=True)
+                    if os.path.exists(pref_layout.metadata()):
+                        metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
+                        pref_bundle["metadata_folder"] = metadata_folder
+                        out.info(f"Saving {pref} metadata: {folder}")
+                        tgz.add(os.path.join(cache_folder, metadata_folder), metadata_folder,
+                                recursive=True)
+            serialized = json.dumps(package_list.serialize(), indent=2)
+            info = tarfile.TarInfo(name="pkglist.json")
+            data = serialized.encode('utf-8')
+            info.size = len(data)
+            tgz.addfile(tarinfo=info, fileobj=BytesIO(data))
+            tgz.close()
+
+    def restore(self, path):
+        with open(path, mode='rb') as file_handler:
+            the_tar = tarfile.open(fileobj=file_handler)
+            fileobj = the_tar.extractfile("pkglist.json")
+            pkglist = fileobj.read()
+            the_tar.extractall(path=self.conan_api.cache_folder)
+            the_tar.close()
+
+        out = ConanOutput()
+        package_list = PackagesList.deserialize(json.loads(pkglist))
+        cache = ClientCache(self.conan_api.cache_folder)
+        for ref, ref_bundle in package_list.refs().items():
+            ref.timestamp = revision_timestamp_now()
+            ref_bundle["timestamp"] = ref.timestamp
+            recipe_layout = cache.get_or_create_ref_layout(ref)
+            recipe_folder = ref_bundle["recipe_folder"]
+            rel_path = os.path.relpath(recipe_layout.base_folder, cache.cache_folder)
+            assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
+            out.info(f"Put: {ref} in {recipe_folder}")
+            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+                pref.timestamp = revision_timestamp_now()
+                pref_bundle["timestamp"] = pref.timestamp
+                pkg_layout = cache.get_or_create_pkg_layout(pref)
+                pkg_folder = pref_bundle["package_folder"]
+                out.info(f"Restore: {pref} in {pkg_folder}")
+                # We need to put the package in the final location in the cache
+                shutil.move(os.path.join(cache.cache_folder, pkg_folder), pkg_layout.package())
+                metadata_folder = pref_bundle.get("metadata_folder")
+                if metadata_folder:
+                    out.info(f"Restore: {pref} metadata in {metadata_folder}")
+                    # We need to put the package in the final location in the cache
+                    shutil.move(os.path.join(cache.cache_folder, metadata_folder),
+                                pkg_layout.metadata())
+
+        return package_list
 
 
 def _resolve_latest_ref(app, ref):

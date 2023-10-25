@@ -19,7 +19,7 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
+        connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
         try:
             yield connection
         finally:

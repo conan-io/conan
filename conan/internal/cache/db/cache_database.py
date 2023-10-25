@@ -1,14 +1,20 @@
 import os
+import sqlite3
 
+from conan.api.output import ConanOutput
 from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
+from conans.model.version import Version
 
 
 class CacheDatabase:
 
     def __init__(self, filename):
+        version = sqlite3.sqlite_version
+        if Version(version) < "3.7.11":  # Not an exception, in case some false positives
+            ConanOutput().error(f"Your sqlite3 '{version} < 3.7.11' version is not supported")
         self._recipes = RecipesDBTable(filename)
         self._packages = PackagesDBTable(filename)
         if not os.path.isfile(filename):

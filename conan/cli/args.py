@@ -76,7 +76,7 @@ def add_profiles_args(parser):
                             action="append",
                             dest=f"{long}_host",
                             metavar=long.upper(),
-                            help='Apply the specified profile. '
+                            help=f'Apply the specified {long}. '
                                  f'By default, or if specifying -{short}:h (--{long}:host), it applies to the host context. '
                                  f'Use -{short}:b (--{long}:build) to specify the build context, '
                                  f'or -{short}:a (--{long}:all) to specify both contexts at once'

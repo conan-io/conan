@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
@@ -12,7 +12,7 @@ def summary_upload_list(results):
     """ Do litte format modification to serialized
     list bundle so it looks prettier on text output
     """
-    cli_out_write("Upload summary:")
+    ConanOutput().subtitle("Upload summary")
     info = results["results"]
 
     def format_upload(item):

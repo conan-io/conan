@@ -183,6 +183,9 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
+        if node.binary == BINARY_EDITABLE:
+            return
+
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
