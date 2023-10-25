@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 from collections import namedtuple
 
@@ -8,9 +9,8 @@ from conan.errors import ConanException
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.util.files import save
 
-
 _DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
-_LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'interface_path'])
+_LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'interface_lib_path'])
 
 
 def _get_name_with_namespace(namespace, name):
@@ -48,7 +48,7 @@ def _get_component_name(dep, comp_ref_name):
 
 
 # FIXME: This function should be a common one to be used by PkgConfigDeps, CMakeDeps?, etc.
-def get_requirements(conanfile, build_context_activated):
+def _get_requirements(conanfile, build_context_activated):
     """
     Simply save the activated requirements (host + build + test), and the deactivated ones
     """
@@ -66,31 +66,45 @@ def get_requirements(conanfile, build_context_activated):
         yield require, dep
 
 
-def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> list:
+def _get_libs(dep, cpp_info=None) -> list:
     """
     Get the static/shared library paths
 
-    :param conanfile: The current recipe object.
+    :param dep: normally a <ConanFileInterface obj>
     :param cpp_info: <CppInfo obj> of the component.
-    :param relative_to_path: base path to prune from each library path
     :return: dict of static/shared library absolute paths ->
              {lib_name: (IS_SHARED, LIB_PATH, DLL_PATH)}
              Note: LIB_PATH could be both static and shared ones in case of UNIX. If Windows it'll be
                    the interface library xxx.lib linked to the DLL_PATH one.
     """
+    def _is_shared():
+        """
+        Checking traits and shared option
+        """
+        default_value = dep.options.get_safe("shared") if dep.options else False
+        # Conan 2.x
+        # return {"shared-library": True,
+        #         "static-library": False}.get(str(dep.package_type), default_value)
+        return default_value
+
+    def _save_lib_path(lib_, lib_path_):
+        _, ext_ = os.path.splitext(lib_path_)
+        if is_shared and ext_ == ".lib":  # Windows interface library
+            interface_lib_paths[lib_] = lib_path_
+        else:
+            lib_paths[lib_] = lib_path_
+
+    cpp_info = cpp_info or dep.cpp_info
+    is_shared = _is_shared()
     libdirs = cpp_info.libdirs
     bindirs = cpp_info.bindirs if is_shared else []  # just want to get shared libraries
     libs = cpp_info.libs[:]  # copying the values
-    ret = {}
-    interfaces = {}
+    lib_paths = {}
+    interface_lib_paths = {}
     for libdir in set(libdirs + bindirs):
-        lib = ""
         if not os.path.exists(libdir):
-            # Conan 2
-            # conanfile.output.debug("The library folder doesn't exist: {}".format(libdir))
             continue
         files = os.listdir(libdir)
-        lib_path = None
         for f in files:
             full_path = os.path.join(libdir, f)
             if not os.path.isfile(full_path):  # Make sure that directories are excluded
@@ -99,9 +113,10 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
             # use the basename of the lib file as lib name.
             if f in libs:
                 lib = f
-                libs.remove(f)
+                # libs.remove(f)
                 lib_path = full_path
-                break
+                _save_lib_path(lib, lib_path)
+                continue
             name, ext = os.path.splitext(f)
             if name not in libs and name.startswith("lib"):
                 name = name[3:]
@@ -110,28 +125,21 @@ def _get_libs(conanfile, cpp_info, is_shared=False, relative_to_path=None) -> li
                 if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
                    (not is_shared and ext in (".a", ".lib")):
                     lib = name
-                    libs.remove(name)
+                    # libs.remove(name)
                     lib_path = full_path
-                    break
-        if lib_path is not None:
-            _, ext = os.path.splitext(lib_path)
-            if is_shared and ext == ".lib":  # Windows interface library
-                interfaces[lib] = _relativize_path(lib_path, relative_to_path=relative_to_path)
-            else:
-                ret[lib] = _relativize_path(lib_path, relative_to_path=relative_to_path)
+                    _save_lib_path(lib, lib_path)
+                    continue
 
     libraries = []
-    for lib, lib_path in ret.items():
-        interface_library = None
+    for lib, lib_path in lib_paths.items():
+        interface_lib_path = None
         if lib_path.endswith(".dll"):
-            if lib not in interfaces:
+            if lib not in interface_lib_paths:
                 raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
-                                     f"Only found {lib_path}")
-            interface_library = interfaces.pop(lib)
-        libraries.append(_LibInfo(lib, is_shared, lib_path, interface_library))
+                                     f" Only found {lib_path}")
+            interface_lib_path = interface_lib_paths.pop(lib)
+        libraries.append((lib, is_shared, lib_path, interface_lib_path))
     # TODO: Would we want to manage the cases where DLLs are provided by the system?
-    # Conan 2
-    # conanfile.output.warning(f"The library/ies {libs} cannot be found in the dependency")
     return libraries
 
 
@@ -166,28 +174,26 @@ def _get_copts(cpp_info):
     return ", ".join(cxxflags + cflags)
 
 
-# FIXME: Very fragile. Need UTs, and, maybe, move it to conan.tools.files
-def _relativize_path(path, relative_to_path):
+def _relativize_path(path, pattern):
     """
-    Relativize the path with regard to a given base path
+    Returns a relative path with regard to pattern given.
 
-    :param path: path to relativize
-    :param relative_to_path: base path to prune from the path
-    :return: Unix-like path relative to ``relative_to_path``. Otherwise, it returns
-             the Unix-like ``path``.
+    :param path: absolute or relative path
+    :param pattern: either a piece of path or a pattern to match the leading part of the path
+    :return: Unix-like path relative if matches to the given pattern.
+             Otherwise, it returns the original path.
     """
-    if not path or not relative_to_path:
+    if not path or not pattern:
         return path
-    p = path.replace("\\", "/")
-    rel = relative_to_path.replace("\\", "/")
-    if p.startswith(rel):
-        ret = p[len(rel):]
-    elif rel in p:
-        ret = p.split(rel)[-1]
-    else:
-        ret = p
-    # Removes current directories and slashes as prefixes/suffixes
-    return ret.strip("/").strip("./").replace("/./", "/")
+    path_ = path.replace("\\", "/").replace("/./", "/")
+    pattern_ = pattern.replace("\\", "/").replace("/./", "/")
+    match = re.match(pattern_, path_)
+    if match:
+        matching = match[0]
+        if path_.startswith(matching):
+            path_ = path_.replace(matching, "").strip("/")
+            return path_.strip("./") or "./"
+    return path
 
 
 class _BazelDependenciesBZLGenerator:
@@ -253,8 +259,8 @@ class _BazelBUILDGenerator:
         {% else %}
         static_library = "{{ lib_info.lib_path }}",
         {% endif %}
-        {% if lib_info.interface_path %}
-        interface_library = "{{ lib_info.interface_path }}",
+        {% if lib_info.interface_lib_path %}
+        interface_lib_path = "{{ lib_info.interface_lib_path }}",
         {% endif %}
     )
     {% endfor %}
@@ -326,17 +332,6 @@ class _BazelBUILDGenerator:
         self._components_info = components_info
 
     @property
-    def _is_shared_dependency(self):
-        """
-        Checking traits and shared option
-        """
-        default_value = self._dep.options.get_safe("shared") if self._dep.options else False
-        # Conan 2.x
-        # return {"shared-library": True,
-        #         "static-library": False}.get(str(self._dep.package_type), default_value)
-        return default_value
-
-    @property
     def build_file_pah(self):
         """
         Returns the absolute path to the BUILD file created by Conan
@@ -389,12 +384,20 @@ class _BazelBUILDGenerator:
                 copts = _get_copts(cpp_info)
                 defines = _get_defines(cpp_info)
                 # Conan 2
-                # linkopts = _get_linkopts(cpp_info, self._dep.settings_build.get_safe("os"))
-                linkopts = _get_linkopts(cpp_info, self._dep.settings.get_safe("os"))
-                libs = _get_libs(self._conanfile, cpp_info, is_shared=is_shared,
-                                 relative_to_path=package_folder_path)
+                # os_build = self._dep.settings_build.get_safe("os")
+                os_build = self._dep.settings.get_safe("os")
+                linkopts = _get_linkopts(cpp_info, os_build)
+                libs = _get_libs(self._dep, cpp_info)
+                libs_info = []
+                for (lib, is_shared, lib_path, interface_lib_path) in libs:
+                    # Bazel needs to relativize each path
+                    libs_info.append(
+                        _LibInfo(lib, is_shared,
+                                 _relativize_path(lib_path, package_folder_path),
+                                 _relativize_path(interface_lib_path, package_folder_path))
+                    )
                 ret.update({
-                    "libs": libs,
+                    "libs": libs_info,
                     "headers": headers,
                     "includes": includes,
                     "defines": defines,
@@ -403,7 +406,6 @@ class _BazelBUILDGenerator:
                 })
             return ret
 
-        is_shared = self._is_shared_dependency
         package_folder_path = self.package_folder
         context = dict()
         context["root"] = fill_info(self._root_package_info)
@@ -528,7 +530,7 @@ class BazelDeps:
         """
         # Conan 2
         # check_duplicated_generator(self, self._conanfile)
-        requirements = get_requirements(self._conanfile, self.build_context_activated)
+        requirements = _get_requirements(self._conanfile, self.build_context_activated)
         deps_info = []
         for require, dep in requirements:
             # Bazel info generator
