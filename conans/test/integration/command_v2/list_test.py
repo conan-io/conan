@@ -731,9 +731,8 @@ class TestListHTML:
         c.run("create dep")
         c.run("create pkg -s os=Windows -s arch=x86")
         # Revision is needed explicitly!
-        c.run("list pkg/2.3.4#latest --format=html", redirect_stdout="table.html")
-        table = c.load("table.html")
-        assert "<!DOCTYPE html>" in table
+        c.run("list pkg/2.3.4#latest --format=html")
+        assert "<!DOCTYPE html>" in c.stdout
         # TODO: The actual good html is missing
 
     def test_list_html_custom(self):
@@ -747,3 +746,27 @@ class TestListHTML:
         c.save({"list_packages.html": '{{ base_template_path }}'}, path=template_folder)
         c.run("list lib/0.1#latest --format=html")
         assert template_folder in c.stdout
+
+
+class TestListCompact:
+    def test_list_compact(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("os", "arch")
+                                                          .with_shared_option(False)})
+        c.run("create . -s os=Windows -s arch=x86")
+        c.run("create . -s os=Linux -s arch=armv8")
+        c.run("create . -s os=Macos -s arch=armv8 -o shared=True")
+        c.run("list pkg:* --format=compact")
+
+        expected = textwrap.dedent("""\
+            pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2a67a51fbf36a4ee345b2125dd2642be60ffd3ec
+              settings: Macos, armv8
+              options(diff): shared=True
+            pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2d46abc802bbffdf2af11591e3e452bc6149ea2b
+              settings: Linux, armv8
+              options(diff): shared=False
+            pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:d2e97769569ac0a583d72c10a37d5ca26de7c9fa
+              settings: Windows, x86
+              options(diff): shared=False
+            """)
+        assert textwrap.indent(expected, "      ") in c.stdout
