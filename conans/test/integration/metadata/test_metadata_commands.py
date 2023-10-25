@@ -235,4 +235,4 @@ class TestMetadataCommands:
         self._save_metadata_file(client, f"pkg/0.1:{pid}")
 
         client.run('upload * --confirm --remote=default --metadata="" --metadata="logs/*"', assert_error=True)
-        assert "ERROR: Empty string is not a valid pattern for metadata upload" in client.out
+        assert "ERROR: Empty string and patterns can not be mixed for metadata." in client.out

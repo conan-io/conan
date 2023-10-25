@@ -24,18 +24,11 @@ def gather_metadata(package_list, cache, metadata: list):
     List and configure the metadata files to be uploaded.
     The metadata supports patterns, so it can be used to upload only a subset of the metadata files.
     When metadata is not specified, all metadata files are uploaded.
-    But, when metadata is empty string (""), it means that no metadata files should be uploaded.
 
     :param package_list: Package to be uploaded
     :param cache: Conan client cache
     :param metadata: A list of patterns of metadata that should be uploaded. Default None
     """
-
-    if metadata == ['']:
-        return
-    elif metadata and '' in metadata:
-        raise ConanException("Empty string is not a valid pattern for metadata upload")
-
     for rref, recipe_bundle in package_list.refs().items():
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.recipe_layout(rref).metadata()
