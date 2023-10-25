@@ -193,8 +193,7 @@ class TestMetadataCommands:
 
     def test_upload_ignored_metadata_with_pattern(self, create_conan_pkg):
         """
-        Upload command should ignore metadata files when passing --metadata="".
-        Even if a pattern is passed to the upload command.
+        Upload command should fail when passing --metadata="" and a pattern
         """
         client, pid = create_conan_pkg
 
