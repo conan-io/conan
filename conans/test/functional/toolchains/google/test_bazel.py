@@ -68,8 +68,6 @@ def test_basic_exe():
 
 
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
-                                                         "and win is suspect too")
 @pytest.mark.tool_bazel
 def test_basic_exe(client_exe, build_type, base_profile):
 
@@ -84,8 +82,6 @@ def test_basic_exe(client_exe, build_type, base_profile):
 
 
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
-                                                         "and win is suspect too")
 @pytest.mark.tool_bazel
 def test_basic_lib(client_lib, build_type, base_profile):
 
@@ -99,8 +95,6 @@ def test_basic_lib(client_lib, build_type, base_profile):
         assert "mylib/1.0: Hello World Debug!" in client_lib.out
 
 
-@pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
-                                                         "and win is suspect too")
 @pytest.mark.tool_bazel
 def test_transitive_consuming():
 
