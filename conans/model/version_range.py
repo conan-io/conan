@@ -7,10 +7,14 @@ from conans.model.recipe_ref import Version
 
 @total_ordering
 class _Condition:
-    def __init__(self, operator, version, display_version=None):
+    def __init__(self, operator, version):
         self.operator = operator
-        self.version = version
-        self.display_version = display_version if display_version is not None else version
+        self.display_version = version
+
+        value = str(version)
+        if (operator == ">=" or operator == "<") and "-" not in value:
+            value += "-"
+        self.version = Version(value)
 
     def __str__(self):
         return f"{self.operator}{self.display_version}"
@@ -68,7 +72,6 @@ class _ConditionSet:
                 operator += "="
                 index = 2
         version = expression[index:]
-        original_version = version
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
         if operator == "~":  # tilde minor
@@ -76,10 +79,8 @@ class _ConditionSet:
                 version += "-"
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0
-            return [_Condition(">=", v, Version(original_version)), _Condition("<", v.upper_bound(index))]
+            return [_Condition(">=", v), _Condition("<", v.upper_bound(index))]
         elif operator == "^":  # caret major
-            if "-" not in version:
-                version += "-"
             v = Version(version)
 
             def first_non_zero(main):
@@ -89,11 +90,9 @@ class _ConditionSet:
                 return len(main)
 
             initial_index = first_non_zero(v.main)
-            return [_Condition(">=", v, Version(original_version)), _Condition("<", v.upper_bound(initial_index))]
+            return [_Condition(">=", v), _Condition("<", v.upper_bound(initial_index))]
         else:
-            if (operator == ">=" or operator == "<") and "-" not in version:
-                version += "-"
-            return [_Condition(operator, Version(version), Version(original_version))]
+            return [_Condition(operator, Version(version))]
 
     def _valid(self, version, conf_resolve_prepreleases):
         if version.pre:
