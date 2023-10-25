@@ -82,6 +82,65 @@ def print_list_text(results):
     print_serial(info)
 
 
+def print_list_compact(results):
+    info = results["results"]
+    # Extract command single package name
+    new_info = {}
+
+    for remote, remote_info in info.items():
+        if not remote_info or "error" in remote_info:
+            new_info[remote] = {"warning": "There are no matching recipe references"}
+            continue
+        new_remote_info = {}
+        for ref, ref_info in remote_info.items():
+            new_ref_info = {}
+            for rrev, rrev_info in ref_info.get("revisions", {}).items():
+                new_rrev_info = {}
+                new_rrev = f"{ref}#{rrev}"
+                timestamp = rrev_info.get("timestamp")
+                if timestamp:
+                    new_rrev += f" ({timestamp_to_str(timestamp)})"
+                # collect all options
+                common_options = {}
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    options = pid_info.get("info", {}).get("options", {})
+                    common_options.update(options)
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    options = pid_info.get("info", {}).get("options")
+                    if options:  # If a package has no options, like header-only, skip
+                        common_options = {k: v for k, v in common_options.items()
+                                          if k in options and v == options[k]}
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    options = pid_info.get("info", {}).get("options")
+                    if options:
+                        for k, v in options.items():
+                            if v != common_options.get(k):
+                                common_options.pop(k, None)
+                # format options
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    new_pid = f"{ref}#{rrev}:{pid}"
+                    new_pid_info = {}
+                    info = pid_info.get("info")
+                    settings = info.get("settings")
+                    if settings:  # A bit of pretty order, first OS-ARCH
+                        values = [settings.pop(s, None)
+                                  for s in ("os", "arch", "build_type", "compiler")]
+                        values = [v for v in values if v is not None]
+                        values.extend(settings.values())
+                        new_pid_info["settings"] = ", ".join(values)
+                    options = info.get("options")
+                    if options:
+                        diff_options = {k: v for k, v in options.items() if k not in common_options}
+                        options = ", ".join(f"{k}={v}" for k, v in diff_options.items())
+                        new_pid_info["options(diff)"] = options
+                    new_rrev_info[new_pid] = new_pid_info
+                new_ref_info[new_rrev] = new_rrev_info
+            new_remote_info[ref] = new_ref_info
+        new_info[remote] = new_remote_info
+
+    print_serial(new_info)
+
+
 def print_list_json(data):
     results = data["results"]
     myjson = json.dumps(results, indent=4)
@@ -90,7 +149,8 @@ def print_list_json(data):
 
 @conan_command(group="Consumer", formatters={"text": print_list_text,
                                              "json": print_list_json,
-                                             "html": list_packages_html})
+                                             "html": list_packages_html,
+                                             "compact": print_list_compact})
 def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions, or packages in the cache (by default) or the remotes.
