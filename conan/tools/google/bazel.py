@@ -26,6 +26,7 @@ class Bazel(object):
         each command.
         """
         try:
+            command += " --sandbox_debug --verbose_failures"  # remove (only for debug)
             self._conanfile.run(command)
         finally:
             if platform.system() == "Windows":
