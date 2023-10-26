@@ -28,7 +28,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        # TODO: configure function is deprecated
+        # DeprecationWarning: "bazel.configure()" function is deprecated
         bazel.configure()
         bazel.build()
 
@@ -67,7 +67,7 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        # TODO: configure function is deprecated
+        # DeprecationWarning: "bazel.configure()" function is deprecated
         bazel.configure()
         bazel.build()
 
