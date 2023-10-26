@@ -26,7 +26,7 @@ def test_bazel_command_with_config_values():
     bazel = Bazel(conanfile)
     bazel.build(target='//test:label')
     # Uncomment Conan 2.x
-    # assert "bazel --bazelrc='/path/to/bazelrc' build " \
+    # assert "bazel --bazelrc=/path/to/bazelrc build " \
     #        "--config=config --config=config2 //test:label" in conanfile.commands
-    assert "bazel --bazelrc='/path/to/bazelrc' build " \
+    assert "bazel --bazelrc=/path/to/bazelrc build " \
            "--config=config --config=config2 //test:label" == str(conanfile.command)

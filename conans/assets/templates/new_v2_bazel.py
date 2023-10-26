@@ -28,6 +28,8 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
+        # TODO: configure function is deprecated
+        bazel.configure()
         bazel.build()
 
     def package(self):
@@ -65,6 +67,8 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
+        # TODO: configure function is deprecated
+        bazel.configure()
         bazel.build()
 
     def layout(self):
