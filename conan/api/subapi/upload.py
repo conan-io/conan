@@ -57,22 +57,28 @@ class UploadAPI:
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
 
-    def upload_backup_sources(self, package_list):
+    def get_backup_sources(self, package_list=None):
+        """Get list of backup source files currently present in the cache,
+        either all of them if no argument, else filter by those belonging to the references in the package_list"""
         app = ConanApp(self.conan_api.cache_folder)
         config = app.cache.new_config
-        url = config.get("core.sources:upload_url")
+        download_cache_path = config.get("core.sources:download_cache")
+        download_cache_path = download_cache_path or HomePaths(
+            self.conan_api.cache_folder).default_sources_backup_folder
+        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
+        download_cache = DownloadCache(download_cache_path)
+        return download_cache.get_backup_sources_files_to_upload(excluded_urls, package_list)
+
+    def upload_backup_sources(self, files):
+        app = ConanApp(self.conan_api.cache_folder)
+        config = app.cache.new_config
+        url = config.get("core.sources:upload_url", check_type=str)
         if url is None:
             return
         url = url if url.endswith("/") else url + "/"
-        download_cache_path = config.get("core.sources:download_cache")
-        download_cache_path = download_cache_path or HomePaths(self.conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
 
         output = ConanOutput()
         output.subtitle("Uploading backup sources")
-        output.info("Gathering files to upload")
-        files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list,
-                                                                                      excluded_urls)
         if not files:
             output.info("No backup sources files to upload")
             return files

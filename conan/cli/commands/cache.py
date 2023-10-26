@@ -126,10 +126,19 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
                               "json": print_list_json})
 def cache_restore(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Put  the artifacts from a an archive into the cache
+    Put  the artifacts from an archive into the cache
     """
     subparser.add_argument("file", help="Path to archive to restore")
     args = parser.parse_args(*args)
     path = make_abs_path(args.file)
     package_list = conan_api.cache.restore(path)
     return {"results": {"Local Cache": package_list.serialize()}}
+
+
+@conan_subcommand()
+def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Upload all the source backups present in the cache
+    """
+    files = conan_api.upload.get_backup_sources()
+    conan_api.upload.upload_backup_sources(files)
