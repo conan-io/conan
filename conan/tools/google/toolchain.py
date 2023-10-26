@@ -84,9 +84,8 @@ class BazelToolchain:
         self.conlyopt = []
         self.cxxopt = []
         self.linkopt = []
-        self.strip = 'sometimes'  # 'always', 'sometimes', 'never'
         self.compilation_mode = {'Release': 'opt', 'Debug': 'dbg'}.get(
-            self._conanfile.settings.get_safe("build_type"), "fastbuild"  # Bazel default
+            self._conanfile.settings.get_safe("build_type")
         )
         # Be aware that this parameter does not admit a compiler absolute path
         # If you want to add it, you will have to use a specific Bazel toolchain
@@ -112,13 +111,13 @@ class BazelToolchain:
     def cxxflags(self):
         ret = [self.cppstd]
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret + conf_flags + self.extra_cxxflags
+        ret = ret  + self.extra_cxxflags + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
     def cflags(self):
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ret = conf_flags + self.extra_cflags
+        ret = self.extra_cflags + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -129,7 +128,7 @@ class BazelToolchain:
                                                    check_type=list))
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
-        ret = conf_flags + self.extra_ldflags
+        ret = self.extra_ldflags + conf_flags
         return self._filter_list_empty_fields(ret)
 
     def _context(self):

@@ -43,7 +43,6 @@ def test_default_bazel_toolchain(conanfile):
     assert "build:conan-config --cxxopt=-std=gnu++17" in content
     assert "build:conan-config --force_pic=True" in content
     assert "build:conan-config --dynamic_mode=off" in content
-    assert "build:conan-config --strip=sometimes" in content
     assert "build:conan-config --compilation_mode=opt" in content
 
 
@@ -76,7 +75,6 @@ def test_bazel_toolchain_and_flags(conanfile):
     assert "build:conan-config --linkopt=--flag5 --linkopt=--flag6 --linkopt=-T'myscript.sh'" in content
     assert "build:conan-config --force_pic=True" not in content
     assert "build:conan-config --dynamic_mode=fully" in content
-    assert "build:conan-config --strip=sometimes" in content
     assert "build:conan-config --compilation_mode=opt" in content
 
 
