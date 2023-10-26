@@ -53,6 +53,17 @@ def client_lib(bazelrc):
     return client
 
 
+@pytest.mark.skipif(platform.system() == "Linux", reason="Validate exception raises "
+                                                         "only for Macos/Windows")
+@pytest.mark.tool_bazel
+def test_basic_exe():
+    client = TestClient(path_with_spaces=False)
+    # client.run("new bazel_lib -d name=mylib -d version=1.0")
+    client.run("new mylib/1.0 -m bazel_lib")
+    client.run("create . -o '*:shared=True'", assert_error=True)
+    assert "Windows and Macos needs extra BUILD configuration" in client.out
+
+
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
 @pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
                                                          "and win is suspect too")
