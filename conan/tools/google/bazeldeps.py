@@ -508,7 +508,7 @@ class _InfoGenerator:
         Get the whole package and its components information like their own requires, names and even
         the cpp_info for each component.
 
-        :return: `list` of `_PCInfo` objects with all the components information
+        :return: `list` of `_DepInfo` objects with all the components information
         """
         if not self._dep.cpp_info.has_components:
             return []
@@ -527,7 +527,7 @@ class _InfoGenerator:
         """
         Get the whole package information
 
-        :return: `_PCInfo` object with the package information
+        :return: `_DepInfo` object with the package information
         """
         pkg_name = _get_package_name(self._dep)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
