@@ -57,27 +57,17 @@ class UploadAPI:
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
 
-    def get_all_backup_sources(self):
-        app = ConanApp(self.conan_api.cache_folder)
-        config = app.cache.new_config
-
-        download_cache_path = config.get("core.sources:download_cache", check_type=str)
-        download_cache_path = download_cache_path or HomePaths(
-            self.conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
-        files = DownloadCache(download_cache_path).get_all_backup_sources_files(excluded_urls)
-        return files
-
-    def get_associated_backup_sources(self, package_list):
+    def get_backup_sources(self, package_list=None):
+        """Get list of backup source files currently present in the cache,
+        either all of them if no argument, else filter by those belonging to the references in the package_list"""
         app = ConanApp(self.conan_api.cache_folder)
         config = app.cache.new_config
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
             self.conan_api.cache_folder).default_sources_backup_folder
         excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
-        files = DownloadCache(download_cache_path).get_backup_sources_files_to_upload(package_list,
-                                                                                      excluded_urls)
-        return files
+        download_cache = DownloadCache(download_cache_path)
+        return download_cache.get_backup_sources_files_to_upload(excluded_urls, package_list)
 
     def upload_backup_sources(self, files):
         app = ConanApp(self.conan_api.cache_folder)
