@@ -161,7 +161,7 @@ def _get_defines(cpp_info):
 
 
 def _get_linkopts(cpp_info, os_build):
-    link_opt = '"/DEFAULTLIB:{}"' if os_build == "Windows" else '"-l{}"'
+    link_opt = '/DEFAULTLIB:{}' if os_build == "Windows" else '-l{}'
     system_libs = [link_opt.format(lib) for lib in cpp_info.system_libs]
     shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
     return [f'"{flag}"' for flag in (system_libs + shared_flags)]
