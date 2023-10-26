@@ -54,7 +54,6 @@ class BazelToolchain:
     {% if linkopt %}build:conan-config {{linkopt}}{% endif %}
     {% if force_pic %}build:conan-config --force_pic={{force_pic}}{% endif %}
     {% if dynamic_mode %}build:conan-config --dynamic_mode={{dynamic_mode}}{% endif %}
-    {% if strip %}build:conan-config --strip={{strip}}{% endif %}
     {% if compilation_mode %}build:conan-config --compilation_mode={{compilation_mode}}{% endif %}
     {% if compiler %}build:conan-config --compiler={{compiler}}{% endif %}
     {% if cpu %}build:conan-config --cpu={{cpu}}{% endif %}
@@ -139,7 +138,6 @@ class BazelToolchain:
             "linkopt": " ".join(f"--linkopt={flag}" for flag in (self.linkopt + self.ldflags)),
             "force_pic": self.force_pic,
             "dynamic_mode": self.dynamic_mode,
-            "strip": self.strip,
             "compilation_mode": self.compilation_mode,
             "compiler": self.compiler,
             "cpu": self.cpu,
