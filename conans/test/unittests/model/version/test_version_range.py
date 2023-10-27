@@ -20,15 +20,15 @@ values = [
     ['1.0.0',   [[["=", "1.0.0"]]],                   ["1.0.0"],          ["2", "1.0.1"]],
     ['=1.0.0',  [[["=", "1.0.0"]]],                   ["1.0.0"],          ["2", "1.0.1"]],
     # Any
-    ['*',       [[[">=", "0.0.0"]]],                  ["1.0", "a.b"],          []],
-    ['',        [[[">=", "0.0.0"]]],                  ["1.0", "a.b"],          []],
+    ['*',       [[[">=", "0.0.0-"]]],                  ["1.0", "a.b"],          []],
+    ['',        [[[">=", "0.0.0-"]]],                  ["1.0", "a.b"],          []],
     # Unions
     ['1.0.0 || 2.1.3',  [[["=", "1.0.0"]], [["=", "2.1.3"]]],  ["1.0.0", "2.1.3"],  ["2", "1.0.1"]],
     ['>1 <2.0 || ^3.2 ',  [[['>', '1'], ['<', '2.0-']],
                            [['>=', '3.2-'], ['<', '4.0-']]],   ["1.5", "3.3"],  ["2.1", "0.1", "5"]],
     # pre-releases
-    ['',                             [[[">=", "0.0.0"]]],    ["1.0"],                ["1.0-pre.1"]],
-    ['*, include_prerelease=True',   [[[">=", "0.0.0"]]],    ["1.0", "1.0-pre.1"],   []],
+    ['',                             [[[">=", "0.0.0-"]]],    ["1.0"],                ["1.0-pre.1"]],
+    ['*, include_prerelease=True',   [[[">=", "0.0.0-"]]],    ["1.0", "1.0-pre.1", "0.0.0", "0.0.0-pre.1"],   []],
     ['>1- <2.0',                     [[['>', '1-'], ['<', '2.0-']]],
                                      ["1.0", "1.1", "1.9"],   ["1-pre.1", "1.5.1-pre1", "2.1-pre1"]],
     ['>1- <2.0 || ^3.2 ',  [[['>', '1-'], ['<', '2.0-']], [['>=', '3.2-'], ['<', '4.0-']]],
@@ -46,14 +46,14 @@ def test_range(version_range, conditions, versions_in, versions_out):
     r = VersionRange(version_range)
     for condition_set, expected_condition_set in zip(r.condition_sets, conditions):
         for condition, expected_condition in zip(condition_set.conditions, expected_condition_set):
-            assert condition.operator == expected_condition[0]
-            assert condition.version == expected_condition[1]
+            assert condition.operator == expected_condition[0], f"Expected {r} condition operator to be {expected_condition[0]}, but got {condition.operator}"
+            assert condition.version == expected_condition[1], f"Expected {r} condition version to be {expected_condition[1]}, but got {condition.version}"
 
     for v in versions_in:
-        assert r.contains(Version(v), None)
+        assert r.contains(Version(v), None), f"[{r}] must contain {v}"
 
     for v in versions_out:
-        assert not r.contains(Version(v), None)
+        assert not r.contains(Version(v), None), f"[{r}] must not contain {v}"
 
 
 @pytest.mark.parametrize("version_range, resolve_prereleases, versions_in, versions_out", [

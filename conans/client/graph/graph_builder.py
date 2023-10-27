@@ -106,7 +106,11 @@ class DepsGraphBuilder(object):
         if version_range:
             # TODO: Check user/channel conflicts first
             if prev_version_range is not None:
-                pass  # Do nothing, evaluate current as it were a fixed one
+                # It it is not conflicting, but range can be incompatible, restrict range
+                restricted_version_range = version_range.intersection(prev_version_range)
+                if restricted_version_range is None:
+                    raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+                require.ref.version = restricted_version_range.version()
             else:
                 if version_range.contains(prev_ref.version, resolve_prereleases):
                     require.ref = prev_ref
