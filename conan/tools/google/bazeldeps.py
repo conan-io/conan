@@ -262,7 +262,7 @@ class _BazelBUILDGenerator:
         static_library = "{{ lib_info.lib_path }}",
         {% endif %}
         {% if lib_info.interface_lib_path %}
-        interface_lib_path = "{{ lib_info.interface_lib_path }}",
+        interface_library = "{{ lib_info.interface_lib_path }}",
         {% endif %}
     )
     {% endfor %}
