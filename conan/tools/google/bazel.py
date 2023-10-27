@@ -31,13 +31,15 @@ class Bazel(object):
             if platform.system() == "Windows":
                 self._conanfile.run("bazel shutdown")
 
-    def build(self, args=None, label=None, target="//..."):
+    def build(self, args=None, label=None, target="//...", clean=True):
         """
         Runs "bazel <rcpaths> build <configs> <args> <targets>"
 
         :param label: DEPRECATED: It'll disappear in Conan 2.x. It is the target label
         :param target: It is the target label
         :param args: list of extra arguments
+        :param clean: bool that indicates to run a "bazel clean" before running the "bazel build".
+                      Notice that this is important to ensure a fresh bazel cache.
         :return:
         """
         # TODO: Remove in Conan 2.x. Superseded by target
@@ -73,6 +75,8 @@ class Bazel(object):
         if args:
             command += " ".join(f" {arg}" for arg in args)
         command += f" {target}"
+        if clean:
+            self._safe_run_command("bazel clean")
         self._safe_run_command(command)
 
     def test(self, target=None):
