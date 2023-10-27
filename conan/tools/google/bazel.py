@@ -63,6 +63,7 @@ class Bazel(object):
         bazelrc_paths.extend(rc_paths)
         command = "bazel"
         for rc in bazelrc_paths:
+            rc = rc.replace("\\", "/")
             command += f" --bazelrc={rc}"
         command += " build"
         # TODO: Legacy Bazel allowed only one value or several ones separate by commas.

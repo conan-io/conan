@@ -100,9 +100,9 @@ def test_transitive_consuming():
 
     client = TestClient(path_with_spaces=False)
     # A regular library made with CMake
-    with client.chdir("zlib"):
-        # client.run("new cmake_lib -d name=zlib -d version=1.2.11")
-        client.run("new zlib/1.2.11 -m cmake_lib")
+    with client.chdir("myzip_lib"):
+        # client.run("new cmake_lib -d name=myzip_lib -d version=1.2.11")
+        client.run("new myzip_lib/1.2.11 -m cmake_lib")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -115,7 +115,7 @@ def test_transitive_consuming():
         client.save({"conanfile.py": conanfile})
         client.run("create .")
 
-    # We prepare a consumer with Bazel (library openssl using zlib) and a test_package with an
+    # We prepare a consumer with Bazel (library myssl_lib using myzip_lib) and a test_package with an
     # example executable
     conanfile = textwrap.dedent("""
             import os
@@ -125,11 +125,11 @@ def test_transitive_consuming():
 
 
             class OpenSSLConan(ConanFile):
-                name = "openssl"
+                name = "myssl_lib"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "main/*", "WORKSPACE"
-                requires = "zlib/1.2.11"
+                requires = "myzip_lib/1.2.11"
 
                 generators = "BazelToolchain", "BazelDeps"
 
@@ -138,7 +138,7 @@ def test_transitive_consuming():
 
                 def build(self):
                     bazel = Bazel(self)
-                    bazel.build(target="//main:openssl")
+                    bazel.build(target="//main:myssl_lib")
 
                 def package(self):
                     dest_bin = os.path.join(self.package_folder, "bin")
@@ -149,51 +149,51 @@ def test_transitive_consuming():
                     copy(self, "*.dylib", build, dest_bin, keep_path=False)
                     copy(self, "*.a", build, dest_lib, keep_path=False)
                     copy(self, "*.lib", build, dest_lib, keep_path=False)
-                    copy(self, "*openssl.h", self.source_folder,
+                    copy(self, "*myssl_lib.h", self.source_folder,
                          os.path.join(self.package_folder, "include"), keep_path=False)
 
                 def package_info(self):
-                    self.cpp_info.libs = ["openssl"]
+                    self.cpp_info.libs = ["myssl_lib"]
                 """)
     bazel_build = textwrap.dedent("""
             load("@rules_cc//cc:defs.bzl", "cc_library")
 
             cc_library(
-                name = "openssl",
-                srcs = ["openssl.cpp"],
-                hdrs = ["openssl.h"],
+                name = "myssl_lib",
+                srcs = ["myssl_lib.cpp"],
+                hdrs = ["myssl_lib.h"],
                 deps = [
-                    "@zlib//:zlib",
+                    "@myzip_lib//:myzip_lib",
                 ],
             )
             """)
-    openssl_c = textwrap.dedent("""
+    myssl_lib_c = textwrap.dedent("""
             #include <iostream>
-            #include "openssl.h"
-            #include "zlib.h"
+            #include "myssl_lib.h"
+            #include "myzip_lib.h"
             #include <math.h>
 
-            void openssl(){
+            void myssl_lib(){
                 std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
-                zlib();
-                // This comes from the systemlibs declared in the zlib
+                myzip_lib();
+                // This comes from the systemlibs declared in the myzip_lib
                 sqrt(25);
             }
             """)
-    openssl_c_win = textwrap.dedent("""
+    myssl_lib_c_win = textwrap.dedent("""
                 #include <iostream>
-                #include "openssl.h"
-                #include "zlib.h"
+                #include "myssl_lib.h"
+                #include "myzip_lib.h"
                 #include <WinSock2.h>
 
-                void openssl(){
+                void myssl_lib(){
                     SOCKET foo; // From the system library
                     std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
-                    zlib();
+                    myzip_lib();
                 }
                 """)
-    openssl_h = textwrap.dedent("""
-            void openssl();
+    myssl_lib_h = textwrap.dedent("""
+            void myssl_lib();
             """)
 
     bazel_workspace = textwrap.dedent("""
@@ -201,10 +201,10 @@ def test_transitive_consuming():
         load_conan_dependencies()
     """)
 
-    test_example = """#include "openssl.h"
+    test_example = """#include "myssl_lib.h"
 
     int main() {{
-        openssl();
+        myssl_lib();
     }}
     """
 
@@ -243,15 +243,15 @@ def test_transitive_consuming():
             name = "example",
             srcs = ["example.cpp"],
             deps = [
-                "@openssl//:openssl",
+                "@myssl_lib//:myssl_lib",
             ],
         )
         """)
 
     client.save({"conanfile.py": conanfile,
                  "main/BUILD": bazel_build,
-                 "main/openssl.cpp": openssl_c if platform.system() != "Windows" else openssl_c_win,
-                 "main/openssl.h": openssl_h,
+                 "main/myssl_lib.cpp": myssl_lib_c if platform.system() != "Windows" else myssl_lib_c_win,
+                 "main/myssl_lib.h": myssl_lib_h,
                  "WORKSPACE": bazel_workspace,
                  "test_package/conanfile.py": test_conanfile,
                  "test_package/main/example.cpp": test_example,
@@ -261,4 +261,4 @@ def test_transitive_consuming():
 
     client.run("create .")
     assert "Calling OpenSSL function with define MY_VALUE and other define 2" in client.out
-    assert "zlib/1.2.11: Hello World Release!"
+    assert "myzip_lib/1.2.11: Hello World Release!"
