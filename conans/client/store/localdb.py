@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import threading
 from contextlib import contextmanager
 from sqlite3 import OperationalError
 
@@ -14,6 +15,7 @@ class LocalDB(object):
     def __init__(self, dbfile, encryption_key):
         self.dbfile = dbfile
         self.encryption_key = encryption_key
+        self._connection_mutex = threading.Lock()
 
     def _encode(self, value):
         if value and self.encryption_key:
@@ -64,12 +66,13 @@ class LocalDB(object):
 
     @contextmanager
     def _connect(self):
-        connection = sqlite3.connect(self.dbfile, detect_types=sqlite3.PARSE_DECLTYPES)
-        connection.text_factory = str
-        try:
-            yield connection
-        finally:
-            connection.close()
+        with self._connection_mutex:
+            connection = sqlite3.connect(self.dbfile, detect_types=sqlite3.PARSE_DECLTYPES)
+            connection.text_factory = str
+            try:
+                yield connection
+            finally:
+                connection.close()
 
     def get_login(self, remote_url):
         """ Returns login credentials. This method is also in charge of expiring them. """
