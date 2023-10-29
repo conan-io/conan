@@ -110,8 +110,8 @@ class AutotoolsToolchain:
     @property
     def _bitcode_flags(self):
         if (
-            self.settings.os in ["iOS", "tvOS", "watchOS"]
-            and self.conf.get("tools.apple:enable_bitcode", check_type=bool)
+            self._conanfile.settings.get_safe("os") in ["iOS", "tvOS", "watchOS"]
+            and self._conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
         ):
             return ["-fembed-bitcode"]
         return []
@@ -120,7 +120,7 @@ class AutotoolsToolchain:
     def _arc_flags(self):
         if (
             is_apple_os(self._conanfile)
-            and self.conf.get("tools.apple:enable_arc", check_type=bool)
+            and self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
         ):
             return ["-fobjc-arc"]
         return []
