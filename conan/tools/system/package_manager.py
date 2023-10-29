@@ -61,6 +61,11 @@ class _SystemPackageManagerTool(object):
             for d in distros:
                 if d in os_name:
                     return tool
+                
+        # No default package manager was found for the system,
+        # so notify the user
+        self._conanfile.output.info("A default system package manager couldn't be found for {}, "
+                                    "system packages will not be installed.".format(os_name))
 
     def get_package_name(self, package, host_package=True):
         # Only if the package is for building, for example a library,
