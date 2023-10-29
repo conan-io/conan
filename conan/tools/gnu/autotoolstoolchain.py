@@ -108,11 +108,20 @@ class AutotoolsToolchain:
         return list(filter(bool, v))
 
     @property
+    def _bitcode_flags(self):
+        if (
+            self.settings.os in ["iOS", "tvOS", "watchOS"]
+            and self.conf.get("tools.apple:enable_bitcode", check_type=bool)
+        ):
+            return ["-fembed-bitcode"]
+        return []
+
+    @property
     def cxxflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag]
-        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag] + self._bitcode_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + conf_flags
         return self._filter_list_empty_fields(ret)
@@ -121,7 +130,7 @@ class AutotoolsToolchain:
     def cflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
-        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag] + self._bitcode_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + conf_flags
         return self._filter_list_empty_fields(ret)
