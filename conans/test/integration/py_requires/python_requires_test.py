@@ -912,6 +912,37 @@ def test_transitive_diamond_python_requires():
            client.out
 
 
+class TestConflictPyRequires:
+    # https://github.com/conan-io/conan/issues/15016
+    def test_diamond_conflict_fixed(self):
+        c = TestClient()
+
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "sub1/conanfile.py": GenConanfile("sub1", "1.0").with_python_requires("tool/1.0"),
+                "sub2/conanfile.py": GenConanfile("sub2", "1.0").with_python_requires("tool/1.1"),
+                "app/conanfile.py": GenConanfile().with_python_requires("sub1/1.0", "sub2/1.0")})
+        c.run("export tool --version=1.0")
+        c.run("export tool --version=1.1")
+        c.run("export sub1")
+        c.run("export sub2")
+        c.run("install app", assert_error=True)
+        assert "Conflict in py_requires tool/1.0 - tool/1.1" in c.out
+
+    def test_diamond_conflict_ranges(self):
+        c = TestClient()
+
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "sub1/conanfile.py": GenConanfile("sub1", "1.0").with_python_requires("tool/[*]"),
+                "sub2/conanfile.py": GenConanfile("sub2", "1.0").with_python_requires("tool/1.0"),
+                "app/conanfile.py": GenConanfile().with_python_requires("sub1/1.0", "sub2/1.0")})
+        c.run("export tool --version=1.0")
+        c.run("export tool --version=1.1")
+        c.run("export sub1")
+        c.run("export sub2")
+        c.run("install app", assert_error=True)
+        assert "Conflict in py_requires tool/1.1 - tool/1.0" in c.out
+
+
 def test_multiple_reuse():
     """ test how to enable the multiple code reuse for custom user generators
         # https://github.com/conan-io/conan/issues/11589
