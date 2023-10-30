@@ -32,6 +32,8 @@ class {package_name}Conan(ConanFile):
 
     def layout(self):
         bazel_layout(self)
+        # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
+        self.folders.generators = "conan"
 
     def build(self):
         bazel = Bazel(self)
@@ -76,6 +78,8 @@ class {package_name}TestConan(ConanFile):
 
     def layout(self):
         bazel_layout(self)
+        # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
+        self.folders.generators = "conan"
 
     def test(self):
         if not cross_building(self):
@@ -135,6 +139,8 @@ class {package_name}Conan(ConanFile):
 
     def layout(self):
         bazel_layout(self)
+        # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
+        self.folders.generators = "conan"
 
     def build(self):
         bazel = Bazel(self)

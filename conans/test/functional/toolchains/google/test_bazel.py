@@ -26,8 +26,11 @@ def base_profile():
         build_type={build_type}
 
         [conf]
-        tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
-        tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
+        # FIXME: Conan 2.x
+        # tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
+        # tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
+        tools.google.bazel:bazelrc_path={curdir}/mybazelrc
+        tools.google.bazel:configs="{build_type}", "withTimeStamps"
         """)
 
 
@@ -200,7 +203,7 @@ def test_transitive_consuming():
             """)
 
     bazel_workspace = textwrap.dedent("""
-        load("@//conan:dependencies.bzl", "load_conan_dependencies")
+        load("@//:dependencies.bzl", "load_conan_dependencies")
         load_conan_dependencies()
     """)
 

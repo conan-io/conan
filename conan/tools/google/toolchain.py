@@ -59,9 +59,14 @@ class BazelToolchain:
     {% if cpu %}build:conan-config --cpu={{cpu}}{% endif %}
     {% if crosstool_top %}build:conan-config --crosstool_top={{crosstool_top}}{% endif %}""")
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, namespace=None):
         self._conanfile = conanfile
-        # TODO: Remove in Conan 2.x
+        # TODO: Remove namespace and check_using_build_profile in Conan 2.x
+        if namespace:
+            self._conanfile.output.warn("In BazelToolchain() call, namespace param has been "
+                                        "deprecated as it's not used anymore. Use the bazel_layout()"
+                                        " and the 'tools.google.bazel_layout:generators_folder=xxxx' configuration"
+                                        " to specify another folder for the Conan-generated-files.")
         check_using_build_profile(self._conanfile)
 
         # Flags

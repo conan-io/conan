@@ -20,6 +20,8 @@ def conanfile():
             generators = 'BazelToolchain'
             def layout(self):
                 bazel_layout(self)
+                # Remove in Conan 2.x
+                self.folders.generators = "conan"
     """)
 
 
@@ -98,6 +100,7 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
     compiler.libcxx=libc++
     compiler.version=13.0
     os=Macos
+
     """)
     c = TestClient()
     c.save({"conanfile.py": conanfile,
