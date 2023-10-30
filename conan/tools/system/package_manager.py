@@ -39,7 +39,7 @@ class _SystemPackageManagerTool(object):
             os_name = distro.id() or os_name
         elif os_name == "Windows" and self._conanfile.conf.get("tools.microsoft.bash:subsystem") == "msys2":
             os_name = "msys2"
-        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian"],
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint"],
                            "apk": ["alpine"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux", "rocky"],
@@ -61,6 +61,11 @@ class _SystemPackageManagerTool(object):
             for d in distros:
                 if d in os_name:
                     return tool
+                
+        # No default package manager was found for the system,
+        # so notify the user
+        self._conanfile.output.info("A default system package manager couldn't be found for {}, "
+                                    "system packages will not be installed.".format(os_name))
 
     def get_package_name(self, package, host_package=True):
         # Only if the package is for building, for example a library,

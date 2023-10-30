@@ -45,6 +45,7 @@ def test_msys2():
 @pytest.mark.parametrize("distro, tool", [
     ("ubuntu", "apt-get"),
     ("debian", "apt-get"),
+    ("linuxmint", "apt-get"),
     ("pidora", "yum"),
     ("rocky", "yum"),
     ("fedora", "dnf"),
