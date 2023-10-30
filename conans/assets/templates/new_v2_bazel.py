@@ -26,12 +26,6 @@ class {package_name}Conan(ConanFile):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
-    def validate(self):
-        if self.settings.os in ("Windows", "Macos") and self.options.shared:
-            raise ConanException("Windows and Macos needs extra BUILD configuration to be able "
-                                 "to create a shared library. Please, check this reference to "
-                                 "know more about it: https://bazel.build/reference/be/c-cpp")
-
     def layout(self):
         bazel_layout(self)
         # DEPRECATED: Default generators folder will be "conan" in Conan 2.x

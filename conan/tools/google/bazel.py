@@ -11,12 +11,12 @@ class Bazel(object):
         # TODO: Remove namespace in Conan 2.x
         if namespace:
             self._conanfile.output.warning("In Bazel() call, namespace param has been "
-                                        "deprecated as it's not used anymore.")
+                                           "deprecated as it's not used anymore.")
 
     def configure(self, args=None):
         # TODO: Remove in Conan 2.x. Keeping it backward compatible
         self._conanfile.output.warning("Bazel.configure() function has been deprecated."
-                                    " Removing in Conan 2.x.")
+                                       " Removing in Conan 2.x.")
         pass
 
     def _safe_run_command(self, command):
