@@ -11,18 +11,17 @@ class BaseDbTable:
     row_type: namedtuple = None
     columns: namedtuple = None
     unique_together: tuple = None
-    _connection_mutex: threading.Lock = None
+    _connection_mutex = threading.Lock()
 
     def __init__(self, filename):
         self.filename = filename
         column_names: List[str] = [it[0] for it in self.columns_description]
         self.row_type = namedtuple('_', column_names)
         self.columns = self.row_type(*column_names)
-        self._connection_mutex = threading.Lock()
 
     @contextmanager
     def db_connection(self):
-        with self._connection_mutex:
+        with type(self)._connection_mutex:
             connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
             try:
                 yield connection
