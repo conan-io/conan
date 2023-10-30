@@ -8,8 +8,9 @@ def bazel_layout(conanfile, src_folder="."):
     conanfile.folders.source = src_folder if not subproject else os.path.join(subproject, src_folder)
     conanfile.folders.build = "."  # Bazel always build the whole project in the root folder
     # FIXME: Keeping backward-compatibility. Defaulting to "conan" in Conan 2.x.
-    conanfile.folders.generators = conanfile.conf.get("tools.google.bazel_layout:generators_folder",
-                                                      default=".", check_type=str)
+    conanfile.output.warning("In bazel_layout() call, generators folder changes its default value "
+                             "from './' to './conan/' in Conan 2.x")
+    conanfile.folders.generators = "."
     # FIXME: used in test package for example, to know where the binaries are (editables not supported yet)?
     conanfile.cpp.build.bindirs = [os.path.join(conanfile.folders.build, "bazel-bin")]
     conanfile.cpp.build.libdirs = [os.path.join(conanfile.folders.build, "bazel-bin")]

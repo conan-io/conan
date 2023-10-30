@@ -10,14 +10,12 @@ class Bazel(object):
         self._conanfile = conanfile
         # TODO: Remove namespace in Conan 2.x
         if namespace:
-            self._conanfile.output.warn("In Bazel() call, namespace param has been "
-                                        "deprecated as it's not used anymore. Use the bazel_layout()"
-                                        " and the 'tools.google.bazel_layout:generators_folder=xxxx' configuration"
-                                        " to specify another folder for the Conan-generated-files.")
+            self._conanfile.output.warning("In Bazel() call, namespace param has been "
+                                        "deprecated as it's not used anymore.")
 
     def configure(self, args=None):
         # TODO: Remove in Conan 2.x. Keeping it backward compatible
-        self._conanfile.output.warn("Bazel.configure() function has been deprecated."
+        self._conanfile.output.warning("Bazel.configure() function has been deprecated."
                                     " Removing in Conan 2.x.")
         pass
 
@@ -44,7 +42,7 @@ class Bazel(object):
         """
         # TODO: Remove in Conan 2.x. Superseded by target
         if label:
-            self._conanfile.output.warn("In Bazel.build() call, label param has been deprecated."
+            self._conanfile.output.warning("In Bazel.build() call, label param has been deprecated."
                                         " Migrating to target.")
             target = label
         # Use BazelToolchain generated file if exists

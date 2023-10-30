@@ -63,10 +63,8 @@ class BazelToolchain:
         self._conanfile = conanfile
         # TODO: Remove namespace and check_using_build_profile in Conan 2.x
         if namespace:
-            self._conanfile.output.warn("In BazelToolchain() call, namespace param has been "
-                                        "deprecated as it's not used anymore. Use the bazel_layout()"
-                                        " and the 'tools.google.bazel_layout:generators_folder=xxxx' configuration"
-                                        " to specify another folder for the Conan-generated-files.")
+            self._conanfile.output.warning("In BazelToolchain() call, namespace param has been "
+                                        "deprecated as it's not used anymore.")
         check_using_build_profile(self._conanfile)
 
         # Flags

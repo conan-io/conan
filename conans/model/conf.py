@@ -32,7 +32,6 @@ BUILT_IN_CONFS = {
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
     "tools.google.bazel:configs": "Define Bazel config file",
     "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
-    "tools.google.bazel_layout:generators_folder": "Define the generators folder for the bazel_layout(). Defaulted to 'conan' in Conan 2.x",
     "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
