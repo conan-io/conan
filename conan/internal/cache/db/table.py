@@ -1,6 +1,6 @@
 import sqlite3
 import threading
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from contextlib import contextmanager
 from typing import Tuple, List, Optional
 
@@ -11,7 +11,7 @@ class BaseDbTable:
     row_type: namedtuple = None
     columns: namedtuple = None
     unique_together: tuple = None
-    _connection_mutex = threading.Lock()
+    _lock_storage = defaultdict(threading.Lock)
 
     def __init__(self, filename):
         self.filename = filename
@@ -21,13 +21,14 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        assert self._connection_mutex.acquire(timeout=10)
+        lock = self._lock_storage[self.filename]
+        assert lock.acquire(timeout=10)
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
         try:
             yield connection
         finally:
             connection.close()
-            self._connection_mutex.release()
+            lock.release()
 
     def create_table(self):
         def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
