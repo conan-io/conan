@@ -23,13 +23,13 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        assert self.lock.acquire(timeout=10)
+        assert self._lock.acquire(timeout=10)
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
         try:
             yield connection
         finally:
             connection.close()
-            self.lock.release()
+            self._lock.release()
 
     def create_table(self):
         def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
