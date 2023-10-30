@@ -18,8 +18,8 @@ def test_reuse_uploaded_tgz():
     client.save(files)
     client.run("create . --user=user --channel=stable")
     client.run("upload %s -r default" % str(ref))
-    assert "Compressing recipe" in client.out
-    assert "Compressing package" in client.out
+    assert "Compressing conan_export.tgz" in client.out
+    assert "Compressing conan_package.tgz" in client.out
 
 
 def test_reuse_downloaded_tgz():
@@ -32,8 +32,8 @@ def test_reuse_downloaded_tgz():
     client.save(files)
     client.run("create . --user=user --channel=stable")
     client.run("upload hello0/0.1@user/stable -r default")
-    assert "Compressing recipe" in client.out
-    assert "Compressing package" in client.out
+    assert "Compressing conan_export.tgz" in client.out
+    assert "Compressing conan_package.tgz" in client.out
 
     # Other user downloads the package
     # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
@@ -41,8 +41,8 @@ def test_reuse_downloaded_tgz():
     other_client = TestClient(servers=client.servers, inputs=["admin", "password"])
     other_client.run("download hello0/0.1@user/stable -r default")
     other_client.run("upload hello0/0.1@user/stable -r default")
-    assert "Compressing recipe" in client.out
-    assert "Compressing package" in client.out
+    assert "Compressing conan_export.tgz" in client.out
+    assert "Compressing conan_package.tgz" in client.out
 
 
 def test_upload_only_tgz_if_needed():
@@ -56,11 +56,11 @@ def test_upload_only_tgz_if_needed():
 
     # Upload conans
     client.run("upload %s -r default --only-recipe" % str(ref))
-    assert "Compressing recipe" in client.out
+    assert "Compressing conan_export.tgz" in client.out
 
     # Not needed to tgz again
     client.run("upload %s -r default --only-recipe" % str(ref))
-    assert "Compressing recipe" not in client.out
+    assert "Compressing" not in client.out
 
     # Check that conans exists on server
     server_paths = client.servers["default"].server_store
@@ -73,17 +73,17 @@ def test_upload_only_tgz_if_needed():
 
     # Upload package
     client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
-    assert "Compressing package" in client.out
+    assert "Compressing conan_package.tgz" in client.out
 
     # Not needed to tgz again
     client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
-    assert "Compressing package" not in client.out
+    assert "Compressing" not in client.out
 
     # If we install the package again will be removed and re tgz
     client.run("install --requires=%s --build missing" % str(ref))
     # Upload package
     client.run("upload %s#*:%s -r default -c" % (str(ref), str(pref.package_id)))
-    assert "Compressing package" not in client.out
+    assert "Compressing" not in client.out
 
     # Check library on server
     folder = uncompress_packaged_files(server_paths, pref)

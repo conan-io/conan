@@ -15,8 +15,8 @@ from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
+from conan.internal.cache.home_paths import HomePaths
 from conans import __version__ as client_version
-from conans.client.cache.cache import ClientCache
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 
@@ -40,7 +40,7 @@ class Cli:
             module_name = module[1]
             self._add_command("conan.cli.commands.{}".format(module_name), module_name)
 
-        custom_commands_path = ClientCache(self._conan_api.cache_folder).custom_commands_path
+        custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         if not os.path.isdir(custom_commands_path):
             return
 
@@ -156,7 +156,7 @@ class Cli:
             command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
+                cli_out_write("Conan version %s" % client_version)
                 return
 
             if command_argument in ["-h", "--help"]:

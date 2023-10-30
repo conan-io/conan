@@ -48,3 +48,27 @@ def test_info(client):
     assert "RUNNING SOURCE" in client.out
     client.run("graph info --requires=dep/0.1 -c tools.build:download_source=True")
     assert "RUNNING SOURCE" not in client.out
+
+
+def test_info_editable():
+    """ graph info for editable shouldn't crash, but it also shoudn't do anythin
+    # https://github.com/conan-io/conan/issues/15003
+    """
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Dep(ConanFile):
+            name = "dep"
+            version = "0.1"
+
+            def source(self):
+                self.output.info("RUNNING SOURCE!!")
+            """)
+
+    c.save({"conanfile.py": dep})
+    c.run("editable add .")
+    c.run("graph info --requires=dep/0.1")
+    assert "RUNNING SOURCE" not in c.out
+    c.run("graph info --requires=dep/0.1 -c tools.build:download_source=True")
+    assert "RUNNING SOURCE" not in c.out  # BUT it doesn't crash, it used to crash
