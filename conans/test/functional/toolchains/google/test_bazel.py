@@ -26,15 +26,19 @@ def base_profile():
         build_type={build_type}
 
         [conf]
+        # FIXME: Conan 2.x
+        # tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
+        # tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
         tools.google.bazel:bazelrc_path={curdir}/mybazelrc
-        tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
+        tools.google.bazel:configs="{build_type}", "withTimeStamps"
         """)
 
 
 @pytest.fixture(scope="module")
 def client_exe(bazelrc):
     client = TestClient(path_with_spaces=False)
-    client.run("new myapp/1.0 --template bazel_exe")
+    # client.run("new bazel_exe -d name=myapp -d version=1.0")
+    client.run("new myapp/1.0 -m bazel_exe")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
@@ -44,17 +48,29 @@ def client_exe(bazelrc):
 @pytest.fixture(scope="module")
 def client_lib(bazelrc):
     client = TestClient(path_with_spaces=False)
-    client.run("new mylib/1.0 --template bazel_lib")
+    # client.run("new bazel_lib -d name=mylib -d version=1.0")
+    client.run("new mylib/1.0 -m bazel_lib")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
     return client
 
 
+@pytest.mark.skipif(platform.system() == "Linux", reason="Validate exception raises "
+                                                         "only for Macos/Windows")
+@pytest.mark.tool_bazel
+def test_basic_exe():
+    client = TestClient(path_with_spaces=False)
+    # client.run("new bazel_lib -d name=mylib -d version=1.0")
+    client.run("new mylib/1.0 -m bazel_lib")
+    client.run("create . -o '*:shared=True'", assert_error=True)
+    assert "Windows and Macos needs extra BUILD configuration" in client.out
+
+
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
 @pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
                                                          "and win is suspect too")
-@pytest.mark.tool("bazel")
+@pytest.mark.tool_bazel
 def test_basic_exe(client_exe, build_type, base_profile):
 
     profile = base_profile.format(build_type=build_type, curdir=client_exe.current_folder)
@@ -70,7 +86,7 @@ def test_basic_exe(client_exe, build_type, base_profile):
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
 @pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
                                                          "and win is suspect too")
-@pytest.mark.tool("bazel")
+@pytest.mark.tool_bazel
 def test_basic_lib(client_lib, build_type, base_profile):
 
     profile = base_profile.format(build_type=build_type, curdir=client_lib.current_folder)
@@ -85,13 +101,14 @@ def test_basic_lib(client_lib, build_type, base_profile):
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
                                                          "and win is suspect too")
-@pytest.mark.tool("bazel")
+@pytest.mark.tool_bazel
 def test_transitive_consuming():
 
     client = TestClient(path_with_spaces=False)
     # A regular library made with CMake
     with client.chdir("zlib"):
-        client.run("new zlib/1.2.11 --template cmake_lib")
+        # client.run("new cmake_lib -d name=zlib -d version=1.2.11")
+        client.run("new zlib/1.2.11 -m cmake_lib")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -127,8 +144,7 @@ def test_transitive_consuming():
 
                 def build(self):
                     bazel = Bazel(self)
-                    bazel.configure()
-                    bazel.build(label="//main:openssl")
+                    bazel.build(target="//main:openssl")
 
                 def package(self):
                     dest_bin = os.path.join(self.package_folder, "bin")
@@ -207,8 +223,6 @@ def test_transitive_consuming():
 
     class OpenSSLTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
-        # VirtualBuildEnv and VirtualRunEnv can be avoided if "tools.env.virtualenv:auto_use" is defined
-        # (it will be defined in Conan 2.0)
         generators = "BazelToolchain", "BazelDeps", "VirtualBuildEnv", "VirtualRunEnv"
         apply_env = False
 
@@ -217,8 +231,7 @@ def test_transitive_consuming():
 
         def build(self):
             bazel = Bazel(self)
-            bazel.configure()
-            bazel.build(label="//main:example")
+            bazel.build(target="//main:example")
 
         def layout(self):
             bazel_layout(self)
