@@ -21,7 +21,7 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        with type(self)._connection_mutex:
+        with self._connection_mutex:
             connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
             try:
                 yield connection
