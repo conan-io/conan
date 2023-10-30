@@ -23,7 +23,7 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        assert self._lock.acquire(timeout=10)
+        assert self._lock.acquire()
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=10)
         try:
             yield connection
