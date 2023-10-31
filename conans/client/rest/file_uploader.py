@@ -1,4 +1,6 @@
 import time
+import os
+import contextlib
 from copy import copy
 
 from conan.api.output import ConanOutput
@@ -80,8 +82,20 @@ class FileUploader(object):
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
+    def _get_file_handler_or_empty_buffer(self, abs_path):
+        """Return a context manager for abs_path or an empty buffer.
+        If abs_path points to a non empty file, open abs_path and return the file handler.
+        If abs_path points to an empty file, return a context handler for an empty
+        string.
+        This avoids an issue with several web servers that cannot handle
+        "Transfer-Encoding: chunked" for empty files."""
+        if os.stat(abs_path).st_size == 0:
+            return contextlib.nullcontext("")
+        else:
+            return open(abs_path, mode='rb')
+
     def _upload_file(self, url, abs_path,  headers, auth):
-        with open(abs_path, mode='rb') as file_handler:
+        with self._get_file_handler_or_empty_buffer(abs_path) as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth)
