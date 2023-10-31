@@ -27,21 +27,19 @@ class {package_name}Conan(ConanFile):
             del self.options.fPIC
 
     def layout(self):
-        bazel_layout(self)
         # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
         self.folders.generators = "conan"
+        bazel_layout(self)
 
     def build(self):
         bazel = Bazel(self)
-        # Linux creates both shared and static libraries by default
-        if self.settings.os == "Linux":
-            bazel.build()
+        # Linux creates both shared and static libraries by default, and
+        # it is even conflicting if we use the cc_shared_library rule
+        if self.options.shared and self.settings.os != "Linux":
+            # main/BUILD uses cc_shared_library to create shared libraries
+            bazel.build(args=["--experimental_cc_shared_library"], target="//main:{name}_shared")
         else:
-            if self.options.shared:
-                # main/BUILD uses cc_shared_library to create shared libraries
-                bazel.build(args=["--experimental_cc_shared_library"])
-            else:
-                bazel.build(target="//main:{name}")
+            bazel.build(target="//main:{name}")
 
     def package(self):
         dest_lib = os.path.join(self.package_folder, "lib")
@@ -81,9 +79,9 @@ class {package_name}TestConan(ConanFile):
         bazel.build()
 
     def layout(self):
-        bazel_layout(self)
         # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
         self.folders.generators = "conan"
+        bazel_layout(self)
 
     def test(self):
         if not cross_building(self):
@@ -158,9 +156,9 @@ class {package_name}Conan(ConanFile):
     generators = "BazelToolchain"
 
     def layout(self):
-        bazel_layout(self)
         # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
         self.folders.generators = "conan"
+        bazel_layout(self)
 
     def build(self):
         bazel = Bazel(self)
