@@ -36,7 +36,7 @@ class {package_name}Conan(ConanFile):
         # Linux creates both shared and static libraries by default, and
         # it is even conflicting if we use the cc_shared_library rule
         if self.options.shared and self.settings.os != "Linux":
-            # main/BUILD uses cc_shared_library to create shared libraries
+            # We need to add '--experimental_cc_shared_library' because the project uses cc_shared_library to create shared libraries
             bazel.build(args=["--experimental_cc_shared_library"], target="//main:{name}_shared")
         else:
             bazel.build(target="//main:{name}")
