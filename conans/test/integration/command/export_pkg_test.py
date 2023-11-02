@@ -399,7 +399,7 @@ def test_export_pkg_json_formatter():
     for n in nodes.values():
         ref = n["ref"]
         if ref == hello_pkg_ref:
-            assert n['binary'] is None  # The exported package has no binary status
+            assert n['binary'] == "Build"
             hello_cpp_info = n['cpp_info']
         elif ref == pkg_pkg_ref:
             assert n['binary'] == "Cache"
