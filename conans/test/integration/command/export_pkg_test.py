@@ -284,7 +284,6 @@ class TestConan(ConanFile):
 
         # Wrong folders
         client.run("export-pkg . --format=json")
-        print(client.stdout)
         graph = json.loads(client.stdout)
         node = graph["graph"]["nodes"]["0"]
         assert "pkg/0.1" in node["ref"]
