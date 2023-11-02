@@ -91,15 +91,11 @@ class Git:
 
         try:
             # This will raise if commit not present.
-            self.run("fetch origin --dry-run --depth=1 {}".format(commit))
+            self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
             return True
         except Exception as e:
-            # The error message contains the command and the commit if it can't find it.
-            if str(e).count(commit) == 2:
-                return False
-            else:
-                # Perhaps a connection error.
-                raise ConanException("Unable to check remote commit in '%s': %s" % (self.folder, str(e)))
+            # Don't raise an error because the fetch could fail for many more reasons than the branch.
+            return False
 
     def is_dirty(self):
         """
