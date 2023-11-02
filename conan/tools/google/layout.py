@@ -6,7 +6,7 @@ def bazel_layout(conanfile, src_folder=".", build_folder=".", target_folder=None
     folder. See more information in https://bazel.build/remote/output-directories"""
     subproject = conanfile.folders.subproject
     conanfile.folders.source = src_folder if not subproject else os.path.join(subproject, src_folder)
-    # Bazel always build the whole project in the root folder, but consumer can put another one
+    # Bazel always builds the whole project in the root folder, but consumer can put another one
     conanfile.folders.build = build_folder if not subproject else os.path.join(subproject, build_folder)
     # TODO: Remove this warning in Conan 2.x
     if not conanfile.folders.generators:

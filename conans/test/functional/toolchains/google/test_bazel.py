@@ -61,20 +61,20 @@ def test_transitive_libs_consuming(shared):
     Testing the next dependencies structure for shared/static libs
 
     /.
-    |- zlib/
+    |- myfirstlib/
          |- conanfile.py
          |- WORKSPACE
          |- main/
             |- BUILD
-            |- zlib.cpp
-            |- zlib.h
-    |- openssl/
-         |- conanfile.py  (requires zlib)
+            |- myfirstlib.cpp
+            |- myfirstlib.h
+    |- mysecondlib/  (requires myfirstlib)
+         |- conanfile.py
          |- WORKSPACE
          |- main/
             |- BUILD
-            |- openssl.cpp
-            |- openssl.h
+            |- mysecondlib.cpp
+            |- mysecondlib.h
          |- test_package/
             |- WORKSPACE
             |- conanfile.py
@@ -84,9 +84,9 @@ def test_transitive_libs_consuming(shared):
     """
     client = TestClient(path_with_spaces=False)
     # A regular library made with Bazel
-    with client.chdir("zlib"):
-        # client.run("new bazel_lib -d name=zlib -d version=1.2.11")
-        client.run("new zlib/1.2.11 -m bazel_lib")
+    with client.chdir("myfirstlib"):
+        # client.run("new bazel_lib -d name=myfirstlib -d version=1.2.11")
+        client.run("new myfirstlib/1.2.11 -m bazel_lib")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -99,16 +99,16 @@ def test_transitive_libs_consuming(shared):
         client.save({"conanfile.py": conanfile})
         client.run(f"create . -o '*:shared={shared}' -tf None")  # skipping tests
 
-    with client.chdir("openssl"):
-        # We prepare a consumer with Bazel (library openssl using zlib) and a test_package with an
-        # example executable
+    with client.chdir("mysecondlib"):
+        # We prepare a consumer with Bazel (library mysecondlib using myfirstlib)
+        # and a test_package with an example executable
         os_ = platform.system()
-        # client.run("new bazel_lib -d name=openssl -d version=1.0")
-        client.run("new openssl/1.0 -m bazel_lib")
+        # client.run("new bazel_lib -d name=mysecondlib -d version=1.0")
+        client.run("new mysecondlib/1.0 -m bazel_lib")
         conanfile = client.load("conanfile.py")
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'
-                                      '    requires = "zlib/1.2.11"')
+                                      '    requires = "myfirstlib/1.2.11"')
         workspace = textwrap.dedent("""
         load("@//conan:dependencies.bzl", "load_conan_dependencies")
         load_conan_dependencies()
@@ -117,60 +117,60 @@ def test_transitive_libs_consuming(shared):
         load("@rules_cc//cc:defs.bzl", "cc_library")
 
         cc_library(
-            name = "openssl",
-            srcs = ["openssl.cpp"],
-            hdrs = ["openssl.h"],
-            deps = [ "@zlib//:zlib" ]
+            name = "mysecondlib",
+            srcs = ["mysecondlib.cpp"],
+            hdrs = ["mysecondlib.h"],
+            deps = [ "@myfirstlib//:myfirstlib" ]
         )
         """)
         bazel_build = textwrap.dedent("""\
         load("@rules_cc//cc:defs.bzl", "cc_library")
 
         cc_library(
-            name = "openssl",
-            srcs = ["openssl.cpp"],
-            hdrs = ["openssl.h"],
-            deps = [ "@zlib//:zlib" ]
+            name = "mysecondlib",
+            srcs = ["mysecondlib.cpp"],
+            hdrs = ["mysecondlib.h"],
+            deps = [ "@myfirstlib//:myfirstlib" ]
         )
 
         cc_shared_library(
-            name = "openssl_shared",
-            shared_lib_name = "libopenssl.{}",
-            deps = [":openssl"],
+            name = "mysecondlib_shared",
+            shared_lib_name = "libmysecondlib.{}",
+            deps = [":mysecondlib"],
         )
         """.format("dylib" if os_ == "Darwin" else "dll"))
-        openssl_c = textwrap.dedent("""
+        mysecondlib_c = textwrap.dedent("""
         #include <iostream>
-        #include "openssl.h"
-        #include "zlib.h"
-        #include <math.h>
+        #include "mysecondlib.h"
+        #include "myfirstlib.h"
+        #include <cmath>
 
-        void openssl(){
-            std::cout << "openssl() First define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
-            zlib();
-            // This comes from the systemlibs declared in the zlib
+        void mysecondlib(){
+            std::cout << "mysecondlib() First define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << std::endl;
+            myfirstlib();
+            // This comes from the systemlibs declared in the myfirstlib
             sqrt(25);
         }
         """)
-        openssl_c_win = textwrap.dedent("""
+        mysecondlib_c_win = textwrap.dedent("""
         #include <iostream>
-        #include "openssl.h"
-        #include "zlib.h"
+        #include "mysecondlib.h"
+        #include "myfirstlib.h"
         #include <WinSock2.h>
 
-        void openssl(){
+        void mysecondlib(){
             SOCKET foo; // From the system library
-            std::cout << "openssl() First define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
-            zlib();
+            std::cout << "mysecondlib() First define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << std::endl;
+            myfirstlib();
         }
         """)
         # Overwriting files
         client.save({"conanfile.py": conanfile,
                      "WORKSPACE": workspace,
                      "main/BUILD.bazel": bazel_build_linux if os_ == "Linux" else bazel_build,
-                     "main/openssl.cpp": openssl_c if os_ != "Windows" else openssl_c_win,
+                     "main/mysecondlib.cpp": mysecondlib_c if os_ != "Windows" else mysecondlib_c_win,
                      })
 
         client.run(f"create . -o '*:shared={shared}'")
-        assert "openssl() First define MY_VALUE and other define 2" in client.out
-        assert "zlib/1.2.11: Hello World Release!"
+        assert "mysecondlib() First define MY_VALUE and other define 2" in client.out
+        assert "myfirstlib/1.2.11: Hello World Release!"
