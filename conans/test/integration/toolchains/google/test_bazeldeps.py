@@ -193,7 +193,7 @@ def test_pkg_with_public_deps_and_component_requires():
     Testing a complex structure like:
 
     * first/0.1
-        - Global bazel_module_name == "myfirstlib"
+        - Global bazel_target_name == "myfirstlib"
         - Components: "cmp1"
     * other/0.1
     * second/0.1
@@ -224,7 +224,7 @@ def test_pkg_with_public_deps_and_component_requires():
                 save(self, dest_lib, "")
 
             def package_info(self):
-                self.cpp_info.set_property("bazel_module_name", "myfirstlib")
+                self.cpp_info.set_property("bazel_target_name", "myfirstlib")
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
     """)
     client.save({"conanfile.py": conanfile})
@@ -290,7 +290,7 @@ def test_pkg_with_public_deps_and_component_requires():
         ],
         visibility = ["//visibility:public"],
         deps = [
-            "@myfirstlib//:myfirstlib-cmp1",
+            "@first//:myfirstlib-cmp1",
         ],
     )
 
@@ -321,10 +321,10 @@ def test_pkg_with_public_deps_and_component_requires():
         deps = [
             ":second-mycomponent",
             ":second-myfirstcomp",
-            "@myfirstlib//:myfirstlib",
+            "@first//:myfirstlib",
         ],
     )""") in content
-    content = client2.load("myfirstlib/BUILD.bazel")
+    content = client2.load("first/BUILD.bazel")
     assert textwrap.dedent("""\
     # Components precompiled libs
     cc_import(
@@ -372,10 +372,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
     Testing another complex structure like:
 
     * other/0.1
-        - Global bazel_module_name == "fancy_name"
+        - Global bazel_target_name == "fancy_name"
         - Components: "cmp1", "cmp2", "cmp3"
-            + "cmp1" bazel_module_name == "component1" (it shouldn't be affected by "fancy_name")
-            + "cmp3" bazel_module_name == "component3" (it shouldn't be affected by "fancy_name")
+            + "cmp1" bazel_target_name == "component1" (it shouldn't be affected by "fancy_name")
+            + "cmp3" bazel_target_name == "component3" (it shouldn't be affected by "fancy_name")
             + "cmp3" requires "cmp1"
     * pkg/0.1
         - Requires: "other/0.1" -> "other::cmp1"
@@ -400,12 +400,12 @@ def test_pkg_with_public_deps_and_component_requires_2():
                 save(self, dest_lib2, "")
 
             def package_info(self):
-                self.cpp_info.set_property("bazel_module_name", "fancy_name")
+                self.cpp_info.set_property("bazel_target_name", "fancy_name")
                 self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
-                self.cpp_info.components["cmp1"].set_property("bazel_module_name", "component1")
+                self.cpp_info.components["cmp1"].set_property("bazel_target_name", "component1")
                 self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
                 self.cpp_info.components["cmp3"].requires.append("cmp1")
-                self.cpp_info.components["cmp3"].set_property("bazel_module_name", "component3")
+                self.cpp_info.components["cmp3"].set_property("bazel_target_name", "component3")
     """)
     client.save({"conanfile.py": conanfile})
     client.run("create . other/1.0@")
@@ -445,10 +445,10 @@ def test_pkg_with_public_deps_and_component_requires_2():
         ],
         visibility = ["//visibility:public"],
         deps = [
-            "@fancy_name//:component1",
+            "@other//:component1",
         ],
     )""") in content
-    content = client2.load("fancy_name/BUILD.bazel")
+    content = client2.load("other/BUILD.bazel")
     assert textwrap.dedent("""\
     # Components precompiled libs
     cc_import(
@@ -673,12 +673,13 @@ def test_tool_requires():
         class PkgBazelConan(ConanFile):
 
             def package_info(self):
-                self.cpp_info.set_property("bazel_module_name", "libother")
+                self.cpp_info.set_property("bazel_target_name", "libother")
+                self.cpp_info.set_property("bazel_repository_name", "other-repo")
                 self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
-                self.cpp_info.components["cmp1"].set_property("bazel_module_name", "component1")
+                self.cpp_info.components["cmp1"].set_property("bazel_target_name", "component1")
                 self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
                 self.cpp_info.components["cmp3"].requires.append("cmp1")
-                self.cpp_info.components["cmp3"].set_property("bazel_module_name", "component3")
+                self.cpp_info.components["cmp3"].set_property("bazel_target_name", "component3")
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("create . other/1.0@")
@@ -702,7 +703,7 @@ def test_tool_requires():
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
-    assert 'name = "build-tool"' in client.load("build-tool/BUILD.bazel")
+    assert 'name = "tool"' in client.load("build-tool/BUILD.bazel")
     assert textwrap.dedent("""\
     # Components libraries declaration
     cc_library(
@@ -717,7 +718,7 @@ def test_tool_requires():
     )
 
     cc_library(
-        name = "build-libother-cmp2",
+        name = "libother-cmp2",
         hdrs = glob([
             "include/**",
         ]),
@@ -743,7 +744,7 @@ def test_tool_requires():
 
     # Package library declaration
     cc_library(
-        name = "build-libother",
+        name = "libother",
         hdrs = glob([
             "include/**",
         ]),
@@ -753,10 +754,10 @@ def test_tool_requires():
         visibility = ["//visibility:public"],
         deps = [
             ":component1",
-            ":build-libother-cmp2",
+            ":libother-cmp2",
             ":component3",
         ],
-    )""") in client.load("build-libother/BUILD.bazel")
+    )""") in client.load("build-other-repo/BUILD.bazel")
 
 
 def test_tool_requires_not_created_if_no_activated():
@@ -829,7 +830,8 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default")
-    assert 'name = "build-tool"' in client.load("build-tool/BUILD.bazel")
+    # Different Bazel repository names, same target names
+    assert 'name = "tool"' in client.load("build-tool/BUILD.bazel")
     assert 'name = "tool"' in client.load("tool/BUILD.bazel")
 
 

@@ -9,7 +9,7 @@ from conan.errors import ConanException
 from conan.tools._check_build_profile import check_using_build_profile
 from conans.util.files import save
 
-_DepInfo = namedtuple("DepInfo", ['name', 'requires', 'cpp_info'])
+_BazelTargetInfo = namedtuple("DepInfo", ['repository_name', 'name', 'requires', 'cpp_info'])
 _LibInfo = namedtuple("LibInfo", ['name', 'is_shared', 'lib_path', 'interface_lib_path'])
 
 
@@ -27,13 +27,18 @@ def _get_package_reference_name(dep):
     return dep.ref.name
 
 
-def _get_package_name(dep):
-    pkg_name = dep.cpp_info.get_property("bazel_module_name") or _get_package_reference_name(dep)
+def _get_repository_name(dep):
+    pkg_name = dep.cpp_info.get_property("bazel_repository_name") or _get_package_reference_name(dep)
     return f"build-{pkg_name}" if dep.context == "build" else pkg_name
 
 
+def _get_target_name(dep):
+    pkg_name = dep.cpp_info.get_property("bazel_target_name") or _get_package_reference_name(dep)
+    return pkg_name
+
+
 def _get_component_name(dep, comp_ref_name):
-    pkg_name = _get_package_name(dep)
+    pkg_name = _get_target_name(dep)
     if comp_ref_name not in dep.cpp_info.components:
         # foo::foo might be referencing the root cppinfo
         if _get_package_reference_name(dep) == comp_ref_name:
@@ -41,8 +46,8 @@ def _get_component_name(dep, comp_ref_name):
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=_get_package_reference_name(dep),
                                                           cname=comp_ref_name))
-    comp_name = dep.cpp_info.components[comp_ref_name].get_property("bazel_module_name")
-    # If user did not set bazel_module_name, let's create a component name
+    comp_name = dep.cpp_info.components[comp_ref_name].get_property("bazel_target_name")
+    # If user did not set bazel_target_name, let's create a component name
     # with a namespace, e.g., dep-comp1
     return comp_name or _get_name_with_namespace(pkg_name, comp_ref_name)
 
@@ -363,7 +368,7 @@ class _BazelBUILDGenerator:
         """
         Returns the absolute path to the BUILD file created by Conan
         """
-        folder = os.path.join(self._root_package_info.name, self.filename)
+        folder = os.path.join(self._root_package_info.repository_name, self.filename)
         return folder.replace("\\", "/")
 
     @property
@@ -385,7 +390,7 @@ class _BazelBUILDGenerator:
         return root_folder.replace("\\", "/")
 
     @property
-    def package_name(self):
+    def target_name(self):
         """
         Wrapper to get the final name used for the root dependency cc_library declaration
         """
@@ -493,7 +498,7 @@ class _InfoGenerator:
                 try:
                     req_conanfile = self._transitive_reqs[pkg_ref_name]
                     # Requirements declared in another dependency BUILD file
-                    prefix = f"@{_get_package_name(req_conanfile)}//:"
+                    prefix = f"@{_get_repository_name(req_conanfile)}//:"
                 except KeyError:
                     continue  # If the dependency is not in the transitive, might be skipped
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
@@ -508,7 +513,7 @@ class _InfoGenerator:
         Get the whole package and its components information like their own requires, names and even
         the cpp_info for each component.
 
-        :return: `list` of `_DepInfo` objects with all the components information
+        :return: `list` of `_BazelTargetInfo` objects with all the components information
         """
         if not self._dep.cpp_info.has_components:
             return []
@@ -519,7 +524,7 @@ class _InfoGenerator:
             comp_requires_names = self._get_cpp_info_requires_names(cpp_info)
             comp_name = _get_component_name(self._dep, comp_ref_name)
             # Save each component information
-            components_info.append(_DepInfo(comp_name, comp_requires_names, cpp_info))
+            components_info.append(_BazelTargetInfo(None, comp_name, comp_requires_names, cpp_info))
         return components_info
 
     @property
@@ -527,20 +532,20 @@ class _InfoGenerator:
         """
         Get the whole package information
 
-        :return: `_DepInfo` object with the package information
+        :return: `_BazelTargetInfo` object with the package information
         """
-        pkg_name = _get_package_name(self._dep)
+        repository_name = _get_repository_name(self._dep)
+        pkg_name = _get_target_name(self._dep)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
-            for req in self._transitive_reqs.values():
-                req_name = _get_package_name(req)
-                requires.append(f"@{req_name}//:{req_name}")
+            requires = [f"@{_get_repository_name(req)}//:{_get_target_name(req)}"
+                        for req in self._transitive_reqs.values()]
         cpp_info = self._dep.cpp_info
-        return _DepInfo(pkg_name, requires, cpp_info)
+        return _BazelTargetInfo(repository_name, pkg_name, requires, cpp_info)
 
 
 class BazelDeps:
@@ -573,9 +578,9 @@ class BazelDeps:
             bazel_generator.generate()
             # Saving pieces of information from each BUILD file
             deps_info.append((
-                bazel_generator.package_name,  # package name
-                bazel_generator.package_folder,  # path to dependency folder
-                bazel_generator.absolute_build_file_pah  # path to the BUILD file created
+                bazel_generator.target_name,  # Bazel target name
+                bazel_generator.package_folder,  # path to the dependency folder
+                bazel_generator.absolute_build_file_pah  # path to the BUILD.bazel file created
             ))
         # dependencies.bzl has all the information about where to look for the dependencies
         bazel_dependencies_module_generator = _BazelDependenciesBZLGenerator(self._conanfile,
