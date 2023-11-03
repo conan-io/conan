@@ -921,7 +921,6 @@ class TestGitShallowTagClone:
         """
         a shallow cloned repo won't have the new commit locally, but can fetch it.
         """
-        return
         folder = temp_folder()
         url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
 
