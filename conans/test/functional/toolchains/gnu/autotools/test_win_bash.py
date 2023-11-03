@@ -4,7 +4,7 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
+from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.conftest import tools_locations
 from conans.test.functional.utils import check_exe_run
@@ -105,6 +105,7 @@ def test_add_msys2_path_automatically():
     client.run("create .")
     assert "ar.exe" in client.out
 
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_autotools_support_custom_make():
     """ Check that the conf setting `tools.gnu:make_program` works when set with
@@ -131,11 +132,9 @@ def test_autotools_support_custom_make():
             tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
             """.format(bash_path, make_path)))
 
-    main = gen_function_cpp(name="main")
     # The autotools support for "cl" compiler (VS) is very limited, linking with deps doesn't
     # work but building a simple app do
-    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
-    configure_ac = gen_configure_ac()
+    makefile = gen_makefile()
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -143,27 +142,20 @@ def test_autotools_support_custom_make():
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
-            exports_sources = "configure.ac", "Makefile.am", "main.cpp"
             generators = "AutotoolsToolchain"
             win_bash = True
 
             def build(self):
                 # These commands will run in bash activating first the vcvars and
                 # then inside the bash activating the
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
                 autotools = Autotools(self)
-                autotools.configure()
                 autotools.make()
-                autotools.install()
         """)
 
     client.save({"conanfile.py": conanfile,
-                 "configure.ac": configure_ac,
-                 "Makefile.am": makefile_am,
-                 "main.cpp": main})
+                 "Makefile": makefile})
     client.run("install . -s:b os=Windows -s:h os=Windows")
     client.run("build .")
-    client.run_command("main.exe")
-    check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
+    # This used to crash, because ``make_program`` was not unix_path
+    assert "conanfile.py: Calling build()" in client.out
+
