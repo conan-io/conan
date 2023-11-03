@@ -889,3 +889,76 @@ def test_capture_git_tag():
     assert "pkg/1.2" in c.out
     c.run("install --requires=pkg/1.2")
     assert "pkg/1.2" in c.out
+
+
+@pytest.mark.tool("git")
+class TestGitShallowTagClone:
+    """
+    When we do a shallow clone of a repo with a specific tag/branch, it doesn't
+    clone any of the git history.  When we check to see if a commit is in the
+    repo, we fallback to a git fetch if we can't verify the commit locally.
+    """
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.scm import Git
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                git = Git(self, self.recipe_folder)
+                commit = git.get_commit()
+                url = git.get_remote_url()
+                self.output.info("URL: {}".format(url))
+                self.output.info("COMMIT: {}".format(commit))
+                in_remote = git.commit_in_remote(commit)
+                self.output.info("COMMIT IN REMOTE: {}".format(in_remote))
+                self.output.info("DIRTY: {}".format(git.is_dirty()))
+        """)
+
+    def test_find_tag_in_remote(self):
+        """
+        a shallow cloned repo won't have the new commit locally, but can fetch it.
+        """
+        return
+        folder = temp_folder()
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
+
+        c = TestClient()
+        # Create a tag
+        with c.chdir(folder):
+            c.run_command('git tag 1.0.0')
+
+        # Do a shallow clone of our tag
+        c.run_command('git clone --depth=1 --branch 1.0.0 "{}" myclone'.format(folder))
+        with c.chdir("myclone"):
+            c.run("export .")
+            assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+            assert "pkg/0.1: URL: {}".format(url) in c.out
+            assert "pkg/0.1: COMMIT IN REMOTE: True" in c.out
+            assert "pkg/0.1: DIRTY: False" in c.out
+
+    def test_detect_commit_not_in_remote(self):
+        """
+        a shallow cloned repo won't have new commit in remote
+        """
+        folder = temp_folder()
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
+
+        c = TestClient()
+        # Create a tag
+        with c.chdir(folder):
+            c.run_command('git tag 1.0.0')
+
+        # Do a shallow clone of our tag
+        c.run_command('git clone --depth=1 --branch 1.0.0 "{}" myclone'.format(folder))
+        with c.chdir("myclone"):
+            c.save({"conanfile.py": self.conanfile + "\n# some coment!"})
+            new_commit = git_add_changes_commit(c.current_folder)
+
+            c.run("export .")
+            assert "pkg/0.1: COMMIT: {}".format(new_commit) in c.out
+            assert "pkg/0.1: URL: {}".format(url) in c.out
+            assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
+            assert "pkg/0.1: DIRTY: False" in c.out
