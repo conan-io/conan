@@ -28,7 +28,9 @@ class DetectedArchitectureTest(unittest.TestCase):
         ['s390x', 's390x'],
         ['arm64', "armv8"],
         ['aarch64', 'armv8'],
-        ['ARM64', 'armv8']
+        ['ARM64', 'armv8'],
+        ["riscv64", 'riscv64'],
+        ['riscv32', "riscv32"]
     ])
     def test_various(self, mocked_machine, expected_arch):
 
