@@ -6,7 +6,6 @@ import textwrap
 import pytest
 from mock import mock
 
-import conans.test.unittests.util.output_test
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
