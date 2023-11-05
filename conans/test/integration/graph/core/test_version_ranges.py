@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import pytest
 
 from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
@@ -321,9 +322,10 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, liba])
 
-    def test_two_ranges_overriden_conflict(self):
+    def test_two_ranges_overriden_no_conflict(self):
         # app -> libb/0.1 -(range >0)-> liba/0.1
         #   \ ---------liba/[<0.3>]-------------/
+        # Conan learned to solve this conflict in 2.0.14
         self.recipe_cache("liba/0.1")
         self.recipe_cache("liba/0.2")
         self.recipe_cache("liba/0.3")
@@ -332,16 +334,16 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[<0.3]"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        # This is no longer a conflict, and Conan knows that liba/2.0 is a valid joint solution
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(liba, "liba/0.3#123", dependents=[libb], deps=[])
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
 
 
 def test_mixed_user_channel():
@@ -416,3 +418,22 @@ def test_unknown_options():
 
     c.run("graph info --requires=lib/[>1.2,unknown_conf]")
     assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out
+
+
+@pytest.mark.parametrize("version_range,should_warn", [
+    [">=0.1, include_prereleases", False],
+    [">=0.1, include_prerelease=True", True],
+    [">=0.1, include_prerelease=False", True]
+])
+def test_bad_options_syntax(version_range, should_warn):
+    """We don't error out on bad options, maybe we should,
+    but for now this test ensures we don't change it without realizing"""
+    tc = TestClient()
+    tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_requires(f"lib/[{version_range}]")})
+    tc.run("export lib")
+    tc.run("graph info app/conanfile.py")
+    if should_warn:
+        assert "its presence unconditionally enables prereleases" in tc.out
+    else:
+        assert "its presence unconditionally enables prereleases" not in tc.out

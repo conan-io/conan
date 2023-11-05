@@ -80,11 +80,22 @@ class Git:
         """
         if not remote:
             return False
+        # Potentially do two checks here.  If the clone is a shallow clone, then we won't be
+        # able to find the commit.
         try:
             branches = self.run("branch -r --contains {}".format(commit))
-            return "{}/".format(remote) in branches
+            if "{}/".format(remote) in branches:
+                return True
         except Exception as e:
             raise ConanException("Unable to check remote commit in '%s': %s" % (self.folder, str(e)))
+
+        try:
+            # This will raise if commit not present.
+            self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
+            return True
+        except Exception as e:
+            # Don't raise an error because the fetch could fail for many more reasons than the branch.
+            return False
 
     def is_dirty(self):
         """

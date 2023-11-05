@@ -283,9 +283,17 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
 
         # Wrong folders
-        client.run("export-pkg . --format=json", redirect_stdout="file.json")
-        graph = json.loads(client.load("file.json"))
-        assert "pkg/0.1" in graph["graph"]["nodes"]["0"]["ref"]
+        client.run("export-pkg . --format=json")
+        graph = json.loads(client.stdout)
+        node = graph["graph"]["nodes"]["0"]
+        assert "pkg/0.1" in node["ref"]
+        # https://github.com/conan-io/conan/issues/15041
+        assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" == node["package_id"]
+        assert "485dad6cb11e2fa99d9afbe44a57a164" == node["rrev"]
+        assert "0ba8627bd47edc3a501e8f0eb9a79e5e" == node["prev"]
+        assert "Build" == node["binary"]
+        assert node["rrev_timestamp"] is not None
+        assert node["prev_timestamp"] is not None
 
     def test_export_pkg_no_ref(self):
         client = TestClient()
@@ -391,7 +399,7 @@ def test_export_pkg_json_formatter():
     for n in nodes.values():
         ref = n["ref"]
         if ref == hello_pkg_ref:
-            assert n['binary'] is None  # The exported package has no binary status
+            assert n['binary'] == "Build"
             hello_cpp_info = n['cpp_info']
         elif ref == pkg_pkg_ref:
             assert n['binary'] == "Cache"

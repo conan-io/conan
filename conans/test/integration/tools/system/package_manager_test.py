@@ -45,6 +45,7 @@ def test_msys2():
 @pytest.mark.parametrize("distro, tool", [
     ("ubuntu", "apt-get"),
     ("debian", "apt-get"),
+    ("linuxmint", "apt-get"),
     ("pidora", "yum"),
     ("rocky", "yum"),
     ("fedora", "dnf"),
@@ -58,6 +59,9 @@ def test_msys2():
     ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
     ("alpine", "apk"),
+    ('altlinux', "apt-get"),
+    ("astra", 'apt-get'),
+    ('elbrus', 'apt-get'),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
@@ -171,7 +175,8 @@ def test_dnf_yum_return_code_100(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,
+                     quiet=False):
             assert command == result
             return 100 if "check-update" in command else 0
 
@@ -183,7 +188,8 @@ def test_dnf_yum_return_code_100(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,
+                     quiet=False):
             return 55 if "check-update" in command else 0
 
         conanfile.run = fake_run
@@ -193,7 +199,7 @@ def test_dnf_yum_return_code_100(tool_class, result):
 
 
 @pytest.mark.parametrize("tool_class, arch_host, result", [
-    # not cross-compile -> do not add host architecture
+    # Install host package and not cross-compile -> do not add host architecture
     (Apk, 'x86_64', 'apk add --no-cache package1 package2'),
     (Apt, 'x86_64', 'apt-get install -y --no-install-recommends package1 package2'),
     (Yum, 'x86_64', 'yum install -y package1 package2'),
@@ -204,7 +210,7 @@ def test_dnf_yum_return_code_100(tool_class, result):
     (Chocolatey, 'x86_64', 'choco install --yes package1 package2'),
     (PacMan, 'x86_64', 'pacman -S --noconfirm package1 package2'),
     (Zypper, 'x86_64', 'zypper --non-interactive in package1 package2'),
-    # cross-compile -> add host architecture https://github.com/conan-io/conan/issues/12320
+    # Install host package and cross-compile -> add host architecture
     (Apt, 'x86', 'apt-get install -y --no-install-recommends package1:i386 package2:i386'),
     (Yum, 'x86', 'yum install -y package1.i?86 package2.i?86'),
     (Dnf, 'x86', 'dnf install -y package1.i?86 package2.i?86'),
@@ -233,6 +239,46 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
 
     assert tool._conanfile.command == result
 
+@pytest.mark.parametrize("tool_class, arch_host, result", [
+    # Install build machine package and not cross-compile -> do not add host architecture
+    (Apk, 'x86_64', 'apk add --no-cache package1 package2'),
+    (Apt, 'x86_64', 'apt-get install -y --no-install-recommends package1 package2'),
+    (Yum, 'x86_64', 'yum install -y package1 package2'),
+    (Dnf, 'x86_64', 'dnf install -y package1 package2'),
+    (Brew, 'x86_64', 'brew install package1 package2'),
+    (Pkg, 'x86_64', 'pkg install -y package1 package2'),
+    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1 package2'),
+    (Chocolatey, 'x86_64', 'choco install --yes package1 package2'),
+    (PacMan, 'x86_64', 'pacman -S --noconfirm package1 package2'),
+    (Zypper, 'x86_64', 'zypper --non-interactive in package1 package2'),
+    # Install build machine package and cross-compile -> do not add host architecture
+    (Apt, 'x86', 'apt-get install -y --no-install-recommends package1 package2'),
+    (Yum, 'x86', 'yum install -y package1 package2'),
+    (Dnf, 'x86', 'dnf install -y package1 package2'),
+    (Brew, 'x86', 'brew install package1 package2'),
+    (Pkg, 'x86', 'pkg install -y package1 package2'),
+    (PkgUtil, 'x86', 'pkgutil --install --yes package1 package2'),
+    (Chocolatey, 'x86', 'choco install --yes package1 package2'),
+    (PacMan, 'x86', 'pacman -S --noconfirm package1 package2'),
+    (Zypper, 'x86', 'zypper --non-interactive in package1 package2'),
+])
+def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": arch_host})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+
+        def fake_check(*args, **kwargs):
+            return ["package1", "package2"]
+        from conan.tools.system.package_manager import _SystemPackageManagerTool
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+            tool.install(["package1", "package2"], host_package=False)
+
+    assert tool._conanfile.command == result
 
 @pytest.mark.parametrize("tool_class, result", [
     # cross-compile but arch_names=None -> do not add host architecture

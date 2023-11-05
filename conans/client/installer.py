@@ -182,6 +182,9 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
+        if node.binary == BINARY_EDITABLE:
+            return
+
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
@@ -323,6 +326,7 @@ class BinaryInstaller:
         elif package.binary == BINARY_CACHE:
             node = package.nodes[0]
             pref = node.pref
+            self._cache.update_package_lru(pref)
             assert node.prev, "PREV for %s is None" % str(pref)
             node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 

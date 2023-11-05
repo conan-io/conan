@@ -142,7 +142,9 @@ class CMake(object):
 
         args = []
         if target is not None:
-            args = ["--target", target]
+            target_list = [target] if isinstance(target, str) else target
+            args.extend(["--target"] + target_list)
+
         if cli_args:
             args.extend(cli_args)
 

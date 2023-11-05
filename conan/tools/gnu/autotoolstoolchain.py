@@ -114,7 +114,7 @@ class AutotoolsToolchain:
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret + self.build_type_flags + apple_flags + conf_flags + self.extra_cxxflags
+        ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -123,7 +123,7 @@ class AutotoolsToolchain:
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ret = ret + self.build_type_flags + apple_flags + conf_flags + self.extra_cflags
+        ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -136,13 +136,13 @@ class AutotoolsToolchain:
                                                    check_type=list))
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
-        ret = ret + apple_flags + conf_flags + self.build_type_link_flags + self.extra_ldflags
+        ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
     def defines(self):
         conf_flags = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
-        ret = [self.ndebug, self.gcc_cxx11_abi] + conf_flags + self.extra_defines
+        ret = [self.ndebug, self.gcc_cxx11_abi] + self.extra_defines + conf_flags
         return self._filter_list_empty_fields(ret)
 
     def environment(self):

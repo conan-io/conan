@@ -1,3 +1,6 @@
+import os
+import shutil
+
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -38,3 +41,15 @@ class TestRemoveEditablePackageTest:
         assert "WARN: No editables were removed" in client.out
         client.run("editable list")
         assert "lib" in client.out
+
+    def test_removed_folder(self,):
+        # https://github.com/conan-io/conan/issues/15038
+        c = TestClient()
+        c.save({'pkg/conanfile.py': GenConanfile()})
+        c.run('editable add pkg --name=lib --version=version')
+        shutil.rmtree(os.path.join(c.current_folder, "pkg"))
+        c.run("editable remove pkg", assert_error=True)
+        c.run("editable remove --refs=lib/version")
+        assert "Removed editable 'lib/version'" in c.out
+        c.run("editable list")
+        assert "lib" not in c.out

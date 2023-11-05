@@ -12,7 +12,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
 - Docs: https://docs.conan.io
-- Slack: https://cpplang.slack.com (#conan channel)
+- Slack: https://cpplang.slack.com (#conan channel. Please, click [here](https://join.slack.com/t/cpplang/shared_invite/zt-1snzdn6rp-rOUxF3166oz1_11Tr5H~xg) to get an invitation)
 - Twitter: https://twitter.com/conan_io
 
 
@@ -27,7 +27,7 @@ Conan is a package manager for C and C++ developers:
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
 - Extensible: Its Python-based recipes, together with extension points allow for great power and flexibility.
-- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cpplang-inviter.cppalliance.org/ #conan channel).
+- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cppalliance.org/slack/ #conan channel).
   This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
 - Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
@@ -61,7 +61,7 @@ You can run Conan from source in Windows, MacOS, and Linux:
   $ cd conan-io && sudo pip install -e .
   ```
 
-  If you are in Windows, using ``sudo`` is not required.
+  If you are in Windows, using ``sudo`` is not required. Some Linux distros won't allow you to put Python packages in editable mode in the root Python installation, and creating a virtual environment ``venv`` first, is mandatory.
 
 - **You are ready, try to run Conan:**
 

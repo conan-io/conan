@@ -50,6 +50,10 @@ def detect_arch():
         return "armv8"
     elif "ARM64" in machine:
         return "armv8"
+    elif 'riscv64' in machine:
+        return "riscv64"
+    elif "riscv32" in machine:
+        return 'riscv32'
     elif "64" in machine:
         return "x86_64"
     elif "86" in machine:
@@ -226,6 +230,16 @@ def default_cppstd(compiler, compiler_version):
                "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
+
+
+def detect_cppstd(compiler, compiler_version):
+    cppstd = default_cppstd(compiler, compiler_version)
+    if compiler == "apple-clang" and compiler_version >= "11":
+        # Conan does not detect the default cppstd for apple-clang,
+        # because it's still 98 for the compiler (eben though xcode uses newer in projects)
+        # and having it be so old would be annoying for users
+        cppstd = "gnu17"
+    return cppstd
 
 
 def detect_compiler():

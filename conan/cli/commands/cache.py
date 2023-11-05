@@ -1,7 +1,9 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.api.output import cli_out_write
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
+from conan.cli.commands.list import print_list_text, print_list_json
 from conan.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -85,7 +87,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.cache.clean(package_list)
 
 
-@conan_subcommand(formatters={"text": cli_out_write})
+@conan_subcommand()
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the integrity of the local cache for the given references
@@ -99,3 +101,44 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
+
+
+@conan_subcommand(formatters={"text": print_list_text,
+                              "json": print_list_json})
+def cache_save(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Get the artifacts from a package list and archive them
+    """
+    subparser.add_argument('file', help="Save to this file")
+    subparser.add_argument('pattern',
+                           help="A pattern in the form 'pkg/version#revision:package_id#revision', "
+                                "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
+                                "If revision is not specified, it is assumed latest one.")
+    args = parser.parse_args(*args)
+    ref_pattern = ListPattern(args.pattern)
+    package_list = conan_api.list.select(ref_pattern)
+    tgz_path = make_abs_path(args.file)
+    conan_api.cache.save(package_list, tgz_path)
+    return {"results": {"Local Cache": package_list.serialize()}}
+
+
+@conan_subcommand(formatters={"text": print_list_text,
+                              "json": print_list_json})
+def cache_restore(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Put  the artifacts from an archive into the cache
+    """
+    subparser.add_argument("file", help="Path to archive to restore")
+    args = parser.parse_args(*args)
+    path = make_abs_path(args.file)
+    package_list = conan_api.cache.restore(path)
+    return {"results": {"Local Cache": package_list.serialize()}}
+
+
+@conan_subcommand()
+def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Upload all the source backups present in the cache
+    """
+    files = conan_api.upload.get_backup_sources()
+    conan_api.upload.upload_backup_sources(files)

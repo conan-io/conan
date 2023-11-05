@@ -1,7 +1,5 @@
 import textwrap
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -35,9 +33,8 @@ def test_components_cycles():
             """)
     c.save({"conanfile.py": conanfile,
             "test_package/conanfile.py": test_conanfile})
-    with pytest.raises(Exception) as exc:
-        c.run("create .")
-    out = str(exc.value)
+    c.run("create .", assert_error=True)
+    out = c.out
     assert "ERROR: Error in generator 'CMakeDeps': error generating context for 'testcycle/1.0': " \
            "There is a dependency loop in 'self.cpp_info.components' requires:" in out
     assert "a requires c" in out
@@ -79,9 +76,8 @@ def test_components_cycle_complex():
             """)
     c.save({"conanfile.py": conanfile,
             "test_package/conanfile.py": test_conanfile})
-    with pytest.raises(Exception) as exc:
-        c.run("create .")
-    out = str(exc.value)
+    c.run("create .", assert_error=True)
+    out = c.out
     assert "ERROR: Error in generator 'CMakeDeps': error generating context for 'testcycle/1.0': " \
            "There is a dependency loop in 'self.cpp_info.components' requires:" in out
     assert "a requires b" in out

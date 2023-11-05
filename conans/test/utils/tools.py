@@ -26,11 +26,13 @@ from webtest.app import TestApp
 
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
+from conan.internal.cache.home_paths import HomePaths
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli
 from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import RemoteRegistry
 from conans.util.env import environment_update
 from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
@@ -417,7 +419,8 @@ class TestClient(object):
         self.out = ""
         self.stdout = RedirectedTestOutput()
         self.stderr = RedirectedTestOutput()
-        self.user_inputs = RedirectedInputStream(inputs)
+        self.user_inputs = RedirectedInputStream([])
+        self.inputs = inputs or []
 
         # create default profile
         text = default_profiles[platform.system()]
@@ -429,7 +432,20 @@ class TestClient(object):
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
-        return ClientCache(self.cache_folder)
+        class MyCache(ClientCache, HomePaths):  # Temporary class to avoid breaking all tests
+            def __init__(self, cache_folder):
+                ClientCache.__init__(self, cache_folder)
+                HomePaths.__init__(self, cache_folder)
+
+            @property
+            def plugins_path(self):  # Temporary to not break tests
+                return os.path.join(self.cache_folder, "extensions", "plugins")
+
+            @property
+            def default_profile_path(self):
+                return os.path.join(self.cache_folder, "profiles", "default")
+
+        return MyCache(self.cache_folder)
 
     @property
     def base_folder(self):
@@ -446,12 +462,13 @@ class TestClient(object):
             api.remotes.remove(r.name)
 
         for name, server in self.servers.items():
+            remotes_registry = RemoteRegistry(HomePaths(self.cache_folder).remotes_path)
             if isinstance(server, ArtifactoryServer):
-                self.cache.remotes_registry.add(Remote(name, server.repo_api_url))
+                remotes_registry.add(Remote(name, server.repo_api_url))
             elif isinstance(server, TestServer):
-                self.cache.remotes_registry.add(Remote(name, server.fake_url))
+                remotes_registry.add(Remote(name, server.fake_url))
             else:
-                self.cache.remotes_registry.add(Remote(name, server))
+                remotes_registry.add(Remote(name, server))
 
     @contextmanager
     def chdir(self, newdir):
@@ -513,13 +530,14 @@ class TestClient(object):
         self._handle_cli_result(command_line, assert_error=assert_error, error=error, trace=trace)
         return error
 
-    def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None):
+    def run(self, command_line, assert_error=False, redirect_stdout=None, redirect_stderr=None, inputs=None):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
         from conans.test.utils.mocks import RedirectedTestOutput
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
+            self.user_inputs = RedirectedInputStream(inputs or self.inputs)
             self.stdout = RedirectedTestOutput()  # Initialize each command
             self.stderr = RedirectedTestOutput()
             self.out = ""
