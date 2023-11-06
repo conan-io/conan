@@ -220,16 +220,16 @@ class _BazelDependenciesBZLGenerator:
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
 
-        {% macro new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) %}
+        {% macro new_local_repository(repository_name, pkg_folder, pkg_build_file_path) %}
             native.new_local_repository(
-                name="{{pkg_name}}",
+                name="{{repository_name}}",
                 path="{{pkg_folder}}",
                 build_file="{{pkg_build_file_path}}",
             )
         {% endmacro %}
         def load_conan_dependencies():
-        {% for pkg_name, pkg_folder, pkg_build_file_path in dependencies %}
-        {{ new_local_repository(pkg_name, pkg_folder, pkg_build_file_path) }}
+        {% for repository_name, pkg_folder, pkg_build_file_path in dependencies %}
+        {{ new_local_repository(repository_name, pkg_folder, pkg_build_file_path) }}
         {% endfor %}
         """)
 
