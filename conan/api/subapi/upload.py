@@ -60,8 +60,7 @@ class UploadAPI:
     def get_backup_sources(self, package_list=None):
         """Get list of backup source files currently present in the cache,
         either all of them if no argument, else filter by those belonging to the references in the package_list"""
-        app = ConanApp(self.conan_api.cache_folder)
-        config = app.cache.new_config
+        config = self.conan_api.config.global_conf
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
             self.conan_api.cache_folder).default_sources_backup_folder
