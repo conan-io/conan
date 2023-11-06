@@ -432,9 +432,12 @@ class TestClient(object):
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
+        api = ConanAPI(cache_folder=self.cache_folder)
+        global_conf = api.config.global_conf
+
         class MyCache(ClientCache, HomePaths):  # Temporary class to avoid breaking all tests
             def __init__(self, cache_folder):
-                ClientCache.__init__(self, cache_folder)
+                ClientCache.__init__(self, cache_folder, global_conf)
                 HomePaths.__init__(self, cache_folder)
 
             @property

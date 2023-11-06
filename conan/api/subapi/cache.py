@@ -22,50 +22,50 @@ class CacheAPI:
         self.conan_api = conan_api
 
     def export_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         ref.revision = None if ref.revision == "latest" else ref.revision
         ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.export()
 
     def recipe_metadata_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         ref = _resolve_latest_ref(app, ref)
         ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.metadata()
 
     def export_source_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         ref.revision = None if ref.revision == "latest" else ref.revision
         ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.export_sources()
 
     def source_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         ref.revision = None if ref.revision == "latest" else ref.revision
         ref_layout = app.cache.recipe_layout(ref)
         return ref_layout.source()
 
     def build_path(self, pref: PkgReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.build()
 
     def package_metadata_path(self, pref: PkgReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.metadata()
 
     def package_path(self, pref: PkgReference):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return ref_layout.package()
 
     def check_integrity(self, package_list):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         checker = IntegrityChecker(app)
         checker.check(package_list)
 
@@ -81,7 +81,7 @@ class CacheAPI:
         :return:
         """
 
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if temp:
             rmdir(app.cache.temp_folder)
             # Clean those build folders that didn't succeed to create a package and wont be in DB
@@ -111,7 +111,7 @@ class CacheAPI:
 
     def save(self, package_list, tgz_path):
         cache_folder = self.conan_api.cache_folder
-        app = ConanApp(cache_folder)
+        app = ConanApp(cache_folder, self.conan_api.config.global_conf)
         out = ConanOutput()
         name = os.path.basename(tgz_path)
         with open(tgz_path, "wb") as tgz_handle:
@@ -152,7 +152,7 @@ class CacheAPI:
 
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        cache = ClientCache(self.conan_api.cache_folder)
+        cache = ClientCache(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         for ref, ref_bundle in package_list.refs().items():
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp

@@ -8,6 +8,7 @@ from conan.api.conan_api import ConanAPI
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
 from conans.client.conf import default_settings_yml
+from conans.model.conf import ConfDefinition
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import Options
 from conans.model.profile import Profile
@@ -23,7 +24,7 @@ class GraphManagerTest(unittest.TestCase):
 
     def setUp(self):
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder)
+        cache = ClientCache(cache_folder, ConfDefinition())
         home = HomePaths(cache_folder)
         save(os.path.join(home.profiles_path, "default"), "")
         save(home.settings_path, "os: [Windows, Linux]")

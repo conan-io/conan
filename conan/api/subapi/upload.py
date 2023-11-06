@@ -19,7 +19,7 @@ class UploadAPI:
     def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -42,8 +42,8 @@ class UploadAPI:
         string (""), it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self.conan_api.cache_folder)
-        preparator = PackagePreparator(app)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        preparator = PackagePreparator(app, self.conan_api.config.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
@@ -52,7 +52,7 @@ class UploadAPI:
         signer.sign(package_list)
 
     def upload(self, package_list, remote):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
@@ -60,8 +60,7 @@ class UploadAPI:
     def get_backup_sources(self, package_list=None):
         """Get list of backup source files currently present in the cache,
         either all of them if no argument, else filter by those belonging to the references in the package_list"""
-        app = ConanApp(self.conan_api.cache_folder)
-        config = app.cache.new_config
+        config = self.conan_api.config.global_conf
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
             self.conan_api.cache_folder).default_sources_backup_folder
@@ -70,8 +69,7 @@ class UploadAPI:
         return download_cache.get_backup_sources_files_to_upload(excluded_urls, package_list)
 
     def upload_backup_sources(self, files):
-        app = ConanApp(self.conan_api.cache_folder)
-        config = app.cache.new_config
+        config = self.conan_api.config.global_conf
         url = config.get("core.sources:upload_url", check_type=str)
         if url is None:
             return
@@ -83,6 +81,7 @@ class UploadAPI:
             output.info("No backup sources files to upload")
             return files
 
+        app = ConanApp(self.conan_api.cache_folder, config)
         # TODO: verify might need a config to force it to False
         uploader = FileUploader(app.requester, verify=True, config=config)
         # TODO: For Artifactory, we can list all files once and check from there instead

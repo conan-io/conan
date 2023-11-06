@@ -19,7 +19,7 @@ class ListAPI:
 
     def latest_recipe_revision(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
         else:
@@ -29,7 +29,7 @@ class ListAPI:
 
     def recipe_revisions(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
@@ -43,7 +43,7 @@ class ListAPI:
         #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
@@ -53,7 +53,7 @@ class ListAPI:
     def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
         else:
@@ -65,11 +65,11 @@ class ListAPI:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
         if not remote:
-            app = ConanApp(self.conan_api.cache_folder)
+            app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
             prefs = app.cache.get_package_references(ref)
             packages = get_cache_packages_binary_info(app.cache, prefs)
         else:
-            app = ConanApp(self.conan_api.cache_folder)
+            app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
             if ref.revision == "latest":
                 ref.revision = None
                 ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
@@ -95,7 +95,7 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         limit_time = timelimit(lru) if lru else None
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
