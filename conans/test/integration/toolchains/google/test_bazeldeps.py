@@ -758,6 +758,10 @@ def test_tool_requires():
             ":component3",
         ],
     )""") in client.load("build-other-repo/BUILD.bazel")
+    # Let's check if the names used in the dependencies.bzl are correct
+    content = client.load("dependencies.bzl")
+    assert 'name="build-other-repo"' in content  # build context + bazel_repository_name prop
+    assert 'name="build-tool"' in content  # build context + package reference name
 
 
 def test_tool_requires_not_created_if_no_activated():

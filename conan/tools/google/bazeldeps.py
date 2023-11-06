@@ -390,11 +390,11 @@ class _BazelBUILDGenerator:
         return root_folder.replace("\\", "/")
 
     @property
-    def target_name(self):
+    def repository_name(self):
         """
         Wrapper to get the final name used for the root dependency cc_library declaration
         """
-        return self._root_package_info.name
+        return self._root_package_info.repository_name
 
     def _get_context(self):
         def fill_info(info):
@@ -578,8 +578,8 @@ class BazelDeps:
             bazel_generator.generate()
             # Saving pieces of information from each BUILD file
             deps_info.append((
-                bazel_generator.target_name,  # Bazel target name
-                bazel_generator.package_folder,  # path to the dependency folder
+                bazel_generator.repository_name,  # Bazel repository name == @repository_name
+                bazel_generator.package_folder,  # path to the Conan dependency folder
                 bazel_generator.absolute_build_file_pah  # path to the BUILD.bazel file created
             ))
         # dependencies.bzl has all the information about where to look for the dependencies
