@@ -1176,3 +1176,13 @@ def test_extra_flags():
     assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
+
+
+def test_avoid_ovewrite_user_cmakepresets():
+    # https://github.com/conan-io/conan/issues/15052
+    c = TestClient()
+    c.save({"conanfile.txt": "",
+            "CMakePresets.json": "{}"})
+    c.run('install . -g CMakeToolchain', assert_error=True)
+    assert "Error in generator 'CMakeToolchain': Existing CMakePresets.json not generated" in c.out
+    assert "Use --output-folder or define a 'layout' to avoid collision" in c.out

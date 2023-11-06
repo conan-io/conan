@@ -45,6 +45,7 @@ def test_msys2():
 @pytest.mark.parametrize("distro, tool", [
     ("ubuntu", "apt-get"),
     ("debian", "apt-get"),
+    ("linuxmint", "apt-get"),
     ("pidora", "yum"),
     ("rocky", "yum"),
     ("fedora", "dnf"),
@@ -58,6 +59,9 @@ def test_msys2():
     ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
     ("alpine", "apk"),
+    ('altlinux', "apt-get"),
+    ("astra", 'apt-get'),
+    ('elbrus', 'apt-get'),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):

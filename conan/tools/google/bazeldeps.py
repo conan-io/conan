@@ -56,53 +56,53 @@ class BazelDeps(object):
         return filegroup
 
     def _get_dependency_buildfile_content(self, dependency):
-        template = textwrap.dedent("""
+        template = textwrap.dedent("""\
             load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-            {% for libname, filepath in libs.items() %}
+            {%- for libname, filepath in libs.items() %}
             cc_import(
                 name = "{{ libname }}_precompiled",
                 {{ library_type }} = "{{ filepath }}",
             )
-            {% endfor %}
+            {%- endfor %}
 
-            {% for libname, (lib_path, dll_path) in shared_with_interface_libs.items() %}
+            {%- for libname, (lib_path, dll_path) in shared_with_interface_libs.items() %}
             cc_import(
                 name = "{{ libname }}_precompiled",
                 interface_library = "{{ lib_path }}",
                 shared_library = "{{ dll_path }}",
             )
-            {% endfor %}
+            {%- endfor %}
 
             cc_library(
                 name = "{{ name }}",
-                {% if headers %}
+                {%- if headers %}
                 hdrs = glob([{{ headers }}]),
-                {% endif %}
-                {% if includes %}
+                {%- endif %}
+                {%- if includes %}
                 includes = [{{ includes }}],
-                {% endif %}
-                {% if defines %}
+                {%- endif %}
+                {%- if defines %}
                 defines = [{{ defines }}],
                 {% endif %}
-                {% if linkopts %}
+                {%- if linkopts %}
                 linkopts = [{{ linkopts }}],
-                {% endif %}
+                {%- endif %}
                 visibility = ["//visibility:public"],
-                {% if libs or shared_with_interface_libs %}
+                {%- if libs or shared_with_interface_libs %}
                 deps = [
                     # do not sort
-                {% for lib in libs %}
-                ":{{ lib }}_precompiled",
-                {% endfor %}
-                {% for lib in shared_with_interface_libs %}
-                ":{{ lib }}_precompiled",
-                {% endfor %}
-                {% for dep in dependencies %}
-                "@{{ dep }}",
-                {% endfor %}
+                    {%- for lib in libs %}
+                    ":{{ lib }}_precompiled",
+                    {%- endfor %}
+                    {%- for lib in shared_with_interface_libs %}
+                    ":{{ lib }}_precompiled",
+                    {%- endfor %}
+                    {%- for dep in dependencies %}
+                    "@{{ dep }}",
+                    {%- endfor %}
                 ],
-                {% endif %}
+                {%- endif %}
             )
 
         """)

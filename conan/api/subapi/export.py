@@ -2,6 +2,7 @@ from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
+from conans.client.graph.graph import BINARY_BUILD
 from conans.model.package_ref import PkgReference
 
 
@@ -46,6 +47,9 @@ class ExportAPI:
         pref = PkgReference(pref.ref, pref.package_id, prev)
         pkg_layout.reference = pref
         cache.assign_prev(pkg_layout)
+        pkg_node.prev = prev
+        pkg_node.pref_timestamp = pref.timestamp  # assigned by assign_prev
+        pkg_node.binary = BINARY_BUILD
         # Make sure folder is updated
         final_folder = pkg_layout.package()
         conanfile.folders.set_base_package(final_folder)
