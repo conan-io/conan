@@ -1,5 +1,5 @@
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern
+from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
@@ -110,13 +110,25 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
     Get the artifacts from a package list and archive them
     """
     subparser.add_argument('file', help="Save to this file")
-    subparser.add_argument('pattern',
+    subparser.add_argument('pattern', nargs="?",
                            help="A pattern in the form 'pkg/version#revision:package_id#revision', "
                                 "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
                                 "If revision is not specified, it is assumed latest one.")
+    subparser.add_argument("-l", "--list", help="Package list file")
     args = parser.parse_args(*args)
-    ref_pattern = ListPattern(args.pattern)
-    package_list = conan_api.list.select(ref_pattern)
+
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot define both the pattern and the package list file")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern)
+        package_list = conan_api.list.select(ref_pattern)
     tgz_path = make_abs_path(args.file)
     conan_api.cache.save(package_list, tgz_path)
     return {"results": {"Local Cache": package_list.serialize()}}

@@ -121,3 +121,26 @@ def test_cache_save_restore_multiple_revisions():
     shutil.copy2(cache_path, c2.current_folder)
     c2.run("cache restore cache.tgz")
     check_ordered_revisions(c2)
+
+
+def test_cache_save_restore_graph():
+    """ It is possible to save package list
+    """
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
+    c.run("create dep")
+    c.run("create pkg --format=json", redirect_stdout="graph.json")
+    c.run("list --graph=graph.json --format=json", redirect_stdout="list.json")
+    c.run("cache save cache.tgz --list=list.json")
+    cache_path = os.path.join(c.current_folder, "cache.tgz")
+    assert os.path.exists(cache_path)
+    c2 = TestClient()
+    # Create a package in the cache to check put doesn't interact badly
+    c2.save({"conanfile.py": GenConanfile().with_settings("os")})
+    c2.run("create . --name=pkg2 --version=3.0 -s os=Windows")
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run("cache restore cache.tgz")
+    c2.run("list *:*#*")
+    assert "pkg/0.1" in c2.out
+    assert "dep/0.1" in c2.out

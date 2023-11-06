@@ -160,7 +160,7 @@ class CacheAPI:
             recipe_folder = ref_bundle["recipe_folder"]
             rel_path = os.path.relpath(recipe_layout.base_folder, cache.cache_folder)
             assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
-            out.info(f"Put: {ref} in {recipe_folder}")
+            out.info(f"Restore: {ref} in {recipe_folder}")
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle["timestamp"] = pref.timestamp
