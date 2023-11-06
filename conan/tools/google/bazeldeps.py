@@ -220,16 +220,13 @@ class _BazelDependenciesBZLGenerator:
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
 
-        {% macro new_local_repository(repository_name, pkg_folder, pkg_build_file_path) %}
+        def load_conan_dependencies():
+        {% for repository_name, pkg_folder, pkg_build_file_path in dependencies %}
             native.new_local_repository(
                 name="{{repository_name}}",
                 path="{{pkg_folder}}",
                 build_file="{{pkg_build_file_path}}",
             )
-        {% endmacro %}
-        def load_conan_dependencies():
-        {% for repository_name, pkg_folder, pkg_build_file_path in dependencies %}
-        {{ new_local_repository(repository_name, pkg_folder, pkg_build_file_path) }}
         {% endfor %}
         """)
 
@@ -582,7 +579,8 @@ class BazelDeps:
                 bazel_generator.package_folder,  # path to the Conan dependency folder
                 bazel_generator.absolute_build_file_pah  # path to the BUILD.bazel file created
             ))
-        # dependencies.bzl has all the information about where to look for the dependencies
-        bazel_dependencies_module_generator = _BazelDependenciesBZLGenerator(self._conanfile,
-                                                                             deps_info)
-        bazel_dependencies_module_generator.generate()
+        if deps_info:
+            # dependencies.bzl has all the information about where to look for the dependencies
+            bazel_dependencies_module_generator = _BazelDependenciesBZLGenerator(self._conanfile,
+                                                                                 deps_info)
+            bazel_dependencies_module_generator.generate()
