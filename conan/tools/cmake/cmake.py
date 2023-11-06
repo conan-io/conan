@@ -155,7 +155,8 @@ class CMake(object):
                            for a multi-configuration generator (e.g. Visual Studio, XCode).
                            This value will be ignored for single-configuration generators, they will
                            use the one defined in the toolchain file during the install step.
-        :param target: Name of the build target to run
+        :param target: The name of a single build target as a string, or names of multiple build targets in a 
+                       list of strings to be passed to the ``--target`` argument.
         :param cli_args: A list of arguments ``[arg1, arg2, ...]`` that will be passed to the
                         ``cmake --build ... arg1 arg2`` command directly.
         :param build_tool_args: A list of arguments ``[barg1, barg2, ...]`` for the underlying
