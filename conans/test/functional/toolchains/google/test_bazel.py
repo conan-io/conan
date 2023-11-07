@@ -26,72 +26,61 @@ def base_profile():
         build_type={build_type}
 
         [conf]
-        tools.google.bazel:bazelrc_path={curdir}/mybazelrc
+        tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
         tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
         """)
 
 
-@pytest.fixture(scope="module")
-def client_exe(bazelrc):
+@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
+@pytest.mark.tool("bazel")
+def test_basic_exe(bazelrc, build_type, base_profile):
     client = TestClient(path_with_spaces=False)
     client.run("new bazel_exe -d name=myapp -d version=1.0")
     # The build:<config> define several configurations that can be activated by passing
     # the bazel config with tools.google.bazel:configs
     client.save({"mybazelrc": bazelrc})
-    return client
-
-
-@pytest.fixture(scope="module")
-def client_lib(bazelrc):
-    client = TestClient(path_with_spaces=False)
-    client.run("new bazel_lib -d name=mylib -d version=1.0")
-    # The build:<config> define several configurations that can be activated by passing
-    # the bazel config with tools.google.bazel:configs
-    client.save({"mybazelrc": bazelrc})
-    return client
-
-
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
-                                                         "and win is suspect too")
-@pytest.mark.tool("bazel")
-def test_basic_exe(client_exe, build_type, base_profile):
-
-    profile = base_profile.format(build_type=build_type, curdir=client_exe.current_folder)
-    client_exe.save({"my_profile": profile})
-
-    client_exe.run("create . --profile=./my_profile")
+    profile = base_profile.format(build_type=build_type,
+                                  curdir=client.current_folder.replace("\\", "/"))
+    client.save({"my_profile": profile})
+    client.run("create . --profile=./my_profile")
     if build_type != "Debug":
-        assert "myapp/1.0: Hello World Release!" in client_exe.out
+        assert "myapp/1.0: Hello World Release!" in client.out
     else:
-        assert "myapp/1.0: Hello World Debug!" in client_exe.out
+        assert "myapp/1.0: Hello World Debug!" in client.out
 
 
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
-                                                         "and win is suspect too")
+@pytest.mark.parametrize("shared", [False, True])
 @pytest.mark.tool("bazel")
-def test_basic_lib(client_lib, build_type, base_profile):
+def test_transitive_libs_consuming(shared):
+    """
+    Testing the next dependencies structure for shared/static libs
 
-    profile = base_profile.format(build_type=build_type, curdir=client_lib.current_folder)
-    client_lib.save({"my_profile": profile})
-
-    client_lib.run("create . --profile=./my_profile")
-    if build_type != "Debug":
-        assert "mylib/1.0: Hello World Release!" in client_lib.out
-    else:
-        assert "mylib/1.0: Hello World Debug!" in client_lib.out
-
-
-@pytest.mark.skipif(platform.system() != "Linux", reason="FIXME: Darwin keeps failing randomly "
-                                                         "and win is suspect too")
-@pytest.mark.tool("bazel")
-def test_transitive_consuming():
-
+    /.
+    |- myfirstlib/
+         |- conanfile.py
+         |- WORKSPACE
+         |- main/
+            |- BUILD
+            |- myfirstlib.cpp
+            |- myfirstlib.h
+    |- mysecondlib/  (requires myfirstlib)
+         |- conanfile.py
+         |- WORKSPACE
+         |- main/
+            |- BUILD
+            |- mysecondlib.cpp
+            |- mysecondlib.h
+         |- test_package/
+            |- WORKSPACE
+            |- conanfile.py
+            |- main
+                |- example.cpp
+                |- BUILD
+    """
     client = TestClient(path_with_spaces=False)
-    # A regular library made with CMake
-    with client.chdir("zlib"):
-        client.run("new cmake_lib -d name=zlib -d version=1.2.11")
+    # A regular library made with Bazel
+    with client.chdir("myfirstlib"):
+        client.run("new bazel_lib -d name=myfirstlib -d version=1.2.11")
         conanfile = client.load("conanfile.py")
         conanfile += """
         self.cpp_info.defines.append("MY_DEFINE=\\"MY_VALUE\\"")
@@ -102,154 +91,89 @@ def test_transitive_consuming():
             self.cpp_info.system_libs.append("ws2_32")
         """
         client.save({"conanfile.py": conanfile})
-        client.run("create .")
+        client.run(f"create . -o '*:shared={shared}' -tf ''")  # skipping tests
 
-    # We prepare a consumer with Bazel (library openssl using zlib) and a test_package with an
-    # example executable
-    conanfile = textwrap.dedent("""
-            import os
-            from conan import ConanFile
-            from conan.tools.google import Bazel, bazel_layout
-            from conan.tools.files import copy
-
-
-            class OpenSSLConan(ConanFile):
-                name = "openssl"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                exports_sources = "main/*", "WORKSPACE"
-                requires = "zlib/1.2.11"
-
-                generators = "BazelToolchain", "BazelDeps"
-
-                def layout(self):
-                    bazel_layout(self)
-
-                def build(self):
-                    bazel = Bazel(self)
-                    bazel.configure()
-                    bazel.build(label="//main:openssl")
-
-                def package(self):
-                    dest_bin = os.path.join(self.package_folder, "bin")
-                    dest_lib = os.path.join(self.package_folder, "lib")
-                    build = os.path.join(self.build_folder, "bazel-bin", "main")
-                    copy(self, "*.so", build, dest_bin, keep_path=False)
-                    copy(self, "*.dll", build, dest_bin, keep_path=False)
-                    copy(self, "*.dylib", build, dest_bin, keep_path=False)
-                    copy(self, "*.a", build, dest_lib, keep_path=False)
-                    copy(self, "*.lib", build, dest_lib, keep_path=False)
-                    copy(self, "*openssl.h", self.source_folder,
-                         os.path.join(self.package_folder, "include"), keep_path=False)
-
-                def package_info(self):
-                    self.cpp_info.libs = ["openssl"]
-                """)
-    bazel_build = textwrap.dedent("""
-            load("@rules_cc//cc:defs.bzl", "cc_library")
-
-            cc_library(
-                name = "openssl",
-                srcs = ["openssl.cpp"],
-                hdrs = ["openssl.h"],
-                deps = [
-                    "@zlib//:zlib",
-                ],
-            )
-            """)
-    openssl_c = textwrap.dedent("""
-            #include <iostream>
-            #include "openssl.h"
-            #include "zlib.h"
-            #include <math.h>
-
-            void openssl(){
-                std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
-                zlib();
-                // This comes from the systemlibs declared in the zlib
-                sqrt(25);
-            }
-            """)
-    openssl_c_win = textwrap.dedent("""
-                #include <iostream>
-                #include "openssl.h"
-                #include "zlib.h"
-                #include <WinSock2.h>
-
-                void openssl(){
-                    SOCKET foo; // From the system library
-                    std::cout << "Calling OpenSSL function with define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << "\\n";
-                    zlib();
-                }
-                """)
-    openssl_h = textwrap.dedent("""
-            void openssl();
-            """)
-
-    bazel_workspace = textwrap.dedent("""
-        load("@//:dependencies.bzl", "load_conan_dependencies")
+    with client.chdir("mysecondlib"):
+        # We prepare a consumer with Bazel (library mysecondlib using myfirstlib)
+        # and a test_package with an example executable
+        os_ = platform.system()
+        client.run("new bazel_lib -d name=mysecondlib -d version=1.0")
+        conanfile = client.load("conanfile.py")
+        conanfile = conanfile.replace('generators = "BazelToolchain"',
+                                      'generators = "BazelToolchain", "BazelDeps"\n'
+                                      '    requires = "myfirstlib/1.2.11"')
+        workspace = textwrap.dedent("""
+        load("@//conan:dependencies.bzl", "load_conan_dependencies")
         load_conan_dependencies()
-    """)
+        """)
+        bazel_build_linux = textwrap.dedent("""\
+        load("@rules_cc//cc:defs.bzl", "cc_library")
 
-    test_example = """#include "openssl.h"
-
-    int main() {{
-        openssl();
-    }}
-    """
-
-    test_conanfile = textwrap.dedent("""
-    import os
-    from conan import ConanFile
-    from conan.tools.google import Bazel, bazel_layout
-    from conan.tools.build import cross_building
-
-
-    class OpenSSLTestConan(ConanFile):
-        settings = "os", "compiler", "build_type", "arch"
-        generators = "BazelToolchain", "BazelDeps", "VirtualBuildEnv", "VirtualRunEnv"
-        apply_env = False
-
-        def requirements(self):
-            self.requires(self.tested_reference_str)
-
-        def build(self):
-            bazel = Bazel(self)
-            bazel.configure()
-            bazel.build(label="//main:example")
-
-        def layout(self):
-            bazel_layout(self)
-
-        def test(self):
-            if not cross_building(self):
-                cmd = os.path.join(self.cpp.build.bindirs[0], "main", "example")
-                self.run(cmd, env="conanrun")
-    """)
-
-    test_bazel_build = textwrap.dedent("""
-        load("@rules_cc//cc:defs.bzl", "cc_binary")
-
-        cc_binary(
-            name = "example",
-            srcs = ["example.cpp"],
-            deps = [
-                "@openssl//:openssl",
-            ],
+        cc_library(
+            name = "mysecondlib",
+            srcs = ["mysecondlib.cpp"],
+            hdrs = ["mysecondlib.h"],
+            deps = [ "@myfirstlib//:myfirstlib" ]
         )
         """)
+        bazel_build = textwrap.dedent("""\
+        load("@rules_cc//cc:defs.bzl", "cc_library")
 
-    client.save({"conanfile.py": conanfile,
-                 "main/BUILD": bazel_build,
-                 "main/openssl.cpp": openssl_c if platform.system() != "Windows" else openssl_c_win,
-                 "main/openssl.h": openssl_h,
-                 "WORKSPACE": bazel_workspace,
-                 "test_package/conanfile.py": test_conanfile,
-                 "test_package/main/example.cpp": test_example,
-                 "test_package/main/BUILD": test_bazel_build,
-                 "test_package/WORKSPACE": bazel_workspace
-                 })
+        cc_library(
+            name = "mysecondlib",
+            srcs = ["mysecondlib.cpp"],
+            hdrs = ["mysecondlib.h"],
+            deps = [ "@myfirstlib//:myfirstlib" ]
+        )
 
-    client.run("create .")
-    assert "Calling OpenSSL function with define MY_VALUE and other define 2" in client.out
-    assert "zlib/1.2.11: Hello World Release!"
+        cc_shared_library(
+            name = "mysecondlib_shared",
+            shared_lib_name = "libmysecondlib.{}",
+            deps = [":mysecondlib"],
+        )
+        """.format("dylib" if os_ == "Darwin" else "dll"))
+        mysecondlib_cpp = textwrap.dedent("""
+        #include <iostream>
+        #include "mysecondlib.h"
+        #include "myfirstlib.h"
+        #include <cmath>
+
+        void mysecondlib(){
+            std::cout << "mysecondlib() First define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << std::endl;
+            myfirstlib();
+            // This comes from the systemlibs declared in the myfirstlib
+            sqrt(25);
+        }
+        void mysecondlib_print_vector(const std::vector<std::string> &strings) {
+            for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
+                std::cout << "mysecondlib/1.0 " << *it << std::endl;
+            }
+        }
+        """)
+        mysecondlib_cpp_win = textwrap.dedent("""
+        #include <iostream>
+        #include "mysecondlib.h"
+        #include "myfirstlib.h"
+        #include <WinSock2.h>
+
+        void mysecondlib(){
+            SOCKET foo; // From the system library
+            std::cout << "mysecondlib() First define " << MY_DEFINE << " and other define " << MY_OTHER_DEFINE << std::endl;
+            myfirstlib();
+        }
+        void mysecondlib_print_vector(const std::vector<std::string> &strings) {
+            for(std::vector<std::string>::const_iterator it = strings.begin(); it != strings.end(); ++it) {
+                std::cout << "mysecondlib/1.0 " << *it << std::endl;
+            }
+        }
+        """)
+        # Overwriting files
+        client.save({"conanfile.py": conanfile,
+                     "WORKSPACE": workspace,
+                     "main/BUILD": bazel_build_linux if os_ == "Linux" else bazel_build,
+                     "main/mysecondlib.cpp": mysecondlib_cpp if os_ != "Windows" else mysecondlib_cpp_win,
+                     })
+
+        client.run(f"create . -o '*:shared={shared}'")
+        assert "mysecondlib() First define MY_VALUE and other define 2" in client.out
+        assert "myfirstlib/1.2.11: Hello World Release!"

@@ -1,49 +1,68 @@
+import os
 import platform
 
-from conan.tools.build import load_toolchain_args
+from conan.tools.google import BazelToolchain
 
 
 class Bazel(object):
-    def __init__(self, conanfile, namespace=None):
+
+    def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._namespace = namespace
-        self._get_bazel_project_configuration()
 
-    def configure(self, args=None):
-        pass
+    def _safe_run_command(self, command):
+        """
+        Windows is having problems for stopping bazel processes, so it ends up locking
+        some files if something goes wrong. Better to shut down the Bazel server after running
+        each command.
+        """
+        try:
+            self._conanfile.run(command)
+        finally:
+            if platform.system() == "Windows":
+                self._conanfile.run("bazel shutdown")
 
-    def build(self, args=None, label=None):
-        # TODO: Change the directory where bazel builds the project (by default, /var/tmp/_bazel_<username> )
+    def build(self, args=None, target="//...", clean=True):
+        """
+        Runs "bazel <rcpaths> build <configs> <args> <targets>"
 
-        bazelrc_path = '--bazelrc={}'.format(self._bazelrc_path) if self._bazelrc_path else ''
-        bazel_config = " ".join(['--config={}'.format(conf) for conf in self._bazel_config])
+        :param target: It is the target label
+        :param args: list of extra arguments
+        :param clean: bool that indicates to run a "bazel clean" before running the "bazel build".
+                      Notice that this is important to ensure a fresh bazel cache.
+        :return:
+        """
+        # Use BazelToolchain generated file if exists
+        conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
+        use_conan_config = os.path.exists(conan_bazelrc)
+        bazelrc_paths = []
+        bazelrc_configs = []
+        if use_conan_config:
+            bazelrc_paths.append(conan_bazelrc)
+            bazelrc_configs.append(BazelToolchain.bazelrc_config)
+        # User bazelrc paths have more prio than Conan one
+        # See more info in https://bazel.build/run/bazelrc
+        bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
+                                                      check_type=list))
+        command = "bazel"
+        for rc in bazelrc_paths:
+            rc = rc.replace("\\", "/")
+            command += f" --bazelrc={rc}"
+        command += " build"
+        bazelrc_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs", default=[],
+                                                        check_type=list))
+        for config in bazelrc_configs:
+            command += f" --config={config}"
+        if args:
+            command += " ".join(f" {arg}" for arg in args)
+        command += f" {target}"
+        if clean:
+            self._safe_run_command("bazel clean")
+        self._safe_run_command(command)
 
-        # arch = self._conanfile.settings.get_safe("arch")
-        # cpu = {
-        #     "armv8": "arm64",
-        #     "x86_64": ""
-        # }.get(arch, arch)
-        #
-        # command = 'bazel {} build --sandbox_debug --subcommands=pretty_print --cpu={} {} {}'.format(
-        #     bazelrc_path,
-        #     cpu,
-        #     bazel_config,
-        #     label
-        # )
-        command = 'bazel {} build {} {}'.format(
-            bazelrc_path,
-            bazel_config,
-            label
-        )
-
-        self._conanfile.run(command)
-        # This is very important for Windows, as otherwise the bazel server locks files
-        if platform.system() == "Windows":
-            self._conanfile.run("bazel shutdown")
-
-    def _get_bazel_project_configuration(self):
-        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder,
-                                                     namespace=self._namespace)
-        configs = toolchain_file_content.get("bazel_configs")
-        self._bazel_config = configs.split(",") if configs else []
-        self._bazelrc_path = toolchain_file_content.get("bazelrc_path")
+    def test(self, target=None):
+        """
+        Runs "bazel test <target>"
+        """
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool) or target is None:
+            return
+        self._safe_run_command(f'bazel test {target}')

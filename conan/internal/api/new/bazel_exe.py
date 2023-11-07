@@ -26,8 +26,7 @@ class {{package_name}}Recipe(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
-        bazel.build(label="//main:{{name}}")
+        bazel.build(target="//main:{{name}}")
 
     def package(self):
         dest_bin = os.path.join(self.package_folder, "bin")
