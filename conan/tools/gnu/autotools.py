@@ -46,7 +46,8 @@ class Autotools(object):
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw()
                                                 else "make")
-        make_program = unix_path(self._conanfile, make_program)
+        subsystem = deduce_subsystem(self._conanfile, scope="build")
+        make_program = subsystem_path(subsystem, make_program)
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
