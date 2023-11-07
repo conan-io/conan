@@ -109,12 +109,12 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
     """
     Get the artifacts from a package list and archive them
     """
-    subparser.add_argument('file', help="Save to this file")
     subparser.add_argument('pattern', nargs="?",
                            help="A pattern in the form 'pkg/version#revision:package_id#revision', "
                                 "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
                                 "If revision is not specified, it is assumed latest one.")
-    subparser.add_argument("-l", "--list", help="Package list file")
+    subparser.add_argument("-l", "--list", help="Package list of packages to save")
+    subparser.add_argument('--file', help="Save to this tgz file")
     args = parser.parse_args(*args)
 
     if args.pattern is None and args.list is None:
@@ -129,7 +129,7 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern)
         package_list = conan_api.list.select(ref_pattern)
-    tgz_path = make_abs_path(args.file)
+    tgz_path = make_abs_path(args.file or "conan_cache_save.tgz")
     conan_api.cache.save(package_list, tgz_path)
     return {"results": {"Local Cache": package_list.serialize()}}
 
