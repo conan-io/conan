@@ -11,12 +11,12 @@ class Bazel(object):
         # TODO: Remove namespace in Conan 2.x
         if namespace:
             self._conanfile.output.warning("In Bazel() call, namespace param has been "
-                                        "deprecated as it's not used anymore.")
+                                           "deprecated as it's not used anymore.")
 
     def configure(self, args=None):
         # TODO: Remove in Conan 2.x. Keeping it backward compatible
         self._conanfile.output.warning("Bazel.configure() function has been deprecated."
-                                    " Removing in Conan 2.x.")
+                                       " Removing in Conan 2.x.")
         pass
 
     def _safe_run_command(self, command):
@@ -31,13 +31,15 @@ class Bazel(object):
             if platform.system() == "Windows":
                 self._conanfile.run("bazel shutdown")
 
-    def build(self, args=None, label=None, target="//..."):
+    def build(self, args=None, label=None, target="//...", clean=True):
         """
         Runs "bazel <rcpaths> build <configs> <args> <targets>"
 
         :param label: DEPRECATED: It'll disappear in Conan 2.x. It is the target label
         :param target: It is the target label
         :param args: list of extra arguments
+        :param clean: bool that indicates to run a "bazel clean" before running the "bazel build".
+                      Notice that this is important to ensure a fresh bazel cache.
         :return:
         """
         # TODO: Remove in Conan 2.x. Superseded by target
@@ -61,6 +63,7 @@ class Bazel(object):
         bazelrc_paths.extend(rc_paths)
         command = "bazel"
         for rc in bazelrc_paths:
+            rc = rc.replace("\\", "/")
             command += f" --bazelrc={rc}"
         command += " build"
         # TODO: Legacy Bazel allowed only one value or several ones separate by commas.
@@ -73,6 +76,8 @@ class Bazel(object):
         if args:
             command += " ".join(f" {arg}" for arg in args)
         command += f" {target}"
+        if clean:
+            self._safe_run_command("bazel clean")
         self._safe_run_command(command)
 
     def test(self, target=None):
