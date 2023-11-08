@@ -107,3 +107,65 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
     c.run("install . -pr:b profile -pr:h profile_host")
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
     assert "build:conan-config --cpu=darwin_arm64" in content
+
+
+def test_toolchain_attributes_and_conf_priority():
+    """
+    Tests that all the attributes are appearing correctly in the conan_bzl.rc even defining
+    some conf variables
+    """
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=13.0
+    os=Macos
+    [conf]
+    tools.build:cxxflags=["--flag1"]
+    tools.build:cflags+=["--flag3"]
+    tools.build:sharedlinkflags+=["--linkflag5"]
+    tools.build:exelinkflags+=["--linkflag6"]
+    """)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.google import BazelToolchain
+    class ExampleConanIntegration(ConanFile):
+        settings = "os", "arch", "build_type", "compiler"
+        options = {"shared": [True, False], "fPIC": [True, False]}
+        default_options = {"shared": False, "fPIC": True}
+
+        def generate(self):
+            bz = BazelToolchain(self)
+            bz.copt = ["copt1"]
+            bz.conlyopt = ["conly1"]
+            bz.cxxopt = ["cxxopt1"]
+            bz.linkopt = ["linkopt1"]
+            bz.force_pic = True
+            bz.dynamic_mode = "auto"
+            bz.compilation_mode = "fastbuild"
+            bz.compiler = "gcc"
+            bz.cpu = "armv8"
+            bz.crosstool_top = "my_crosstool"
+            bz.generate()
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr profile")
+    content = load(c, os.path.join(c.current_folder, BazelToolchain.bazelrc_name))
+    expected = textwrap.dedent("""\
+    # Automatic bazelrc file created by Conan
+    build:conan-config --copt=copt1
+    build:conan-config --conlyopt=conly1 --conlyopt=--flag3
+    build:conan-config --cxxopt=-std=gnu++17 --cxxopt=cxxopt1 --cxxopt=--flag1
+    build:conan-config --linkopt=linkopt1 --linkopt=--linkflag5 --linkopt=--linkflag6
+    build:conan-config --force_pic=True
+    build:conan-config --dynamic_mode=auto
+    build:conan-config --compilation_mode=fastbuild
+    build:conan-config --compiler=gcc
+    build:conan-config --cpu=armv8
+    build:conan-config --crosstool_top=my_crosstool""")
+    assert expected == content
