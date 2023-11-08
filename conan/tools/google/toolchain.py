@@ -46,7 +46,7 @@ class BazelToolchain:
 
     bazelrc_name = "conan_bzl.rc"
     bazelrc_config = "conan-config"
-    bazelrc_template = textwrap.dedent("""
+    bazelrc_template = textwrap.dedent("""\
     # Automatic bazelrc file created by Conan
     {% if copt %}build:conan-config {{copt}}{% endif %}
     {% if conlyopt %}build:conan-config {{conlyopt}}{% endif %}
@@ -66,13 +66,6 @@ class BazelToolchain:
             self._conanfile.output.warning("In BazelToolchain() call, namespace param has been "
                                         "deprecated as it's not used anymore.")
         check_using_build_profile(self._conanfile)
-
-        # Flags
-        # TODO: Should we read the buildenv to get flags?
-        self.extra_cxxflags = []
-        self.extra_cflags = []
-        self.extra_ldflags = []
-        self.extra_defines = []
 
         # Bazel build parameters
         shared = self._conanfile.options.get_safe("shared")
@@ -113,13 +106,13 @@ class BazelToolchain:
     def cxxflags(self):
         ret = [self.cppstd]
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret  + self.extra_cxxflags + conf_flags
+        ret = ret  + self.cxxopt + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
     def cflags(self):
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ret = self.extra_cflags + conf_flags
+        ret = self.conlyopt + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -130,15 +123,15 @@ class BazelToolchain:
                                                    check_type=list))
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
-        ret = self.extra_ldflags + conf_flags
+        ret = self.linkopt + conf_flags
         return self._filter_list_empty_fields(ret)
 
     def _context(self):
         return {
             "copt": " ".join(f"--copt={flag}" for flag in self.copt),
-            "conlyopt": " ".join(f"--conlyopt={flag}" for flag in (self.conlyopt + self.cflags)),
-            "cxxopt": " ".join(f"--cxxopt={flag}" for flag in (self.cxxopt + self.cxxflags)),
-            "linkopt": " ".join(f"--linkopt={flag}" for flag in (self.linkopt + self.ldflags)),
+            "conlyopt": " ".join(f"--conlyopt={flag}" for flag in self.cflags),
+            "cxxopt": " ".join(f"--cxxopt={flag}" for flag in self.cxxflags),
+            "linkopt": " ".join(f"--linkopt={flag}" for flag in self.ldflags),
             "force_pic": self.force_pic,
             "dynamic_mode": self.dynamic_mode,
             "compilation_mode": self.compilation_mode,
