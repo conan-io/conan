@@ -33,6 +33,7 @@ class GraphBinariesAnalyzer(object):
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
             conanfile.output.info('Forced build from source')
+            print("FORCED!!!!!!!!!!!!!!!!!!!!!!!!!!!", node)
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
             node.prev = None
             return True
@@ -151,6 +152,7 @@ class GraphBinariesAnalyzer(object):
         node._package_id = original_package_id
 
     def _evaluate_node(self, node, build_mode, remotes, update):
+        ConanOutput().warning(f"EVALUAING NODE!!!!!!!!!!!!!!!!!!!!!!! {node}")
         assert node.binary is None, "Node.binary should be None"
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.prev is None, "Node.prev should be None"
@@ -162,6 +164,7 @@ class GraphBinariesAnalyzer(object):
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
             node.should_build = True
+            ConanOutput().warning(f"ALLOWED!!!!!!!!!!!!!!!!!!!!!!! {node}")
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
@@ -210,6 +213,7 @@ class GraphBinariesAnalyzer(object):
                 node.prev = cache_latest_prev.revision
             elif build_mode.allowed(node.conanfile):
                 node.should_build = True
+                ConanOutput().warning(f"SKIP!!!!!!!!!!!!!!!!!!!!!!! {node}")
                 node.binary = BINARY_BUILD
             else:
                 node.binary = BINARY_MISSING
@@ -372,8 +376,10 @@ class GraphBinariesAnalyzer(object):
         required_nodes = set()
         required_nodes.add(graph.root)
         for node in graph.nodes:
+            ConanOutput().warning(f"..........CHECK IF SKIP {node}")
             if node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE) \
                     and node is not graph.root:
+                ConanOutput().warning(f"         CANNOT BE SKIPPED {node}")
                 continue
             # The nodes that are directly required by this one to build correctly
             deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
@@ -389,10 +395,15 @@ class GraphBinariesAnalyzer(object):
             for dep in node.transitive_deps.values():
                 dep.require.skip = dep.node not in deps_required
 
+            ConanOutput().warning(f"DEPS REQUIRED BY {node} = {deps_required}")
             # Finally accumulate for marking binaries as SKIP download
             required_nodes.update(deps_required)
+            ConanOutput().warning(f"TOTAL DEPS {required_nodes}")
 
         for node in graph.nodes:
             if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries",
                                                                       check_type=bool, default=True):
+                ConanOutput().warning(f"         SUCCESSFULLY SKIPPING! {node}")
                 node.binary = BINARY_SKIP
+            else:
+                ConanOutput().warning(f"         NOT SKIPPING {node}")
