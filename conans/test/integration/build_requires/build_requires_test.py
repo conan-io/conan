@@ -982,10 +982,9 @@ def test_build_missing_build_requires():
     c.run("create tool")
     c.run("create pkg")
     c.run("remove tool*:* -c")
-    print(c.out)
     c.run("install app")
-    print(c.out)
-    c.run("install app --build=missing")
-    print(c.out)
     assert "- Build" not in c.out
-    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", client.out)
+    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+    c.run("install app --build=missing")
+    assert "- Build" not in c.out
+    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)

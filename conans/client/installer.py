@@ -178,7 +178,7 @@ class BinaryInstaller:
     def _install_source(self, node, remotes):
         conanfile = node.conanfile
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
-        ConanOutput().warning(f"DOWNLAOD SOURCE {node}={download_source}. Binary {node.binary}")
+
         if not download_source and node.binary != BINARY_BUILD:
             return
 
