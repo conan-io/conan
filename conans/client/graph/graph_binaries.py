@@ -396,11 +396,11 @@ class GraphBinariesAnalyzer(object):
                 for dep in node.transitive_deps.values():
                     dep.require.skip = dep.node not in deps_required
 
-                # Finally accumulate for marking binaries as SKIP download
+                # Finally accumulate all needed nodes for marking binaries as SKIP download
                 news_req = [r for r in deps_required
-                            if r.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE)]
-                # TODO: Optimize not repeat expansions
-                new_root_nodes.update(news_req)
+                            if r.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE)
+                            if r not in required_nodes]  # Avoid already expanded before
+                new_root_nodes.update(news_req)  # For expanding the next iteration
                 required_nodes.update(deps_required)
 
             root_nodes = new_root_nodes
