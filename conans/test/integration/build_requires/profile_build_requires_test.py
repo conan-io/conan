@@ -58,6 +58,10 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=stable")
 
     def test_profile_requires(self):
+        """
+        cli -(tool-requires)-> tool/0.1
+          \\--(requires)->mylib/0.1 -(tool_requires)->tool/0.1 (skipped)
+        """
         client = TestClient()
         self._create(client)
 
