@@ -1,3 +1,26 @@
+"""
+Creates a simple conan_bzl.rc file which defines a conan-config configuration with all the
+attributes defined by the consumer. Bear in mind that this is not a complete toolchain, it
+only fills some common CLI attributes and save them in a ``*.rc`` file.
+
+Important: Maybe, this toolchain should create a new Conan platform with the user
+constraints, but it's not the goal for now as Bazel has tons of platforms and toolchains
+already available in its bazel_tools repo. For now, it only admits a list of platforms defined
+by the user.
+
+More information related:
+    * Toolchains: https://bazel.build/extending/toolchains (deprecated)
+    * Platforms: https://bazel.build/concepts/platforms (new default since Bazel 7.x)
+    * Migrating to platforms: https://bazel.build/concepts/platforms
+    * Issue related: https://github.com/bazelbuild/bazel/issues/6516
+
+Others:
+    * CROOSTOOL: https://github.com/bazelbuild/bazel/blob/cb0fb033bad2a73e0457f206afb87e195be93df2/tools/cpp/CROSSTOOL
+    * Cross-compiling with Bazel: https://ltekieli.com/cross-compiling-with-bazel/
+    * bazelrc files: https://bazel.build/run/bazelrc
+    * CLI options: https://bazel.build/reference/command-line-reference
+    * User manual: https://bazel.build/docs/user-manual
+"""
 import textwrap
 
 from jinja2 import Template
@@ -21,29 +44,6 @@ def _get_cpu_name(conanfile):
 
 # FIXME: In the future, it could be BazelPlatform instead? Check https://bazel.build/concepts/platforms
 class BazelToolchain:
-    """
-    Creates a simple conan_bzl.rc file which defines a conan-config configuration with all the
-    attributes defined by the consumer. Bear in mind that this is not a complete toolchain, it
-    only fills some common CLI attributes and save them in a *.rc file.
-
-    Important: Maybe, this toolchain should create a new Conan platform with the user
-    constraints, but it's not the goal for now as Bazel has tons of platforms and toolchains
-    already available in its bazel_tools repo. For now, it only admits a list of platforms defined
-    by the user.
-    More information related:
-        * Toolchains: https://bazel.build/extending/toolchains (deprecated)
-        * Platforms: https://bazel.build/concepts/platforms (new default since Bazel 7.x)
-        * Migrating to platforms: https://bazel.build/concepts/platforms
-        * Issue related: https://github.com/bazelbuild/bazel/issues/6516
-
-    Others:
-        CROOSTOOL: https://github.com/bazelbuild/bazel/blob/cb0fb033bad2a73e0457f206afb87e195be93df2/tools/cpp/CROSSTOOL
-        Cross-compiling with Bazel: https://ltekieli.com/cross-compiling-with-bazel/
-        bazelrc files: https://bazel.build/run/bazelrc
-        CLI options: https://bazel.build/reference/command-line-reference
-        User manual: https://bazel.build/docs/user-manual
-    """
-
     bazelrc_name = "conan_bzl.rc"
     bazelrc_config = "conan-config"
     bazelrc_template = textwrap.dedent("""\
@@ -60,28 +60,42 @@ class BazelToolchain:
     {% if crosstool_top %}build:conan-config --crosstool_top={{crosstool_top}}{% endif %}""")
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
 
         # Bazel build parameters
         shared = self._conanfile.options.get_safe("shared")
         fpic = self._conanfile.options.get_safe("fPIC")
+        #: Boolean used to add --force_pic=True. Depends on self.options.shared and
+        #: self.options.fPIC values
         self.force_pic = fpic if (not shared and fpic is not None) else None
         # FIXME: Keeping this option but it's not working as expected. It's not creating the shared
         #        libraries at all.
+        #: String used to add --dynamic_mode=["fully"|"off"]. Depends on self.options.shared value.
         self.dynamic_mode = "fully" if shared else "off"
+        #: String used to add --cppstd=[FLAG]. Depends on your settings.
         self.cppstd = cppstd_flag(self._conanfile.settings)
+        #: List of flags used to add --copt=flag1 ... --copt=flagN
         self.copt = []
+        #: List of flags used to add --conlyopt=flag1 ... --conlyopt=flagN
         self.conlyopt = []
+        #: List of flags used to add --cxxopt=flag1 ... --cxxopt=flagN
         self.cxxopt = []
+        #: List of flags used to add --linkopt=flag1 ... --linkopt=flagN
         self.linkopt = []
+        #: String used to add --compilation_mode=["opt"|"dbg"]. Depends on self.settings.build_type
         self.compilation_mode = {'Release': 'opt', 'Debug': 'dbg'}.get(
             self._conanfile.settings.get_safe("build_type")
         )
         # Be aware that this parameter does not admit a compiler absolute path
         # If you want to add it, you will have to use a specific Bazel toolchain
+        #: String used to add --compiler=xxxx.
         self.compiler = None
         # cpu is the target architecture, and it's a bit tricky. If it's not a cross-compilation,
         # let Bazel guess it.
+        #: String used to add --cpu=xxxxx. At the moment, it's only added if cross-building.
         self.cpu = None
         # TODO: cross-compilation process is so powerless. Needs to use the new platforms.
         if cross_building(self._conanfile):
@@ -89,6 +103,7 @@ class BazelToolchain:
             # It's better to let it configure the project in that case
             self.cpu = _get_cpu_name(conanfile)
         # This is itself a toolchain but just in case
+        #: String used to add --crosstool_top.
         self.crosstool_top = None
         # TODO: Have a look at https://bazel.build/reference/be/make-variables
         # FIXME: Missing host_xxxx options. When are they needed? Cross-compilation?
@@ -142,5 +157,9 @@ class BazelToolchain:
         return content
 
     def generate(self):
+        """
+        Creates a ``conan_bzl.rc`` file with some bazel-build configuration. This last mentioned
+        is put as ``conan-config``.
+        """
         check_duplicated_generator(self, self._conanfile)
         save(self._conanfile, BazelToolchain.bazelrc_name, self._content)

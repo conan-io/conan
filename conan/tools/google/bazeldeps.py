@@ -543,15 +543,23 @@ class _InfoGenerator:
 class BazelDeps:
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
-        # Activate the build context for the specified libraries
+        #: Activates the build context for the specified Conan package names.
         self.build_context_activated = []
 
     def generate(self):
         """
-        Save all the targets BUILD files and the dependencies.bzl one.
+        Generates all the targets <DEP>/BUILD.bazel files and the dependencies.bzl one in the
+        build folder. It's important to highlight that the dependencies.bzl file should be loaded
+        by your WORKSPACE Bazel file:
 
-        Important! The dependencies.bzl file should be loaded by the WORKSPACE Bazel file.
+        .. code-block:: python
+
+            load("@//[BUILD_FOLDER]:dependencies.bzl", "load_conan_dependencies")
+            load_conan_dependencies()
         """
         check_duplicated_generator(self, self._conanfile)
         requirements = _get_requirements(self._conanfile, self.build_context_activated)
