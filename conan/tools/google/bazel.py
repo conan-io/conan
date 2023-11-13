@@ -27,13 +27,14 @@ class Bazel(object):
     def build(self, args=None, target="//...", clean=True):
         """
         Runs "bazel <rcpaths> build <configs> <args> <targets>" command where:
-            * ``rcpaths``: adds ``--bazelrc=xxxx`` per rc-file path. It listens to ``BazelToolchain``
-              (``--bazelrc=conan_bzl.rc``), and ``tools.google.bazel:bazelrc_path`` conf.
-            * ``configs``: adds ``--config=xxxx`` per bazel-build configuration.
-              It listens to ``BazelToolchain`` (``--config=conan-config``), and
-              ``tools.google.bazel:configs`` conf.
-            * ``args``: they are any extra arguments to add to the ``bazel build`` execution.
-            * ``targets``: all the target labels.
+
+        * ``rcpaths``: adds ``--bazelrc=xxxx`` per rc-file path. It listens to ``BazelToolchain``
+          (``--bazelrc=conan_bzl.rc``), and ``tools.google.bazel:bazelrc_path`` conf.
+        * ``configs``: adds ``--config=xxxx`` per bazel-build configuration.
+          It listens to ``BazelToolchain`` (``--config=conan-config``), and
+          ``tools.google.bazel:configs`` conf.
+        * ``args``: they are any extra arguments to add to the ``bazel build`` execution.
+        * ``targets``: all the target labels.
 
         :param target: It is the target label. By default, it's "//..." which runs all the targets.
         :param args: list of extra arguments to pass to the CLI.
