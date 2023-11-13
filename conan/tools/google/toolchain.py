@@ -1,3 +1,26 @@
+"""
+Creates a simple conan_bzl.rc file which defines a conan-config configuration with all the
+attributes defined by the consumer. Bear in mind that this is not a complete toolchain, it
+only fills some common CLI attributes and save them in a ``*.rc`` file.
+
+Important: Maybe, this toolchain should create a new Conan platform with the user
+constraints, but it's not the goal for now as Bazel has tons of platforms and toolchains
+already available in its bazel_tools repo. For now, it only admits a list of platforms defined
+by the user.
+
+More information related:
+    * Toolchains: https://bazel.build/extending/toolchains (deprecated)
+    * Platforms: https://bazel.build/concepts/platforms (new default since Bazel 7.x)
+    * Migrating to platforms: https://bazel.build/concepts/platforms
+    * Issue related: https://github.com/bazelbuild/bazel/issues/6516
+
+Others:
+    * CROOSTOOL: https://github.com/bazelbuild/bazel/blob/cb0fb033bad2a73e0457f206afb87e195be93df2/tools/cpp/CROSSTOOL
+    * Cross-compiling with Bazel: https://ltekieli.com/cross-compiling-with-bazel/
+    * bazelrc files: https://bazel.build/run/bazelrc
+    * CLI options: https://bazel.build/reference/command-line-reference
+    * User manual: https://bazel.build/docs/user-manual
+"""
 import textwrap
 
 from jinja2 import Template
@@ -21,29 +44,6 @@ def _get_cpu_name(conanfile):
 
 # FIXME: In the future, it could be BazelPlatform instead? Check https://bazel.build/concepts/platforms
 class BazelToolchain:
-    """
-    Creates a simple conan_bzl.rc file which defines a conan-config configuration with all the
-    attributes defined by the consumer. Bear in mind that this is not a complete toolchain, it
-    only fills some common CLI attributes and save them in a *.rc file.
-
-    Important: Maybe, this toolchain should create a new Conan platform with the user
-    constraints, but it's not the goal for now as Bazel has tons of platforms and toolchains
-    already available in its bazel_tools repo. For now, it only admits a list of platforms defined
-    by the user.
-    More information related:
-        * Toolchains: https://bazel.build/extending/toolchains (deprecated)
-        * Platforms: https://bazel.build/concepts/platforms (new default since Bazel 7.x)
-        * Migrating to platforms: https://bazel.build/concepts/platforms
-        * Issue related: https://github.com/bazelbuild/bazel/issues/6516
-
-    Others:
-        CROOSTOOL: https://github.com/bazelbuild/bazel/blob/cb0fb033bad2a73e0457f206afb87e195be93df2/tools/cpp/CROSSTOOL
-        Cross-compiling with Bazel: https://ltekieli.com/cross-compiling-with-bazel/
-        bazelrc files: https://bazel.build/run/bazelrc
-        CLI options: https://bazel.build/reference/command-line-reference
-        User manual: https://bazel.build/docs/user-manual
-    """
-
     bazelrc_name = "conan_bzl.rc"
     bazelrc_config = "conan-config"
     bazelrc_template = textwrap.dedent("""\
