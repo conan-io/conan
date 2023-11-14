@@ -1,8 +1,9 @@
 import fnmatch
 import os
 
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
-from conans.client.cache.remote_registry import Remote
+from conans.client.cache.remote_registry import Remote, RemoteRegistry
 from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.errors import ConanException
 
@@ -11,6 +12,7 @@ class RemotesAPI:
 
     def __init__(self, conan_api):
         self.conan_api = conan_api
+        self._remotes_file = HomePaths(self.conan_api.cache_folder).remotes_path
 
     def list(self, pattern=None, only_enabled=True):
         """
@@ -19,8 +21,7 @@ class RemotesAPI:
         :param only_enabled:
         :return:
         """
-        app = ConanApp(self.conan_api.cache_folder)
-        remotes = app.cache.remotes_registry.list()
+        remotes = RemoteRegistry(self._remotes_file).list()
         if only_enabled:
             remotes = [r for r in remotes if not r.disabled]
         if pattern:
@@ -59,48 +60,44 @@ class RemotesAPI:
         return remotes
 
     def get(self, remote_name):
-        app = ConanApp(self.conan_api.cache_folder)
-        return app.cache.remotes_registry.read(remote_name)
+        return RemoteRegistry(self._remotes_file).read(remote_name)
 
     def add(self, remote: Remote, force=False, index=None):
-        app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.add(remote, force=force, index=index)
+        return RemoteRegistry(self._remotes_file).add(remote, force=force, index=index)
 
     def remove(self, pattern: str):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         remotes = self.list(pattern, only_enabled=False)
         for remote in remotes:
-            app.cache.remotes_registry.remove(remote.name)
+            RemoteRegistry(self._remotes_file).remove(remote.name)
             users_clean(app.cache.localdb, remote.url)
 
     def update(self, remote_name, url=None, secure=None, disabled=None, index=None):
-        app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.update(remote_name, url, secure, disabled=disabled,
-                                          index=index)
+        RemoteRegistry(self._remotes_file).update(remote_name, url, secure, disabled=disabled,
+                                                  index=index)
 
     def rename(self, remote_name: str, new_name: str):
-        app = ConanApp(self.conan_api.cache_folder)
-        app.cache.remotes_registry.rename(remote_name, new_name)
+        RemoteRegistry(self._remotes_file).rename(remote_name, new_name)
 
     def user_info(self, remote: Remote):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         return users_list(app.cache.localdb, remotes=[remote])[0]
 
     def login(self, remote: Remote, username, password):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         app.remote_manager.authenticate(remote, username, password)
 
     def logout(self, remote: Remote):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         # The localdb only stores url + username + token, not remote name, so use URL as key
         users_clean(app.cache.localdb, remote.url)
 
     def user_set(self, remote: Remote, username):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         return user_set(app.cache.localdb, username, remote)
 
     def auth(self, remote: Remote, with_user=False):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if with_user:
             user, token, _ = app.cache.localdb.get_login(remote.url)
             if not user:

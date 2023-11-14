@@ -99,7 +99,7 @@ def test_profiles_includes():
 
     save_profile(profile4, "profile4.txt")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile = profile_loader.load_profile("./profile4.txt", tmp)
 
     assert profile.settings == {"os": "1"}
@@ -116,7 +116,7 @@ def test_profile_compose_system_tools():
     save(os.path.join(tmp, "profile2"), "include(./profile0)\n[system_tools]\ntool3/3.0")
     save(os.path.join(tmp, "profile3"), "include(./profile0)\n[system_tools]\ntool1/1.1")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile2 = profile_loader.load_profile("./profile2", tmp)
     assert profile2.system_tools == [RecipeReference.loads("tool1/1.0"),
                                      RecipeReference.loads("tool3/3.0")]
@@ -136,7 +136,7 @@ def test_profile_compose_tool_requires():
     save(os.path.join(tmp, "profile2"), "include(./profile0)\n[tool_requires]\ntool3/3.0")
     save(os.path.join(tmp, "profile3"), "include(./profile0)\n[tool_requires]\ntool1/1.1")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile2 = profile_loader.load_profile("./profile2", tmp)
     assert profile2.tool_requires == {"*": [RecipeReference.loads("tool1/1.0"),
                                             RecipeReference.loads("tool3/3.0")]}
@@ -162,7 +162,7 @@ def test_profile_include_order():
             os={{MYVAR}}
         """)
     save(os.path.join(tmp, "profile2.txt"), profile2)
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile = profile_loader.load_profile("./profile2.txt", tmp)
 
     assert profile.settings["os"] == "fromProfile2"
@@ -177,7 +177,7 @@ def test_profile_load_absolute_path():
     current_profile_path = os.path.join(current_profile_folder, "default")
     save(current_profile_path, "[settings]\nos=Windows")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile = profile_loader.load_profile(current_profile_path)
     assert "Windows" == profile.settings["os"]
 
@@ -191,7 +191,7 @@ def test_profile_load_relative_path_dot():
     current_profile_path = os.path.join(current_profile_folder, "profiles", "default")
     save(current_profile_path, "[settings]\nos=Windows")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile = profile_loader.load_profile("./profiles/default", current_profile_folder)
     assert "Windows" == profile.settings["os"]
 
@@ -206,7 +206,7 @@ def test_profile_load_relative_path_pardir():
     cwd = os.path.join(tmp, "user_folder")
     save(current_profile_path, "[settings]\nos=Windows")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile = profile_loader.load_profile("../profiles/default", cwd)
     assert "Windows" == profile.settings["os"]
 
@@ -223,7 +223,7 @@ def test_profile_buildenv():
     current_profile_path = os.path.join(tmp, "default")
     save(current_profile_path, txt)
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
     profile = profile_loader.load_profile(current_profile_path)
     buildenv = profile.buildenv
     env = buildenv.get_profile_env(None)
@@ -247,7 +247,7 @@ def test_profile_core_confs_error(conf_name):
     current_profile_path = os.path.join(tmp, "default")
     save(current_profile_path, "")
 
-    profile_loader = ProfileLoader(cache=None)  # If not used cache, will not error
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
 
     with pytest.raises(ConanException) as exc:
         profile_loader.from_cli_args([], [], [], [conf_name], None)

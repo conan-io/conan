@@ -82,6 +82,65 @@ def print_list_text(results):
     print_serial(info)
 
 
+def print_list_compact(results):
+    info = results["results"]
+    # Extract command single package name
+    new_info = {}
+
+    for remote, remote_info in info.items():
+        if not remote_info or "error" in remote_info:
+            new_info[remote] = {"warning": "There are no matching recipe references"}
+            continue
+        new_remote_info = {}
+        for ref, ref_info in remote_info.items():
+            new_ref_info = {}
+            for rrev, rrev_info in ref_info.get("revisions", {}).items():
+                new_rrev_info = {}
+                new_rrev = f"{ref}#{rrev}"
+                timestamp = rrev_info.get("timestamp")
+                if timestamp:
+                    new_rrev += f" ({timestamp_to_str(timestamp)})"
+                # collect all options
+                common_options = {}
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    options = pid_info.get("info", {}).get("options", {})
+                    common_options.update(options)
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    options = pid_info.get("info", {}).get("options")
+                    if options:  # If a package has no options, like header-only, skip
+                        common_options = {k: v for k, v in common_options.items()
+                                          if k in options and v == options[k]}
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    options = pid_info.get("info", {}).get("options")
+                    if options:
+                        for k, v in options.items():
+                            if v != common_options.get(k):
+                                common_options.pop(k, None)
+                # format options
+                for pid, pid_info in rrev_info.get("packages", {}).items():
+                    new_pid = f"{ref}#{rrev}:{pid}"
+                    new_pid_info = {}
+                    info = pid_info.get("info")
+                    settings = info.get("settings")
+                    if settings:  # A bit of pretty order, first OS-ARCH
+                        values = [settings.pop(s, None)
+                                  for s in ("os", "arch", "build_type", "compiler")]
+                        values = [v for v in values if v is not None]
+                        values.extend(settings.values())
+                        new_pid_info["settings"] = ", ".join(values)
+                    options = info.get("options")
+                    if options:
+                        diff_options = {k: v for k, v in options.items() if k not in common_options}
+                        options = ", ".join(f"{k}={v}" for k, v in diff_options.items())
+                        new_pid_info["options(diff)"] = options
+                    new_rrev_info[new_pid] = new_pid_info
+                new_ref_info[new_rrev] = new_rrev_info
+            new_remote_info[ref] = new_ref_info
+        new_info[remote] = new_remote_info
+
+    print_serial(new_info)
+
+
 def print_list_json(data):
     results = data["results"]
     myjson = json.dumps(results, indent=4)
@@ -90,7 +149,8 @@ def print_list_json(data):
 
 @conan_command(group="Consumer", formatters={"text": print_list_text,
                                              "json": print_list_json,
-                                             "html": list_packages_html})
+                                             "html": list_packages_html,
+                                             "compact": print_list_compact})
 def list(conan_api: ConanAPI, parser, *args):
     """
     List existing recipes, revisions, or packages in the cache (by default) or the remotes.
@@ -108,6 +168,10 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-g", "--graph", help="Graph json file")
     parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
     parser.add_argument("-gr", "--graph-recipes", help="Which recipes are listed", action="append")
+    parser.add_argument('--lru', default=None, action=OnceArgument,
+                        help="List recipes and binaries that have not been recently used. Use a"
+                             " time limit like --lru=5d (days) or --lru=4w (weeks),"
+                             " h (hours), m(minutes)")
 
     args = parser.parse_args(*args)
 
@@ -115,8 +179,12 @@ def list(conan_api: ConanAPI, parser, *args):
         raise ConanException("Missing pattern or graph json file")
     if args.pattern and args.graph:
         raise ConanException("Cannot define both the pattern and the graph json file")
+    if args.graph and args.lru:
+        raise ConanException("Cannot define lru when loading a graph json file")
     if (args.graph_recipes or args.graph_binaries) and not args.graph:
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
+    if args.remote and args.lru:
+        raise ConanException("'--lru' cannot be used in remotes, only in cache")
 
     if args.graph:
         graphfile = make_abs_path(args.graph)
@@ -127,7 +195,8 @@ def list(conan_api: ConanAPI, parser, *args):
         pkglist = MultiPackagesList()
         if args.cache or not args.remote:
             try:
-                cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None)
+                cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
+                                                   lru=args.lru)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:

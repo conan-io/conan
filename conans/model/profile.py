@@ -50,9 +50,9 @@ class Profile(object):
                 self._package_settings_values[pkg] = list(settings.items())
         return self._package_settings_values
 
-    def process_settings(self, cache):
+    def process_settings(self, cache_settings):
         assert self.processed_settings is None, "processed settings must be None"
-        self.processed_settings = cache.settings.copy()
+        self.processed_settings = cache_settings.copy()
         self.processed_settings.update_values(list(self.settings.items()))
 
     def dumps(self):

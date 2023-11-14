@@ -1,11 +1,64 @@
-from collections import namedtuple
+from functools import total_ordering
 from typing import Optional
 
 from conans.errors import ConanException
 from conans.model.recipe_ref import Version
 
 
-_Condition = namedtuple("_Condition", ["operator", "version"])
+@total_ordering
+class _Condition:
+    def __init__(self, operator, version):
+        self.operator = operator
+        self.display_version = version
+
+        value = str(version)
+        if (operator == ">=" or operator == "<") and "-" not in value:
+            value += "-"
+        self.version = Version(value)
+
+    def __str__(self):
+        return f"{self.operator}{self.display_version}"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __hash__(self):
+        return hash((self.operator, self.version))
+
+    def __lt__(self, other):
+        # Notice that this is done on the modified version, might contain extra prereleases
+        if self.version < other.version:
+            return True
+        elif self.version == other.version:
+            if self.operator == "<":
+                if other.operator == "<":
+                    return self.display_version.pre is not None
+                else:
+                    return True
+            elif self.operator == "<=":
+                if other.operator == "<":
+                    return False
+                else:
+                    return self.display_version.pre is None
+            elif self.operator == ">":
+                if other.operator == ">":
+                    return self.display_version.pre is None
+                else:
+                    return False
+            else:
+                if other.operator == ">":
+                    return True
+                # There's a possibility of getting here while validating if a range is non-void
+                # by comparing >= & <= for lower limit <= upper limit
+                elif other.operator == "<=":
+                    return True
+                else:
+                    return self.display_version.pre is not None
+        return False
+
+    def __eq__(self, other):
+        return (self.display_version == other.display_version and
+                self.operator == other.operator)
 
 
 class _ConditionSet:
@@ -16,14 +69,11 @@ class _ConditionSet:
         self.conditions = []
         for e in expressions:
             e = e.strip()
-            if e[-1] == "-":  # Include pre-releases
-                e = e[:-1]
-                self.prerelease = True
             self.conditions.extend(self._parse_expression(e))
 
     @staticmethod
     def _parse_expression(expression):
-        if expression == "" or expression == "*":
+        if expression in ("", "*"):
             return [_Condition(">=", Version("0.0.0"))]
         elif len(expression) == 1:
             raise ConanException(f'Error parsing version range "{expression}"')
@@ -42,6 +92,8 @@ class _ConditionSet:
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
         if operator == "~":  # tilde minor
+            if "-" not in version:
+                version += "-"
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0
             return [_Condition(">=", v), _Condition("<", v.upper_bound(index))]
@@ -132,3 +184,34 @@ class VersionRange:
                 return True
         return False
 
+    def intersection(self, other):
+        conditions = []
+
+        def _calculate_limits(operator, lhs, rhs):
+            limits = ([c for c in lhs.conditions if operator in c.operator]
+                      + [c for c in rhs.conditions if operator in c.operator])
+            if limits:
+                return sorted(limits, reverse=operator == ">")[0]
+
+        for lhs_conditions in self.condition_sets:
+            for rhs_conditions in other.condition_sets:
+                internal_conditions = []
+                lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
+                upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
+                if lower_limit:
+                    internal_conditions.append(lower_limit)
+                if upper_limit:
+                    internal_conditions.append(upper_limit)
+                if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
+                    conditions.append(internal_conditions)
+
+        if not conditions:
+            return None
+        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions)
+        result = VersionRange(expression)
+        # TODO: Direct definition of conditions not reparsing
+        # result.condition_sets = self.condition_sets + other.condition_sets
+        return result
+
+    def version(self):
+        return Version(f"[{self._expression}]")

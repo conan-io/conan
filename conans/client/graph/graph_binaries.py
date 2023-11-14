@@ -1,4 +1,5 @@
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compatibility import BinaryCompatibility
 from conans.client.graph.compute_pid import compute_package_id
@@ -13,12 +14,14 @@ from conans.errors import NoRemoteAvailable, NotFoundException, \
 
 class GraphBinariesAnalyzer(object):
 
-    def __init__(self, conan_app):
+    def __init__(self, conan_app, global_conf):
         self._cache = conan_app.cache
+        self._global_conf = global_conf
         self._remote_manager = conan_app.remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        self._compatibility = BinaryCompatibility(self._cache)
+        compat_folder = HomePaths(self._cache.cache_folder).compatibility_plugin_path
+        self._compatibility = BinaryCompatibility(compat_folder)
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -314,7 +317,7 @@ class GraphBinariesAnalyzer(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
 
     def _evaluate_package_id(self, node):
-        compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
+        compute_package_id(node, self._global_conf)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for

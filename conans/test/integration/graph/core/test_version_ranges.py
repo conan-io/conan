@@ -322,9 +322,10 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, liba])
 
-    def test_two_ranges_overriden_conflict(self):
+    def test_two_ranges_overriden_no_conflict(self):
         # app -> libb/0.1 -(range >0)-> liba/0.1
         #   \ ---------liba/[<0.3>]-------------/
+        # Conan learned to solve this conflict in 2.0.14
         self.recipe_cache("liba/0.1")
         self.recipe_cache("liba/0.2")
         self.recipe_cache("liba/0.3")
@@ -333,16 +334,16 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[<0.3]"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        # This is no longer a conflict, and Conan knows that liba/2.0 is a valid joint solution
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(liba, "liba/0.3#123", dependents=[libb], deps=[])
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
 
 
 def test_mixed_user_channel():

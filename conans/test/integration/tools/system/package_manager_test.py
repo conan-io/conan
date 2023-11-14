@@ -45,6 +45,7 @@ def test_msys2():
 @pytest.mark.parametrize("distro, tool", [
     ("ubuntu", "apt-get"),
     ("debian", "apt-get"),
+    ("linuxmint", "apt-get"),
     ("pidora", "yum"),
     ("rocky", "yum"),
     ("fedora", "dnf"),
@@ -58,6 +59,9 @@ def test_msys2():
     ("opensuse-next_version", "zypper"),
     ("freebsd", "pkg"),
     ("alpine", "apk"),
+    ('altlinux', "apt-get"),
+    ("astra", 'apt-get'),
+    ('elbrus', 'apt-get'),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
@@ -171,7 +175,8 @@ def test_dnf_yum_return_code_100(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,
+                     quiet=False):
             assert command == result
             return 100 if "check-update" in command else 0
 
@@ -183,7 +188,8 @@ def test_dnf_yum_return_code_100(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False):
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,
+                     quiet=False):
             return 55 if "check-update" in command else 0
 
         conanfile.run = fake_run
@@ -273,7 +279,7 @@ def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host,
             tool.install(["package1", "package2"], host_package=False)
 
     assert tool._conanfile.command == result
-    
+
 @pytest.mark.parametrize("tool_class, result", [
     # cross-compile but arch_names=None -> do not add host architecture
     # https://github.com/conan-io/conan/issues/12320 because the package is archless

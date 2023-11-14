@@ -16,7 +16,8 @@ class PyRequire(object):
 
     def serialize(self):
         return {"remote": self.remote.name if self.remote is not None else None,
-                "recipe": self.recipe}
+                "recipe": self.recipe,
+                "path": self.path}
 
 
 class PyRequires(object):
@@ -60,11 +61,11 @@ class PyRequires(object):
 
 
 class PyRequireLoader(object):
-    def __init__(self, conan_app):
+    def __init__(self, conan_app, global_conf):
         self._proxy = conan_app.proxy
         self._range_resolver = conan_app.range_resolver
         self._cached_py_requires = {}
-        self._resolve_prereleases = conan_app.cache.new_config.get("core.version_ranges:resolve_prereleases")
+        self._resolve_prereleases = global_conf.get("core.version_ranges:resolve_prereleases")
 
     def load_py_requires(self, conanfile, loader, graph_lock, remotes, update, check_update):
         py_requires_refs = getattr(conanfile, "python_requires", None)

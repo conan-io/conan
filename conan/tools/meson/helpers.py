@@ -1,6 +1,5 @@
 from conan.api.output import ConanOutput
 from conan.tools.build.flags import cppstd_msvc_flag
-from conans.errors import ConanException
 from conans.model.options import _PackageOption
 
 __all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag"]
@@ -50,7 +49,9 @@ _meson_cpu_family_map = {
     'sparcv9': ('sparc64', 'sparc64', 'big'),
     'wasm': ('wasm32', 'wasm32', 'little'),
     'x86': ('x86', 'x86', 'little'),
-    'x86_64': ('x86_64', 'x86_64', 'little')
+    'x86_64': ('x86_64', 'x86_64', 'little'),
+    'riscv32': ('riscv32', 'riscv32', 'little'),
+    'riscv64': ('riscv64', 'riscv32', 'little')
 }
 
 

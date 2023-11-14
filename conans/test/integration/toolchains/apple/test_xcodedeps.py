@@ -534,3 +534,50 @@ def test_skipped_not_included():
     assert re.search(r"Skipped binaries\n\s+(.*?)", client.out, re.DOTALL)
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
     assert "conan_dep.xcconfig" not in dep_xconfig
+
+
+def test_correctly_handle_transitive_components():
+    # https://github.com/conan-io/conan/issues/14887
+    client = TestClient()
+    has_components = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgWithComponents(ConanFile):
+            name = 'has_components'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def package_info(self):
+                self.cpp_info.components['first'].libs = ['first']
+                self.cpp_info.components['second'].libs = ['donottouch']
+                self.cpp_info.components['second'].requires = ['first']
+        """)
+
+    uses_components = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgUsesComponent(ConanFile):
+            name = 'uses_components'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def requirements(self):
+                self.requires('has_components/1.0')
+            def package_info(self):
+                self.cpp_info.libs = ['uses_only_first']
+                self.cpp_info.requires = ['has_components::first']
+        """)
+
+    consumer = textwrap.dedent("""
+        [requires]
+        uses_components/1.0
+        """)
+
+    client.save({"has_components.py": has_components,
+                 "uses_components.py": uses_components,
+                 "consumer.txt": consumer})
+    client.run("create has_components.py")
+    client.run("create uses_components.py")
+    client.run("install consumer.txt -g XcodeDeps")
+    conandeps = client.load("conandeps.xcconfig")
+    assert '#include "conan_has_components.xcconfig"' not in conandeps
+    assert '#include "conan_uses_components.xcconfig"' in conandeps
+    conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
+    assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
+    assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig

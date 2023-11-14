@@ -333,7 +333,8 @@ class ConanFile:
         if not quiet:
             ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, shell=shell)
-        ConanOutput().writeln("")
+        if not quiet:
+            ConanOutput().writeln("")
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing" % retcode)

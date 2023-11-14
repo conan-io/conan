@@ -7,7 +7,6 @@ from mock import patch
 
 from conan import conan_version
 from conan.internal.api import detect_api
-from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
@@ -343,3 +342,34 @@ def test_build_test_consumer_only():
     c.run('install pkg --build=*')
     assert "dep/0.1: SKIP-TEST: True" in c.out
     assert "conanfile.py (pkg/0.1): SKIP-TEST: False" in c.out
+
+
+def test_conf_should_be_immutable():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                self.conf.append("user.myteam:myconf", "value1")
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            requires = "dep/0.1"
+            def generate(self):
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+        """)
+    save(c.cache.new_config_path, 'user.myteam:myconf=["root_value"]')
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("create dep")
+    assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
+    c.run('create pkg --build=*')
+    assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
+    # The pkg/0.1 output should be non-modified
+    assert "pkg/0.1: user.myteam:myconf: ['root_value']" in c.out

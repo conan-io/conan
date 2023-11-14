@@ -1,6 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
 from conans.client.graph.proxy import ConanProxy
 from conans.client.graph.python_requires import PyRequireLoader
@@ -14,8 +15,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 
 
 class CmdWrapper:
-    def __init__(self, cache):
-        wrapper = os.path.join(cache.cache_folder, "extensions", "plugins", "cmd_wrapper.py")
+    def __init__(self, wrapper):
         if os.path.isfile(wrapper):
             mod, _ = load_python_file(wrapper)
             self._wrapper = mod.cmd_wrapper
@@ -37,27 +37,27 @@ class ConanFileHelpers:
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder, global_conf):
 
         self.cache_folder = cache_folder
-        self.cache = ClientCache(self.cache_folder)
+        self.cache = ClientCache(self.cache_folder, global_conf)
 
-        self.hook_manager = HookManager(self.cache.hooks_path)
+        home_paths = HomePaths(self.cache_folder)
+        self.hook_manager = HookManager(home_paths.hooks_path)
         # Wraps an http_requester to inject proxies, certs, etc
-        global_conf = self.cache.new_config
         ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
         self.requester = ConanRequester(global_conf, cache_folder)
         # To handle remote connections
         rest_client_factory = RestApiClientFactory(self.requester, global_conf)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_client_factory, self.cache)
+        auth_manager = ConanApiAuthManager(rest_client_factory, self.cache, global_conf)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager)
 
         self.proxy = ConanProxy(self)
-        self.range_resolver = RangeResolver(self)
+        self.range_resolver = RangeResolver(self, global_conf)
 
-        self.pyreq_loader = PyRequireLoader(self)
-        cmd_wrap = CmdWrapper(self.cache)
+        self.pyreq_loader = PyRequireLoader(self, global_conf)
+        cmd_wrap = CmdWrapper(home_paths.wrapper_path)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)

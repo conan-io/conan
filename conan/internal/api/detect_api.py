@@ -50,6 +50,10 @@ def detect_arch():
         return "armv8"
     elif "ARM64" in machine:
         return "armv8"
+    elif 'riscv64' in machine:
+        return "riscv64"
+    elif "riscv32" in machine:
+        return 'riscv32'
     elif "64" in machine:
         return "x86_64"
     elif "86" in machine:

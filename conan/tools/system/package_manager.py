@@ -39,7 +39,7 @@ class _SystemPackageManagerTool(object):
             os_name = distro.id() or os_name
         elif os_name == "Windows" and self._conanfile.conf.get("tools.microsoft.bash:subsystem") == "msys2":
             os_name = "msys2"
-        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian"],
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint", 'astra', 'elbrus', 'altlinux'],
                            "apk": ["alpine"],
                            "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
                                    "almalinux", "rocky"],
@@ -61,11 +61,16 @@ class _SystemPackageManagerTool(object):
             for d in distros:
                 if d in os_name:
                     return tool
+                
+        # No default package manager was found for the system,
+        # so notify the user
+        self._conanfile.output.info("A default system package manager couldn't be found for {}, "
+                                    "system packages will not be installed.".format(os_name))
 
-    def get_package_name(self, package, host_package=True):        
+    def get_package_name(self, package, host_package=True):
         # Only if the package is for building, for example a library,
         # we should add the host arch when cross building.
-        # If the package is a tool that should be installed on the current build 
+        # If the package is a tool that should be installed on the current build
         # machine we should not add the arch.
         if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
             return "{}{}{}".format(package, self._arch_separator,
@@ -83,7 +88,8 @@ class _SystemPackageManagerTool(object):
             return method(*args, **kwargs)
 
     def _conanfile_run(self, command, accepted_returns):
-        ret = self._conanfile.run(command, ignore_errors=True)
+        # When checking multiple packages, this is too noisy
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=True)
         if ret not in accepted_returns:
             raise ConanException("Command '%s' failed" % command)
         return ret
