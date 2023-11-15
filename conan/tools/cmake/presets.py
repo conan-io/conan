@@ -170,8 +170,8 @@ def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
             cmake_make_program = cmake_make_program.replace("\\", "/")
             cache_variables["CMAKE_MAKE_PROGRAM"] = cmake_make_program
 
-    if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
-        cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
+        if "CMAKE_POLICY_DEFAULT_CMP0091" not in cache_variables:
+            cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "NEW"
 
     if "BUILD_TESTING" not in cache_variables:
         if conanfile.conf.get("tools.build:skip_test", check_type=bool):
