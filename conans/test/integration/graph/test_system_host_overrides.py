@@ -1,6 +1,17 @@
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
+"""cases for "alternatives"
+zlib/1.1 => zlib/1.1@system  # replace exact dependency version for one in the system
+zlib/* => zlibng/*           # replace an alternative provider, with the same version, user, channel
+zlib/* => zlib/1.2           # dependency override
+zlib/1.1 => zlib/1.2         # exact dependency override
+zlib/* => zlib/*@system      # replace a dependency version for same in another channel
+zlib/1.*
+
+This is equivalent to --require-override in Conan 1.X? This was a require(..., override)
+"""
+
 
 class TestSystemHostOverrides:
     def test_system_dep(self):
