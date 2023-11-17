@@ -219,7 +219,7 @@ class _ProfileValueParser(object):
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
-                                                         "system_deps", "settings",
+                                                         "system_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
@@ -232,16 +232,10 @@ class _ProfileValueParser(object):
         else:
             system_tools = []
 
-        system_deps = {}
-        if doc.system_deps:
-            for r in doc.system_deps.splitlines():
-                tokens = r.split(":", 1)
-                if len(tokens) == 2:
-                    src, target = tokens
-                    target = RecipeReference.loads(target.strip())
-                else:
-                    src, target = r, None
-                system_deps[RecipeReference.loads(src.strip())] = target
+        if doc.system_requires:
+            system_deps = [RecipeReference.loads(r) for r in doc.system_requires.splitlines()]
+        else:
+            system_deps = []
 
         if doc.conf:
             conf = ConfDefinition()
@@ -256,7 +250,9 @@ class _ProfileValueParser(object):
         current_system_tools = {r.name: r for r in base_profile.system_tools}
         current_system_tools.update({r.name: r for r in system_tools})
         base_profile.system_tools = list(current_system_tools.values())
-        base_profile.system_deps.update(system_deps)
+        current_system_deps = {r.name: r for r in base_profile.system_deps}
+        current_system_deps.update({r.name: r for r in system_deps})
+        base_profile.system_deps = list(current_system_deps.values())
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():

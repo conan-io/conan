@@ -181,8 +181,6 @@ class TestGenerators:
                      "profile": "[system_tools]\ntool/1.1"})
         client.run("install . -pr=profile")
         assert "tool/1.1 - System tool" in client.out
-        print(client.out)
-        print(client.current_folder)
         assert not os.path.exists(os.path.join(client.current_folder, "tool-config.cmake"))
         assert not os.path.exists(os.path.join(client.current_folder, "tool.pc"))
 

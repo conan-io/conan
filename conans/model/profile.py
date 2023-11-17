@@ -117,7 +117,10 @@ class Profile(object):
         current_system_tools = {r.name: r for r in self.system_tools}
         current_system_tools.update({r.name: r for r in other.system_tools})
         self.system_tools = list(current_system_tools.values())
-        self.system_deps.update(other.system_deps)
+        current_system_deps = {r.name: r for r in self.system_deps}
+        current_system_deps.update({r.name: r for r in other.system_deps})
+        self.system_deps = list(current_system_deps.values())
+
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
         self.runenv.update_profile_env(other.runenv)
