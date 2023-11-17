@@ -4,6 +4,7 @@ from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_BUILD
 from conans.model.package_ref import PkgReference
+from conans.util.files import mkdir
 
 
 class ExportAPI:
@@ -40,6 +41,8 @@ class ExportAPI:
         conanfile.folders.set_base_folders(source_folder, output_folder)
         dest_package_folder = pkg_layout.package()
         conanfile.folders.set_base_package(dest_package_folder)
+        mkdir(pkg_layout.metadata())
+        conanfile.folders.set_base_pkg_metadata(pkg_layout.metadata())
 
         with pkg_layout.set_dirty_context_manager():
             prev = run_package_method(conanfile, package_id, hook_manager, ref)
