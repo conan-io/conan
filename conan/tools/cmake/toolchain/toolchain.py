@@ -116,8 +116,7 @@ class CMakeToolchain(object):
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
 
-        if(CMAKE_POLICY_DEFAULT_CMP0091)
-        set(_conan_avoid_unused_policy_warning "${CMAKE_POLICY_DEFAULT_CMP0091}")
+        if(CMAKE_POLICY_DEFAULT_CMP0091)  # Avoid unused and not-initialized warnings
         endif()
         """)
 
