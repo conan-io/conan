@@ -19,7 +19,6 @@ import os
 import platform
 import shutil
 import subprocess
-from distutils import dir_util
 
 from conans import __version__
 from conans.util.files import save
@@ -104,7 +103,6 @@ def pyinstall(source_folder):
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     hidden = ("--hidden-import=glob "  # core stdlib
               "--hidden-import=pathlib "
-              "--hidden-import=distutils.dir_util "
               # Modules that can be imported in ConanFile conan.tools and errors
               "--collect-submodules=conan.cli.commands "
               "--hidden-import=conan.errors "

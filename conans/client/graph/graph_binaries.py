@@ -162,6 +162,7 @@ class GraphBinariesAnalyzer(object):
 
         if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
             node.should_build = True
+            node.build_allowed = True
             node.binary = BINARY_BUILD if not node.cant_build else BINARY_INVALID
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
@@ -370,27 +371,39 @@ class GraphBinariesAnalyzer(object):
     @staticmethod
     def _skip_binaries(graph):
         required_nodes = set()
+        # Aggregate all necessary starting nodes
         required_nodes.add(graph.root)
         for node in graph.nodes:
-            if node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE) \
-                    and node is not graph.root:
-                continue
-            # The nodes that are directly required by this one to build correctly
-            deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
+            if node.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE):
+                if not node.build_allowed:  # Only those that are forced to build, not only "missing"
+                    required_nodes.add(node)
 
-            # second pass, transitive affected. Packages that have some dependency that is required
-            # cannot be skipped either. In theory the binary could be skipped, but build system
-            # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
-            indirect = (d.node for d in node.transitive_deps.values()
-                        if any(t.node in deps_required for t in d.node.transitive_deps.values()))
-            deps_required.update(indirect)
+        root_nodes = required_nodes.copy()
+        while root_nodes:
+            new_root_nodes = set()
+            for node in root_nodes:
+                # The nodes that are directly required by this one to build correctly
+                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
 
-            # Third pass, mark requires as skippeable
-            for dep in node.transitive_deps.values():
-                dep.require.skip = dep.node not in deps_required
+                # second pass, transitive affected. Packages that have some dependency that is required
+                # cannot be skipped either. In theory the binary could be skipped, but build system
+                # integrations like CMakeDeps rely on find_package() to correctly find transitive deps
+                indirect = (d.node for d in node.transitive_deps.values()
+                            if any(t.node in deps_required for t in d.node.transitive_deps.values()))
+                deps_required.update(indirect)
 
-            # Finally accumulate for marking binaries as SKIP download
-            required_nodes.update(deps_required)
+                # Third pass, mark requires as skippeable
+                for dep in node.transitive_deps.values():
+                    dep.require.skip = dep.node not in deps_required
+
+                # Finally accumulate all needed nodes for marking binaries as SKIP download
+                news_req = [r for r in deps_required
+                            if r.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE)
+                            if r not in required_nodes]  # Avoid already expanded before
+                new_root_nodes.update(news_req)  # For expanding the next iteration
+                required_nodes.update(deps_required)
+
+            root_nodes = new_root_nodes
 
         for node in graph.nodes:
             if node not in required_nodes and node.conanfile.conf.get("tools.graph:skip_binaries",

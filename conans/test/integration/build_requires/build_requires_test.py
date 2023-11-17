@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import re
 import textwrap
 import unittest
 
@@ -969,3 +970,21 @@ class TestBuildTrackHost:
         # lock can be used
         c.run("install app --lockfile=app/conan.lock")
         c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
+
+
+def test_build_missing_build_requires():
+    c = TestClient()
+    c.save({"tooldep/conanfile.py": GenConanfile("tooldep", "0.1"),
+            "tool/conanfile.py": GenConanfile("tool", "0.1").with_tool_requires("tooldep/0.1"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_tool_requires("tool/0.1"),
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+    c.run("create tooldep")
+    c.run("create tool")
+    c.run("create pkg")
+    c.run("remove tool*:* -c")
+    c.run("install app")
+    assert "- Build" not in c.out
+    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+    c.run("install app --build=missing")
+    assert "- Build" not in c.out
+    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
