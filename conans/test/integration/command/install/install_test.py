@@ -510,3 +510,27 @@ def test_install_json_format():
     data = json.loads(client.stdout)
     conf_info = data["graph"]["nodes"]["1"]["conf_info"]
     assert {'user.myteam:myconf': 'myvalue'} == conf_info
+
+
+def test_install_json_format_not_visible():
+    c = TestClient()
+    dep = GenConanfile("dep", "0.1")
+    app = textwrap.dedent("""
+        from conan import ConanFile
+
+        class RtPkcs11EcpConanfile(ConanFile):
+            settings = "os", "arch", "build_type"
+            name="pkg_a"
+            version="0.0.1"
+
+            def requirements(self):
+                self.requires("dep/0.1", visible=False, headers=False, libs=False, run=False)
+        """)
+    c.save({"dep/conanfile.py": dep,
+            "app/conanfile.py": app})
+    c.run("export-pkg dep")
+    c.run("install app --format=json")
+    c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")})
+    data = json.loads(c.stdout)
+    pkg_folder = data["graph"]["nodes"]["1"]["package_folder"]
+    assert pkg_folder is not None
