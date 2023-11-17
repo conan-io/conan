@@ -22,8 +22,7 @@ class ClientCache(object):
         self.cache_folder = cache_folder
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = global_conf.get("core.cache:storage_path") or \
-                             os.path.join(self.cache_folder, "p")
+        self._store_folder = self.find_store_folder(cache_folder, global_conf)
 
         try:
             mkdir(self._store_folder)
@@ -31,6 +30,10 @@ class ClientCache(object):
             self._data_cache = DataCache(self._store_folder, db_filename)
         except Exception as e:
             raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
+
+    @staticmethod
+    def find_store_folder(cache_folder, global_conf):
+        return global_conf.get("core.cache:storage_path") or os.path.join(cache_folder, "p")
 
     @property
     def temp_folder(self):

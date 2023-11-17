@@ -49,7 +49,7 @@ class ConanAPI(object):
         self.graph = GraphAPI(self)
         self.export = ExportAPI(self)
         self.remove = RemoveAPI(self)
-        self.config = ConfigAPI(self)
+        self.config = ConfigAPI(self.home_folder)
         self.new = NewAPI(self)
         self.upload = UploadAPI(self)
         self.download = DownloadAPI(self)

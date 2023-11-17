@@ -14,18 +14,18 @@ from conans.util.files import load, save
 
 class ConfigAPI:
 
-    def __init__(self, conan_api):
-        self.conan_api = conan_api
+    def __init__(self, home_folder):
+        self.home_folder = home_folder
         self._new_config = None
 
     def home(self):
-        return self.conan_api.cache_folder
+        return self.home_folder
 
     def install(self, path_or_url, verify_ssl, config_type=None, args=None,
                 source_folder=None, target_folder=None):
         # TODO: We probably want to split this into git-folder-http cases?
         from conans.client.conf.config_installer import configuration_install
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.home_folder, self.global_conf)
         return configuration_install(app, path_or_url, verify_ssl,
                                      config_type=config_type, args=args,
                                      source_folder=source_folder, target_folder=target_folder)
@@ -44,18 +44,17 @@ class ConfigAPI:
         """
         if self._new_config is None:
             self._new_config = ConfDefinition()
-            cache_folder = self.conan_api.cache_folder
-            home_paths = HomePaths(cache_folder)
+            home_paths = HomePaths(self.home_folder)
             global_conf_path = home_paths.global_conf_path
             if os.path.exists(global_conf_path):
                 text = load(global_conf_path)
                 distro = None
                 if platform.system() in ["Linux", "FreeBSD"]:
                     import distro
-                template = Environment(loader=FileSystemLoader(cache_folder)).from_string(text)
+                template = Environment(loader=FileSystemLoader(self.home_folder)).from_string(text)
                 content = template.render({"platform": platform, "os": os, "distro": distro,
                                            "conan_version": conan_version,
-                                           "conan_home_folder": cache_folder,
+                                           "conan_home_folder": self.home_folder,
                                            "detect_api": detect_api})
                 self._new_config.loads(content)
             else:  # creation of a blank global.conf file for user convenience
