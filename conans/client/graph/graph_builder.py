@@ -215,14 +215,13 @@ class DepsGraphBuilder(object):
         return new_ref, dep_conanfile, recipe_status, remote
 
     @staticmethod
-    def _resolved_system_tool(node, require, profile_build, profile_host, resolve_prereleases):
-        if node.context == CONTEXT_HOST and not require.build:  # Only for DIRECT tool_requires
-            return
-        system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
-            else profile_host.system_tools
-        if system_tool:
+    def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
+        profile = profile_build if node.context == CONTEXT_BUILD else profile_host
+        dep_type = "system_tools" if require.build else "system_deps"
+        system_reqs = getattr(profile, dep_type)
+        if system_reqs:
             version_range = require.version_range
-            for d in system_tool:
+            for d in system_reqs:
                 if require.ref.name == d.name:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
@@ -233,40 +232,6 @@ class DepsGraphBuilder(object):
                                 d.revision == require.ref.revision:
                             require.ref.revision = d.revision
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
-
-    @staticmethod
-    def _resolved_system_deps(node, require, profile_build, profile_host, resolve_prereleases):
-        system_deps = profile_build.system_deps if node.context == CONTEXT_BUILD \
-            else profile_host.system_deps
-        if system_deps:
-            version_range = require.version_range
-            for d, system_replace in system_deps.items():
-                if require.ref.name == d.name:
-                    if version_range:
-                        if version_range.contains(d.version, resolve_prereleases):
-                            if system_replace:
-                                if require.ref.name != system_replace.name:
-                                    raise ConanException(f"[system_deps] {system_replace} cannot replace package name")
-                                #require.ref.version = system_replace.version
-                                require.ref.user = system_replace.user
-                                require.ref.channel = system_replace.channel
-                                require.ref.revision = system_replace.revision
-                            else:
-                                require.ref.version = d.version  # resolved range is replaced by exact
-                                return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
-                    elif require.ref.version == d.version:
-                        if d.revision is None or require.ref.revision is None or \
-                                d.revision == require.ref.revision:
-                            if system_replace:
-                                if require.ref.name != system_replace.name:
-                                    raise ConanException(f"[system_deps] {system_replace} cannot replace package name")
-                                #require.ref.version = system_replace.version
-                                require.ref.user = system_replace.user
-                                require.ref.channel = system_replace.channel
-                                require.ref.revision = system_replace.revision
-                            else:
-                                require.ref.revision = d.revision
-                                return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         if require.ref.version == "<host_version>":
@@ -280,11 +245,8 @@ class DepsGraphBuilder(object):
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
-        resolved = self._resolved_system_deps(node, require, profile_build, profile_host,
-                                              self._resolve_prereleases)
-        if resolved is None:
-            resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
-                                                  self._resolve_prereleases)
+        resolved = self._resolved_system(node, require, profile_build, profile_host,
+                                         self._resolve_prereleases)
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)
