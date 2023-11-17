@@ -115,6 +115,9 @@ class CMakeToolchain(object):
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
+
+        if(CMAKE_POLICY_DEFAULT_CMP0091)  # Avoid unused and not-initialized warnings
+        endif()
         """)
 
     def __init__(self, conanfile, generator=None):
