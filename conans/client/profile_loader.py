@@ -219,8 +219,9 @@ class _ProfileValueParser(object):
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
-                                                         "system_deps", "settings",
-                                                         "options", "conf", "buildenv", "runenv"])
+                                                         "settings",
+                                                         "options", "conf", "buildenv", "runenv",
+                                                         "alternatives"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
@@ -228,20 +229,18 @@ class _ProfileValueParser(object):
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         if doc.system_tools:
-            system_tools = [RecipeReference.loads(r) for r in doc.system_tools.splitlines()]
+            system_tools = [RecipeReference.loads(r.strip())
+                            for r in doc.system_tools.splitlines() if r.strip()]
         else:
             system_tools = []
 
-        system_deps = {}
-        if doc.system_deps:
-            for r in doc.system_deps.splitlines():
+        alternatives = {}
+        if doc.alternatives:
+            for r in doc.alternatives.splitlines():
                 tokens = r.split(":", 1)
-                if len(tokens) == 2:
-                    src, target = tokens
-                    target = RecipeReference.loads(target.strip())
-                else:
-                    src, target = r, None
-                system_deps[RecipeReference.loads(src.strip())] = target
+                src, target = tokens
+                target = RecipeReference.loads(target.strip())
+                alternatives[src.strip()] = target
 
         if doc.conf:
             conf = ConfDefinition()
@@ -256,7 +255,7 @@ class _ProfileValueParser(object):
         current_system_tools = {r.name: r for r in base_profile.system_tools}
         current_system_tools.update({r.name: r for r in system_tools})
         base_profile.system_tools = list(current_system_tools.values())
-        base_profile.system_deps.update(system_deps)
+        base_profile.alternatives.update(alternatives)
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():

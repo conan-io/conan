@@ -170,7 +170,7 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
-            self._resolved_system_deps(node, require, profile_build, profile_host)
+            self._resolved_alternatives(node, require, profile_build, profile_host)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -235,20 +235,19 @@ class DepsGraphBuilder(object):
                             require.ref.revision = d.revision
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
-    def _resolved_system_deps(self, node, require, profile_build, profile_host):
-        system_deps = profile_build.system_deps if node.context == CONTEXT_BUILD \
-            else profile_host.system_deps
-        if not system_deps:
+    def _resolved_alternatives(self, node, require, profile_build, profile_host):
+        alternatives = profile_build.alternatives if node.context == CONTEXT_BUILD \
+            else profile_host.alternatives
+
+        if not alternatives:
             return
 
-        for d, alternative_ref in system_deps.items():
+        for d, alternative_ref in alternatives.items():
             if require.ref.name != d.name:
                 continue
 
             if require.ref.matches(d):
                 require.ref = alternative_ref
-
-
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         if require.ref.version == "<host_version>":
@@ -262,12 +261,12 @@ class DepsGraphBuilder(object):
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
-        if resolved is None:
-            resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
-                                                  self._resolve_prereleases)
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)
+
+        resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
+                                              self._resolve_prereleases)
 
         if resolved is None:
             try:

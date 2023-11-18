@@ -152,10 +152,10 @@ class TestToolRequiresLock:
         c.run("install . -pr=profile")
         assert "tool/1.1 - System tool" in c.out
 
-        # if the profile points to another version it is an error, not in the lockfile
+        # even if the profile points to another version the locked one will prevail
         c.save({"profile": "[system_tools]\ntool/1.2"})
         c.run("install . -pr=profile", assert_error=True)
-        assert "ERROR: Requirement 'tool/1.2' not in lockfile" in c.out
+        assert "Package 'tool/1.1' not resolved: No remote defined" in c.out
 
 
 class TestGenerators:

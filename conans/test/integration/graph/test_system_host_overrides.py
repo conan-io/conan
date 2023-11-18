@@ -13,12 +13,12 @@ This is equivalent to --require-override in Conan 1.X? This was a require(..., o
 """
 
 
-class TestSystemHostOverrides:
+class TestAlternatives:
     def test_system_dep(self):
         c = TestClient()
         c.save({"dep2/conanfile.py": GenConanfile("dep2"),
-                "pkg/conanfile.py": GenConanfile().with_requires("dep1/1.0", "dep2/[>=1.0 <2]"),
-                "profile": "[system_deps]\ndep1/1.0\ndep2/1.1: dep2/1.1@system"})
+                "pkg/conanfile.py": GenConanfile().with_requires("dep2/[>=1.0 <2]"),
+                "profile": "[alternatives]\ndep2/: dep2/1.1@system"})
         c.run("create dep2 --version=1.1 --user=system")
         rrev = c.exported_recipe_revision()
         c.run("install pkg -pr=profile")
