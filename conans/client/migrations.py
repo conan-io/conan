@@ -78,8 +78,21 @@ def _migrate_pkg_db_lru(cache_folder, old_version):
         undo_lru = textwrap.dedent("""\
             import os
             import sqlite3
+
             def migrate(cache_folder):
-                db = os.path.join(cache_folder, 'p', 'cache.sqlite3')
+                config = os.path.join(cache_folder, "global.conf")
+                global_conf = open(config, "r").read() if os.path.isfile(config) else ""
+                storage = os.path.join(cache_folder, "p")
+                for line in global_conf.splitlines():
+                    tokens = line.split("=")
+                    if len(tokens) != 2:
+                        continue
+                    conf, value = tokens
+                    if conf.strip() == "core.cache:storage_path":
+                        storage = value.strip()
+                        break
+
+                db = os.path.join(storage, 'cache.sqlite3')
                 connection = sqlite3.connect(db, isolation_level=None, timeout=1,
                                              check_same_thread=False)
                 rec_cols = 'reference, rrev, path, timestamp'
