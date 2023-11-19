@@ -19,6 +19,7 @@ class Profile(object):
         self.tool_requires = OrderedDict()  # ref pattern: list of ref
         self.system_tools = []
         self.alternatives = {}
+        self.tool_alternatives = {}
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
         self.runenv = ProfileEnvironment()
@@ -118,6 +119,7 @@ class Profile(object):
         current_system_tools.update({r.name: r for r in other.system_tools})
         self.system_tools = list(current_system_tools.values())
         self.alternatives.update(other.alternatives)
+        self.tool_alternatives.update(other.tool_alternatives)
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
         self.runenv.update_profile_env(other.runenv)

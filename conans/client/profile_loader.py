@@ -221,7 +221,7 @@ class _ProfileValueParser(object):
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
                                                          "settings",
                                                          "options", "conf", "buildenv", "runenv",
-                                                         "alternatives"])
+                                                         "alternatives", "tool_alternatives"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
@@ -234,13 +234,19 @@ class _ProfileValueParser(object):
         else:
             system_tools = []
 
-        alternatives = {}
-        if doc.alternatives:
-            for r in doc.alternatives.splitlines():
-                tokens = r.split(":", 1)
-                src, target = tokens
+        def load_alternatives(doc_alternatives):
+            result = {}
+            for r in doc_alternatives.splitlines():
+                r = r.strip()
+                if not r or r.startswith("#"):
+                    continue
+                src, target = r.split(":", 1)
                 target = RecipeReference.loads(target.strip())
-                alternatives[src.strip()] = target
+                result[src.strip()] = target
+            return result
+
+        alternatives = load_alternatives(doc.alternatives) if doc.alternatives else {}
+        tool_alternatives = load_alternatives(doc.tool_alternatives) if doc.tool_alternatives else {}
 
         if doc.conf:
             conf = ConfDefinition()
@@ -256,6 +262,7 @@ class _ProfileValueParser(object):
         current_system_tools.update({r.name: r for r in system_tools})
         base_profile.system_tools = list(current_system_tools.values())
         base_profile.alternatives.update(alternatives)
+        base_profile.tool_alternatives.update(tool_alternatives)
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():

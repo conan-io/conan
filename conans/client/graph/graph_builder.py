@@ -237,15 +237,37 @@ class DepsGraphBuilder(object):
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
     def _resolve_alternatives(self, node, require, profile_build, profile_host):
-        alternatives = profile_build.alternatives if node.context == CONTEXT_BUILD \
-            else profile_host.alternatives
-
+        profile = profile_build if node.context == CONTEXT_BUILD else profile_host
+        alternatives = profile.tool_alternatives if require.build else profile.alternatives
         if not alternatives:
             return
 
         for pattern, alternative_ref in alternatives.items():
-            if require.ref.matches(pattern, is_consumer=False):
-                require.ref = alternative_ref
+            pattern = RecipeReference.loads(pattern)
+            if pattern.name != require.ref.name:
+                continue  # no match in name
+            if pattern.version != "*":  # we need to check versions
+                rrange = require.version_range
+                valid = rrange.contains(pattern.version, self._resolve_prereleases) if rrange else \
+                    require.ref.version == pattern.version
+                if not valid:
+                    continue
+            if pattern.user != "*" and pattern.user != require.ref.user:
+                continue
+            if pattern.channel != "*" and pattern.channel != require.ref.channel:
+                continue
+            if alternative_ref.version != "*":
+                require.ref.version = alternative_ref.version
+            if alternative_ref.user != "*":
+                require.ref.user = alternative_ref.user
+            if alternative_ref.channel != "*":
+                require.ref.channel = alternative_ref.channel
+            if alternative_ref.revision != "*":
+                require.ref.revision = alternative_ref.revision
+            if require.ref.name != alternative_ref.name:  # This requires re-doing dict!
+                node.conanfile.requires.reindex(require, alternative_ref.name)
+            require.ref.name = alternative_ref.name
+            break  # First match executes the alternative and finishes checking others
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         if require.ref.version == "<host_version>":
