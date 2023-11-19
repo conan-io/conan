@@ -3,6 +3,7 @@ import sqlite3
 import textwrap
 
 from conan.api.output import ConanOutput
+from conan.api.subapi.config import ConfigAPI
 from conans.migrations import Migrator
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save
@@ -59,7 +60,9 @@ class ClientMigrator(Migrator):
 def _migrate_pkg_db_lru(cache_folder, old_version):
     ConanOutput().warning(f"Upgrade cache from Conan version '{old_version}'")
     ConanOutput().warning("Running 2.0.14 Cache DB migration to add LRU column")
-    db_filename = os.path.join(cache_folder, 'p', 'cache.sqlite3')
+    config = ConfigAPI.load_config(cache_folder)
+    storage = config.get("core.cache:storage_path") or os.path.join(cache_folder, "p")
+    db_filename = os.path.join(storage, 'cache.sqlite3')
     connection = sqlite3.connect(db_filename, isolation_level=None,
                                  timeout=1, check_same_thread=False)
     try:

@@ -43,28 +43,33 @@ class ConfigAPI:
         to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
         """
         if self._new_config is None:
-            self._new_config = ConfDefinition()
             cache_folder = self.conan_api.cache_folder
-            home_paths = HomePaths(cache_folder)
-            global_conf_path = home_paths.global_conf_path
-            if os.path.exists(global_conf_path):
-                text = load(global_conf_path)
-                distro = None
-                if platform.system() in ["Linux", "FreeBSD"]:
-                    import distro
-                template = Environment(loader=FileSystemLoader(cache_folder)).from_string(text)
-                content = template.render({"platform": platform, "os": os, "distro": distro,
-                                           "conan_version": conan_version,
-                                           "conan_home_folder": cache_folder,
-                                           "detect_api": detect_api})
-                self._new_config.loads(content)
-            else:  # creation of a blank global.conf file for user convenience
-                default_global_conf = textwrap.dedent("""\
-                    # Core configuration (type 'conan config list' to list possible values)
-                    # e.g, for CI systems, to raise if user input would block
-                    # core:non_interactive = True
-                    # some tools.xxx config also possible, though generally better in profiles
-                    # tools.android:ndk_path = my/path/to/android/ndk
-                    """)
-                save(global_conf_path, default_global_conf)
+            self._new_config = self.load_config(cache_folder)
         return self._new_config
+
+    @staticmethod
+    def load_config(home_folder):
+        home_paths = HomePaths(home_folder)
+        global_conf_path = home_paths.global_conf_path
+        new_config = ConfDefinition()
+        if os.path.exists(global_conf_path):
+            text = load(global_conf_path)
+            distro = None
+            if platform.system() in ["Linux", "FreeBSD"]:
+                import distro
+            template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+            content = template.render({"platform": platform, "os": os, "distro": distro,
+                                       "conan_version": conan_version,
+                                       "conan_home_folder": home_folder,
+                                       "detect_api": detect_api})
+            new_config.loads(content)
+        else:  # creation of a blank global.conf file for user convenience
+            default_global_conf = textwrap.dedent("""\
+                # Core configuration (type 'conan config list' to list possible values)
+                # e.g, for CI systems, to raise if user input would block
+                # core:non_interactive = True
+                # some tools.xxx config also possible, though generally better in profiles
+                # tools.android:ndk_path = my/path/to/android/ndk
+                """)
+            save(global_conf_path, default_global_conf)
+        return new_config
