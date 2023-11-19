@@ -38,7 +38,7 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
-        self._initialize_requires(root_node, dep_graph, graph_lock)
+        self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
@@ -51,7 +51,8 @@ class DepsGraphBuilder(object):
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
                 if new_node:
-                    self._initialize_requires(new_node, dep_graph, graph_lock)
+                    self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
+                                              profile_host)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
@@ -160,7 +161,7 @@ class DepsGraphBuilder(object):
                     node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
-    def _initialize_requires(self, node, graph, graph_lock):
+    def _initialize_requires(self, node, graph, graph_lock, profile_build, profile_host):
         for require in node.conanfile.requires.values():
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
@@ -170,7 +171,7 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
-            self._resolved_alternatives(node, require, profile_build, profile_host)
+            self._resolve_alternatives(node, require, profile_build, profile_host)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -235,18 +236,15 @@ class DepsGraphBuilder(object):
                             require.ref.revision = d.revision
                             return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
 
-    def _resolved_alternatives(self, node, require, profile_build, profile_host):
+    def _resolve_alternatives(self, node, require, profile_build, profile_host):
         alternatives = profile_build.alternatives if node.context == CONTEXT_BUILD \
             else profile_host.alternatives
 
         if not alternatives:
             return
 
-        for d, alternative_ref in alternatives.items():
-            if require.ref.name != d.name:
-                continue
-
-            if require.ref.matches(d):
+        for pattern, alternative_ref in alternatives.items():
+            if require.ref.matches(pattern, is_consumer=False):
                 require.ref = alternative_ref
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
