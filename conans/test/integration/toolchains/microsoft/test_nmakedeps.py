@@ -42,7 +42,7 @@ def test_nmakedeps():
     for flag in (
         r'/DTEST_DEFINITION1', r'/DTEST_DEFINITION2#0',
         r'/DTEST_DEFINITION3#', r'/DTEST_DEFINITION4#foo',
-        r'/DTEST_DEFINITION5#__declspec\(dllexport\)',  # The backslash is not actually in the file!
+        r'/DTEST_DEFINITION5#__declspec(dllexport)',
         r'"/DTEST_DEFINITION6#foo bar"',
     ):
         assert re.search(fr'set "CL=%CL%.*\s{flag}(?:\s|")', bat_file)
