@@ -65,7 +65,7 @@ def config_list(conan_api, parser, subparser, *args):
     Show all the Conan available configurations: core and tools.
     """
     parser.parse_args(*args)
-    return BUILT_IN_CONFS
+    return conan_api.config.builtin_confs
 
 
 @conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
@@ -77,3 +77,11 @@ def config_show(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     return conan_api.config.show(args.pattern)
+
+
+@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+def config_settings_yml(conan_api, parser, subparser, *args):
+    """
+    Get the content of the settings.yml file
+    """
+    return conan_api.config.settings_yml
