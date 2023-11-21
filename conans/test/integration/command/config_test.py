@@ -7,6 +7,7 @@ from conans.model.conf import BUILT_IN_CONFS
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
+from conans.util.files import load
 
 
 def test_missing_subarguments():
@@ -151,3 +152,28 @@ def test_config_show():
     tc.run("config show zlib/*:foo")
     assert "zlib/*:user.mycategory:foo" in tc.out
     assert "zlib/*:user.myothercategory:foo" in tc.out
+
+
+def test_settings_list():
+    tc = TestClient()
+    settings_yml = textwrap.dedent("""
+    os:
+        Windows:
+        Linux:
+    arch: [x86, x86_64]
+    """)
+    tc.save_home({"settings.yml": settings_yml})
+    tc.run("config settings-yml")
+    assert "arch: ['x86', 'x86_64']" in tc.out
+
+    settings_user_yml = textwrap.dedent("""
+        os:
+            Windows:
+            Linux:
+            custom:
+        arch: [x86, x86_64]
+        """)
+    tc.save_home({"settings_user.yml": settings_user_yml})
+    tc.run("config settings-yml --format=json", redirect_stdout="output.json")
+    output = json.loads(load(os.path.join(tc.current_folder, "output.json")))
+    assert "custom" in output["os"]

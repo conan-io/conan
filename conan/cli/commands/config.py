@@ -1,7 +1,6 @@
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.formatters import default_json_formatter
-from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 
 
@@ -84,4 +83,5 @@ def config_settings_yml(conan_api, parser, subparser, *args):
     """
     Get the content of the settings.yml file
     """
-    return conan_api.config.settings_yml
+    parser.parse_args(*args)
+    return conan_api.config.settings_yml.possible_values()
