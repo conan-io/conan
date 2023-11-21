@@ -244,8 +244,8 @@ def test_cmake_toolchain_multiple_user_toolchain():
 
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_no_warnings():
-    """Make sure unitialized variables do not cause any warnings, passing -Werror=dev
-    and --wanr-unitialized, calling "cmake" with conan_toolchain.cmake used to fail
+    """Make sure uninitialized variables do not cause any warnings, passing -Werror=dev
+    and --warn-uninitialized, calling "cmake" with conan_toolchain.cmake used to fail
     """
     # Issue https://github.com/conan-io/conan/issues/10288
     client = TestClient()
@@ -1353,3 +1353,44 @@ def test_inject_user_toolchain_profile():
                  "CMakeLists.txt": cmake})
     client.run("create . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_redirect_stdout():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, CMakeToolchain
+    from conan.tools.cmake import cmake_layout
+
+    class Pkg(ConanFile):
+        name = "foo"
+        version = "1.0"
+        settings = "os", "arch", "build_type", "compiler"
+
+        exports_sources = "CMakeLists.txt", "main.cpp"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            CMakeToolchain(self).generate()
+
+        def build(self):
+            cmake = CMake(self)
+            self.output.info(f"Metadata: {self.package_metadata_folder}")
+            cmake.configure()
+            cmake.build(redirect_stdout=os.path.join(self.package_metadata_folder, "build.log"))
+    """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": 'project(foo)\nadd_library(mylib main.cpp)', "main.cpp": ""})
+    client.run("create .")
+    assert "-- Using Conan toolchain" in client.out
+    # It still shows up in the output as before
+    assert "Built target mylib" in client.out
+
+    metadata_folder = re.search(r"Metadata: (.*)", client.out).group(1)
+    build_log_path = os.path.join(metadata_folder, "build.log")
+    assert build_log_path
+    log_contents = load(build_log_path)
+    assert "Built target mylib" in log_contents
