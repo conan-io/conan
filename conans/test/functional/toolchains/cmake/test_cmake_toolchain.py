@@ -1378,12 +1378,13 @@ def test_redirect_stdout():
             CMakeToolchain(self).generate()
 
         def build(self):
-            cmake = CMake(self)
             self.output.info(f"Metadata: {self.package_metadata_folder}")
+
+            cmake = CMake(self)
             cmake.configure()
             cmake.build(redirect_stdout=os.path.join(self.package_metadata_folder, "build.log"))
     """)
-    client.save({"conanfile.py": conanfile, "CMakeLists.txt": 'project(foo)\nadd_library(mylib main.cpp)', "main.cpp": ""})
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)', "main.cpp": "int main() {return 0;}"})
     client.run("create .")
     assert "-- Using Conan toolchain" in client.out
     # It still shows up in the output as before
