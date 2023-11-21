@@ -256,3 +256,29 @@ class ToolCopyTest(unittest.TestCase):
                          sorted(os.listdir(os.path.join(dst_folder, "include"))))
         self.assertEqual(sorted(["AttributeStorage.h", "file.h"]),
                          sorted(os.listdir(os.path.join(dst_folder, "include", "sub"))))
+
+    def test_if_different(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "file.h"), "")
+
+        dst_folder = temp_folder()
+
+        copy(None, "*.h", src=src_folder, dst=dst_folder)
+
+        # creation time
+        dst_file = os.path.join(dst_folder, "file.h")
+        dst_file_ctime = os.stat(dst_file).st_ctime_ns
+
+        # test that file is not copied again
+        copy(None, "*.h", if_different=True, src=src_folder, dst=dst_folder)
+        self.assertEqual(dst_file_ctime, os.stat(dst_file).st_ctime_ns)
+
+        # test that file is copied again
+        copy(None, "*.h", if_different=False, src=src_folder, dst=dst_folder)
+        self.assertNotEqual(dst_file_ctime, os.stat(dst_file).st_ctime_ns)
+
+        # test that file is copied again when source changes
+        dst_file_ctime = os.stat(dst_file).st_ctime_ns
+        save(os.path.join(src_folder, "file.h"), "dummy")
+        copy(None, "*.h", if_different=True, src=src_folder, dst=dst_folder)
+        self.assertNotEqual(dst_file_ctime, os.stat(dst_file).st_ctime_ns)

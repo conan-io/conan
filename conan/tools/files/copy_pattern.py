@@ -1,4 +1,5 @@
 import fnmatch
+import filecmp
 import os
 import shutil
 from collections import defaultdict
@@ -7,7 +8,7 @@ from conans.util.files import mkdir
 
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
-         ignore_case=True):
+         ignore_case=True, if_different=False):
     """
         It will copy the files matching the pattern from the src folder to the dst, including the
         symlinks to files. If a folder from "src" doesn't contain any file to be copied, it won't be
@@ -27,6 +28,7 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
                          lib dir
         param excludes: Single pattern or a tuple of patterns to be excluded from the copy
         param ignore_case: will do a case-insensitive pattern matching when True
+        param if_different: only copy file if source is different from the destination
 
         return: list of copied files
         """
@@ -39,7 +41,7 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     files_to_copy, files_symlinked_to_folders = _filter_files(src, pattern, excludes, ignore_case,
                                                            excluded_folder)
 
-    copied_files = _copy_files(files_to_copy, src, dst, keep_path)
+    copied_files = _copy_files(files_to_copy, src, dst, keep_path, if_different)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
 
     # FIXME: Not always passed conanfile
@@ -103,7 +105,7 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     return files_to_copy, files_symlinked_to_folders
 
 
-def _copy_files(files, src, dst, keep_path):
+def _copy_files(files, src, dst, keep_path, if_different):
     """ executes a multiple file copy from [(src_file, dst_file), (..)]
     managing symlinks if necessary
     """
@@ -124,7 +126,8 @@ def _copy_files(files, src, dst, keep_path):
                 pass
             os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
         else:
-            shutil.copy2(abs_src_name, abs_dst_name)
+            if not if_different or not os.path.exists(abs_dst_name) or not filecmp.cmp(abs_src_name, abs_dst_name):
+                shutil.copy2(abs_src_name, abs_dst_name)
         copied_files.append(abs_dst_name)
     return copied_files
 
