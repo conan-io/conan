@@ -44,8 +44,12 @@ class ConanApp(object):
 
         home_paths = HomePaths(self.cache_folder)
         self.hook_manager = HookManager(home_paths.hooks_path)
-        # Wraps an http_requester to inject proxies, certs, etc
+
+        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
+                                                           default=False, check_type=bool))
         ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
+
+        # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(global_conf, cache_folder)
         # To handle remote connections
         rest_client_factory = RestApiClientFactory(self.requester, global_conf)
