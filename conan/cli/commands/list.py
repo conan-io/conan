@@ -20,7 +20,7 @@ field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
 
 
-def print_serial(item, indent=None, color_index=None):
+def print_serial(item, indent=None, color_index=None, join_lists=False):
     indent = "" if indent is None else (indent + "  ")
     color_index = 0 if color_index is None else (color_index + 1)
     color_array = [Color.BRIGHT_BLUE, Color.BRIGHT_GREEN, Color.BRIGHT_WHITE,
@@ -38,10 +38,13 @@ def print_serial(item, indent=None, color_index=None):
                 cli_out_write(f"{indent}{k}: {v}", fg=color)
             else:
                 cli_out_write(f"{indent}{k}", fg=color)
-                print_serial(v, indent, color_index)
+                print_serial(v, indent, color_index, join_lists)
     elif isinstance(item, type([])):
-        for elem in item:
-            cli_out_write(f"{indent}{elem}", fg=color)
+        if join_lists:
+            cli_out_write(f"{indent}{str(item)}", fg=color)
+        else:
+            for elem in item:
+                cli_out_write(f"{indent}{elem}", fg=color)
     elif item:
         cli_out_write(f"{indent}{item}", fg=color)
 

@@ -1,7 +1,12 @@
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand
+from conan.cli.commands.list import print_serial
 from conan.cli.formatters import default_json_formatter
 from conans.util.config_parser import get_bool_from_text
+
+
+def settings_yml_formatter(data):
+    print_serial(data, join_lists=True)
 
 
 @conan_command(group='Consumer')
@@ -78,7 +83,7 @@ def config_show(conan_api, parser, subparser, *args):
     return conan_api.config.show(args.pattern)
 
 
-@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+@conan_subcommand(formatters={"text": settings_yml_formatter, "json": default_json_formatter})
 def config_settings_yml(conan_api, parser, subparser, *args):
     """
     Get the content of the settings.yml file

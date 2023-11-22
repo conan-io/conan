@@ -72,8 +72,8 @@ class ConfigAPI:
                 save(global_conf_path, default_global_conf)
         return self._new_config
 
-    @staticmethod
-    def builtin_confs():
+    @property
+    def builtin_confs(self):
         return BUILT_IN_CONFS
 
     @property
