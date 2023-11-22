@@ -38,16 +38,12 @@ class ConanFileHelpers:
 
 class ConanApp(object):
     def __init__(self, cache_folder, global_conf):
-
+        self._configure(global_conf)
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, global_conf)
 
         home_paths = HomePaths(self.cache_folder)
         self.hook_manager = HookManager(home_paths.hooks_path)
-
-        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
-                                                           default=False, check_type=bool))
-        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
 
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(global_conf, cache_folder)
@@ -65,3 +61,9 @@ class ConanApp(object):
         cmd_wrap = CmdWrapper(home_paths.wrapper_path)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
+
+    @staticmethod
+    def _configure(global_conf):
+        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
+                                                           default=False, check_type=bool))
+        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
