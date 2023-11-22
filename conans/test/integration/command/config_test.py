@@ -160,11 +160,11 @@ def test_settings_list():
     os:
         Windows:
         Linux:
-    arch: [x86, x86_64]
+    arch: [null, x86, x86_64]
     """)
     tc.save_home({"settings.yml": settings_yml})
     tc.run("config settings-yml")
-    assert "arch: ['x86', 'x86_64']" in tc.out
+    assert "[None, 'x86', 'x86_64']" in tc.out
 
     settings_user_yml = textwrap.dedent("""
         os:
