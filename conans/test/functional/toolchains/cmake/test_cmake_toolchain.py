@@ -1368,30 +1368,24 @@ def test_redirect_stdout():
         name = "foo"
         version = "1.0"
         settings = "os", "arch", "build_type", "compiler"
-
+        generators = "CMakeToolchain"
         exports_sources = "CMakeLists.txt", "main.cpp"
 
-        def layout(self):
-            cmake_layout(self)
-
-        def generate(self):
-            CMakeToolchain(self).generate()
-
         def build(self):
-            self.output.info(f"Metadata: {self.package_metadata_folder}")
-
             cmake = CMake(self)
             cmake.configure()
-            cmake.build(redirect_stdout=os.path.join(self.package_metadata_folder, "build.log"))
+            cmake.build(redirect_stdout="build.log")
     """)
-    client.save({"conanfile.py": conanfile, "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)', "main.cpp": "int main() {return 0;}"})
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)',
+                 "main.cpp": "int main() {return 0;}"})
     client.run("create .")
+    build_folder = client.created_build_folder("foo/1.0")
     assert "-- Using Conan toolchain" in client.out
     # It still shows up in the output as before
     assert "Built target mylib" in client.out
 
-    metadata_folder = re.search(r"Metadata: (.*)", client.out).group(1)
-    build_log_path = os.path.join(metadata_folder, "build.log")
-    assert build_log_path
+    build_log_path = os.path.join(build_folder, "build.log")
+    assert os.path.exists(build_log_path)
     log_contents = load(build_log_path)
     assert "Built target mylib" in log_contents

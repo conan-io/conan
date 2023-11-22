@@ -262,7 +262,6 @@ class CMake(object):
                 self._conanfile.run(command, stdout=f, **kwargs)
             # Print the contents of the redirect file to the user too for complete logs
             with open(redirect_stdout, "r") as f:
-                log_contents = f.read()
-                self._conanfile.output.info(log_contents)
+                self._conanfile.output.info(f.read())
         else:
             self._conanfile.run(command, **kwargs)
