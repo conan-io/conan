@@ -42,7 +42,7 @@ def test_cmake_cmake_program(conanfile):
 
 
 def test_cmake_make_program(conanfile):
-    def run(command):
+    def run(command, **kwargs):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
 
     conanfile.run = run
