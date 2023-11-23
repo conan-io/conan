@@ -22,7 +22,7 @@ def test_build_requires_source():
         """)
     pkg = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.env import VirtualBuildEnv
+        from conan.tools.env import buildenv
         import platform
 
         class Pkg(ConanFile):
@@ -32,7 +32,8 @@ def test_build_requires_source():
 
             def source(self):
                 cmd = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"
-                self.run(cmd)
+                with buildenv(self):
+                    self.run(cmd)
         """)
     c.save({"tool/conanfile.py": tool,
             "pkg/conanfile.py": pkg})
