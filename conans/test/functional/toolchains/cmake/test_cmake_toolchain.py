@@ -1360,6 +1360,7 @@ def test_redirect_stdout():
     client = TestClient()
     conanfile = textwrap.dedent("""
     import os
+    from io import StringIO
     from conan import ConanFile
     from conan.tools.cmake import CMake, CMakeToolchain
     from conan.tools.cmake import cmake_layout
@@ -1373,19 +1374,33 @@ def test_redirect_stdout():
 
         def build(self):
             cmake = CMake(self)
-            cmake.configure()
-            cmake.build(redirect_stdout="build.log")
+
+            config_stdout, config_stderr = StringIO(), StringIO()
+            cmake.configure(stdout=config_stdout, stderr=config_stderr)
+            self.output.info(f"Configure stdout: {config_stdout.getvalue()}")
+            self.output.info(f"Configure stderr: {config_stderr.getvalue()}")
+
+            build_stdout, build_stderr = StringIO(), StringIO()
+            cmake.configure(stdout=build_stdout, stderr=build_stderr)
+            self.output.info(f"Build stdout: {build_stdout.getvalue()}")
+            self.output.info(f"Build stderr: {build_stderr.getvalue()}")
+
+        def package(self):
+            cmake = CMake(self)
+            install_stdout, install_stderr = StringIO(), StringIO()
+            cmake.install(stdout=install_stdout, stderr=install_stderr)
+            self.output.info(f"Install stdout: {install_stdout.getvalue()}")
+            self.output.info(f"Install stderr: {install_stderr.getvalue()}")
+
+
     """)
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)',
                  "main.cpp": "int main() {return 0;}"})
     client.run("create .")
-    build_folder = client.created_build_folder("foo/1.0")
-    assert "-- Using Conan toolchain" in client.out
-    # It still shows up in the output as before
-    assert "Built target mylib" in client.out
-
-    build_log_path = os.path.join(build_folder, "build.log")
-    assert os.path.exists(build_log_path)
-    log_contents = load(build_log_path)
-    assert "Built target mylib" in log_contents
+    assert "Configure stdout: -- Using Conan toolchain" in client.out
+    assert "Configure stderr: CMake Warning" in client.out
+    assert "Build stdout: -- Using Conan toolchain" in client.out
+    assert "Build stderr: CMake Warning" in client.out
+    assert "Install stdout: -- Install configuration" in client.out
+    assert "Install stderr: \n" in client.out
