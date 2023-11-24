@@ -1,6 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.tools.env import VirtualBuildEnv
 from conans.errors import ConanException, conanfile_exception_formatter, NotFoundException, \
     conanfile_remove_attr
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
@@ -67,7 +68,12 @@ def config_source(export_source_folder, conanfile, hook_manager):
             # First of all get the exported scm sources (if auto) or clone (if fixed)
             # Now move the export-sources to the right location
             merge_directories(export_source_folder, conanfile.folders.base_source)
-            run_source_method(conanfile, hook_manager)
+            conanfile.source_buildenv = True  # A flag to indicate that the buildenv has to be used
+            if getattr(conanfile, "source_buildenv", None):
+                with VirtualBuildEnv(conanfile).vars().apply():
+                    run_source_method(conanfile, hook_manager)
+            else:
+                run_source_method(conanfile, hook_manager)
 
 
 def run_source_method(conanfile, hook_manager):

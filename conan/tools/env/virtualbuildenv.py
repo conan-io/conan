@@ -1,14 +1,6 @@
-from contextlib import contextmanager
-
 from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.env.virtualrunenv import runenv_from_cpp_info
-
-
-@contextmanager
-def buildenv(conanfile):
-    with VirtualBuildEnv(conanfile).vars().apply():
-        yield
 
 
 class VirtualBuildEnv:
