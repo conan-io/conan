@@ -54,7 +54,7 @@ def download(conan_api: ConanAPI, parser, *args):
             raise ConanException(f"The current package list does not contain remote '{remote.name}'")
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
-        package_list = conan_api.list.select(ref_pattern, args.package_query, remote=remote)
+        package_list = conan_api.list.select(ref_pattern, args.package_query, remote)
 
     parallel = conan_api.config.get("core.download:parallel", default=1, check_type=int)
 

@@ -6,6 +6,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.search.search import get_cache_packages_binary_info, filter_packages
+from conans.util.dates import timelimit
 
 
 class ListAPI:
@@ -18,7 +19,7 @@ class ListAPI:
 
     def latest_recipe_revision(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
         else:
@@ -28,7 +29,7 @@ class ListAPI:
 
     def recipe_revisions(self, ref: RecipeReference, remote=None):
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
         else:
@@ -42,7 +43,7 @@ class ListAPI:
         #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
         else:
@@ -52,7 +53,7 @@ class ListAPI:
     def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
         else:
@@ -64,11 +65,11 @@ class ListAPI:
         assert ref.revision is not None, "packages: ref should have a revision. " \
                                          "Check latest if needed."
         if not remote:
-            app = ConanApp(self.conan_api.cache_folder)
+            app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
             prefs = app.cache.get_package_references(ref)
             packages = get_cache_packages_binary_info(app.cache, prefs)
         else:
-            app = ConanApp(self.conan_api.cache_folder)
+            app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
             if ref.revision == "latest":
                 ref.revision = None
                 ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
@@ -121,13 +122,22 @@ class ListAPI:
             final_result[pref] = data
         return final_result
 
-    def select(self, pattern, package_query=None, profile=None, remote=None):
-        if (package_query or profile) and pattern.package_id and "*" not in pattern.package_id:
-            raise ConanException("Cannot specify '-p' package queries or profile, "
+    def explain(self, ref, profile=None):
+        if profile is not None:
+            packages = self.filter_packages_profile(rrev, packages, profile)
+
+    def select(self, pattern, package_query=None, remote=None, lru=None):
+        if package_query and pattern.package_id and "*" not in pattern.package_id:
+            raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
+        if remote and lru:
+            raise ConanException("'--lru' cannot be used in remotes, only in cache")
+
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        limit_time = timelimit(lru) if lru else None
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
@@ -151,6 +161,10 @@ class ListAPI:
                 rrevs = self.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
                 rrevs = list(reversed(rrevs))  # Order older revisions first
+
+            if lru and pattern.package_id is None:  # Filter LRUs
+                rrevs = [r for r in rrevs if app.cache.get_recipe_lru(r) < limit_time]
+
             select_bundle.add_refs(rrevs)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
@@ -165,8 +179,6 @@ class ListAPI:
                     packages = self.packages_configurations(rrev, remote)
                     if package_query is not None:
                         packages = self.filter_packages_configurations(packages, package_query)
-                    if profile is not None:
-                        packages = self.filter_packages_profile(rrev, packages, profile)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
                     packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
@@ -186,6 +198,9 @@ class ListAPI:
                             prevs = list(reversed(prevs))  # Older revisions first
                             new_prefs.extend(prevs)
                     prefs = new_prefs
+
+                if lru:  # Filter LRUs
+                    prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
 
                 select_bundle.add_prefs(rrev, prefs)
                 select_bundle.add_configurations(packages)

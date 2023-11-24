@@ -19,7 +19,7 @@ from conans.model.requires import Requirement
 
 class DepsGraphBuilder(object):
 
-    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update):
+    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
@@ -27,7 +27,7 @@ class DepsGraphBuilder(object):
         self._remotes = remotes  # TODO: pass as arg to load_graph()
         self._update = update
         self._check_update = check_update
-        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
+        self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -106,7 +106,11 @@ class DepsGraphBuilder(object):
         if version_range:
             # TODO: Check user/channel conflicts first
             if prev_version_range is not None:
-                pass  # Do nothing, evaluate current as it were a fixed one
+                # It it is not conflicting, but range can be incompatible, restrict range
+                restricted_version_range = version_range.intersection(prev_version_range)
+                if restricted_version_range is None:
+                    raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+                require.ref.version = restricted_version_range.version()
             else:
                 if version_range.contains(prev_ref.version, resolve_prereleases):
                     require.ref = prev_ref

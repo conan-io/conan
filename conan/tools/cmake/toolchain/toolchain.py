@@ -115,6 +115,9 @@ class CMakeToolchain(object):
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
+
+        if(CMAKE_POLICY_DEFAULT_CMP0091)  # Avoid unused and not-initialized warnings
+        endif()
         """)
 
     def __init__(self, conanfile, generator=None):
@@ -124,6 +127,11 @@ class CMakeToolchain(object):
         # This doesn't support multi-config, they go to the same configPreset common in multi-config
         self.cache_variables = {}
         self.preprocessor_definitions = Variables()
+
+        self.extra_cxxflags = []
+        self.extra_cflags = []
+        self.extra_sharedlinkflags = []
+        self.extra_exelinkflags = []
 
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),

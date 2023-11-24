@@ -6,13 +6,13 @@ from conans.search.search import search_recipes
 
 class RangeResolver:
 
-    def __init__(self, conan_app):
+    def __init__(self, conan_app, global_conf):
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
-        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
+        self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def resolve(self, require, base_conanref, remotes, update):
         version_range = require.version_range

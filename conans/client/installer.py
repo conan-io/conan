@@ -168,11 +168,12 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app):
+    def __init__(self, app, global_conf):
         self._app = app
         self._cache = app.cache
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
+        self._global_conf = global_conf
 
     def _install_source(self, node, remotes):
         conanfile = node.conanfile
@@ -182,6 +183,9 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
+        if node.binary == BINARY_EDITABLE:
+            return
+
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
@@ -272,7 +276,7 @@ class BinaryInstaller:
         download_count = len(downloads)
         plural = 's' if download_count != 1 else ''
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
-        parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
+        parallel = self._global_conf.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
@@ -323,6 +327,7 @@ class BinaryInstaller:
         elif package.binary == BINARY_CACHE:
             node = package.nodes[0]
             pref = node.pref
+            self._cache.update_package_lru(pref)
             assert node.prev, "PREV for %s is None" % str(pref)
             node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
