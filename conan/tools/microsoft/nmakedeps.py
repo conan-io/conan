@@ -51,9 +51,7 @@ class NMakeDeps(object):
                     # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
                     macro, value = define.split("=", 1)
                     define = f"{macro}#{value}"
-                if " " in define:
-                    return f'"/D{define}"'
-                return f'/D{define}'
+                return f'/D"{define}"'
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
