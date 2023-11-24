@@ -68,10 +68,11 @@ def config_source(export_source_folder, conanfile, hook_manager):
             # First of all get the exported scm sources (if auto) or clone (if fixed)
             # Now move the export-sources to the right location
             merge_directories(export_source_folder, conanfile.folders.base_source)
-            conanfile.source_buildenv = True  # A flag to indicate that the buildenv has to be used
             if getattr(conanfile, "source_buildenv", None):
+                prev_status = conanfile.virtualbuildenv
                 with VirtualBuildEnv(conanfile).vars().apply():
                     run_source_method(conanfile, hook_manager)
+                conanfile.virtualbuildenv = prev_status
             else:
                 run_source_method(conanfile, hook_manager)
 
