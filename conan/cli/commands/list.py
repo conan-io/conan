@@ -135,6 +135,9 @@ def print_list_compact(results):
                         diff_options = {k: v for k, v in options.items() if k not in common_options}
                         options = ", ".join(f"{k}={v}" for k, v in diff_options.items())
                         new_pid_info["options(diff)"] = options
+                    new_diff = pid_info.get("diff")  # for listx binaries
+                    if new_diff:
+                        new_pid_info["diff"] = new_diff
                     new_rrev_info[new_pid] = new_pid_info
                 new_ref_info[new_rrev] = new_rrev_info
             new_remote_info[ref] = new_ref_info
@@ -164,10 +167,6 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
-    parser.add_argument('-pr', '--profile', default=None, action="append",
-                        help="Profiles to filter the package binaries")
-    parser.add_argument('-a', '--approx', type=int,
-                        help="How many binaries are shown if an exact match is not found")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
@@ -189,10 +188,6 @@ def list(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define lru when loading a graph json file")
     if (args.graph_recipes or args.graph_binaries) and not args.graph:
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
-    if args.package_query and args.profile:
-        raise ConanException("--package-query and --profile are mutually exclusive")
-    if args.approx and not args.profile:
-        raise ConanException("--approx can only be used with --profile")
     if args.remote and args.lru:
         raise ConanException("'--lru' cannot be used in remotes, only in cache")
 
@@ -203,11 +198,10 @@ def list(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
-        profile = conan_api.profiles.get_profile(args.profile) if args.profile else None
         if args.cache or not args.remote:
             try:
                 cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
-                                                   lru=args.lru, profile=profile)
+                                                   lru=args.lru)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:
@@ -216,8 +210,7 @@ def list(conan_api: ConanAPI, parser, *args):
             remotes = conan_api.remotes.list(args.remote)
             for remote in remotes:
                 try:
-                    remote_list = conan_api.list.select(ref_pattern, args.package_query,
-                                                        remote, profile=profile)
+                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
                 except Exception as e:
                     pkglist.add_error(remote.name, str(e))
                 else:

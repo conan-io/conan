@@ -85,46 +85,89 @@ class ListAPI:
         """
         return filter_packages(query, pkg_configurations)
 
-    @staticmethod
-    def filter_packages_profile(ref, pkg_configurations, profile):
+    def find_binaries(self, ref, profile=None, remote=None):
+        ref = RecipeReference.loads(ref)
+        if not ref.revision:
+            ref = self.latest_recipe_revision(ref, remote)
+            if ref is None:
+                raise NotFoundException(f"Recipe '{ref}' not found")
+
+        pkg_configurations = self.packages_configurations(ref, remote)
+
         profile_settings = profile.settings
         profile_options = profile.options
         profile_pkg_settings = profile.package_settings
 
-        def _distance(d):
-            diff = {"distance": 0}
-            settings = d.get("settings", {})
-            for k, v in settings.items():
-                profile_value = profile_settings.get(k)
-                for pattern, pattern_settings in profile_pkg_settings.items():
-                    if ref_matches(ref, pattern, is_consumer=False):
-                        profile_value = pattern_settings.get(k) or profile_value
-                if profile_value is not None and profile_value != v:
-                    diff["distance"] += (100 if k in ("os", "arch") else 10)
-                    diff.setdefault("settings", {})[k] = profile_value
-            options = d.get("options", {})
-            for k, v in options.items():
-                for pattern, opts in profile_options._deps_package_options.items():
-                    if ref_matches(ref, pattern, is_consumer=False):
-                        for profile_opt, profile_val in opts.items():
-                            if profile_opt == k and profile_val != v:
-                                diff["distance"] += 1
-                                diff.setdefault("options", {})[k] = profile_opt
-            return diff
+        class ConfDistance:
+            def __init__(self, pref, data):
+                self.pref = pref
+                self.data = data
+                settings = data.get("settings", {})
+                self.platform_diff = {}
+                self.settings_diff = {}
+                for k, v in settings.items():
+                    profile_value = profile_settings.get(k)
+                    for pattern, pattern_settings in profile_pkg_settings.items():
+                        if ref_matches(ref, pattern, is_consumer=False):
+                            profile_value = pattern_settings.get(k) or profile_value
+                    if profile_value is not None and profile_value != v:
+                        diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
+                        diff[k] = profile_value
+                self.deps_diff = {}
+                self.options_diff = {}
+                options = data.get("options", {})
+                for k, v in options.items():
+                    for pattern, opts in profile_options._deps_package_options.items():
+                        if ref_matches(ref, pattern, is_consumer=False):
+                            for profile_opt, profile_val in opts.items():
+                                if profile_opt == k and profile_val != v:
+                                    self.options_diff[k] = profile_val
 
-        candidates = [(_distance(data), data, pref) for pref, data in pkg_configurations.items()]
-        candidates.sort(key=lambda x: x[0]["distance"])
-        final_result = {}
+            def __lt__(self, other):
+                return self.distance < other.distance
+
+            def explanation(self):
+                if self.platform_diff:
+                    return "This binary belongs to another OS or Architecture, highly incompatible."
+                if self.settings_diff:
+                    return "This binary was built with different settings (compiler, build_type)."
+                if self.options_diff:
+                    return "This binary was built with the same settings, but different options"
+                if self.deps_diff:
+                    return "This binary was built with same settings and options, but " \
+                           "dependencies are different, so it is not compatible"
+                return "This binary is an exact match for the defined inputs"
+
+            @property
+            def distance(self):
+                return len(self.platform_diff), len(self.settings_diff), \
+                       len(self.options_diff), len(self.deps_diff)
+
+            def serialize(self):
+                return {"platform": self.platform_diff,
+                        "settings": self.settings_diff,
+                        "options": self.options_diff,
+                        "dependencies": self.deps_diff,
+                        "explanation": self.explanation()}
+
+        candidates = [ConfDistance(pref, data) for pref, data in pkg_configurations.items()]
+        candidates.sort()
+        final_result = PackagesList()
+        final_result.add_refs([ref])
+        # If there are exact matches, only return the matches
+        # else, limit to the number specified
+        candidate_distance = None
         for candidate in candidates:
-            pref = candidate[2]
-            data = candidate[1]
-            data["diff"] = candidate[0]
-            final_result[pref] = data
+            if candidate_distance and candidate.distance != candidate_distance:
+                break
+            candidate_distance = candidate.distance
+            pref = candidate.pref
+            final_result.add_prefs(ref, [pref])
+            final_result.add_configurations({pref: candidate.data})
+            # Add the diff data
+            rev_dict = final_result.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
         return final_result
-
-    def explain(self, ref, profile=None):
-        if profile is not None:
-            packages = self.filter_packages_profile(rrev, packages, profile)
 
     def select(self, pattern, package_query=None, remote=None, lru=None):
         if package_query and pattern.package_id and "*" not in pattern.package_id:
