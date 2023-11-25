@@ -1381,7 +1381,7 @@ def test_redirect_stdout():
             self.output.info(f"Configure stderr: {config_stderr.getvalue()}")
 
             build_stdout, build_stderr = StringIO(), StringIO()
-            cmake.configure(stdout=build_stdout, stderr=build_stderr)
+            cmake.build(stdout=build_stdout, stderr=build_stderr)
             self.output.info(f"Build stdout: {build_stdout.getvalue()}")
             self.output.info(f"Build stderr: {build_stderr.getvalue()}")
 
