@@ -117,11 +117,10 @@ def print_list_compact(results):
     info = format_compact(info)
 
     def compute_common_options(packages):
-        """ compute the common subset of existing options with same values of a set
-        of packages """
+        """ compute the common subset of existing options with same values of a set of packages
+        """
         result = {}
-        all_package_options = [pkgid_info.get("info", {}).get("options")
-                               for pkgid_info in packages.values()]
+        all_package_options = [p.get("info", {}).get("options") for p in packages.values()]
         all_package_options = [p for p in all_package_options if p]  # filter pkgs without options
         for package_options in all_package_options:  # Accumulate all options for all binaries
             result.update(package_options)
@@ -166,6 +165,7 @@ def print_list_compact(results):
                 continue
             for rrev, prefs in revisions.items():
                 pkg_common_options = compute_common_options(prefs)
+                pkg_common_options = pkg_common_options if len(pkg_common_options) > 4 else None
                 for pref, pref_contents in prefs.items():
                     pref_info = pref_contents.pop("info")
                     pref_contents.update(compact_format_info(pref_info, pkg_common_options))
