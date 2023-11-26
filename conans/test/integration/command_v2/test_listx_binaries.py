@@ -41,6 +41,8 @@ class TestFilterProfile:
         # We find 2 exact matches for os=Windows shared=True
         c = client
         c.save({"windows": "[settings]\nos=Windows\n[options]\n*:shared=True"})
+        c.run("listx find-binaries lib/1.0 -pr windows")
+        print(c.out)
         c.run("listx find-binaries lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -58,6 +60,7 @@ class TestFilterProfile:
         c = client
         c.save({"linux": "[settings]\nos=Linux\n[options]\n*:shared=True"})
         c.run("listx find-binaries lib/1.0 -pr linux")
+        print(c.out)
         c.run("listx find-binaries lib/1.0 -pr linux --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -75,6 +78,8 @@ class TestFilterProfile:
         # We find 1 closest match in Linux static
         c = client
         c.save({"windows": "[settings]\nos=Windows\nbuild_type=Debug\n[options]\n*:shared=True"})
+        c.run("listx find-binaries lib/1.0 -pr windows")
+        print(c.out)
         c.run("listx find-binaries lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -92,6 +97,8 @@ class TestFilterProfile:
         # We find closest match in other platforms
         c = client
         c.save({"macos": "[settings]\nos=Macos\nbuild_type=Release\n[options]\n*:shared=True"})
+        c.run("listx find-binaries lib/1.0 -pr macos")
+        print(c.out)
         c.run("listx find-binaries lib/1.0 -pr macos --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
