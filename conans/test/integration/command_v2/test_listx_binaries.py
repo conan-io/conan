@@ -1,4 +1,5 @@
 import json
+import textwrap
 
 import pytest
 
@@ -21,8 +22,6 @@ class TestFilterProfile:
         # We find 2 exact matches for os=Windows
         c = client
         c.save({"windows": "[settings]\nos=Windows"})
-        c.run("listx find-binaries lib/1.0 -pr windows")
-        print(c.out)
         c.run("listx find-binaries lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -32,7 +31,7 @@ class TestFilterProfile:
         assert pkg1["diff"]["platform"] == {}
         assert pkg1["diff"]["settings"] == {}
         assert pkg1["diff"]["options"] == {}
-        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["dependencies"] == []
         assert pkg1["diff"]["explanation"] == "This binary is an exact match for the defined inputs"
         pkg2 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
         assert pkg2["diff"]["explanation"] == "This binary is an exact match for the defined inputs"
@@ -42,7 +41,13 @@ class TestFilterProfile:
         c = client
         c.save({"windows": "[settings]\nos=Windows\n[options]\n*:shared=True"})
         c.run("listx find-binaries lib/1.0 -pr windows")
-        print(c.out)
+        expected = textwrap.dedent("""\
+            settings: Windows, Release
+            options: shared=True
+            diff
+              explanation: This binary is an exact match for the defined inputs
+            """)
+        assert textwrap.indent(expected, "        ") in c.out
         c.run("listx find-binaries lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -52,7 +57,7 @@ class TestFilterProfile:
         assert pkg1["diff"]["platform"] == {}
         assert pkg1["diff"]["settings"] == {}
         assert pkg1["diff"]["options"] == {}
-        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["dependencies"] == []
         assert pkg1["diff"]["explanation"] == "This binary is an exact match for the defined inputs"
 
     def test_different_option(self, client):
@@ -60,7 +65,14 @@ class TestFilterProfile:
         c = client
         c.save({"linux": "[settings]\nos=Linux\n[options]\n*:shared=True"})
         c.run("listx find-binaries lib/1.0 -pr linux")
-        print(c.out)
+        expected = textwrap.dedent("""\
+            settings: Linux, Release
+            options: shared=False
+            diff
+              options: shared=True
+              explanation: This binary was built with the same settings, but different options
+            """)
+        assert textwrap.indent(expected, "        ") in c.out
         c.run("listx find-binaries lib/1.0 -pr linux --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -70,7 +82,7 @@ class TestFilterProfile:
         assert pkg1["diff"]["platform"] == {}
         assert pkg1["diff"]["settings"] == {}
         assert pkg1["diff"]["options"] == {"shared": "True"}
-        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["dependencies"] == []
         assert pkg1["diff"]["explanation"] == "This binary was built with the same settings, " \
                                               "but different options"
 
@@ -79,7 +91,14 @@ class TestFilterProfile:
         c = client
         c.save({"windows": "[settings]\nos=Windows\nbuild_type=Debug\n[options]\n*:shared=True"})
         c.run("listx find-binaries lib/1.0 -pr windows")
-        print(c.out)
+        expected = textwrap.dedent("""\
+            settings: Windows, Release
+            options: shared=True
+            diff
+              settings: Debug
+              explanation: This binary was built with different settings (compiler, build_type).
+            """)
+        assert textwrap.indent(expected, "        ") in c.out
         c.run("listx find-binaries lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -89,7 +108,7 @@ class TestFilterProfile:
         assert pkg1["diff"]["platform"] == {}
         assert pkg1["diff"]["settings"] == {"build_type": "Debug"}
         assert pkg1["diff"]["options"] == {}
-        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["dependencies"] == []
         assert pkg1["diff"]["explanation"] == "This binary was built with different settings " \
                                               "(compiler, build_type)."
 
@@ -98,7 +117,14 @@ class TestFilterProfile:
         c = client
         c.save({"macos": "[settings]\nos=Macos\nbuild_type=Release\n[options]\n*:shared=True"})
         c.run("listx find-binaries lib/1.0 -pr macos")
-        print(c.out)
+        expected = textwrap.dedent("""\
+            settings: Windows, Release
+            options: shared=True
+            diff
+              platform: os=Macos
+              explanation: This binary belongs to another OS or Architecture, highly incompatible.
+            """)
+        assert textwrap.indent(expected, "        ") in c.out
         c.run("listx find-binaries lib/1.0 -pr macos --format=json")
         cache = json.loads(c.stdout)["Local Cache"]
         revisions = cache["lib/1.0"]["revisions"]
@@ -108,7 +134,7 @@ class TestFilterProfile:
         assert pkg1["diff"]["platform"] == {"os": "Macos"}
         assert pkg1["diff"]["settings"] == {}
         assert pkg1["diff"]["options"] == {}
-        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["dependencies"] == []
         assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
                                               "highly incompatible."
 
@@ -117,13 +143,39 @@ class TestMissingBinaryUX:
     @pytest.fixture(scope="class")
     def client(self):
         c = TestClient()
-        c.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")})
+        c.save({"dep/conanfile.py": GenConanfile("dep"),
+                "lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")
+                                                              .with_requires("dep/[>=1.0]")})
+        c.run("create dep --version=1.0")
         c.run("create lib -s os=Linux")
+        c.run("create dep --version=2.0")
         return c
 
-    def test_settings_exact_match_incomplete(self, client):
+    def test_other_platform(self, client):
         c = client
         c.run("install --requires=lib/1.0 -s os=Windows", assert_error=True)
-        print(c.out)
+        assert "ERROR: Missing prebuilt package for 'lib/1.0'" in c.out
         c.run("listx find-binaries lib/1.0")
-        print(c.out)
+        expected = textwrap.dedent("""\
+            settings: Linux
+            requires: dep/1.Y.Z
+            diff
+              platform: os=Windows
+              dependencies: dep/2.Y.Z
+              explanation: This binary belongs to another OS or Architecture, highly incompatible.
+            """)
+        assert textwrap.indent(expected, "        ") in c.out
+
+    def test_other_dependencies(self, client):
+        c = client
+        c.run("install --requires=lib/1.0 -s os=Linux", assert_error=True)
+        assert "ERROR: Missing prebuilt package for 'lib/1.0'" in c.out
+        c.run("listx find-binaries lib/1.0")
+        expected = textwrap.dedent("""\
+            settings: Linux
+            requires: dep/1.Y.Z
+            diff
+              dependencies: dep/2.Y.Z
+              explanation: This binary has same settings and options, but different dependencies
+               """)
+        assert textwrap.indent(expected, "        ") in c.out

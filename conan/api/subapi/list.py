@@ -101,14 +101,14 @@ class ListAPI:
                                      "not found")
 
             binary_info = load_binary_info(load(full_file))
-            import json
-            print(json.dumps(binary_info, indent=4))
             settings = binary_info.get("settings", {})
             options = binary_info.get("options", {})
+            requires = binary_info.get("requires", [])
             pkg_settings = {}
         else:
             settings = profile.settings
             options = profile.options
+            requires = []
             pkg_settings = profile.package_settings
 
         if not ref.revision:
@@ -133,7 +133,6 @@ class ListAPI:
                     if profile_value is not None and profile_value != v:
                         diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
                         diff[k] = profile_value
-                self.deps_diff = {}
                 self.options_diff = {}
                 data_options = data.get("options", {})
                 for k, v in data_options.items():
@@ -142,6 +141,11 @@ class ListAPI:
                             for profile_opt, profile_val in opts.items():
                                 if profile_opt == k and profile_val != v:
                                     self.options_diff[k] = profile_val
+                self.deps_diff = []
+                data_requires = data.get("requires", [])
+                for r in requires:
+                    if r not in data_requires:
+                        self.deps_diff.append(r)
 
             def __lt__(self, other):
                 return self.distance < other.distance
@@ -154,8 +158,7 @@ class ListAPI:
                 if self.options_diff:
                     return "This binary was built with the same settings, but different options"
                 if self.deps_diff:
-                    return "This binary was built with same settings and options, but " \
-                           "dependencies are different, so it is not compatible"
+                    return "This binary has same settings and options, but different dependencies"
                 return "This binary is an exact match for the defined inputs"
 
             @property
