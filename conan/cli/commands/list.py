@@ -67,6 +67,7 @@ def print_list_text(results):
         new_info[remote] = new_remote_info
     info = new_info
 
+    # TODO: The errors are not being displayed
     info = {remote: {"warning": "There are no matching recipe references"} if not values else values
             for remote, values in info.items()}
 

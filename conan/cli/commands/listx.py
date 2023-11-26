@@ -38,6 +38,7 @@ def listx_find_binaries(conan_api: ConanAPI, parser,  subparser, *args):
             ConanOutput().info(f"Finding binaries in the cache")
             cache_list = conan_api.list.find_binaries(args.ref, remote=None, profile=profile)
         except Exception as e:
+            print(e)
             pkglist.add_error("Local Cache", str(e))
         else:
             pkglist.add("Local Cache", cache_list)

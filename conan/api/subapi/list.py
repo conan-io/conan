@@ -1,12 +1,16 @@
+import os
 from typing import Dict
 
 from conan.api.model import PackagesList
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.search.search import get_cache_packages_binary_info, filter_packages
 from conans.util.dates import timelimit
+from conans.util.files import load
 
 
 class ListAPI:
@@ -87,6 +91,26 @@ class ListAPI:
 
     def find_binaries(self, ref, profile=None, remote=None):
         ref = RecipeReference.loads(ref)
+
+        if profile is None:  # we should look in the cache files
+            filename = str(ref).replace("/", "_")
+            home_paths = HomePaths(self.conan_api.cache_folder)
+            full_file = os.path.join(home_paths.missing_binaries_path, filename)
+            if not os.path.isfile(full_file):
+                raise ConanException("Called find-binaries without profile and binary info file "
+                                     "not found")
+
+            binary_info = load_binary_info(load(full_file))
+            import json
+            print(json.dumps(binary_info, indent=4))
+            settings = binary_info.get("settings", {})
+            options = binary_info.get("options", {})
+            pkg_settings = {}
+        else:
+            settings = profile.settings
+            options = profile.options
+            pkg_settings = profile.package_settings
+
         if not ref.revision:
             ref = self.latest_recipe_revision(ref, remote)
             if ref is None:
@@ -94,20 +118,16 @@ class ListAPI:
 
         pkg_configurations = self.packages_configurations(ref, remote)
 
-        profile_settings = profile.settings
-        profile_options = profile.options
-        profile_pkg_settings = profile.package_settings
-
         class ConfDistance:
             def __init__(self, pref, data):
                 self.pref = pref
                 self.data = data
-                settings = data.get("settings", {})
+                data_settings = data.get("settings", {})
                 self.platform_diff = {}
                 self.settings_diff = {}
-                for k, v in settings.items():
-                    profile_value = profile_settings.get(k)
-                    for pattern, pattern_settings in profile_pkg_settings.items():
+                for k, v in data_settings.items():
+                    profile_value = settings.get(k)
+                    for pattern, pattern_settings in pkg_settings.items():
                         if ref_matches(ref, pattern, is_consumer=False):
                             profile_value = pattern_settings.get(k) or profile_value
                     if profile_value is not None and profile_value != v:
@@ -115,9 +135,9 @@ class ListAPI:
                         diff[k] = profile_value
                 self.deps_diff = {}
                 self.options_diff = {}
-                options = data.get("options", {})
-                for k, v in options.items():
-                    for pattern, opts in profile_options._deps_package_options.items():
+                data_options = data.get("options", {})
+                for k, v in data_options.items():
+                    for pattern, opts in options._deps_package_options.items():
                         if ref_matches(ref, pattern, is_consumer=False):
                             for profile_opt, profile_val in opts.items():
                                 if profile_opt == k and profile_val != v:

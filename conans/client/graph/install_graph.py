@@ -3,12 +3,13 @@ import os
 import textwrap
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class _InstallPackageReference:
@@ -296,6 +297,22 @@ class InstallGraph:
         if missing:
             self._raise_missing(missing)
 
+    def save_missing_files(self, home_folder):
+        """ so the 'conan listx find-binaries can recover the files
+        """
+        home_paths = HomePaths(home_folder)
+        missing_path = home_paths.missing_binaries_path
+        out = ConanOutput()
+        for ref, install_node in self._nodes.items():
+            for package in install_node.packages.values():
+                if package.binary == BINARY_MISSING:
+                    node = package.nodes[0]
+                    conanfile = node.conanfile
+                    filename = str(conanfile.ref).replace("/", "_")
+                    missing_file = os.path.join(missing_path, filename)
+                    out.info(f"Saving file for missing binary {missing_file}")
+                    save(missing_file, conanfile.info.dumps())
+
     def _raise_missing(self, missing):
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
@@ -326,12 +343,13 @@ class InstallGraph:
             else:
                 build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
                                                   for pref in missing_prefs])))
-            build_msg = f"or try to build locally from sources using the '{build_str}' argument"
+            build_msg = f"Try to build locally from sources using the '{build_str}' argument"
 
         raise ConanException(textwrap.dedent(f'''\
-           Missing prebuilt package for '{missing_pkgs}'
-           Check the available packages using 'conan list {ref}:* -r=remote'
-           {build_msg}
+           Missing prebuilt package for '{missing_pkgs}'. You can try:
+               - List all available packages using 'conan list {ref}:* -r=remote'
+               - Smart find and compare existing binaries using 'conan listx find-binaries {ref}'
+               - {build_msg}
 
            More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
            '''))

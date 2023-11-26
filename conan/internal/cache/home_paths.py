@@ -23,6 +23,10 @@ class HomePaths:
         return os.path.join(self._home, _EXTENSIONS_FOLDER, "commands")
 
     @property
+    def missing_binaries_path(self):
+        return os.path.join(self._home, "tmp", "missing")
+
+    @property
     def deployers_path(self):
         deploy = os.path.join(self._home, _EXTENSIONS_FOLDER, "deploy")
         if os.path.exists(deploy):

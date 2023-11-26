@@ -104,3 +104,19 @@ class TestFilterProfile:
         assert pkg1["diff"]["dependencies"] == {}
         assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
                                               "highly incompatible."
+
+
+class TestMissingBinaryUX:
+    @pytest.fixture(scope="class")
+    def client(self):
+        c = TestClient()
+        c.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")})
+        c.run("create lib -s os=Linux")
+        return c
+
+    def test_settings_exact_match_incomplete(self, client):
+        c = client
+        c.run("install --requires=lib/1.0 -s os=Windows", assert_error=True)
+        print(c.out)
+        c.run("listx find-binaries lib/1.0")
+        print(c.out)
