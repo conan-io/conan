@@ -85,14 +85,15 @@ def print_list_text(results):
     print_serial(info)
 
 
-def format_compact(info):
+def print_list_compact(results):
+    info = results["results"]
+
     """ transform the dictionary into a more compact one, keeping the internals
     but forming full recipe and package references including revisions at the top levels
     """
-    new_info = {}
     for remote, remote_info in info.items():
         if not remote_info or "error" in remote_info:
-            new_info[remote] = {"warning": "There are no matching recipe references"}
+            info[remote] = {"warning": "There are no matching recipe references"}
             continue
         new_remote_info = {}
         for ref, ref_info in remote_info.items():
@@ -110,21 +111,13 @@ def format_compact(info):
                         rrev_info[new_pid] = pid_info
                 new_ref_info[new_rrev] = rrev_info
             new_remote_info[ref] = new_ref_info
-        new_info[remote] = new_remote_info
-    return new_info
+        info[remote] = new_remote_info
 
-
-def print_list_compact(results):
-    info = results["results"]
-    # Extract command single package name
-
-    info = format_compact(info)
-
-    def compute_common_options(packages):
+    def compute_common_options(pkgs):
         """ compute the common subset of existing options with same values of a set of packages
         """
         result = {}
-        all_package_options = [p.get("info", {}).get("options") for p in packages.values()]
+        all_package_options = [p.get("info", {}).get("options") for p in pkgs.values()]
         all_package_options = [p for p in all_package_options if p]  # filter pkgs without options
         for package_options in all_package_options:  # Accumulate all options for all binaries
             result.update(package_options)
