@@ -28,7 +28,7 @@ def print_serial(item, indent=None, color_index=None):
     color = color_array[color_index % len(color_array)]
     if isinstance(item, dict):
         for k, v in item.items():
-            if isinstance(v, str):
+            if isinstance(v, (str, int)):
                 if k.lower() == "error":
                     color = Color.BRIGHT_RED
                     k = "ERROR"
@@ -42,6 +42,8 @@ def print_serial(item, indent=None, color_index=None):
     elif isinstance(item, type([])):
         for elem in item:
             cli_out_write(f"{indent}{elem}", fg=color)
+    elif isinstance(item, int):  # Can print 0
+        cli_out_write(f"{indent}{item}", fg=color)
     elif item:
         cli_out_write(f"{indent}{item}", fg=color)
 
@@ -65,6 +67,7 @@ def print_list_text(results):
         new_info[remote] = new_remote_info
     info = new_info
 
+    # TODO: The errors are not being displayed
     info = {remote: {"warning": "There are no matching recipe references"} if not values else values
             for remote, values in info.items()}
 
@@ -82,14 +85,15 @@ def print_list_text(results):
     print_serial(info)
 
 
-def format_compact(info):
+def print_list_compact(results):
+    info = results["results"]
+
     """ transform the dictionary into a more compact one, keeping the internals
     but forming full recipe and package references including revisions at the top levels
     """
-    new_info = {}
     for remote, remote_info in info.items():
         if not remote_info or "error" in remote_info:
-            new_info[remote] = {"warning": "There are no matching recipe references"}
+            info[remote] = {"warning": "There are no matching recipe references"}
             continue
         new_remote_info = {}
         for ref, ref_info in remote_info.items():
@@ -99,6 +103,7 @@ def format_compact(info):
                 timestamp = rrev_info.pop("timestamp", None)
                 if timestamp:
                     new_rrev += f" ({timestamp_to_str(timestamp)})"
+
                 packages = rrev_info.pop("packages", None)
                 if packages:
                     for pid, pid_info in packages.items():
@@ -106,21 +111,13 @@ def format_compact(info):
                         rrev_info[new_pid] = pid_info
                 new_ref_info[new_rrev] = rrev_info
             new_remote_info[ref] = new_ref_info
-        new_info[remote] = new_remote_info
-    return new_info
+        info[remote] = new_remote_info
 
-
-def print_list_compact(results):
-    info = results["results"]
-    # Extract command single package name
-
-    info = format_compact(info)
-
-    def compute_common_options(packages):
+    def compute_common_options(pkgs):
         """ compute the common subset of existing options with same values of a set of packages
         """
         result = {}
-        all_package_options = [p.get("info", {}).get("options") for p in packages.values()]
+        all_package_options = [p.get("info", {}).get("options") for p in pkgs.values()]
         all_package_options = [p for p in all_package_options if p]  # filter pkgs without options
         for package_options in all_package_options:  # Accumulate all options for all binaries
             result.update(package_options)
@@ -156,7 +153,8 @@ def print_list_compact(results):
                 v = ", ".join(f"{kv}={vv}" for kv, vv in v.items())
             elif isinstance(v, type([])):
                 v = ", ".join(v)
-            result[k] = v
+            if v:
+                result[k] = v
         return result
 
     for remote, remote_info in info.items():
