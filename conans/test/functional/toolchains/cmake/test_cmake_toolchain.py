@@ -1403,9 +1403,13 @@ def test_redirect_stdout():
                  "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)\ninclude(CTest)',
                  "main.cpp": "int main() {return 0;}"})
     client.run("create .")
+
+    # These checks ensure the order is not messed up,
+    # but will probably break at some point if the CMake output changes in new versions,
+    # sorry!
     assert "Configure stdout: -- Using Conan toolchain" in client.out
     assert "Configure stderr: CMake Warning" in client.out
-    assert "Build stdout: [ 50%] Building CXX object CMakeFiles/mylib.dir/main.o" in client.out
+    assert "Build stdout: [ 50%] Building CXX" in client.out
     assert "Build stderr: \n" in client.out
     assert "Test stdout: Running tests..." in client.out
     assert "Test stderr: No tests were found!!!" in client.out
