@@ -242,7 +242,6 @@ class BinaryInstaller:
 
         # order by levels and separate the root node (ref=None) from the rest
         install_graph = InstallGraph(deps_graph)
-        install_graph.save_missing_files(self._cache.cache_folder)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
 

@@ -1,16 +1,12 @@
-import os
 from typing import Dict
 
 from conan.api.model import PackagesList
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
-from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference, ref_matches
+from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_cache_packages_binary_info, filter_packages
 from conans.util.dates import timelimit
-from conans.util.files import load
 
 
 class ListAPI:
@@ -88,109 +84,6 @@ class ListAPI:
         :return: Dict[PkgReference, PkgConfiguration]
         """
         return filter_packages(query, pkg_configurations)
-
-    def find_binaries(self, ref, profile=None, remote=None):
-        ref = RecipeReference.loads(ref)
-
-        if profile is None:  # we should look in the cache files
-            filename = str(ref).replace("/", "_")
-            home_paths = HomePaths(self.conan_api.cache_folder)
-            full_file = os.path.join(home_paths.missing_binaries_path, filename)
-            if not os.path.isfile(full_file):
-                raise ConanException("Called find-binaries without profile and binary info file "
-                                     "not found")
-
-            binary_info = load_binary_info(load(full_file))
-            settings = binary_info.get("settings", {})
-            options = binary_info.get("options", {})
-            requires = binary_info.get("requires", [])
-            pkg_settings = {}
-        else:
-            settings = profile.settings
-            options = profile.options
-            requires = []
-            pkg_settings = profile.package_settings
-
-        if not ref.revision:
-            ref = self.latest_recipe_revision(ref, remote)
-            if ref is None:
-                raise NotFoundException(f"Recipe '{ref}' not found")
-
-        pkg_configurations = self.packages_configurations(ref, remote)
-
-        class ConfDistance:
-            def __init__(self, pref, data):
-                self.pref = pref
-                self.data = data
-                data_settings = data.get("settings", {})
-                self.platform_diff = {}
-                self.settings_diff = {}
-                for k, v in data_settings.items():
-                    profile_value = settings.get(k)
-                    for pattern, pattern_settings in pkg_settings.items():
-                        if ref_matches(ref, pattern, is_consumer=False):
-                            profile_value = pattern_settings.get(k) or profile_value
-                    if profile_value is not None and profile_value != v:
-                        diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
-                        diff[k] = profile_value
-                self.options_diff = {}
-                data_options = data.get("options", {})
-                for k, v in data_options.items():
-                    for pattern, opts in options._deps_package_options.items():
-                        if ref_matches(ref, pattern, is_consumer=False):
-                            for profile_opt, profile_val in opts.items():
-                                if profile_opt == k and profile_val != v:
-                                    self.options_diff[k] = profile_val
-                self.deps_diff = []
-                data_requires = data.get("requires", [])
-                for r in requires:
-                    if r not in data_requires:
-                        self.deps_diff.append(r)
-
-            def __lt__(self, other):
-                return self.distance < other.distance
-
-            def explanation(self):
-                if self.platform_diff:
-                    return "This binary belongs to another OS or Architecture, highly incompatible."
-                if self.settings_diff:
-                    return "This binary was built with different settings (compiler, build_type)."
-                if self.options_diff:
-                    return "This binary was built with the same settings, but different options"
-                if self.deps_diff:
-                    return "This binary has same settings and options, but different dependencies"
-                return "This binary is an exact match for the defined inputs"
-
-            @property
-            def distance(self):
-                return len(self.platform_diff), len(self.settings_diff), \
-                       len(self.options_diff), len(self.deps_diff)
-
-            def serialize(self):
-                return {"platform": self.platform_diff,
-                        "settings": self.settings_diff,
-                        "options": self.options_diff,
-                        "dependencies": self.deps_diff,
-                        "explanation": self.explanation()}
-
-        candidates = [ConfDistance(pref, data) for pref, data in pkg_configurations.items()]
-        candidates.sort()
-        final_result = PackagesList()
-        final_result.add_refs([ref])
-        # If there are exact matches, only return the matches
-        # else, limit to the number specified
-        candidate_distance = None
-        for candidate in candidates:
-            if candidate_distance and candidate.distance != candidate_distance:
-                break
-            candidate_distance = candidate.distance
-            pref = candidate.pref
-            final_result.add_prefs(ref, [pref])
-            final_result.add_configurations({pref: candidate.data})
-            # Add the diff data
-            rev_dict = final_result.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
-            rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
-        return final_result
 
     def select(self, pattern, package_query=None, remote=None, lru=None):
         if package_query and pattern.package_id and "*" not in pattern.package_id:
