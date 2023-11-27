@@ -774,10 +774,6 @@ class TestClient(object):
             else:
                 raise AssertionError(f"Cant find {r}-{kind} in {reqs}")
 
-    def created_build_folder(self, ref):
-        build_folder = re.search(r"{}: Build folder (.*)".format(str(ref)), str(self.out)).group(1)
-        return build_folder.replace("\\", "/")
-
     def created_test_build_folder(self, ref):
         build_folder = re.search(r"{} \(test package\): Test package build: (.*)".format(str(ref)),
                                  str(self.out)).group(1)
