@@ -182,6 +182,15 @@ class RecipeReference:
             return not condition
         return condition
 
+    def serialize(self):
+        result = {"name": self.name,
+                  "version": str(self.version),
+                  "user": self.user,
+                  "channel": self.channel,
+                  "revision": self.revision,
+                  "timestamp": self.timestamp}
+        return result
+
 
 def ref_matches(ref, pattern, is_consumer):
     if not ref or not str(ref):

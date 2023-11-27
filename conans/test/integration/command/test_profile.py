@@ -133,9 +133,14 @@ def test_shorthand_syntax():
 
 def test_profile_show_json():
     c = TestClient()
-    c.save({"myprofilewin": "[settings]\nos=Windows",
+    c.save({"myprofilewin": "[settings]\nos=Windows\n[tool_requires]\nmytool/*:mytool/1.0",
             "myprofilelinux": "[settings]\nos=Linux"})
     c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
     profile = json.loads(c.stdout)
-    assert profile["build"]["settings"] == {"os": "Windows"}
     assert profile["host"]["settings"] == {"os": "Linux"}
+
+    assert profile["build"]["settings"] == {"os": "Windows"}
+    # Check that tool_requires are properly serialized in json format
+    # https://github.com/conan-io/conan/issues/15183
+    result = {'mytool/*': [{'channel': None, 'name': 'mytool', 'revision': None, 'timestamp': None, 'user': None, 'version': '1.0'}]}
+    assert profile["build"]["tool_requires"] == result
