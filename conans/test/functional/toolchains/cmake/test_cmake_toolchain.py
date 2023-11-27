@@ -1385,6 +1385,11 @@ def test_redirect_stdout():
             self.output.info(f"Build stdout: {build_stdout.getvalue()}")
             self.output.info(f"Build stderr: {build_stderr.getvalue()}")
 
+            test_stdout, test_stderr = StringIO(), StringIO()
+            cmake.test(stdout=test_stdout, stderr=test_stderr)
+            self.output.info(f"Test stdout: {test_stdout.getvalue()}")
+            self.output.info(f"Test stderr: {test_stderr.getvalue()}")
+
         def package(self):
             cmake = CMake(self)
             install_stdout, install_stderr = StringIO(), StringIO()
@@ -1395,12 +1400,15 @@ def test_redirect_stdout():
 
     """)
     client.save({"conanfile.py": conanfile,
-                 "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)',
+                 "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)\ninclude(CTest)',
                  "main.cpp": "int main() {return 0;}"})
     client.run("create .")
     assert "Configure stdout: -- Using Conan toolchain" in client.out
     assert "Configure stderr: CMake Warning" in client.out
-    assert "Build stdout: -- Using Conan toolchain" in client.out
-    assert "Build stderr: CMake Warning" in client.out
+    assert "Build stdout: [ 50%] Building CXX object CMakeFiles/mylib.dir/main.o" in client.out
+    assert "Build stderr: \n" in client.out
+    assert "Test stdout: Running tests..." in client.out
+    assert "Test stderr: No tests were found!!!" in client.out
+
     assert "Install stdout: -- Install configuration" in client.out
     assert "Install stderr: \n" in client.out
