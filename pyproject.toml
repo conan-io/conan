@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conan"
+version = "2.0.15-dev"
+authors = [
+    {name = "JFrog LTD", email = "luism@jfrog.com"}
+]
+description = "Conan C/C++ package manager"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {text = "MIT"}
+keywords=["C/C++", "package", "libraries", "developer", "manager",
+              "dependency", "tool", "c", "c++", "cpp"]
+classifiers=[
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8"
+]
+dynamic = ["dependencies", "optional-dependencies"]
+
+[project.scripts]
+conan = "conans.conan:run"
+
+[tool.setuptools.packages.find]
+include = ["conan", "conans", "conans.test.utils.*"]
+exclude = ["conans.test.*"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["conans/requirements.txt"]}
+optional-dependencies.test = {file = ["conans/requirements_dev.txt"]}
+optional-dependencies.dev = {file = ["conans/requirements_dev.txt"]}
