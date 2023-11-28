@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=59.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -29,7 +29,7 @@ dynamic = ["dependencies", "optional-dependencies", "version"]
 conan = "conans.conan:run"
 
 [tool.setuptools.packages.find]
-include = ["conan", "conans", "conans.test.utils.*"]
+include = ["conan", "conan.*", "conans", "conans.*", "conans.test.utils.*"]
 exclude = ["conans.test.*", "conans.server.*"]
 
 [tool.setuptools.dynamic]
