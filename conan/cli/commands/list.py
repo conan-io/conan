@@ -28,7 +28,7 @@ def print_serial(item, indent=None, color_index=None):
     color = color_array[color_index % len(color_array)]
     if isinstance(item, dict):
         for k, v in item.items():
-            if isinstance(v, str):
+            if isinstance(v, (str, int)):
                 if k.lower() == "error":
                     color = Color.BRIGHT_RED
                     k = "ERROR"
@@ -42,6 +42,8 @@ def print_serial(item, indent=None, color_index=None):
     elif isinstance(item, type([])):
         for elem in item:
             cli_out_write(f"{indent}{elem}", fg=color)
+    elif isinstance(item, int):  # Can print 0
+        cli_out_write(f"{indent}{item}", fg=color)
     elif item:
         cli_out_write(f"{indent}{item}", fg=color)
 
@@ -65,6 +67,7 @@ def print_list_text(results):
         new_info[remote] = new_remote_info
     info = new_info
 
+    # TODO: The errors are not being displayed
     info = {remote: {"warning": "There are no matching recipe references"} if not values else values
             for remote, values in info.items()}
 
@@ -84,61 +87,88 @@ def print_list_text(results):
 
 def print_list_compact(results):
     info = results["results"]
-    # Extract command single package name
-    new_info = {}
 
+    """ transform the dictionary into a more compact one, keeping the internals
+    but forming full recipe and package references including revisions at the top levels
+    """
     for remote, remote_info in info.items():
         if not remote_info or "error" in remote_info:
-            new_info[remote] = {"warning": "There are no matching recipe references"}
+            info[remote] = {"warning": "There are no matching recipe references"}
             continue
         new_remote_info = {}
         for ref, ref_info in remote_info.items():
             new_ref_info = {}
             for rrev, rrev_info in ref_info.get("revisions", {}).items():
-                new_rrev_info = {}
                 new_rrev = f"{ref}#{rrev}"
-                timestamp = rrev_info.get("timestamp")
+                timestamp = rrev_info.pop("timestamp", None)
                 if timestamp:
                     new_rrev += f" ({timestamp_to_str(timestamp)})"
-                # collect all options
-                common_options = {}
-                for pid, pid_info in rrev_info.get("packages", {}).items():
-                    options = pid_info.get("info", {}).get("options", {})
-                    common_options.update(options)
-                for pid, pid_info in rrev_info.get("packages", {}).items():
-                    options = pid_info.get("info", {}).get("options")
-                    if options:  # If a package has no options, like header-only, skip
-                        common_options = {k: v for k, v in common_options.items()
-                                          if k in options and v == options[k]}
-                for pid, pid_info in rrev_info.get("packages", {}).items():
-                    options = pid_info.get("info", {}).get("options")
-                    if options:
-                        for k, v in options.items():
-                            if v != common_options.get(k):
-                                common_options.pop(k, None)
-                # format options
-                for pid, pid_info in rrev_info.get("packages", {}).items():
-                    new_pid = f"{ref}#{rrev}:{pid}"
-                    new_pid_info = {}
-                    info = pid_info.get("info")
-                    settings = info.get("settings")
-                    if settings:  # A bit of pretty order, first OS-ARCH
-                        values = [settings.pop(s, None)
-                                  for s in ("os", "arch", "build_type", "compiler")]
-                        values = [v for v in values if v is not None]
-                        values.extend(settings.values())
-                        new_pid_info["settings"] = ", ".join(values)
-                    options = info.get("options")
-                    if options:
-                        diff_options = {k: v for k, v in options.items() if k not in common_options}
-                        options = ", ".join(f"{k}={v}" for k, v in diff_options.items())
-                        new_pid_info["options(diff)"] = options
-                    new_rrev_info[new_pid] = new_pid_info
-                new_ref_info[new_rrev] = new_rrev_info
-            new_remote_info[ref] = new_ref_info
-        new_info[remote] = new_remote_info
 
-    print_serial(new_info)
+                packages = rrev_info.pop("packages", None)
+                if packages:
+                    for pid, pid_info in packages.items():
+                        new_pid = f"{ref}#{rrev}:{pid}"
+                        rrev_info[new_pid] = pid_info
+                new_ref_info[new_rrev] = rrev_info
+            new_remote_info[ref] = new_ref_info
+        info[remote] = new_remote_info
+
+    def compute_common_options(pkgs):
+        """ compute the common subset of existing options with same values of a set of packages
+        """
+        result = {}
+        all_package_options = [p.get("info", {}).get("options") for p in pkgs.values()]
+        all_package_options = [p for p in all_package_options if p]  # filter pkgs without options
+        for package_options in all_package_options:  # Accumulate all options for all binaries
+            result.update(package_options)
+        for package_options in all_package_options:  # Filter those not common to all
+            result = {k: v for k, v in result.items()
+                      if k in package_options and v == package_options[k]}
+        for package_options in all_package_options:
+            for k, v in package_options.items():
+                if v != result.get(k):
+                    result.pop(k, None)
+        return result
+
+    def compact_format_info(local_info, common_options=None):
+        """ return a dictionary with settings and options in short form for compact format
+        """
+        result = {}
+        settings = local_info.pop("settings", None)
+        if settings:  # A bit of pretty order, first OS-ARCH
+            values = [settings.pop(s, None)
+                      for s in ("os", "arch", "build_type", "compiler")]
+            values = [v for v in values if v is not None]
+            values.extend(settings.values())
+            result["settings"] = ", ".join(values)
+        options = local_info.pop("options", None)
+        if options:
+            if common_options is not None:
+                options = {k: v for k, v in options.items() if k not in common_options}
+            options = ", ".join(f"{k}={v}" for k, v in options.items())
+            options_tag = "options(diff)" if common_options is not None else "options"
+            result[options_tag] = options
+        for k, v in local_info.items():
+            if isinstance(v, dict):
+                v = ", ".join(f"{kv}={vv}" for kv, vv in v.items())
+            elif isinstance(v, type([])):
+                v = ", ".join(v)
+            if v:
+                result[k] = v
+        return result
+
+    for remote, remote_info in info.items():
+        for ref, revisions in remote_info.items():
+            if not isinstance(revisions, dict):
+                continue
+            for rrev, prefs in revisions.items():
+                pkg_common_options = compute_common_options(prefs)
+                pkg_common_options = pkg_common_options if len(pkg_common_options) > 4 else None
+                for pref, pref_contents in prefs.items():
+                    pref_info = pref_contents.pop("info")
+                    pref_contents.update(compact_format_info(pref_info, pkg_common_options))
+
+    print_serial(info)
 
 
 def print_list_json(data):
