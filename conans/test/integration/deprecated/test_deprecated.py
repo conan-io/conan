@@ -1,3 +1,5 @@
+import textwrap
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -39,3 +41,24 @@ class TestDeprecated:
         assert "maths/1.0: This is not secure, use maths/[>=2.0]" in tc.out
         tc.run("install --requires=maths/1.0")
         assert "maths/1.0: This is not secure, use maths/[>=2.0]" in tc.out
+
+    def test_deprecated_configure(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.scm import Version
+
+        class Pkg(ConanFile):
+            name = "pkg"
+
+            def configure(self):
+                if Version(self.version) < "1.0":
+                    self.deprecated = True
+        """)
+        tc.save({"conanfile.py": conanfile})
+
+        tc.run("graph info . --version=0.0")
+        assert "deprecated: True" in tc.out
+
+        tc.run("graph info . --version=2.0")
+        assert "deprecated: None" in tc.out
