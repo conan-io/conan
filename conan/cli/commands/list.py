@@ -157,6 +157,21 @@ def print_list_compact(results):
                 result[k] = v
         return result
 
+    def compact_diff(diffinfo):
+        """ return a dictionary with settings and options in short form for compact format
+        """
+        result = {}
+        for k, v in diffinfo.items():
+            if not v:
+                continue
+            if not isinstance(v, dict):
+                result[k] = v
+            else:
+                result[k] = ", ".join(f"Existing '{kk}={vv['existing']}' "
+                                      f"different from expected '{kk}={vv['expected']}'"
+                                      for kk, vv in v.items())
+        return result
+
     for remote, remote_info in info.items():
         for ref, revisions in remote_info.items():
             if not isinstance(revisions, dict):
@@ -169,7 +184,7 @@ def print_list_compact(results):
                     pref_contents.update(compact_format_info(pref_info, pkg_common_options))
                     diff_info = pref_contents.pop("diff", None)
                     if diff_info is not None:
-                        pref_contents["diff"] = compact_format_info(diff_info)
+                        pref_contents["diff"] = compact_diff(diff_info)
 
     print_serial(info)
 

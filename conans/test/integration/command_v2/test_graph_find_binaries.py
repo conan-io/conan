@@ -71,6 +71,7 @@ class TestFilterProfile:
         c = client
         c.save({"linux": "[settings]\nos=Linux\n[options]\n*:shared=True"})
         c.run("graph explain --requires=lib/1.0 -pr linux")
+        print(c.out)
         expected = textwrap.dedent("""\
             settings: Linux, Release
             options: shared=False
@@ -97,6 +98,7 @@ class TestFilterProfile:
         c = client
         c.save({"windows": "[settings]\nos=Windows\nbuild_type=Debug\n[options]\n*:shared=True"})
         c.run("graph explain --requires=lib/1.0 -pr windows")
+        print(c.out)
         expected = textwrap.dedent("""\
             settings: Windows, Release
             options: shared=True

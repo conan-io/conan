@@ -225,7 +225,7 @@ class _BinaryDistance:
             value = binary_settings.get(k)
             if value is not None and value != v:
                 diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
-                diff[k] = v
+                diff[k] = {"expected": v, "existing": value}
 
         # Options
         self.options_diff = {}
@@ -234,15 +234,19 @@ class _BinaryDistance:
         for k, v in expected_options.items():
             value = binary_options.get(k)
             if value is not None and value != v:
-                self.options_diff[k] = v
+                self.options_diff[k] = {"expected": v, "existing": value}
 
         # Requires
-        self.deps_diff = []
+        self.deps_diff = {}
         binary_requires = binary_config.get("requires", [])
         expected_requires = expected_config.get("requires", [])
+        binary_requires = [RecipeReference.loads(r) for r in binary_requires]
+        expected_requires = [RecipeReference.loads(r) for r in expected_requires]
+        binary_requires = {r.name: r for r in binary_requires}
         for r in expected_requires:
-            if r not in binary_requires:
-                self.deps_diff.append(r)
+            existing = binary_requires.get(r.name)
+            if not existing or r != existing:
+                self.deps_diff[r.name] = {"expected": r, "existing": existing}
 
     def __lt__(self, other):
         return self.distance < other.distance
