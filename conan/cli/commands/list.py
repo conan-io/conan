@@ -35,6 +35,8 @@ def print_serial(item, indent=None, color_index=None):
                 elif k.lower() == "warning":
                     color = Color.BRIGHT_YELLOW
                     k = "WARN"
+                color = Color.BRIGHT_RED if k == "expected" else color
+                color = Color.BRIGHT_GREEN if k == "existing" else color
                 cli_out_write(f"{indent}{k}: {v}", fg=color)
             else:
                 cli_out_write(f"{indent}{k}", fg=color)
@@ -158,18 +160,17 @@ def print_list_compact(results):
         return result
 
     def compact_diff(diffinfo):
-        """ return a dictionary with settings and options in short form for compact format
+        """ return a compact and red/green diff for binary differences
         """
         result = {}
         for k, v in diffinfo.items():
             if not v:
                 continue
-            if not isinstance(v, dict):
-                result[k] = v
+            if isinstance(v, dict):
+                result[k] = {"expected": ", ".join(value for value in v["expected"]),
+                             "existing": ", ".join(value for value in v["existing"])}
             else:
-                result[k] = ", ".join(f"Existing '{kk}={vv['existing']}' "
-                                      f"different from expected '{kk}={vv['expected']}'"
-                                      for kk, vv in v.items())
+                result[k] = v
         return result
 
     for remote, remote_info in info.items():

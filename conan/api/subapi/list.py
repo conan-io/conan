@@ -225,7 +225,8 @@ class _BinaryDistance:
             value = binary_settings.get(k)
             if value is not None and value != v:
                 diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
-                diff[k] = {"expected": v, "existing": value}
+                diff.setdefault("expected", []).append(f"{k}={v}")
+                diff.setdefault("existing", []).append(f"{k}={value}")
 
         # Options
         self.options_diff = {}
@@ -234,7 +235,8 @@ class _BinaryDistance:
         for k, v in expected_options.items():
             value = binary_options.get(k)
             if value is not None and value != v:
-                self.options_diff[k] = {"expected": v, "existing": value}
+                self.options_diff.setdefault("expected", []).append(f"{k}={v}")
+                self.options_diff.setdefault("existing", []).append(f"{k}={value}")
 
         # Requires
         self.deps_diff = {}
@@ -246,7 +248,8 @@ class _BinaryDistance:
         for r in expected_requires:
             existing = binary_requires.get(r.name)
             if not existing or r != existing:
-                self.deps_diff[r.name] = {"expected": r, "existing": existing}
+                self.deps_diff.setdefault("expected", []).append(repr(r))
+                self.deps_diff.setdefault("existing", []).append(repr(existing))
 
     def __lt__(self, other):
         return self.distance < other.distance
@@ -255,7 +258,7 @@ class _BinaryDistance:
         if self.platform_diff:
             return "This binary belongs to another OS or Architecture, highly incompatible."
         if self.settings_diff:
-            return "This binary was built with different settings (compiler, build_type)."
+            return "This binary was built with different settings."
         if self.options_diff:
             return "This binary was built with the same settings, but different options"
         if self.deps_diff:
