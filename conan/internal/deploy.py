@@ -38,13 +38,14 @@ def _find_deployer(d, cache_deploy_folder):
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
-def do_deploys(conan_api, graph, deploy, deploy_pkg, deploy_folder):
+def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
     mkdir(deploy_folder)
     # handle the recipe deploy()
-    if deploy_pkg:
+    if deploy_package:
         for node in graph.ordered_iterate():
             conanfile = node.conanfile
-            if not conanfile.ref or not any(ref_matches(conanfile.ref, p, None) for p in deploy_pkg):
+            if not conanfile.ref or not any(ref_matches(conanfile.ref, p, None)
+                                            for p in deploy_package):
                 continue
             if hasattr(conanfile, "deploy"):
                 conanfile.output.info("Executing deploy()")

@@ -33,7 +33,7 @@ def install(conan_api, parser, *args):
                         help='Deploy using the provided deployer to the output folder')
     parser.add_argument("--deployer-folder",
                         help="Deployer output folder, base build folder by default if not set")
-    parser.add_argument("--deployer-pkg", action="append",
+    parser.add_argument("--deploy-package", action="append",
                         help="Execute the deployment of the specific packages")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
@@ -72,7 +72,7 @@ def install(conan_api, parser, *args):
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     ConanOutput().title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
-                                       deploy=args.deployer, deploy_pkg=args.deployer_pkg,
+                                       deploy=args.deployer, deploy_package=args.deploy_package,
                                        deploy_folder=args.deployer_folder)
     ConanOutput().success("Install finished successfully")
 
