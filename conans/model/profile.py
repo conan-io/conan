@@ -31,7 +31,7 @@ class Profile(object):
 
     def serialize(self):
         def _serialize_tool_requires():
-            return {pattern: [ref.serialize() for ref in refs]
+            return {pattern: [repr(ref) for ref in refs]
                     for pattern, refs in self.tool_requires.items()}
         return {
             "settings": self.settings,

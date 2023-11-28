@@ -142,5 +142,4 @@ def test_profile_show_json():
     assert profile["build"]["settings"] == {"os": "Windows"}
     # Check that tool_requires are properly serialized in json format
     # https://github.com/conan-io/conan/issues/15183
-    result = {'mytool/*': [{'channel': None, 'name': 'mytool', 'revision': None, 'timestamp': None, 'user': None, 'version': '1.0'}]}
-    assert profile["build"]["tool_requires"] == result
+    assert profile["build"]["tool_requires"] == {'mytool/*': ["mytool/1.0"]}
