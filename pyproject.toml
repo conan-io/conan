@@ -31,7 +31,7 @@ conan = "conans.conan:run"
 
 [tool.setuptools.packages.find]
 include = ["conan", "conans", "conans.test.utils.*"]
-exclude = ["conans.test.*"]
+exclude = ["conans.test.*", "conans.server.*"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["conans/requirements.txt"]}
