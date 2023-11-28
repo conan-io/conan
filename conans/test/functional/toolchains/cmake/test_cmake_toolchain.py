@@ -1355,7 +1355,7 @@ def test_inject_user_toolchain_profile():
     assert "-- MYVAR1 MYVALUE1!!" in client.out
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.19")
 def test_redirect_stdout():
     client = TestClient()
     conanfile = textwrap.dedent("""
