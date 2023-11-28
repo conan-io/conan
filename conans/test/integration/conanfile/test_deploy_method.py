@@ -30,17 +30,17 @@ def test_deploy_method():
     assert "Executing deploy()" not in c.out
 
     # Doesn't install with other patterns
-    c.run("install --requires=pkg/0.1 --deploy-package=other")
+    c.run("install --requires=pkg/0.1 --deployer-package=other")
     assert "Executing deploy()" not in c.out
 
     # install can deploy all
-    c.run("install --requires=pkg/0.1 --deploy-package=* --deployer-folder=mydeploy")
+    c.run("install --requires=pkg/0.1 --deployer-package=* --deployer-folder=mydeploy")
     assert "dep/0.1: Executing deploy()" in c.out
     assert "pkg/0.1: Executing deploy()" in c.out
     assert c.load("mydeploy/mydepfile.txt") == "HELLO!!!!"
     assert c.load("mydeploy/mypkgfile.txt") == "HELLO!!!!"
 
     # install can deploy only "pkg"
-    c.run("install --requires=pkg/0.1 --deploy-package=pkg/* --deployer-folder=mydeploy")
+    c.run("install --requires=pkg/0.1 --deployer-package=pkg/* --deployer-folder=mydeploy")
     assert "dep/0.1: Executing deploy()" not in c.out
     assert "pkg/0.1: Executing deploy()" in c.out
