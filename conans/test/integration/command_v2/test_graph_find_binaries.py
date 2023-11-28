@@ -22,7 +22,7 @@ class TestFilterProfile:
         # We find 2 exact matches for os=Windows
         c = client
         c.save({"windows": "[settings]\nos=Windows"})
-        c.run("graph find-binaries --requires=lib/1.0 -pr windows")
+        c.run("graph explain --requires=lib/1.0 -pr windows")
         expected = textwrap.dedent("""\
             settings: Windows, Release
             options: shared=False
@@ -30,7 +30,7 @@ class TestFilterProfile:
               explanation: This binary is an exact match for the defined inputs
             """)
         assert textwrap.indent(expected, "        ") in c.out
-        c.run("graph find-binaries --requires=lib/1.0 -pr windows --format=json")
+        c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Closest binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
@@ -46,7 +46,7 @@ class TestFilterProfile:
         # We find 2 exact matches for os=Windows shared=True
         c = client
         c.save({"windows": "[settings]\nos=Windows\n[options]\n*:shared=True"})
-        c.run("graph find-binaries --requires=lib/1.0 -pr windows")
+        c.run("graph explain --requires=lib/1.0 -pr windows")
         expected = textwrap.dedent("""\
             settings: Windows, Release
             options: shared=True
@@ -54,7 +54,7 @@ class TestFilterProfile:
               explanation: This binary is an exact match for the defined inputs
             """)
         assert textwrap.indent(expected, "        ") in c.out
-        c.run("graph find-binaries --requires=lib/1.0 -pr windows --format=json")
+        c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Closest binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
@@ -70,7 +70,7 @@ class TestFilterProfile:
         # We find 1 closest match in Linux static
         c = client
         c.save({"linux": "[settings]\nos=Linux\n[options]\n*:shared=True"})
-        c.run("graph find-binaries --requires=lib/1.0 -pr linux")
+        c.run("graph explain --requires=lib/1.0 -pr linux")
         expected = textwrap.dedent("""\
             settings: Linux, Release
             options: shared=False
@@ -79,7 +79,7 @@ class TestFilterProfile:
               explanation: This binary was built with the same settings, but different options
             """)
         assert textwrap.indent(expected, "        ") in c.out
-        c.run("graph find-binaries --requires=lib/1.0 -pr linux --format=json")
+        c.run("graph explain --requires=lib/1.0 -pr linux --format=json")
         cache = json.loads(c.stdout)["Closest binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
@@ -96,7 +96,7 @@ class TestFilterProfile:
         # We find 1 closest match in Linux static
         c = client
         c.save({"windows": "[settings]\nos=Windows\nbuild_type=Debug\n[options]\n*:shared=True"})
-        c.run("graph find-binaries --requires=lib/1.0 -pr windows")
+        c.run("graph explain --requires=lib/1.0 -pr windows")
         expected = textwrap.dedent("""\
             settings: Windows, Release
             options: shared=True
@@ -105,7 +105,7 @@ class TestFilterProfile:
               explanation: This binary was built with different settings (compiler, build_type).
             """)
         assert textwrap.indent(expected, "        ") in c.out
-        c.run("graph find-binaries --requires=lib/1.0 -pr windows --format=json")
+        c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
         cache = json.loads(c.stdout)["Closest binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
@@ -122,7 +122,7 @@ class TestFilterProfile:
         # We find closest match in other platforms
         c = client
         c.save({"macos": "[settings]\nos=Macos\nbuild_type=Release\n[options]\n*:shared=True"})
-        c.run("graph find-binaries --requires=lib/1.0 -pr macos")
+        c.run("graph explain --requires=lib/1.0 -pr macos")
         expected = textwrap.dedent("""\
             settings: Windows, Release
             options: shared=True
@@ -131,7 +131,7 @@ class TestFilterProfile:
               explanation: This binary belongs to another OS or Architecture, highly incompatible.
             """)
         assert textwrap.indent(expected, "        ") in c.out
-        c.run("graph find-binaries --requires=lib/1.0 -pr macos --format=json")
+        c.run("graph explain --requires=lib/1.0 -pr macos --format=json")
         cache = json.loads(c.stdout)["Closest binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
@@ -162,7 +162,7 @@ class TestMissingBinaryDeps:
         c.run("install --requires=lib/1.0 -s os=Windows", assert_error=True)
         assert "ERROR: Missing prebuilt package for 'dep/2.0', 'lib/1.0'" in c.out
         # We use the --missing=lib/1.0 to specify we want this binary and not dep/2.0
-        c.run("graph find-binaries --requires=lib/1.0 --missing=lib/1.0 -s os=Windows")
+        c.run("graph explain --requires=lib/1.0 --missing=lib/1.0 -s os=Windows")
         expected = textwrap.dedent("""\
             settings: Linux
             requires: dep/1.Y.Z
@@ -177,7 +177,7 @@ class TestMissingBinaryDeps:
         c = client
         c.run("install --requires=lib/1.0 -s os=Linux", assert_error=True)
         assert "ERROR: Missing prebuilt package for 'lib/1.0'" in c.out
-        c.run("graph find-binaries --requires=lib/1.0 -s os=Linux")
+        c.run("graph explain --requires=lib/1.0 -s os=Linux")
         expected = textwrap.dedent("""\
             settings: Linux
             requires: dep/1.Y.Z

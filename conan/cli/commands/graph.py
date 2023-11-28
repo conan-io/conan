@@ -1,7 +1,7 @@
 import json
 import os
 
-from conan.api.model import PackagesList, MultiPackagesList
+from conan.api.model import MultiPackagesList
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
@@ -10,11 +10,10 @@ from conan.cli.commands.list import print_list_compact, print_list_json
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
+from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
-from conan.errors import ConanException
-from conans.model.info import load_binary_info
 from conans.model.recipe_ref import ref_matches
 
 
@@ -189,9 +188,10 @@ def graph_info(conan_api, parser, subparser, *args):
 
 @conan_subcommand(formatters={"text": print_list_compact,
                               "json": print_list_json})
-def graph_find_binaries(conan_api, parser,  subparser, *args):
+def graph_explain(conan_api, parser,  subparser, *args):
     """
-    List existing recipes, revisions, or packages in the cache (by default) or the remotes.
+    Explain what is wrong with the dependency graph, like report missing binaries closest
+    alternatives, trying to explain why the existing binaries do not match
     """
     common_graph_args(subparser)
     subparser.add_argument("--check-updates", default=False, action="store_true",
@@ -250,45 +250,7 @@ def graph_find_binaries(conan_api, parser,  subparser, *args):
     else:
         raise ConanException("There is no missing binary")
 
-    ConanOutput().info(f"Missing binary: {ref}")
-    ConanOutput().info(f"With conaninfo.txt (package_id):\n{conaninfo.dumps()}")
-    conaninfo = load_binary_info(conaninfo.dumps())
-    # Collect all configurations
-    candidates = []
-    ConanOutput().info(f"Finding binaries in the cache")
-    pkg_configurations = conan_api.list.packages_configurations(ref)
-    candidates.extend(_BinaryDistance(pref, data, conaninfo)
-                      for pref, data in pkg_configurations.items())
-
-    for remote in remotes:
-        try:
-            ConanOutput().info(f"Finding binaries in remote {remote.name}")
-            pkg_configurations = conan_api.list.packages_configurations(ref, remote=remote)
-        except Exception as e:
-            pass
-            ConanOutput(f"ERROR IN REMOTE {remote.name}: {e}")
-        else:
-            candidates.extend(_BinaryDistance(pref, data, conaninfo, remote)
-                              for pref, data in pkg_configurations.items())
-
-    candidates.sort()
-    pkglist = PackagesList()
-    pkglist.add_refs([ref])
-    # If there are exact matches, only return the matches
-    # else, limit to the number specified
-    candidate_distance = None
-    for candidate in candidates:
-        if candidate_distance and candidate.distance != candidate_distance:
-            break
-        candidate_distance = candidate.distance
-        pref = candidate.pref
-        pkglist.add_prefs(ref, [pref])
-        pkglist.add_configurations({pref: candidate.binary_config})
-        # Add the diff data
-        rev_dict = pkglist.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
-        rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
-        remote = candidate.remote.name if candidate.remote else "Local Cache"
-        rev_dict["packages"][pref.package_id]["remote"] = remote
+    pkglist = conan_api.list.explain_missing_binaries(ref, conaninfo, remotes)
 
     ConanOutput().title("Closest binaries")
     result = MultiPackagesList()
@@ -296,64 +258,3 @@ def graph_find_binaries(conan_api, parser,  subparser, *args):
     return {
         "results": result.serialize(),
     }
-
-
-class _BinaryDistance:
-    def __init__(self, pref, binary_config, expected_config, remote=None):
-        self.remote = remote
-        self.pref = pref
-        self.binary_config = binary_config
-
-        # Settings
-        self.platform_diff = {}
-        self.settings_diff = {}
-        binary_settings = binary_config.get("settings", {})
-        expected_settings = expected_config.get("settings", {})
-        for k, v in expected_settings.items():
-            value = binary_settings.get(k)
-            if value is not None and value != v:
-                diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
-                diff[k] = v
-
-        # Options
-        self.options_diff = {}
-        binary_options = binary_config.get("options", {})
-        expected_options = expected_config.get("options", {})
-        for k, v in expected_options.items():
-            value = binary_options.get(k)
-            if value is not None and value != v:
-                self.options_diff[k] = v
-
-        # Requires
-        self.deps_diff = []
-        binary_requires = binary_config.get("requires", [])
-        expected_requires = expected_config.get("requires", [])
-        for r in expected_requires:
-            if r not in binary_requires:
-                self.deps_diff.append(r)
-
-    def __lt__(self, other):
-        return self.distance < other.distance
-
-    def explanation(self):
-        if self.platform_diff:
-            return "This binary belongs to another OS or Architecture, highly incompatible."
-        if self.settings_diff:
-            return "This binary was built with different settings (compiler, build_type)."
-        if self.options_diff:
-            return "This binary was built with the same settings, but different options"
-        if self.deps_diff:
-            return "This binary has same settings and options, but different dependencies"
-        return "This binary is an exact match for the defined inputs"
-
-    @property
-    def distance(self):
-        return len(self.platform_diff), len(self.settings_diff), \
-               len(self.options_diff), len(self.deps_diff)
-
-    def serialize(self):
-        return {"platform": self.platform_diff,
-                "settings": self.settings_diff,
-                "options": self.options_diff,
-                "dependencies": self.deps_diff,
-                "explanation": self.explanation()}

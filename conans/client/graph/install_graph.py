@@ -331,7 +331,7 @@ class InstallGraph:
         raise ConanException(textwrap.dedent(f'''\
            Missing prebuilt package for '{missing_pkgs}'. You can try:
                - List all available packages using 'conan list {ref}:* -r=remote'
-               - Smart find missing binaries replace 'conan install ...' with 'conan graph find-binaries ...'
+               - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
                - {build_msg}
 
            More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
