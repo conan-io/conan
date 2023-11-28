@@ -1,7 +1,7 @@
 import fnmatch
 from collections import OrderedDict
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 
 
 def filter_graph(graph, package_filter=None, field_filter=None):
@@ -27,23 +27,21 @@ def format_graph_info(result):
     field_filter = result["field_filter"]
     package_filter = result["package_filter"]
 
-    out = ConanOutput()
-    out.title("Basic graph information")
+    ConanOutput().subtitle("Basic graph information")
     serial = graph.serialize()
     serial = filter_graph(serial, package_filter, field_filter)
     for n in serial["nodes"].values():
-        out.writeln(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
+        cli_out_write(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
         _serial_pretty_printer(n, indent="  ")
     if graph.error:
         raise graph.error
 
 
 def _serial_pretty_printer(data, indent=""):
-    out = ConanOutput()
     for k, v in data.items():
         if isinstance(v, dict):
-            out.writeln(f"{indent}{k}:")
+            cli_out_write(f"{indent}{k}:")
             # TODO: increment color too
             _serial_pretty_printer(v, indent=indent+"  ")
         else:
-            out.writeln(f"{indent}{k}: {v}")
+            cli_out_write(f"{indent}{k}: {v}")
