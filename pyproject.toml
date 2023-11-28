@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "conan"
-version = "2.0.15-dev"
 authors = [
     {name = "JFrog LTD", email = "luism@jfrog.com"}
 ]
@@ -24,7 +23,7 @@ classifiers=[
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8"
 ]
-dynamic = ["dependencies", "optional-dependencies"]
+dynamic = ["dependencies", "optional-dependencies", "version"]
 
 [project.scripts]
 conan = "conans.conan:run"
@@ -34,7 +33,7 @@ include = ["conan", "conans", "conans.test.utils.*"]
 exclude = ["conans.test.*", "conans.server.*"]
 
 [tool.setuptools.dynamic]
+version = {attr = "conans.__version__"}
 dependencies = {file = ["conans/requirements.txt"]}
 optional-dependencies.test = {file = ["conans/requirements_dev.txt"]}
 optional-dependencies.dev = {file = ["conans/requirements_dev.txt"]}
-
