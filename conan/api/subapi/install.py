@@ -40,7 +40,7 @@ class InstallAPI:
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
-                         deploy=False, deploy_folder=None):
+                         deploy=False, deploy_package=None, deploy_folder=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -61,9 +61,9 @@ class InstallAPI:
         conanfile.folders.set_base_folders(source_folder, output_folder)
 
         # The previous .set_base_folders has already decided between the source_folder and output
-        if deploy:
+        if deploy or deploy_package:
             base_folder = deploy_folder or conanfile.folders.base_build
-            do_deploys(self.conan_api, deps_graph, deploy, base_folder)
+            do_deploys(self.conan_api, deps_graph, deploy, deploy_package, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
         app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
