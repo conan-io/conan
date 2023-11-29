@@ -1412,7 +1412,15 @@ def test_redirect_stdout():
     assert re.search("Build stderr: ''", client.out)
 
     assert re.search("Test stdout: '[^']", client.out)
-    assert re.search("Test stderr: '[^']", client.out)
 
-    assert re.search("Install stdout: '[^']", client.out)
+    # Empty on Windows
+    if platform.system() == "Windows":
+        assert re.search("Test stderr: ''", client.out)
+    else:
+        assert re.search("Test stderr: '[^']", client.out)
+
+    if platform.system() == "Windows":
+        assert re.search("Install stdout: ''", client.out)
+    else:
+        assert re.search("Install stdout: '[^']", client.out)
     assert re.search("Install stderr: ''", client.out)
