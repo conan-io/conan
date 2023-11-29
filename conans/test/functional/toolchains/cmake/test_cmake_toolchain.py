@@ -1381,7 +1381,7 @@ def test_redirect_stdout():
             self.output.info(f"Configure stderr: {config_stderr.getvalue()}")
 
             build_stdout, build_stderr = StringIO(), StringIO()
-            cmake.build(stdout=build_stdout, stderr=build_stderr, cli_args=['--list-presets'])
+            cmake.build(stdout=build_stdout, stderr=build_stderr)
             self.output.info(f"Build stdout: {build_stdout.getvalue()}")
             self.output.info(f"Build stderr: {build_stderr.getvalue()}")
 
@@ -1409,7 +1409,7 @@ def test_redirect_stdout():
     # sorry!
     assert "Configure stdout: -- Using Conan toolchain" in client.out
     assert "Configure stderr: CMake Warning" in client.out
-    assert "Build stdout: Available build presets" in client.out
+    assert "Build stdout: Scanning dependencies" in client.out
     assert "Build stderr: \n" in client.out
     assert "Test stdout: Running tests..." in client.out
     assert "Test stderr: No tests were found!!!" in client.out
