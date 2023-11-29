@@ -17,6 +17,19 @@ from conans.client.graph.install_graph import InstallGraph
 from conans.model.recipe_ref import ref_matches
 
 
+def explain_formatter_text(data):
+    if "Closest binaries" in data:
+        # To be able to reuse the print_list_compact method,
+        # we need to wrap this in a MultiPackagesList
+        multipackage = MultiPackagesList()
+        multipackage.add("Closest binaries", data["Closest binaries"])
+        print_list_compact({"results": multipackage.serialize()})
+
+
+def explain_formatter_json(data):
+    print_list_json({"results": data})
+
+
 @conan_command(group="Consumer")
 def graph(conan_api, parser, *args):
     """
@@ -186,8 +199,8 @@ def graph_info(conan_api, parser, subparser, *args):
             "conan_api": conan_api}
 
 
-@conan_subcommand(formatters={"text": print_list_compact,
-                              "json": print_list_json})
+@conan_subcommand(formatters={"text": explain_formatter_text,
+                              "json": explain_formatter_json})
 def graph_explain(conan_api, parser,  subparser, *args):
     """
     Explain what is wrong with the dependency graph, like report missing binaries closest
@@ -253,8 +266,6 @@ def graph_explain(conan_api, parser,  subparser, *args):
     pkglist = conan_api.list.explain_missing_binaries(ref, conaninfo, remotes)
 
     ConanOutput().title("Closest binaries")
-    result = MultiPackagesList()
-    result.add("Closest binaries", pkglist)
     return {
-        "results": result.serialize(),
+        "Closest binaries": pkglist.serialize(),
     }
