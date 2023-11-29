@@ -15,17 +15,19 @@ not cross-build
 The resulting executable can be put in the system PATH of the running machine
 """
 
+import argparse
 import os
 import platform
 import shutil
 import subprocess
+import sys
 
 from conans import __version__
 from conans.util.files import save
 
 
 def _install_pyinstaller(pyinstaller_path):
-    subprocess.call("pip install pyinstaller", shell=True)
+    subprocess.call(f"{sys.executable} -m pip install pyinstaller", shell=True)
     # try to install pyinstaller if not installed
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
@@ -90,10 +92,9 @@ VSVersionInfo(
     return template.format(version=version, version_tuple=version_tuple)
 
 
-def pyinstall(source_folder):
+def pyinstall(source_folder, onefile=False):
     pyinstaller_path = os.path.join(os.getcwd(), 'pyinstaller')
     _install_pyinstaller(pyinstaller_path)
-    command = "pyinstaller"  # "python pyinstaller.py"
 
     try:
         shutil.rmtree(os.path.join(pyinstaller_path))
@@ -126,9 +127,21 @@ def pyinstall(source_folder):
 
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
-    subprocess.call('%s -y -p "%s" --console "%s" %s %s'
-                    % (command, source_folder, conan_path, hidden, win_ver),
-                    cwd=pyinstaller_path, shell=True)
+
+    if onefile:
+        distpath = os.path.join(pyinstaller_path, "dist", "conan")
+    else:
+        distpath = os.path.join(pyinstaller_path, "dist")
+
+    command_args = [conan_path, "--noconfirm", f"--paths={source_folder}",  "--console", f"--distpath={distpath}"]
+    command_args.extend(hidden.split(" "))
+    if win_ver:
+        command_args.append(win_ver)
+    if onefile:
+        command_args.append("--onefile")
+
+    import PyInstaller.__main__
+    PyInstaller.__main__.run(command_args)
 
     _run_bin(pyinstaller_path)
 
@@ -136,8 +149,13 @@ def pyinstall(source_folder):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--onefile', action='store_true')
+    parser.set_defaults(onefile=False)
+    args = parser.parse_args()
+
     src_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-    output_folder = pyinstall(src_folder)
+    output_folder = pyinstall(src_folder, args.onefile)
     print("\n**************Conan binaries created!******************\n"
           "\nAppend this folder to your system PATH: '%s'\n"
           "Feel free to move the whole folder to another location." % output_folder)
