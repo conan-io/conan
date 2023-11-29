@@ -1353,3 +1353,58 @@ def test_inject_user_toolchain_profile():
                  "CMakeLists.txt": cmake})
     client.run("create . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+def test_add_buildenv_to_configure_preset():
+    c = TestClient()
+
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import chdir, save
+        class Tool(ConanFile):
+            name = "mytool"
+            version = "0.1"
+            settings = "os", "compiler", "arch", "build_type"
+            def package(self):
+                with chdir(self, self.package_folder):
+                    save(self, "bin/mytool.bat", f"@echo off\n running: {self.name}/{self.version} {self.settings.build_type}")
+                    save(self, "bin/mytool.sh", f"echo running: {self.name}/{self.version} {self.settings.build_type}")
+                    os.chmod("bin/mytool.sh", 0o777)
+        """)
+
+    consumer = textwrap.dedent("""
+        [tool_requires]
+        mytool/0.1
+        [layout]
+        cmake_layout
+    """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyProject)
+        if(WIN32)
+            set(MYTOOL_SCRIPT "mytool.bat")
+        else()
+            set(MYTOOL_SCRIPT "mytool.sh")
+        endif()
+        add_custom_target(run_mytool COMMAND ${MYTOOL_SCRIPT})
+    """)
+
+    c.save({"tool.py": tool,
+            "conanfile.txt": consumer,
+            "CMakeLists.txt": cmakelists})
+
+    c.run("create tool.py")
+    c.run("create tool.py -s build_type=Debug")
+    c.run("install conanfile.txt -g CMakeToolchain -g CMakeDeps")
+    c.run("install conanfile.txt -g CMakeToolchain -g CMakeDeps -s:a build_type=Debug")
+
+    c.run_command("cmake --preset conan-release")
+    c.run_command("cmake --build --preset conan-release --target run_mytool")
+    assert "running: mytool/0.1 Release" in c.out
+
+    c.run_command("cmake --preset conan-debug")
+    c.run_command("cmake --build --preset conan-debug --target run_mytool")
+    assert "running: mytool/0.1 Debug" in c.out
