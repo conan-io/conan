@@ -1,7 +1,6 @@
 from conan.api.output import cli_out_write
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.formatters import default_json_formatter
-from conans.model.conf import BUILT_IN_CONFS
 from conans.util.config_parser import get_bool_from_text
 
 
@@ -65,7 +64,7 @@ def config_list(conan_api, parser, subparser, *args):
     Show all the Conan available configurations: core and tools.
     """
     parser.parse_args(*args)
-    return BUILT_IN_CONFS
+    return conan_api.config.builtin_confs
 
 
 @conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})

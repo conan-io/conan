@@ -239,6 +239,7 @@ def test_cmake_toolchain_multiple_user_toolchain():
     client.run("create . --name=pkg --version=0.1")
     assert "mytoolchain1.cmake !!!running!!!" in client.out
     assert "mytoolchain2.cmake !!!running!!!" in client.out
+    assert "CMake Warning" not in client.out
 
 
 @pytest.mark.tool("cmake")
