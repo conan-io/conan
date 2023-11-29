@@ -1377,25 +1377,25 @@ def test_redirect_stdout():
 
             config_stdout, config_stderr = StringIO(), StringIO()
             cmake.configure(stdout=config_stdout, stderr=config_stderr)
-            self.output.info(f"Configure stdout: {config_stdout.getvalue()}")
-            self.output.info(f"Configure stderr: {config_stderr.getvalue()}")
+            self.output.info(f"Configure stdout: '{config_stdout.getvalue()}'")
+            self.output.info(f"Configure stderr: '{config_stderr.getvalue()}'")
 
             build_stdout, build_stderr = StringIO(), StringIO()
             cmake.build(stdout=build_stdout, stderr=build_stderr)
-            self.output.info(f"Build stdout: {build_stdout.getvalue()}")
-            self.output.info(f"Build stderr: {build_stderr.getvalue()}")
+            self.output.info(f"Build stdout: '{build_stdout.getvalue()}'")
+            self.output.info(f"Build stderr: '{build_stderr.getvalue()}'")
 
             test_stdout, test_stderr = StringIO(), StringIO()
             cmake.test(stdout=test_stdout, stderr=test_stderr)
-            self.output.info(f"Test stdout: {test_stdout.getvalue()}")
-            self.output.info(f"Test stderr: {test_stderr.getvalue()}")
+            self.output.info(f"Test stdout: '{test_stdout.getvalue()}'")
+            self.output.info(f"Test stderr: '{test_stderr.getvalue()}'")
 
         def package(self):
             cmake = CMake(self)
             install_stdout, install_stderr = StringIO(), StringIO()
             cmake.install(stdout=install_stdout, stderr=install_stderr)
-            self.output.info(f"Install stdout: {install_stdout.getvalue()}")
-            self.output.info(f"Install stderr: {install_stderr.getvalue()}")
+            self.output.info(f"Install stdout: '{install_stdout.getvalue()}'")
+            self.output.info(f"Install stderr: '{install_stderr.getvalue()}'")
 
 
     """)
@@ -1407,12 +1407,15 @@ def test_redirect_stdout():
     # These checks ensure the order is not messed up,
     # but will probably break at some point if the CMake output changes in new versions,
     # sorry!
-    assert "Configure stdout: -- Using Conan toolchain" in client.out
-    assert "Configure stderr: CMake Warning" in client.out
-    assert "Build stdout: Scanning dependencies" in client.out
-    assert "Build stderr: \n" in client.out
-    assert "Test stdout: Running tests..." in client.out
-    assert "Test stderr: No tests were found!!!" in client.out
 
-    assert "Install stdout: -- Install configuration" in client.out
-    assert "Install stderr: \n" in client.out
+    assert re.search("Configure stdout: '[^']", client.out)
+    assert re.search("Configure stderr: '[^']", client.out)
+
+    assert re.search("Build stdout: '[^']", client.out)
+    assert re.search("Build stderr: ''", client.out)
+
+    assert re.search("Test stdout: '[^']", client.out)
+    assert re.search("Test stderr: '[^']", client.out)
+
+    assert re.search("Install stdout: '[^']", client.out)
+    assert re.search("Install stderr: ''", client.out)
