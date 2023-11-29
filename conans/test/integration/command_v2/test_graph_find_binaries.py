@@ -29,9 +29,9 @@ class TestFilterProfile:
             diff
               explanation: This binary is an exact match for the defined inputs
             """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
-        cache = json.loads(c.stdout)["Closest binaries"]
+        cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
@@ -53,9 +53,9 @@ class TestFilterProfile:
             diff
               explanation: This binary is an exact match for the defined inputs
             """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
-        cache = json.loads(c.stdout)["Closest binaries"]
+        cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
@@ -81,9 +81,9 @@ class TestFilterProfile:
                 existing: shared=False
               explanation: This binary was built with the same settings, but different options
             """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr linux --format=json")
-        cache = json.loads(c.stdout)["Closest binaries"]
+        cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
@@ -110,9 +110,9 @@ class TestFilterProfile:
                 existing: build_type=Release
               explanation: This binary was built with different settings.
             """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
-        cache = json.loads(c.stdout)["Closest binaries"]
+        cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
@@ -139,9 +139,9 @@ class TestFilterProfile:
                 existing: os=Windows
               explanation: This binary belongs to another OS or Architecture, highly incompatible.
             """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr macos --format=json")
-        cache = json.loads(c.stdout)["Closest binaries"]
+        cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
@@ -184,7 +184,7 @@ class TestMissingBinaryDeps:
                 existing: dep/1.Y.Z
               explanation: This binary belongs to another OS or Architecture, highly incompatible.
             """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out
 
     def test_other_dependencies(self, client):
         c = client
@@ -200,4 +200,4 @@ class TestMissingBinaryDeps:
                 existing: dep/1.Y.Z
               explanation: This binary has same settings and options, but different dependencies
                """)
-        assert textwrap.indent(expected, "        ") in c.out
+        assert textwrap.indent(expected, "      ") in c.out

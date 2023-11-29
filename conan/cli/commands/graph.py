@@ -1,12 +1,11 @@
 import json
 import os
 
-from conan.api.model import MultiPackagesList
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
-from conan.cli.commands.list import print_list_compact, print_list_json
+from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
@@ -18,16 +17,17 @@ from conans.model.recipe_ref import ref_matches
 
 
 def explain_formatter_text(data):
-    if "Closest binaries" in data:
+    if "closest_binaries" in data:
         # To be able to reuse the print_list_compact method,
         # we need to wrap this in a MultiPackagesList
-        multipackage = MultiPackagesList()
-        multipackage.add("Closest binaries", data["Closest binaries"])
-        print_list_compact({"results": multipackage.serialize()})
+        pkglist = data["closest_binaries"]
+        prepare_pkglist_compact(pkglist)
+        print_serial(pkglist)
 
 
 def explain_formatter_json(data):
-    print_list_json({"results": data})
+    myjson = json.dumps(data, indent=4)
+    cli_out_write(myjson)
 
 
 @conan_command(group="Consumer")
@@ -267,5 +267,5 @@ def graph_explain(conan_api, parser,  subparser, *args):
 
     ConanOutput().title("Closest binaries")
     return {
-        "Closest binaries": pkglist.serialize(),
+        "closest_binaries": pkglist.serialize(),
     }

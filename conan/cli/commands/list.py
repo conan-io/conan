@@ -97,23 +97,27 @@ def print_list_compact(results):
         if not remote_info or "error" in remote_info:
             info[remote] = {"warning": "There are no matching recipe references"}
             continue
-        new_remote_info = {}
-        for ref, ref_info in remote_info.items():
-            new_ref_info = {}
-            for rrev, rrev_info in ref_info.get("revisions", {}).items():
-                new_rrev = f"{ref}#{rrev}"
-                timestamp = rrev_info.pop("timestamp", None)
-                if timestamp:
-                    new_rrev += f" ({timestamp_to_str(timestamp)})"
+        prepare_pkglist_compact(remote_info)
 
-                packages = rrev_info.pop("packages", None)
-                if packages:
-                    for pid, pid_info in packages.items():
-                        new_pid = f"{ref}#{rrev}:{pid}"
-                        rrev_info[new_pid] = pid_info
-                new_ref_info[new_rrev] = rrev_info
-            new_remote_info[ref] = new_ref_info
-        info[remote] = new_remote_info
+    print_serial(info)
+
+
+def prepare_pkglist_compact(pkglist):
+    for ref, ref_info in pkglist.items():
+        new_ref_info = {}
+        for rrev, rrev_info in ref_info.get("revisions", {}).items():
+            new_rrev = f"{ref}#{rrev}"
+            timestamp = rrev_info.pop("timestamp", None)
+            if timestamp:
+                new_rrev += f" ({timestamp_to_str(timestamp)})"
+
+            packages = rrev_info.pop("packages", None)
+            if packages:
+                for pid, pid_info in packages.items():
+                    new_pid = f"{ref}#{rrev}:{pid}"
+                    rrev_info[new_pid] = pid_info
+            new_ref_info[new_rrev] = rrev_info
+        pkglist[ref] = new_ref_info
 
     def compute_common_options(pkgs):
         """ compute the common subset of existing options with same values of a set of packages
@@ -173,21 +177,18 @@ def print_list_compact(results):
                 result[k] = v
         return result
 
-    for remote, remote_info in info.items():
-        for ref, revisions in remote_info.items():
-            if not isinstance(revisions, dict):
-                continue
-            for rrev, prefs in revisions.items():
-                pkg_common_options = compute_common_options(prefs)
-                pkg_common_options = pkg_common_options if len(pkg_common_options) > 4 else None
-                for pref, pref_contents in prefs.items():
-                    pref_info = pref_contents.pop("info")
-                    pref_contents.update(compact_format_info(pref_info, pkg_common_options))
-                    diff_info = pref_contents.pop("diff", None)
-                    if diff_info is not None:
-                        pref_contents["diff"] = compact_diff(diff_info)
-
-    print_serial(info)
+    for ref, revisions in pkglist.items():
+        if not isinstance(revisions, dict):
+            continue
+        for rrev, prefs in revisions.items():
+            pkg_common_options = compute_common_options(prefs)
+            pkg_common_options = pkg_common_options if len(pkg_common_options) > 4 else None
+            for pref, pref_contents in prefs.items():
+                pref_info = pref_contents.pop("info")
+                pref_contents.update(compact_format_info(pref_info, pkg_common_options))
+                diff_info = pref_contents.pop("diff", None)
+                if diff_info is not None:
+                    pref_contents["diff"] = compact_diff(diff_info)
 
 
 def print_list_json(data):
