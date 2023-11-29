@@ -73,8 +73,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 def venvName = "env_${env.BUILD_NUMBER}_${pythonVersion}_${commit}"
 
                 def pipArguments = "--no-cache-dir --timeout 30"
-                def pipInstalls = "python -m pip install pip setuptools --upgrade && " \
-                                + "python -m pip install -r conans/requirements.txt ${pipArguments} && " \
+                def pipInstalls = "python -m pip install -r conans/requirements.txt ${pipArguments} && " \
                                 + "python -m pip install -r conans/requirements_server.txt ${pipArguments} && " \
                                 + "python -m pip install -r conans/requirements_dev.txt ${pipArguments} && " \
                                 + "python -m pip install meson ${pipArguments} && "
