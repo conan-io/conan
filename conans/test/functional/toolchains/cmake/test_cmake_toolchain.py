@@ -1372,6 +1372,8 @@ def test_add_buildenv_to_configure_preset():
                     save(self, "bin/mytool.bat", f"@echo off\n running: {self.name}/{self.version} {self.settings.build_type}")
                     save(self, "bin/mytool.sh", f"echo running: {self.name}/{self.version} {self.settings.build_type}")
                     os.chmod("bin/mytool.sh", 0o777)
+            def package_info(self):
+                self.buildenv_info.define("MYCUSTOMVAR", "MYCUSTOMVARVALUE")
         """)
 
     consumer = textwrap.dedent("""
@@ -1390,6 +1392,7 @@ def test_add_buildenv_to_configure_preset():
             set(MYTOOL_SCRIPT "mytool.sh")
         endif()
         add_custom_target(run_mytool COMMAND ${MYTOOL_SCRIPT})
+        message("MYCUSTOMVAR:$ENV{MYCUSTOMVAR}")
     """)
 
     c.save({"tool.py": tool,
@@ -1398,13 +1401,15 @@ def test_add_buildenv_to_configure_preset():
 
     c.run("create tool.py")
     c.run("create tool.py -s build_type=Debug")
-    c.run("install conanfile.txt -g CMakeToolchain -g CMakeDeps")
-    c.run("install conanfile.txt -g CMakeToolchain -g CMakeDeps -s:a build_type=Debug")
+    c.run("install . -g CMakeToolchain -g CMakeDeps")
+    c.run("install . -g CMakeToolchain -g CMakeDeps -s:a build_type=Debug")
 
     c.run_command("cmake --preset conan-release")
+    assert "MYCUSTOMVAR:MYCUSTOMVARVALUE" in c.out
     c.run_command("cmake --build --preset conan-release --target run_mytool")
     assert "running: mytool/0.1 Release" in c.out
 
     c.run_command("cmake --preset conan-debug")
+    assert "MYCUSTOMVAR:MYCUSTOMVARVALUE" in c.out
     c.run_command("cmake --build --preset conan-debug --target run_mytool")
     assert "running: mytool/0.1 Debug" in c.out
