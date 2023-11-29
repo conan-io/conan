@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
+from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.conanfile_interface import ConanFileInterface
@@ -94,7 +94,7 @@ class ConanFileDependencies(UserRequirementsDict):
         if remove_system:
             data = OrderedDict((k, v) for k, v in data.items()
                                # TODO: Make "recipe" part of ConanFileInterface model
-                               if v._conanfile._conan_node.recipe != RECIPE_SYSTEM_TOOL)
+                               if v._conanfile._conan_node.recipe != RECIPE_PLATFORM)
         return ConanFileDependencies(data, require_filter)
 
     def transitive_requires(self, other):

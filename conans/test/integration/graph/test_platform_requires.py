@@ -9,22 +9,22 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-class TestSystemDeps:
+class TestPlatformRequires:
     def test_system_require(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
-                     "profile": "[system_requires]\ndep/1.0"})
+                     "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
         assert "dep/1.0 - System" in client.out
 
     def test_system_dep_require_non_matching(self):
-        """ if what is specified in [system_dep_require] doesn't match what the recipe requires, then
+        """ if what is specified in [platform_requires] doesn't match what the recipe requires, then
         the system_dep_require will not be used, and the recipe will use its declared version
         """
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
-                     "profile": "[system_requires]\ndep/1.1"})
+                     "profile": "[platform_requires]\ndep/1.1"})
         client.run("create dep")
         client.run("create . -pr=profile")
         assert "dep/1.0#6a99f55e933fb6feeb96df134c33af44 - Cache" in client.out
@@ -32,7 +32,7 @@ class TestSystemDeps:
     def test_system_dep_require_range(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
-                     "profile": "[system_requires]\ndep/1.1"})
+                     "profile": "[platform_requires]\ndep/1.1"})
         client.run("create . -pr=profile")
         assert "dep/1.1 - System" in client.out
 
@@ -43,18 +43,18 @@ class TestSystemDeps:
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile("dep", "1.1"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
-                     "profile": "[system_requires]\ndep/0.1"})
+                     "profile": "[platform_requires]\ndep/0.1"})
         client.run("create dep")
         client.run("create . -pr=profile")
         assert "dep/1.1#af79f1e3973b7d174e7465038c3f5f36 - Cache" in client.out
 
     def test_system_dep_require_no_host(self):
         """
-        system_deps must not affect tool-requires
+        platform_requires must not affect tool-requires
         """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
-                     "profile": "[system_requires]\ndep/1.0"})
+                     "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile", assert_error=True)
         assert "ERROR: Package 'dep/1.0' not resolved: No remote defined" in client.out
 
@@ -64,7 +64,7 @@ class TestSystemDeps:
         """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
-                     "profile": "[system_requires]\ndep/1.1"})
+                     "profile": "[platform_requires]\ndep/1.1"})
         client.run("graph info . -pr=profile")
         assert "dep/1.1 - System" in client.out
 
@@ -80,7 +80,7 @@ class TestSystemDeps:
                         self.output.info(f"DEPENDENCY {r.ref}")
                 """)
         client.save({"conanfile.py": conanfile,
-                     "profile": "[system_requires]\ndep/1.1"})
+                     "profile": "[platform_requires]\ndep/1.1"})
         client.run("install . -pr=profile")
         assert "dep/1.1 - System" in client.out
         assert "conanfile.py: DEPENDENCY dep/1.1" in client.out
@@ -97,7 +97,7 @@ class TestSystemDeps:
                         self.output.info(f"DEPENDENCY {repr(r.ref)}")
                 """)
         client.save({"conanfile.py": conanfile,
-                     "profile": "[system_requires]\ndep/1.1#rev1"})
+                     "profile": "[platform_requires]\ndep/1.1#rev1"})
         client.run("install . -pr=profile")
         assert "dep/1.1 - System" in client.out
         assert "conanfile.py: DEPENDENCY dep/1.1#rev1" in client.out
@@ -131,17 +131,17 @@ class TestSystemDeps:
                         self.output.info(f"DEPENDENCY {repr(r.ref)}")
                 """)
         client.save({"conanfile.py": conanfile,
-                     "profile": "[system_requires]\ndep/1.1#rev1"})
+                     "profile": "[platform_requires]\ndep/1.1#rev1"})
         client.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Package 'dep/1.1' not resolved" in client.out
 
 
-class TestToolRequiresLock:
+class TestPlatformRequiresLock:
 
     def test_system_dep_require_range(self):
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
-                "profile": "[system_requires]\ndep/1.1"})
+                "profile": "[platform_requires]\ndep/1.1"})
         c.run("lock create . -pr=profile")
         assert "dep/1.1 - System" in c.out
         lock = json.loads(c.load("conan.lock"))
@@ -153,7 +153,7 @@ class TestToolRequiresLock:
         assert "dep/1.1 - System" in c.out
 
         # if the profile points to another version it is an error, not in the lockfile
-        c.save({"profile": "[system_requires]\ndep/1.2"})
+        c.save({"profile": "[platform_requires]\ndep/1.2"})
         c.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Requirement 'dep/1.2' not in lockfile" in c.out
 
@@ -169,7 +169,7 @@ class TestGenerators:
                 generators = "CMakeDeps", # "PkgConfigDeps"
             """)
         client.save({"conanfile.py": conanfile,
-                     "profile": "[system_requires]\ndep/1.1"})
+                     "profile": "[platform_requires]\ndep/1.1"})
         client.run("install . -pr=profile")
         assert "dep/1.1 - System" in client.out
         assert not os.path.exists(os.path.join(client.current_folder, "dep-config.cmake"))
@@ -189,7 +189,7 @@ class TestPackageID:
         client = TestClient()
         save(client.cache.new_config_path, f"core.package_id:default_build_mode={package_id_mode}")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
-                     "profile": "[system_requires]\ndep/1.0"})
+                     "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
         assert "dep/1.0 - System" in client.out
 
@@ -200,8 +200,8 @@ class TestPackageID:
         client = TestClient()
         save(client.cache.new_config_path, "core.package_id:default_build_mode=recipe_revision_mode")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
-                     "profile": "[system_requires]\ndep/1.0#r1",
-                     "profile2": "[system_requires]\ndep/1.0#r2"})
+                     "profile": "[platform_requires]\ndep/1.0#r1",
+                     "profile2": "[platform_requires]\ndep/1.0#r2"})
         client.run("create . -pr=profile")
         assert "dep/1.0#r1 - System" in client.out
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \

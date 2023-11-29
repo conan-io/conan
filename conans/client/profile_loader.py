@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
+from conan.api.output import ConanOutput
 from conan.internal.api import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
@@ -219,7 +220,8 @@ class _ProfileValueParser(object):
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
         doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
-                                                         "system_requires", "settings",
+                                                         "platform_requires",
+                                                         "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
@@ -228,14 +230,19 @@ class _ProfileValueParser(object):
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         if doc.system_tools:
-            system_tools = [RecipeReference.loads(r) for r in doc.system_tools.splitlines()]
+            ConanOutput().warning("Profile [system_tools] is deprecated,"
+                                  " please use [platform_tool_requires]")
+            platform_tools = doc.system_tools
+        elif doc.platform_tool_requires:
+            platform_tools = doc.platform_tool_requires
         else:
-            system_tools = []
+            platform_tools = ""
+        platform_tool_requires = [RecipeReference.loads(r) for r in platform_tools.splitlines()]
 
-        if doc.system_requires:
-            system_deps = [RecipeReference.loads(r) for r in doc.system_requires.splitlines()]
+        if doc.platform_requires:
+            platform_requires = [RecipeReference.loads(r) for r in doc.platform_requires.splitlines()]
         else:
-            system_deps = []
+            platform_requires = []
 
         if doc.conf:
             conf = ConfDefinition()
@@ -247,12 +254,12 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
-        current_system_tools = {r.name: r for r in base_profile.system_tools}
-        current_system_tools.update({r.name: r for r in system_tools})
-        base_profile.system_tools = list(current_system_tools.values())
-        current_system_deps = {r.name: r for r in base_profile.system_deps}
-        current_system_deps.update({r.name: r for r in system_deps})
-        base_profile.system_deps = list(current_system_deps.values())
+        current_platform_tool_requires = {r.name: r for r in base_profile.platform_tool_requires}
+        current_platform_tool_requires.update({r.name: r for r in platform_tool_requires})
+        base_profile.platform_tool_requires = list(current_platform_tool_requires.values())
+        current_platform_requires = {r.name: r for r in base_profile.platform_requires}
+        current_platform_requires.update({r.name: r for r in platform_requires})
+        base_profile.platform_requires = list(current_platform_requires.values())
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
