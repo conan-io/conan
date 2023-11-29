@@ -173,7 +173,7 @@ def graph_info(conan_api, parser, subparser, *args):
         conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
         if args.deployer:
             base_folder = args.deployer_folder or os.getcwd()
-            do_deploys(conan_api, deps_graph, args.deployer, base_folder)
+            do_deploys(conan_api, deps_graph, args.deployer, None, base_folder)
 
     return {"graph": deps_graph,
             "field_filter": args.filter,
