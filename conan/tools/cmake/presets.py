@@ -55,10 +55,9 @@ class _CMakePresets:
                                      "avoid collision with your CMakePresets.json")
         if os.path.exists(preset_path) and multiconfig:
             data = json.loads(load(preset_path))
-            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig,
-                                                                       preset_prefix)
-            test_preset = _CMakePresets._test_preset_fields(conanfile, multiconfig,
-                                                                     preset_prefix, runenv)
+            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+            test_preset = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix,
+                                                            runenv)
             _CMakePresets._insert_preset(data, "buildPresets", build_preset)
             _CMakePresets._insert_preset(data, "testPresets", test_preset)
             configure_preset = _CMakePresets._configure_preset(conanfile, generator, cache_variables,
@@ -110,7 +109,8 @@ class _CMakePresets:
             data[preset_type].append(preset)
 
     @staticmethod
-    def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix, buildenv, runenv):
+    def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix, buildenv,
+                  runenv):
         """
         Contents for the CMakePresets.json
         It uses schema version 3 unless it is forced to 2
@@ -131,7 +131,7 @@ class _CMakePresets:
 
     @staticmethod
     def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
-                         preset_prefix, buildenv):
+                          preset_prefix, buildenv):
         build_type = conanfile.settings.get_safe("build_type")
         name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
         if preset_prefix:
