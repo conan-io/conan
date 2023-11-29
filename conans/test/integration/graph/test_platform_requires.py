@@ -15,7 +15,7 @@ class TestPlatformRequires:
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
-        assert "dep/1.0 - System" in client.out
+        assert "dep/1.0 - Platform" in client.out
 
     def test_system_dep_require_non_matching(self):
         """ if what is specified in [platform_requires] doesn't match what the recipe requires, then
@@ -34,7 +34,7 @@ class TestPlatformRequires:
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                      "profile": "[platform_requires]\ndep/1.1"})
         client.run("create . -pr=profile")
-        assert "dep/1.1 - System" in client.out
+        assert "dep/1.1 - Platform" in client.out
 
     def test_system_dep_require_range_non_matching(self):
         """ if what is specified in [system_dep_require] doesn't match what the recipe requires, then
@@ -66,7 +66,7 @@ class TestPlatformRequires:
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                      "profile": "[platform_requires]\ndep/1.1"})
         client.run("graph info . -pr=profile")
-        assert "dep/1.1 - System" in client.out
+        assert "dep/1.1 - Platform" in client.out
 
     def test_consumer_resolved_version(self):
         client = TestClient()
@@ -82,7 +82,7 @@ class TestPlatformRequires:
         client.save({"conanfile.py": conanfile,
                      "profile": "[platform_requires]\ndep/1.1"})
         client.run("install . -pr=profile")
-        assert "dep/1.1 - System" in client.out
+        assert "dep/1.1 - Platform" in client.out
         assert "conanfile.py: DEPENDENCY dep/1.1" in client.out
 
     def test_consumer_resolved_revision(self):
@@ -99,7 +99,7 @@ class TestPlatformRequires:
         client.save({"conanfile.py": conanfile,
                      "profile": "[platform_requires]\ndep/1.1#rev1"})
         client.run("install . -pr=profile")
-        assert "dep/1.1 - System" in client.out
+        assert "dep/1.1 - Platform" in client.out
         assert "conanfile.py: DEPENDENCY dep/1.1#rev1" in client.out
 
         conanfile = textwrap.dedent("""
@@ -113,7 +113,7 @@ class TestPlatformRequires:
                """)
         client.save({"conanfile.py": conanfile})
         client.run("install . -pr=profile")
-        assert "dep/1.1 - System" in client.out
+        assert "dep/1.1 - Platform" in client.out
         assert "conanfile.py: DEPENDENCY dep/1.1#rev1" in client.out
 
     def test_consumer_unresolved_revision(self):
@@ -143,14 +143,14 @@ class TestPlatformRequiresLock:
         c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                 "profile": "[platform_requires]\ndep/1.1"})
         c.run("lock create . -pr=profile")
-        assert "dep/1.1 - System" in c.out
+        assert "dep/1.1 - Platform" in c.out
         lock = json.loads(c.load("conan.lock"))
         assert lock["requires"] == ["dep/1.1"]
 
         c.run("install .", assert_error=True)
         assert "Package 'dep/1.1' not resolved: No remote defined" in c.out
         c.run("install . -pr=profile")
-        assert "dep/1.1 - System" in c.out
+        assert "dep/1.1 - Platform" in c.out
 
         # if the profile points to another version it is an error, not in the lockfile
         c.save({"profile": "[platform_requires]\ndep/1.2"})
@@ -171,7 +171,7 @@ class TestGenerators:
         client.save({"conanfile.py": conanfile,
                      "profile": "[platform_requires]\ndep/1.1"})
         client.run("install . -pr=profile")
-        assert "dep/1.1 - System" in client.out
+        assert "dep/1.1 - Platform" in client.out
         assert not os.path.exists(os.path.join(client.current_folder, "dep-config.cmake"))
         assert not os.path.exists(os.path.join(client.current_folder, "dep.pc"))
 
@@ -191,7 +191,7 @@ class TestPackageID:
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
-        assert "dep/1.0 - System" in client.out
+        assert "dep/1.0 - Platform" in client.out
 
     def test_package_id_explicit_revision(self):
         """
@@ -203,12 +203,12 @@ class TestPackageID:
                      "profile": "[platform_requires]\ndep/1.0#r1",
                      "profile2": "[platform_requires]\ndep/1.0#r2"})
         client.run("create . -pr=profile")
-        assert "dep/1.0#r1 - System" in client.out
+        assert "dep/1.0#r1 - Platform" in client.out
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
                "abfcc78fa8242cabcd1e3d92896aa24808c789a3 - Build" in client.out
 
         client.run("create . -pr=profile2")
         # pkg gets a new package_id because it is a different revision
-        assert "dep/1.0#r2 - System" in client.out
+        assert "dep/1.0#r2 - Platform" in client.out
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
                "abfcc78fa8242cabcd1e3d92896aa24808c789a3 - Build" in client.out
