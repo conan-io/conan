@@ -79,6 +79,10 @@ class Profile(object):
             result.append("[platform_tool_requires]")
             result.extend(str(t) for t in self.platform_tool_requires)
 
+        if self.platform_requires:
+            result.append("[platform_requires]")
+            result.extend(str(t) for t in self.platform_requires)
+
         if self.conf:
             result.append("[conf]")
             result.append(self.conf.dumps())
