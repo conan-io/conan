@@ -1404,10 +1404,7 @@ def test_redirect_stdout():
                  "main.cpp": "int main() {return 0;}"})
     client.run("create .")
 
-    # These checks ensure the order is not messed up,
-    # but will probably break at some point if the CMake output changes in new versions,
-    # sorry!
-
+    # Ensure the output is not unexpectedly empty
     assert re.search("Configure stdout: '[^']", client.out)
     assert re.search("Configure stderr: '[^']", client.out)
 
