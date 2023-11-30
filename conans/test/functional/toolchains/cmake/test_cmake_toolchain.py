@@ -1525,9 +1525,9 @@ def test_add_buildenv_to_configure_preset():
 
     if platform.system() != "Windows":
         c.run_command("cmake --preset conan-debug")
+        assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
+        assert "MY_RUNVAR NOT FOUND" in c.out
 
-    assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
-    assert "MY_RUNVAR NOT FOUND" in c.out
     c.run_command("cmake --build --preset conan-debug --target run_mytool --target test_env")
     assert "running: mytool/0.1" in c.out
 
