@@ -1439,7 +1439,7 @@ def test_add_buildenv_to_configure_preset():
             settings = "os", "compiler", "arch", "build_type"
             def package(self):
                 with chdir(self, self.package_folder):
-                    save(self, f"bin/{{self.name}}.bat", f"@echo off\n running: {{self.name}}/{{self.version}} {{self.settings.build_type}}")
+                    save(self, f"bin/{{self.name}}.bat", f"@echo off\necho running: {{self.name}}/{{self.version}} {{self.settings.build_type}}")
                     save(self, f"bin/{{self.name}}.sh", f"echo running: {{self.name}}/{{self.version}} {{self.settings.build_type}}")
                     os.chmod(f"bin/{{self.name}}.sh", 0o777)
             def package_info(self):
