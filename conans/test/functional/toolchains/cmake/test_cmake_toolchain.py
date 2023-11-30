@@ -1512,7 +1512,10 @@ def test_add_buildenv_to_configure_preset():
 
     # test that the buildenv is correctly injected to configure and build steps
     # that the runenv is not injected to configure, but it is when running tests
-    c.run_command("cmake --preset conan-release")
+
+    preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+
+    c.run_command(f"cmake --preset {preset}")
     assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
     assert "MY_RUNVAR NOT FOUND" in c.out
     c.run_command("cmake --build --preset conan-release --target run_mytool --target test_env")
@@ -1521,7 +1524,9 @@ def test_add_buildenv_to_configure_preset():
     c.run_command("ctest --preset conan-release")
     assert "tests passed" in c.out
 
-    c.run_command("cmake --preset conan-debug")
+    if platform.system() != "Windows":
+        c.run_command("cmake --preset conan-debug")
+
     assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
     assert "MY_RUNVAR NOT FOUND" in c.out
     c.run_command("cmake --build --preset conan-debug --target run_mytool --target test_env")
