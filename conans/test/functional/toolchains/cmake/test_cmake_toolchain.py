@@ -244,8 +244,8 @@ def test_cmake_toolchain_multiple_user_toolchain():
 
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_no_warnings():
-    """Make sure unitialized variables do not cause any warnings, passing -Werror=dev
-    and --wanr-unitialized, calling "cmake" with conan_toolchain.cmake used to fail
+    """Make sure uninitialized variables do not cause any warnings, passing -Werror=dev
+    and --warn-uninitialized, calling "cmake" with conan_toolchain.cmake used to fail
     """
     # Issue https://github.com/conan-io/conan/issues/10288
     client = TestClient()
@@ -1353,6 +1353,77 @@ def test_inject_user_toolchain_profile():
                  "CMakeLists.txt": cmake})
     client.run("create . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+
+@pytest.mark.tool("cmake", "3.19")
+def test_redirect_stdout():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    import os
+    from io import StringIO
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, CMakeToolchain
+    from conan.tools.cmake import cmake_layout
+
+    class Pkg(ConanFile):
+        name = "foo"
+        version = "1.0"
+        settings = "os", "arch", "build_type", "compiler"
+        generators = "CMakeToolchain"
+        exports_sources = "CMakeLists.txt", "main.cpp"
+
+        def build(self):
+            cmake = CMake(self)
+
+            config_stdout, config_stderr = StringIO(), StringIO()
+            cmake.configure(stdout=config_stdout, stderr=config_stderr)
+            self.output.info(f"Configure stdout: '{config_stdout.getvalue()}'")
+            self.output.info(f"Configure stderr: '{config_stderr.getvalue()}'")
+
+            build_stdout, build_stderr = StringIO(), StringIO()
+            cmake.build(stdout=build_stdout, stderr=build_stderr)
+            self.output.info(f"Build stdout: '{build_stdout.getvalue()}'")
+            self.output.info(f"Build stderr: '{build_stderr.getvalue()}'")
+
+            test_stdout, test_stderr = StringIO(), StringIO()
+            cmake.test(stdout=test_stdout, stderr=test_stderr)
+            self.output.info(f"Test stdout: '{test_stdout.getvalue()}'")
+            self.output.info(f"Test stderr: '{test_stderr.getvalue()}'")
+
+        def package(self):
+            cmake = CMake(self)
+            install_stdout, install_stderr = StringIO(), StringIO()
+            cmake.install(stdout=install_stdout, stderr=install_stderr)
+            self.output.info(f"Install stdout: '{install_stdout.getvalue()}'")
+            self.output.info(f"Install stderr: '{install_stderr.getvalue()}'")
+
+
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)\ninclude(CTest)',
+                 "main.cpp": "int main() {return 0;}"})
+    client.run("create .")
+
+    # Ensure the output is not unexpectedly empty
+    assert re.search("Configure stdout: '[^']", client.out)
+    assert re.search("Configure stderr: '[^']", client.out)
+
+    assert re.search("Build stdout: '[^']", client.out)
+    assert re.search("Build stderr: ''", client.out)
+
+    assert re.search("Test stdout: '[^']", client.out)
+
+    # Empty on Windows
+    if platform.system() == "Windows":
+        assert re.search("Test stderr: ''", client.out)
+    else:
+        assert re.search("Test stderr: '[^']", client.out)
+
+    if platform.system() == "Windows":
+        assert re.search("Install stdout: ''", client.out)
+    else:
+        assert re.search("Install stdout: '[^']", client.out)
+    assert re.search("Install stderr: ''", client.out)
 
 
 @pytest.mark.tool("cmake", "3.23")

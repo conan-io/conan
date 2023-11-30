@@ -34,7 +34,8 @@ def install(conan_api, parser, *args):
     parser.add_argument("--deployer-folder",
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--deployer-package", action="append",
-                        help="Execute the deployment of the specific packages")
+                        help="Execute the deploy() method of the packages matching "
+                             "the provided patterns")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
