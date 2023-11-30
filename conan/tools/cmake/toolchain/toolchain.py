@@ -215,18 +215,18 @@ class CMakeToolchain(object):
             else:
                 cache_variables[name] = value
 
-        # Get environment information for the presets
-        # FIXME: check if we have an alternative to avoid this way of getting this
-
+        # FIXME: think an alternative way of getting the
+        #  VirtualBuildEnv and VirtualRunEnv and avoid this pattern
         prev_status = self._conanfile.virtualbuildenv
         build_env = VirtualBuildEnv(self._conanfile).vars()
         self._conanfile.virtualbuildenv = prev_status
-        buildenv = {name: value for name, value in
-                    build_env.items(variable_reference="$penv{{{name}}}")}
 
         prev_status = self._conanfile.virtualrunenv
         run_env = VirtualRunEnv(self._conanfile).vars()
         self._conanfile.virtualrunenv = prev_status
+
+        buildenv = {name: value for name, value in
+                    build_env.items(variable_reference="$penv{{{name}}}")}
         runenv = {name: value for name, value in
                   run_env.items(variable_reference="$penv{{{name}}}")}
 

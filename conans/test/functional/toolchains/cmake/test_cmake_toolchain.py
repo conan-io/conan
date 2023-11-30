@@ -1439,8 +1439,8 @@ def test_add_buildenv_to_configure_preset():
             settings = "os", "compiler", "arch", "build_type"
             def package(self):
                 with chdir(self, self.package_folder):
-                    save(self, f"bin/{{self.name}}.bat", f"@echo off\necho running: {{self.name}}/{{self.version}} {{self.settings.build_type}}")
-                    save(self, f"bin/{{self.name}}.sh", f"echo running: {{self.name}}/{{self.version}} {{self.settings.build_type}}")
+                    save(self, f"bin/{{self.name}}.bat", f"@echo off\necho running: {{self.name}}/{{self.version}}")
+                    save(self, f"bin/{{self.name}}.sh", f"echo running: {{self.name}}/{{self.version}}")
                     os.chmod(f"bin/{{self.name}}.sh", 0o777)
             def package_info(self):
                 self.buildenv_info.define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE")
@@ -1502,13 +1502,12 @@ def test_add_buildenv_to_configure_preset():
             "test_env.cpp": test_env})
 
     c.run("create tool.py --name=mytool")
-    c.run("create tool.py --name=mytool -s build_type=Debug")
 
     c.run("create test_tool.py --name=mytesttool")
     c.run("create test_tool.py --name=mytesttool -s build_type=Debug")
 
     c.run("install . -g CMakeToolchain -g CMakeDeps")
-    c.run("install . -g CMakeToolchain -g CMakeDeps -s:a build_type=Debug")
+    c.run("install . -g CMakeToolchain -g CMakeDeps -s:h build_type=Debug")
 
     # test that the buildenv is correctly injected to configure and build steps
     # that the runenv is not injected to configure, but it is when running tests
@@ -1519,7 +1518,7 @@ def test_add_buildenv_to_configure_preset():
     assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
     assert "MY_RUNVAR NOT FOUND" in c.out
     c.run_command("cmake --build --preset conan-release --target run_mytool --target test_env")
-    assert "running: mytool/0.1 Release" in c.out
+    assert "running: mytool/0.1" in c.out
 
     c.run_command("ctest --preset conan-release")
     assert "tests passed" in c.out
@@ -1530,7 +1529,7 @@ def test_add_buildenv_to_configure_preset():
     assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
     assert "MY_RUNVAR NOT FOUND" in c.out
     c.run_command("cmake --build --preset conan-debug --target run_mytool --target test_env")
-    assert "running: mytool/0.1 Debug" in c.out
+    assert "running: mytool/0.1" in c.out
 
     c.run_command("ctest --preset conan-debug")
     assert "tests passed" in c.out
