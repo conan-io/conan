@@ -81,20 +81,14 @@ class _CMakePresets:
         # the environment information
 
         prev_status = conanfile.virtualbuildenv
-        _build_env = VirtualBuildEnv(conanfile).vars()
+        build_env = VirtualBuildEnv(conanfile).vars()
         conanfile.virtualbuildenv = prev_status
+        buildenv = {name: value for name, value in build_env.items(variable_reference="$penv{{{name}}}")}
 
         prev_status = conanfile.virtualrunenv
-        _run_env = VirtualRunEnv(conanfile).vars()
+        run_env = VirtualRunEnv(conanfile).vars()
         conanfile.virtualrunenv = prev_status
-
-        buildenv, runenv = {}, {}
-
-        for name, value in _build_env.items(variable_reference="$penv{{{name}}}"):
-            buildenv[name] = value
-
-        for name, value in _run_env.items(variable_reference="$penv{{{name}}}"):
-            runenv[name] = value
+        runenv = {name: value for name, value in run_env.items(variable_reference="$penv{{{name}}}")}
 
         return buildenv, runenv
 
