@@ -5,7 +5,6 @@ import platform
 from conan.api.output import ConanOutput
 from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.utils import is_multi_configuration
-from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.microsoft import is_msvc
 from conans.client.graph.graph import RECIPE_CONSUMER
 from conan.errors import ConanException
@@ -13,9 +12,9 @@ from conans.util.files import save, load
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
-                        user_presets_path=None, preset_prefix=None):
+                        user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None):
     preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix)
+                                                      cache_variables, preset_prefix, buildenv, runenv)
     _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data)
 
 
@@ -23,7 +22,7 @@ class _CMakePresets:
     """ Conan generated main CMakePresets.json inside the generators_folder
     """
     @staticmethod
-    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix):
+    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv):
         cache_variables = cache_variables or {}
         if platform.system() == "Windows" and generator == "MinGW Makefiles":
             if "CMAKE_SH" not in cache_variables:
@@ -41,8 +40,6 @@ class _CMakePresets:
         if "BUILD_TESTING" not in cache_variables:
             if conanfile.conf.get("tools.build:skip_test", check_type=bool):
                 cache_variables["BUILD_TESTING"] = "OFF"
-
-        buildenv, runenv = _CMakePresets._get_environment(conanfile)
 
         preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
         multiconfig = is_multi_configuration(generator)
@@ -73,24 +70,6 @@ class _CMakePresets:
         save(preset_path, preset_content)
         ConanOutput(str(conanfile)).info("CMakeToolchain generated: CMakePresets.json")
         return preset_path, data
-
-    @staticmethod
-    def _get_environment(conanfile):
-        # Get environment information
-        # FIXME: check if we have an alternative to avoid this way of getting
-        # the environment information
-
-        prev_status = conanfile.virtualbuildenv
-        build_env = VirtualBuildEnv(conanfile).vars()
-        conanfile.virtualbuildenv = prev_status
-        buildenv = {name: value for name, value in build_env.items(variable_reference="$penv{{{name}}}")}
-
-        prev_status = conanfile.virtualrunenv
-        run_env = VirtualRunEnv(conanfile).vars()
-        conanfile.virtualrunenv = prev_status
-        runenv = {name: value for name, value in run_env.items(variable_reference="$penv{{{name}}}")}
-
-        return buildenv, runenv
 
     @staticmethod
     def _insert_preset(data, preset_type, preset):
