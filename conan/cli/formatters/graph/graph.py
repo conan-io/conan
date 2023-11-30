@@ -54,7 +54,7 @@ class _PrinterGraphItem(object):
 class _Grapher(object):
     def __init__(self, deps_graph):
         self._deps_graph = deps_graph
-        self.nodes, self.edges = self._build_graph()
+        self.nodes, self.edges, self.node_map = self._build_graph()
 
     def _build_graph(self):
         graph_nodes = self._deps_graph.by_levels()
@@ -73,7 +73,7 @@ class _Grapher(object):
                 dst = _node_map[node_to]
                 edges.append((src, dst))
 
-        return _node_map.values(), edges
+        return _node_map.values(), edges, _node_map
 
     @staticmethod
     def binary_color(node):
