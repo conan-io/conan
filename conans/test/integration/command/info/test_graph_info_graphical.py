@@ -201,6 +201,9 @@ def test_graph_info_html_output():
     assert "// Add edge from base node to the new error node" not in tc.out
     assert "// Add edge from previous node that already had conflicting dependency" in tc.out
 
+    # Ensure mapping is preserved, ui is node id 3 before ordering, but 2 after
+    assert "id: 2,\n                        label: 'ui/1.0'" in tc.out
+
     tc.run("graph info openimageio/ --format=html", assert_error=True)
     assert "// Add error conflict node" in tc.out
     assert "// Add edge from node that introduces the conflict to the new error node" in tc.out

@@ -95,11 +95,11 @@ graph_info_html = """
                     edges.push({from: {{ graph.node_map[error["context"].node].id }},
                                 to: "{{ error["type"] }}",
                                 color: "red",
-                                dashes: true,
+                                dashes: false,
                                 title: "Conflict",
                                 physics: false,
                                 color: "red",
-                                arrows: "to;from"})
+                                arrows: "to"})
                 {% endif %}
 
                 {% if error["context"].prev_node is none and error["context"].base_previous.id is not none %}
@@ -107,7 +107,7 @@ graph_info_html = """
                     edges.push({from: {{ graph.node_map[error["context"].base_previous].id }},
                                 to: "{{ error["type"] }}",
                                 color: "red",
-                                dashes: true,
+                                dashes: false,
                                 title: "Conflict",
                                 physics: false,
                                 color: "red",
@@ -122,7 +122,7 @@ graph_info_html = """
                                 dashes: true,
                                 title: "Conflict",
                                 physics: false,
-                                color: "red",
+                                color: "gray",
                                 arrows: "to;from"})
                 {% endif %}
 
