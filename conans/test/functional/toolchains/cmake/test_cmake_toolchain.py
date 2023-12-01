@@ -1458,12 +1458,8 @@ def test_add_buildenv_to_configure_preset():
 
     test_env = textwrap.dedent("""
         #include <cstdlib>
-        #include <iostream>
         int main() {
-            if (const char* env_var = std::getenv("MY_RUNVAR")) {
-                return 0; // passes
-            }
-            return 1; // fails
+            return std::getenv("MY_RUNVAR") ? 0 : 1;
         }
     """)
 
