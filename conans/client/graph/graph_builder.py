@@ -5,7 +5,7 @@ from collections import deque
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
-from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
+from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
@@ -215,24 +215,23 @@ class DepsGraphBuilder(object):
         return new_ref, dep_conanfile, recipe_status, remote
 
     @staticmethod
-    def _resolved_system_tool(node, require, profile_build, profile_host, resolve_prereleases):
-        if node.context == CONTEXT_HOST and not require.build:  # Only for DIRECT tool_requires
-            return
-        system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
-            else profile_host.system_tools
-        if system_tool:
+    def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
+        profile = profile_build if node.context == CONTEXT_BUILD else profile_host
+        dep_type = "platform_tool_requires" if require.build else "platform_requires"
+        system_reqs = getattr(profile, dep_type)
+        if system_reqs:
             version_range = require.version_range
-            for d in system_tool:
+            for d in system_reqs:
                 if require.ref.name == d.name:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
-                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
                             require.ref.revision = d.revision
-                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         if require.ref.version == "<host_version>":
@@ -246,12 +245,11 @@ class DepsGraphBuilder(object):
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
+        resolved = self._resolved_system(node, require, profile_build, profile_host,
+                                         self._resolve_prereleases)
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)
-
-        resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
-                                              self._resolve_prereleases)
 
         if resolved is None:
             try:
@@ -269,7 +267,7 @@ class DepsGraphBuilder(object):
         if recipe_status == RECIPE_EDITABLE:
             recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
             dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
-        elif recipe_status != RECIPE_SYSTEM_TOOL:
+        elif recipe_status != RECIPE_PLATFORM:
             recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
             dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         # If the node is virtual or a test package, the require is also "root"
