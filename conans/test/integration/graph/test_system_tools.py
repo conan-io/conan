@@ -163,7 +163,7 @@ class TestToolRequiresLock:
 
         # if we relax the lockfile, we can still resolve to the platform_tool_requires
         # specified by the profile
-        c.run("install . -pr=profile --lockfile --lockfile-partial")
+        c.run("install . -pr=profile --lockfile-partial")
         assert "tool/1.2 - Platform" in c.out
 
 
