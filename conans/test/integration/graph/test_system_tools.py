@@ -153,10 +153,18 @@ class TestToolRequiresLock:
         c.run("install . -pr=profile")
         assert "tool/1.1 - Platform" in c.out
 
+        # even if we create a version within the range, it will error if not matching the profile
+        c.save({"tool/conanfile.py": GenConanfile("tool", "1.1")})
+        c.run("create tool")
         # if the profile points to another version it is an error, not in the lockfile
         c.save({"profile": "[platform_tool_requires]\ntool/1.2"})
-        c.run("install . -pr=profile", assert_error=True)
+        c.run("install . -pr=profile --lockfile", assert_error=True)
         assert "ERROR: Requirement 'tool/1.2' not in lockfile" in c.out
+
+        # if we relax the lockfile, we can still resolve to the platform_tool_requires
+        # specified by the profile
+        c.run("install . -pr=profile --lockfile --lockfile-partial")
+        assert "tool/1.2 - Platform" in c.out
 
 
 class TestGenerators:
