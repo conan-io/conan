@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
+from conan.api.output import ConanOutput
 from conan.internal.api import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
@@ -218,25 +219,29 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
-                                                         "settings",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+                                                         "system_tools",  # DEPRECATED: platform_tool_requires
+                                                         "platform_requires",
+                                                         "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
-                                                         "alternatives", "tool_alternatives"])
+                                                         "replace_requires", "replace_tool_requires"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
+        doc_platform_requires = doc.platform_requires or ""
+        doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
         if doc.system_tools:
-            system_tools = [RecipeReference.loads(r.strip())
-                            for r in doc.system_tools.splitlines() if r.strip()]
-        else:
-            system_tools = []
+            ConanOutput().warning("Profile [system_tools] is deprecated,"
+                                  " please use [platform_tool_requires]")
+        platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
+        platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
 
-        def load_alternatives(doc_alternatives):
+        def load_replace(doc_replace_requires):
             result = {}
-            for r in doc_alternatives.splitlines():
+            for r in doc_replace_requires.splitlines():
                 r = r.strip()
                 if not r or r.startswith("#"):
                     continue
@@ -245,8 +250,8 @@ class _ProfileValueParser(object):
                 result[src.strip()] = target
             return result
 
-        alternatives = load_alternatives(doc.alternatives) if doc.alternatives else {}
-        tool_alternatives = load_alternatives(doc.tool_alternatives) if doc.tool_alternatives else {}
+        replace_requires = load_replace(doc.replace_requires) if doc.replace_requires else {}
+        replace_tool = load_replace(doc.replace_tool_requires) if doc.replace_tool_requires else {}
 
         if doc.conf:
             conf = ConfDefinition()
@@ -258,11 +263,15 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
-        current_system_tools = {r.name: r for r in base_profile.system_tools}
-        current_system_tools.update({r.name: r for r in system_tools})
-        base_profile.system_tools = list(current_system_tools.values())
-        base_profile.alternatives.update(alternatives)
-        base_profile.tool_alternatives.update(tool_alternatives)
+        base_profile.replace_requires.update(replace_requires)
+        base_profile.replace_tool_requires.update(replace_tool)
+
+        current_platform_tool_requires = {r.name: r for r in base_profile.platform_tool_requires}
+        current_platform_tool_requires.update({r.name: r for r in platform_tool_requires})
+        base_profile.platform_tool_requires = list(current_platform_tool_requires.values())
+        current_platform_requires = {r.name: r for r in base_profile.platform_requires}
+        current_platform_requires.update({r.name: r for r in platform_requires})
+        base_profile.platform_requires = list(current_platform_requires.values())
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():

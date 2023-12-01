@@ -33,12 +33,12 @@ from conans.test.utils.tools import TestClient
     ("dep/[>=1.0 <2]", "dep/2.1", "dep/2.1@system", "dep/1.1"),
 ])
 @pytest.mark.parametrize("tool_require", [False, True])
-class TestAlternatives:
+class TestReplaceRequires:
     def test_alternative(self, tool_require, require, pattern, alternative, pkg):
         c = TestClient()
         conanfile = GenConanfile().with_tool_requires(require) if tool_require else \
             GenConanfile().with_requires(require)
-        profile_tag = "alternatives" if not tool_require else "tool_alternatives"
+        profile_tag = "replace_requires" if not tool_require else "replace_tool_requires"
         c.save({"dep/conanfile.py": GenConanfile(),
                 "pkg/conanfile.py": conanfile,
                 "profile": f"[{profile_tag}]\n{pattern}: {alternative}"})
@@ -60,11 +60,11 @@ class TestAlternatives:
         c.run("install pkg -pr=profile")
         c.assert_listed_require({f"{pkg}#{rrev}": "Cache"}, build=tool_require)
 
-    def test_system_dep_diamond(self, tool_require, require, pattern, alternative, pkg):
+    def test_diamond(self, tool_require, require, pattern, alternative, pkg):
         c = TestClient()
         conanfile = GenConanfile().with_tool_requires(require) if tool_require else \
             GenConanfile().with_requires(require)
-        profile_tag = "alternatives" if not tool_require else "tool_alternatives"
+        profile_tag = "replace_requires" if not tool_require else "replace_tool_requires"
 
         c.save({"dep/conanfile.py": GenConanfile(),
                 "libb/conanfile.py": conanfile,

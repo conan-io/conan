@@ -17,9 +17,10 @@ class Profile(object):
         self.package_settings = defaultdict(OrderedDict)
         self.options = Options()
         self.tool_requires = OrderedDict()  # ref pattern: list of ref
-        self.system_tools = []
-        self.alternatives = {}
-        self.tool_alternatives = {}
+        self.replace_requires = {}
+        self.replace_tool_requires = {}
+        self.platform_tool_requires = []
+        self.platform_requires = []
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
         self.runenv = ProfileEnvironment()
@@ -32,12 +33,14 @@ class Profile(object):
         return self.dumps()
 
     def serialize(self):
-        # TODO: Remove it seems dead
+        def _serialize_tool_requires():
+            return {pattern: [repr(ref) for ref in refs]
+                    for pattern, refs in self.tool_requires.items()}
         return {
             "settings": self.settings,
             "package_settings": self.package_settings,
             "options": self.options.serialize(),
-            "tool_requires": self.tool_requires,
+            "tool_requires": _serialize_tool_requires(),
             "conf": self.conf.serialize(),
             # FIXME: Perform a serialize method for ProfileEnvironment
             "build_env": self.buildenv.dumps()
@@ -74,9 +77,13 @@ class Profile(object):
             for pattern, req_list in self.tool_requires.items():
                 result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
 
-        if self.system_tools:
-            result.append("[system_tools]")
-            result.extend(str(t) for t in self.system_tools)
+        if self.platform_tool_requires:
+            result.append("[platform_tool_requires]")
+            result.extend(str(t) for t in self.platform_tool_requires)
+
+        if self.platform_requires:
+            result.append("[platform_requires]")
+            result.extend(str(t) for t in self.platform_requires)
 
         if self.conf:
             result.append("[conf]")
@@ -115,11 +122,16 @@ class Profile(object):
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
 
-        current_system_tools = {r.name: r for r in self.system_tools}
-        current_system_tools.update({r.name: r for r in other.system_tools})
-        self.system_tools = list(current_system_tools.values())
-        self.alternatives.update(other.alternatives)
-        self.tool_alternatives.update(other.tool_alternatives)
+        self.replace_requires.update(other.replace_requires)
+        self.replace_tool_requires.update(other.replace_tool_requires)
+
+        current_platform_tool_requires = {r.name: r for r in self.platform_tool_requires}
+        current_platform_tool_requires.update({r.name: r for r in other.platform_tool_requires})
+        self.platform_tool_requires = list(current_platform_tool_requires.values())
+        current_platform_requires = {r.name: r for r in self.platform_requires}
+        current_platform_requires.update({r.name: r for r in other.platform_requires})
+        self.platform_requires = list(current_platform_requires.values())
+
         self.conf.update_conf_definition(other.conf)
         self.buildenv.update_profile_env(other.buildenv)  # Profile composition, last has priority
         self.runenv.update_profile_env(other.runenv)
