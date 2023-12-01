@@ -17,10 +17,9 @@ class RequiredVersionTest(unittest.TestCase):
         client = TestClient()
         client.save({"global.conf": f"core:required_conan_version={required_version}"},
                     path=client.cache.cache_folder)
-        with self.assertRaises(ConanException) as error:
-            client.run("help")
+        client.run("help", assert_error=True)
         self.assertIn("Current Conan version (1.26.0) does not satisfy the defined "
-                      "one ({})".format(required_version), str(error.exception))
+                      "one ({})".format(required_version), client.out)
 
     @mock.patch("conans.client.conf.required_version.client_version", "1.22.0")
     def test_exact_version(self):

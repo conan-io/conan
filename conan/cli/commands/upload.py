@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
@@ -9,10 +9,10 @@ from conan.errors import ConanException
 
 
 def summary_upload_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
-    cli_out_write("Upload summary:")
+    ConanOutput().subtitle("Upload summary")
     info = results["results"]
 
     def format_upload(item):
@@ -106,7 +106,8 @@ def upload(conan_api: ConanAPI, parser, *args):
 
         if not args.dry_run:
             conan_api.upload.upload(package_list, remote)
-            conan_api.upload.upload_backup_sources(package_list)
+            backup_files = conan_api.upload.get_backup_sources(package_list)
+            conan_api.upload.upload_backup_sources(backup_files)
     elif args.list:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded

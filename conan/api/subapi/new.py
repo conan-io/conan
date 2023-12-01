@@ -3,6 +3,7 @@ import os
 
 from jinja2 import Template, StrictUndefined
 
+from conans.errors import ConanException
 from conans.util.files import load
 from conans import __version__
 
@@ -83,6 +84,8 @@ class NewAPI:
     def render(template_files, definitions):
         result = {}
         name = definitions.get("name", "Pkg")
+        if isinstance(name, list):
+            raise ConanException(f"name argument can't be multiple: {name}")
         definitions["conan_version"] = __version__
 
         def ensure_list(key):

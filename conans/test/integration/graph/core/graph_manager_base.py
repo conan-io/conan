@@ -2,12 +2,18 @@ import os
 import textwrap
 import unittest
 
+import yaml
+
 from conan.api.conan_api import ConanAPI
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.cache.cache import ClientCache
+from conans.client.conf import default_settings_yml
+from conans.model.conf import ConfDefinition
 from conans.model.manifest import FileTreeManifest
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
+from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
 from conans.util.dates import revision_timestamp_now
@@ -18,9 +24,10 @@ class GraphManagerTest(unittest.TestCase):
 
     def setUp(self):
         cache_folder = temp_folder()
-        cache = ClientCache(cache_folder)
-        save(cache.default_profile_path, "")
-        save(cache.settings_path, "os: [Windows, Linux]")
+        cache = ClientCache(cache_folder, ConfDefinition())
+        home = HomePaths(cache_folder)
+        save(os.path.join(home.profiles_path, "default"), "")
+        save(home.settings_path, "os: [Windows, Linux]")
         self.cache = cache
         self.cache_folder = cache_folder
 
@@ -113,8 +120,9 @@ class GraphManagerTest(unittest.TestCase):
             profile_host.tool_requires = profile_build_requires
         if options_build:
             profile_build.options = Options(options_values=options_build)
-        profile_host.process_settings(self.cache)
-        profile_build.process_settings(self.cache)
+        cache_settings = Settings(yaml.safe_load(default_settings_yml))
+        profile_host.process_settings(cache_settings)
+        profile_build.process_settings(cache_settings)
         build_mode = ["*"]  # Means build all
 
         conan_api = ConanAPI(cache_folder=self.cache_folder)

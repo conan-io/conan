@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import NotFoundException, ConanException, AuthenticationException, \
@@ -48,7 +49,7 @@ class SourcesCachingDownloader:
         something is found.
         """
         # We are going to use the download_urls definition for backups
-        download_cache_folder = download_cache_folder or self._cache.default_sources_backup_folder
+        download_cache_folder = download_cache_folder or HomePaths(self._cache.cache_folder).default_sources_backup_folder
         # regular local shared download cache, not using Conan backup sources servers
         backups_urls = backups_urls or ["origin"]
         if download_cache_folder and not os.path.isabs(download_cache_folder):

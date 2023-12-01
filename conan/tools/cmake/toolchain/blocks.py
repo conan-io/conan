@@ -565,10 +565,10 @@ class ExtraFlagsBlock(Block):
 
     def context(self):
         # Now, it's time to get all the flags defined by the user
-        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        cxxflags = self._toolchain.extra_cxxflags + self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
 
         # See https://github.com/conan-io/conan/issues/13374
@@ -840,8 +840,23 @@ class ToolchainBlocks:
             for name, block in items:
                 self._blocks[name] = block(conanfile, toolchain)
 
-    def remove(self, name):
+    def keys(self):
+        return self._blocks.keys()
+
+    def items(self):
+        return self._blocks.items()
+
+    def remove(self, name, *args):
         del self._blocks[name]
+        for arg in args:
+            del self._blocks[arg]
+
+    def select(self, name, *args):
+        """
+        keep the blocks provided as arguments, remove the others
+        """
+        to_keep = [name] + list(args)
+        self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 
     def __setitem__(self, name, block_type):
         # Create a new class inheriting Block with the elements of the provided one

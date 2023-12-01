@@ -185,6 +185,16 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup" in self.client.out
         assert f"File {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {self.file_server.fake_url}/backups/" in self.client.out
 
+        # Ensure defaults backup folder works if it's not set in global.conf
+        # (The rest is needed to exercise the rest of the code)
+        self.client.save(
+            {"global.conf": f"core.sources:download_urls=['{self.file_server.fake_url}/backups/', 'origin']\n"
+                            f"core.sources:exclude_urls=['{self.file_server.fake_url}/mycompanystorage/', '{self.file_server.fake_url}/mycompanystorage2/']"},
+            path=self.client.cache.cache_folder)
+        self.client.run("source .")
+        assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup" in self.client.out
+        assert f"File {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {self.file_server.fake_url}/backups/" in self.client.out
+
     def test_download_origin_first(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
 
@@ -628,3 +638,34 @@ class TestDownloadCacheBackupSources:
         self.client.run("upload * --only-recipe -c -r=default")
         # Ensure we are testing for an already uploaded recipe
         assert f"Recipe 'pkg/1.0#{exported_rev}' already in server, skipping upload" in self.client.out
+
+    def test_source_then_upload_workflow(self):
+        mkdir(os.path.join(self.download_cache_folder, "s"))
+
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+        http_server_base_folder_backup = os.path.join(self.file_server.store, "backup")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        self.client.save(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['{self.file_server.fake_url}/backup/', 'origin']\n"
+                            f"core.sources:upload_url={self.file_server.fake_url}/backup/"},
+            path=self.client.cache.cache_folder)
+
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("source .")
+        self.client.run("cache backup-upload")
+        # This used to crash because we were trying to list a missing dir if only exports were made
+        assert "[Errno 2] No such file or directory" not in self.client.out
+        assert sha256 in os.listdir(http_server_base_folder_backup)

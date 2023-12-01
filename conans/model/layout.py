@@ -81,7 +81,8 @@ class Folders(object):
         self._base_build = output_folder or base_folder
         self._base_generators = output_folder or base_folder
         self._base_export_sources = output_folder or base_folder
-        self._base_recipe_metadata = base_folder
+        self._base_recipe_metadata = os.path.join(base_folder, "metadata")
+        # TODO: It is likely that this base_pkg_metadata is not really used with this value
         self._base_pkg_metadata = output_folder or base_folder
 
     @property

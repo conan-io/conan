@@ -1140,3 +1140,49 @@ def test_recipe_build_folders_vars():
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
+
+
+def test_extra_flags():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.extra_cxxflags = ["extra_cxxflags"]
+                tc.extra_cflags = ["extra_cflags"]
+                tc.extra_sharedlinkflags = ["extra_sharedlinkflags"]
+                tc.extra_exelinkflags = ["extra_exelinkflags"]
+                tc.generate()
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:cxxflags+=['cxxflags']
+        tools.build:cflags+=['cflags']
+        tools.build:sharedlinkflags+=['sharedlinkflags']
+        tools.build:exelinkflags+=['exelinkflags']
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('install . -pr=./profile')
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert 'string(APPEND CONAN_CXX_FLAGS " extra_cxxflags cxxflags")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
+
+
+def test_avoid_ovewrite_user_cmakepresets():
+    # https://github.com/conan-io/conan/issues/15052
+    c = TestClient()
+    c.save({"conanfile.txt": "",
+            "CMakePresets.json": "{}"})
+    c.run('install . -g CMakeToolchain', assert_error=True)
+    assert "Error in generator 'CMakeToolchain': Existing CMakePresets.json not generated" in c.out
+    assert "Use --output-folder or define a 'layout' to avoid collision" in c.out

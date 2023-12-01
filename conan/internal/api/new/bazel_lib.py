@@ -33,16 +33,22 @@ class {{package_name}}Recipe(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
-        bazel.build(label="//main:{{name}}")
+        # On Linux platforms, Bazel creates both shared and static libraries by default, and
+        # it is getting naming conflicts if we use the cc_shared_library rule
+        if self.options.shared and self.settings.os != "Linux":
+            # We need to add '--experimental_cc_shared_library' because the project uses
+            # cc_shared_library to create shared libraries
+            bazel.build(args=["--experimental_cc_shared_library"], target="//main:{{name}}_shared")
+        else:
+            bazel.build(target="//main:{{name}}")
 
     def package(self):
         dest_lib = os.path.join(self.package_folder, "lib")
         dest_bin = os.path.join(self.package_folder, "bin")
         build = os.path.join(self.build_folder, "bazel-bin", "main")
-        copy(self, "*.so", build, dest_bin, keep_path=False)
+        copy(self, "*.so", build, dest_lib, keep_path=False)
         copy(self, "*.dll", build, dest_bin, keep_path=False)
-        copy(self, "*.dylib", build, dest_bin, keep_path=False)
+        copy(self, "*.dylib", build, dest_lib, keep_path=False)
         copy(self, "*.a", build, dest_lib, keep_path=False)
         copy(self, "*.lib", build, dest_lib, keep_path=False)
         copy(self, "{{name}}.h", os.path.join(self.source_folder, "main"),
@@ -68,8 +74,7 @@ class {{package_name}}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.configure()
-        bazel.build(label="//main:example")
+        bazel.build()
 
     def layout(self):
         bazel_layout(self)
@@ -93,7 +98,6 @@ cc_binary(
 )
 """
 
-
 _bazel_build = """\
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
@@ -104,17 +108,34 @@ cc_library(
 )
 """
 
+_bazel_build_shared = """
+cc_shared_library(
+    name = "{{name}}_shared",
+    shared_lib_name = "lib{{name}}.%s",
+    deps = [":{{name}}"],
+)
+"""
+
 _bazel_workspace = " "  # Important not empty, so template doesn't discard it
 _test_bazel_workspace = """
-load("@//:dependencies.bzl", "load_conan_dependencies")
+load("@//conan:dependencies.bzl", "load_conan_dependencies")
 load_conan_dependencies()
 """
+
+
+def _get_bazel_build():
+    import platform
+    os_ = platform.system()
+    ret = _bazel_build
+    if os_ != "Linux":
+        ret += _bazel_build_shared % ("dylib" if os_ == "Darwin" else "dll")
+    return ret
 
 
 bazel_lib_files = {"conanfile.py": conanfile_sources_v2,
                    "main/{{name}}.cpp": source_cpp,
                    "main/{{name}}.h": source_h,
-                   "main/BUILD": _bazel_build,
+                   "main/BUILD": _get_bazel_build(),
                    "WORKSPACE": _bazel_workspace,
                    "test_package/conanfile.py": test_conanfile_v2,
                    "test_package/main/example.cpp": test_main,

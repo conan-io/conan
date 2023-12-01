@@ -6,7 +6,8 @@ import pytest
 from mock import patch
 
 from conan import conan_version
-from conans.errors import ConanException
+from conan.internal.api import detect_api
+from conans.test.assets.genconanfile import GenConanfile
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
@@ -139,10 +140,9 @@ def test_new_config_file_required_version():
         core:required_conan_version=>=2.0
         """)
     save(client.cache.new_config_path, conf)
-    with pytest.raises(ConanException) as excinfo:
-        client.run("install .")
+    client.run("install .", assert_error=True)
     assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
-            in str(excinfo.value))
+            in client.out)
 
 
 def test_composition_conan_conf_overwritten_by_cli_arg(client):
@@ -225,6 +225,23 @@ def test_jinja_global_conf_paths():
     assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
 
 
+def test_profile_detect_os_arch():
+    """ testing OS & ARCH just to test that detect_api is injected
+    """
+    c = TestClient()
+    global_conf = textwrap.dedent("""
+        user.myteam:myconf1={{detect_api.detect_os()}}
+        user.myteam:myconf2={{detect_api.detect_arch()}}
+        """)
+
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    _os = detect_api.detect_os()
+    _arch = detect_api.detect_arch()
+    assert f"user.myteam:myconf1: {_os}" in c.out
+    assert f"user.myteam:myconf2: {_arch}" in c.out
+
+
 def test_empty_conf_valid():
     tc = TestClient()
     profile = textwrap.dedent(r"""
@@ -288,3 +305,71 @@ def test_global_conf_auto_created():
     c.run("config list")  # all commands will trigger
     global_conf = load(c.cache.new_config_path)
     assert "# core:non_interactive = True" in global_conf
+
+
+def test_build_test_consumer_only():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                skip = self.conf.get("tools.build:skip_test", check_type=bool)
+                self.output.info(f'SKIP-TEST: {skip}')
+        """)
+    pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                requires = "dep/0.1"
+                def generate(self):
+                    self.output.info(f'SKIP-TEST: {self.conf.get("tools.build:skip_test")}')
+            """)
+    save(c.cache.new_config_path, "tools.build:skip_test=True\n&:tools.build:skip_test=False")
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg,
+            "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
+    c.run("create dep")
+    assert "dep/0.1: SKIP-TEST: False" in c.out
+    c.run('create pkg --build=* -tf=""')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    c.run('create pkg --build=*')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    c.run('install pkg --build=*')
+    assert "dep/0.1: SKIP-TEST: True" in c.out
+    assert "conanfile.py (pkg/0.1): SKIP-TEST: False" in c.out
+
+
+def test_conf_should_be_immutable():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                self.conf.append("user.myteam:myconf", "value1")
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            requires = "dep/0.1"
+            def generate(self):
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+        """)
+    save(c.cache.new_config_path, 'user.myteam:myconf=["root_value"]')
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("create dep")
+    assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
+    c.run('create pkg --build=*')
+    assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
+    # The pkg/0.1 output should be non-modified
+    assert "pkg/0.1: user.myteam:myconf: ['root_value']" in c.out

@@ -5,14 +5,15 @@ from collections import OrderedDict, defaultdict
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
+from conan.api.output import ConanOutput
+from conan.internal.api import detect_api
+from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.loader import load_python_file
-from conans.errors import ConanException, scoped_traceback
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.config_parser import ConfigParser
 from conans.util.files import mkdir, load_user_encoded
 
@@ -79,46 +80,8 @@ def _check_correct_cppstd(settings):
 
 
 class ProfileLoader:
-    def __init__(self, cache):
-        self._cache = cache
-
-    def get_default_host(self):
-        cache = self._cache
-
-        default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
-        if default_profile is None:
-            default_profile = cache.new_config.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
-
-        default_profile = os.path.join(cache.profiles_path, default_profile)
-        if not os.path.exists(default_profile):
-            msg = ("The default host profile '{}' doesn't exist.\n"
-                   "You need to create a default profile (type 'conan profile detect' command)\n"
-                   "or specify your own profile with '--profile:host=<myprofile>'")
-            # TODO: Add detailed instructions when cli is improved
-            raise ConanException(msg.format(default_profile))
-        return default_profile
-
-    def get_default_build(self):
-        cache = self._cache
-        default_profile = cache.new_config.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
-        default_profile = os.path.join(cache.profiles_path, default_profile)
-        if not os.path.exists(default_profile):
-            msg = ("The default build profile '{}' doesn't exist.\n"
-                   "You need to create a default profile (type 'conan profile detect' command)\n"
-                   "or specify your own profile with '--profile:build=<myprofile>'")
-            # TODO: Add detailed instructions when cli is improved
-            raise ConanException(msg.format(default_profile))
-        return default_profile
-
-    def _load_profile_plugin(self):
-        profile_plugin = os.path.join(self._cache.plugins_path, "profile.py")
-        if not os.path.exists(profile_plugin):
-            raise ConanException("The 'profile.py' plugin file doesn't exist. If you want "
-                                 "to disable it, edit its contents instead of removing it")
-
-        mod, _ = load_python_file(profile_plugin)
-        if hasattr(mod, "profile_plugin"):
-            return mod.profile_plugin
+    def __init__(self, cache_folder):
+        self._home_paths = HomePaths(cache_folder)
 
     def from_cli_args(self, profiles, settings, options, conf, cwd):
         """ Return a Profile object, as the result of merging a potentially existing Profile
@@ -134,16 +97,6 @@ class ProfileLoader:
 
         args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
-        # Only after everything has been aggregated, try to complete missing settings
-        profile_plugin = self._load_profile_plugin()
-        if profile_plugin is not None:
-            try:
-                profile_plugin(result)
-            except Exception as e:
-                msg = f"Error while processing 'profile.py' plugin"
-                msg = scoped_traceback(msg, e, scope="/extensions/plugins")
-                raise ConanException(msg)
-        result.process_settings(self._cache)
         return result
 
     def load_profile(self, profile_name, cwd=None):
@@ -157,8 +110,8 @@ class ProfileLoader:
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
         """
-
-        profile_path = self.get_profile_path(profile_name, cwd)
+        profiles_folder = self._home_paths.profiles_path
+        profile_path = self.get_profile_path(profiles_folder, profile_name, cwd)
         try:
             text = load_user_encoded(profile_path)
         except Exception as e:
@@ -171,7 +124,8 @@ class ProfileLoader:
                    "os": os,
                    "profile_dir": base_path,
                    "profile_name": file_path,
-                   "conan_version": conan_version}
+                   "conan_version": conan_version,
+                   "detect_api": detect_api}
         rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
         text = rtemplate.render(context)
 
@@ -204,8 +158,8 @@ class ProfileLoader:
         except Exception as exc:
             raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
-    def get_profile_path(self, profile_name, cwd, exists=True):
-
+    @staticmethod
+    def get_profile_path(profiles_path, profile_name, cwd, exists=True):
         def valid_path(_profile_path, _profile_name=None):
             if exists and not os.path.isfile(_profile_path):
                 raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
@@ -218,7 +172,7 @@ class ProfileLoader:
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
             return valid_path(profile_path, profile_name)
 
-        default_folder = self._cache.profiles_path
+        default_folder = profiles_path
         if not os.path.exists(default_folder):
             mkdir(default_folder)
         profile_path = os.path.join(default_folder, profile_name)
@@ -265,8 +219,10 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires", "system_tools",
-                                                         "settings",
+        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+                                                         "system_tools",  # DEPRECATED: platform_tool_requires
+                                                         "platform_requires",
+                                                         "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
@@ -274,11 +230,13 @@ class _ProfileValueParser(object):
         options = Options.loads(doc.options) if doc.options else None
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
+        doc_platform_requires = doc.platform_requires or ""
+        doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
         if doc.system_tools:
-            system_tools = [RecipeReference.loads(r.strip())
-                            for r in doc.system_tools.splitlines() if r.strip()]
-        else:
-            system_tools = []
+            ConanOutput().warning("Profile [system_tools] is deprecated,"
+                                  " please use [platform_tool_requires]")
+        platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
+        platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
 
         if doc.conf:
             conf = ConfDefinition()
@@ -290,9 +248,12 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
-        current_system_tools = {r.name: r for r in base_profile.system_tools}
-        current_system_tools.update({r.name: r for r in system_tools})
-        base_profile.system_tools = list(current_system_tools.values())
+        current_platform_tool_requires = {r.name: r for r in base_profile.platform_tool_requires}
+        current_platform_tool_requires.update({r.name: r for r in platform_tool_requires})
+        base_profile.platform_tool_requires = list(current_platform_tool_requires.values())
+        current_platform_requires = {r.name: r for r in base_profile.platform_requires}
+        current_platform_requires.update({r.name: r for r in platform_requires})
+        base_profile.platform_requires = list(current_platform_requires.values())
 
         base_profile.settings.update(settings)
         for pkg_name, values_dict in package_settings.items():
@@ -404,8 +365,8 @@ def _profile_parse_args(settings, options, conf):
     return result
 
 
-def migrate_profile_plugin(cache):
+def migrate_profile_plugin(cache_folder):
     from conans.client.migrations import update_file
 
-    profile_plugin_file = os.path.join(cache.plugins_path, "profile.py")
+    profile_plugin_file = HomePaths(cache_folder).profile_plugin_path
     update_file(profile_plugin_file, _default_profile_plugin)
