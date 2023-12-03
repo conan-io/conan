@@ -171,7 +171,7 @@ def test_custom_command_collect():
     c.save({"dep/conanfile.py": conanfile.format(name="dep",
                                                  requires="tool_requires = 'tool/0.1'"),
             "pkg/conanfile.py": conanfile.format(name="pkg", requires='requires = "dep/0.1"'),
-            "profile": "[system_tools]\ntool/0.1"})
+            "profile": "[platform_tool_requires]\ntool/0.1"})
     c.run("create dep -pr=profile")
     c.run("create pkg -pr=profile")
     c.run("metadata:collect --requires=pkg/0.1 --metadata=* --metadata-remote=default -pr=profile")

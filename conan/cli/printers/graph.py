@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP,\
-    BINARY_SYSTEM_TOOL
+    BINARY_PLATFORM
 
 
 def print_graph_basic(graph):
@@ -105,7 +105,7 @@ def print_graph_packages(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote) in sorted(reqs_to_print.items(), key=repr):
-            name = pref.repr_notime() if status != BINARY_SYSTEM_TOOL else str(pref.ref)
+            name = pref.repr_notime() if status != BINARY_PLATFORM else str(pref.ref)
             msg = f"{tab}{name} - {status}"
             if remote is not None and status != BINARY_SKIP:
                 msg += f" ({remote.name})"
