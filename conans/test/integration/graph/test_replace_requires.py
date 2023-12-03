@@ -3,6 +3,7 @@ import pytest
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.parametrize("require, pattern, alternative, pkg", [
@@ -95,3 +96,20 @@ class TestReplaceRequires:
         # with lockfile
         c.run("install app -pr=profile")
         c.assert_listed_require({f"{pkg}#{rrev}": "Cache"}, build=tool_require)
+
+
+@pytest.mark.parametrize("pattern, replace", [
+    ("pkg", "pkg/0.1"),
+    ("pkg/*", "pkg"),
+    ("pkg/*:pid1", "pkg/0.1"),
+    ("pkg/*:pid1", "pkg/0.1:pid2"),
+    ("pkg/*", "pkg/0.1:pid2"),
+])
+def test_replace_requires_errors(pattern, replace):
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.2"),
+            "profile": f"[replace_requires]\n{pattern}: {replace}"})
+    c.run("create pkg")
+    c.run("install app -pr=profile", assert_error=True)
+    assert f"ERROR: Error reading 'profile' profile. Error in [replace_xxx] '{pattern}: {replace}'"

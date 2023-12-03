@@ -242,7 +242,6 @@ class DepsGraphBuilder(object):
             return
 
         for pattern, alternative_ref in replacements.items():
-            pattern = RecipeReference.loads(pattern)
             if pattern.name != require.ref.name:
                 continue  # no match in name
             if pattern.version != "*":  # we need to check versions

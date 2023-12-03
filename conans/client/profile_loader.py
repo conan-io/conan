@@ -245,9 +245,15 @@ class _ProfileValueParser(object):
                 r = r.strip()
                 if not r or r.startswith("#"):
                     continue
-                src, target = r.split(":", 1)
-                target = RecipeReference.loads(target.strip())
-                result[src.strip()] = target
+                try:
+                    src, target = r.split(":")
+                    target = RecipeReference.loads(target.strip())
+                    src = RecipeReference.loads(src.strip())
+                except Exception as e:
+                    raise ConanException(f"Error in [replace_xxx] '{r}'.\nIt should be in the form"
+                                         f" 'pattern: replacement', without package-ids.\n"
+                                         f"Original error: {str(e)}")
+                result[src] = target
             return result
 
         replace_requires = load_replace(doc.replace_requires) if doc.replace_requires else {}
