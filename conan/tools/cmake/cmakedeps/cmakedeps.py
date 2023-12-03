@@ -1,4 +1,8 @@
 import os
+import textwrap
+
+import jinja2
+from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
@@ -43,6 +47,7 @@ class CMakeDeps(object):
         generator_files = self.content
         for generator_file, content in generator_files.items():
             save(self._conanfile, generator_file, content)
+        self.generate_aggregator()
 
     @property
     def content(self):
@@ -162,3 +167,43 @@ class CMakeDeps(object):
         if tmp is None:
             return "config"
         return tmp.lower()
+
+    def generate_aggregator(self):
+        host = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
+
+        deps, targets = [], []
+        for require, dep in list(host.items()) + list(build_req.items()) + list(test_req.items()):
+            if not require.direct:
+                continue
+            if require.build and dep.ref.name not in self.build_context_activated:
+                continue
+            cmake_find_mode = self.get_property("cmake_find_mode", dep)
+            cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
+            cmake_find_mode = cmake_find_mode.lower()
+            find_module_mode = True if cmake_find_mode == FIND_MODE_MODULE else False
+            config = ConfigTemplate(self, require, dep, find_module_mode)
+            deps.append(config.file_name)
+            targets.append(config.root_target_name)
+
+        # Some helpful verbose messages about generated files
+        msg = ["CMakeDeps generated files basic information"]
+        for dep, target in zip(deps, targets):
+            msg.append(f"    find_package({dep}), target_link_libraries(... {target})")
+        msg.append("    Created aggregation file 'conandeps.cmake'")
+        self._conanfile.output.verbose("\n".join(msg))
+
+        template = textwrap.dedent("""\
+            {% for dep in deps %}
+            find_package({{dep}})
+            {% endfor %}
+
+            add_library(conandeps INTERFACE)
+            target_link_libraries(conandeps INTERFACE {% for t in targets %} {{t}} {% endfor %})
+            """)
+
+        template = Template(template, trim_blocks=True, lstrip_blocks=True,
+                            undefined=jinja2.StrictUndefined)
+        conandeps = template.render({"deps": deps, "targets": targets})
+        save(self._conanfile, "conandeps.cmake", conandeps)
