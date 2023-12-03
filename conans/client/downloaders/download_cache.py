@@ -44,14 +44,11 @@ class DownloadCache:
             finally:
                 thread_lock.release()
 
-    def get_backup_sources_files_to_upload(self, package_list, excluded_urls):
+    def get_backup_sources_files_to_upload(self, excluded_urls, package_list=None):
         """ from a package_list of packages to upload, collect from the backup-sources cache
-        the matching references to upload those backups too
+        the matching references to upload those backups too.
+        If no package_list is passed, it gets all
         """
-        def should_upload_sources(package):
-            return any(prev["upload"] for prev in package["revisions"].values())
-
-        files_to_upload = []
         path_backups = os.path.join(self._path, self._SOURCE_BACKUP)
 
         if not os.path.exists(path_backups):
@@ -60,25 +57,34 @@ class DownloadCache:
         if excluded_urls is None:
             excluded_urls = []
 
-        all_refs = set()
-        for k, ref in package_list.refs():
-            packages = ref.get("packages", {}).values()
-            if ref.get("upload") or any(should_upload_sources(p) for p in packages):
-                all_refs.add(str(k))
+        def has_excluded_urls(backup_urls):
+            return all(any(url.startswith(excluded_url)
+                           for excluded_url in excluded_urls)
+                       for url in backup_urls)
 
-        for f in os.listdir(path_backups):
-            if f.endswith(".json"):
-                f = os.path.join(path_backups, f)
-                content = json.loads(load(f))
-                refs = content["references"]
-                # unknown entries are not uploaded at this moment, the flow is not expected.
+        def should_upload_sources(package):
+            return any(prev["upload"] for prev in package["revisions"].values())
+
+        all_refs = set()
+        if package_list is not None:
+            for k, ref in package_list.refs().items():
+                packages = ref.get("packages", {}).values()
+                if ref.get("upload") or any(should_upload_sources(p) for p in packages):
+                    all_refs.add(str(k))
+
+        files_to_upload = []
+
+        for path in os.listdir(path_backups):
+            if not path.endswith(".json"):
+                blob_path = os.path.join(path_backups, path)
+                metadata_path = os.path.join(blob_path + ".json")
+                metadata = json.loads(load(metadata_path))
+                refs = metadata["references"]
+                # unknown entries are not uploaded at this moment unless no package_list is passed
                 for ref, urls in refs.items():
-                    is_excluded = all(any(url.startswith(excluded_url)
-                                          for excluded_url in excluded_urls)
-                                      for url in urls)
-                    if not is_excluded and ref in all_refs:
-                        files_to_upload.append(f)
-                        files_to_upload.append(f[:-5])
+                    if not has_excluded_urls(urls) and (package_list is None or ref in all_refs):
+                        files_to_upload.append(metadata_path)
+                        files_to_upload.append(blob_path)
                         break
         return files_to_upload
 

@@ -3,7 +3,7 @@ from mock import mock
 from parameterized import parameterized
 
 from conan.tools.build import check_max_cppstd, check_min_cppstd, valid_max_cppstd, valid_min_cppstd
-from conans.test.utils.mocks import MockSettings, MockConanfile
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.errors import ConanInvalidConfiguration, ConanException
 
 
@@ -16,7 +16,7 @@ def _create_conanfile(compiler, version, os, cppstd, libcxx=None):
                              "compiler.cppstd": cppstd})
     if libcxx:
         settings.values["compiler.libcxx"] = libcxx
-    conanfile = MockConanfile(settings)
+    conanfile = ConanFileMock(settings)
     return conanfile
 
 
@@ -25,7 +25,7 @@ class UserInputTests(unittest.TestCase):
     def test_check_cppstd_type(self):
         """ cppstd must be a number
         """
-        conanfile = MockConanfile(MockSettings({}))
+        conanfile = ConanFileMock(MockSettings({}))
         with self.assertRaises(ConanException) as raises:
             check_min_cppstd(conanfile, "gnu17", False)
         self.assertEqual("cppstd parameter must be a number", str(raises.exception))

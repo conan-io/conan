@@ -38,7 +38,6 @@ class ConanAPI(object):
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version))
         migrator.migrate()
-        check_required_conan_version(self.cache_folder)
 
         self.remotes = RemotesAPI(self)
         # Search recipes by wildcard and packages filtering by configuracion
@@ -57,3 +56,5 @@ class ConanAPI(object):
         self.cache = CacheAPI(self)
         self.lockfile = LockfileAPI(self)
         self.local = LocalAPI(self)
+
+        check_required_conan_version(self.config.global_conf)

@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput
 from conans.errors import ConanException, conanfile_exception_formatter, NotFoundException, \
     conanfile_remove_attr
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
@@ -41,8 +42,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
                % str(ref))
         raise ConanException(msg)
 
-    # FIXME: this output is scoped but without reference, check if we want this
-    conanfile.output.info("Sources downloaded from '{}'".format(sources_remote.name))
+    ConanOutput(scope=str(ref)).info("Sources downloaded from '{}'".format(sources_remote.name))
 
 
 def config_source(export_source_folder, conanfile, hook_manager):

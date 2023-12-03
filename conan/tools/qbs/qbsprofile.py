@@ -73,6 +73,7 @@ _target_platform = {
     'iOS': 'ios',
     'watchOS': 'watchos',
     'tvOS': 'tvos',
+    'visionOS': 'xros',
     'FreeBSD': 'freebsd',
     'SunOS': 'solaris',
     'AIX': 'aix',

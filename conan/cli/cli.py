@@ -15,8 +15,8 @@ from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
+from conan.internal.cache.home_paths import HomePaths
 from conans import __version__ as client_version
-from conans.client.cache.cache import ClientCache
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 
@@ -40,7 +40,7 @@ class Cli:
             module_name = module[1]
             self._add_command("conan.cli.commands.{}".format(module_name), module_name)
 
-        custom_commands_path = ClientCache(self._conan_api.cache_folder).custom_commands_path
+        custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         if not os.path.isdir(custom_commands_path):
             return
 
@@ -156,7 +156,7 @@ class Cli:
             command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % client_version, fg=Color.BRIGHT_GREEN)
+                cli_out_write("Conan version %s" % client_version)
                 return
 
             if command_argument in ["-h", "--help"]:
@@ -173,7 +173,7 @@ class Cli:
         except Exception as e:
             # must be a local-import to get updated value
             if ConanOutput.level_allowed(LEVEL_TRACE):
-                print(traceback.format_exc())
+                print(traceback.format_exc(), file=sys.stderr)
             self._conan2_migrate_recipe_msg(e)
             raise
 
@@ -187,17 +187,7 @@ class Cli:
             error = "*********************************************************\n" \
                     f"Recipe '{pkg}' seems broken.\n" \
                     f"It is possible that this recipe is not Conan 2.0 ready\n"\
-                    "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
-                    "If it is your recipe, check if it is updated to 2.0\n" \
-                    "*********************************************************\n"
-            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
-        result = re.search(r"(.*): Error in build\(\) method, line", message)
-        if result:
-            pkg = result.group(1)
-            error = "*********************************************************\n" \
-                    f"Recipe '{pkg}' cannot build its binary\n" \
-                    f"It is possible that this recipe is not Conan 2.0 ready\n" \
-                    "If the recipe comes from ConanCenter check: https://conan.io/cci-v2.html\n" \
+                    "If the recipe comes from ConanCenter, report it at https://github.com/conan-io/conan-center-index/issues\n" \
                     "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
@@ -219,7 +209,7 @@ class Cli:
             return exception.code
 
         assert isinstance(exception, Exception)
-        print(traceback.format_exc())
+        output.error(traceback.format_exc())
         msg = exception_message_safe(exception)
         output.error(msg)
         return ERROR_UNEXPECTED

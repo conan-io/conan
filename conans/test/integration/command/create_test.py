@@ -457,14 +457,14 @@ def test_create_format_json():
                                          'compiler.libcxx': 'libstdc++', 'compiler.version': '12',
                                          'os': 'Linux'}
     consumer_deps = {
-        '1': {'ref': 'hello/0.1', 'run': 'False', 'libs': 'True', 'skip': 'False',
-              'test': 'False', 'force': 'False', 'direct': 'True', 'build': 'False',
-              'transitive_headers': 'None', 'transitive_libs': 'None', 'headers': 'True',
-              'package_id_mode': 'None', 'visible': 'True'},
-        '2': {'ref': 'pkg/0.2', 'run': 'False', 'libs': 'True', 'skip': 'False', 'test': 'False',
-              'force': 'False', 'direct': 'False', 'build': 'False', 'transitive_headers': 'None',
-              'transitive_libs': 'None', 'headers': 'True', 'package_id_mode': 'None',
-              'visible': 'True'}
+        '1': {'ref': 'hello/0.1', 'run': False, 'libs': True, 'skip': False,
+              'test': False, 'force': False, 'direct': True, 'build': False,
+              'transitive_headers': None, 'transitive_libs': None, 'headers': True,
+              'package_id_mode': None, 'visible': True},
+        '2': {'ref': 'pkg/0.2', 'run': False, 'libs': True, 'skip': False, 'test': False,
+              'force': False, 'direct': False, 'build': False, 'transitive_headers': None,
+              'transitive_libs': None, 'headers': True, 'package_id_mode': None,
+              'visible': True}
     }
     assert consumer_info["dependencies"] == consumer_deps
     # hello/0.1 pkg information
@@ -474,10 +474,10 @@ def test_create_format_json():
     assert hello_pkg_info["options"] == {}
     hello_pkg_info_deps = {
         "2": {
-            "ref": "pkg/0.2", "run": "False", "libs": "True", "skip": "False", "test": "False",
-            "force": "False", "direct": "True", "build": "False", "transitive_headers": "None",
-            "transitive_libs": "None", "headers": "True", "package_id_mode": "semver_mode",
-            "visible": "True"
+            "ref": "pkg/0.2", "run": False, "libs": True, "skip": False, "test": False,
+            "force": False, "direct": True, "build": False, "transitive_headers": None,
+            "transitive_libs": None, "headers": True, "package_id_mode": "semver_mode",
+            "visible": True
         }
     }
     assert hello_pkg_info["dependencies"] == hello_pkg_info_deps
@@ -770,3 +770,44 @@ def test_create_both_host_build_require():
     # it used to fail, now it works and builds the test_package "tools_requires" in Release
     c.assert_listed_binary({"protobuf/0.1": ("efa83b160a55b033c4ea706ddb980cd708e3ba1b", "Build")},
                            build=True, test_package=True)
+
+
+def test_python_requires_json_format():
+    """Check python requires does not crash when calling conan create . --format=json
+    See https://github.com/conan-io/conan/issues/14577"""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pyreq", "1.0")
+           .with_package_type("python-require")})
+    c.run("create . --format=json", redirect_stdout="output.json")
+    data = json.loads(load(os.path.join(c.current_folder, "output.json")))
+    # There's a graph and the python requires is there
+    assert len(data["graph"]["nodes"]["0"]["python_requires"]) == 1
+
+
+def test_python_requires_with_test_package():
+    c = TestClient()
+    # Code comes from the docs
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    def mynumber():
+        return 42
+
+    class PyReq(ConanFile):
+        name = "pyreq"
+        version = "1.0"
+        package_type = "python-require"
+    """)
+    test_conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Tool(ConanFile):
+        def test(self):
+            pyreq = self.python_requires["pyreq"].module
+            mynumber = pyreq.mynumber()
+            self.output.info("{}!!!".format(mynumber))
+    """)
+    c.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
+    c.run("create .")
+    # Ensure that creating a deps graph does not break the testing
+    assert "pyreq/1.0 (test package): 42!!!" in c.out

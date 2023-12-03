@@ -1,10 +1,11 @@
 import copy
+import os
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
-from conans.client.graph.graph import RECIPE_SYSTEM_TOOL
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
@@ -18,7 +19,7 @@ from conans.model.requires import Requirement
 
 class DepsGraphBuilder(object):
 
-    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update):
+    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
@@ -26,7 +27,7 @@ class DepsGraphBuilder(object):
         self._remotes = remotes  # TODO: pass as arg to load_graph()
         self._update = update
         self._check_update = check_update
-        self._resolve_prereleases = self._cache.new_config.get('core.version_ranges:resolve_prereleases')
+        self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -105,7 +106,11 @@ class DepsGraphBuilder(object):
         if version_range:
             # TODO: Check user/channel conflicts first
             if prev_version_range is not None:
-                pass  # Do nothing, evaluate current as it were a fixed one
+                # It it is not conflicting, but range can be incompatible, restrict range
+                restricted_version_range = version_range.intersection(prev_version_range)
+                if restricted_version_range is None:
+                    raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+                require.ref.version = restricted_version_range.version()
             else:
                 if version_range.contains(prev_ref.version, resolve_prereleases):
                     require.ref = prev_ref
@@ -210,24 +215,23 @@ class DepsGraphBuilder(object):
         return new_ref, dep_conanfile, recipe_status, remote
 
     @staticmethod
-    def _resolved_system_tool(node, require, profile_build, profile_host, resolve_prereleases):
-        if node.context == CONTEXT_HOST and not require.build:  # Only for DIRECT tool_requires
-            return
-        system_tool = profile_build.system_tools if node.context == CONTEXT_BUILD \
-            else profile_host.system_tools
-        if system_tool:
+    def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
+        profile = profile_build if node.context == CONTEXT_BUILD else profile_host
+        dep_type = "platform_tool_requires" if require.build else "platform_requires"
+        system_reqs = getattr(profile, dep_type)
+        if system_reqs:
             version_range = require.version_range
-            for d in system_tool:
+            for d in system_reqs:
                 if require.ref.name == d.name:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
-                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
                             require.ref.revision = d.revision
-                            return d, ConanFile(str(d)), RECIPE_SYSTEM_TOOL, None
+                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         if require.ref.version == "<host_version>":
@@ -241,12 +245,11 @@ class DepsGraphBuilder(object):
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
+        resolved = self._resolved_system(node, require, profile_build, profile_host,
+                                         self._resolve_prereleases)
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)
-
-        resolved = self._resolved_system_tool(node, require, profile_build, profile_host,
-                                              self._resolve_prereleases)
 
         if resolved is None:
             try:
@@ -259,12 +262,20 @@ class DepsGraphBuilder(object):
                 raise GraphMissingError(node, require, str(e))
 
         new_ref, dep_conanfile, recipe_status, remote = resolved
+        # TODO: Proxy could return the recipe_layout() and it can be reused
+        # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
+        if recipe_status == RECIPE_EDITABLE:
+            recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
+            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
+        elif recipe_status != RECIPE_PLATFORM:
+            recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
+            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
             dep_conanfile._conan_is_consumer = True
         initialize_conanfile_profile(dep_conanfile, profile_build, profile_host, node.context,
-                                     require.build, new_ref)
+                                     require.build, new_ref, parent=node.conanfile)
 
         context = CONTEXT_BUILD if require.build else node.context
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)

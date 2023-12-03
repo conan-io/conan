@@ -12,8 +12,9 @@ from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.paths import DEFAULT_CONAN_HOME
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
-from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
+from conans.test.utils.tools import TestClient, zipdir
 from conans.util.files import load, mkdir, save, save_files
 
 
@@ -509,18 +510,14 @@ class ConfigInstallTest(unittest.TestCase):
 
     def test_config_install_requester(self):
         # https://github.com/conan-io/conan/issues/4169
-        http_server = StoppableThreadBottle()
         path = self._create_zip()
+        file_server = TestFileServer(os.path.dirname(path))
+        self.client.servers["file_server"] = file_server
 
-        from bottle import static_file
+        self.client.run(f"config install {file_server.fake_url}/myconfig.zip")
+        assert "Defining remotes from remotes.json" in self.client.out
+        assert "Copying file myfuncs.py" in self.client.out
 
-        @http_server.server.get("/myconfig.zip")
-        def get_zip():
-            return static_file(os.path.basename(path), os.path.dirname(path))
-
-        http_server.run_server()
-        self.client.run("config install http://localhost:%s/myconfig.zip" % http_server.port)
-        http_server.stop()
 
     def test_overwrite_read_only_file(self):
         source_folder = self._create_profile_folder()

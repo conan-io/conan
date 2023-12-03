@@ -18,7 +18,7 @@ class GraphAPI:
                                       name=None, version=None, user=None, channel=None,
                                       update=None, remotes=None, lockfile=None,
                                       is_build_require=False):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
 
         if path.endswith(".py"):
             conanfile = app.loader.load_consumer(path,
@@ -32,7 +32,8 @@ class GraphAPI:
             ref = RecipeReference(conanfile.name, conanfile.version,
                                   conanfile.user, conanfile.channel)
             context = CONTEXT_BUILD if is_build_require else CONTEXT_HOST
-            initialize_conanfile_profile(conanfile, profile_build, profile_host, context,
+            # Here, it is always the "host" context because it is the base, not the current node one
+            initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          is_build_require, ref)
             if ref.name:
                 profile_host.options.scope(ref)
@@ -61,7 +62,7 @@ class GraphAPI:
         :return: a graph Node, recipe=RECIPE_CONSUMER
         """
 
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         # necessary for correct resolution and update of remote python_requires
 
         loader = app.loader
@@ -83,11 +84,17 @@ class GraphAPI:
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
         return root_node
 
-    def _load_root_virtual_conanfile(self, profile_host, profile_build, requires, tool_requires):
-        if not requires and not tool_requires:
+    def _load_root_virtual_conanfile(self, profile_host, profile_build, requires, tool_requires,
+                                     lockfile, remotes, update, check_updates=False, python_requires=None):
+        if not python_requires and not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
-        app = ConanApp(self.conan_api.cache_folder)
-        conanfile = app.loader.load_virtual(requires=requires,  tool_requires=tool_requires)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        conanfile = app.loader.load_virtual(requires=requires,
+                                            tool_requires=tool_requires,
+                                            python_requires=python_requires,
+                                            graph_lock=lockfile, remotes=remotes,
+                                            update=update, check_updates=check_updates)
+
         consumer_definer(conanfile, profile_host, profile_build)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
@@ -106,7 +113,7 @@ class GraphAPI:
             profile.options.scope(tool_requires[0])
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
-                            lockfile, remotes, update, check_updates=False):
+                            lockfile, remotes, update, check_updates=False, python_requires=None):
         requires = [RecipeReference.loads(r) if isinstance(r, str) else r for r in requires] \
             if requires else None
         tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
@@ -115,7 +122,10 @@ class GraphAPI:
         self._scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = self._load_root_virtual_conanfile(requires=requires, tool_requires=tool_requires,
                                                       profile_host=profile_host,
-                                                      profile_build=profile_build)
+                                                      profile_build=profile_build,
+                                                      lockfile=lockfile, remotes=remotes,
+                                                      update=update,
+                                                      python_requires=python_requires)
 
         # check_updates = args.check_updates if "check_updates" in args else False
         deps_graph = self.load_graph(root_node, profile_host=profile_host,
@@ -159,14 +169,14 @@ class GraphAPI:
         :param check_update: For "graph info" command, check if there are recipe updates
         """
         ConanOutput().title("Computing dependency graph")
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
 
         assert profile_host is not None
         assert profile_build is not None
 
         remotes = remotes or []
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, check_update)
+                                   update, check_update, self.conan_api.config.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 
@@ -186,7 +196,7 @@ class GraphAPI:
         :param tested_graph: In case of a "test_package", the graph being tested
         """
         ConanOutput().title("Computing necessary packages")
-        conan_app = ConanApp(self.conan_api.cache_folder)
-        binaries_analyzer = GraphBinariesAnalyzer(conan_app)
+        conan_app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self.conan_api.config.global_conf)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)

@@ -6,7 +6,7 @@ import textwrap
 import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
-from conans.test.utils.mocks import MockConanfile
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.runners import conan_run
 
@@ -135,7 +135,7 @@ def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_ver
     demo = os.path.join(t.current_folder, "build", "demo")
     assert os.path.isfile(demo) is True
 
-    conanfile = MockConanfile({}, runner=conan_run)
+    conanfile = ConanFileMock({}, runner=conan_run)
     xcrun = XCRun(conanfile, sdk)
     lipo = xcrun.find('lipo')
     t.run_command('"%s" -info "%s"' % (lipo, demo))

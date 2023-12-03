@@ -6,6 +6,7 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
+from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
@@ -42,12 +43,12 @@ def lock_create(conan_api, parser, subparser, *args):
         graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                     args.user, args.channel,
                                                     profile_host, profile_build, lockfile,
-                                                    remotes, args.build, args.update,
+                                                    remotes, args.update,
                                                     is_build_require=args.build_require)
     else:
         graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                     profile_host, profile_build, lockfile,
-                                                    remotes, args.build, args.update)
+                                                    remotes, args.update)
 
     print_graph_basic(graph)
     graph.report_graph_error()
@@ -105,11 +106,18 @@ def lock_add(conan_api, parser, subparser, *args):
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
 
-    requires = [RecipeReference.loads(r) for r in args.requires] if args.requires else None
-    build_requires = [RecipeReference.loads(r) for r in args.build_requires] \
-        if args.build_requires else None
-    python_requires = [RecipeReference.loads(r) for r in args.python_requires] \
-        if args.python_requires else None
+    global_conf = conan_api.config.global_conf
+    allow_uppercase = global_conf.get("core:allow_uppercase_pkg_names", check_type=bool)
+
+    def _parse_requires(reqs):
+        if reqs:
+            result = [RecipeReference.loads(r) for r in reqs]
+            [r.validate_ref(allow_uppercase) for r in result]
+            return result
+
+    requires = _parse_requires(args.requires)
+    build_requires = _parse_requires(args.build_requires)
+    python_requires = _parse_requires(args.python_requires)
 
     lockfile = conan_api.lockfile.add_lockfile(lockfile,
                                                requires=requires,

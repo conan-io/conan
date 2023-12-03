@@ -9,6 +9,7 @@ from requests import ConnectionError
 from conans.paths import CONAN_MANIFEST
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)
+from conans.util.env import environment_update
 from conans.util.files import load
 
 
@@ -59,6 +60,7 @@ def test_upload_with_pattern():
         client.run("export . --user=frodo --channel=stable")
 
     client.run("upload hello* --confirm -r default")
+    print(client.out)
     for num in range(3):
         assert "Uploading recipe 'hello%s/1.2.1@frodo/stable" % num in client.out
 
@@ -71,7 +73,8 @@ def test_upload_with_pattern():
 
 def test_check_upload_confirm_question():
     server = TestServer()
-    client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "admin", "password", "n", "n", "n"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
@@ -79,10 +82,27 @@ def test_check_upload_confirm_question():
     assert "Uploading recipe 'hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
-    client.run("export . --user=frodo --channel=stable")
+    client.run("create . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
     assert "Uploading recipe 'hello2/1.2.1@frodo/stable" not in client.out
+
+
+def test_check_upload_confirm_question_yes():
+    server = TestServer()
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "yes", "yes", "yes", "yes", "admin", "password"])
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
+    client.run("create . ")
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1").with_package_file("file.txt",
+                                                                                   env_var="MYVAR")})
+
+    with environment_update({"MYVAR": "0"}):
+        client.run("create . ")
+    with environment_update({"MYVAR": "1"}):
+        client.run("create . ")
+    client.run("upload hello*#*:*#* -r default")
+    assert str(client.out).count("(Uploaded)") == 5
 
 
 class UploadTest(unittest.TestCase):
@@ -215,13 +235,13 @@ class UploadTest(unittest.TestCase):
         client.run("create . --name foo --version 1.0")
 
         client.run("upload foo/1.0 -r default")
-        self.assertIn("Compressing recipe", client.out)
-        self.assertIn("Compressing package", str(client.out))
+        self.assertIn("foo/1.0: Compressing conan_sources.tgz", client.out)
+        self.assertIn("foo/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: "
+                      "Compressing conan_package.tgz", client.out)
 
         client.run("upload foo/1.0 -r default")
-        self.assertNotIn("Compressing recipe", client.out)
-        self.assertNotIn("Compressing package", str(client.out))
-        self.assertIn("already in server, skipping upload", str(client.out))
+        self.assertNotIn("Compressing", client.out)
+        self.assertIn("already in server, skipping upload", client.out)
 
     @pytest.mark.xfail(reason="No output json available yet for upload. Also old test, has to be "
                               "upgraded")

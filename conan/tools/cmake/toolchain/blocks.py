@@ -385,7 +385,7 @@ class AppleSystemBlock(Block):
         if host_os_version:
             # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
             # Despite the OSX part in the variable name(s) they apply also to other SDKs than
-            # macOS like iOS, tvOS, or watchOS.
+            # macOS like iOS, tvOS, watchOS or visionOS.
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
         return ctxt_toolchain
@@ -565,10 +565,10 @@ class ExtraFlagsBlock(Block):
 
     def context(self):
         # Now, it's time to get all the flags defined by the user
-        cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        cxxflags = self._toolchain.extra_cxxflags + self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
 
         # See https://github.com/conan-io/conan/issues/13374
@@ -734,23 +734,22 @@ class GenericSystemBlock(Block):
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
         os_build = self._conanfile.settings_build.get_safe("os")
-        return os_host in ('iOS', 'watchOS', 'tvOS') or (
+        return os_host in ('iOS', 'watchOS', 'tvOS', 'visionOS') or (
                 os_host == 'Macos' and (arch_host != arch_build or os_build != os_host))
 
     def _get_cross_build(self):
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain")
-        if user_toolchain is not None:
-            return None, None, None  # Will be provided by user_toolchain
 
         system_name = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_name")
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        assert hasattr(self._conanfile, "settings_build")
-        # TODO: Remove unused if
-        if hasattr(self._conanfile, "settings_build"):
+        if not user_toolchain:  # try to detect automatically
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
+            if arch_host == "armv8":
+                arch_host = {"Windows": "ARM64", "Macos": "arm64"}.get(os_host, "aarch64")
+
             if system_name is None:  # Try to deduce
                 _system_version = None
                 _system_processor = None
@@ -841,8 +840,23 @@ class ToolchainBlocks:
             for name, block in items:
                 self._blocks[name] = block(conanfile, toolchain)
 
-    def remove(self, name):
+    def keys(self):
+        return self._blocks.keys()
+
+    def items(self):
+        return self._blocks.items()
+
+    def remove(self, name, *args):
         del self._blocks[name]
+        for arg in args:
+            del self._blocks[arg]
+
+    def select(self, name, *args):
+        """
+        keep the blocks provided as arguments, remove the others
+        """
+        to_keep = [name] + list(args)
+        self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
 
     def __setitem__(self, name, block_type):
         # Create a new class inheriting Block with the elements of the provided one

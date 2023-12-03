@@ -90,7 +90,7 @@ class RecipeReference:
         return hash((self.name, self.version, self.user, self.channel))
 
     @staticmethod
-    def loads(rref):  # TODO: change this default to validate only on end points
+    def loads(rref):
         try:
             # timestamp
             tokens = rref.rsplit("%", 1)
@@ -134,6 +134,8 @@ class RecipeReference:
                                       "allowed by temporary config. This will break in later 2.X")
         if len(self_str) > 200:
             raise ConanException(f"Package reference too long >200 {self_str}")
+        if ":" in repr(self):
+            raise ConanException(f"Invalid recipe reference '{repr(self)}' is a package reference")
         if not allow_uppercase:
             validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}\Z")
         else:

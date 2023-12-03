@@ -1,7 +1,7 @@
 import fnmatch
 import json
 
-from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_SYSTEM_TOOL, \
+from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -25,10 +25,8 @@ class Remote:
     def __eq__(self, other):
         if other is None:
             return False
-        return self.name == other.name and \
-               self.url == other.url and \
-               self.verify_ssl == other.verify_ssl and \
-               self.disabled == other.disabled
+        return (self.name == other.name and self.url == other.url and
+                self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
         return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
@@ -88,12 +86,28 @@ class MultiPackagesList:
 
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
+            # We need to add the python_requires too
+            python_requires = node.get("python_requires")
+            if python_requires is not None:
+                for pyref, pyreq in python_requires.items():
+                    pyrecipe = pyreq["recipe"]
+                    if pyrecipe == RECIPE_EDITABLE:
+                        continue
+                    pyref = RecipeReference.loads(pyref)
+                    if any(r == "*" or r == pyrecipe for r in recipes):
+                        cache_list.add_refs([pyref])
+                    pyremote = pyreq["remote"]
+                    if pyremote:
+                        remote_list = pkglist.lists.setdefault(pyremote, PackagesList())
+                        remote_list.add_refs([pyref])
+
             recipe = node["recipe"]
-            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_SYSTEM_TOOL):
+            if recipe in (RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_PLATFORM):
                 continue
 
             ref = node["ref"]
             ref = RecipeReference.loads(ref)
+            ref.timestamp = node["rrev_timestamp"]
             recipe = recipe.lower()
             if any(r == "*" or r == recipe for r in recipes):
                 cache_list.add_refs([ref])
@@ -102,7 +116,7 @@ class MultiPackagesList:
             if remote:
                 remote_list = pkglist.lists.setdefault(remote, PackagesList())
                 remote_list.add_refs([ref])
-            pref = PkgReference(ref, node["package_id"], node["prev"])
+            pref = PkgReference(ref, node["package_id"], node["prev"], node["prev_timestamp"])
             binary_remote = node["binary_remote"]
             if binary_remote:
                 remote_list = pkglist.lists.setdefault(binary_remote, PackagesList())
@@ -165,7 +179,7 @@ class PackagesList:
                 if t is not None:
                     recipe.timestamp = t
                 result[recipe] = rrev_dict
-        return result.items()
+        return result
 
     @staticmethod
     def prefs(ref, recipe_bundle):
@@ -176,7 +190,7 @@ class PackagesList:
                 t = prev_bundle.get("timestamp")
                 pref = PkgReference(ref, package_id, prev, t)
                 result[pref] = prev_bundle
-        return result.items()
+        return result
 
     def serialize(self):
         return self.recipes

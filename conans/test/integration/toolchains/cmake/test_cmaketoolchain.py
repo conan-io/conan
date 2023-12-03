@@ -27,19 +27,35 @@ def test_cross_build():
         arch=armv8
         build_type=Release
         """)
+    embedwin = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+        """)
 
     client = TestClient(path_with_spaces=False)
 
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
         .with_generator("CMakeToolchain")
     client.save({"conanfile.py": conanfile,
-                "rpi": rpi_profile,
+                 "rpi": rpi_profile,
+                 "embedwin": embedwin,
                  "windows": windows_profile})
     client.run("install . --profile:build=windows --profile:host=rpi")
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
-    assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+
+    client.run("install . --profile:build=windows --profile:host=embedwin")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Windows)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR ARM64)" in toolchain
 
 
 def test_cross_build_linux_to_macos():
@@ -106,6 +122,41 @@ def test_cross_build_user_toolchain():
     assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
 
 
+def test_cross_build_user_toolchain_confs():
+    # When a user_toolchain is defined in [conf], but other confs are defined, they will be used
+    windows_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        """)
+    rpi_profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+        [conf]
+        tools.cmake.cmaketoolchain:user_toolchain+=rpi_toolchain.cmake
+        tools.cmake.cmaketoolchain:system_name=Linux
+        tools.cmake.cmaketoolchain:system_processor=aarch64
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                "rpi": rpi_profile,
+                 "windows": windows_profile})
+    client.run("install . --profile:build=windows --profile:host=rpi")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+
+
 def test_no_cross_build():
     windows_profile = textwrap.dedent("""
         [settings]
@@ -146,19 +197,35 @@ def test_cross_arch():
         compiler.libcxx=libstdc++11
         build_type=Release
         """)
+    profile_macos = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """)
 
     client = TestClient(path_with_spaces=False)
 
     conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
         .with_generator("CMakeToolchain")
     client.save({"conanfile.py": conanfile,
-                "linux64": build_profile,
+                 "linux64": build_profile,
+                 "macos": profile_macos,
                  "linuxarm": profile_arm})
     client.run("install . --profile:build=linux64 --profile:host=linuxarm")
     toolchain = client.load("conan_toolchain.cmake")
 
     assert "set(CMAKE_SYSTEM_NAME Linux)" in toolchain
-    assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR aarch64)" in toolchain
+
+    client.run("install . --profile:build=linux64 --profile:host=macos")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "set(CMAKE_SYSTEM_NAME Darwin)" in toolchain
+    assert "set(CMAKE_SYSTEM_PROCESSOR arm64)" in toolchain
 
 
 def test_no_cross_build_arch():
@@ -684,6 +751,7 @@ def test_android_legacy_toolchain_flag(cmake_legacy_toolchain):
         .with_generator("CMakeToolchain")
     client.save({"conanfile.py": conanfile})
     settings = "-s arch=x86_64 -s os=Android -s os.api_level=23 -c tools.android:ndk_path=/foo"
+    expected = None
     if cmake_legacy_toolchain is not None:
         settings += f" -c tools.android:cmake_legacy_toolchain={cmake_legacy_toolchain}"
         expected = "ON" if cmake_legacy_toolchain else "OFF"
@@ -1072,3 +1140,49 @@ def test_recipe_build_folders_vars():
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
+
+
+def test_extra_flags():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.extra_cxxflags = ["extra_cxxflags"]
+                tc.extra_cflags = ["extra_cflags"]
+                tc.extra_sharedlinkflags = ["extra_sharedlinkflags"]
+                tc.extra_exelinkflags = ["extra_exelinkflags"]
+                tc.generate()
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:cxxflags+=['cxxflags']
+        tools.build:cflags+=['cflags']
+        tools.build:sharedlinkflags+=['sharedlinkflags']
+        tools.build:exelinkflags+=['exelinkflags']
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('install . -pr=./profile')
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert 'string(APPEND CONAN_CXX_FLAGS " extra_cxxflags cxxflags")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
+
+
+def test_avoid_ovewrite_user_cmakepresets():
+    # https://github.com/conan-io/conan/issues/15052
+    c = TestClient()
+    c.save({"conanfile.txt": "",
+            "CMakePresets.json": "{}"})
+    c.run('install . -g CMakeToolchain', assert_error=True)
+    assert "Error in generator 'CMakeToolchain': Existing CMakePresets.json not generated" in c.out
+    assert "Use --output-folder or define a 'layout' to avoid collision" in c.out

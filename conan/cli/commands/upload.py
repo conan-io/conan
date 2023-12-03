@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
@@ -9,20 +9,32 @@ from conan.errors import ConanException
 
 
 def summary_upload_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
-    cli_out_write("Upload summary:")
+    ConanOutput().subtitle("Upload summary")
     info = results["results"]
-    result = {}
-    for remote, remote_info in info.items():
-        new_info = result.setdefault(remote, {})
-        for ref, content in remote_info.items():
-            for rev, rev_content in content["revisions"].items():
-                pkgids = rev_content.get('packages')
-                if pkgids:
-                    new_info.setdefault(f"{ref}:{rev}", list(pkgids))
-    print_serial(result)
+
+    def format_upload(item):
+        if isinstance(item, dict):
+            result = {}
+            for k, v in item.items():
+                if isinstance(v, dict):
+                    v.pop("info", None)
+                    v.pop("timestamp", None)
+                    v.pop("files", None)
+                    upload_value = v.pop("upload", None)
+                    if upload_value is not None:
+                        msg = "Uploaded" if upload_value else "Skipped, already in server"
+                        force_upload = v.pop("force_upload", None)
+                        if force_upload:
+                            msg += " - forced"
+                        k = f"{k} ({msg})"
+                result[k] = format_upload(v)
+            return result
+        return item
+    info = {remote: format_upload(values) for remote, values in info.items()}
+    print_serial(info)
 
 
 @conan_command(group="Creator", formatters={"text": summary_upload_list,
@@ -82,20 +94,20 @@ def upload(conan_api: ConanAPI, parser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     if package_list.recipes:
-        if args.check:
-            conan_api.cache.check_integrity(package_list)
-        # Check if the recipes/packages are in the remote
-        conan_api.upload.check_upstream(package_list, remote, args.force)
-
         # If only if search with "*" we ask for confirmation
         if not args.list and not args.confirm and "*" in args.pattern:
             _ask_confirm_upload(conan_api, package_list)
 
+        if args.check:
+            conan_api.cache.check_integrity(package_list)
+        # Check if the recipes/packages are in the remote
+        conan_api.upload.check_upstream(package_list, remote, enabled_remotes, args.force)
         conan_api.upload.prepare(package_list, enabled_remotes, args.metadata)
 
         if not args.dry_run:
             conan_api.upload.upload(package_list, remote)
-            conan_api.upload.upload_backup_sources(package_list)
+            backup_files = conan_api.upload.get_backup_sources(package_list)
+            conan_api.upload.upload_backup_sources(backup_files)
     elif args.list:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded
@@ -111,17 +123,22 @@ def upload(conan_api: ConanAPI, parser, *args):
     }
 
 
-def _ask_confirm_upload(conan_api, upload_data):
+def _ask_confirm_upload(conan_api, package_list):
     ui = UserInput(conan_api.config.get("core:non_interactive"))
-    for ref, bundle in upload_data.refs():
+    for ref, bundle in package_list.refs().items():
         msg = "Are you sure you want to upload recipe '%s'?" % ref.repr_notime()
+        ref_dict = package_list.recipes[str(ref)]["revisions"]
         if not ui.request_boolean(msg):
-            bundle["upload"] = False
-            for _, prev_bundle in upload_data.prefs(ref, bundle):
-                prev_bundle["upload"] = False
-
+            ref_dict.pop(ref.revision)
+            # clean up empy refs
+            if not ref_dict:
+                package_list.recipes.pop(str(ref))
         else:
-            for pref, prev_bundle in upload_data.prefs(ref, bundle):
+            for pref, prev_bundle in package_list.prefs(ref, bundle).items():
                 msg = "Are you sure you want to upload package '%s'?" % pref.repr_notime()
+                pkgs_dict = ref_dict[ref.revision]["packages"]
                 if not ui.request_boolean(msg):
-                    prev_bundle["upload"] = False
+                    pref_dict = pkgs_dict[pref.package_id]["revisions"]
+                    pref_dict.pop(pref.revision)
+                    if not pref_dict:
+                        pkgs_dict.pop(pref.package_id)

@@ -7,7 +7,7 @@ from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_SYSTEM_TOOL, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
+    BINARY_PLATFORM, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
@@ -47,10 +47,12 @@ class _PackageBuilder(object):
         recipe_build_id = build_id(conanfile)
         pref = package_layout.reference
         if recipe_build_id is not None and pref.package_id != recipe_build_id:
-            package_layout.build_id = recipe_build_id
+            conanfile.output.info(f"build_id() computed {recipe_build_id}")
             # check if we already have a package with the calculated build_id
             recipe_ref = pref.ref
             build_prev = self._cache.get_matching_build_id(recipe_ref, recipe_build_id)
+            if build_prev is None:  # Only store build_id of the first one actually building it
+                package_layout.build_id = recipe_build_id
             build_prev = build_prev or pref
 
             # We are trying to build a package id different from the one that has the
@@ -65,10 +67,11 @@ class _PackageBuilder(object):
             conanfile.output.warning("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
+            skip_build = False
 
         if skip_build and os.path.exists(build_folder):
             conanfile.output.info("Won't be built, using previous build folder as defined "
-                                  "in build_id()")
+                                  f"in build_id(): {build_folder}")
 
         return build_folder, skip_build
 
@@ -136,7 +139,6 @@ class _PackageBuilder(object):
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
         with chdir(base_build):
-            conanfile.output.info('Building your package in %s' % base_build)
             try:
                 src = base_source if getattr(conanfile, 'no_copy_source', False) else base_build
                 conanfile.folders.set_base_source(src)
@@ -147,6 +149,7 @@ class _PackageBuilder(object):
                 conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
 
                 if not skip_build:
+                    conanfile.output.info('Building your package in %s' % base_build)
                     # In local cache, install folder always is build_folder
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
@@ -165,11 +168,12 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app):
+    def __init__(self, app, global_conf):
         self._app = app
         self._cache = app.cache
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
+        self._global_conf = global_conf
 
     def _install_source(self, node, remotes):
         conanfile = node.conanfile
@@ -179,6 +183,9 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
+        if node.binary == BINARY_EDITABLE:
+            return
+
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
@@ -269,7 +276,7 @@ class BinaryInstaller:
         download_count = len(downloads)
         plural = 's' if download_count != 1 else ''
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
-        parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
+        parallel = self._global_conf.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
@@ -287,7 +294,7 @@ class BinaryInstaller:
         self._remote_manager.get_package(node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, handled_count, total_count):
-        if package.binary == BINARY_SYSTEM_TOOL:
+        if package.binary == BINARY_PLATFORM:
             return
 
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
@@ -320,6 +327,7 @@ class BinaryInstaller:
         elif package.binary == BINARY_CACHE:
             node = package.nodes[0]
             pref = node.pref
+            self._cache.update_package_lru(pref)
             assert node.prev, "PREV for %s is None" % str(pref)
             node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
@@ -364,6 +372,7 @@ class BinaryInstaller:
             # New editables mechanism based on Folders
             conanfile.folders.set_base_package(output_folder or rooted_base_path)
             conanfile.folders.set_base_folders(base_path, output_folder)
+            conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"

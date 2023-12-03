@@ -56,3 +56,18 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         self.assertIn('conanfile.py: Buffer got msgs Hello', client.out)
+
+    def test_custom_stream_stderr(self):
+        conanfile = textwrap.dedent("""
+            from io import StringIO
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def source(self):
+                    my_buf = StringIO()
+                    self.run('echo Hello 1>&2', stderr=my_buf)
+                    self.output.info("Buffer got stderr msgs {}".format(my_buf.getvalue()))
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+        self.assertIn('conanfile.py: Buffer got stderr msgs Hello', client.out)

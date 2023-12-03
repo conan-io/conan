@@ -126,7 +126,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
     os.unlink(filename)
 
 
-def ftp_download(conanfile, host, filename, login='', password=''):
+def ftp_download(conanfile, host, filename, login='', password='', secure=False):
     """
     Ftp download of a file. Retrieves a file from an FTP server. This doesn’t support SSL, but you
     might implement it yourself using the standard Python FTP library.
@@ -142,7 +142,11 @@ def ftp_download(conanfile, host, filename, login='', password=''):
     import ftplib
     ftp = None
     try:
-        ftp = ftplib.FTP(host)
+        if secure:
+            ftp = ftplib.FTP_TLS(host)
+            ftp.prot_p()
+        else:
+            ftp = ftplib.FTP(host)
         ftp.login(login, password)
         filepath, filename = os.path.split(filename)
         if filepath:
@@ -193,6 +197,7 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     retry = config.get("tools.files.download:retry", check_type=int, default=retry)
     retry_wait = retry_wait if retry_wait is not None else 5
     retry_wait = config.get("tools.files.download:retry_wait", check_type=int, default=retry_wait)
+    verify = config.get("tools.files.download:verify", check_type=bool, default=verify)
 
     filename = os.path.abspath(filename)
     downloader = SourcesCachingDownloader(conanfile)

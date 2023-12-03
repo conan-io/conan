@@ -45,6 +45,8 @@ class ConanProxy:
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
 
+        self._cache.update_recipe_lru(ref)
+
         # TODO: cache2.0: check with new --update flows
         conanfile_path = recipe_layout.conanfile()
 
@@ -135,7 +137,7 @@ class ConanProxy:
 
     def _download(self, ref, remote):
         assert ref.revision
+        assert ref.timestamp
         self._remote_manager.get_recipe(ref, remote)
-        self._cache.update_recipe_timestamp(ref)
         output = ConanOutput(scope=str(ref))
         output.info("Downloaded recipe revision %s" % ref.revision)

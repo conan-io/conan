@@ -1,3 +1,4 @@
+import copy
 import re
 import os
 import fnmatch
@@ -43,7 +44,7 @@ BUILT_IN_CONFS = {
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Gzip compression
-    "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
+    "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -65,15 +66,18 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake:cmake_program": "Path to CMake executable",
-    "tools.cmake:install_strip": "Add --strip to cmake.instal()",
+    "tools.cmake:install_strip": "Add --strip to cmake.install()",
+    "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.files.download:verify": "If set, overrides recipes on whether to perform SSL verification for their downloaded files. Only recommended to be set while testing",
+    "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
-    "tools.google.bazel:configs": "Define Bazel config file",
-    "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
+    "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
+    "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
@@ -86,7 +90,7 @@ BUILT_IN_CONFS = {
     "tools.microsoft.bash:active": "If Conan is already running inside bash terminal in Windows",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
-    "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
+    "tools.system.package_manager:tool": "Default package manager tool: 'apk', 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
@@ -150,7 +154,8 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path, self._update)
+        # Using copy for when self._value is a mutable list
+        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
 
     def dumps(self):
         if self._value is None:
@@ -268,6 +273,9 @@ class Conf:
         """
         return other._values == self._values
 
+    def clear(self):
+        self._values.clear()
+
     def validate(self):
         for conf in self._values:
             self._check_conf_name(conf)
@@ -285,6 +293,7 @@ class Conf:
         :param default: Default value in case of conf does not have the conf_name key.
         :param check_type: Check the conf type(value) is the same as the given by this param.
                            There are two default smart conversions for bool and str types.
+        :param choices: list of possible values this conf can have, if value not in it, errors.
         """
         # Skipping this check only the user.* configurations
         self._check_conf_name(conf_name)
@@ -329,7 +338,7 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = self._values.copy()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
         return c
 
     def dumps(self):
@@ -470,10 +479,12 @@ class Conf:
         # Reading the list of all the configurations selected by the user to use for the package_id
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
-            value = self.get(conf_name)
-            # Pruning any empty values, those should not affect package ID
-            if value:
-                result.define(conf_name, value)
+            matching_confs = [c for c in self._values if re.match(conf_name, c)] or [conf_name]
+            for name in matching_confs:
+                value = self.get(name)
+                # Pruning any empty values, those should not affect package ID
+                if value:
+                    result.define(name, value)
         return result
 
     def set_relative_base_folder(self, folder):

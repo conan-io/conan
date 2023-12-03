@@ -1,6 +1,10 @@
+import platform
 import textwrap
 
+import pytest
+
 from conan.tools.meson import MesonToolchain
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -165,3 +169,114 @@ def test_deactivate_nowrap():
     content = t.load(MesonToolchain.native_filename)
     assert "wrap_mode " not in content
     assert "nofallback" not in content
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
+@pytest.mark.parametrize("build_type,runtime,vscrt", [
+    ("Debug", "dynamic", "mdd"),
+    ("Debug", "static", "mtd"),
+    ("Release", "dynamic", "md"),
+    ("Release", "static", "mt")
+])
+def test_clang_cl_vscrt(build_type, runtime, vscrt):
+    profile = textwrap.dedent(f"""
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type={build_type}
+        compiler=clang
+        compiler.runtime={runtime}
+        compiler.runtime_version=v143
+        compiler.version=16
+
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Visual Studio 17
+
+        [buildenv]
+        CC=clang-cl
+        CXX=clang-cl
+   """)
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
+            "profile": profile})
+
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert f"b_vscrt = '{vscrt}'" in content
+
+
+def test_env_vars_from_build_require():
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    import os
+
+    class HelloConan(ConanFile):
+        name = 'hello_compiler'
+        version = '1.0'
+        def package_info(self):
+            self.buildenv_info.define("CC", "CC_VALUE")
+            self.buildenv_info.define("CC_LD", "CC_LD_VALUE")
+            self.buildenv_info.define("CXX", "CXX_VALUE")
+            self.buildenv_info.define("CXX_LD", "CXX_LD_VALUE")
+            self.buildenv_info.define("AR", "AR_VALUE")
+            self.buildenv_info.define("STRIP", "STRIP_VALUE")
+            self.buildenv_info.define("AS", "AS_VALUE")
+            self.buildenv_info.define("WINDRES", "WINDRES_VALUE")
+            self.buildenv_info.define("PKG_CONFIG", "PKG_CONFIG_VALUE")
+            self.buildenv_info.define("LD", "LD_VALUE")
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class HelloConan(ConanFile):
+        name = 'consumer'
+        version = '1.0'
+        generators = "MesonToolchain"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def requirements(self):
+            self.tool_requires("hello_compiler/1.0", )
+    """)
+    # Now, let's check how all the build env variables are applied at consumer side
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -pr:h=default -pr:b=default")
+    content = client.load("conan_meson_native.ini")
+    assert "c = 'CC_VALUE'" in content
+    assert "cpp = 'CXX_VALUE'" in content
+    assert "ld = 'LD_VALUE'" in content
+    assert "c_ld = 'CC_LD_VALUE'" in content
+    assert "cpp_ld = 'CXX_LD_VALUE'" in content
+    assert "ar = 'AR_VALUE'" in content
+    assert "strip = 'STRIP_VALUE'" in content
+    assert "as = 'AS_VALUE'" in content
+    assert "windres = 'WINDRES_VALUE'" in content
+    assert "pkgconfig = 'PKG_CONFIG_VALUE'" in content
+
+
+def test_check_c_cpp_ld_list_formats():
+    # Issue related: https://github.com/conan-io/conan/issues/14028
+    profile = textwrap.dedent("""
+       [settings]
+       os=Windows
+       arch=x86_64
+       compiler=gcc
+       compiler.version=9
+       compiler.cppstd=17
+       compiler.libcxx=libstdc++11
+       build_type=Release
+       [buildenv]
+       CC=aarch64-poky-linux-gcc  -mcpu=cortex-a53 -march=armv8-a+crc+crypto
+       CXX=aarch64-poky-linux-g++  -mcpu=cortex-a53 -march=armv8-a+crc+crypto
+       LD=aarch64-poky-linux-ld  --sysroot=/opt/sysroots/cortexa53-crypto-poky-linux
+       """)
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
+            "profile": profile})
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
+    assert "c = ['aarch64-poky-linux-gcc', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
+    assert "cpp = ['aarch64-poky-linux-g++', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
+    assert "ld = ['aarch64-poky-linux-ld', '--sysroot=/opt/sysroots/cortexa53-crypto-poky-linux']" in content
