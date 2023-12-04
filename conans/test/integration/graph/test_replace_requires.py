@@ -104,6 +104,9 @@ class TestReplaceRequires:
     ("pkg/*:pid1", "pkg/0.1"),
     ("pkg/*:pid1", "pkg/0.1:pid2"),
     ("pkg/*", "pkg/0.1:pid2"),
+    (":", ""),
+    ("pkg/version:pid", ""),
+    ("pkg/version:pid", ":")
 ])
 def test_replace_requires_errors(pattern, replace):
     c = TestClient()
