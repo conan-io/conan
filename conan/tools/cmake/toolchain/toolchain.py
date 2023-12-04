@@ -215,20 +215,24 @@ class CMakeToolchain(object):
             else:
                 cache_variables[name] = value
 
-        # FIXME: think an alternative way of getting the
-        #  VirtualBuildEnv and VirtualRunEnv and avoid this pattern
-        prev_status = self._conanfile.virtualbuildenv
-        build_env = VirtualBuildEnv(self._conanfile).vars()
-        self._conanfile.virtualbuildenv = prev_status
+        buildenv, runenv = None, None
 
-        prev_status = self._conanfile.virtualrunenv
-        run_env = VirtualRunEnv(self._conanfile).vars()
-        self._conanfile.virtualrunenv = prev_status
+        if self._conanfile.conf.get("tools.cmake.cmakepresets:environment", default=True,
+                                    check_type=bool):
+            # FIXME: think an alternative way of getting the
+            #  VirtualBuildEnv and VirtualRunEnv and avoid this pattern
+            prev_status = self._conanfile.virtualbuildenv
+            build_env = VirtualBuildEnv(self._conanfile).vars()
+            self._conanfile.virtualbuildenv = prev_status
 
-        buildenv = {name: value for name, value in
-                    build_env.items(variable_reference="$penv{{{name}}}")}
-        runenv = {name: value for name, value in
-                  run_env.items(variable_reference="$penv{{{name}}}")}
+            prev_status = self._conanfile.virtualrunenv
+            run_env = VirtualRunEnv(self._conanfile).vars()
+            self._conanfile.virtualrunenv = prev_status
+
+            buildenv = {name: value for name, value in
+                        build_env.items(variable_reference="$penv{{{name}}}")}
+            runenv = {name: value for name, value in
+                      run_env.items(variable_reference="$penv{{{name}}}")}
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
                             self.user_presets_path, self.presets_prefix, buildenv, runenv)

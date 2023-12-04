@@ -1427,7 +1427,7 @@ def test_redirect_stdout():
 
 
 @pytest.mark.tool("cmake", "3.23")
-def test_add_buildenv_to_configure_preset():
+def test_add_env_to_presets():
     c = TestClient()
 
     tool = textwrap.dedent(r"""
@@ -1501,6 +1501,15 @@ def test_add_buildenv_to_configure_preset():
 
     c.run("create test_tool.py --name=mytesttool")
     c.run("create test_tool.py --name=mytesttool -s build_type=Debug")
+
+    # do a first conann install with env disabled just to test that the conf works
+    c.run("install . -g CMakeToolchain -g CMakeDeps -c tools.cmake.cmakepresets:environment=False")
+
+    presets_path = os.path.join("build", "Release", "generators", "CMakePresets.json") \
+        if platform.system() != "Windows" else os.path.join("build", "generators", "CMakePresets.json")
+    presets = json.loads(c.load(presets_path))
+
+    assert presets["configurePresets"][0].get("env") is None
 
     c.run("install . -g CMakeToolchain -g CMakeDeps")
     c.run("install . -g CMakeToolchain -g CMakeDeps -s:h build_type=Debug")
