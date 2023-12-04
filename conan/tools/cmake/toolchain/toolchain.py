@@ -217,8 +217,8 @@ class CMakeToolchain(object):
 
         buildenv, runenv = None, None
 
-        if self._conanfile.conf.get("tools.cmake.cmakepresets:environment", default=True,
-                                    check_type=bool):
+        if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
+                                    check_type=str, choices=("disabled", "")) != "disabled":
             # FIXME: think an alternative way of getting the
             #  VirtualBuildEnv and VirtualRunEnv and avoid this pattern
             prev_status = self._conanfile.virtualbuildenv

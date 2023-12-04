@@ -1502,8 +1502,8 @@ def test_add_env_to_presets():
     c.run("create test_tool.py --name=mytesttool")
     c.run("create test_tool.py --name=mytesttool -s build_type=Debug")
 
-    # do a first conann install with env disabled just to test that the conf works
-    c.run("install . -g CMakeToolchain -g CMakeDeps -c tools.cmake.cmakepresets:environment=False")
+    # do a first conan install with env disabled just to test that the conf works
+    c.run("install . -g CMakeToolchain -g CMakeDeps -c tools.cmake.cmaketoolchain:presets_environment=disabled")
 
     presets_path = os.path.join("build", "Release", "generators", "CMakePresets.json") \
         if platform.system() != "Windows" else os.path.join("build", "generators", "CMakePresets.json")
