@@ -373,7 +373,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
-                 default_server_user=None):
+                 default_server_user=None, light=False):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -423,7 +423,11 @@ class TestClient(object):
         self.inputs = inputs or []
 
         # create default profile
-        text = default_profiles[platform.system()]
+        if light:
+            text = "[settings]\nos=Linux"  # Needed at least build-os
+            save(self.cache.settings_path, "os: [Linux]")
+        else:
+            text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)
 
     def load(self, filename):
@@ -501,6 +505,8 @@ class TestClient(object):
                 with mock.patch("getpass.getpass", mock_get_pass):
                     yield
 
+    _conan_commands = None
+
     def _run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -512,6 +518,12 @@ class TestClient(object):
         try:
             self.api = ConanAPI(cache_folder=self.cache_folder)
             command = Cli(self.api)
+            if TestClient._conan_commands is None:
+                command._add_commands()
+                TestClient._conan_commands = command._commands
+            else:
+                command.load_commands = False
+                command._commands = TestClient._conan_commands
         except ConanException as e:
             sys.stderr.write("Error in Conan initialization: {}".format(e))
             return ERROR_GENERAL

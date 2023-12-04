@@ -33,6 +33,7 @@ class Cli:
         self._conan_api = conan_api
         self._groups = defaultdict(list)
         self._commands = {}
+        self.load_commands = True
 
     def _add_commands(self):
         conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
@@ -146,7 +147,8 @@ class Cli:
         methods
         """
         output = ConanOutput()
-        self._add_commands()
+        if self.load_commands:
+            self._add_commands()
         try:
             command_argument = args[0][0]
         except IndexError:  # No parameters
