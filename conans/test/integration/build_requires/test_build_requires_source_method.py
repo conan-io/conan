@@ -87,6 +87,37 @@ class TestBuildEnvSource:
         c.run("source .")
         assert "MY-TOOL! tool/0.1" in c.out
 
+    def test_source_buildenv_cmake_layout(self, client):
+        c = client
+        pkg = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+            import platform
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                tool_requires = "tool/0.1"
+                settings = "build_type"
+
+                def layout(self):
+                    cmake_layout(self)
+                    bt = self.settings.get_safe("build_type") or "Release"
+                    self.folders.generators = os.path.join(bt, "generators")
+
+                def source(self):
+                    cmd = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"
+                    self.run(cmd)
+            """)
+        c.save({"conanfile.py": pkg})
+        c.run("create .")
+        assert "MY-TOOL! tool/0.1" in c.out
+
+        c.run("install .")
+        c.run("source .")
+        assert "MY-TOOL! tool/0.1" in c.out
+
     def test_source_buildenv_optout(self, client):
         c = client
 
