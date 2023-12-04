@@ -171,7 +171,7 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
-            self._resolve_replace_requires(node, require, profile_build, profile_host)
+            self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -235,7 +235,7 @@ class DepsGraphBuilder(object):
                             require.ref.revision = d.revision
                             return d, ConanFile(str(d)), RECIPE_PLATFORM, None
 
-    def _resolve_replace_requires(self, node, require, profile_build, profile_host):
+    def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
         replacements = profile.replace_tool_requires if require.build else profile.replace_requires
         if not replacements:
@@ -254,6 +254,7 @@ class DepsGraphBuilder(object):
                 continue
             if pattern.channel != "*" and pattern.channel != require.ref.channel:
                 continue
+            original_require = repr(require.ref)
             if alternative_ref.version != "*":
                 require.ref.version = alternative_ref.version
             if alternative_ref.user != "*":
@@ -265,6 +266,7 @@ class DepsGraphBuilder(object):
             if require.ref.name != alternative_ref.name:  # This requires re-doing dict!
                 node.conanfile.requires.reindex(require, alternative_ref.name)
             require.ref.name = alternative_ref.name
+            graph.replaced_requires[original_require] = repr(require.ref)
             break  # First match executes the alternative and finishes checking others
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):

@@ -56,6 +56,11 @@ def print_graph_basic(graph):
         for k, v in sorted(reqs_to_print.items()):
             output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
 
+    if graph.replaced_requires:
+        output.info("Replaced requires", Color.BRIGHT_YELLOW)
+        for k, v in graph.replaced_requires.items():
+            output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
+
     _format_resolved("Resolved alias", graph.aliased)
     if graph.aliased:
         output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
