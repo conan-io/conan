@@ -1,59 +1,11 @@
-from conan.errors import ConanInvalidConfiguration, ConanException
+from conan.errors import ConanInvalidConfiguration
 from conan.tools.microsoft import MSBuild
 from conan.tools.apple import XcodeBuild
 
-import glob
 import os.path
 
-# Dictionary for version to year lookups
+# Dictionary for MSVC version's to year lookups
 PREMAKE_VS_VERSION = {
-    # Visual Studio -> Year
-    # https://en.wikipedia.org/wiki/Visual_Studio#History
-    '8': '2005',
-    '9': '2008',
-    '10': '2010',
-    '11': '2012',
-    '12': '2013',
-    '14': '2015',
-    '15': '2017',
-    '16': '2019',
-    '17': '2022',
-
-    # MSVC -> Year
-    # https://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B#Internal_version_numbering
-    '14.0': '2005',
-    '15.0': '2008',
-    '16.0': '2010',
-    '17.0': '2012',
-    '18.0': '2013',
-    '19.0': '2015',
-    '19.1': '2017',
-    '19.10': '2017',
-    '19.11': '2017',
-    '19.12': '2017',
-    '19.13': '2017',
-    '19.14': '2017',
-    '19.16': '2017',
-    '19.2': '2019',
-    '19.20': '2019',
-    '19.21': '2019',
-    '19.22': '2019',
-    '19.23': '2019',
-    '19.24': '2019',
-    '19.25': '2019',
-    '19.26': '2019',
-    '19.27': '2019',
-    '19.28': '2019',
-    '19.29': '2019',
-    '19.3': '2022',
-    '19.30': '2022',
-    '19.32': '2022',
-    '19.33': '2022',
-    '19.34': '2022',
-    '19.35': '2022',
-    '19.36': '2022',
-
-    # MSVC without dot
     '140': '2005',
     '150': '2008',
     '160': '2010',
@@ -64,7 +16,6 @@ PREMAKE_VS_VERSION = {
     '192': '2019',
     '193': '2022',
 }
-
 
 class Premake:
     def __init__(self, conanfile):
@@ -83,16 +34,12 @@ class Premake:
         self.build_targets = []             # Name of projects that should be build (Will build all if empty)
 
         # We will find the right action depending on OS and Compiler Version
-        os_name = str(self._conanfile.settings.os)
-        if os_name == 'Windows':
+        if self._conanfile.settings.os == 'Windows':
             # Visual studio version detection
-            cxx_version = str(self._conanfile.settings.compiler.version)
-            if cxx_version not in PREMAKE_VS_VERSION:
-                raise ConanInvalidConfiguration(
-                    f'Compiler / VisualStudio version "{cxx_version}" is not supported by premake5'
-                    )
-            self.action = f'vs{PREMAKE_VS_VERSION[cxx_version]}'
-        elif os_name == 'Linux':
+            msvc_version = self._get_msvc_version()
+            if msvc_version in PREMAKE_VS_VERSION:
+                self.action = f'vs{PREMAKE_VS_VERSION[msvc_version]}'
+        elif self._conanfile.settings.os == 'Linux':
             self.action = 'gmake2'
             # Detect gcc or clang
             cxx_name = str(self._conanfile.settings.compiler)
@@ -100,16 +47,37 @@ class Premake:
                 self.compiler = 'gcc'
             elif 'clang' in cxx_name:
                 self.compiler = 'clang'
-        elif os_name == 'OSX':
+        elif self._conanfile.settings.os == 'Macos':
             # No detection for OSX required currently
             self.action = 'xcode4'
-        else:
+
+    def validate(self):
+        # Validate visual studio version on windows
+        if self._conanfile.settings.os == 'Windows':
+            msvc_version = self._get_msvc_version()
+            if msvc_version not in PREMAKE_VS_VERSION:
+                raise ConanInvalidConfiguration(
+                    f'Compiler / VisualStudio version "{msvc_version}" is not supported by premake5'
+                    )
+            
+        # Validate compiler
+        if self._conanfile.settings.os != 'Windows' and self._conanfile.settings.os != 'Linux' and self._conanfile.settings.os != 'Macos':
             raise ConanInvalidConfiguration(
-                f'The operation system with name {os_name} is not supported by premake5'
+                f'The operation system with name {str(self._conanfile.settings.os)} is not supported by premake5'
                 )
 
     def _expand_args(self, args):
         return ' '.join([f'--{key}={value}' for key, value in args.items()])
+    
+    def _get_msvc_version(self):
+        # We want to convert msvc versions like "19.1" and "19.10" to "191"
+        # We remove the (all) dots and reduce the the string to 3 digits by striping the last character if too many
+        msvc_version = str(self._conanfile.settings.compiler.version)
+        msvc_version = msvc_version.replace('.', '')
+        if len(msvc_version) == 4:
+            msvc_version = msvc_version[0:-1]
+
+        return msvc_version
 
     def configure(self):
         # Generate options depending on system
@@ -118,63 +86,41 @@ class Premake:
         if self.compiler:
             premake_options["cc"] = self.compiler
 
-        # TODO: Set PREMAKE_PATH env to binary bindirs (maybe)
-
         # Build premake command
         premake_command = f'premake5 {self._expand_args(premake_options)} {self.action} {self._expand_args(self.arguments)}'
         self._conanfile.run(premake_command, cwd=self._conanfile.recipe_folder)
 
     def build(self):
-        os_name = str(self._conanfile.settings.os)
-        if os_name in ('Windows', 'OSX'):
-            # Create os dependant file pattern and build provider
+        if self._conanfile.settings.os == 'Windows' or self._conanfile.settings.os == 'Macos':
             proj_build_provider = None
-            proj_file_pattern = None
-            if os_name == 'Windows':
-                proj_build_provider = MSBuild(self._conanfile)
-                proj_file_pattern = '*.sln'
-            elif os_name == 'OSX':
-                proj_build_provider = XcodeBuild(self._conanfile)
-                proj_file_pattern = '*.xcodeproj'
+            proj_file = str(self.project_name)
 
-            # Find project file
-            proj_file = self.project_name
-            if not proj_file:
-                proj_files = glob.glob(
-                    os.path.join(self._conanfile.recipe_folder, proj_file_pattern)
-                    )
-                proj_files_count = len(proj_files)
-                if proj_files_count == 0:
-                    raise ConanException(
-                        f'Can\'t auto detect project file ({proj_file_pattern})!\n'
-                        f'Please check if the project was generate properly or '
-                        f'provide it manually (using project_name)'
-                        )
-                elif proj_files_count == 1:
-                    proj_file = proj_files[0]
-                else:
-                    proj_file = proj_files[0]
-                    self._conanfile.output.warn(
-                        f'Detected multiple project files ({proj_file_pattern})!\n'
-                        f'Using the first detection "{proj_file}"!'
-                        )
+            # Create os dependant file pattern and build provider
+            if self._conanfile.settings.os == 'Windows':
+                proj_build_provider = MSBuild(self._conanfile)
+                if not proj_file.lower().endswith('.sln'):
+                    proj_file = f'{proj_file}.sln'
+                if not os.path.isabs(proj_file):
+                    proj_file = f'{self._conanfile.recipe_folder}{os.path.sep}{proj_file}'
+            elif self._conanfile.settings.os == 'Macos':
+                proj_build_provider = XcodeBuild(self._conanfile)
 
             # Invoke
             if len(self.build_targets) > 0:
-                if os_name == 'Windows':
+                if self._conanfile.settings.os == 'Windows':
                     proj_build_provider.build(proj_file, self.build_targets)
-                elif os_name == 'OSX':
+                elif self._conanfile.settings.os == 'Macos':
                     for target in self.build_targets:
                         proj_build_provider(proj_file, target)
             else:
                 proj_build_provider.build(proj_file)
 
-        elif os_name == 'Linux':
+        elif self._conanfile.settings.os == 'Linux':
             # Detect build config
             config = self.build_type
             if not config:
                 config = self._conanfile.settings.get_safe("build_type")
-
+            
             # Generate and execute the make command
             if len(self.build_targets) > 0:
                 for target in self.build_targets:
