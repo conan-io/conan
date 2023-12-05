@@ -224,4 +224,5 @@ def test_graph_info_html_error_range_quoting():
     tc.run("export libpng")
 
     tc.run("graph info --requires=zlib/0.1 --requires=libpng/1.0 --format=html", assert_error=True)
-    assert 'label: "zlib/[&gt;=1.0]"' not in tc.out
+    assert 'zlib/[&gt;=1.0]' not in tc.out
+    assert r'"zlib/[\u003e=1.0]"' in tc.out
