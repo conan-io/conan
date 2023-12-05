@@ -124,8 +124,8 @@ class Premake:
             # Generate and execute the make command
             if len(self.build_targets) > 0:
                 for target in self.build_targets:
-                    make_command = f'make "config={self.build_type}" "{target}"'
+                    make_command = f'make "config={config}" "{target}"'
                     self._conanfile.run(make_command, cwd=self._conanfile.recipe_folder)
             else:
-                make_command = f'make "config={self.build_type}" all'
+                make_command = f'make "config={config}" all'
                 self._conanfile.run(make_command, cwd=self._conanfile.recipe_folder)
