@@ -73,6 +73,17 @@ class UserRequirementsDict(object):
     def values(self):
         return self._data.values()
 
+    def __contains__(self, item):
+        try:
+            self.get(item)
+            return True
+        except KeyError:
+            return False
+        except ConanException:
+            # ConanException is raised when there are more than one matching the filters
+            # so it's definitely in the dict
+            return True
+
 
 class ConanFileDependencies(UserRequirementsDict):
 
