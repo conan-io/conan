@@ -115,7 +115,7 @@ class _CMakePresets:
             "generator": generator,
             "cacheVariables": cache_variables,
         }
-        if "Ninja" in generator and is_msvc(conanfile):
+        if is_msvc(conanfile):
             toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
             if toolset_arch:
                 toolset_arch = "host={}".format(toolset_arch)
