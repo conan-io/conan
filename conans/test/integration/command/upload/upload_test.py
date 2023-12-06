@@ -15,6 +15,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
+from utils.test_files import temp_folder
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy
@@ -231,6 +232,8 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
+        download_cache = temp_folder()
+        client.save_home({"global.conf": f"core.download:download_cache={download_cache}"})
         ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
         client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")

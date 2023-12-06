@@ -38,6 +38,7 @@ class ConanFileHelpers:
 
 class ConanApp(object):
     def __init__(self, cache_folder, global_conf):
+        self.global_conf = global_conf
 
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, global_conf)

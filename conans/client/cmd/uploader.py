@@ -4,6 +4,7 @@ import time
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
+from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
@@ -244,6 +245,18 @@ class UploadExecutor:
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         self._output.debug(f"Upload {pref} in {duration} time")
+        for cache_file in cache_files:
+            self._local_cache_file(pref, cache_file, remote)
+
+    def _local_cache_file(self, pref, cache_file, remote):
+        approved_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt"]
+        if cache_file not in approved_files:
+            return
+        _download_cache = self._app.global_conf.get("core.download:download_cache")
+        if True or _download_cache and os.path.isabs(_download_cache):
+            url = self._app.remote_manager._auth_manager._get_rest_client(remote)._get_api().router.package_file(pref, cache_file)
+            cached_path = DownloadCache(_download_cache).cached_path(url)
+            self._output.info(f"Caching future {url} to local cache '{cached_path}'")
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
