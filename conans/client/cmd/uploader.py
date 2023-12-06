@@ -253,10 +253,10 @@ class UploadExecutor:
         if cache_file not in approved_files:
             return
         _download_cache = self._app.global_conf.get("core.download:download_cache")
-        if True or _download_cache and os.path.isabs(_download_cache):
+        if _download_cache and os.path.isabs(_download_cache):
             url = self._app.remote_manager._auth_manager._get_rest_client(remote)._get_api().router.package_file(pref, cache_file)
             cached_path = DownloadCache(_download_cache).cached_path(url)
-            self._output.info(f"Caching future {url} to local cache '{cached_path}'")
+            self._output.info(f"Caching {cache_file} to local cache '{cached_path}' - was uploaded to {url}")
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):

@@ -238,6 +238,8 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
 
+        assert "Caching conan_package.tgz to local cache" in client.out
+
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
