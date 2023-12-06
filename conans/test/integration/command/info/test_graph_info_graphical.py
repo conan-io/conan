@@ -179,7 +179,7 @@ def test_user_templates():
     assert template_folder in c.stdout
 
 
-def test_graph_info_html_output():
+def test_graph_info_html_error_reporting_output():
     tc = TestClient()
     tc.save({"lib/conanfile.py": GenConanfile("lib"),
              "ui/conanfile.py": GenConanfile("ui", "1.0").with_requirement("lib/1.0"),
@@ -212,3 +212,17 @@ def test_graph_info_html_output():
     # There used to be a few bugs with weird graphs, check for regressions
     assert "jinja2.exceptions.UndefinedError" not in tc.out
     assert "from: ," not in tc.out
+
+
+def test_graph_info_html_error_range_quoting():
+    tc = TestClient()
+    tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
+             "libpng/conanfile.py": GenConanfile("libpng", "1.0").with_requirement("zlib/[>=1.0]")})
+
+    tc.run("export zlib --version=1.0")
+    tc.run("export zlib --version=0.1")
+    tc.run("export libpng")
+
+    tc.run("graph info --requires=zlib/0.1 --requires=libpng/1.0 --format=html", assert_error=True)
+    assert 'zlib/[&gt;=1.0]' not in tc.out
+    assert r'"zlib/[\u003e=1.0]"' in tc.out
