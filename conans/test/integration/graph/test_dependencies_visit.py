@@ -33,6 +33,12 @@ def test_dependencies_visit():
                 if "openssl" in self.dependencies:
                     self.output.info("OpenSSL found in deps")
 
+                if "cmake" in self.dependencies:
+                    self.output.info("cmake found in default deps")
+
+                if "cmake" in self.dependencies.build:
+                    self.output.info("cmake found in deps.build")
+
                 if "badlib" in self.dependencies:
                     self.output.info("badlib found in deps")
         """)
@@ -56,6 +62,9 @@ def test_dependencies_visit():
 
     assert "OpenSSL found in deps" in client.out
     assert "badlib found in deps" not in client.out
+
+    assert "cmake found in default deps" not in client.out
+    assert "cmake found in deps.build" in client.out
 
 
 def test_dependencies_visit_settings_options():
@@ -100,6 +109,7 @@ asserts = [
     ('self.dependencies["missing"]', True, "'missing' not found in the dependency set"),
     ('self.output.info("Missing in deps: " + str("missing" in self.dependencies))', False, "Missing in deps: False"),
     ('self.output.info("Zlib in deps: " + str("zlib" in self.dependencies))', False, "Zlib in deps: True"),
+    ('self.output.info("Zlib in deps.build: " + str("zlib" in self.dependencies.build))', False, "Zlib in deps.build: True"),
 ]
 
 
