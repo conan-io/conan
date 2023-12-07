@@ -267,8 +267,10 @@ class _BinaryDistance:
 
     @property
     def distance(self):
-        return len(self.platform_diff), len(self.settings_diff), \
-               len(self.options_diff), len(self.deps_diff)
+        return (len(self.platform_diff.get("expected", [])),
+                len(self.settings_diff.get("expected", [])),
+                len(self.options_diff.get("expected", [])),
+                len(self.deps_diff.get("expected", [])))
 
     def serialize(self):
         return {"platform": self.platform_diff,

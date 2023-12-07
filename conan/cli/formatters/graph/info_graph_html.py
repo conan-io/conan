@@ -82,11 +82,13 @@ graph_info_html = """
                 // Add error conflict node
                 nodes.push({
                     id: "{{ error["type"] }}",
-                    label: "{{ error["context"].require.ref }}",
+                    label: {{ error["context"].require.ref|string|tojson }},
                     shape: "circle",
                     font: { color: "white" },
                     color: "red",
-                    fulllabel: '<h3>{{ error["context"].require.ref }}</h3><p>This node creates a conflict in the dependency graph</p>',
+                    fulllabel: '<h3>' +
+                               {{ error["context"].require.ref|string|tojson }} +
+                               '</h3><p>This node creates a conflict in the dependency graph</p>',
                     shapeProperties: { borderDashes: [5, 5] }
                 })
 
