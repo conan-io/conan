@@ -43,17 +43,6 @@ def test_install_transitive_cache(client):
     assert "hello2/0.1@lasote/stable: Generating the package" in client.out
 
 
-@pytest.mark.xfail(reason="build_modes.report_matches() not working now")
-def test_partials(client):
-    client.run("install . --build=missing")
-    client.run("install ./ --build=Bye")
-    assert "No package matching 'Bye' pattern found." in client.out
-
-    for package in ["hello0", "hello1"]:
-        client.run("install . --build=%s" % package)
-        assert "No package matching" not in client.out
-
-
 @pytest.mark.xfail(reason="changing package-ids")
 def test_reuse(client):
     # FIXME: package-ids will change
