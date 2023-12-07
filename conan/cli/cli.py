@@ -44,6 +44,8 @@ class Cli:
             Cli._builtin_commands = self._commands.copy()
         else:
             self._commands = Cli._builtin_commands.copy()
+            for k, v in self._commands.items():  # Fill groups data too
+                self._groups[v.group].append(k)
 
         custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         if not os.path.isdir(custom_commands_path):
