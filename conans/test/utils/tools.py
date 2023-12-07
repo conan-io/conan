@@ -505,8 +505,6 @@ class TestClient(object):
                 with mock.patch("getpass.getpass", mock_get_pass):
                     yield
 
-    _conan_commands = None
-
     def _run_cli(self, command_line, assert_error=False):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
@@ -518,12 +516,6 @@ class TestClient(object):
         try:
             self.api = ConanAPI(cache_folder=self.cache_folder)
             command = Cli(self.api)
-            if TestClient._conan_commands is None:
-                command._add_commands()
-                TestClient._conan_commands = command._commands
-            else:
-                command.load_commands = False
-                command._commands = TestClient._conan_commands
         except ConanException as e:
             sys.stderr.write("Error in Conan initialization: {}".format(e))
             return ERROR_GENERAL
