@@ -938,6 +938,10 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("./build/Debug/foo")
     else:
         c.run_command("cmake --preset conan-default")
+        # this second called used to fail
+        # https://github.com/conan-io/conan/issues/13792, CMake ignoring toolchain architecture
+        # and toolset
+        c.run_command("cmake --preset conan-default")
         c.run_command("cmake --build --preset conan-debug")
         c.run_command("ctest --preset conan-debug")
         c.run_command("build\\Debug\\foo")

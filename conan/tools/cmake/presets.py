@@ -4,6 +4,7 @@ import platform
 
 from conan.api.output import ConanOutput
 from conan.tools.cmake.layout import get_build_folder_custom_vars
+from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.microsoft import is_msvc
 from conans.client.graph.graph import RECIPE_CONSUMER
@@ -116,11 +117,10 @@ class _CMakePresets:
             "cacheVariables": cache_variables,
         }
         if is_msvc(conanfile):
-            toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
-            if toolset_arch:
-                toolset_arch = "host={}".format(toolset_arch)
+            toolset = GenericSystemBlock.get_toolset(generator, conanfile)
+            if toolset:
                 ret["toolset"] = {
-                    "value": toolset_arch,
+                    "value": toolset,
                     "strategy": "external"
                 }
             arch = {"x86": "x86",
