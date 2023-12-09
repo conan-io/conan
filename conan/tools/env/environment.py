@@ -168,6 +168,8 @@ class _EnvValue:
         for i, v in enumerate(self._values):
             if v is _EnvVarPlaceHolder:
                 continue
+            if os.path.isabs(v):
+                continue
             rel_path = os.path.relpath(v, package_folder)
             self._values[i] = os.path.join(deploy_folder, rel_path)
 

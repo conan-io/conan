@@ -389,6 +389,8 @@ class _Component:
 
     def deploy_base_folder(self, package_folder, deploy_folder):
         def relocate(el):
+            if os.path.isabs(el):
+                return el
             rel_path = os.path.relpath(el, package_folder)
             return os.path.join(deploy_folder, rel_path)
 
