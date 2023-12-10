@@ -914,6 +914,7 @@ def test_cmaketoolchain_sysroot():
     assert "sysroot: '{}'".format(output_fake_sysroot) in client.out
 
 
+# TODO: @pytest.mark.tool("ninja")
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_with_conanfile_txt():
     c = TestClient()
@@ -928,10 +929,13 @@ def test_cmake_presets_with_conanfile_txt():
         cmake_layout
         """)})
 
-    c.run("install .")
-    c.run("install . -s build_type=Debug")
+    ninja = False  # FIXME: This doesn't work with Ninja yet, it needs to activate environment
+    conf = "-c tools.cmake.cmaketoolchain:generator=Ninja" if ninja else ""
+    arch = ""  # "-s arch=x86"
+    c.run(f"install . {arch} {conf}")
+    c.run(f"install . -s build_type=Debug {arch} {conf}")
 
-    if platform.system() != "Windows":
+    if platform.system() != "Windows" or ninja:
         c.run_command("cmake --preset conan-debug")
         c.run_command("cmake --build --preset conan-debug")
         c.run_command("ctest --preset conan-debug")

@@ -118,6 +118,7 @@ class _CMakePresets:
         }
         if is_msvc(conanfile):
             toolset = GenericSystemBlock.get_toolset(generator, conanfile)
+            # It seems "external" strategy is enough, as it is defined by toolchain
             if toolset:
                 ret["toolset"] = {
                     "value": toolset,
