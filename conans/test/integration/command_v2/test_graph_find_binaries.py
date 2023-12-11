@@ -12,7 +12,7 @@ class TestFilterProfile:
     def client(self):
         c = TestClient()
         c.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os", "build_type")
-                                                              .with_shared_option()})
+               .with_shared_option()})
         c.run("create lib -s os=Linux")
         c.run("create lib -s os=Windows")
         c.run("create lib -s os=Windows -o *:shared=True")
@@ -160,7 +160,7 @@ class TestMissingBinaryDeps:
         c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep").with_settings("os"),
                 "lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")
-                                                              .with_requires("dep/[>=1.0]")})
+               .with_requires("dep/[>=1.0]")})
         c.run("create dep --version=1.0 -s os=Linux")
         c.run("create lib -s os=Linux")
         c.run("create dep --version=2.0 -s os=Linux")
@@ -201,3 +201,22 @@ class TestMissingBinaryDeps:
               explanation: This binary has same settings and options, but different dependencies
                """)
         assert textwrap.indent(expected, "      ") in c.out
+
+
+class TestDistance:
+    def test_multiple_distance_ordering(self):
+        tc = TestClient()
+        tc.save({
+            "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
+            "dep/conanfile.py": GenConanfile("dep", "1.0")
+            .with_option("shared", [True, False])
+            .with_option("fPIC", [True, False])})
+
+        tc.run("create dep -o shared=True -o fPIC=True")
+        tc.run("create dep -o shared=True -o fPIC=False")
+
+        tc.run('graph explain . -o *:shared=False -o *:fPIC=False')
+        # We don't expect the further binary to show
+        assert "a657a8fc96dd855e2a1c90a9fe80125f0c4635a0" not in tc.out
+        # We expect the closer binary to show
+        assert "a6923b987deb1469815dda84aab36ac34f370c48" in tc.out

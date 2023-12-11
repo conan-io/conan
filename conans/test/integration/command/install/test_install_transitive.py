@@ -2,8 +2,7 @@ import os
 
 import pytest
 
-from conans.model.info import ConanInfo, load_binary_info
-from conans.model.package_ref import PkgReference
+from conans.model.info import load_binary_info
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE_TXT, CONANINFO
 from conans.test.utils.tools import TestClient,  GenConanfile
@@ -52,30 +51,6 @@ def test_partials(client):
     for package in ["hello0", "hello1"]:
         client.run("install . --build=%s" % package)
         assert "No package matching" not in client.out
-
-
-@pytest.mark.xfail(reason="changing package-ids")
-def test_reuse(client):
-    # FIXME: package-ids will change
-    for lang, id0, id1 in [(0, "3475bd55b91ae904ac96fde0f106a136ab951a5e",
-                               "c27896c40136be4bb5fd9c759d9abffaee6756a0"),
-                           (1, "f43bd822487baa4ed2426c279c27b2811870499a",
-                               "9f15cc4352ab4f46f118942394adc52a2cdbcffc")]:
-
-        client.run("install . -o *:language=%d --build missing" % lang)
-        assert "Configuration:[settings]", "".join(str(client.out).splitlines())
-        ref = RecipeReference.loads("hello0/0.1@lasote/stable")
-
-        hello0 = client.get_latest_pkg_layout(PkgReference(ref, id0)).package()
-        hello0_info = os.path.join(hello0, CONANINFO)
-        hello0_conan_info = load_binary_info(load(hello0_info))
-        assert lang == hello0_conan_info["options"]["language"]
-
-        pref1 = PkgReference(RecipeReference.loads("hello1/0.1@lasote/stable"), id1)
-        hello1 = client.get_latest_pkg_layout(pref1).package()
-        hello1_info = os.path.join(hello1, CONANINFO)
-        hello1_conan_info = load_binary_info(load(hello1_info))
-        assert lang == hello1_conan_info["options"]["language"]
 
 
 def test_upper_option(client):
