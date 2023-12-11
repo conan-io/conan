@@ -199,8 +199,6 @@ def test_install_with_path_errors(client):
     assert "Conanfile not found" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
-                          "of the folders")
 def test_install_argument_order(client):
     # https://github.com/conan-io/conan/issues/2520
     conanfile_boost = textwrap.dedent("""
@@ -209,30 +207,30 @@ def test_install_argument_order(client):
             name = "boost"
             version = "0.1"
             options = {"shared": [True, False]}
-            default_options = "shared=True"
+            default_options = {"shared": True}
         """)
-    conanfile = GenConanfile().with_require("boost/0.1@conan/stable")
+    conanfile = GenConanfile().with_require("boost/0.1")
 
     client.save({"conanfile.py": conanfile,
                  "conanfile_boost.py": conanfile_boost})
-    client.run("create conanfile_boost.py conan/stable")
+    client.run("create conanfile_boost.py ")
     client.run("install . -o boost/*:shared=True --build=missing")
-    output_0 = "%s" % client.out
+    output_0 = client.out
     client.run("install . -o boost/*:shared=True --build missing")
-    output_1 = "%s" % client.out
+    output_1 = client.out
     client.run("install -o boost/*:shared=True . --build missing")
-    output_2 = "%s" % client.out
+    output_2 = client.out
     client.run("install -o boost/*:shared=True --build missing .")
-    output_3 = "%s" % client.out
+    output_3 = client.out
     assert "ERROR" not in output_3
     assert output_0 == output_1
     assert output_1 == output_2
     assert output_2 == output_3
 
     client.run("install -o boost/*:shared=True --build boost . --build missing")
-    output_4 = "%s" % client.out
+    output_4 = client.out
     client.run("install -o boost/*:shared=True --build missing --build boost .")
-    output_5 = "%s" % client.out
+    output_5 = client.out
     assert output_4 == output_5
 
 
