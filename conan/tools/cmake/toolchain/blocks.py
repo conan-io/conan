@@ -696,8 +696,9 @@ class GenericSystemBlock(Block):
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         return toolset
 
-    def _get_generator_platform(self, generator):
-        settings = self._conanfile.settings
+    @staticmethod
+    def get_generator_platform(generator, conanfile):
+        settings = conanfile.settings
         # Returns the generator platform to be used by CMake
         compiler = settings.get_safe("compiler")
         arch = settings.get_safe("arch")
@@ -774,7 +775,7 @@ class GenericSystemBlock(Block):
 
     def context(self):
         generator = self._toolchain.generator
-        generator_platform = self._get_generator_platform(generator)
+        generator_platform = self.get_generator_platform(generator, self._conanfile)
         toolset = self.get_toolset(generator, self._conanfile)
         system_name, system_version, system_processor = self._get_cross_build()
 
