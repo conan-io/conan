@@ -14,8 +14,9 @@ from conans.model.recipe_ref import RecipeReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
+from conans.test.utils.test_files import temp_folder
 from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
-from utils.test_files import temp_folder
+
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy
