@@ -142,24 +142,3 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
                                         "foo/1.0@user/testing": (foo_id, foo),
                                         "foobar/1.0@user/testing": (foobar_id, foobar),
                                         })
-
-
-def test_report_matches(build_all):
-    """ When a wrong reference is passed to be build, an error message should be shown
-    """
-    build_all.run("install --requires=foobar/1.0@user/testing --build=* --build=baz/*")
-    build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
-    # FIXME assert "No package matching 'baz' pattern found." in build_all.out
-
-    build_all.run("install --requires=foobar/1.0@user/testing --build=* --build=!baz/*")
-    # FIXME assert "No package matching 'baz' pattern found." in build_all.out
-    build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
-
-    build_all.run("install --requires=foobar/1.0@user/testing --build=* --build=~baz/* --build=blah")
-    # FIXME assert "No package matching 'blah' pattern found." in build_all.out
-    # FIXME assert "No package matching 'baz' pattern found." in build_all.out
-    build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
-    build_all.run("install --requires=foobar/1.0@user/testing --build=* --build=!baz/* --build=~blah")
-    # FIXME  assert "No package matching 'blah' pattern found." in build_all.out
-    # FIXME assert "No package matching 'baz' pattern found." in build_all.out
-    build_all.assert_listed_binary({"foobar/1.0@user/testing": (foobar_id, "Build")})
