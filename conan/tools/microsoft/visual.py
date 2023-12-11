@@ -234,7 +234,7 @@ def _vcvars_path(version, vs_install_path):
     if not vs_path or not os.path.isdir(vs_path):
         raise ConanException(f"VS non-existing installation: Visual Studio {version}. "
                              "If using a non-default toolset from a VS IDE version consider "
-                             "'tools.microsoft.msbuild:vs_version' conf to specify it")
+                             "specifying it with the 'tools.microsoft.msbuild:vs_version' conf")
 
     if int(version) > 14:
         vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
