@@ -8,9 +8,10 @@ class VirtualBuildEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, skip_auto_generate=True):
         self._conanfile = conanfile
-        self._conanfile.virtualbuildenv = False
+        if skip_auto_generate:
+            self._conanfile.virtualbuildenv = False
         self.basename = "conanbuildenv"
         self.configuration = None
         self.arch = None

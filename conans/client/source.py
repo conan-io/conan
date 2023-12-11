@@ -69,10 +69,8 @@ def config_source(export_source_folder, conanfile, hook_manager):
             # Now move the export-sources to the right location
             merge_directories(export_source_folder, conanfile.folders.base_source)
             if getattr(conanfile, "source_buildenv", True):
-                prev_status = conanfile.virtualbuildenv
-                with VirtualBuildEnv(conanfile).vars().apply():
+                with VirtualBuildEnv(conanfile, skip_auto_generate=False).vars().apply():
                     run_source_method(conanfile, hook_manager)
-                conanfile.virtualbuildenv = prev_status
             else:
                 run_source_method(conanfile, hook_manager)
 
