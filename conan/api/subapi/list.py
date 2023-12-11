@@ -1,8 +1,10 @@
 from typing import Dict
 
 from conan.api.model import PackagesList
+from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.search.search import get_cache_packages_binary_info, filter_packages
@@ -164,3 +166,115 @@ class ListAPI:
                 select_bundle.add_prefs(rrev, prefs)
                 select_bundle.add_configurations(packages)
         return select_bundle
+
+    def explain_missing_binaries(self, ref, conaninfo, remotes):
+        ConanOutput().info(f"Missing binary: {ref}")
+        ConanOutput().info(f"With conaninfo.txt (package_id):\n{conaninfo.dumps()}")
+        conaninfo = load_binary_info(conaninfo.dumps())
+        # Collect all configurations
+        candidates = []
+        ConanOutput().info(f"Finding binaries in the cache")
+        pkg_configurations = self.packages_configurations(ref)
+        candidates.extend(_BinaryDistance(pref, data, conaninfo)
+                          for pref, data in pkg_configurations.items())
+
+        for remote in remotes:
+            try:
+                ConanOutput().info(f"Finding binaries in remote {remote.name}")
+                pkg_configurations = self.packages_configurations(ref, remote=remote)
+            except Exception as e:
+                pass
+                ConanOutput(f"ERROR IN REMOTE {remote.name}: {e}")
+            else:
+                candidates.extend(_BinaryDistance(pref, data, conaninfo, remote)
+                                  for pref, data in pkg_configurations.items())
+
+        candidates.sort()
+        pkglist = PackagesList()
+        pkglist.add_refs([ref])
+        # If there are exact matches, only return the matches
+        # else, limit to the number specified
+        candidate_distance = None
+        for candidate in candidates:
+            if candidate_distance and candidate.distance != candidate_distance:
+                break
+            candidate_distance = candidate.distance
+            pref = candidate.pref
+            pkglist.add_prefs(ref, [pref])
+            pkglist.add_configurations({pref: candidate.binary_config})
+            # Add the diff data
+            rev_dict = pkglist.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
+            remote = candidate.remote.name if candidate.remote else "Local Cache"
+            rev_dict["packages"][pref.package_id]["remote"] = remote
+        return pkglist
+
+
+class _BinaryDistance:
+    def __init__(self, pref, binary_config, expected_config, remote=None):
+        self.remote = remote
+        self.pref = pref
+        self.binary_config = binary_config
+
+        # Settings
+        self.platform_diff = {}
+        self.settings_diff = {}
+        binary_settings = binary_config.get("settings", {})
+        expected_settings = expected_config.get("settings", {})
+        for k, v in expected_settings.items():
+            value = binary_settings.get(k)
+            if value is not None and value != v:
+                diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
+                diff.setdefault("expected", []).append(f"{k}={v}")
+                diff.setdefault("existing", []).append(f"{k}={value}")
+
+        # Options
+        self.options_diff = {}
+        binary_options = binary_config.get("options", {})
+        expected_options = expected_config.get("options", {})
+        for k, v in expected_options.items():
+            value = binary_options.get(k)
+            if value is not None and value != v:
+                self.options_diff.setdefault("expected", []).append(f"{k}={v}")
+                self.options_diff.setdefault("existing", []).append(f"{k}={value}")
+
+        # Requires
+        self.deps_diff = {}
+        binary_requires = binary_config.get("requires", [])
+        expected_requires = expected_config.get("requires", [])
+        binary_requires = [RecipeReference.loads(r) for r in binary_requires]
+        expected_requires = [RecipeReference.loads(r) for r in expected_requires]
+        binary_requires = {r.name: r for r in binary_requires}
+        for r in expected_requires:
+            existing = binary_requires.get(r.name)
+            if not existing or r != existing:
+                self.deps_diff.setdefault("expected", []).append(repr(r))
+                self.deps_diff.setdefault("existing", []).append(repr(existing))
+
+    def __lt__(self, other):
+        return self.distance < other.distance
+
+    def explanation(self):
+        if self.platform_diff:
+            return "This binary belongs to another OS or Architecture, highly incompatible."
+        if self.settings_diff:
+            return "This binary was built with different settings."
+        if self.options_diff:
+            return "This binary was built with the same settings, but different options"
+        if self.deps_diff:
+            return "This binary has same settings and options, but different dependencies"
+        return "This binary is an exact match for the defined inputs"
+
+    @property
+    def distance(self):
+        return (len(self.platform_diff.get("expected", [])),
+                len(self.settings_diff.get("expected", [])),
+                len(self.options_diff.get("expected", [])),
+                len(self.deps_diff.get("expected", [])))
+
+    def serialize(self):
+        return {"platform": self.platform_diff,
+                "settings": self.settings_diff,
+                "options": self.options_diff,
+                "dependencies": self.deps_diff,
+                "explanation": self.explanation()}

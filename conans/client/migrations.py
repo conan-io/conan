@@ -76,21 +76,28 @@ def _migrate_pkg_db_lru(cache_folder, old_version):
         raise
     else:  # generate the back-migration script
         undo_lru = textwrap.dedent("""\
-            import os
+            import os, platform
             import sqlite3
+            from jinja2 import Environment, FileSystemLoader
 
-            def migrate(cache_folder):
-                config = os.path.join(cache_folder, "global.conf")
+            from conan import conan_version
+            from conan.internal.api import detect_api
+            from conans.model.conf import ConfDefinition
+
+            def migrate(home_folder):
+                config = os.path.join(home_folder, "global.conf")
                 global_conf = open(config, "r").read() if os.path.isfile(config) else ""
-                storage = os.path.join(cache_folder, "p")
-                for line in global_conf.splitlines():
-                    tokens = line.split("=")
-                    if len(tokens) != 2:
-                        continue
-                    conf, value = tokens
-                    if conf.strip() == "core.cache:storage_path":
-                        storage = value.strip()
-                        break
+                distro = None
+                if platform.system() in ["Linux", "FreeBSD"]:
+                    import distro
+                template = Environment(loader=FileSystemLoader(home_folder)).from_string(global_conf)
+                content = template.render({"platform": platform, "os": os, "distro": distro,
+                                           "conan_version": conan_version,
+                                           "conan_home_folder": home_folder,
+                                           "detect_api": detect_api})
+                conf = ConfDefinition()
+                conf.loads(content)
+                storage = conf.get("core.cache:storage_path") or os.path.join(home_folder, "p")
 
                 db = os.path.join(storage, 'cache.sqlite3')
                 connection = sqlite3.connect(db, isolation_level=None, timeout=1,

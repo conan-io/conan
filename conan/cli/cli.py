@@ -191,16 +191,6 @@ class Cli:
                     "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
-        result = re.search(r"(.*): Error in build\(\) method, line", message)
-        if result:
-            pkg = result.group(1)
-            error = "*********************************************************\n" \
-                    f"Recipe '{pkg}' cannot build its binary\n" \
-                    f"It is possible that this recipe is not Conan 2.0 ready\n" \
-                    "If the recipe comes from ConanCenter, report it at https://github.com/conan-io/conan-center-index/issues\n" \
-                    "If it is your recipe, check if it is updated to 2.0\n" \
-                    "*********************************************************\n"
-            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
 
     @staticmethod
     def exception_exit_error(exception):
