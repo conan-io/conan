@@ -38,7 +38,7 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
-        self._initialize_requires(root_node, dep_graph, graph_lock)
+        self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
@@ -51,7 +51,8 @@ class DepsGraphBuilder(object):
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
                 if new_node:
-                    self._initialize_requires(new_node, dep_graph, graph_lock)
+                    self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
+                                              profile_host)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
@@ -160,7 +161,7 @@ class DepsGraphBuilder(object):
                     node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
-    def _initialize_requires(self, node, graph, graph_lock):
+    def _initialize_requires(self, node, graph, graph_lock, profile_build, profile_host):
         for require in node.conanfile.requires.values():
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
@@ -170,6 +171,7 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
+            self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -232,6 +234,40 @@ class DepsGraphBuilder(object):
                                 d.revision == require.ref.revision:
                             require.ref.revision = d.revision
                             return d, ConanFile(str(d)), RECIPE_PLATFORM, None
+
+    def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
+        profile = profile_build if node.context == CONTEXT_BUILD else profile_host
+        replacements = profile.replace_tool_requires if require.build else profile.replace_requires
+        if not replacements:
+            return
+
+        for pattern, alternative_ref in replacements.items():
+            if pattern.name != require.ref.name:
+                continue  # no match in name
+            if pattern.version != "*":  # we need to check versions
+                rrange = require.version_range
+                valid = rrange.contains(pattern.version, self._resolve_prereleases) if rrange else \
+                    require.ref.version == pattern.version
+                if not valid:
+                    continue
+            if pattern.user != "*" and pattern.user != require.ref.user:
+                continue
+            if pattern.channel != "*" and pattern.channel != require.ref.channel:
+                continue
+            original_require = repr(require.ref)
+            if alternative_ref.version != "*":
+                require.ref.version = alternative_ref.version
+            if alternative_ref.user != "*":
+                require.ref.user = alternative_ref.user
+            if alternative_ref.channel != "*":
+                require.ref.channel = alternative_ref.channel
+            if alternative_ref.revision != "*":
+                require.ref.revision = alternative_ref.revision
+            if require.ref.name != alternative_ref.name:  # This requires re-doing dict!
+                node.conanfile.requires.reindex(require, alternative_ref.name)
+            require.ref.name = alternative_ref.name
+            graph.replaced_requires[original_require] = repr(require.ref)
+            break  # First match executes the alternative and finishes checking others
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         if require.ref.version == "<host_version>":
