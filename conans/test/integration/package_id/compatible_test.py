@@ -279,7 +279,7 @@ class CompatibleIDsTest(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("lock create . -s os=Windows --lockfile-out=deps.lock")
-        client.run("install . --lockfile=deps.lock")
+        client.run("install . -s os=Windows --lockfile=deps.lock")
         self.assertIn("pkg/0.1: PackageInfo!: OS: Linux!", client.out)
         self.assertIn("9a4eb3c8701508aa9458b1a73d0633783ecc2270", client.out)
         self.assertIn("pkg/0.1: Already installed!", client.out)
