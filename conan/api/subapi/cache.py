@@ -119,6 +119,7 @@ class CacheAPI:
             for ref, ref_bundle in package_list.refs().items():
                 ref_layout = app.cache.recipe_layout(ref)
                 recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
+                recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
                 ref_bundle["recipe_folder"] = recipe_folder
                 out.info(f"Saving {ref}: {recipe_folder}")
                 tgz.add(os.path.join(cache_folder, recipe_folder), recipe_folder, recursive=True)
@@ -126,13 +127,15 @@ class CacheAPI:
                     pref_layout = app.cache.pkg_layout(pref)
                     pkg_folder = pref_layout.package()
                     folder = os.path.relpath(pkg_folder, cache_folder)
+                    folder = folder.replace("\\", "/")  # make win paths portable
                     pref_bundle["package_folder"] = folder
                     out.info(f"Saving {pref}: {folder}")
                     tgz.add(os.path.join(cache_folder, folder), folder, recursive=True)
                     if os.path.exists(pref_layout.metadata()):
                         metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
+                        metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
                         pref_bundle["metadata_folder"] = metadata_folder
-                        out.info(f"Saving {pref} metadata: {folder}")
+                        out.info(f"Saving {pref} metadata: {metadata_folder}")
                         tgz.add(os.path.join(cache_folder, metadata_folder), metadata_folder,
                                 recursive=True)
             serialized = json.dumps(package_list.serialize(), indent=2)
@@ -159,6 +162,7 @@ class CacheAPI:
             recipe_layout = cache.get_or_create_ref_layout(ref)
             recipe_folder = ref_bundle["recipe_folder"]
             rel_path = os.path.relpath(recipe_layout.base_folder, cache.cache_folder)
+            rel_path = rel_path.replace("\\", "/")
             assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
             out.info(f"Restore: {ref} in {recipe_folder}")
             for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
