@@ -135,7 +135,7 @@ class CacheAPI:
                         metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
                         metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
                         pref_bundle["metadata_folder"] = metadata_folder
-                        out.info(f"Saving {pref} metadata: {folder}")
+                        out.info(f"Saving {pref} metadata: {metadata_folder}")
                         tgz.add(os.path.join(cache_folder, metadata_folder), metadata_folder,
                                 recursive=True)
             serialized = json.dumps(package_list.serialize(), indent=2)
