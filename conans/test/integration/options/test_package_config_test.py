@@ -133,6 +133,11 @@ class TestPackageOptionsCreate:
         assert "pkg/0.1 (test package): shared (build): True" in c.out
         assert "pkg/0.1 (test package): shared (test): True" in c.out
 
+        c.run("install --requires=dep/0.1 -o &:shared=True -b=missing")
+        assert "dep/0.1: shared (configure): True" in c.out
+        assert "dep/0.1: shared (requirements): True" in c.out
+        assert "dep/0.1: shared (build): True" in c.out
+
     def test_test_package_non_consumers(self):
         c = TestClient()
         c.save({"dep/conanfile.py": dep,
