@@ -15,8 +15,7 @@ from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty
-
+from conans.util.files import gzopen_without_timestamps, is_dirty, save, set_dirty, load
 
 conanfile = """from conan import ConanFile
 from conan.tools.files import copy
@@ -239,7 +238,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . --user=frodo --channel=stable")
         client.run("upload hello0/1.2.1@frodo/stable -r default")
 
-        assert "Caching conan_package.tgz to local cache" in client.out
+        assert len(os.listdir(os.path.join(download_cache, "c"))) == 5
 
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save({"conanfile.py": conanfile,

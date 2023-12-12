@@ -234,7 +234,7 @@ class UploadExecutor:
 
         duration = time.time() - t1
         self._output.debug(f"Upload {ref} in {duration} time")
-        for cache_file in cache_files:
+        for cache_file in cache_files.items():
             self._local_cache_recipe_file(ref, cache_file, remote)
 
         return ref
@@ -249,40 +249,37 @@ class UploadExecutor:
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         self._output.debug(f"Upload {pref} in {duration} time")
-        for cache_file in cache_files:
+        for cache_file in cache_files.items():
             self._local_cache_package_file(pref, cache_file, remote)
 
     def _local_cache_recipe_file(self, ref, cache_file, remote):
         approved_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt"]
-        if cache_file not in approved_files:
+        filename, path = cache_file
+        if filename not in approved_files:
             return
         _download_cache = self._app.global_conf.get("core.download:download_cache")
-        if _download_cache and os.path.isabs(_download_cache):
-            url = self._app.remote_manager._auth_manager._get_rest_client(remote)._get_api().router.recipe_file(ref, cache_file)
-            download_cache = DownloadCache(_download_cache)
-            cached_path, h = download_cache.cached_path(url)
-            with download_cache.lock(h):
-                remove_if_dirty(cached_path)
-                with set_dirty_context_manager(cached_path):
-                    # shutil.copy2(cache_file, cached_path)
-                    self._output.info(
-                        f"Caching {cache_file} to local cache '{cached_path}' - was uploaded to {url}")
+        url = self._app.remote_manager._auth_manager._get_rest_client(remote)._get_api().router.recipe_file(ref, filename)
+        self._cache_local_upload_url(url, path)
 
     def _local_cache_package_file(self, pref, cache_file, remote):
         approved_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt"]
-        if cache_file not in approved_files:
+        filename, path = cache_file
+        if filename not in approved_files:
             return
+        url = self._app.remote_manager._auth_manager._get_rest_client(remote)._get_api().router.package_file(pref, filename)
+        self._cache_local_upload_url(url, path)
+
+    def _cache_local_upload_url(self, url, path):
         _download_cache = self._app.global_conf.get("core.download:download_cache")
         if _download_cache and os.path.isabs(_download_cache):
-            url = self._app.remote_manager._auth_manager._get_rest_client(remote)._get_api().router.package_file(pref, cache_file)
             download_cache = DownloadCache(_download_cache)
             cached_path, h = download_cache.cached_path(url)
             with download_cache.lock(h):
                 remove_if_dirty(cached_path)
                 with set_dirty_context_manager(cached_path):
-                    # shutil.copy2(cache_file, cached_path)
+                    shutil.copy2(path, cached_path)
                     self._output.info(
-                        f"Caching {cache_file} to local cache '{cached_path}' - was uploaded to {url}")
+                        f"Caching {path} to local cache '{cached_path}' - was uploaded to {url}")
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):
