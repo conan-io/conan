@@ -132,12 +132,14 @@ class VCVars:
             vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = _vcvars_arch(conanfile)
 
+        winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+        winsdk_version = winsdk_version or conanfile.setttings.get_safe("os.version")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
         # C:\Program Files (x86)\Microsoft Visual Studio 14.0
         vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                                winsdk_version=None, vcvars_ver=vcvars_ver,
+                                winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
 
         content = textwrap.dedent("""\
