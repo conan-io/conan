@@ -1,7 +1,6 @@
-import json
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.env import environment_update
 
 
 def test_invalid_output_level():
@@ -142,3 +141,43 @@ def test_output_level():
     assert "This is a success" not in t.out
     assert "This is a warning" not in t.out
     assert "This is a error" in t.out
+
+
+def test_output_level_envvar():
+
+    lines = ("self.output.trace('This is a trace')",
+             "self.output.debug('This is a debug')",
+             "self.output.verbose('This is a verbose')",
+             "self.output.info('This is a info')",
+             "self.output.highlight('This is a highlight')",
+             "self.output.success('This is a success')",
+             "self.output.warning('This is a warning')",
+             "self.output.error('This is a error')",
+             )
+
+    t = TestClient()
+    t.save({"conanfile.py": GenConanfile().with_package(*lines)})
+
+    # Check if -v argument is equal to VERBOSE level
+    with environment_update({"CONAN_LOG_LEVEL": "verbose"}):
+        t.run("create . --name foo --version 1.0")
+        assert "This is a trace" not in t.out
+        assert "This is a debug" not in t.out
+        assert "This is a verbose" in t.out
+        assert "This is a info" in t.out
+        assert "This is a highlight" in t.out
+        assert "This is a success" in t.out
+        assert "This is a warning" in t.out
+        assert "This is a error" in t.out
+
+        # Check if -v argument is equal to VERBOSE level
+    with environment_update({"CONAN_LOG_LEVEL": "error"}):
+        t.run("create . --name foo --version 1.0")
+        assert "This is a trace" not in t.out
+        assert "This is a debug" not in t.out
+        assert "This is a verbose" not in t.out
+        assert "This is a info" not in t.out
+        assert "This is a highlight" not in t.out
+        assert "This is a success" not in t.out
+        assert "This is a warning" not in t.out
+        assert "This is a error" in t.out
