@@ -13,6 +13,7 @@ from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
+from conans.client.graph.install_graph_configuration import InstallGraphConfiguration
 from conans.model.recipe_ref import ref_matches
 
 
@@ -56,6 +57,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
+    subparser.add_argument("--order", choices=['configuration'],
+                           help='Select which order method')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -93,7 +96,10 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
-    install_graph = InstallGraph(deps_graph)
+    if args.order == "configuration":
+        install_graph = InstallGraphConfiguration(deps_graph)
+    else:
+        install_graph = InstallGraph(deps_graph)
     install_order_serialized = install_graph.install_build_order()
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
@@ -109,12 +115,15 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
+    subparser.add_argument("--order", choices=['configuration'],
+                           help='Select which order method')
     args = parser.parse_args(*args)
 
-    result = InstallGraph()
+    graph_class = InstallGraphConfiguration if args.order == "configuration" else InstallGraph
+    result = graph_class()
     for f in args.file:
         f = make_abs_path(f)
-        install_graph = InstallGraph.load(f)
+        install_graph = graph_class.load(f)
         result.merge(install_graph)
 
     install_order_serialized = result.install_build_order()
