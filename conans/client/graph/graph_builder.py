@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
@@ -13,6 +14,7 @@ from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
@@ -269,15 +271,23 @@ class DepsGraphBuilder(object):
             graph.replaced_requires[original_require] = repr(require.ref)
             break  # First match executes the alternative and finishes checking others
 
+    def _match_host_version_ref_track(self, require):
+        ref_track_re = re.compile("<host_version(?::(.+))?>")
+        return ref_track_re.match(str(require.ref.version))
+
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        if require.ref.version == "<host_version>":
+        ref_track_match = self._match_host_version_ref_track(require)
+        if require.ref.version == "<host_version>" or ref_track_match:
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
-            req = Requirement(require.ref, headers=True, libs=True, visible=True)
+            temp = RecipeReference.loads(str(node.ref))
+            temp.name = ref_track_match.group(1)
+            ref = temp if ref_track_match else require.ref
+            req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
             if transitive is None:
-                raise ConanException(f"{node.ref} require '{require.ref}': didn't find a matching "
+                raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
