@@ -319,6 +319,7 @@ class DepsGraph(object):
         self.nodes = []
         self.aliased = {}
         self.resolved_ranges = {}
+        self.replaced_requires = {}
         self.error = False
 
     def overrides(self):
@@ -391,4 +392,5 @@ class DepsGraph(object):
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
         result["overrides"] = self.overrides().serialize()
         result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
+        result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
         return result
