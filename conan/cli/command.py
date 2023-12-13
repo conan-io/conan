@@ -1,4 +1,5 @@
 import argparse
+import os
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -101,7 +102,7 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        ConanOutput.define_log_level(args.v)
+        ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
         return args
 
 
