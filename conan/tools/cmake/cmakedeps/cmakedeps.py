@@ -4,6 +4,7 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
+from conan.api.output import Color
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
     FIND_MODE_MODULE
@@ -71,6 +72,7 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
+        direct_configs = []
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
@@ -91,6 +93,23 @@ class CMakeDeps(object):
 
             if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
                 self._generate_files(require, dep, ret, find_module_mode=True)
+
+            if require.direct:  # aggregate config information for user convenience
+                find_module_mode = True if cmake_find_mode == FIND_MODE_MODULE else False
+                config = ConfigTemplate(self, require, dep, find_module_mode)
+                direct_configs.append(config)
+
+        if direct_configs:
+            # Some helpful verbose messages about generated files
+            msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
+            for config in direct_configs:
+                msg.append(f"    find_package({config.file_name})")
+            targets = ' '.join(c.root_target_name for c in direct_configs)
+            msg.append(f"    target_link_libraries(... {targets})")
+            if self._conanfile._conan_is_consumer:
+                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
+            else:
+                self._conanfile.output.verbose("\n".join(msg))
 
         return ret
 
@@ -173,7 +192,7 @@ class CMakeDeps(object):
         build_req = self._conanfile.dependencies.direct_build
         test_req = self._conanfile.dependencies.test
 
-        deps, targets = [], []
+        configs = []
         for require, dep in list(host.items()) + list(build_req.items()) + list(test_req.items()):
             if not require.direct:
                 continue
@@ -184,26 +203,21 @@ class CMakeDeps(object):
             cmake_find_mode = cmake_find_mode.lower()
             find_module_mode = True if cmake_find_mode == FIND_MODE_MODULE else False
             config = ConfigTemplate(self, require, dep, find_module_mode)
-            deps.append(config.file_name)
-            targets.append(config.root_target_name)
-
-        # Some helpful verbose messages about generated files
-        msg = ["CMakeDeps generated files basic information"]
-        for dep, target in zip(deps, targets):
-            msg.append(f"    find_package({dep}), target_link_libraries(... {target})")
-        msg.append("    Created aggregation file 'conandeps.cmake'")
-        self._conanfile.output.verbose("\n".join(msg))
+            configs.append(config)
 
         template = textwrap.dedent("""\
-            {% for dep in deps %}
-            find_package({{dep}})
+            message(STATUS "Conan: Using CMakeDeps conandeps.cmake aggregator via include()")
+            message(STATUS "Conan: It is recommended to use explicit find_package() per dependency instead")
+
+            {% for config in configs %}
+            find_package({{config.file_name}})
             {% endfor %}
 
             add_library(conandeps INTERFACE)
-            target_link_libraries(conandeps INTERFACE {% for t in targets %} {{t}} {% endfor %})
+            target_link_libraries(conandeps INTERFACE {% for t in configs %} {{t.root_target_name}} {% endfor %})
             """)
 
         template = Template(template, trim_blocks=True, lstrip_blocks=True,
                             undefined=jinja2.StrictUndefined)
-        conandeps = template.render({"deps": deps, "targets": targets})
+        conandeps = template.render({"configs": configs})
         save(self._conanfile, "conandeps.cmake", conandeps)

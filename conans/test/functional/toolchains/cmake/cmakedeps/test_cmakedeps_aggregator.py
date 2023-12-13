@@ -14,6 +14,7 @@ def test_aggregator(transitive_libraries):
             settings = "os", "arch", "compiler", "build_type"
             requires = "engine/1.0"
             generators = "CMakeDeps", "CMakeToolchain"
+            exports_sources = "*"
             def layout(self):
                 cmake_layout(self)
             def build(self):
@@ -38,7 +39,6 @@ def test_aggregator(transitive_libraries):
         "main.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"]),
         "CMakeLists.txt": cmakelists
     }, clean_first=True)
-    c.run("build . -v")
-    print(c.out)
+    c.run("build .")
     assert "matrix/1.0: Hello World Release!" in c.out
     assert "engine/1.0: Hello World Release!" in c.out
