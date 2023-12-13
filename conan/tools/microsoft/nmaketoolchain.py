@@ -38,7 +38,9 @@ class NMakeToolchain(object):
                 if value and not value.isnumeric():
                     value = f'\\"{value}\\"'
                 define = f"{macro}#{value}"
-            formated_defines.append(f"/D{define}")
+                if " " in define:
+                    define = f"\"{define}\""
+            formated_defines.append(f'/D{define}')
         return formated_defines
 
     @property
