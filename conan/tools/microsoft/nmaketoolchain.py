@@ -40,7 +40,7 @@ class NMakeToolchain(object):
                 define = f"{macro}#{value}"
                 if " " in define:
                     define = f"\"{define}\""
-            formated_defines.append(f'/D{define}')
+            formated_defines.append(f"/D{define}")
         return formated_defines
 
     @property

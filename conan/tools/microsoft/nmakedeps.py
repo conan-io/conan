@@ -50,8 +50,12 @@ class NMakeDeps(object):
                     # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
                     # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
                     macro, value = define.split("=", 1)
+                    if value and not value.isnumeric():
+                        value = f'\"{value}\"'
                     define = f"{macro}#{value}"
-                return f'/D"{define}"'
+                    if " " in define:
+                        define = f"\"{define}\""
+                return f"/D{define}"
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
