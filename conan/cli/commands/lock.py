@@ -6,7 +6,6 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
@@ -110,8 +109,17 @@ def lock_add(conan_api, parser, subparser, *args):
     allow_uppercase = global_conf.get("core:allow_uppercase_pkg_names", check_type=bool)
 
     def _parse_requires(reqs):
+        def convert_timestamp(ref):  # allows user to specify time copy&paste from compact format
+            tokens = ref.split(" ", 1)
+            if len(tokens) == 2:
+                ref, t = tokens
+                if t[0] == "(" and t[-1] == ")":
+                    import dateutil
+                    t = dateutil.parser.parse(t[1:-1]).timestamp()
+                    ref = f"{ref}%{t}"
+            return ref
         if reqs:
-            result = [RecipeReference.loads(r) for r in reqs]
+            result = [RecipeReference.loads(convert_timestamp(r)) for r in reqs]
             [r.validate_ref(allow_uppercase) for r in result]
             return result
 
