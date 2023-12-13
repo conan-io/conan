@@ -26,6 +26,7 @@ class Cli:
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
     """
+    _builtin_commands = None  # Caching the builtin commands, no need to load them over and over
 
     def __init__(self, conan_api):
         assert isinstance(conan_api, ConanAPI), \
@@ -35,10 +36,16 @@ class Cli:
         self._commands = {}
 
     def _add_commands(self):
-        conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
-        for module in pkgutil.iter_modules([conan_commands_path]):
-            module_name = module[1]
-            self._add_command("conan.cli.commands.{}".format(module_name), module_name)
+        if Cli._builtin_commands is None:
+            conan_cmd_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
+            for module in pkgutil.iter_modules([conan_cmd_path]):
+                module_name = module[1]
+                self._add_command("conan.cli.commands.{}".format(module_name), module_name)
+            Cli._builtin_commands = self._commands.copy()
+        else:
+            self._commands = Cli._builtin_commands.copy()
+            for k, v in self._commands.items():  # Fill groups data too
+                self._groups[v.group].append(k)
 
         custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         if not os.path.isdir(custom_commands_path):
