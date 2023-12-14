@@ -233,6 +233,8 @@ def test_tool_requires_revision_profile():
     # We shoul be able to explicitly [tool_require] a recipe revision in the profile
     c = TestClient()
     build_profile = textwrap.dedent("""\
+        [settings]
+        os=Linux
         [tool_requires]
         *:tool/0.1#2d65f1b4af1ce59028f96adbfe7ed5a2
         """)
