@@ -390,6 +390,9 @@ class _Component:
     def deploy_base_folder(self, package_folder, deploy_folder):
         def relocate(el):
             rel_path = os.path.relpath(el, package_folder)
+            if rel_path.startswith(".."):
+                # If it is pointing to a folder outside of the package, then do not relocate
+                return el
             return os.path.join(deploy_folder, rel_path)
 
         for varname in _DIRS_VAR_NAMES:

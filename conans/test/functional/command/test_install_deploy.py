@@ -405,3 +405,33 @@ def test_deploy_output_locations():
     tc.run(f"install . --deployer=my_deploy -of='{tmp_folder}' --deployer-folder='{deployer_output}'")
     assert f"Deployer output: {deployer_output}" in tc.out
     assert f"Deployer output: {tmp_folder}" not in tc.out
+
+
+def test_not_deploy_absolute_paths():
+    """ Absolute paths, for system packages, don't need to be relativized
+    https://github.com/conan-io/conan/issues/15242
+    """
+    c = TestClient()
+    some_abs_path = temp_folder().replace("\\", "/")
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.includedirs = ["{some_abs_path}/myusr/include"]
+                self.cpp_info.libdirs = ["{some_abs_path}/myusr/lib"]
+                self.buildenv_info.define_path("MYPATH", "{some_abs_path}/mypath")
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    # if we deploy one --requires, we get that package
+    c.run("install  --requires=pkg/1.0 --deployer=full_deploy -g CMakeDeps -g CMakeToolchain "
+          "-s os=Linux -s:b os=Linux -s arch=x86_64 -s:b arch=x86_64")
+    data = c.load("pkg-release-x86_64-data.cmake")
+    assert f'set(pkg_INCLUDE_DIRS_RELEASE "{some_abs_path}/myusr/include")' in data
+    assert f'set(pkg_LIB_DIRS_RELEASE "{some_abs_path}/myusr/lib")' in data
+
+    env = c.load("conanbuildenv-release-x86_64.sh")
+    assert f'export MYPATH="{some_abs_path}/mypath"' in env
