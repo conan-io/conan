@@ -53,9 +53,7 @@ class NMakeDeps(object):
                     if value and not value.isnumeric():
                         value = f'\"{value}\"'
                     define = f"{macro}#{value}"
-                    if " " in define:
-                        define = f"\"{define}\""
-                return f"/D{define}"
+                return f"/D\"{define}\""
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
