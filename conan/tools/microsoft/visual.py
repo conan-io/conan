@@ -133,7 +133,7 @@ class VCVars:
         vcvarsarch = _vcvars_arch(conanfile)
 
         winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
-        winsdk_version = winsdk_version or conanfile.setttings.get_safe("os.version")
+        winsdk_version = winsdk_version or conanfile.settings.get_safe("os.version")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
