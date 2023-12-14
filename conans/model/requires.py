@@ -467,6 +467,18 @@ class Requirements:
                     raise ConanException("Wrong 'tool_requires' definition, "
                                          "did you mean 'build_requirements()'?")
 
+    def reindex(self, require, new_name):
+        """ This operation is necessary when the reference name of a package is changed
+        as a result of an "alternative" replacement of the package name, otherwise the dictionary
+        gets broken by modified key
+        """
+        result = OrderedDict()
+        for k, v in self._requires.items():
+            if k is require:
+                k.ref.name = new_name
+            result[k] = v
+        self._requires = result
+
     def values(self):
         return self._requires.values()
 

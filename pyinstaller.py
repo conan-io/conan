@@ -123,7 +123,7 @@ def pyinstall(source_folder, onefile=False):
         win_ver_file = os.path.join(pyinstaller_path, 'windows-version-file')
         content = _windows_version_file(__version__)
         save(win_ver_file, content)
-        win_ver = "--version-file \"%s\"" % win_ver_file
+        win_ver = ["--version-file", win_ver_file]
 
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
@@ -136,7 +136,7 @@ def pyinstall(source_folder, onefile=False):
     command_args = [conan_path, "--noconfirm", f"--paths={source_folder}",  "--console", f"--distpath={distpath}"]
     command_args.extend(hidden.split(" "))
     if win_ver:
-        command_args.append(win_ver)
+        command_args.extend(win_ver)
     if onefile:
         command_args.append("--onefile")
 

@@ -169,6 +169,9 @@ class _EnvValue:
             if v is _EnvVarPlaceHolder:
                 continue
             rel_path = os.path.relpath(v, package_folder)
+            if rel_path.startswith(".."):
+                # If it is pointing to a folder outside of the package, then do not relocate
+                continue
             self._values[i] = os.path.join(deploy_folder, rel_path)
 
     def set_relative_base_folder(self, folder):
