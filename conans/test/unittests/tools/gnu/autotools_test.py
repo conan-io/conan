@@ -32,4 +32,4 @@ def test_source_folder_works(chdir_mock):
 
     autotools.autoreconf()
     chdir_mock.assert_called_with(autotools, os.path.normpath("/path/to/sources"))
-    assert conanfile.command.replace("\\", "/") == 'autoreconf -bar foo'
+    assert conanfile.command == 'autoreconf -bar foo'
