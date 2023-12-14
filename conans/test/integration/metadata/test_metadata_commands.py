@@ -1,6 +1,8 @@
 import os
 import pytest
 
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
@@ -14,22 +16,26 @@ class TestMetadataCommands:
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run("create .")
-        pid = client.created_package_id("pkg/0.1")
-        return client, pid
+        pref = client.created_package_reference("pkg/0.1")
+        return client, pref
 
     def save_metadata_file(self, client, pkg_ref, filename="somefile.log"):
-        client.run(f"cache path {pkg_ref} --folder=metadata")
-        metadata_path = str(client.stdout).strip()
+        try:
+            layout = client.get_latest_pkg_layout(PkgReference.loads(pkg_ref))
+        except:
+            layout = client.get_latest_ref_layout(RecipeReference.loads(pkg_ref))
+        metadata_path = layout.metadata()
         myfile = os.path.join(metadata_path, "logs", filename)
         save(myfile, f"{pkg_ref}!!!!")
         return metadata_path, myfile
 
     def test_upload(self, create_conan_pkg):
-        c, pid = create_conan_pkg
+        c, pref = create_conan_pkg
+        pid = pref.package_id
 
         # Add some metadata
-        self.save_metadata_file(c, "pkg/0.1", "mylogs.txt")
-        self.save_metadata_file(c, f"pkg/0.1:{pid}", "mybuildlogs.txt")
+        self.save_metadata_file(c, pref.ref, "mylogs.txt")
+        self.save_metadata_file(c, pref, "mybuildlogs.txt")
 
         # Now upload everything
         c.run("upload * -c -r=default")
