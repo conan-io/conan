@@ -219,15 +219,10 @@ class CMakeToolchain(object):
 
         if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
                                     check_type=str, choices=("disabled", "")) != "disabled":
-            # FIXME: think an alternative way of getting the
-            #  VirtualBuildEnv and VirtualRunEnv and avoid this pattern
-            prev_status = self._conanfile.virtualbuildenv
-            build_env = VirtualBuildEnv(self._conanfile).vars()
-            self._conanfile.virtualbuildenv = prev_status
 
-            prev_status = self._conanfile.virtualrunenv
-            run_env = VirtualRunEnv(self._conanfile).vars()
-            self._conanfile.virtualrunenv = prev_status
+            build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+
+            run_env = VirtualRunEnv(self._conanfile, auto_generate=True).vars()
 
             buildenv = {name: value for name, value in
                         build_env.items(variable_reference="$penv{{{name}}}")}
