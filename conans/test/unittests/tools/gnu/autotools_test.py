@@ -28,8 +28,8 @@ def test_source_folder_works(chdir_mock):
     assert conanfile.command.replace("\\", "/") == '"/path/to/sources/configure" -foo bar '
 
     autotools.autoreconf(build_script_folder="subfolder")
-    chdir_mock.assert_called_with(autotools, os.path.join("/path/to/sources", "subfolder"))
+    chdir_mock.assert_called_with(autotools, os.path.normpath(os.path.join("/path/to/sources", "subfolder")))
 
     autotools.autoreconf()
-    chdir_mock.assert_called_with(autotools, "/path/to/sources")
+    chdir_mock.assert_called_with(autotools, os.path.normpath("/path/to/sources"))
     assert conanfile.command.replace("\\", "/") == 'autoreconf -bar foo'
