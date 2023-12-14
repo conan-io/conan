@@ -221,7 +221,6 @@ class CMakeToolchain(object):
                                     check_type=str, choices=("disabled", "")) != "disabled":
 
             build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-
             run_env = VirtualRunEnv(self._conanfile, auto_generate=True).vars()
 
             buildenv = {name: value for name, value in
