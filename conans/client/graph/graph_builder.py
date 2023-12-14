@@ -271,19 +271,18 @@ class DepsGraphBuilder(object):
             graph.replaced_requires[original_require] = repr(require.ref)
             break  # First match executes the alternative and finishes checking others
 
-    def _match_host_version_ref_track(self, require):
-        ref_track_re = re.compile("<host_version(?::(.+))?>")
-        return ref_track_re.match(str(require.ref.version))
-
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        ref_track_match = self._match_host_version_ref_track(require)
-        if require.ref.version == "<host_version>" or ref_track_match:
+        require_version = str(require.ref.version)
+        if require_version == "<host_version>" or require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
-            temp = RecipeReference.loads(str(node.ref))
-            temp.name = ref_track_match.group(1)
-            ref = temp if ref_track_match else require.ref
+            tracking_ref = require_version.split(':')
+            ref = require.ref
+            if len(tracking_ref) > 1:
+                temp = RecipeReference.loads(str(node.ref))
+                temp.name = tracking_ref[1][:-1]  # Remove the trailing >
+                ref = temp
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
             if transitive is None:
