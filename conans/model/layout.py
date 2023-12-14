@@ -90,7 +90,7 @@ class Folders(object):
         if self._base_source is None:
             return None
         if not self.source:
-            return self._base_source
+            return os.path.normpath(self._base_source)
 
         return os.path.normpath(os.path.join(self._base_source, self.source))
 
@@ -106,7 +106,7 @@ class Folders(object):
         if self._base_build is None:
             return None
         if not self.build:
-            return self._base_build
+            return os.path.normpath(self._base_build)
         return os.path.normpath(os.path.join(self._base_build, self.build))
 
     @property
@@ -147,7 +147,7 @@ class Folders(object):
         if self._base_generators is None:
             return None
         if not self.generators:
-            return self._base_generators
+            return os.path.normpath(self._base_generators)
         return os.path.normpath(os.path.join(self._base_generators, self.generators))
 
     def set_base_generators(self, folder):
