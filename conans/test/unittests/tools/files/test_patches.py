@@ -7,7 +7,6 @@ from conan.tools.files import patch, apply_conandata_patches
 from conans.errors import ConanException
 from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
-from pathlib import Path
 
 
 class MockPatchset:
