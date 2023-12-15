@@ -4,6 +4,7 @@ import platform
 
 from conan.api.output import ConanOutput
 from conan.tools.cmake.layout import get_build_folder_custom_vars
+from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.microsoft import is_msvc
 from conans.client.graph.graph import RECIPE_CONSUMER
@@ -118,22 +119,23 @@ class _CMakePresets:
             "generator": generator,
             "cacheVariables": cache_variables,
         }
+
         if buildenv:
             ret["environment"] = buildenv
 
-        if "Ninja" in generator and is_msvc(conanfile):
-            toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
-            if toolset_arch:
-                toolset_arch = "host={}".format(toolset_arch)
+        if is_msvc(conanfile):
+            # We can force the generator Visual even if it is Ninja, to define the toolset
+            toolset = GenericSystemBlock.get_toolset("Visual", conanfile)
+            # It seems "external" strategy is enough, as it is defined by toolchain
+            if toolset:
                 ret["toolset"] = {
-                    "value": toolset_arch,
+                    "value": toolset,
                     "strategy": "external"
                 }
-            arch = {"x86": "x86",
-                    "x86_64": "x64",
-                    "armv7": "ARM",
-                    "armv8": "ARM64"}.get(conanfile.settings.get_safe("arch"))
-
+            arch = GenericSystemBlock.get_generator_platform("Visual", conanfile)
+            # https://learn.microsoft.com/en-us/cpp/build/cmake-presets-vs
+            if generator and "Ninja" in generator and arch == "Win32":
+                arch = "x86"  # for command line, it is not Win32, it is x86
             if arch:
                 ret["architecture"] = {
                     "value": arch,

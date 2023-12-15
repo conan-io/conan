@@ -956,6 +956,10 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("./build/Debug/foo")
     else:
         c.run_command("cmake --preset conan-default")
+        # this second called used to fail
+        # https://github.com/conan-io/conan/issues/13792, CMake ignoring toolchain architecture
+        # and toolset
+        c.run_command("cmake --preset conan-default")
         c.run_command("cmake --build --preset conan-debug")
         c.run_command("ctest --preset conan-debug")
         c.run_command("build\\Debug\\foo")
@@ -971,6 +975,35 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("cmake --build --preset conan-release")
         c.run_command("ctest --preset conan-release")
         c.run_command("build\\Release\\foo")
+
+    assert "Hello World Release!" in c.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.23")
+def test_cmake_presets_with_conanfile_txt_ninja():
+    c = TestClient()
+
+    c.run("new cmake_exe -d name=foo -d version=1.0")
+    os.unlink(os.path.join(c.current_folder, "conanfile.py"))
+    c.save({"conanfile.txt": textwrap.dedent("""
+        [generators]
+        CMakeToolchain
+
+        [layout]
+        cmake_layout
+        """)})
+
+    conf = "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    c.run(f"install . {conf}")
+    c.run(f"install . -s build_type=Debug {conf}")
+
+    c.run_command("build\\Release\\generators\\conanbuild.bat && cmake --preset conan-release")
+    c.run_command("build\\Release\\generators\\conanbuild.bat && cmake --preset conan-release")
+    c.run_command("build\\Release\\generators\\conanbuild.bat && cmake --build --preset conan-release")
+    c.run_command("build\\Release\\generators\\conanbuild.bat && ctest --preset conan-release")
+    c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
 

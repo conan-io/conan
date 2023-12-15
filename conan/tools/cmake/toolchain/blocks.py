@@ -681,14 +681,15 @@ class GenericSystemBlock(Block):
         {% endif %}
         """)
 
-    def _get_toolset(self, generator):
+    @staticmethod
+    def get_toolset(generator, conanfile):
         toolset = None
         if generator is None or ("Visual" not in generator and "Xcode" not in generator):
             return None
-        settings = self._conanfile.settings
+        settings = conanfile.settings
         compiler = settings.get_safe("compiler")
         if compiler == "intel-cc":
-            return IntelCC(self._conanfile).ms_toolset
+            return IntelCC(conanfile).ms_toolset
         elif compiler == "msvc":
             toolset = settings.get_safe("compiler.toolset")
             if toolset is None:
@@ -706,14 +707,15 @@ class GenericSystemBlock(Block):
                 else:
                     raise ConanException("CMakeToolchain with compiler=clang and a CMake "
                                          "'Visual Studio' generator requires VS16 or VS17")
-        toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
+        toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         return toolset
 
-    def _get_generator_platform(self, generator):
-        settings = self._conanfile.settings
+    @staticmethod
+    def get_generator_platform(generator, conanfile):
+        settings = conanfile.settings
         # Returns the generator platform to be used by CMake
         compiler = settings.get_safe("compiler")
         arch = settings.get_safe("arch")
@@ -816,8 +818,8 @@ class GenericSystemBlock(Block):
 
     def context(self):
         generator = self._toolchain.generator
-        generator_platform = self._get_generator_platform(generator)
-        toolset = self._get_toolset(generator)
+        generator_platform = self.get_generator_platform(generator, self._conanfile)
+        toolset = self.get_toolset(generator, self._conanfile)
         system_name, system_version, system_processor = self._get_cross_build()
 
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
