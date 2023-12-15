@@ -338,3 +338,31 @@ def test_autotools_fix_shared_libs():
     # Running the test-package also works
     client.run("test test_package hello/0.1@ -o hello/*:shared=True")
     assert "Bye, bye!" in client.out
+
+
+@pytest.mark.tool("msys2")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_autotools_template_windows():
+    client = TestClient(path_with_spaces=False)
+    client.run("new autotools_lib -d name=hello -d version=0.1")
+    profile = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        build_type=Release
+        compiler=msvc
+        compiler.runtime=dynamic
+        compiler.runtime_type=Release
+        compiler.version=191
+        os=Windows
+
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash.exe
+
+        [buildenv]
+        CC=cl
+        CXX=cl
+        """)
+    client.save({"profile": profile})
+    client.run("create . -pr=profile")
+    print(client.out)
