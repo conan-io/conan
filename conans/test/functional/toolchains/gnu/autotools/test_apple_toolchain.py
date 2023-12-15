@@ -143,4 +143,4 @@ def test_catalyst(arch):
 
     if arch == "x86_64":
         t.run_command('"%s"' % app)
-        assert "running catalyst 130100" in t.out
+        assert "running catalyst 160100" in t.out
