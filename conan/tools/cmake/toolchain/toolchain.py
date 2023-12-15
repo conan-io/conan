@@ -13,6 +13,7 @@ from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, G
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock
+from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
@@ -214,8 +215,21 @@ class CMakeToolchain(object):
             else:
                 cache_variables[name] = value
 
+        buildenv, runenv = None, None
+
+        if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
+                                    check_type=str, choices=("disabled", "")) != "disabled":
+
+            build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+            run_env = VirtualRunEnv(self._conanfile, auto_generate=True).vars()
+
+            buildenv = {name: value for name, value in
+                        build_env.items(variable_reference="$penv{{{name}}}")}
+            runenv = {name: value for name, value in
+                      run_env.items(variable_reference="$penv{{{name}}}")}
+
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path, self.presets_prefix)
+                            self.user_presets_path, self.presets_prefix, buildenv, runenv)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

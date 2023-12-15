@@ -12,9 +12,9 @@ from conans.util.files import save, load
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
-                        user_presets_path=None, preset_prefix=None):
+                        user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None):
     preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix)
+                                                      cache_variables, preset_prefix, buildenv, runenv)
     _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data)
 
 
@@ -22,7 +22,7 @@ class _CMakePresets:
     """ Conan generated main CMakePresets.json inside the generators_folder
     """
     @staticmethod
-    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix):
+    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv):
         cache_variables = cache_variables or {}
         if platform.system() == "Windows" and generator == "MinGW Makefiles":
             if "CMAKE_SH" not in cache_variables:
@@ -52,18 +52,19 @@ class _CMakePresets:
                                      "avoid collision with your CMakePresets.json")
         if os.path.exists(preset_path) and multiconfig:
             data = json.loads(load(preset_path))
-            build_preset = _CMakePresets._build_and_test_preset_fields(conanfile, multiconfig,
-                                                                       preset_prefix)
+            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+            test_preset = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix,
+                                                            runenv)
             _CMakePresets._insert_preset(data, "buildPresets", build_preset)
-            _CMakePresets._insert_preset(data, "testPresets", build_preset)
+            _CMakePresets._insert_preset(data, "testPresets", test_preset)
             configure_preset = _CMakePresets._configure_preset(conanfile, generator, cache_variables,
                                                                toolchain_file, multiconfig,
-                                                               preset_prefix)
+                                                               preset_prefix, buildenv)
             # Conan generated presets should have only 1 configurePreset, no more, overwrite it
             data["configurePresets"] = [configure_preset]
         else:
             data = _CMakePresets._contents(conanfile, toolchain_file, cache_variables, generator,
-                                           preset_prefix)
+                                           preset_prefix, buildenv, runenv)
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
@@ -81,27 +82,29 @@ class _CMakePresets:
             data[preset_type].append(preset)
 
     @staticmethod
-    def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix):
+    def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix, buildenv,
+                  runenv):
         """
         Contents for the CMakePresets.json
         It uses schema version 3 unless it is forced to 2
         """
         multiconfig = is_multi_configuration(generator)
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
-                                               multiconfig, preset_prefix)
-        build = _CMakePresets._build_and_test_preset_fields(conanfile, multiconfig, preset_prefix)
+                                               multiconfig, preset_prefix, buildenv)
+        build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+        test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
                "vendor": {"conan": {}},
                "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
                "configurePresets": [conf],
                "buildPresets": [build],
-               "testPresets": [build]
+               "testPresets": [test]
                }
         return ret
 
     @staticmethod
     def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
-                          preset_prefix):
+                          preset_prefix, buildenv):
         build_type = conanfile.settings.get_safe("build_type")
         name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
         if preset_prefix:
@@ -115,6 +118,9 @@ class _CMakePresets:
             "generator": generator,
             "cacheVariables": cache_variables,
         }
+        if buildenv:
+            ret["environment"] = buildenv
+
         if "Ninja" in generator and is_msvc(conanfile):
             toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
             if toolset_arch:
@@ -166,17 +172,28 @@ class _CMakePresets:
         return ret
 
     @staticmethod
-    def _build_and_test_preset_fields(conanfile, multiconfig, preset_prefix):
+    def _common_preset_fields(conanfile, multiconfig, preset_prefix):
         build_type = conanfile.settings.get_safe("build_type")
         configure_preset_name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
         build_preset_name = _CMakePresets._build_and_test_preset_name(conanfile)
         if preset_prefix:
             configure_preset_name = f"{preset_prefix}-{configure_preset_name}"
             build_preset_name = f"{preset_prefix}-{build_preset_name}"
-        ret = {"name": build_preset_name,
-               "configurePreset": configure_preset_name}
+        ret = {"name": build_preset_name, "configurePreset": configure_preset_name}
         if multiconfig:
             ret["configuration"] = build_type
+        return ret
+
+    @staticmethod
+    def _build_preset_fields(conanfile, multiconfig, preset_prefix):
+        ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
+        return ret
+
+    @staticmethod
+    def _test_preset_fields(conanfile, multiconfig, preset_prefix, runenv):
+        ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
+        if runenv:
+            ret["environment"] = runenv
         return ret
 
     @staticmethod
