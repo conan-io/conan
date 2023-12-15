@@ -216,14 +216,20 @@ class ConanOutput:
             if _skip_warning():
                 return self
             warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "
-            message_type = "ERROR" if self._warnings_as_errors else "WARN"
-            message_color = Color.RED if self._warnings_as_errors else Color.YELLOW
-            self._write_message(f"{message_type}: {warn_tag_msg}{msg}", message_color)
+            output = f"{warn_tag_msg}{msg}"
+
+            if self._warnings_as_errors:
+                self.error(output)
+            else:
+                self._write_message(f"WARN: {output}", Color.YELLOW)
         return self
 
-    def error(self, msg):
+    def error(self, msg, error_type=None):
         if self._conan_output_level <= LEVEL_ERROR:
-            self._write_message("ERROR: {}".format(msg), Color.RED)
+            if self._warnings_as_errors and error_type != "context":
+                raise ConanException(msg)
+            else:
+                self._write_message("ERROR: {}".format(msg), Color.RED)
         return self
 
     def flush(self):

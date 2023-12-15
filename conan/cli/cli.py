@@ -208,20 +208,20 @@ class Cli:
         if exception is None:
             return SUCCESS
         if isinstance(exception, ConanInvalidConfiguration):
-            output.error(exception)
+            output.error(exception, error_type="context")
             return ERROR_INVALID_CONFIGURATION
         if isinstance(exception, ConanException):
-            output.error(exception)
+            output.error(exception, error_type="context")
             return ERROR_GENERAL
         if isinstance(exception, SystemExit):
             if exception.code != 0:
-                output.error("Exiting with code: %d" % exception.code)
+                output.error("Exiting with code: %d" % exception.code, error_type="context")
             return exception.code
 
         assert isinstance(exception, Exception)
-        output.error(traceback.format_exc())
+        output.error(traceback.format_exc(), error_type="context")
         msg = exception_message_safe(exception)
-        output.error(msg)
+        output.error(msg, error_type="context")
         return ERROR_UNEXPECTED
 
 
