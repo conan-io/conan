@@ -555,6 +555,24 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     assert "LIBCMTD" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+# @pytest.mark.tool("cmake", "3.28")
+def test_cmake_toolchain_winsdk_version():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_lib -d name=hello -d version=0.1")
+    cmake = client.load("CMakeLists.txt")
+    # TODO: when we have CMake 3.27 in CI
+    # cmake = cmake.replace("cmake_minimum_required(VERSION 3.15)",
+    #                       "cmake_minimum_required(VERSION 3.27)")
+    cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
+             '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
+    client.save({"CMakeLists.txt": cmake})
+    client.run("create . -s arch=x86_64 -s compiler.version=193 "
+               "-c tools.microsoft:winsdk_version=8.1")
+    assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
+    assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
+
+
 @pytest.mark.tool("cmake", "3.23")
 def test_cmake_presets_missing_option():
     client = TestClient(path_with_spaces=False)
