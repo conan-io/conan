@@ -92,7 +92,7 @@ def test_catalyst(arch):
         include(default)
         [settings]
         os = Macos
-        os.version = 15.0
+        os.version = 14.0
         os.subsystem = catalyst
         os.subsystem.ios_version = 16.1
         arch = {arch}
