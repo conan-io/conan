@@ -804,7 +804,7 @@ class GenericSystemBlock(Block):
                 self._conanfile.output.warning("Both cmake_system_version and winsdk_version confs"
                                                " defined, prioritizing winsdk_version")
             system_version = winsdk_version
-        elif "Windows" in self._conanfile.get_safe("os", ""):
+        elif "Windows" in self._conanfile.settings.get_safe("os", ""):
             winsdk_version = self._conanfile.settings.get_safe("os.version")
             if system_version:
                 if winsdk_version:
