@@ -146,9 +146,9 @@ class VCVars:
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
-            echo conanvcvars.bat: Activating environment Visual Studio {} - {} - vcvars_ver={}
+            echo conanvcvars.bat: Activating environment Visual Studio {} - {} - winsdk_version={} - vcvars_ver={}
             {}
-            """.format(vs_version, vcvarsarch, vcvars_ver, vcvars))
+            """.format(vs_version, vcvarsarch, winsdk_version, vcvars_ver, vcvars))
         from conan.tools.env.environment import create_env_script
         create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
 
