@@ -280,9 +280,8 @@ class DepsGraphBuilder(object):
             tracking_ref = require_version.split(':', 1)
             ref = require.ref
             if len(tracking_ref) > 1:
-                temp = RecipeReference.loads(str(node.ref))
-                temp.name = tracking_ref[1][:-1]  # Remove the trailing >
-                ref = temp
+                ref = RecipeReference.loads(str(node.ref))
+                ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
             if transitive is None:
