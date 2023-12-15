@@ -273,7 +273,7 @@ class DepsGraphBuilder(object):
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         require_version = str(require.ref.version)
-        if require_version == "<host_version>" or require_version.startswith("<host_version") and require_version.endswith(">"):
+        if require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
