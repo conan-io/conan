@@ -245,6 +245,38 @@ class CMake(object):
         self._build(build_type=build_type, target=target, cli_args=cli_args,
                     build_tool_args=build_tool_args, env=env, stdout=stdout, stderr=stderr)
 
+    def ctest(self, cli_args=None, env="", stdout=None, stderr=None):
+        """
+        Equivalent to running ctest ...
+
+        :param cli_args: Extra ctest command line arguments
+        :param env: the environment files to activate, by default conanbuild + conanrun
+        :param stdout: Use it to redirect stdout to this stream
+        :param stderr: Use it to redirect stderr to this stream
+        """
+        if self._conanfile.conf.get("tools.build:skip_test", check_type=bool):
+            return
+
+        arg_list = []
+        bt = self._conanfile.settings.get_safe("build_type")
+        is_multi = is_multi_configuration(self._generator)
+        if bt and is_multi:
+            arg_list.append(f"--build-config {bt}")
+        njobs = build_jobs(self._conanfile)
+        if njobs:
+            arg_list.append(f"--parallel {njobs}")
+
+        verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
+        if verbosity:
+            arg_list.append(f"--{verbosity}")
+
+        arg_list.extend(cli_args or [])
+        arg_list = " ".join(filter(None, arg_list))
+        command = f"ctest {arg_list}"
+
+        env = ["conanbuild", "conanrun"] if env == "" else env
+        self._conanfile.run(command, env=env, stdout=stdout, stderr=stderr)
+
     @property
     def _compilation_verbosity_arg(self):
         """
@@ -266,4 +298,3 @@ class CMake(object):
         if log_level == "quiet":
             log_level = "error"
         return ["--loglevel=" + log_level.upper()] if log_level is not None else []
-
