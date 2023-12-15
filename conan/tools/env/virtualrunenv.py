@@ -29,13 +29,14 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, auto_generate=False):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
-        self._conanfile.virtualrunenv = False
+        if not auto_generate:
+            self._conanfile.virtualrunenv = False
         self.basename = "conanrunenv"
         self.configuration = conanfile.settings.get_safe("build_type")
         if self.configuration:
