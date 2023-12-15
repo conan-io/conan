@@ -7,7 +7,6 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
@@ -624,6 +623,7 @@ class TestCmakeTestMethod:
                     cmake.configure()
                     cmake.build()
                     cmake.test()
+                    cmake.ctest()
             """)
 
         cmakelist = textwrap.dedent("""
@@ -648,7 +648,8 @@ class TestCmakeTestMethod:
 
         # The create flow must work
         c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
-        assert "1/1 Test #1: example ..........................   Passed" in c.out
+        assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
+        assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
 
 
 @pytest.mark.tool("cmake")
