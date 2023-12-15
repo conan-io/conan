@@ -788,15 +788,11 @@ class GenericSystemBlock(Block):
 
         return system_name, system_version, system_processor
 
-    def context(self):
-        generator = self._toolchain.generator
-        generator_platform = self._get_generator_platform(generator)
-        toolset = self._get_toolset(generator)
-        system_name, system_version, system_processor = self._get_cross_build()
-
-        # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
-        cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
-        cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+    def _get_winsdk_version(self, system_version, generator_platform):
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler not in ("msvc", "clang") or "Visual" not in str(self._toolchain.generator):
+            # Ninja will get it from VCVars, not from toolchain
+            return system_version, None, None
 
         winsdk_version = self._conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
         if winsdk_version:
@@ -815,6 +811,21 @@ class GenericSystemBlock(Block):
         gen_platform_sdk_version = [generator_platform,
                                     f"version={winsdk_version}" if winsdk_version else None]
         gen_platform_sdk_version = ",".join(d for d in gen_platform_sdk_version if d)
+
+        return system_version, winsdk_version, gen_platform_sdk_version
+
+    def context(self):
+        generator = self._toolchain.generator
+        generator_platform = self._get_generator_platform(generator)
+        toolset = self._get_toolset(generator)
+        system_name, system_version, system_processor = self._get_cross_build()
+
+        # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
+        cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
+        cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+
+        result = self._get_winsdk_version(system_version, generator)
+        system_version, winsdk_version, gen_platform_sdk_version = result
 
         return {"toolset": toolset,
                 "generator_platform": generator_platform,
