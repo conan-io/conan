@@ -18,11 +18,13 @@ def cpp_info():
     bindirs = os.path.join(folder, "bin")
     libdirs = os.path.join(folder, "lib")
     save(ConanFileMock(), os.path.join(bindirs, "mylibwin.dll"), "")
+    save(ConanFileMock(), os.path.join(bindirs, "mylibwin2.dll"), "")
     save(ConanFileMock(), os.path.join(bindirs, "myliblin.so"), "")
     save(ConanFileMock(), os.path.join(bindirs, "mylibmac.dylib"), "")
     save(ConanFileMock(), os.path.join(libdirs, "myliblin.a"), "")
     save(ConanFileMock(), os.path.join(libdirs, "mylibmac.a"), "")
     save(ConanFileMock(), os.path.join(libdirs, "mylibwin.lib"), "")
+    save(ConanFileMock(), os.path.join(libdirs, "mylibwin2.if.lib"), "")
     save(ConanFileMock(), os.path.join(libdirs, "libmylib.so"), "")
     save(ConanFileMock(), os.path.join(libdirs, "subfolder", "libmylib.a"), "")  # recursive
     cpp_info_mock = MagicMock(_base_folder=None, libdirs=None, bindirs=None, libs=None)
@@ -78,6 +80,8 @@ def test_bazeldeps_relativize_path(path, pattern, expected):
     (["mylibwin"], False, [('mylibwin', False, '{base_folder}/lib/mylibwin.lib', None)]),
     # Win + shared
     (["mylibwin"], True, [('mylibwin', True, '{base_folder}/bin/mylibwin.dll', '{base_folder}/lib/mylibwin.lib')]),
+    # Win + shared (interface with another ext)
+    (["mylibwin2"], True, [('mylibwin2', True, '{base_folder}/bin/mylibwin2.dll', '{base_folder}/lib/mylibwin2.if.lib')]),
     # Win + Mac + shared
     (["mylibwin", "mylibmac"], True, [('mylibmac', True, '{base_folder}/bin/mylibmac.dylib', None),
                                       ('mylibwin', True, '{base_folder}/bin/mylibwin.dll', '{base_folder}/lib/mylibwin.lib')]),
@@ -102,5 +106,7 @@ def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
         if interface_lib_path:
             interface_lib_path = interface_lib_path.format(base_folder=cpp_info._base_folder)
         ret.append((lib, is_shared, lib_path, interface_lib_path))
-    assert _get_libs(ConanFileMock(options=Options(options_values={"shared": is_shared})),
-                     cpp_info).sort() == ret.sort()
+    found_libs = _get_libs(ConanFileMock(options=Options(options_values={"shared": is_shared})), cpp_info)
+    found_libs.sort()
+    ret.sort()
+    assert found_libs == ret
