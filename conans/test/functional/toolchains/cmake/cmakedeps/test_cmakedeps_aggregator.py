@@ -29,9 +29,9 @@ def test_aggregator(transitive_libraries):
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
         project(app CXX)
-        include(${CMAKE_BINARY_DIR}/generators/conandeps.cmake)
+        include(${CMAKE_BINARY_DIR}/generators/conandeps_legacy.cmake)
         add_executable(app main.cpp)
-        target_link_libraries(app conandeps)
+        target_link_libraries(app ${CONANDEPS_LEGACY})
         """)
 
     c.save({

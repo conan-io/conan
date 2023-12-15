@@ -206,18 +206,17 @@ class CMakeDeps(object):
             configs.append(config)
 
         template = textwrap.dedent("""\
-            message(STATUS "Conan: Using CMakeDeps conandeps.cmake aggregator via include()")
+            message(STATUS "Conan: Using CMakeDeps conandeps_legacy.cmake aggregator via include()")
             message(STATUS "Conan: It is recommended to use explicit find_package() per dependency instead")
 
             {% for config in configs %}
             find_package({{config.file_name}})
             {% endfor %}
 
-            add_library(conandeps INTERFACE)
-            target_link_libraries(conandeps INTERFACE {% for t in configs %} {{t.root_target_name}} {% endfor %})
+            set(CONANDEPS_LEGACY {% for t in configs %} {{t.root_target_name}} {% endfor %})
             """)
 
         template = Template(template, trim_blocks=True, lstrip_blocks=True,
                             undefined=jinja2.StrictUndefined)
         conandeps = template.render({"configs": configs})
-        save(self._conanfile, "conandeps.cmake", conandeps)
+        save(self._conanfile, "conandeps_legacy.cmake", conandeps)
