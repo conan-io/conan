@@ -83,6 +83,8 @@ class LocalAPI:
         conanfile.folders.set_base_source(folder)
         conanfile.folders.set_base_export_sources(folder)
         conanfile.folders.set_base_recipe_metadata(os.path.join(folder, "metadata"))
+        # The generators are needed for the "conan source" local case with tool-requires
+        conanfile.folders.set_base_generators(folder)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
