@@ -516,7 +516,7 @@ class TestBuildTrackHost:
         ("libgettext>", False, "gettext/0.2#d9f9eaeac9b6e403b271f04e04149df2"),
         # Error cases, just checking that we fail gracefully - no tracebacks
         ("libgettext", True, "Package 'gettext/<host_version:libgettext' not resolved"),
-        (":>", True, "app/1.0 require '/1.0': didn't find a matching host dependency"),
+        (":>", True, "app/1.0 require ':/1.0': didn't find a matching host dependency"),
         (">", True, "app/1.0 require '/1.0': didn't find a matching host dependency"),
         (":", True, " Package 'gettext/<host_version::' not resolved"),
         ("", True, "Package 'gettext/<host_version:' not resolved: No remote defined")
