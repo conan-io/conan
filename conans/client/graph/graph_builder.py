@@ -277,7 +277,7 @@ class DepsGraphBuilder(object):
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
-            tracking_ref = require_version.split(':')
+            tracking_ref = require_version.split(':', 1)
             ref = require.ref
             if len(tracking_ref) > 1:
                 temp = RecipeReference.loads(str(node.ref))
