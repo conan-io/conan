@@ -404,18 +404,29 @@ class DepsGraphBuilder(object):
 
     def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
                         update, remotes, profile, graph_lock, original_ref=None):
-
         ref = requirement.ref
-        if ref.version == "<host_version>":
+        ref_version = str(ref.version)
+        if ref_version.startswith("<host_version") and ref_version.endswith(">"):
             if not requirement.build_require:
                 raise ConanException(f"{current_node.ref} uses '<host_version>' in requires, "
                                      "it is only allowed in tool_requires")
+            search_ref_name = ref.name
+            tracking_ref = ref_version.split(":", 1)
+            if len(tracking_ref) == 2:
+                search_ref_name = tracking_ref[1][:-1]  # Remove trailing '>'
             transitive = next((dep for dep in current_node.dependencies if
-                  not dep.build_require and dep.require.ref.name == ref.name), None)
+                               not dep.build_require and
+                               dep.require.ref.name == search_ref_name and
+                               dep.require.ref.user == ref.user and
+                               dep.require.ref.channel == ref.channel), None)
             if transitive is None:
                 raise ConanException(
-                    f"{current_node.ref} require '{ref}': didn't find a matching host dependency")
-            requirement.ref = transitive.require.ref
+                    f"{current_node.ref} require '{search_ref_name}': didn't find a matching host dependency")
+            new_ref = transitive.require.ref
+            # Final ref is the one from the transitive dependency, but with the version from the
+            # tracked requirement, if any
+            requirement.ref = ConanFileReference(ref.name, new_ref.version,
+                                                 new_ref.user, new_ref.channel)
 
         try:
             result = self._proxy.get_recipe(requirement.ref, check_updates, update,
