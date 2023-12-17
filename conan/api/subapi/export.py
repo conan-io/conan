@@ -4,6 +4,7 @@ from conans.client.cmd.export import cmd_export
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_BUILD
 from conans.model.package_ref import PkgReference
+from conans.util.files import mkdir
 
 
 class ExportAPI:
@@ -13,12 +14,12 @@ class ExportAPI:
 
     def export(self, path, name, version, user, channel, lockfile=None, remotes=None):
         ConanOutput().title("Exporting recipe to the cache")
-        app = ConanApp(self.conan_api.cache_folder)
-        return cmd_export(app, path, name, version, user, channel, graph_lock=lockfile,
-                          remotes=remotes)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        return cmd_export(app, self.conan_api.config.global_conf, path, name, version, user, channel,
+                          graph_lock=lockfile, remotes=remotes)
 
     def export_pkg(self, deps_graph, source_folder, output_folder):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         cache, hook_manager = app.cache, app.hook_manager
 
         # The graph has to be loaded with build_mode=[ref.name], so that node is not tried
@@ -40,6 +41,8 @@ class ExportAPI:
         conanfile.folders.set_base_folders(source_folder, output_folder)
         dest_package_folder = pkg_layout.package()
         conanfile.folders.set_base_package(dest_package_folder)
+        mkdir(pkg_layout.metadata())
+        conanfile.folders.set_base_pkg_metadata(pkg_layout.metadata())
 
         with pkg_layout.set_dirty_context_manager():
             prev = run_package_method(conanfile, package_id, hook_manager, ref)

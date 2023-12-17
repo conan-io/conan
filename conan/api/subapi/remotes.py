@@ -66,7 +66,7 @@ class RemotesAPI:
         return RemoteRegistry(self._remotes_file).add(remote, force=force, index=index)
 
     def remove(self, pattern: str):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         remotes = self.list(pattern, only_enabled=False)
         for remote in remotes:
             RemoteRegistry(self._remotes_file).remove(remote.name)
@@ -80,24 +80,24 @@ class RemotesAPI:
         RemoteRegistry(self._remotes_file).rename(remote_name, new_name)
 
     def user_info(self, remote: Remote):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         return users_list(app.cache.localdb, remotes=[remote])[0]
 
     def login(self, remote: Remote, username, password):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         app.remote_manager.authenticate(remote, username, password)
 
     def logout(self, remote: Remote):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         # The localdb only stores url + username + token, not remote name, so use URL as key
         users_clean(app.cache.localdb, remote.url)
 
     def user_set(self, remote: Remote, username):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         return user_set(app.cache.localdb, username, remote)
 
     def auth(self, remote: Remote, with_user=False):
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if with_user:
             user, token, _ = app.cache.localdb.get_login(remote.url)
             if not user:

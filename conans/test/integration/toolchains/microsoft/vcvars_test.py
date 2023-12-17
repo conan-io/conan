@@ -107,3 +107,22 @@ def test_vcvars_platform_x86():
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  x86_amd64' in vcvars
     assert "-vcvars_ver" not in vcvars
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_vcvars_winsdk_version():
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            generators = "VCVars"
+            settings = "os", "compiler", "arch", "build_type"
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
+               '-s compiler.cppstd=14 -s compiler.runtime=static '
+               '-c tools.microsoft:winsdk_version=8.1')
+
+    vcvars = client.load("conanvcvars.bat")
+    assert 'vcvarsall.bat"  amd64 8.1 -vcvars_ver=14.3' in vcvars

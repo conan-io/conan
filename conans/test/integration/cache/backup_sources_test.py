@@ -185,6 +185,16 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup" in self.client.out
         assert f"File {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {self.file_server.fake_url}/backups/" in self.client.out
 
+        # Ensure defaults backup folder works if it's not set in global.conf
+        # (The rest is needed to exercise the rest of the code)
+        self.client.save(
+            {"global.conf": f"core.sources:download_urls=['{self.file_server.fake_url}/backups/', 'origin']\n"
+                            f"core.sources:exclude_urls=['{self.file_server.fake_url}/mycompanystorage/', '{self.file_server.fake_url}/mycompanystorage2/']"},
+            path=self.client.cache.cache_folder)
+        self.client.run("source .")
+        assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup" in self.client.out
+        assert f"File {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not found in {self.file_server.fake_url}/backups/" in self.client.out
+
     def test_download_origin_first(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
 

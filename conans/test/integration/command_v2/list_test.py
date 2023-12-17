@@ -761,13 +761,13 @@ class TestListCompact:
         expected = textwrap.dedent("""\
             pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2a67a51fbf36a4ee345b2125dd2642be60ffd3ec
               settings: Macos, armv8
-              options(diff): shared=True
+              options: shared=True
             pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2d46abc802bbffdf2af11591e3e452bc6149ea2b
               settings: Linux, armv8
-              options(diff): shared=False
+              options: shared=False
             pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:d2e97769569ac0a583d72c10a37d5ca26de7c9fa
               settings: Windows, x86
-              options(diff): shared=False
+              options: shared=False
             """)
         assert textwrap.indent(expected, "      ") in c.stdout
 

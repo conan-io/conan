@@ -373,7 +373,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
-                 default_server_user=None):
+                 default_server_user=None, light=False):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -423,7 +423,11 @@ class TestClient(object):
         self.inputs = inputs or []
 
         # create default profile
-        text = default_profiles[platform.system()]
+        if light:
+            text = "[settings]\nos=Linux"  # Needed at least build-os
+            save(self.cache.settings_path, "os: [Linux]")
+        else:
+            text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)
 
     def load(self, filename):
@@ -432,9 +436,12 @@ class TestClient(object):
     @property
     def cache(self):
         # Returns a temporary cache object intended for inspecting it
+        api = ConanAPI(cache_folder=self.cache_folder)
+        global_conf = api.config.global_conf
+
         class MyCache(ClientCache, HomePaths):  # Temporary class to avoid breaking all tests
             def __init__(self, cache_folder):
-                ClientCache.__init__(self, cache_folder)
+                ClientCache.__init__(self, cache_folder, global_conf)
                 HomePaths.__init__(self, cache_folder)
 
             @property

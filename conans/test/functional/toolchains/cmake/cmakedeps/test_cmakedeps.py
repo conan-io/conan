@@ -562,32 +562,29 @@ def test_system_dep():
 
 
 @pytest.mark.tool("cmake", "3.19")
-def test_error_missing_build_type():
+def test_error_missing_build_type(matrix_client):
     # https://github.com/conan-io/conan/issues/11168
-    client = TestClient()
-
-    client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create . -tf=\"\"")
+    client = matrix_client
 
     conanfile = textwrap.dedent("""
         [requires]
-        hello/1.0
+        matrix/1.0
         [generators]
         CMakeDeps
         CMakeToolchain
     """)
 
     main = textwrap.dedent("""
-        #include <hello.h>
-        int main() {hello();return 0;}
+        #include <matrix.h>
+        int main() {matrix();return 0;}
     """)
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(app)
-        find_package(hello REQUIRED)
+        find_package(matrix REQUIRED)
         add_executable(app)
-        target_link_libraries(app hello::hello)
+        target_link_libraries(app matrix::matrix)
         target_sources(app PRIVATE main.cpp)
     """)
 
@@ -620,19 +617,16 @@ def test_error_missing_build_type():
     client.run_command("cmake --build . --config Release")
     run_app = r".\Release\app.exe" if platform.system() == "Windows" else "./Release/app"
     client.run_command(run_app)
-    assert "Hello World Release!" in client.out
+    assert "matrix/1.0: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")
-def test_map_imported_config():
+def test_map_imported_config(matrix_client):
     # https://github.com/conan-io/conan/issues/12041
-
-    client = TestClient()
-    client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run("create . -tf=\"\" -s build_type=Release")
+    client = matrix_client
 
     # It is necessary a 2-level test to make the fixes evident
-    talk_cpp = gen_function_cpp(name="talk", includes=["hello"], calls=["hello"])
+    talk_cpp = gen_function_cpp(name="talk", includes=["matrix"], calls=["matrix"])
     talk_h = gen_function_h(name="talk")
     conanfile = textwrap.dedent("""
         import os
@@ -644,7 +638,7 @@ def test_map_imported_config():
             version = '1.0'
             exports_sources = "*"
             generators = "CMakeDeps", "CMakeToolchain"
-            requires = ("hello/1.0", )
+            requires = ("matrix/1.0", )
             settings = "os", "compiler", "arch", "build_type"
 
             def build(self):
@@ -662,7 +656,7 @@ def test_map_imported_config():
 
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": gen_cmakelists(libname="talk",
-                                                  libsources=["talk.cpp"], find_package=["hello"],
+                                                  libsources=["talk.cpp"], find_package=["matrix"],
                                                   install=True, public_header="talk.h"),
                  "talk.cpp": talk_cpp,
                  "talk.h": talk_h}, clean_first=True)
@@ -701,40 +695,39 @@ def test_map_imported_config():
         client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
         client.run_command("cmake --build . --config Debug")
         client.run_command("Debug\\app.exe")
-    assert "hello/1.0: Hello World Release!" in client.out
+    assert "matrix/1.0: Hello World Release!" in client.out
     assert "talk: Release!" in client.out
     assert "main: Debug!" in client.out
 
+
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Windows DLL specific")
-def test_cmake_target_runtime_dlls():
+def test_cmake_target_runtime_dlls(transitive_libraries):
     # https://github.com/conan-io/conan/issues/13504
 
-    client = TestClient()
-    client.run("new cmake_lib -d name=hello -d version=1.0")
-    client.run('create . -tf="" -s build_type=Release -o "hello/*":shared=True')
+    client = transitive_libraries
 
-    client.run("new cmake_exe -d name=foo -d version=1.0 -d requires=hello/1.0 -f")
+    client.run("new cmake_exe -d name=foo -d version=1.0 -d requires=engine/1.0 -f")
     cmakelists = textwrap.dedent("""
     cmake_minimum_required(VERSION 3.15)
     project(foo CXX)
-    find_package(hello CONFIG REQUIRED)
+    find_package(engine CONFIG REQUIRED)
     add_executable(foo src/foo.cpp src/main.cpp)
-    target_link_libraries(foo PRIVATE hello::hello)
+    target_link_libraries(foo PRIVATE engine::engine)
     # Make sure CMake copies DLLs from dependencies, next to the executable
-    # in this case it should copy hello.dll
+    # in this case it should copy engine.dll
     add_custom_command(TARGET foo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:foo> $<TARGET_FILE_DIR:foo>
         COMMAND_EXPAND_LISTS)
     """)
     client.save({"CMakeLists.txt": cmakelists})
-    client.run('install . -s build_type=Release -o "hello/*":shared=True')
+    client.run('install . -s build_type=Release -o "engine/*":shared=True')
     client.run_command("cmake -S . -B build/ -DCMAKE_TOOLCHAIN_FILE=build/generators/conan_toolchain.cmake")
     client.run_command("cmake --build build --config Release")
     client.run_command("build\\Release\\foo.exe")
 
-    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "hello.dll"))
-    assert "hello/1.0: Hello World Release!" in client.out # if the DLL wasn't copied, the application would not run and show output
+    assert os.path.exists(os.path.join(client.current_folder, "build", "Release", "engine.dll"))
+    assert "engine/1.0: Hello World Release!" in client.out # if the DLL wasn't copied, the application would not run and show output
 
 
 @pytest.mark.tool("cmake")
