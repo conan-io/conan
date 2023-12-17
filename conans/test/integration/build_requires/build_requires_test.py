@@ -716,7 +716,6 @@ class TestBuildTrackHost:
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg})
         c.run(f"create protobuf 1.0@{requires_tag}")
-        c.run(f"create protobuf 1.0@{tool_requires_tag}")
 
         c.run("create pkg", assert_error=fails)
         if fails:
