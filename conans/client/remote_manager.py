@@ -63,7 +63,7 @@ class RemoteManager(object):
                                      f"no conanmanifest.txt")
             self._signer.verify(ref, download_export, files=zipped_files)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'")
+            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'", error_type="context")
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
@@ -91,7 +91,7 @@ class RemoteManager(object):
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                               only_metadata=True)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            output.error(f"Error downloading metadata from remote '{remote.name}'")
+            output.error(f"Error downloading metadata from remote '{remote.name}'", error_type="context")
             raise
 
     def get_recipe_sources(self, ref, layout, remote):
@@ -134,8 +134,8 @@ class RemoteManager(object):
             self._call_remote(remote, "get_package", pref, download_pkg_folder,
                               metadata, only_metadata=True)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
-            output.error("Exception while getting package metadata: %s" % str(pref.package_id))
-            output.error("Exception: %s %s" % (type(e), str(e)))
+            output.error(f"Exception while getting package metadata: {str(pref.package_id)}", error_type="context")
+            output.error(f"Exception: {type(e)} {str(e)}", error_type="context")
             raise
 
     def _get_package(self, layout, pref, remote, scoped_output, metadata):
@@ -166,8 +166,8 @@ class RemoteManager(object):
             raise PackageNotFoundException(pref)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
             self._cache.remove_package_layout(layout)
-            scoped_output.error("Exception while getting package: %s" % str(pref.package_id))
-            scoped_output.error("Exception: %s %s" % (type(e), str(e)))
+            scoped_output.error(f"Exception while getting package: {str(pref.package_id)}", error_type="context")
+            scoped_output.error(f"Exception: {type(e)} {str(e)}", error_type="context")
             raise
 
     def search_recipes(self, remote, pattern):

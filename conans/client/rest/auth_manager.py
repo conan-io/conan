@@ -78,9 +78,9 @@ class ConanApiAuthManager(object):
             except AuthenticationException:
                 out = ConanOutput()
                 if user is None:
-                    out.error('Wrong user or password')
+                    out.error('Wrong user or password', error_type="context")
                 else:
-                    out.error('Wrong password for user "%s"' % user)
+                    out.error(f'Wrong password for user "{user}"', error_type="context")
                     out.info('You can change username with "conan remote login <remote> <username>"')
             else:
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
@@ -98,7 +98,7 @@ class ConanApiAuthManager(object):
             self._localdb.store(user, token=None, refresh_token=None, remote_url=remote.url)
         except Exception as e:
             out = ConanOutput()
-            out.error('Your credentials could not be stored in local cache\n')
+            out.error('Your credentials could not be stored in local cache\n', error_type="context")
             out.debug(str(e) + '\n')
 
     @staticmethod

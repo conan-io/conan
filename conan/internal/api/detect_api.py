@@ -5,6 +5,7 @@ import tempfile
 import textwrap
 
 from conan.api.output import ConanOutput
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import save
 from conans.util.runners import check_output_runner, detect_runner
@@ -205,6 +206,7 @@ def default_msvc_runtime(compiler):
 def default_cppstd(compiler, compiler_version):
     """ returns the default cppstd for the compiler-version. This is not detected, just the default
     """
+
     def _clang_cppstd_default(version):
         if version >= "16":
             return "gnu17"
@@ -264,18 +266,17 @@ def detect_compiler():
         if "gcc" in command or "g++" in command or "c++" in command:
             gcc, gcc_version = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
-                output.error("%s detected as a frontend using apple-clang. "
-                             "Compiler not supported" % command)
+                raise ConanException("%s detected as a frontend using apple-clang. "
+                                     "Compiler not supported" % command)
             return gcc, gcc_version
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
-        if platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe")) \
-                and "clang" not in command:
+        if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
+            and "clang" not in command):
             return _msvc_cl_compiler(command)
 
         # I am not able to find its version
-        output.error("Not able to automatically detect '%s' version" % command)
-        return None, None
+        raise ConanException("Not able to automatically detect '%s' version" % command)
 
     if platform.system() == "Windows":
         version = _detect_vs_ide_version()

@@ -103,4 +103,4 @@ class BuildMode:
 
     def report_matches(self):
         for pattern in self._unused_patterns:
-            ConanOutput().error("No package matching '%s' pattern found." % pattern)
+            ConanOutput().error(f"No package matching '{pattern}' pattern found.", error_type="context")

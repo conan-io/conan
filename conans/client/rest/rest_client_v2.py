@@ -147,7 +147,7 @@ class RestV2Methods(RestCommonMethods):
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
-                output.error("\nError uploading file: %s, '%s'" % (filename, exc))
+                output.error(f"\nError uploading file: {filename}, '{exc}'", error_type="context")
                 failed.append(filename)
 
         if failed:
