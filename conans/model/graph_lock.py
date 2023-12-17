@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 from collections import OrderedDict
@@ -72,7 +73,7 @@ class _LockRequires:
         if version.startswith("[") and version.endswith("]"):
             version_range = VersionRange(version[1:-1])
             for k, v in self._requires.items():
-                if k.name == ref.name and version_range.contains(k.version, None):
+                if fnmatch.fnmatch(k.name, ref.name) and version_range.contains(k.version, None):
                     new_pattern = f"{k.name}/*@{ref.user or ''}"
                     new_pattern += f"/{ref.channel}" if ref.channel else ""
                     if k.matches(new_pattern, False):

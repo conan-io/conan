@@ -222,12 +222,13 @@ class TestLockRemove:
         ("--requires=math/2.0", []),
         ("--build-requires=cmake/1.0", ["cmake"]),
         # Not valid ("--build-requires=*", ["cmake", "ninja"]),
-        ("--build-requires=*/*", ["cmake", "ninja"]), # But this is valid
+        ("--build-requires=*/*", ["cmake", "ninja"]),  # But this is valid
         ("--python-requires=mytool/*", ["mytool"]),
         ("--python-requires=*tool/*", ["mytool", "othertool"]),
         # With version ranges
         ('--requires="math/[>=1.0 <2]"', ["math"]),
         ('--requires="math/[>1.0]"', []),
+        ('--requires="*/[>=1.0 <2]"', ["math", "engine"])
     ])
     def test_lock_remove(self, args, removed):
         c = TestClient()
