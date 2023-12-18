@@ -1,5 +1,3 @@
-import os.path
-
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write
