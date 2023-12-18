@@ -47,9 +47,9 @@ class TestMetadataCommands:
         c.run("remove * -c")
         c.run("install --requires=pkg/0.1")  # wont install metadata by default
         c.run("cache path pkg/0.1 --folder=metadata", assert_error=True)
-        assert "'metadata' folder does not exist for the pkg/0.1" in c.out
+        assert "'metadata' folder does not exist for the reference pkg/0.1" in c.out
         c.run(f"cache path pkg/0.1:{pid} --folder=metadata", assert_error=True)
-        assert f"'metadata' folder does not exist for the pkg/0.1:{pid}" in c.out
+        assert f"'metadata' folder does not exist for the package reference pkg/0.1:{pid}" in c.out
 
         # Forcing the download of the metadata of cache-existing things with the "download" command
         c.run("download pkg/0.1 -r=default --metadata=*")

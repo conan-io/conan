@@ -49,7 +49,7 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
         else:
             raise ConanException(f"'--folder {args.folder}' requires a valid package reference")
         if args.folder and not os.path.exists(path):
-            raise ConanException(f"'{args.folder}' folder does not exist for the {ref}")
+            raise ConanException(f"'{args.folder}' folder does not exist for the reference {ref}")
     else:
         if args.folder is None:
             path = conan_api.cache.package_path(pref)
@@ -60,7 +60,8 @@ def cache_path(conan_api: ConanAPI, parser, subparser, *args):
         else:
             raise ConanException(f"'--folder {args.folder}' requires a recipe reference")
         if args.folder and not os.path.exists(path):
-            raise ConanException(f"'{args.folder}' folder does not exist for the {pref}")
+            raise ConanException(f"'{args.folder}' folder does not exist for the package reference "
+                                 f"{pref}")
     return path
 
 
