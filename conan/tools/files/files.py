@@ -339,7 +339,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
-                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="context")
+                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
                 extracted_size += file_.file_size
@@ -352,7 +352,7 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                         perm = file_.external_attr >> 16 & 0xFFF
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
-                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="context")
+                    output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         output.writeln("")
 
 

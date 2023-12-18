@@ -226,7 +226,7 @@ class ConanOutput:
 
     def error(self, msg, error_type=None):
         if self._conan_output_level <= LEVEL_ERROR:
-            if self._warnings_as_errors and error_type != "context":
+            if self._warnings_as_errors and error_type != "exception":
                 raise ConanException(msg)
             else:
                 self._write_message("ERROR: {}".format(msg), Color.RED)

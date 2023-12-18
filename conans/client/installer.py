@@ -97,7 +97,7 @@ class _PackageBuilder(object):
             conanfile.output.success("Package '%s' built" % pref.package_id)
             conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
-            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed", error_type="context")
+            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed", error_type="exception")
             conanfile.output.warning("Build folder %s" % conanfile.build_folder)
             if isinstance(exc, ConanException):
                 raise exc

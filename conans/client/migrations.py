@@ -70,7 +70,7 @@ def _migrate_pkg_db_lru(cache_folder, old_version):
     except Exception:
         ConanOutput().error(f"Could not complete the 2.0.14 DB migration."
                             " Please manually remove your .conan2 cache and reinstall packages",
-                            error_type="context")
+                            error_type="exception")
         raise
     else:  # generate the back-migration script
         undo_lru = textwrap.dedent("""\

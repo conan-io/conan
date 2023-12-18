@@ -78,7 +78,7 @@ def cmd_export(app, global_conf, conanfile_path, name, version, user, channel, g
                 clean_dirty(source_folder)
         except BaseException as e:
             scoped_output.error("Unable to delete source folder. Will be marked as corrupted "
-                                "for deletion", error_type="context")
+                                "for deletion", error_type="exception")
             scoped_output.warning(str(e))
             set_dirty(source_folder)
 
