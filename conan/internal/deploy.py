@@ -89,7 +89,7 @@ def _deploy_single(dep, conanfile, output_folder, folder_name):
     except Exception as e:
         if "WinError 1314" in str(e):
             ConanOutput().error("full_deploy: Symlinks in Windows require admin privileges "
-                                "or 'Developer mode = ON'")
+                                "or 'Developer mode = ON'", error_type="exception")
         raise ConanException(f"full_deploy: The copy of '{dep}' files failed: {e}.\nYou can "
                              f"use 'tools.deployer:symlinks' conf to disable symlinks")
     dep.set_deploy_folder(new_folder)

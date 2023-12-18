@@ -224,7 +224,7 @@ class Lockfile(object):
                 msg = f"Override defined for {require.ref}, but multiple possible overrides" \
                       f" {overrides}. You might need to apply the 'conan graph build-order'" \
                       f" overrides for correctly building this package with this lockfile"
-                ConanOutput().error(msg)
+                ConanOutput().error(msg, error_type="exception")
             raise
 
     def _resolve_overrides(self, require):
