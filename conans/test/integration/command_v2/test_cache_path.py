@@ -97,3 +97,17 @@ def test_cache_path_arg_errors():
     # source, cannot obtain build without pref
     t.run("cache path foo/1.0:pid --folder source", assert_error=True)
     assert "ERROR: '--folder source' requires a recipe reference" in t.out
+
+
+def test_cache_path_does_not_exist_folder():
+    client = TestClient(default_server_user=True)
+    conanfile = GenConanfile()
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=mypkg --version=0.1")
+    pref = client.created_package_reference("mypkg/0.1")
+    client.run("upload * --confirm -r default")
+    client.run("remove * -c")
+
+    client.run(f"install --requires mypkg/0.1")
+    client.run(f"cache path {pref} --folder build", assert_error=True)
+    assert f"ERROR: 'build' folder does not exist for the reference {pref}" in client.out
