@@ -357,6 +357,10 @@ class TestRemoteAuth:
                 user: lasote""")
         assert text in c.out
 
+        c.run("remote auth * --format=json")
+        result = json.loads(c.stdout)
+        assert result == {'default': {'user': 'lasote'}, 'other_server': {'user': 'lasote'}}
+
     def test_remote_auth_with_user(self):
         servers = OrderedDict()
         servers["default"] = TestServer(users={"lasote": "mypass"})
