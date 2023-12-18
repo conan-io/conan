@@ -1,8 +1,6 @@
 import os
 import pytest
 
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
@@ -16,27 +14,22 @@ class TestMetadataCommands:
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run("create .")
-        pref = client.created_package_reference("pkg/0.1")
-        return client, pref
+        pid = client.created_package_id("pkg/0.1")
+        return client, pid
 
     def save_metadata_file(self, client, pkg_ref, filename="somefile.log"):
-        try:
-            layout = client.get_latest_pkg_layout(PkgReference.loads(pkg_ref))
-        except:
-            layout = client.get_latest_ref_layout(RecipeReference.loads(pkg_ref))
-        metadata_path = layout.metadata()
+        client.run(f"cache path {pkg_ref} --folder=metadata")
+        metadata_path = str(client.stdout).strip()
         myfile = os.path.join(metadata_path, "logs", filename)
         save(myfile, f"{pkg_ref}!!!!")
         return metadata_path, myfile
 
     def test_upload(self, create_conan_pkg):
-        c, pref = create_conan_pkg
-        pid = pref.package_id
+        c, pid = create_conan_pkg
 
         # Add some metadata
-        self.save_metadata_file(c, pref.ref, "mylogs.txt")
-        self.save_metadata_file(c, pref, "mybuildlogs.txt")
-
+        self.save_metadata_file(c, "pkg/0.1", "mylogs.txt")
+        self.save_metadata_file(c, f"pkg/0.1:{pid}", "mybuildlogs.txt")
         # Now upload everything
         c.run("upload * -c -r=default")
         assert "pkg/0.1: Recipe metadata: 1 files" in c.out
@@ -53,15 +46,17 @@ class TestMetadataCommands:
 
         c.run("remove * -c")
         c.run("install --requires=pkg/0.1")  # wont install metadata by default
-        c.run("cache path pkg/0.1 --folder=metadata")
-        metadata_path = str(c.stdout).strip()
-        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
-        pkg_metadata_path = str(c.stdout).strip()
-        assert not os.path.exists(metadata_path)
-        assert not os.path.exists(pkg_metadata_path)
+        c.run("cache path pkg/0.1 --folder=metadata", assert_error=True)
+        assert "'metadata' folder does not exist for the pkg/0.1" in c.out
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata", assert_error=True)
+        assert f"'metadata' folder does not exist for the pkg/0.1:{pid}" in c.out
 
         # Forcing the download of the metadata of cache-existing things with the "download" command
         c.run("download pkg/0.1 -r=default --metadata=*")
+        c.run(f"cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
+        pkg_metadata_path = str(c.stdout).strip()
         for f in "logs/mylogs.txt", "logs/mylogs2.txt":
             assert os.path.isfile(os.path.join(metadata_path, f))
         for f in "logs/mybuildlogs.txt", "logs/mybuildlogs2.txt":
