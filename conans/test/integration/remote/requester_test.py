@@ -1,4 +1,3 @@
-import pytest
 from requests import Response
 
 from conans.test.utils.tools import TestClient, TestRequester
@@ -40,15 +39,6 @@ class TestRequester:
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=foo --version=1.0")
         assert "TIMEOUT: (2, 3.4)" in client.out
-
-    @pytest.mark.xfail(reason="This test was very fragile. Conf was refactored and it's not failing."
-                              " Add a 'validate' function if str is not allowed")
-    def test_requester_timeout_errors(self):
-        client = TestClient(requester_class=MyRequester)
-        client.save({"global.conf": "core.net.http:timeout=invalid"}, path=client.cache.cache_folder)
-        with pytest.raises(Exception) as e:
-            client.run("install --requires=Lib/1.0@conan/stable")
-        assert "Conf 'core.net.http:timeout' value 'invalid' must be" in str(e.value)
 
     def test_request_infinite_timeout(self):
         # Test that not having timeout works

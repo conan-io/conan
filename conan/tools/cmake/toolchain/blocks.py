@@ -577,7 +577,7 @@ class ExtraFlagsBlock(Block):
                                                             check_type=bool)
         if android_ndk_path and (cxxflags or cflags) and android_legacy_toolchain is not False:
             self._conanfile.output.warning("tools.build:cxxflags or cflags are defined, but Android NDK toolchain may be overriding "
-                                            "the values. Consider setting tools.android:cmake_legacy_toolchain to False.")
+                                           "the values. Consider setting tools.android:cmake_legacy_toolchain to False.")
 
         return {
             "cxxflags": cxxflags,
@@ -641,6 +641,9 @@ class CompilersBlock(Block):
 
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
+        ########## generic_system block #############
+        # Definition of system, platform and toolset
+        #############################################
         {% if cmake_sysroot %}
         set(CMAKE_SYSROOT {{ cmake_sysroot }})
         {% endif %}
@@ -656,22 +659,37 @@ class GenericSystemBlock(Block):
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
         {% endif %}
 
-        {% if generator_platform %}
+        {% if generator_platform and not winsdk_version %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
+        {% elif winsdk_version %}
+        if(POLICY CMP0149)
+            cmake_policy(GET CMP0149 _POLICY_WINSDK_VERSION)
+        endif()
+        if(_POLICY_WINSDK_VERSION STREQUAL "NEW")
+            message(STATUS "Conan toolchain: CMAKE_GENERATOR_PLATFORM={{gen_platform_sdk_version}}")
+            set(CMAKE_GENERATOR_PLATFORM "{{ gen_platform_sdk_version }}" CACHE STRING "" FORCE)
+        else()
+            # winsdk_version will be taken from above CMAKE_SYSTEM_VERSION
+            message(STATUS "Conan toolchain: CMAKE_GENERATOR_PLATFORM={{generator_platform}}")
+            set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
+        endif()
         {% endif %}
+
         {% if toolset %}
+        message(STATUS "Conan toolchain: CMAKE_GENERATOR_TOOLSET={{ toolset }}")
         set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE)
         {% endif %}
         """)
 
-    def _get_toolset(self, generator):
+    @staticmethod
+    def get_toolset(generator, conanfile):
         toolset = None
         if generator is None or ("Visual" not in generator and "Xcode" not in generator):
             return None
-        settings = self._conanfile.settings
+        settings = conanfile.settings
         compiler = settings.get_safe("compiler")
         if compiler == "intel-cc":
-            return IntelCC(self._conanfile).ms_toolset
+            return IntelCC(conanfile).ms_toolset
         elif compiler == "msvc":
             toolset = settings.get_safe("compiler.toolset")
             if toolset is None:
@@ -689,14 +707,15 @@ class GenericSystemBlock(Block):
                 else:
                     raise ConanException("CMakeToolchain with compiler=clang and a CMake "
                                          "'Visual Studio' generator requires VS16 or VS17")
-        toolset_arch = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
+        toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         return toolset
 
-    def _get_generator_platform(self, generator):
-        settings = self._conanfile.settings
+    @staticmethod
+    def get_generator_platform(generator, conanfile):
+        settings = conanfile.settings
         # Returns the generator platform to be used by CMake
         compiler = settings.get_safe("compiler")
         arch = settings.get_safe("arch")
@@ -771,22 +790,53 @@ class GenericSystemBlock(Block):
 
         return system_name, system_version, system_processor
 
+    def _get_winsdk_version(self, system_version, generator_platform):
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler not in ("msvc", "clang") or "Visual" not in str(self._toolchain.generator):
+            # Ninja will get it from VCVars, not from toolchain
+            return system_version, None, None
+
+        winsdk_version = self._conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+        if winsdk_version:
+            if system_version:
+                self._conanfile.output.warning("Both cmake_system_version and winsdk_version confs"
+                                               " defined, prioritizing winsdk_version")
+            system_version = winsdk_version
+        elif "Windows" in self._conanfile.settings.get_safe("os", ""):
+            winsdk_version = self._conanfile.settings.get_safe("os.version")
+            if system_version:
+                if winsdk_version:
+                    self._conanfile.output.warning("Both cmake_system_version conf and os.version"
+                                                   " defined, prioritizing cmake_system_version")
+                winsdk_version = system_version
+
+        gen_platform_sdk_version = [generator_platform,
+                                    f"version={winsdk_version}" if winsdk_version else None]
+        gen_platform_sdk_version = ",".join(d for d in gen_platform_sdk_version if d)
+
+        return system_version, winsdk_version, gen_platform_sdk_version
+
     def context(self):
         generator = self._toolchain.generator
-        generator_platform = self._get_generator_platform(generator)
-        toolset = self._get_toolset(generator)
+        generator_platform = self.get_generator_platform(generator, self._conanfile)
+        toolset = self.get_toolset(generator, self._conanfile)
         system_name, system_version, system_processor = self._get_cross_build()
 
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
+        result = self._get_winsdk_version(system_version, generator)
+        system_version, winsdk_version, gen_platform_sdk_version = result
+
         return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor,
-                "cmake_sysroot": cmake_sysroot}
+                "cmake_sysroot": cmake_sysroot,
+                "winsdk_version": winsdk_version,
+                "gen_platform_sdk_version": gen_platform_sdk_version}
 
 
 class OutputDirsBlock(Block):
