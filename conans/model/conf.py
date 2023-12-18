@@ -490,7 +490,7 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        if (CORE_CONF_PATTERN.match(conf) is not None or TOOLS_CONF_PATTERN.match(conf) is not None):
+        if CORE_CONF_PATTERN.match(conf) is not None or TOOLS_CONF_PATTERN.match(conf) is not None:
             if conf in BUILT_IN_CONFS:
                 return  # It's a built-in conf
             else:
@@ -503,12 +503,8 @@ class Conf:
             else:
                 return  # Good, user. conf
         else:
-            if conf.count(":") < 1:
-                raise ConanException(f"[conf] '{conf}' must have at least one ':' separator, "
-                                     "e.g. 'tools.build:verbosity'")
-            else:
-                raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
-                                     f" Run 'conan config list' to see all the available confs.")
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 f" Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:
