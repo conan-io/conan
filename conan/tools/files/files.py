@@ -136,7 +136,6 @@ def ftp_download(conanfile, host, filename, login='', password='', secure=False)
     :param login: Authentication login.
     :param password: Authentication password.
     :param secure: Set to True to use FTP over TLS/SSL (FTPS). Defaults to False for regular FTP.
-
     """
     # TODO: Check if we want to join this method with download() one, based on ftp:// protocol
     # this has been requested by some users, but the signature is a bit divergent
