@@ -22,8 +22,8 @@ class MesonToolchainTest(TestMesonBase):
 
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
-            options = {{"shared": [True, False], "fPIC": [True, False]}}
-            default_options = {{"shared": False, "fPIC": True}}
+            options = {{"shared": [True, False], "fPIC": [True, False], "msg": ["ANY"]}}
+            default_options = {{"shared": False, "fPIC": True, "msg": "Hi everyone!"}}
 
             def config_options(self):
                 if self.settings.os == "Windows":
@@ -44,7 +44,11 @@ class MesonToolchainTest(TestMesonBase):
                 tc.project_options["FALSE_DEFINITION"] = False
                 tc.project_options["INT_DEFINITION"] = 42
                 tc.project_options["ARRAY_DEFINITION"] = ["Text1", "Text2"]
-                tc.project_options["DYNAMIC"] = {dynamic}
+                # Meson converts True/False into true/false boolean values
+                tc.project_options["DYNAMIC"] = self.options.shared
+                # This one will fail because HELLO_MSG = Hi everyone is an invalid value
+                # The good one should be HELLO_MSG = "Hi everyone"
+                tc.project_options["HELLO_MSG"] = {msg}
                 tc.generate()
 
             def build(self):
@@ -79,25 +83,29 @@ class MesonToolchainTest(TestMesonBase):
 
         # Issue related: https://github.com/conan-io/conan/issues/14453
         # At first, let's add a raw option to see that it fails
-        self.t.save({"conanfile.py": conanfile_py.format(dynamic="self.options.shared"),
+        self.t.save({"conanfile.py": conanfile_py.format(msg="self.options.msg"),
                      "meson.build": meson_build,
                      "meson_options.txt": meson_options_txt,
                      "hello.h": hello_h,
                      "hello.cpp": hello_cpp,
                      "main.cpp": app})
         self.t.run("build .", assert_error=True)
-        assert "Conan options cannot be specified directly as a valid Meson data type. " \
-               "Please, use another Python data type like int, str, list or boolean." in self.t.out
+        # Using directly the options, the result is -> HELLO_MSG = Hi everyone, which is incorrect
+        assert "WARN: deprecated: Please, do not use a Conan option value directly. " \
+               "Convert 'options.shared' into" in self.t.out
+        assert "WARN: deprecated: Please, do not use a Conan option value directly. " \
+               "Convert 'options.msg' into" in self.t.out
+        assert "Malformed value" in self.t.out
         # Let's transform the Conan option into other allowed data type to solve the issue
-        self.t.save({"conanfile.py": conanfile_py.format(dynamic="True if self.options.shared "
-                                                                 "else False")})
+        self.t.save({"conanfile.py": conanfile_py.format(msg="str(self.options.msg)")})
         self.t.run("build .")
         content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
         self.assertIn("[project options]", content)
         self.assertIn("STRING_DEFINITION = 'Text'", content)
         self.assertIn("TRUE_DEFINITION = true", content)
         self.assertIn("FALSE_DEFINITION = false", content)
-        self.assertIn("DYNAMIC = false", content)
+        self.assertIn("DYNAMIC = False", content)  # Meson transforms correctly this value into bool
+        self.assertIn("HELLO_MSG = 'Hi everyone!'", content)
         self.assertIn("INT_DEFINITION = 42", content)
         self.assertIn("ARRAY_DEFINITION = ['Text1', 'Text2']", content)
         self.assertIn("[built-in options]", content)

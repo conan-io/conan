@@ -7,7 +7,6 @@ from conan.api.model import Remote
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
-from conans.client.cache.cache import ClientCache
 from conans.client.rest.remote_credentials import RemoteCredentials
 from conan.errors import ConanException
 
@@ -178,8 +177,7 @@ def remote_login(conan_api, parser, subparser, *args):
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
-    cache = ClientCache(conan_api.cache_folder)
-    creds = RemoteCredentials(cache)
+    creds = RemoteCredentials(conan_api.cache_folder, conan_api.config.global_conf)
     user, password = creds.auth(args.remote, args.username, args.password)
     if args.username is not None and args.username != user:
         raise ConanException(f"User '{args.username}' doesn't match user '{user}' in "

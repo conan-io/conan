@@ -49,6 +49,40 @@ def test_remove(conanfile):
     toolchain.blocks.remove("generic_system")
     content = toolchain.content
     assert 'CMAKE_SYSTEM_NAME' not in content
+    assert "CMAKE_CXX_FLAGS_INIT" in content
+    assert "_CMAKE_IN_TRY_COMPILE" in content
+
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.remove("generic_system", "cmake_flags_init")
+    content = toolchain.content
+    assert 'CMAKE_SYSTEM_NAME' not in content
+    assert "CMAKE_CXX_FLAGS_INIT" not in content
+    assert "_CMAKE_IN_TRY_COMPILE" in content
+
+
+def test_filter(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.select("generic_system")
+    content = toolchain.content
+    assert 'CMAKE_SYSTEM_NAME' in content
+    assert "CMAKE_CXX_FLAGS_INIT" not in content
+    assert "_CMAKE_IN_TRY_COMPILE" not in content
+
+    # remove multiple
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks.select("generic_system", "cmake_flags_init")
+    content = toolchain.content
+    assert 'CMAKE_SYSTEM_NAME' in content
+    assert "CMAKE_CXX_FLAGS_INIT" in content
+    assert "_CMAKE_IN_TRY_COMPILE" not in content
+
+
+def test_dict_keys(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    assert "generic_system" in toolchain.blocks.keys()
+    items = dict(toolchain.blocks.items())
+    assert "generic_system" in items
 
 
 def test_template_remove(conanfile):
@@ -491,20 +525,6 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
     with pytest.raises(ConanException) as excinfo:
         CMakeToolchain(c).content()
         assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
-
-
-def test_variables_types(conanfile):
-    generator_folder = temp_folder()
-    conanfile.folders.set_base_generators(generator_folder)
-    # This is a trick for 1.X to use base_generator and not install folder
-    conanfile.folders.generators = "here"
-
-    toolchain = CMakeToolchain(conanfile)
-    toolchain.variables["FOO"] = True
-    toolchain.generate()
-
-    contents = load(os.path.join(conanfile.generators_folder, "conan_toolchain.cmake"))
-    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in contents
 
 
 def test_compilers_block(conanfile):

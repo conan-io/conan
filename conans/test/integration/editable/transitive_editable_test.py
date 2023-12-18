@@ -89,3 +89,32 @@ def test_transitive_editables_python_requires_version_range():
     client.run("remove * -c")
     client.run("editable add pkg")  # now it works, able to return from server if necessary
     assert "dep/0.1: Downloaded recipe revision" in client.out
+
+
+def test_transitive_editables_build():
+    # https://github.com/conan-io/conan/issues/6064
+    c = TestClient()
+    libb = textwrap.dedent("""\
+        from conan import ConanFile
+        class LibB(ConanFile):
+            name = "libb"
+            version = "0.1"
+            build_policy = "missing"
+            settings = "os", "compiler", "arch"
+
+            def build_requirements(self):
+                self.build_requires("liba/[>=0.0]")
+
+            def requirements(self):
+                self.requires("liba/[>=0.0]")
+        """)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
+            "libb/conanfile.py": libb,
+            "app/conanfile.txt": "[requires]\nlibb/0.1"})
+    c.run("editable add liba")
+    c.run("editable add libb")
+    c.run("install app --build=*")
+    # It doesn't crash
+    # Try also with 2 profiles
+    c.run("install app -s:b os=Windows --build=*")
+    # it doesn't crash

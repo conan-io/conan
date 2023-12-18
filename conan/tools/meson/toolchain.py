@@ -39,8 +39,9 @@ class MesonToolchain(object):
     {% endfor %}
 
     [binaries]
-    {% if c %}c = '{{c}}'{% endif %}
-    {% if cpp %}cpp = '{{cpp}}'{% endif %}
+    {% if c %}c = {{c}}{% endif %}
+    {% if cpp %}cpp = {{cpp}}{% endif %}
+    {% if ld %}ld = {{ld}}{% endif %}
     {% if is_apple_system %}
     {% if objc %}objc = '{{objc}}'{% endif %}
     {% if objcpp %}objcpp = '{{objcpp}}'{% endif %}
@@ -181,22 +182,28 @@ class MesonToolchain(object):
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
-        # FIXME: This VirtualBuildEnv instance is breaking things!!
-        # FIXME: It shouldn't be used here, not intended for this use case
-        prev_status = self._conanfile.virtualbuildenv
-        build_env = VirtualBuildEnv(self._conanfile).vars()
-        self._conanfile.virtualbuildenv = prev_status
-        #: Defines the Meson ``c`` variable. Defaulted to ``CC`` build environment value
+        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+        #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
-        #: Defines the Meson ``cpp`` variable. Defaulted to ``CXX`` build environment value
+        #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
+        #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
+        self.ld = build_env.get("LD")
         # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
-        #: Defines the Meson ``c_ld`` variable. Defaulted to ``CC_LD`` or ``LD`` build
+        # Issue related: https://github.com/mesonbuild/meson/issues/6442
+        # PR related: https://github.com/mesonbuild/meson/pull/6457
+        #: Defines the Meson ``c_ld`` variable. Defaulted to ``CC_LD``
         #: environment value
-        self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
-        #: Defines the Meson ``cpp_ld`` variable. Defaulted to ``CXX_LD`` or ``LD`` build
+        self.c_ld = build_env.get("CC_LD")
+        #: Defines the Meson ``cpp_ld`` variable. Defaulted to ``CXX_LD``
         #: environment value
-        self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
+        self.cpp_ld = build_env.get("CXX_LD")
         #: Defines the Meson ``ar`` variable. Defaulted to ``AR`` build environment value
         self.ar = build_env.get("AR")
         #: Defines the Meson ``strip`` variable. Defaulted to ``STRIP`` build environment value
@@ -354,6 +361,12 @@ class MesonToolchain(object):
         return list(filter(bool, v))
 
     def _context(self):
+        def _sanitize_format(v):
+            if v is None or isinstance(v, list):
+                return v
+            ret = [x.strip() for x in v.split() if x]
+            return f"'{ret[0]}'" if len(ret) == 1 else ret
+
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
 
@@ -380,11 +393,11 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
-            # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
-            "c": self.c,
-            "cpp": self.cpp,
+            "c": _sanitize_format(self.c),
+            "cpp": _sanitize_format(self.cpp),
+            "ld": _sanitize_format(self.ld),
             "objc": self.objc,
             "objcpp": self.objcpp,
             "c_ld": self.c_ld,

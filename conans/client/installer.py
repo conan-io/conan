@@ -7,7 +7,7 @@ from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_SYSTEM_TOOL, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
+    BINARY_PLATFORM, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
@@ -168,11 +168,12 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app):
+    def __init__(self, app, global_conf):
         self._app = app
         self._cache = app.cache
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
+        self._global_conf = global_conf
 
     def _install_source(self, node, remotes):
         conanfile = node.conanfile
@@ -182,6 +183,9 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
+        if node.binary == BINARY_EDITABLE:
+            return
+
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
@@ -272,7 +276,7 @@ class BinaryInstaller:
         download_count = len(downloads)
         plural = 's' if download_count != 1 else ''
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
-        parallel = self._cache.new_config.get("core.download:parallel", check_type=int)
+        parallel = self._global_conf.get("core.download:parallel", check_type=int)
         if parallel is not None:
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
@@ -290,7 +294,7 @@ class BinaryInstaller:
         self._remote_manager.get_package(node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, handled_count, total_count):
-        if package.binary == BINARY_SYSTEM_TOOL:
+        if package.binary == BINARY_PLATFORM:
             return
 
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
@@ -323,6 +327,7 @@ class BinaryInstaller:
         elif package.binary == BINARY_CACHE:
             node = package.nodes[0]
             pref = node.pref
+            self._cache.update_package_lru(pref)
             assert node.prev, "PREV for %s is None" % str(pref)
             node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
 
@@ -367,6 +372,7 @@ class BinaryInstaller:
             # New editables mechanism based on Folders
             conanfile.folders.set_base_package(output_folder or rooted_base_path)
             conanfile.folders.set_base_folders(base_path, output_folder)
+            conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
             # Need a temporary package revision for package_revision_mode
             # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
             node.prev = "editable"

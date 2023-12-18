@@ -256,6 +256,25 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run(command, assert_error=True)
         self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
 
+    def test_revision_build_requires(self):
+        conanfile = GenConanfile()
+
+        refs = []
+        for _ in range(1, 4):  # create different revisions
+            conanfile.with_build_msg("any change to get another rrev")
+            pref = self.c_v2.create(self.ref, conanfile=conanfile)
+            self.c_v2.upload_all(pref.ref)
+            refs.append(pref.ref)
+            assert refs.count(pref.ref) == 1 # make sure that all revisions are different
+
+        client = self.c_v2  # revisions enabled
+        client.remove_all()
+
+        for ref in refs:
+            command = "install --update --tool-require={}".format(repr(ref))
+            client.run(command)
+            self.assertIn("Downloaded recipe revision {}".format(ref.revision), client.out)
+
 
 class RemoveWithRevisionsTest(unittest.TestCase):
 

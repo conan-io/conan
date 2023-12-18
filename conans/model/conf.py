@@ -1,3 +1,4 @@
+import copy
 import re
 import os
 import fnmatch
@@ -63,6 +64,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake:install_strip": "Add --strip to cmake.install()",
@@ -75,11 +77,12 @@ BUILT_IN_CONFS = {
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
-    "tools.google.bazel:configs": "Define Bazel config file",
-    "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
+    "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
+    "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
-    "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
+    "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
+    "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
@@ -153,7 +156,8 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path, self._update)
+        # Using copy for when self._value is a mutable list
+        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
 
     def dumps(self):
         if self._value is None:
@@ -291,6 +295,7 @@ class Conf:
         :param default: Default value in case of conf does not have the conf_name key.
         :param check_type: Check the conf type(value) is the same as the given by this param.
                            There are two default smart conversions for bool and str types.
+        :param choices: list of possible values this conf can have, if value not in it, errors.
         """
         # Skipping this check only the user.* configurations
         self._check_conf_name(conf_name)
@@ -335,7 +340,7 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = self._values.copy()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
         return c
 
     def dumps(self):

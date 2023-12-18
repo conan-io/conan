@@ -7,10 +7,8 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake")
-def test_cmake_virtualenv():
-    client = TestClient()
-    client.run("new cmake_lib -d name=hello -d version=0.1")
-    client.run("create . -tf=")
+def test_cmake_virtualenv(matrix_client):
+    client = matrix_client
 
     cmakewrapper = textwrap.dedent(r"""
         from conan import ConanFile
@@ -33,7 +31,7 @@ def test_cmake_virtualenv():
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             exports_sources = "CMakeLists.txt", "main.cpp"
-            requires = "hello/0.1"
+            requires = "matrix/1.0"
             build_requires = "cmakewrapper/0.1"
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
 
@@ -49,15 +47,15 @@ def test_cmake_virtualenv():
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
-        find_package(hello)
+        find_package(matrix)
         add_executable(app main.cpp)
-        target_link_libraries(app hello::hello)
+        target_link_libraries(app matrix::matrix)
         """)
 
     client.save({"cmakewrapper/conanfile.py": cmakewrapper,
                  "consumer/conanfile.py": consumer,
-                 "consumer/main.cpp": gen_function_cpp(name="main", includes=["hello"],
-                                                       calls=["hello"]),
+                 "consumer/main.cpp": gen_function_cpp(name="main", includes=["matrix"],
+                                                       calls=["matrix"]),
                  "consumer/CMakeLists.txt": cmakelists},
                 clean_first=True)
 

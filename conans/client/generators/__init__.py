@@ -3,6 +3,7 @@ import os
 import traceback
 import importlib
 
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
@@ -22,6 +23,7 @@ _generators = {"CMakeToolchain": "conan.tools.cmake", "CMakeDeps": "conan.tools.
                "XcodeDeps": "conan.tools.apple", "XcodeToolchain": "conan.tools.apple",
                "PremakeDeps": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
+               "SConsDeps": "conan.tools.scons"
                }
 
 
@@ -68,9 +70,8 @@ def write_generators(conanfile, app):
     _receive_conf(conanfile)
 
     hook_manager = app.hook_manager
-    cache = app.cache
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
-    global_generators = load_cache_generators(cache.custom_generators_path)
+    global_generators = load_cache_generators(HomePaths(app.cache_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
     if conanfile.generators:

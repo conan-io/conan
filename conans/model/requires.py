@@ -32,10 +32,11 @@ class Requirement:
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
+        self.skip = False
 
     @property
-    def skip(self):
-        return not (self.headers or self.libs or self.run or self.build)
+    def files(self):  # require needs some files in dependency package
+        return self.headers or self.libs or self.run or self.build
 
     @staticmethod
     def _default_if_none(field, default_value):
@@ -223,7 +224,7 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 (self.visible and other.visible) or
+                 ((self.visible or self.test) and (other.visible or other.test)) or
                  (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
@@ -465,6 +466,18 @@ class Requirements:
                 except TypeError:
                     raise ConanException("Wrong 'tool_requires' definition, "
                                          "did you mean 'build_requirements()'?")
+
+    def reindex(self, require, new_name):
+        """ This operation is necessary when the reference name of a package is changed
+        as a result of an "alternative" replacement of the package name, otherwise the dictionary
+        gets broken by modified key
+        """
+        result = OrderedDict()
+        for k, v in self._requires.items():
+            if k is require:
+                k.ref.name = new_name
+            result[k] = v
+        self._requires = result
 
     def values(self):
         return self._requires.values()

@@ -6,6 +6,7 @@ from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
@@ -31,6 +32,14 @@ class _InstallPackageReference:
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
         self.overrides = Overrides()
         self.ref = None
+
+    @property
+    def pref(self):
+        return PkgReference(self.ref, self.package_id, self.prev)
+
+    @property
+    def conanfile(self):
+        return self.nodes[0].conanfile
 
     @staticmethod
     def create(node):
@@ -98,12 +107,18 @@ class _InstallRecipeReference:
     same recipe revision (repo+commit) are to be built grouped together"""
     def __init__(self):
         self.ref = None
+        self._node = None
         self.packages = {}  # {package_id: _InstallPackageReference}
         self.depends = []  # Other REFs, defines the graph topology and operation ordering
+
+    @property
+    def node(self):
+        return self._node
 
     @staticmethod
     def create(node):
         result = _InstallRecipeReference()
+        result._node = node
         result.ref = node.ref
         result.add(node)
         return result
@@ -229,7 +244,7 @@ class InstallGraph:
             else:
                 existing.add(node)
 
-    def install_order(self):
+    def install_order(self, flat=False):
         # a topological order by levels, returns a list of list, in order of processing
         levels = []
         opened = self._nodes
@@ -246,7 +261,8 @@ class InstallGraph:
                 levels.append(current_level)
             # now initialize new level
             opened = {k: v for k, v in opened.items() if v not in closed}
-
+        if flat:
+            return [r for level in levels for r in level]
         return levels
 
     def install_build_order(self):
@@ -310,12 +326,13 @@ class InstallGraph:
             else:
                 build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
                                                   for pref in missing_prefs])))
-            build_msg = f"or try to build locally from sources using the '{build_str}' argument"
+            build_msg = f"Try to build locally from sources using the '{build_str}' argument"
 
         raise ConanException(textwrap.dedent(f'''\
-           Missing prebuilt package for '{missing_pkgs}'
-           Check the available packages using 'conan list {ref}:* -r=remote'
-           {build_msg}
+           Missing prebuilt package for '{missing_pkgs}'. You can try:
+               - List all available packages using 'conan list {ref}:* -r=remote'
+               - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
+               - {build_msg}
 
            More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
            '''))

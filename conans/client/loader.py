@@ -126,14 +126,9 @@ class ConanFileLoader:
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):
                 conanfile.set_name()
-            if name and name != conanfile.name:
-                raise ConanException("Package recipe with name %s!=%s" % (name, conanfile.name))
         if hasattr(conanfile, "set_version"):
             with conanfile_exception_formatter("conanfile.py", "set_version"):
                 conanfile.set_version()
-            if version and version != conanfile.version:
-                raise ConanException("Package recipe with version %s!=%s"
-                                     % (version, conanfile.version))
 
         return conanfile
 

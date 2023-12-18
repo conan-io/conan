@@ -717,6 +717,27 @@ def test_toolchain_cache_variables():
     assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
 
 
+def test_variables_types():
+    # https://github.com/conan-io/conan/pull/10941
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.variables["FOO"] = True
+                toolchain.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . --name=mylib --version=1.0")
+
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in toolchain
+
+
 def test_android_c_library():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -815,7 +836,8 @@ def test_presets_paths_normalization():
     assert "/" not in presets["include"]
 
 
-@pytest.mark.parametrize("arch, arch_toolset", [("x86", "x86_64"), ("x86_64", "x86_64")])
+@pytest.mark.parametrize("arch, arch_toolset", [("x86", "x86_64"), ("x86_64", "x86_64"),
+                                                ("x86", "x86"), ("x86_64", "x86")])
 def test_presets_ninja_msvc(arch, arch_toolset):
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -839,9 +861,8 @@ def test_presets_ninja_msvc(arch, arch_toolset):
 
     presets = json.loads(client.load("build/14/Release/generators/CMakePresets.json"))
 
-    toolset_value = {"x86_64": "host=x86_64", "x86": "x86"}.get(arch_toolset)
+    toolset_value = {"x86_64": "v141,host=x86_64", "x86": "v141,host=x86"}.get(arch_toolset)
     arch_value = {"x86_64": "x64", "x86": "x86"}.get(arch)
-
     assert presets["configurePresets"][0]["architecture"]["value"] == arch_value
     assert presets["configurePresets"][0]["architecture"]["strategy"] == "external"
     assert presets["configurePresets"][0]["toolset"]["value"] == toolset_value
@@ -854,11 +875,14 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     client.run(
         "install . {} -s compiler.cppstd=14 {} -s arch={}".format(" ".join(configs), msvc, arch))
 
+    toolset_value = {"x86_64": "v141,host=x86_64", "x86": "v141,host=x86"}.get(arch_toolset)
+    arch_value = {"x86_64": "x64", "x86": "Win32"}.get(arch)  # NOTE: Win32 is different!!
     presets = json.loads(client.load("build/14/generators/CMakePresets.json"))
-    assert "architecture" not in presets["configurePresets"][0]
-    assert "toolset" not in presets["configurePresets"][0]
+    assert presets["configurePresets"][0]["architecture"]["value"] == arch_value
+    assert presets["configurePresets"][0]["architecture"]["strategy"] == "external"
+    assert presets["configurePresets"][0]["toolset"]["value"] == toolset_value
+    assert presets["configurePresets"][0]["toolset"]["strategy"] == "external"
 
-    # No toolset defined in conf, no value
     rmdir(os.path.join(client.current_folder, "build"))
     configs = ["-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'",
                "-c tools.cmake.cmaketoolchain:generator=Ninja"]
@@ -866,8 +890,12 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     client.run(
         "install . {} -s compiler.cppstd=14 {} -s arch={}".format(" ".join(configs), msvc, arch))
     presets = json.loads(client.load("build/14/Release/generators/CMakePresets.json"))
-    assert "architecture" in presets["configurePresets"][0]
-    assert "toolset" not in presets["configurePresets"][0]
+    toolset_value = {"x86_64": "v141", "x86": "v141"}.get(arch_toolset)
+    arch_value = {"x86_64": "x64", "x86": "x86"}.get(arch)
+    assert presets["configurePresets"][0]["architecture"]["value"] == arch_value
+    assert presets["configurePresets"][0]["architecture"]["strategy"] == "external"
+    assert presets["configurePresets"][0]["toolset"]["value"] == toolset_value
+    assert presets["configurePresets"][0]["toolset"]["strategy"] == "external"
 
 
 def test_pkg_config_block():
@@ -1140,3 +1168,49 @@ def test_recipe_build_folders_vars():
     presets = load(os.path.join(build_folder,
                                 "build/windows-shared/Debug/generators/CMakePresets.json"))
     assert "conan-windows-shared-debug" in presets
+
+
+def test_extra_flags():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "arch", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.extra_cxxflags = ["extra_cxxflags"]
+                tc.extra_cflags = ["extra_cflags"]
+                tc.extra_sharedlinkflags = ["extra_sharedlinkflags"]
+                tc.extra_exelinkflags = ["extra_exelinkflags"]
+                tc.generate()
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.build:cxxflags+=['cxxflags']
+        tools.build:cflags+=['cflags']
+        tools.build:sharedlinkflags+=['sharedlinkflags']
+        tools.build:exelinkflags+=['exelinkflags']
+        """)
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run('install . -pr=./profile')
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert 'string(APPEND CONAN_CXX_FLAGS " extra_cxxflags cxxflags")' in toolchain
+    assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
+    assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
+    assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
+
+
+def test_avoid_ovewrite_user_cmakepresets():
+    # https://github.com/conan-io/conan/issues/15052
+    c = TestClient()
+    c.save({"conanfile.txt": "",
+            "CMakePresets.json": "{}"})
+    c.run('install . -g CMakeToolchain', assert_error=True)
+    assert "Error in generator 'CMakeToolchain': Existing CMakePresets.json not generated" in c.out
+    assert "Use --output-folder or define a 'layout' to avoid collision" in c.out
