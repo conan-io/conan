@@ -30,7 +30,6 @@ class TestMetadataCommands:
         # Add some metadata
         self.save_metadata_file(c, "pkg/0.1", "mylogs.txt")
         self.save_metadata_file(c, f"pkg/0.1:{pid}", "mybuildlogs.txt")
-
         # Now upload everything
         c.run("upload * -c -r=default")
         assert "pkg/0.1: Recipe metadata: 1 files" in c.out
@@ -47,15 +46,17 @@ class TestMetadataCommands:
 
         c.run("remove * -c")
         c.run("install --requires=pkg/0.1")  # wont install metadata by default
-        c.run("cache path pkg/0.1 --folder=metadata")
-        metadata_path = str(c.stdout).strip()
-        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
-        pkg_metadata_path = str(c.stdout).strip()
-        assert not os.path.exists(metadata_path)
-        assert not os.path.exists(pkg_metadata_path)
+        c.run("cache path pkg/0.1 --folder=metadata", assert_error=True)
+        assert "'metadata' folder does not exist for the reference pkg/0.1" in c.out
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata", assert_error=True)
+        assert f"'metadata' folder does not exist for the reference pkg/0.1:{pid}" in c.out
 
         # Forcing the download of the metadata of cache-existing things with the "download" command
         c.run("download pkg/0.1 -r=default --metadata=*")
+        c.run(f"cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
+        pkg_metadata_path = str(c.stdout).strip()
         for f in "logs/mylogs.txt", "logs/mylogs2.txt":
             assert os.path.isfile(os.path.join(metadata_path, f))
         for f in "logs/mybuildlogs.txt", "logs/mybuildlogs2.txt":
