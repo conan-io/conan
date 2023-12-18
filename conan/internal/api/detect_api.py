@@ -5,7 +5,6 @@ import tempfile
 import textwrap
 
 from conan.api.output import ConanOutput
-from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.files import save
 from conans.util.runners import check_output_runner, detect_runner
@@ -266,8 +265,8 @@ def detect_compiler():
         if "gcc" in command or "g++" in command or "c++" in command:
             gcc, gcc_version = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
-                raise ConanException("%s detected as a frontend using apple-clang. "
-                                     "Compiler not supported" % command)
+                output.error("%s detected as a frontend using apple-clang. "
+                             "Compiler not supported" % command)
             return gcc, gcc_version
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
@@ -276,7 +275,8 @@ def detect_compiler():
             return _msvc_cl_compiler(command)
 
         # I am not able to find its version
-        raise ConanException("Not able to automatically detect '%s' version" % command)
+        output.error("Not able to automatically detect '%s' version" % command)
+        return None, None
 
     if platform.system() == "Windows":
         version = _detect_vs_ide_version()
