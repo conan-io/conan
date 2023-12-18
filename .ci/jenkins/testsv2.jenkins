@@ -147,7 +147,9 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                             bat(script: launchCommand)
                         }
                         finally {
-                            bat(script: "rd /s /q \"${workDir}\"")
+                            bat(script: "echo Listing contents of ${workDir} && dir \"${workDir}\"")
+                            bat(script: "rd /s /q \"${workDir}\" && echo Deleted ${workDir} || echo Failed to delete ${workDir}")
+                            bat(script: "if exist \"${workDir}\" (echo ${workDir} still exists && dir \"${workDir}\") else (echo ${workDir} successfully deleted)")
                         }
                     }
                 }
