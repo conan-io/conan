@@ -64,6 +64,16 @@ class ConanApp(object):
 
     @staticmethod
     def _configure(global_conf):
-        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
-                                                           default=False, check_type=bool))
-        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
+        legacy_warnings_as_errors_bool = global_conf.get("core:warnings_as_errors", None, check_type=bool)
+        if legacy_warnings_as_errors_bool is not None:
+            # Print this before setting the warnings as errors,
+            # else only this will be printed and Conan will exit
+            ConanOutput().warning("Boolean 'core:warnings_as_errors' key is deprecated, "
+                                  "use a list of patterns instead, e.g. ['*'] to treat all warnings as errors",
+                                  warn_tag="deprecated")
+            ConanOutput.set_warnings_as_errors(["*"] if legacy_warnings_as_errors_bool else [])
+        else:
+            ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
+                                                               default=[], check_type=list))
+        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings",
+                                                            default=[], check_type=list))

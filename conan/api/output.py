@@ -1,3 +1,4 @@
+import fnmatch
 import sys
 
 from colorama import Fore, Style
@@ -51,7 +52,7 @@ class ConanOutput:
     # Singleton
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
-    _warnings_as_errors = False
+    _warnings_as_errors = []
 
     def __init__(self, scope=""):
         self.stream = sys.stderr
@@ -62,7 +63,7 @@ class ConanOutput:
 
     @classmethod
     def define_silence_warnings(cls, warnings):
-        cls._silent_warn_tags = warnings or []
+        cls._silent_warn_tags = warnings
 
     @classmethod
     def set_warnings_as_errors(cls, value):
@@ -208,17 +209,20 @@ class ConanOutput:
             self._write_message(msg, fg=Color.BRIGHT_GREEN)
         return self
 
+    @staticmethod
+    def _warn_tag_matches(warn_tag, patterns):
+        lookup_tag = warn_tag or "unknown"
+        return any(fnmatch.fnmatch(lookup_tag, pattern) for pattern in patterns)
+
     def warning(self, msg, warn_tag=None):
-        def _skip_warning():
-            return (warn_tag is not None and warn_tag in self._silent_warn_tags
-                    or warn_tag is None and "unknown" in self._silent_warn_tags)
-        if self._conan_output_level <= LEVEL_WARNING or (self._warnings_as_errors and self._conan_output_level <= LEVEL_ERROR):
-            if _skip_warning():
+        _treat_as_error = self._warn_tag_matches(warn_tag, self._warnings_as_errors)
+        if self._conan_output_level <= LEVEL_WARNING or (_treat_as_error and self._conan_output_level <= LEVEL_ERROR):
+            if self._warn_tag_matches(warn_tag, self._silent_warn_tags):
                 return self
             warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "
             output = f"{warn_tag_msg}{msg}"
 
-            if self._warnings_as_errors:
+            if _treat_as_error:
                 self.error(output)
             else:
                 self._write_message(f"WARN: {output}", Color.YELLOW)

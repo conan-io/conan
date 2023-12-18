@@ -12,8 +12,8 @@ from conans.model.recipe_ref import ref_matches
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
-    "core:warnings_as_errors": "Treat warnings as errors",
-    "core:skip_warnings": "Do not show warnings in this list",
+    "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors",
+    "core:skip_warnings": "Do not show warnings matching any of the patterns in this list",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",

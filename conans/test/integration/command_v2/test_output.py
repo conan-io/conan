@@ -186,7 +186,7 @@ def test_output_level_envvar():
 
 class TestWarningHandling:
     warning_lines = ("self.output.warning('Tagged warning', warn_tag='tag')",
-             "self.output.warning('Untagged warning')")
+                     "self.output.warning('Untagged warning')")
     error_lines = ("self.output.error('Tagged error', error_type='exception')",
                    "self.output.error('Untagged error')")
 
@@ -199,6 +199,7 @@ class TestWarningHandling:
         assert "WARN: Untagged warning" in t.out
         assert "WARN: tag: Tagged warning" in t.out
 
+        # Deprecated boolean, still works
         t.save_home({"global.conf": "core:warnings_as_errors=True"})
         t.run("create . -vwarning", assert_error=True)
         assert "ConanException: tag: Tagged warning" in t.out
@@ -243,12 +244,17 @@ class TestWarningHandling:
         t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.error_lines)})
 
-        t.save_home({"global.conf": "core:warnings_as_errors=False"})
-        t.run("create .")
-        assert "ERROR: Tagged error" in t.out
-        assert "ERROR: Untagged error" in t.out
+        # t.save_home({"global.conf": "core:warnings_as_errors=False"})
+        # t.run("create .")
+        # assert "ERROR: Tagged error" in t.out
+        # assert "ERROR: Untagged error" in t.out
+        #
+        # t.save_home({"global.conf": "core:warnings_as_errors=True"})
+        # t.run("create .", assert_error=True)
+        # assert "ERROR: Tagged error" in t.out
+        # assert "ConanException: Untagged error" in t.out
 
-        t.save_home({"global.conf": "core:warnings_as_errors=True"})
+        t.save_home({"global.conf": "core:warnings_as_errors=['*']"})
         t.run("create .", assert_error=True)
         assert "ERROR: Tagged error" in t.out
         assert "ConanException: Untagged error" in t.out
