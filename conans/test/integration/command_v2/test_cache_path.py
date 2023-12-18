@@ -110,4 +110,4 @@ def test_cache_path_does_not_exist_folder():
 
     client.run(f"install --requires mypkg/0.1")
     client.run(f"cache path {pref} --folder build", assert_error=True)
-    assert f"ERROR: 'build' folder does not exist for the package reference {pref}" in client.out
+    assert f"ERROR: 'build' folder does not exist for the reference {pref}" in client.out
