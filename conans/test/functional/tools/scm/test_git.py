@@ -89,6 +89,22 @@ class TestGitBasicCapture:
             assert "pkg/0.1: COMMIT IN REMOTE: True" in c.out
             assert "pkg/0.1: DIRTY: False" in c.out
 
+    def test_capture_commit_local_subfolder(self):
+        """
+        A local repo, without remote, will have commit, but no URL, and sibling folders
+        can be dirty, no prob
+        """
+        c = TestClient()
+        c.save({"subfolder/conanfile.py": self.conanfile,
+                "other/myfile.txt": "content"})
+        commit = c.init_git_repo()
+        c.save({"other/myfile.txt": "change content"})
+        c.run("export subfolder")
+        assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: URL: None" in c.out
+        assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
+        assert "pkg/0.1: DIRTY: False" in c.out
+
 
 @pytest.mark.tool("git")
 class TestGitCaptureSCM:
