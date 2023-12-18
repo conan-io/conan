@@ -279,19 +279,19 @@ def test_conf_choices_default():
     assert c.get("user.category:option2", choices=[1, 2], default=7) == 7
 
 
+@pytest.mark.parametrize("scope", ["", "pkg/1.0:"])
 @pytest.mark.parametrize("conf, assert_message", [
-    ("pkg/1.0:user.foo:bar=1", None),
-    ("pkg/1.0:user.baz=1", "'pkg/1.0:user.baz' must have at least one ':' separator"),
     ("user.foo:bar=1", None),
-    ("user.baz=1", "'user.baz' must have at least one ':' separator"),
+    ("user.baz=1", "user.baz' must have at least one ':' separator"),
 ])
-def test_conf_scope_patterns_battery(conf, assert_message):
+def test_conf_scope_patterns_battery(scope, conf, assert_message):
+    final_conf = scope + conf
     c = ConfDefinition()
     if assert_message is not None:
         with pytest.raises(ConanException) as exc_info:
-            c.loads(conf)
+            c.loads(final_conf)
             c.validate()
         assert assert_message in str(exc_info.value)
     else:
-        c.loads(conf)
+        c.loads(final_conf)
         c.validate()
