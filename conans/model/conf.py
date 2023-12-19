@@ -493,10 +493,7 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        unknown_pattern = CORE_CONF_PATTERN.match(conf) is None and \
-                        TOOLS_CONF_PATTERN.match(conf) is None and \
-                        USER_CONF_PATTERN.match(conf) is None
-        if unknown_pattern or (USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS):
+        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
             raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
                                  f"the conf format introduced is not valid. Run 'conan config list' "
                                  f"to see all the available confs.")
