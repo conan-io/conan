@@ -130,7 +130,7 @@ def test_new_config_file(client):
             """)
     save(client.cache.new_config_path, conf)
     client.run("install .", assert_error=True)
-    assert "[conf] 'cache:read_only' does not exist in configuration list" in client.out
+    assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
 
 
 @patch("conans.client.conf.required_version.client_version", "1.26.0")
@@ -286,10 +286,10 @@ def test_nonexisting_conf():
     c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run("install . -c tools.unknown:conf=value", assert_error=True)
-    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
+    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
     c.run("install . -c user.some:var=value")  # This doesn't fail
     c.run("install . -c tool.build:verbosity=v", assert_error=True)
-    assert "ERROR: [conf] 'tool.build:verbosity' does not exist in configuration list" in c.out
+    assert "ERROR: [conf] Either 'tool.build:verbosity' does not exist in configuration" in c.out
 
 
 def test_nonexisting_conf_global_conf():
@@ -297,7 +297,7 @@ def test_nonexisting_conf_global_conf():
     save(c.cache.new_config_path, "tools.unknown:conf=value")
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
-    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
+    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
 
 
 def test_global_conf_auto_created():
