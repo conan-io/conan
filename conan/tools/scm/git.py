@@ -32,8 +32,8 @@ class Git:
 
     def get_commit(self, repo=False):
         """
-        :param repo: By default gets the commit of the folder, use repository=True to get
-                           the commit of the repository instead.
+        :param repo: By default gets the commit of the defined folder, use repo=True to get
+                     the commit of the repository instead.
         :return: The current commit, with ``git rev-list HEAD -n 1 -- <folder>``.
             The latest commit is returned, irrespective of local not committed changes.
         """
@@ -109,7 +109,7 @@ class Git:
         status = self.run(f"status . -s").strip()
         return bool(status)
 
-    def get_url_and_commit(self, remote="origin"):
+    def get_url_and_commit(self, remote="origin", repo=False):
         """
         This is an advanced method, that returns both the current commit, and the remote repository url.
         This method is intended to capture the current remote coordinates for a package creation,
@@ -134,13 +134,15 @@ class Git:
         to strip the credentials from the result.
 
         :param remote: Name of the remote git repository ('origin' by default).
+        :param repo: By default gets the commit of the defined folder, use repo=True to get
+                     the commit of the repository instead.
         :return: (url, commit) tuple
         """
         dirty = self.is_dirty()
         if dirty:
             raise ConanException("Repo is dirty, cannot capture url and commit: "
                                  "{}".format(self.folder))
-        commit = self.get_commit()
+        commit = self.get_commit(repo=repo)
         url = self.get_remote_url(remote=remote)
         in_remote = self.commit_in_remote(commit, remote=remote)
         if in_remote:
