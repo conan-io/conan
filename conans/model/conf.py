@@ -5,7 +5,6 @@ import fnmatch
 
 from collections import OrderedDict
 
-
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
@@ -116,10 +115,9 @@ BUILT_IN_CONFS = {
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
-
-CORE_CONF_PATTERN = re.compile(r"^core[.:]")
-TOOLS_CONF_PATTERN = re.compile(r"^tools[.:]")
-USER_CONF_PATTERN = re.compile(r"^user[.:]")
+CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
+TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
+USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 
 def _is_profile_module(module_name):
@@ -256,7 +254,6 @@ class _ConfValue(object):
 
 
 class Conf:
-
     # Putting some default expressions to check that any value could be false
     boolean_false_expressions = ("0", '"0"', "false", '"false"', "off")
 
@@ -497,12 +494,12 @@ class Conf:
     @staticmethod
     def _check_conf_name(conf):
         if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
-                                 f" Run 'conan config list' to see all the available confs.")
+            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
+                                 f"the conf format introduced is not valid. Run 'conan config list' "
+                                 f"to see all the available confs.")
 
 
 class ConfDefinition:
-
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
                ("=!", "unset"), ("*=", "update"), ("=", "define"))
