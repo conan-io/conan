@@ -28,9 +28,11 @@ class TestGitBasicCapture:
             def export(self):
                 git = Git(self, self.recipe_folder)
                 commit = git.get_commit()
+                repo_commit = git.get_commit(repo=True)
                 url = git.get_remote_url()
                 self.output.info("URL: {}".format(url))
                 self.output.info("COMMIT: {}".format(commit))
+                self.output.info("REPO_COMMIT: {}".format(repo_commit))
                 in_remote = git.commit_in_remote(commit)
                 self.output.info("COMMIT IN REMOTE: {}".format(in_remote))
                 self.output.info("DIRTY: {}".format(git.is_dirty()))
@@ -61,6 +63,7 @@ class TestGitBasicCapture:
         with c.chdir("myclone"):
             c.run("export .")
             assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+            assert "pkg/0.1: REPO_COMMIT: {}".format(commit) in c.out
             assert "pkg/0.1: URL: {}".format(url) in c.out
             assert "pkg/0.1: COMMIT IN REMOTE: True" in c.out
             assert "pkg/0.1: DIRTY: False" in c.out
@@ -101,6 +104,14 @@ class TestGitBasicCapture:
         c.save({"other/myfile.txt": "change content"})
         c.run("export subfolder")
         assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: REPO_COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: URL: None" in c.out
+        assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
+        assert "pkg/0.1: DIRTY: False" in c.out
+        commit2 = git_add_changes_commit(c.current_folder, msg="fix")
+        c.run("export subfolder")
+        assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: REPO_COMMIT: {}".format(commit2) in c.out
         assert "pkg/0.1: URL: None" in c.out
         assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
         assert "pkg/0.1: DIRTY: False" in c.out

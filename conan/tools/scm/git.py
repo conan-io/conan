@@ -30,8 +30,10 @@ class Git:
             #  - the ``conan source`` command, not passing profiles, buildenv not injected
             return check_output_runner("git {}".format(cmd)).strip()
 
-    def get_commit(self):
+    def get_commit(self, repo=False):
         """
+        :param repo: By default gets the commit of the folder, use repository=True to get
+                           the commit of the repository instead.
         :return: The current commit, with ``git rev-list HEAD -n 1 -- <folder>``.
             The latest commit is returned, irrespective of local not committed changes.
         """
@@ -41,7 +43,8 @@ class Git:
             # --full-history is needed to not avoid wrong commits:
             # https://github.com/conan-io/conan/issues/10971
             # https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-Defaultmode
-            commit = self.run('rev-list HEAD -n 1 --full-history -- "."')
+            path = '' if repo else '-- "."'
+            commit = self.run(f'rev-list HEAD -n 1 --full-history {path}')
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
