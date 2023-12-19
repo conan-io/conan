@@ -1,4 +1,4 @@
-pytest>=6.1.1, <7.0.0
+pytest>=6.1.1
 pytest-xdist  # To launch in N cores with pytest -n
 parameterized>=0.6.3
 mock>=1.3.0, <1.4.0
