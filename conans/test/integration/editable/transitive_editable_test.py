@@ -155,3 +155,10 @@ def test_transitive_editable_control_package_id_cache_consumers():
     c.run("install app --build=editable --build=cascade")
     c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Build"),
                             "pkgc/1.0": (pkgc_id, "Build")})
+
+    # Changes in pkga are good, we export it
+    c.run("export pkga")
+    # Now we remove the editable
+    c.run("editable remove pkga")
+    c.run("install app", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkga/1.0'" in c.out
