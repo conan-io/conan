@@ -80,7 +80,7 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         bazel = Bazel(self)
-        bazel.build()
+        bazel.build(target="//main:example")
 
     def layout(self):
         # DEPRECATED: Default generators folder will be "conan" in Conan 2.x
