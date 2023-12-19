@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
@@ -13,6 +14,7 @@ from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
+from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
@@ -38,7 +40,7 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph()
 
         self._prepare_node(root_node, profile_host, profile_build, Options())
-        self._initialize_requires(root_node, dep_graph, graph_lock)
+        self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
@@ -51,7 +53,8 @@ class DepsGraphBuilder(object):
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
                 if new_node:
-                    self._initialize_requires(new_node, dep_graph, graph_lock)
+                    self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
+                                              profile_host)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             self._remove_overrides(dep_graph)
@@ -160,7 +163,7 @@ class DepsGraphBuilder(object):
                     node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
-    def _initialize_requires(self, node, graph, graph_lock):
+    def _initialize_requires(self, node, graph, graph_lock, profile_build, profile_host):
         for require in node.conanfile.requires.values():
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
@@ -170,6 +173,7 @@ class DepsGraphBuilder(object):
                 # if partial, we might still need to resolve the alias
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
+            self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
 
     def _resolve_alias(self, node, require, alias, graph):
@@ -233,15 +237,55 @@ class DepsGraphBuilder(object):
                             require.ref.revision = d.revision
                             return d, ConanFile(str(d)), RECIPE_PLATFORM, None
 
+    def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
+        profile = profile_build if node.context == CONTEXT_BUILD else profile_host
+        replacements = profile.replace_tool_requires if require.build else profile.replace_requires
+        if not replacements:
+            return
+
+        for pattern, alternative_ref in replacements.items():
+            if pattern.name != require.ref.name:
+                continue  # no match in name
+            if pattern.version != "*":  # we need to check versions
+                rrange = require.version_range
+                valid = rrange.contains(pattern.version, self._resolve_prereleases) if rrange else \
+                    require.ref.version == pattern.version
+                if not valid:
+                    continue
+            if pattern.user != "*" and pattern.user != require.ref.user:
+                continue
+            if pattern.channel != "*" and pattern.channel != require.ref.channel:
+                continue
+            original_require = repr(require.ref)
+            if alternative_ref.version != "*":
+                require.ref.version = alternative_ref.version
+            if alternative_ref.user != "*":
+                require.ref.user = alternative_ref.user
+            if alternative_ref.channel != "*":
+                require.ref.channel = alternative_ref.channel
+            if alternative_ref.revision != "*":
+                require.ref.revision = alternative_ref.revision
+            if require.ref.name != alternative_ref.name:  # This requires re-doing dict!
+                node.conanfile.requires.reindex(require, alternative_ref.name)
+            require.ref.name = alternative_ref.name
+            graph.replaced_requires[original_require] = repr(require.ref)
+            break  # First match executes the alternative and finishes checking others
+
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        if require.ref.version == "<host_version>":
+        require_version = str(require.ref.version)
+        if require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
-            req = Requirement(require.ref, headers=True, libs=True, visible=True)
+            tracking_ref = require_version.split(':', 1)
+            ref = require.ref
+            if len(tracking_ref) > 1:
+                ref = RecipeReference.loads(str(node.ref))
+                ref.name = tracking_ref[1][:-1]  # Remove the trailing >
+            req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
             if transitive is None:
-                raise ConanException(f"{node.ref} require '{require.ref}': didn't find a matching "
+                raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 

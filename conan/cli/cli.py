@@ -26,6 +26,7 @@ class Cli:
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
     """
+    _builtin_commands = None  # Caching the builtin commands, no need to load them over and over
 
     def __init__(self, conan_api):
         assert isinstance(conan_api, ConanAPI), \
@@ -35,10 +36,16 @@ class Cli:
         self._commands = {}
 
     def _add_commands(self):
-        conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
-        for module in pkgutil.iter_modules([conan_commands_path]):
-            module_name = module[1]
-            self._add_command("conan.cli.commands.{}".format(module_name), module_name)
+        if Cli._builtin_commands is None:
+            conan_cmd_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
+            for module in pkgutil.iter_modules([conan_cmd_path]):
+                module_name = module[1]
+                self._add_command("conan.cli.commands.{}".format(module_name), module_name)
+            Cli._builtin_commands = self._commands.copy()
+        else:
+            self._commands = Cli._builtin_commands.copy()
+            for k, v in self._commands.items():  # Fill groups data too
+                self._groups[v.group].append(k)
 
         custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         if not os.path.isdir(custom_commands_path):
@@ -51,8 +58,8 @@ class Cli:
                 try:
                     self._add_command(module_name, module_name.replace("cmd_", ""))
                 except Exception as e:
-                    ConanOutput().error("Error loading custom command "
-                                        "'{}.py': {}".format(module_name, e))
+                    ConanOutput().error(f"Error loading custom command '{module_name}.py': {e}",
+                                        error_type="exception")
         # layers
         for folder in os.listdir(custom_commands_path):
             layer_folder = os.path.join(custom_commands_path, folder)
@@ -67,7 +74,8 @@ class Cli:
                         self._add_command(module_path, module_name.replace("cmd_", ""),
                                           package=folder)
                     except Exception as e:
-                        ConanOutput().error(f"Error loading custom command {module_path}: {e}")
+                        ConanOutput().error(f"Error loading custom command {module_path}: {e}",
+                                            error_type="exception")
 
     def _add_command(self, import_path, method_name, package=None):
         try:
@@ -198,20 +206,20 @@ class Cli:
         if exception is None:
             return SUCCESS
         if isinstance(exception, ConanInvalidConfiguration):
-            output.error(exception)
+            output.error(exception, error_type="exception")
             return ERROR_INVALID_CONFIGURATION
         if isinstance(exception, ConanException):
-            output.error(exception)
+            output.error(exception, error_type="exception")
             return ERROR_GENERAL
         if isinstance(exception, SystemExit):
             if exception.code != 0:
-                output.error("Exiting with code: %d" % exception.code)
+                output.error("Exiting with code: %d" % exception.code, error_type="exception")
             return exception.code
 
         assert isinstance(exception, Exception)
-        output.error(traceback.format_exc())
+        output.error(traceback.format_exc(), error_type="exception")
         msg = exception_message_safe(exception)
-        output.error(msg)
+        output.error(msg, error_type="exception")
         return ERROR_UNEXPECTED
 
 

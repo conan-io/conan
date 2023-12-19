@@ -527,20 +527,6 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
         assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
 
 
-def test_variables_types(conanfile):
-    generator_folder = temp_folder()
-    conanfile.folders.set_base_generators(generator_folder)
-    # This is a trick for 1.X to use base_generator and not install folder
-    conanfile.folders.generators = "here"
-
-    toolchain = CMakeToolchain(conanfile)
-    toolchain.variables["FOO"] = True
-    toolchain.generate()
-
-    contents = load(os.path.join(conanfile.generators_folder, "conan_toolchain.cmake"))
-    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in contents
-
-
 def test_compilers_block(conanfile):
     cmake_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
                      "objcpp": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",

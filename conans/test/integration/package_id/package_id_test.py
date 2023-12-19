@@ -2,7 +2,9 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.util.files import save
 
 
 def test_double_package_id_call():
@@ -183,3 +185,47 @@ def test_package_id_validate_settings():
     c.save({"conanfile.py": conanfile})
     c.run("create . --name=pkg --version=0.1", assert_error=True)
     assert "ConanException: Invalid setting 'DONT_EXIST' is not a valid 'settings.os' value" in c.out
+
+
+class TestBuildRequiresHeaderOnly:
+    def test_header_only(self):
+        c = TestClient(light=True)
+        save(c.cache.global_conf_path, "core.package_id:default_build_mode=minor_mode")
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                tool_requires = "tool/[*]"
+                def package_id(self):
+                    self.info.clear()
+                """)
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "pkg/conanfile.py": pkg})
+        c.run("create tool --version=1.0")
+        c.run("create pkg")
+        pkgid = c.created_package_id("pkg/0.1")
+        c.run("create tool --version=1.2")
+        c.run("install --requires=pkg/0.1")
+        c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
+
+    def test_header_only_implements(self):
+        c = TestClient(light=True)
+        save(c.cache.global_conf_path, "core.package_id:default_build_mode=minor_mode")
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                tool_requires = "tool/[*]"
+                package_type = "header-library"
+                implements = ["auto_header_only"]
+                """)
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "pkg/conanfile.py": pkg})
+        c.run("create tool --version=1.0")
+        c.run("create pkg")
+        pkgid = c.created_package_id("pkg/0.1")
+        c.run("create tool --version=1.2")
+        c.run("install --requires=pkg/0.1")
+        c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
