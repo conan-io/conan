@@ -252,3 +252,7 @@ class TestWarningHandling:
         t.run("create .", assert_error=True)
         assert "ERROR: Tagged error" in t.out
         assert "ConanException: Untagged error" in t.out
+
+        t.run("create . -vquiet", assert_error=True)
+        assert "ERROR: Tagged error" not in t.out
+        assert "ConanException: Untagged error" not in t.out
