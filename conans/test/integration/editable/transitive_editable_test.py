@@ -118,3 +118,40 @@ def test_transitive_editables_build():
     # Try also with 2 profiles
     c.run("install app -s:b os=Windows --build=*")
     # it doesn't crash
+
+
+def test_transitive_editable_control_package_id_cache_consumers():
+    """
+    https://github.com/conan-io/conan/issues/15292
+    """
+    c = TestClient()
+    pkga = GenConanfile("pkga", "1.0").with_package_type("static-library")
+    pkgb = GenConanfile("pkgb", "1.0").with_requires("pkga/1.0").with_package_type("static-library")
+    pkgc = GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0").with_package_type("static-library")
+    app = GenConanfile("app", "1.0").with_requires("pkgc/1.0").with_package_type("application")
+    c.save({"pkga/conanfile.py": pkga,
+            "pkgb/conanfile.py": pkgb,
+            "pkgc/conanfile.py": pkgc,
+            "app/conanfile.py": app})
+    c.run("create pkga")
+    c.run("create pkgb")
+    pkgb_id = c.created_package_id("pkgb/1.0")
+    c.run("create pkgc")
+    pkgc_id = c.created_package_id("pkgc/1.0")
+    c.run("install app")
+    # now we want to investigate pkga
+    c.run("editable add pkga")
+    pkga = GenConanfile("pkga", "1.0").with_package_type("static-library")\
+                                      .with_class_attribute("some=42")
+    c.save({"pkga/conanfile.py": pkga})
+    c.run("install app")
+    # The consumers didn't need a new binary, even if I modified pkg
+    c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Cache"),
+                            "pkgc/1.0": (pkgc_id, "Cache")})
+    c.run("install app --build=editable")
+    c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Cache"),
+                            "pkgc/1.0": (pkgc_id, "Cache")})
+    # But I can command perfectly what to do and when
+    c.run("install app --build=editable --build=cascade")
+    c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Build"),
+                            "pkgc/1.0": (pkgc_id, "Build")})
