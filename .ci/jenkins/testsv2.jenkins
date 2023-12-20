@@ -10,7 +10,7 @@ void cancelPrevious() {
 }
 
 String getTempFolder(String nodeName) {
-    if (nodeName=="Windows") { return "D:/J/t/" }
+    if (nodeName=="Windows") { return "C:/J/t_v2/" }
     return "/tmp/"
 }
 
