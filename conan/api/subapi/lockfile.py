@@ -89,6 +89,12 @@ class LockfileAPI:
         return lockfile
 
     @staticmethod
+    def remove_lockfile(lockfile, requires=None, build_requires=None, python_requires=None):
+        lockfile.remove(requires=requires, build_requires=build_requires,
+                        python_requires=python_requires)
+        return lockfile
+
+    @staticmethod
     def save_lockfile(lockfile, lockfile_out, path=None):
         if lockfile_out is not None:
             lockfile_out = make_abs_path(lockfile_out, path)

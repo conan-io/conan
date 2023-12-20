@@ -34,24 +34,24 @@ def test_ignore_paths_when_listing_profiles():
 
 def test_shorthand_syntax():
     tc = TestClient()
-    tc.save({"profile": "[conf]\nuser.profile=True"})
+    tc.save({"profile": "[conf]\nuser:profile=True"})
     tc.run("profile show -h")
     assert "[-pr:b" in tc.out
     assert "[-pr:h" in tc.out
     assert "[-pr:a" in tc.out
 
     tc.run(
-        "profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf.cli=True -f=json")
+        "profile show -o:a=both_options=True -pr:a=profile -s:a=os=WindowsCE -s:a=os.platform=conan -c:a=user.conf:cli=True -f=json")
 
     out = json.loads(tc.out)
     assert out == {'build': {'build_env': '',
-                             'conf': {'user.conf.cli': True, 'user.profile': True},
+                             'conf': {'user.conf:cli': True, 'user:profile': True},
                              'options': {'both_options': 'True'},
                              'package_settings': {},
                              'settings': {'os': 'WindowsCE', 'os.platform': 'conan'},
                              'tool_requires': {}},
                    'host': {'build_env': '',
-                            'conf': {'user.conf.cli': True, 'user.profile': True},
+                            'conf': {'user.conf:cli': True, 'user:profile': True},
                             'options': {'both_options': 'True'},
                             'package_settings': {},
                             'settings': {'os': 'WindowsCE', 'os.platform': 'conan'},
