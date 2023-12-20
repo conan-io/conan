@@ -205,6 +205,7 @@ def default_msvc_runtime(compiler):
 def default_cppstd(compiler, compiler_version):
     """ returns the default cppstd for the compiler-version. This is not detected, just the default
     """
+
     def _clang_cppstd_default(version):
         if version >= "16":
             return "gnu17"
@@ -269,8 +270,8 @@ def detect_compiler():
             return gcc, gcc_version
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
-        if platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe")) \
-                and "clang" not in command:
+        if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
+            and "clang" not in command):
             return _msvc_cl_compiler(command)
 
         # I am not able to find its version

@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import tarfile
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -17,6 +18,16 @@ def test_cache_save_restore():
     cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
     assert os.path.exists(cache_path)
     _validate_restore(cache_path)
+
+    # Lets test that the pkglist does not contain windows backslash paths to make it portable
+    with open(cache_path, mode='rb') as file_handler:
+        the_tar = tarfile.open(fileobj=file_handler)
+        fileobj = the_tar.extractfile("pkglist.json")
+        pkglist = fileobj.read()
+        the_tar.close()
+
+    package_list = json.loads(pkglist)
+    assert "\\" not in package_list
 
 
 def test_cache_save_downloaded_restore():

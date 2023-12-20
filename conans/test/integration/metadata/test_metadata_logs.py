@@ -190,3 +190,34 @@ class TestHooksMetadataLogs:
         assert c.load("metadata/logs/src.log") == "srclog!!"
         c.run("build .")
         assert c.load("mybuild/metadata/logs/mylogs.txt") == "some logs!!!"
+
+
+def test_metadata_export_pkg():
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save, copy
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def build(self):
+                save(self, "mylogs.txt", "some logs!!!")
+                copy(self, "mylogs.txt", src=self.build_folder,
+                     dst=os.path.join(self.package_metadata_folder, "logs"))
+
+            def package(self):
+                copy(self, "*", src=os.path.join(self.build_folder, "metadata"),
+                     dst=self.package_metadata_folder)
+        """)
+
+    c = TestClient()
+    c.save({"conanfile.py": conanfile})
+    c.run("build .")
+    c.run("export-pkg .")
+    # Test local cache looks good
+    pkg_layout = c.created_layout()
+    assert os.listdir(pkg_layout.metadata()) == ["logs"]
+    assert os.listdir(os.path.join(pkg_layout.metadata(), "logs")) == ["mylogs.txt"]
+    assert load(os.path.join(pkg_layout.metadata(), "logs", "mylogs.txt")) == "some logs!!!"

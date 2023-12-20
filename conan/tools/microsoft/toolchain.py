@@ -37,6 +37,9 @@ class MSBuildToolchain(object):
             </ResourceCompile>
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
+            {% if winsdk_version %}
+            <WindowsTargetPlatformVersion>{{ winsdk_version}}</WindowsTargetPlatformVersion>
+            {% endif %}
             <PlatformToolset>{{ toolset }}</PlatformToolset>
             {% for k, v in properties.items() %}
             <{{k}}>{{ v }}</{{k}}>
@@ -149,6 +152,10 @@ class MSBuildToolchain(object):
                  "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
+
+        winsdk_version = self._conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+        winsdk_version = winsdk_version or self._conanfile.settings.get_safe("os.version")
+
         return {
             'defines': defines,
             'compiler_flags': " ".join(self.cxxflags + self.cflags),
@@ -159,6 +166,7 @@ class MSBuildToolchain(object):
             "compile_options": compile_options,
             "parallel": parallel,
             "properties": self.properties,
+            "winsdk_version": winsdk_version
         }
 
     def _write_config_toolchain(self, config_filename):

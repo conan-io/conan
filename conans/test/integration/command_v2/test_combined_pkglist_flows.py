@@ -66,6 +66,15 @@ class TestGraphCreatedUpload:
         assert "Uploading package 'zlib" in c.out
 
 
+class TestExportUpload:
+    def test_export_upload(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("export zlib --format=pkglist", redirect_stdout="pkglist.json")
+        c.run("upload --list=pkglist.json -r=default -c")
+        assert "Uploading recipe 'zlib/1.0#c570d63921c5f2070567da4bf64ff261'" in c.out
+
+
 class TestCreateGraphToPkgList:
     def test_graph_pkg_list_only_built(self):
         c = TestClient()
