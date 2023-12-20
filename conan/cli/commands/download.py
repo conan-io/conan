@@ -42,6 +42,8 @@ def download(conan_api: ConanAPI, parser, *args):
         raise ConanException("Missing pattern or package list file")
     if args.pattern and args.list:
         raise ConanException("Cannot define both the pattern and the package list file")
+    if args.list and args.only_recipe:
+        raise ConanException("--only-recipe cannot be used with package list argument")
 
     remote = conan_api.remotes.get(args.remote)
 
