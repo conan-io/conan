@@ -10,6 +10,7 @@ import yaml
 from conan.api.output import ConanOutput
 from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
+from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
 
@@ -22,21 +23,22 @@ class GitRemoteManager:
         self._remote_cache_dir = "{}/.cache".format(cache_folder)
         self._exported_file = os.path.join(self._remote_cache_dir, "exported.json")
         from conan.internal.conan_app import ConanApp
-        self._app = ConanApp(self._remote_cache_dir)
+        global_conf = ConfDefinition()
+        self._app = ConanApp(self._remote_cache_dir, global_conf)
         self.layout = _ConanCenterIndexLayout(cache_folder)
 
     def call_method(self, method_name, *args, **kwargs):
         return getattr(self, method_name)(*args, **kwargs)
 
-    def get_recipe(self, ref, dest_folder):
-        export_folder = self._app.cache.ref_layout(ref).export()
+    def get_recipe(self, ref, dest_folder, metadata, only_metadata):
+        export_folder = self._app.cache.recipe_layout(ref).export()
         return self._copy_files(export_folder, dest_folder)
 
     def get_recipe_sources(self, ref, dest_folder):
-        export_sources = self._app.cache.ref_layout(ref).export_sources()
+        export_sources = self._app.cache.recipe_layout(ref).export_sources()
         return self._copy_files(export_sources, dest_folder)
 
-    def get_package(self, pref, dest_folder):
+    def get_package(self, pref, dest_folder, metadata, only_metadata):
         raise ConanException(f"The remote '{self._remote.name}' doesn't support binary packages")
 
     def upload_recipe(self, ref, files_to_upload):
@@ -104,7 +106,9 @@ class GitRemoteManager:
         sys.stderr = StringIO()
         try:
             original_stderr.write(f"Git remote processing {ref}\n")
-            new_ref, _ = cmd_export(self._app, conanfile_path, ref.name, ref.version, None, None)
+            global_conf = ConfDefinition()
+            new_ref, _ = cmd_export(self._app, global_conf, conanfile_path,
+                                    ref.name, ref.version, None, None)
         finally:
             sys.stderr = original_stderr
         # Cache the result, so it is not constantly re-exported
