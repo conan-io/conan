@@ -27,7 +27,7 @@ def cpp_info():
     save(ConanFileMock(), os.path.join(libdirs, "libmylib.so"), "")
     save(ConanFileMock(), os.path.join(libdirs, "subfolder", "libmylib.a"), "")  # recursive
     cpp_info_mock = MagicMock(_base_folder=None, libdirs=None, bindirs=None, libs=None)
-    cpp_info_mock._base_folder = folder
+    cpp_info_mock._base_folder = folder.replace("\\", "/")
     cpp_info_mock.libdirs = [libdirs]
     cpp_info_mock.bindirs = [bindirs]
     return cpp_info_mock
