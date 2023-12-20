@@ -96,11 +96,12 @@ def _get_libs(dep, cpp_info=None) -> list:
 
     def _save_lib_path(lib_, lib_path_):
         """Add each lib with its full library path"""
-        _, ext_ = os.path.splitext(lib_path_)
+        formatted_path = lib_path_.replace("\\", "/")
+        _, ext_ = os.path.splitext(formatted_path)
         if is_shared and ext_ == ".lib":  # Windows interface library
-            interface_lib_paths[lib_] = lib_path_
+            interface_lib_paths[lib_] = formatted_path
         else:
-            lib_paths[lib_] = lib_path_
+            lib_paths[lib_] = formatted_path
 
     cpp_info = cpp_info or dep.cpp_info
     is_shared = _is_shared()
