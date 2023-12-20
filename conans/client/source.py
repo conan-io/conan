@@ -1,5 +1,7 @@
 import os
 
+from conan.api.output import ConanOutput
+from conan.tools.env import VirtualBuildEnv
 from conans.errors import ConanException, conanfile_exception_formatter, NotFoundException, \
     conanfile_remove_attr
 from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
@@ -41,8 +43,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
                % str(ref))
         raise ConanException(msg)
 
-    # FIXME: this output is scoped but without reference, check if we want this
-    conanfile.output.info("Sources downloaded from '{}'".format(sources_remote.name))
+    ConanOutput(scope=str(ref)).info("Sources downloaded from '{}'".format(sources_remote.name))
 
 
 def config_source(export_source_folder, conanfile, hook_manager):
@@ -62,12 +63,16 @@ def config_source(export_source_folder, conanfile, hook_manager):
     if not os.path.exists(conanfile.folders.base_source):  # No source folder, need to get it
         with set_dirty_context_manager(conanfile.folders.base_source):
             mkdir(conanfile.source_folder)
+            mkdir(conanfile.recipe_metadata_folder)
 
             # First of all get the exported scm sources (if auto) or clone (if fixed)
             # Now move the export-sources to the right location
             merge_directories(export_source_folder, conanfile.folders.base_source)
-
-            run_source_method(conanfile, hook_manager)
+            if getattr(conanfile, "source_buildenv", True):
+                with VirtualBuildEnv(conanfile, auto_generate=True).vars().apply():
+                    run_source_method(conanfile, hook_manager)
+            else:
+                run_source_method(conanfile, hook_manager)
 
 
 def run_source_method(conanfile, hook_manager):

@@ -3,13 +3,13 @@ import pytest
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import MockConanfile, RedirectedTestOutput
+from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conans.test.utils.tools import redirect_output
 
 
 @pytest.fixture
 def conanfile():
-    return MockConanfile(None)
+    return ConanFileMock(None)
 
 
 def test_skip_package(conanfile):
@@ -56,8 +56,6 @@ def test_common_build_force(conanfile):
         reference = RecipeReference.loads("hello/0.1@user/testing")
         build_mode = BuildMode(["hello/*"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert output.getvalue() == ""
 
 
 def test_no_user_channel(conanfile):
@@ -66,8 +64,6 @@ def test_no_user_channel(conanfile):
         reference = RecipeReference.loads("hello/0.1@")
         build_mode = BuildMode(["hello/0.1@"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert output.getvalue() == ""
 
 
 def test_revision_included(conanfile):
@@ -76,8 +72,6 @@ def test_revision_included(conanfile):
         reference = RecipeReference.loads("hello/0.1@user/channel#rrev1")
         build_mode = BuildMode(["hello/0.1@user/channel#rrev1"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert output.getvalue() == ""
 
 
 def test_no_user_channel_revision_included(conanfile):
@@ -86,8 +80,6 @@ def test_no_user_channel_revision_included(conanfile):
         reference = RecipeReference.loads("hello/0.1@#rrev1")
         build_mode = BuildMode(["hello/0.1@#rrev1"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert output.getvalue() == ""
 
 
 def test_non_matching_build_force(conanfile):
@@ -96,8 +88,6 @@ def test_non_matching_build_force(conanfile):
         reference = RecipeReference.loads("Bar/0.1@user/testing")
         build_mode = BuildMode(["hello"])
         assert build_mode.forced(conanfile, reference) is False
-        build_mode.report_matches()
-        assert "ERROR: No package matching 'hello' pattern" in output.getvalue()
 
 
 def test_full_reference_build_force(conanfile):
@@ -106,8 +96,6 @@ def test_full_reference_build_force(conanfile):
         reference = RecipeReference.loads("bar/0.1@user/testing")
         build_mode = BuildMode(["bar/0.1@user/testing"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert output.getvalue() == ""
 
 
 def test_non_matching_full_reference_build_force(conanfile):
@@ -116,8 +104,6 @@ def test_non_matching_full_reference_build_force(conanfile):
         reference = RecipeReference.loads("bar/0.1@user/stable")
         build_mode = BuildMode(["bar/0.1@user/testing"])
         assert build_mode.forced(conanfile, reference) is False
-        build_mode.report_matches()
-        assert "No package matching 'bar/0.1@user/testing' pattern" in output.getvalue()
 
 
 def test_multiple_builds(conanfile):
@@ -126,15 +112,13 @@ def test_multiple_builds(conanfile):
         reference = RecipeReference.loads("bar/0.1@user/stable")
         build_mode = BuildMode(["bar/*", "Foo/*"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert "ERROR: No package matching" in output.getvalue()
 
 
 def test_allowed(conanfile):
     build_mode = BuildMode(["missing"])
     assert build_mode.allowed(conanfile) is True
 
-    build_mode = BuildMode([])
+    build_mode = BuildMode(None)
     assert build_mode.allowed(conanfile) is False
 
 
@@ -147,16 +131,12 @@ def test_casing(conanfile):
         assert build_mode.forced(conanfile, reference) is True
         build_mode = BuildMode(["bo*"])
         assert build_mode.forced(conanfile, reference) is True
-        build_mode.report_matches()
-        assert "" == output.getvalue()
 
         output.clear()
         build_mode = BuildMode(["Boost*"])
         assert build_mode.forced(conanfile, reference) is False
         build_mode = BuildMode(["Bo*"])
         assert build_mode.forced(conanfile, reference) is False
-        build_mode.report_matches()
-        assert "ERROR: No package matching" in output.getvalue()
 
 
 def test_pattern_matching(conanfile):
@@ -209,6 +189,3 @@ def test_pattern_matching(conanfile):
         assert build_mode.forced(conanfile, reference) is True
         reference = RecipeReference.loads("pythontool/0.1@lasote/stable")
         assert build_mode.forced(conanfile, reference) is False
-
-        build_mode.report_matches()
-        assert output.getvalue() == ""

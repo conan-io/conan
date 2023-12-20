@@ -54,7 +54,7 @@ class RestApiTest(unittest.TestCase):
                 mocked_user_input.get_password = Mock(return_value="private_pass")
 
                 # FIXME: Missing mock
-                cls.auth_manager = ConanApiAuthManager(client_factory, cache)
+                cls.auth_manager = ConanApiAuthManager(client_factory, cache, config)
                 cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
                                     True)
                 cls.auth_manager._authenticate(cls.remote, user="private_user",
@@ -80,7 +80,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans
         tmp_dir = temp_folder()
-        self.api.get_recipe(ref, tmp_dir)
+        self.api.get_recipe(ref, tmp_dir, metadata=None, only_metadata=False)
         self.assertIn(CONANFILE, os.listdir(tmp_dir))
         self.assertIn(CONAN_MANIFEST, os.listdir(tmp_dir))
 
@@ -95,7 +95,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the package
         tmp_dir = temp_folder()
-        self.api.get_package(pref, tmp_dir)
+        self.api.get_package(pref, tmp_dir, metadata=None, only_metadata=False)
         # The hello.cpp file is not downloaded!
         self.assertNotIn("hello.cpp", os.listdir(tmp_dir))
 
@@ -104,7 +104,7 @@ class RestApiTest(unittest.TestCase):
         self._upload_recipe(ref, {"file9.cpp": ""})
 
         tmp = temp_folder()
-        files = self.api.get_recipe(ref, tmp)
+        files = self.api.get_recipe(ref, tmp, metadata=None, only_metadata=False)
         self.assertIsNotNone(files)
         self.assertFalse(os.path.exists(os.path.join(tmp, "file9.cpp")))
 

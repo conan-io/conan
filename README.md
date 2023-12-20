@@ -12,7 +12,7 @@ Decentralized, open-source (MIT), C/C++ package manager.
 - Homepage: https://conan.io/
 - Github: https://github.com/conan-io/conan
 - Docs: https://docs.conan.io
-- Slack: https://cpplang.slack.com (#conan channel)
+- Slack: https://cpplang.slack.com (#conan channel. Please, click [here](https://join.slack.com/t/cpplang/shared_invite/zt-1snzdn6rp-rOUxF3166oz1_11Tr5H~xg) to get an invitation)
 - Twitter: https://twitter.com/conan_io
 
 
@@ -26,8 +26,8 @@ Conan is a package manager for C and C++ developers:
   and customized. Manage all your artifacts in the same way on all platforms.
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
   (CMake, MSBuild, Makefiles, Meson, etc).
-- Extensible: Its python based recipes, together with extensions points allows for great power and flexibility.
-- Large and active community, especially in Github (https://github.com/conan-io/conan) and Slack (https://cpplang-inviter.cppalliance.org/ #conan channel).
+- Extensible: Its Python-based recipes, together with extension points allow for great power and flexibility.
+- Large and active community, especially in GitHub (https://github.com/conan-io/conan) and Slack (https://cppalliance.org/slack/ #conan channel).
   This community also creates and maintains packages in ConanCenter and Bincrafters repositories in Bintray.
 - Stable. Used in production by many companies, since 1.0 there is a commitment not to break package recipes and documented behavior.
 
@@ -61,7 +61,7 @@ You can run Conan from source in Windows, MacOS, and Linux:
   $ cd conan-io && sudo pip install -e .
   ```
 
-  If you are in Windows, using ``sudo`` is not required.
+  If you are in Windows, using ``sudo`` is not required. Some Linux distros won't allow you to put Python packages in editable mode in the root Python installation, and creating a virtual environment ``venv`` first, is mandatory.
 
 - **You are ready, try to run Conan:**
 
@@ -82,19 +82,19 @@ Feedback and contribution are always welcome in this project.
 Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
 Also, if you plan to contribute, please add some testing for your changes. You can read the [Conan
 tests guidelines section](https://github.com/conan-io/conan/blob/develop/conans/test/README.md) for
-some advise on how to write tests for Conan.
+some advice on how to write tests for Conan.
 
 ### Running the tests
 
 
-**Install python requirements**
+**Install Python requirements**
 
 ```bash
 $ python -m pip install -r conans/requirements_server.txt
 $ python -m pip install -r conans/requirements_dev.txt
 ```
 
-If you are not Windows and you are not using a python virtual environment, you will need to run these
+If you are not on Windows and you are not using a Python virtual environment, you will need to run these
 commands using `sudo`.
 
 Before you can run the tests, you need to set a few environment variables first.
@@ -109,7 +109,7 @@ On Windows it would be (while being in the Conan root directory):
 $ set PYTHONPATH=.
 ```
 
-Conan test suite defines and configure some required tools (CMake, Ninja, etc) in the
+Conan test suite defines and configures some required tools (CMake, Ninja, etc) in the
 ``conftest.py`` and allows to define a custom ``conftest_user.py``.
 Some specific versions, like cmake>=3.15 are necessary.
 
@@ -136,7 +136,7 @@ To run specific tests, you can specify the test name too, something like:
 $ python -m pytest conans/test/unittests/client/cmd/export_test.py::ExportTest::test_export_warning -s
 ```
 
-The `-s` argument can be useful to see some output that otherwise is captured by pytest.
+The `-s` argument can be useful to see some output that otherwise is captured by *pytest*.
 
 Also, you can run tests against an instance of Artifactory. Those tests should add the attribute
 `artifactory_ready`.
@@ -156,7 +156,7 @@ $ export ARTIFACTORY_DEFAULT_USER=admin
 $ export ARTIFACTORY_DEFAULT_PASSWORD=password
 ```
 
-`ARTIFACTORY_DEFAULT_URL` is the base url for the Artifactory repo, not one for a specific
+`ARTIFACTORY_DEFAULT_URL` is the base URL for the Artifactory repo, not one for a specific
 repository. Running the tests with a real Artifactory instance will create repos on the fly so please
 use a separate server for testing purposes.
 

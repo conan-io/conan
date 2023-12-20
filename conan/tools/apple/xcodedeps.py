@@ -5,7 +5,7 @@ from collections import OrderedDict
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import load, save
 from conan.tools.apple.apple import _to_apple_arch
@@ -24,10 +24,10 @@ def _format_name(name):
     return name.lower()
 
 
-def _xcconfig_settings_filename(settings):
+def _xcconfig_settings_filename(settings, configuration):
     arch = settings.get_safe("arch")
     architecture = _to_apple_arch(arch) or arch
-    props = [("configuration", settings.get_safe("build_type")),
+    props = [("configuration", configuration),
              ("architecture", architecture),
              ("sdk name", settings.get_safe("os.sdk")),
              ("sdk version", settings.get_safe("os.sdk_version"))]
@@ -35,7 +35,7 @@ def _xcconfig_settings_filename(settings):
     return _format_name(name)
 
 
-def _xcconfig_conditional(settings):
+def _xcconfig_conditional(settings, configuration):
     sdk_condition = "*"
     arch = settings.get_safe("arch")
     architecture = _to_apple_arch(arch) or arch
@@ -43,7 +43,7 @@ def _xcconfig_conditional(settings):
     if sdk:
         sdk_condition = "{}{}".format(sdk, settings.get_safe("os.sdk_version") or "*")
 
-    return "[config={}][arch={}][sdk={}]".format(settings.get_safe("build_type"), architecture, sdk_condition)
+    return "[config={}][arch={}][sdk={}]".format(configuration, architecture, sdk_condition)
 
 
 def _add_includes_to_file_or_create(filename, template, files_to_include):
@@ -65,7 +65,7 @@ class XcodeDeps(object):
     _conf_xconfig = textwrap.dedent("""\
         PACKAGE_ROOT_{{pkg_name}}{{condition}} = {{root}}
         // Compiler options for {{pkg_name}}::{{comp_name}}
-        HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{include_dirs}}
+        SYSTEM_HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}}{{condition}} = {{include_dirs}}
         GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}}{{condition}} = {{definitions}}
         OTHER_CFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{c_compiler_flags}}
         OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}}{{condition}} = {{cxx_compiler_flags}}
@@ -84,7 +84,7 @@ class XcodeDeps(object):
         {% endfor %}
         #include "{{dep_xconfig_filename}}"
 
-        HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
+        SYSTEM_HEADER_SEARCH_PATHS = $(inherited) $(SYSTEM_HEADER_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
         GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{{pkg_name}}_{{comp_name}})
         OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{{pkg_name}}_{{comp_name}})
         OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{{pkg_name}}_{{comp_name}})
@@ -149,7 +149,7 @@ class XcodeDeps(object):
             'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cxxflags")),
             'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("sharedlinkflags")),
             'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("exelinkflags")),
-            'condition': _xcconfig_conditional(self._conanfile.settings)
+            'condition': _xcconfig_conditional(self._conanfile.settings, self.configuration)
         }
 
         if not require.headers:
@@ -231,7 +231,7 @@ class XcodeDeps(object):
     def get_content_for_component(self, require, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
         result = {}
 
-        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings, self.configuration)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
         result[props_name] = self._conf_xconfig_file(require, pkg_name, component_name, package_folder, transitive_internal)
@@ -323,10 +323,7 @@ class XcodeDeps(object):
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
-        # Include transitive requires
         all_file_content = ""
-        for require, dep in requires:
-            all_file_content = self._all_xconfig_file(get_transitive_requires(self._conanfile, dep), all_file_content)
 
         # Include direct requires
         direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "skip": False})

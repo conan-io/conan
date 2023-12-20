@@ -58,6 +58,10 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=stable")
 
     def test_profile_requires(self):
+        """
+        cli -(tool-requires)-> tool/0.1
+          \\--(requires)->mylib/0.1 -(tool_requires)->tool/0.1 (skipped)
+        """
         client = TestClient()
         self._create(client)
 
@@ -223,3 +227,30 @@ def test_consumer_patterns_loop_error():
     client.run("install consumer --build=missing -pr:b=profile.txt -pr:h=profile.txt")
     assert "tool1/1.0: Created package" in client.out
     assert "tool2/1.0: Created package" in client.out
+
+
+def test_tool_requires_revision_profile():
+    # We shoul be able to explicitly [tool_require] a recipe revision in the profile
+    c = TestClient()
+    build_profile = textwrap.dedent("""\
+        [settings]
+        os=Linux
+        [tool_requires]
+        *:tool/0.1#2d65f1b4af1ce59028f96adbfe7ed5a2
+        """)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "cmake/conanfile.py": GenConanfile("cmake", "0.1"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_tool_requires("cmake/0.1"),
+            "build_profile": build_profile})
+    c.run("export tool")
+    rev1 = c.exported_recipe_revision()
+    assert rev1 == "2d65f1b4af1ce59028f96adbfe7ed5a2"
+    # Create a new tool revision to proof that we can still require the old one
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_class_attribute("myvar=42")})
+    c.run("export tool")
+    rev2 = c.exported_recipe_revision()
+    assert rev2 != rev1
+    c.run("export cmake")
+    c.run("graph info app -pr:b=build_profile --build=*")
+    assert f"tool/0.1#{rev1}" in c.out
+    assert rev2 not in c.out

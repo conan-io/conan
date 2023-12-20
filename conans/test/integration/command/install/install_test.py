@@ -29,6 +29,9 @@ def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.run("install --requires=pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    client.run("install . --channel=testing", assert_error=True)
+    assert "ERROR: Can't specify --channel without --user" in client.out
 
 
 def test_install_args_error():
@@ -196,8 +199,6 @@ def test_install_with_path_errors(client):
     assert "Conanfile not found" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
-                          "of the folders")
 def test_install_argument_order(client):
     # https://github.com/conan-io/conan/issues/2520
     conanfile_boost = textwrap.dedent("""
@@ -206,30 +207,30 @@ def test_install_argument_order(client):
             name = "boost"
             version = "0.1"
             options = {"shared": [True, False]}
-            default_options = "shared=True"
+            default_options = {"shared": True}
         """)
-    conanfile = GenConanfile().with_require("boost/0.1@conan/stable")
+    conanfile = GenConanfile().with_require("boost/0.1")
 
     client.save({"conanfile.py": conanfile,
                  "conanfile_boost.py": conanfile_boost})
-    client.run("create conanfile_boost.py conan/stable")
+    client.run("create conanfile_boost.py ")
     client.run("install . -o boost/*:shared=True --build=missing")
-    output_0 = "%s" % client.out
+    output_0 = client.out
     client.run("install . -o boost/*:shared=True --build missing")
-    output_1 = "%s" % client.out
+    output_1 = client.out
     client.run("install -o boost/*:shared=True . --build missing")
-    output_2 = "%s" % client.out
+    output_2 = client.out
     client.run("install -o boost/*:shared=True --build missing .")
-    output_3 = "%s" % client.out
+    output_3 = client.out
     assert "ERROR" not in output_3
     assert output_0 == output_1
     assert output_1 == output_2
     assert output_2 == output_3
 
     client.run("install -o boost/*:shared=True --build boost . --build missing")
-    output_4 = "%s" % client.out
+    output_4 = client.out
     client.run("install -o boost/*:shared=True --build missing --build boost .")
-    output_5 = "%s" % client.out
+    output_5 = client.out
     assert output_4 == output_5
 
 
@@ -485,3 +486,25 @@ def test_upload_skip_binaries_not_hit_server():
     c.run("install --requires=pkg/0.1 --build=missing")
     # This would crash if hits the server, but it doesnt
     assert "pkg/0.1: Created package" in c.out
+
+
+def test_install_json_format():
+    # https://github.com/conan-io/conan/issues/14414
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "build_type"
+
+            def package_info(self):
+                self.conf_info.define("user.myteam:myconf", "myvalue")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.run("install --requires=pkg/0.1 --format=json")
+    data = json.loads(client.stdout)
+    conf_info = data["graph"]["nodes"]["1"]["conf_info"]
+    assert {'user.myteam:myconf': 'myvalue'} == conf_info

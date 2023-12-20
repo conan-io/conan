@@ -1,4 +1,5 @@
 import json
+import os
 import textwrap
 
 from conan.cli.exit_codes import ERROR_GENERAL
@@ -195,11 +196,16 @@ class TestAdvancedCliOutput:
         client.save({"conanfile.py": conanfile})
 
         client.run("graph info .")
-        assert "python_requires: ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']" in client.out
+        assert "python_requires:\n    tool/0.1#4d670581ccb765839f2239cc8dff8fbd" in client.out
 
         client.run("graph info . --format=json")
         info = json.loads(client.stdout)
-        assert info["graph"]["nodes"]["0"]["python_requires"] == ['tool/0.1#4d670581ccb765839f2239cc8dff8fbd']
+        pyrequires = info["graph"]["nodes"]["0"]["python_requires"]
+        tool = pyrequires["tool/0.1#4d670581ccb765839f2239cc8dff8fbd"]
+        # lets make sure the path exists
+        assert tool["recipe"] == "Cache"
+        assert tool["remote"] is None
+        assert os.path.exists(tool["path"])
 
     def test_build_id_info(self):
         client = TestClient()
@@ -308,7 +314,7 @@ class TestDeployers:
         c.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1")
                                               .with_class_attribute("license='GPL'"),
                 "collectlicenses.py": collectlicenses})
-        c.run("graph info . --deploy=collectlicenses")
+        c.run("graph info . --deployer=collectlicenses")
         assert "conanfile.py: LICENSE : GPL!" in c.out
         assert "LICENSE pkg/0.1: MIT!" in c.out
         contents = c.load("licenses.txt")

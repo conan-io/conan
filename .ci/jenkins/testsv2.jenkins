@@ -10,7 +10,7 @@ void cancelPrevious() {
 }
 
 String getTempFolder(String nodeName) {
-    if (nodeName=="Windows") { return "D:/J/t/" }
+    if (nodeName=="Windows") { return "C:/J/t_v2/" }
     return "/tmp/"
 }
 
@@ -21,18 +21,18 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         configs.add([node: "Linux", pyvers: ["PY36"]])
         if (moduleName=="conans/test/functional") {
             configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "M1Macos", pyvers: ["PY36"]])
+            configs.add([node: "M2Macos", pyvers: ["PY36"]])
         }
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-        configs.add([node: "M1Macos", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
         configs.add([node: "Linux", pyvers: ["PY36"]])
         configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M1Macos", pyvers: ["PY36"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36"]])
     }
     return configs
 }
@@ -65,11 +65,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 def scmVars = checkout scm
                 def commit = scmVars["GIT_COMMIT"].substring(0, 4)
 
-                // leaving the flavor here to later adapt con conan 1.x new pipeline
-                // will have to add more configs
-                def flavor = "enabled_revisions"
-
-                def workDir = getTempFolder(nodeName) + "${commit}/${pythonVersion}/${flavor}/"
+                def workDir = getTempFolder(nodeName) + "${commit}/${pythonVersion}/"
                 def venvName = "env_${env.BUILD_NUMBER}_${pythonVersion}_${commit}"
 
                 def pipArguments = "--no-cache-dir --timeout 30"
@@ -96,6 +92,10 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     try {
                         def dockerImage = getDockerImage(module)
                         docker.image(dockerImage).inside("--entrypoint=") {
+
+                            // we only test scons in Linux
+                            pipInstalls = pipInstalls + "python -m pip install scons ${pipArguments} && "
+
                             def sourcedir = "/home/conan/"
                             def pyenvdir = "${sourcedir}.pyenv"
                             sh(script: "cp -R ./ ${sourcedir}")
@@ -113,7 +113,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     }
                     finally {}
                 }
-                else if (nodeName=="M1Macos") {
+                else if (nodeName=="M2Macos") {
                     def localDir = "/Users/jenkins"
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.12", "PY39=3.9.10",
                              "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
@@ -132,7 +132,6 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="Windows") {
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "CONAN_BASH_PATH=c:/tools/msys64/usr/bin/bash",
-                             "CONAN_USER_HOME_SHORT=${workDir}.conan",
                              "PY27=Python27", "PY36=Python36", "PY38=Python38-64"]) {
                         try {
                             bat(script: "if not exist \"${workDir}\" mkdir \"${workDir}\"")

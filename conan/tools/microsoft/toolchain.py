@@ -8,7 +8,7 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import build_jobs
 from conan.tools.intel.intel_cc import IntelCC
 from conan.tools.microsoft.visual import VCVars, msvs_toolset
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import save, load
 
 
@@ -34,10 +34,12 @@ class MSBuildToolchain(object):
             </Link>
             <ResourceCompile>
               <PreprocessorDefinitions>{{ defines }}%(PreprocessorDefinitions)</PreprocessorDefinitions>
-              <AdditionalOptions>{{ compiler_flags }} %(AdditionalOptions)</AdditionalOptions>
             </ResourceCompile>
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
+            {% if winsdk_version %}
+            <WindowsTargetPlatformVersion>{{ winsdk_version}}</WindowsTargetPlatformVersion>
+            {% endif %}
             <PlatformToolset>{{ toolset }}</PlatformToolset>
             {% for k, v in properties.items() %}
             <{{k}}>{{ v }}</{{k}}>
@@ -150,6 +152,10 @@ class MSBuildToolchain(object):
                  "\n      <ProcessorNumber>{}</ProcessorNumber>".format(njobs)])
         compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
                                   for k, v in self.compile_options.items())
+
+        winsdk_version = self._conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+        winsdk_version = winsdk_version or self._conanfile.settings.get_safe("os.version")
+
         return {
             'defines': defines,
             'compiler_flags': " ".join(self.cxxflags + self.cflags),
@@ -160,6 +166,7 @@ class MSBuildToolchain(object):
             "compile_options": compile_options,
             "parallel": parallel,
             "properties": self.properties,
+            "winsdk_version": winsdk_version
         }
 
     def _write_config_toolchain(self, config_filename):

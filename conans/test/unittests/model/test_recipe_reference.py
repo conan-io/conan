@@ -1,3 +1,6 @@
+import pytest
+
+from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 
 
@@ -78,3 +81,15 @@ def test_recipe_reference_compare():
     r2 = RecipeReference.loads("pkg/1.22#2")
     assert r1 < r2
     assert sorted([r2, r1]) == [r1, r2]
+
+
+def test_error_pref():
+    r1 = RecipeReference.loads("pkg/1.0#rrev1:pid#rrev2")
+    with pytest.raises(ConanException) as exc:
+        r1.validate_ref()
+    assert "Invalid recipe reference 'pkg/1.0#rrev1:pid#rrev2' is a package reference" in str(exc)
+
+    r1 = RecipeReference.loads("pkg/1.0:pid")
+    with pytest.raises(ConanException) as exc:
+        r1.validate_ref()
+    assert "Invalid recipe reference 'pkg/1.0:pid' is a package reference" in str(exc)

@@ -3,6 +3,7 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
     apple_sdk_path
@@ -11,7 +12,6 @@ from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
-from conans.errors import ConanException
 from conans.util.files import save
 
 
@@ -32,11 +32,6 @@ class MesonToolchain(object):
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
     '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
-    # Constants to be overridden by conan_meson_deps_flags.ini (if exists)
-    deps_c_args = []
-    deps_c_link_args = []
-    deps_cpp_args = []
-    deps_cpp_link_args = []
 
     [project options]
     {% for it, value in project_options.items() -%}
@@ -44,8 +39,9 @@ class MesonToolchain(object):
     {% endfor %}
 
     [binaries]
-    {% if c %}c = '{{c}}'{% endif %}
-    {% if cpp %}cpp = '{{cpp}}'{% endif %}
+    {% if c %}c = {{c}}{% endif %}
+    {% if cpp %}cpp = {{cpp}}{% endif %}
+    {% if ld %}ld = {{ld}}{% endif %}
     {% if is_apple_system %}
     {% if objc %}objc = '{{objc}}'{% endif %}
     {% if objcpp %}objcpp = '{{objcpp}}'{% endif %}
@@ -69,16 +65,16 @@ class MesonToolchain(object):
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
     # C/C++ arguments
-    c_args = {{c_args}} + preprocessor_definitions + deps_c_args
-    c_link_args = {{c_link_args}} + deps_c_link_args
-    cpp_args = {{cpp_args}} + preprocessor_definitions + deps_cpp_args
-    cpp_link_args = {{cpp_link_args}} + deps_cpp_link_args
+    c_args = {{c_args}} + preprocessor_definitions
+    c_link_args = {{c_link_args}}
+    cpp_args = {{cpp_args}} + preprocessor_definitions
+    cpp_link_args = {{cpp_link_args}}
     {% if is_apple_system %}
     # Objective-C/C++ arguments
-    objc_args = {{objc_args}} + preprocessor_definitions + deps_c_args
-    objc_link_args = {{objc_link_args}} + deps_c_link_args
-    objcpp_args = {{objcpp_args}} + preprocessor_definitions + deps_cpp_args
-    objcpp_link_args = {{objcpp_link_args}} + deps_cpp_link_args
+    objc_args = {{objc_args}} + preprocessor_definitions
+    objc_link_args = {{objc_link_args}}
+    objcpp_args = {{objcpp_args}} + preprocessor_definitions
+    objcpp_link_args = {{objcpp_link_args}}
     {% endif %}
 
     {% for context, values in cross_build.items() %}
@@ -129,11 +125,12 @@ class MesonToolchain(object):
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
 
-        if compiler == "msvc":
+        self._b_vscrt = None
+        if compiler in ("msvc", "clang"):
             vscrt = msvc_runtime_flag(self._conanfile)
-            self._b_vscrt = str(vscrt).lower()
-        else:
-            self._b_vscrt = None
+            if vscrt:
+                self._b_vscrt = str(vscrt).lower()
+
         #: Dict-like object that defines Meson``properties`` with ``key=value`` format
         self.properties = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
@@ -171,36 +168,42 @@ class MesonToolchain(object):
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
         else:
-            if "Visual" in compiler or compiler == "msvc":
-                default_comp = "cl"
-                default_comp_cpp = "cl"
-            elif "clang" in compiler:
+            if "clang" in compiler:
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+        if "Visual" in compiler or compiler == "msvc":
+            default_comp = "cl"
+            default_comp_cpp = "cl"
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
-        # FIXME: This VirtualBuildEnv instance is breaking things!!
-        # FIXME: It shouldn't be used here, not intended for this use case
-        prev_status = self._conanfile.virtualbuildenv
-        build_env = VirtualBuildEnv(self._conanfile).vars()
-        self._conanfile.virtualbuildenv = prev_status
-        #: Defines the Meson ``c`` variable. Defaulted to ``CC`` build environment value
+        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+        #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_comp
-        #: Defines the Meson ``cpp`` variable. Defaulted to ``CXX`` build environment value
+        #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
         self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_comp_cpp
+        #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
+        #: If provided as a blank-separated string, it will be transformed into a list.
+        #: Otherwise, it remains a single string.
+        self.ld = build_env.get("LD")
         # FIXME: Should we use the new tools.build:compiler_executables and avoid buildenv?
-        #: Defines the Meson ``c_ld`` variable. Defaulted to ``CC_LD`` or ``LD`` build
+        # Issue related: https://github.com/mesonbuild/meson/issues/6442
+        # PR related: https://github.com/mesonbuild/meson/pull/6457
+        #: Defines the Meson ``c_ld`` variable. Defaulted to ``CC_LD``
         #: environment value
-        self.c_ld = build_env.get("CC_LD") or build_env.get("LD")
-        #: Defines the Meson ``cpp_ld`` variable. Defaulted to ``CXX_LD`` or ``LD`` build
+        self.c_ld = build_env.get("CC_LD")
+        #: Defines the Meson ``cpp_ld`` variable. Defaulted to ``CXX_LD``
         #: environment value
-        self.cpp_ld = build_env.get("CXX_LD") or build_env.get("LD")
+        self.cpp_ld = build_env.get("CXX_LD")
         #: Defines the Meson ``ar`` variable. Defaulted to ``AR`` build environment value
         self.ar = build_env.get("AR")
         #: Defines the Meson ``strip`` variable. Defaulted to ``STRIP`` build environment value
@@ -358,6 +361,12 @@ class MesonToolchain(object):
         return list(filter(bool, v))
 
     def _context(self):
+        def _sanitize_format(v):
+            if v is None or isinstance(v, list):
+                return v
+            ret = [x.strip() for x in v.split() if x]
+            return f"'{ret[0]}'" if len(ret) == 1 else ret
+
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
         extra_flags = self._get_extra_flags()
 
@@ -384,11 +393,11 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
             # https://mesonbuild.com/Builtin-options.html#directories
-            # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
-            "c": self.c,
-            "cpp": self.cpp,
+            "c": _sanitize_format(self.c),
+            "cpp": _sanitize_format(self.cpp),
+            "ld": _sanitize_format(self.ld),
             "objc": self.objc,
             "objcpp": self.objcpp,
             "c_ld": self.c_ld,

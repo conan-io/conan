@@ -1,4 +1,7 @@
 import json
+import textwrap
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -204,3 +207,113 @@ def test_timestamps_are_updated():
     assert f" math/1.0#{rev} - Cache" in c.out
     new_lock = c.load("conan.lock")
     assert "%0.123" not in new_lock
+
+
+def test_lock_add_error():
+    # https://github.com/conan-io/conan/issues/14465
+    c = TestClient()
+    c.run(f"lock add --requires=math/1.0:pid1", assert_error=True)
+    assert "ERROR: Invalid recipe reference 'math/1.0:pid1' is a package reference" in c.out
+
+
+class TestLockRemove:
+    @pytest.mark.parametrize("args, removed", [
+        ("--requires=math/*", ["math"]),
+        ("--requires=math/2.0", []),
+        ("--build-requires=cmake/1.0", ["cmake"]),
+        # Not valid ("--build-requires=*", ["cmake", "ninja"]),
+        ("--build-requires=*/*", ["cmake", "ninja"]),  # But this is valid
+        ("--python-requires=mytool/*", ["mytool"]),
+        ("--python-requires=*tool/*", ["mytool", "othertool"]),
+        # With version ranges
+        ('--requires="math/[>=1.0 <2]"', ["math"]),
+        ('--requires="math/[>1.0]"', []),
+        ('--requires="*/[>=1.0 <2]"', ["math", "engine"])
+    ])
+    def test_lock_remove(self, args, removed):
+        c = TestClient()
+        lock = textwrap.dedent("""\
+            {
+                "version": "0.5",
+                "requires": [
+                    "math/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "math/1.0#12345%1702683584.3411012",
+                    "engine/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ],
+                "build_requires": [
+                    "cmake/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "ninja/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ],
+                "python_requires": [
+                    "mytool/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "othertool/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ]
+            }
+            """)
+        c.save({"conan.lock": lock})
+        c.run(f"lock remove {args}")
+        lock = c.load("conan.lock")
+        for remove in removed:
+            assert remove not in lock
+        for pkg in {"math", "engine", "cmake", "ninja", "mytool", "othertool"}.difference(removed):
+            assert pkg in lock
+
+    @pytest.mark.parametrize("args, removed", [
+        ("--requires=math/1.0#12345*", ["math/1.0#123456789abcdef"]),
+        ("--requires=math/1.0#*", ["math/1.0#123456789abcdef",
+                                   "math/1.0#85d927a4a067a531b1a9c7619522c015"]),
+    ])
+    def test_lock_remove_revisions(self, args, removed):
+        c = TestClient()
+        lock = textwrap.dedent("""\
+            {
+                "version": "0.5",
+                "requires": [
+                    "math/1.0#123456789abcdef%1702683584.3411012",
+                    "math/1.0#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "engine/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ]
+            }
+            """)
+        c.save({"conan.lock": lock})
+        c.run(f"lock remove {args}")
+        lock = c.load("conan.lock")
+        for remove in removed:
+            assert remove not in lock
+        for pkg in {"math/1.0#123456789abcdef",
+                    "math/1.0#85d927a4a067a531b1a9c7619522c015",
+                    "engine/1.0#fd2b006646a54397c16a1478ac4111ac"}.difference(removed):
+            assert pkg in lock
+
+    @pytest.mark.parametrize("args, removed", [
+        ("--requires=*/*@team", ["pkg/1.0@team"]),
+        ("--requires=*/*@team*", ["pkg/1.0@team", "math/2.0@team/stable"]),
+        ("--requires=*/*@user", ["math/1.0@user", "other/1.0@user"]),
+        ("--requires=*/*@", ["engine/1.0"]),  # Remove those without user
+        # with version ranges
+        ("--requires=math/[*]@user", ["math/1.0@user"]),
+        ("--requires=math/[*]@team*", ["math/2.0@team/stable"]),
+    ])
+    def test_lock_remove_user_channel(self, args, removed):
+        c = TestClient()
+        lock = textwrap.dedent("""\
+            {
+                "version": "0.5",
+                "requires": [
+                    "math/1.0@user#123456789abcdef%1702683584.3411012",
+                    "math/2.0@team/stable#123456789abcdef%1702683584.3411012",
+                    "other/1.0@user#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "pkg/1.0@team#85d927a4a067a531b1a9c7619522c015%1702683583.3411012",
+                    "engine/1.0#fd2b006646a54397c16a1478ac4111ac%1702683583.3544693"
+                ]
+            }
+            """)
+        c.save({"conan.lock": lock})
+        c.run(f"lock remove {args}")
+        lock = c.load("conan.lock")
+        for remove in removed:
+            assert remove not in lock
+        rest = {"math/1.0@user", "math/2.0@team/stable",
+                "other/1.0@user", "pkg/1.0@team", "engine/1.0"}.difference(removed)
+        for pkg in rest:
+            assert pkg in lock

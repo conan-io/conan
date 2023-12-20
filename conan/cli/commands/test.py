@@ -4,12 +4,13 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.create import test_package, _check_tested_reference_matches
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conans.model.recipe_ref import RecipeReference
 
 
-@conan_command(group="Creator")
+@conan_command(group="Creator", formatters={"json": format_graph_json})
 def test(conan_api, parser, *args):
     """
     Test a package from a test_package folder.
@@ -42,9 +43,12 @@ def test(conan_api, parser, *args):
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
+    return {"graph": deps_graph,
+            "conan_api": conan_api}
+
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,
-             build_modes, tested_python_requires=None):
+             build_modes, tested_python_requires=None, build_modes_test=None, tested_graph=None):
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
                                                          profile_host, profile_build,
                                                          remotes=remotes,
@@ -64,7 +68,8 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
     deps_graph.report_graph_error()
 
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=update,
-                                     lockfile=lockfile)
+                                     lockfile=lockfile, build_modes_test=build_modes_test,
+                                     tested_graph=tested_graph)
     print_graph_packages(deps_graph)
 
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)

@@ -73,6 +73,10 @@ class _PackageOption:
         return other == self.__str__()
 
     @property
+    def name(self):
+        return self._name
+
+    @property
     def value(self):
         return self._value
 
@@ -135,10 +139,8 @@ class _PackageOptions:
         return self._data.get(field, default)
 
     def rm_safe(self, field):
-        try:
-            delattr(self, field)
-        except ConanException:
-            pass
+        # This should never raise any exception, in any case
+        self._data.pop(field, None)
 
     def validate(self):
         for child in self._data.values():
@@ -150,10 +152,6 @@ class _PackageOptions:
         for k, v in self._data.items():
             result._data[k] = v.copy_conaninfo_option()
         return result
-
-    @property
-    def fields(self):
-        return sorted(list(self._data.keys()))
 
     def _ensure_exists(self, field):
         if self._constrained and field not in self._data:
@@ -168,7 +166,6 @@ class _PackageOptions:
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        current_value = self._data.get(field)
         # It is always possible to remove an option, even if it is frozen (freeze=True),
         # and it got a value, because it is the only way an option could be removed
         # conditionally to other option value (like fPIC if shared)
@@ -380,12 +377,13 @@ class Options:
         which is the state that a package should define in order to reproduce
         """
         assert isinstance(down_options, Options)
+        # We need to store a copy for internal propagation for test_requires and tool_requires
+        private_deps_options = Options()
+        private_deps_options._deps_package_options = self._deps_package_options.copy()
         # self_options are the minimal necessary for a build-order
         # TODO: check this, isn't this just a copy?
         self_options = Options()
-        for pattern, options in down_options._deps_package_options.items():
-            self_options._deps_package_options.setdefault(pattern,
-                                                          _PackageOptions()).update_options(options)
+        self_options._deps_package_options = down_options._deps_package_options.copy()
 
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
@@ -402,4 +400,4 @@ class Options:
         # not be able to do ``self.options["mydep"]`` because it will be empty. self.dependencies
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
-        return self_options, upstream_options
+        return self_options, upstream_options, private_deps_options

@@ -1,7 +1,7 @@
 import os
 
 from conan.tools.microsoft.msbuild import msbuild_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def vs_layout(conanfile):

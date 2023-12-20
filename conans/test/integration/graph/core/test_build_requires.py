@@ -222,66 +222,28 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(mingw, "mingw/0.1#123", deps=[zlib2], dependents=[lib])
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
 
-    @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_conflict(self):
         # https://github.com/conan-io/conan/issues/4931
         # cheetah -> gazelle -> grass/0.1
         #    \--(br)----------> grass/0.2
-        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
-        grass02_ref = RecipeReference.loads("grass/0.2@user/testing")
-        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
 
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(grass02_ref, GenConanfile().with_name("grass").with_version("0.2"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
-                                                      .with_require(grass01_ref))
+        self._cache_recipe("grass/0.1", GenConanfile())
+        self._cache_recipe("grass/0.2", GenConanfile())
+        self._cache_recipe("gazelle/0.1", GenConanfile().with_require("grass/0.1"))
 
-        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
-                                           .with_require(gazelle_ref)
-                                           .with_tool_requires(grass02_ref))
+        deps_graph = self.build_graph(GenConanfile("cheetah", "0.1")
+                                      .with_require("gazelle/0.1")
+                                      .with_tool_requires("grass/0.2"))
 
         self.assertEqual(4, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
-
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
-
-        assert liba1.conflict == liba2
-        assert liba2.conflict == liba1
-
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_build_require_link_order(self):
-        # https://github.com/conan-io/conan/issues/4931
-        # cheetah -> gazelle -> grass
-        #    \--(br)------------/
-        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
-        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
-
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
-                                                      .with_require(grass01_ref))
-
-        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
-                                                    .with_require(gazelle_ref)
-                                                    .with_tool_requires(grass01_ref))
-
-        self.assertEqual(3, len(deps_graph.nodes))
         cheetah = deps_graph.root
         gazelle = cheetah.dependencies[0].dst
-        grass = gazelle.dependencies[0].dst
         grass2 = cheetah.dependencies[1].dst
-
-        self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], dependents=[])
-        self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
-                             ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+        grass1 = gazelle.dependencies[0].dst
+        self._check_node(cheetah, "cheetah/0.1", deps=[gazelle, grass2])
+        self._check_node(gazelle, "gazelle/0.1#123", deps=[grass1], dependents=[cheetah])
+        self._check_node(grass1, "grass/0.1#123", deps=[], dependents=[gazelle])
+        self._check_node(grass2, "grass/0.2#123", dependents=[cheetah])
 
 
 class TestTestRequire(GraphManagerTest):
@@ -416,6 +378,147 @@ class TestTestRequire(GraphManagerTest):
                                 (zlib, True, True, False, False, False)])
         _check_transitive(lib, [(gtest, True, True, False, False),
                                 (zlib, True, True, False, False, False)])
+
+
+class TestTestRequiresProblemsShared(GraphManagerTest):
+
+    def _check_graph(self, deps_graph, reverse):
+        self.assertEqual(3, len(deps_graph.nodes))
+        lib_c = deps_graph.root
+        if not reverse:
+            lib_a = lib_c.dependencies[0].dst
+            util = lib_a.dependencies[0].dst
+            util2 = lib_c.dependencies[1].dst
+        else:
+            util = lib_c.dependencies[0].dst
+            lib_a = lib_c.dependencies[1].dst
+            util2 = lib_a.dependencies[0].dst
+        assert util is util2
+
+        self._check_node(lib_c, "lib_c/0.1@", deps=[lib_a, util], dependents=[])
+        self._check_node(lib_a, "lib_a/0.1#123", deps=[util], dependents=[lib_c])
+        self._check_node(util, "util/0.1#123", deps=[], dependents=[lib_a, lib_c])
+
+        # node, include, link, build, run
+        _check_transitive(lib_c, [(lib_a, True, True, False, True),
+                                  (util, True, True, False, True)])
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions(self, reverse):
+        #  lib_c -(tr)-> lib_a -0.1--> util
+        #    \--------(tr)----0.1------/
+        # if versions exactly match, it shouldn't be an issue
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        deps = ("lib_a/0.1", "util/0.1") if not reverse else ("util/0.1", "lib_a/0.1")
+        deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps))
+        self._check_graph(deps_graph, reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions_conflict(self, reverse):
+        #  lib_c -(tr)-> lib_a -0.1--> util
+        #    \--------(tr)----0.2------/
+        # This should be a a conflict of versions
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/0.2", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        deps = ("lib_a/0.1", "util/0.2") if not reverse else ("util/0.2", "lib_a/0.1")
+        conanfile = GenConanfile("lib_c", "0.1").with_test_requires(*deps)
+        deps_graph = self.build_graph(conanfile, install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions_hybrid(self, reverse):
+        #  lib_c -----> lib_a--0.1--> util
+        #    \--------(tr)----0.1------/
+        # mixing requires + test_requires, should work
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/0.2", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/0.1").with_test_requires("util/0.1")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/0.1").with_requires("util/0.1")
+        deps_graph = self.build_graph(conanfile)
+        self._check_graph(deps_graph, reverse=reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions_hybrid_conflict(self, reverse):
+        #  lib_c -----> lib_a--0.1---> util
+        #    \--------(tr)----0.2------/
+        # Same as above, but mixing regular requires with test_requires
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/0.2", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/0.1").with_test_requires("util/0.2")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/0.1").with_requires("util/0.2")
+        deps_graph = self.build_graph(conanfile, install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges(self, reverse):
+        #  lib_c -(tr)-> lib_a -> util
+        #    \--------(tr)-------/
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                                                      .with_package_type("shared-library"))
+
+        deps = ("lib_a/[>=0]", "util/[>=0]") if not reverse else ("util/[>=0]", "lib_a/[>=0]")
+        deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps))
+        self._check_graph(deps_graph, reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges_conflict(self, reverse):
+        #  lib_c -(tr)-> lib_a -> util/0.1
+        #    \--------(tr)------> util/1.0
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/1.0", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                                                      .with_package_type("shared-library"))
+        deps = ("lib_a/[>=0]", "util/[>=1]") if not reverse else ("util/[>=1]", "lib_a/[>=0]")
+        deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps),
+                                      install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges_hybrid(self, reverse):
+        #  lib_c ---> lib_a -> util
+        #    \--------(tr)-------/
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                           .with_package_type("shared-library"))
+
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/[>=0.1]").with_test_requires("util/[>=0.1]")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/[>=0.1]").with_requires("util/[>=0.1]")
+        deps_graph = self.build_graph(conanfile)
+        self._check_graph(deps_graph, reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges_hybrid_conflict(self, reverse):
+        #  lib_c -(tr)-> lib_a -> util/0.1
+        #    \--------(tr)------> util/1.0
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/1.0", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                           .with_package_type("shared-library"))
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/[>=0.1]").with_test_requires("util/[>=1]")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/[>=0.1]").with_requires("util/[>=1]")
+        deps_graph = self.build_graph(conanfile, install=False)
+        assert type(deps_graph.error) == GraphConflictError
 
 
 class BuildRequiresPackageIDTest(GraphManagerTest):

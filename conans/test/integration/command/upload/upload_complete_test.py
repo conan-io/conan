@@ -1,16 +1,12 @@
-import json
 import os
-import textwrap
 import unittest
 
-import pytest
 from requests import ConnectionError
 
-from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONAN_MANIFEST
-from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
+from conans.test.utils.tools import (TestClient, TestRequester, TestServer,
                                      GenConanfile)
-from conans.util.files import load, save
+from conans.util.env import environment_update
 
 
 class BadConnectionUploader(TestRequester):
@@ -47,10 +43,9 @@ def test_try_upload_bad_recipe():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
-    ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-    latest_rrev = client.cache.get_latest_recipe_reference(ref)
-    os.unlink(os.path.join(client.cache.ref_layout(latest_rrev).export(), CONAN_MANIFEST))
-    client.run("upload %s -r default" % str(ref), assert_error=True)
+    layout = client.exported_layout()
+    os.unlink(os.path.join(layout.export(), CONAN_MANIFEST))
+    client.run("upload %s -r default" % str(layout.reference), assert_error=True)
     assert "Cannot upload corrupted recipe" in client.out
 
 
@@ -61,6 +56,7 @@ def test_upload_with_pattern():
         client.run("export . --user=frodo --channel=stable")
 
     client.run("upload hello* --confirm -r default")
+    print(client.out)
     for num in range(3):
         assert "Uploading recipe 'hello%s/1.2.1@frodo/stable" % num in client.out
 
@@ -73,7 +69,8 @@ def test_upload_with_pattern():
 
 def test_check_upload_confirm_question():
     server = TestServer()
-    client = TestClient(servers={"default": server}, inputs=["yes", "admin", "password", "n", "n"])
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "admin", "password", "n", "n", "n"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
@@ -81,10 +78,27 @@ def test_check_upload_confirm_question():
     assert "Uploading recipe 'hello1/1.2.1@frodo/stable" in client.out
 
     client.save({"conanfile.py": GenConanfile("hello2", "1.2.1")})
-    client.run("export . --user=frodo --channel=stable")
+    client.run("create . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
 
     assert "Uploading recipe 'hello2/1.2.1@frodo/stable" not in client.out
+
+
+def test_check_upload_confirm_question_yes():
+    server = TestServer()
+    client = TestClient(servers={"default": server},
+                        inputs=["yes", "yes", "yes", "yes", "yes", "admin", "password"])
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
+    client.run("create . ")
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1").with_package_file("file.txt",
+                                                                                   env_var="MYVAR")})
+
+    with environment_update({"MYVAR": "0"}):
+        client.run("create . ")
+    with environment_update({"MYVAR": "1"}):
+        client.run("create . ")
+    client.run("upload hello*#*:*#* -r default")
+    assert str(client.out).count("(Uploaded)") == 5
 
 
 class UploadTest(unittest.TestCase):
@@ -152,7 +166,7 @@ class UploadTest(unittest.TestCase):
         client.run("install --requires=hello0/1.2.1@frodo/stable --build='*' -r default")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
-        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
+        self.assertEqual(str(client.out).count("WARN: network: Pair file, error!"), 5)
 
     def _set_global_conf(self, client, retry=None, retry_wait=None):
         lines = []
@@ -209,7 +223,7 @@ class UploadTest(unittest.TestCase):
         client.run("install --requires=hello0/1.2.1@frodo/stable --build='*'")
         self._set_global_conf(client, retry=3, retry_wait=0)
         client.run("upload hello* --confirm -r default")
-        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
+        self.assertEqual(str(client.out).count("WARN: network: Pair file, error!"), 5)
 
     def test_upload_same_package_dont_compress(self):
         client = self._get_client()
@@ -217,82 +231,10 @@ class UploadTest(unittest.TestCase):
         client.run("create . --name foo --version 1.0")
 
         client.run("upload foo/1.0 -r default")
-        self.assertIn("Compressing recipe", client.out)
-        self.assertIn("Compressing package", str(client.out))
+        self.assertIn("foo/1.0: Compressing conan_sources.tgz", client.out)
+        self.assertIn("foo/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709: "
+                      "Compressing conan_package.tgz", client.out)
 
         client.run("upload foo/1.0 -r default")
-        self.assertNotIn("Compressing recipe", client.out)
-        self.assertNotIn("Compressing package", str(client.out))
-        self.assertIn("already in server, skipping upload", str(client.out))
-
-    @pytest.mark.xfail(reason="No output json available yet for upload. Also old test, has to be "
-                              "upgraded")
-    def test_upload_json(self):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.files import copy
-
-            class TestConan(ConanFile):
-                name = "test"
-                version = "0.1"
-
-                def package(self):
-                    copy(self, "mylib.so", self.build_folder, os.path.join(self.package_folder, "lib"))
-            """)
-
-        client = self._get_client()
-        client.save({"conanfile.py": conanfile,
-                     "mylib.so": ""})
-        client.run("create . danimtb/testing")
-
-        # Test conflict parameter error
-        client.run("upload test/0.1@danimtb/* -p ewvfw --json upload.json", assert_error=True)
-
-        json_path = os.path.join(client.current_folder, "upload.json")
-        self.assertTrue(os.path.exists(json_path))
-        json_content = load(json_path)
-        output = json.loads(json_content)
-        self.assertTrue(output["error"])
-        self.assertEqual(0, len(output["uploaded"]))
-
-        # Test invalid reference error
-        client.run("upload fake/0.1@danimtb/testing --json upload.json", assert_error=True)
-        json_path = os.path.join(client.current_folder, "upload.json")
-        self.assertTrue(os.path.exists(json_path))
-        json_content = load(json_path)
-        output = json.loads(json_content)
-        self.assertTrue(output["error"])
-        self.assertEqual(0, len(output["uploaded"]))
-
-        # Test normal upload
-        client.run("upload test/0.1@danimtb/testing --json upload.json")
-        self.assertTrue(os.path.exists(json_path))
-        json_content = load(json_path)
-        output = json.loads(json_content)
-        output_expected = {"error": False,
-                           "uploaded": [
-                               {
-                                   "recipe": {
-                                       "id": "test/0.1@danimtb/testing",
-                                       "remote_url": "unknown",
-                                       "remote_name": "default",
-                                       "time": "unknown"
-                                   },
-                                   "packages": [
-                                       {
-                                           "id": NO_SETTINGS_PACKAGE_ID,
-                                           "time": "unknown"
-                                       }
-                                   ]
-                               }
-                           ]}
-        self.assertEqual(output_expected["error"], output["error"])
-        self.assertEqual(len(output_expected["uploaded"]), len(output["uploaded"]))
-
-        for i, item in enumerate(output["uploaded"]):
-            self.assertEqual(output_expected["uploaded"][i]["recipe"]["id"], item["recipe"]["id"])
-            self.assertEqual(output_expected["uploaded"][i]["recipe"]["remote_name"],
-                             item["recipe"]["remote_name"])
-            for j, subitem in enumerate(item["packages"]):
-                self.assertEqual(output_expected["uploaded"][i]["packages"][j]["id"],
-                                 subitem["id"])
+        self.assertNotIn("Compressing", client.out)
+        self.assertIn("already in server, skipping upload", client.out)

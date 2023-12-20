@@ -72,7 +72,9 @@ def test_conanrc_wrong_format():
             file.write(f'ronan_jome={_temp_folder}\n')
         conan_home = get_conan_user_home()
 
-        assert os.path.join(conan_expand_user("~"), DEFAULT_CONAN_HOME) == conan_home
+        real_conan_home = os.getenv("CONAN_HOME") or os.path.join(conan_expand_user("~"),
+                                                                  DEFAULT_CONAN_HOME)
+        assert real_conan_home == conan_home
         assert _temp_folder not in conan_home
 
 
@@ -80,4 +82,7 @@ def test_conanrc_not_existing():
     _temp_folder = temp_folder(path_with_spaces=True)
     with chdir(_temp_folder):
         conan_home = get_conan_user_home()
-    assert os.path.join(conan_expand_user("~"), DEFAULT_CONAN_HOME) == conan_home
+
+    real_conan_home = os.getenv("CONAN_HOME") or os.path.join(conan_expand_user("~"),
+                                                              DEFAULT_CONAN_HOME)
+    assert real_conan_home == conan_home

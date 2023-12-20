@@ -1,4 +1,5 @@
 import argparse
+import os
 import textwrap
 
 from conan.api.output import ConanOutput
@@ -29,7 +30,6 @@ class BaseConanCommand:
         self._formatters = {"text": lambda x: None}
         self._method = method
         self._name = None
-        self._parser = None
         if formatters:
             for kind, action in formatters.items():
                 if callable(action):
@@ -44,11 +44,12 @@ class BaseConanCommand:
                                  "commands should provide a documentation string explaining "
                                  "its use briefly.".format(self._name))
 
-    def _init_log_levels(self):
-        self._parser.add_argument("-v", default="status", nargs='?',
-                                  help="Level of detail of the output. Valid options from less verbose "
-                                       "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
-                                       "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
+    @staticmethod
+    def _init_log_levels(parser):
+        parser.add_argument("-v", default="status", nargs='?',
+                            help="Level of detail of the output. Valid options from less verbose "
+                                 "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
+                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
 
     @property
     def _help_formatters(self):
@@ -56,12 +57,13 @@ class BaseConanCommand:
         Formatters that are shown as available in help, 'text' formatter
         should not appear
         """
-        return [formatter for formatter in list(self._formatters) if formatter != "text"]
+        return [formatter for formatter in self._formatters if formatter != "text"]
 
-    def _init_formatters(self):
-        if self._help_formatters:
-            help_message = "Select the output format: {}".format(", ".join(list(self._help_formatters)))
-            self._parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
+    def _init_formatters(self, parser):
+        formatters = self._help_formatters
+        if formatters:
+            help_message = "Select the output format: {}".format(", ".join(formatters))
+            parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
 
     @property
     def name(self):
@@ -74,10 +76,6 @@ class BaseConanCommand:
     @property
     def doc(self):
         return self._doc
-
-    @property
-    def parser(self):
-        return self._parser
 
     def _format(self, parser, info, *args):
         parser_args, _ = parser.parse_known_args(*args)
@@ -104,7 +102,7 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        ConanOutput.define_log_level(args.v)
+        ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
         return args
 
 
@@ -112,35 +110,36 @@ class ConanCommand(BaseConanCommand):
     def __init__(self, method, group=None, formatters=None):
         super().__init__(method, formatters=formatters)
         self._subcommands = {}
-        self._subcommand_parser = None
         self._group = group or "Other"
         self._name = method.__name__.replace("_", "-")
-        self._parser = ConanArgumentParser(description=self._doc,
-                                           prog="conan {}".format(self._name),
-                                           formatter_class=SmartFormatter)
-        self._init_formatters()
-        self._init_log_levels()
 
     def add_subcommand(self, subcommand):
-        if not self._subcommand_parser:
-            self._subcommand_parser = self._parser.add_subparsers(dest='subcommand',
-                                                                  help='sub-command help')
-            self._subcommand_parser.required = True
         subcommand.set_name(self.name)
-        subcommand.set_parser(self._parser, self._subcommand_parser)
         self._subcommands[subcommand.name] = subcommand
 
-    def run(self, conan_api, parser, *args):
+    def run(self, conan_api, *args):
+        parser = ConanArgumentParser(description=self._doc, prog="conan {}".format(self._name),
+                                     formatter_class=SmartFormatter)
+        self._init_log_levels(parser)
+        self._init_formatters(parser)
+
         info = self._method(conan_api, parser, *args)
 
         if not self._subcommands:
-            self._format(self._parser, info, *args)
+            self._format(parser, info, *args)
         else:
-            subcommand = args[0][0] if args[0] else None
-            if subcommand in self._subcommands:
-                self._subcommands[subcommand].run(conan_api, *args)
+            subcommand_parser = parser.add_subparsers(dest='subcommand', help='sub-command help')
+            subcommand_parser.required = True
+
+            try:
+                sub = self._subcommands[args[0][0]]
+            except (KeyError, IndexError):  # display help
+                for sub in self._subcommands.values():
+                    sub.set_parser(subcommand_parser)
+                parser.parse_args(*args)
             else:
-                self._parser.parse_args(*args)
+                sub.set_parser(subcommand_parser)
+                sub.run(conan_api, parser, *args)
 
     @property
     def group(self):
@@ -150,24 +149,22 @@ class ConanCommand(BaseConanCommand):
 class ConanSubCommand(BaseConanCommand):
     def __init__(self, method, formatters=None):
         super().__init__(method, formatters=formatters)
-        self._parent_parser = None
         self._parser = None
         self._subcommand_name = method.__name__.replace('_', '-')
 
-    def run(self, conan_api, *args):
-        info = self._method(conan_api, self._parent_parser, self._parser, *args)
+    def run(self, conan_api, parent_parser, *args):
+        info = self._method(conan_api, parent_parser, self._parser, *args)
         # It is necessary to do it after calling the "method" otherwise parser not complete
-        self._format(self._parent_parser, info, *args)
+        self._format(parent_parser, info, *args)
 
     def set_name(self, parent_name):
         self._name = self._subcommand_name.replace(f'{parent_name}-', '', 1)
 
-    def set_parser(self, parent_parser, subcommand_parser):
+    def set_parser(self, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
         self._parser.description = self._doc
-        self._parent_parser = parent_parser
-        self._init_formatters()
-        self._init_log_levels()
+        self._init_formatters(self._parser)
+        self._init_log_levels(self._parser)
 
 
 def conan_command(group=None, formatters=None):

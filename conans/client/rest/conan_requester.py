@@ -81,14 +81,15 @@ class ConanRequester(object):
             adapter = HTTPAdapter(max_retries=self._get_retries(config))
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
+        else:
+            self._http_requester = requests
 
         self._url_creds = URLCredentials(cache_folder)
         self._timeout = config.get("core.net.http:timeout", default=DEFAULT_TIMEOUT)
-        self._no_proxy_match = config.get("core.net.http:no_proxy_match")
+        self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
-        self._cacert_path = config.get("core.net.http:cacert_path")
+        self._cacert_path = config.get("core.net.http:cacert_path", check_type=str)
         self._client_certificates = config.get("core.net.http:client_cert")
-        self._no_proxy_match = config.get("core.net.http:no_proxy_match")
         self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
                                               check_type=bool)
 
@@ -172,7 +173,7 @@ class ConanRequester(object):
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         try:
             all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(requests, method)(url, **all_kwargs)
+            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
             return tmp
         finally:
             if popped:

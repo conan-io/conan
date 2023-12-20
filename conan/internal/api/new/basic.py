@@ -15,6 +15,9 @@ from conan import ConanFile
 class BasicConanfile(ConanFile):
 ''' + _conanfile_header + '''\
 
+    # Check the documentation for the rest of the available attributes
+
+
     # The requirements method allows you to define the dependencies of your recipe
     def requirements(self):
         # Each call to self.requires() will add the corresponding requirement

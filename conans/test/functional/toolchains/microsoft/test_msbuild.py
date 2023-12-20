@@ -455,7 +455,10 @@ class TestWin:
         settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new cmake_lib -d name=hello -d version=0.1")
-        client.run(f"create . {settings_h} -c tools.microsoft.msbuild:vs_version={ide_version}")
+        client.run(f"create . {settings_h} -c tools.microsoft.msbuild:vs_version={ide_version} -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+
+        assert "MSBUILD : error MSB1001: Unknown switch" not in client.out
+        assert "/verbosity:Detailed" in client.out
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,

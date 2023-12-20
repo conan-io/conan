@@ -11,7 +11,6 @@ from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conans.util.env import environment_update
 
-
 conaninfo = '''
 [settings]
     arch=x64
@@ -28,42 +27,58 @@ conaninfo = '''
 '''
 
 
-class RemoveWithoutUserChannel(unittest.TestCase):
+class TestRemoveWithoutUserChannel:
 
-    def setUp(self):
-        self.test_server = TestServer(users={"admin": "password"},
-                                      write_permissions=[("lib/1.0@*/*", "admin")])
-        servers = {"default": self.test_server}
-        self.client = TestClient(servers=servers, inputs=["admin", "password"])
+    @pytest.mark.parametrize("dry_run", [True, False])
+    def test_local(self, dry_run):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . --name=lib --version=1.0")
+        ref_layout = client.exported_layout()
+        pkg_layout = client.created_layout()
+        extra = " --dry-run" if dry_run else ""
+        client.run("remove lib/1.0 -c" + extra)
+        assert os.path.exists(ref_layout.base_folder) == dry_run
+        assert os.path.exists(pkg_layout.base_folder) == dry_run
 
-    def test_local(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=lib --version=1.0")
-        latest_rrev = self.client.cache.get_latest_recipe_reference(RecipeReference.loads("lib/1.0"))
-        ref_layout = self.client.cache.ref_layout(latest_rrev)
-        pkg_ids = self.client.cache.get_package_references(latest_rrev)
-        latest_prev = self.client.cache.get_latest_package_reference(pkg_ids[0])
-        pkg_layout = self.client.cache.pkg_layout(latest_prev)
-        self.client.run("remove lib/1.0 -c")
-        self.assertFalse(os.path.exists(ref_layout.base_folder))
-        self.assertFalse(os.path.exists(pkg_layout.base_folder))
+    @pytest.mark.parametrize("confirm", [True, False])
+    def test_local_dryrun_output(self, confirm):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . --name=lib --version=1.0")
+        client.run("remove lib/1.0 --dry-run", inputs=["yes" if confirm else "no"])
+        assert "(yes/no)" in client.out  # Users are asked even when dry-run is set
+        if confirm:
+            assert "Removed recipe and all binaries" in client.out  # Output it printed for dry-run
+        else:
+            assert "Removed recipe and all binaries" not in client.out
+        print()
 
     @pytest.mark.artifactory_ready
     def test_remote(self):
-        self.client.save({"conanfile.py": GenConanfile()})
-        self.client.run("create . --name=lib --version=1.0")
-        self.client.run("upload lib/1.0 -r default -c")
-        self.client.run("remove lib/1.0 -c")
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . --name=lib --version=1.0")
+        client.run("upload lib/1.0 -r default -c")
+        client.run("remove lib/1.0 -c")
         # we can still install it
-        self.client.run("install --requires=lib/1.0@")
-        self.assertIn("lib/1.0: Retrieving package", self.client.out)
-        self.client.run("remove lib/1.0 -c")
+        client.run("install --requires=lib/1.0@")
+        assert "lib/1.0: Retrieving package" in client.out
+        client.run("remove lib/1.0 -c")
 
-        # Now remove remotely
-        self.client.run("remove lib/1.0 -c -r default")
-        self.client.run("install --requires=lib/1.0@", assert_error=True)
+        # Now remove remotely, dry run first
+        client.run("remove lib/1.0 -c -r default --dry-run")
 
-        self.assertIn("Unable to find 'lib/1.0' in remotes", self.client.out)
+        # we can still install it
+        client.run("install --requires=lib/1.0@")
+        assert "lib/1.0: Retrieving package" in client.out
+        client.run("remove lib/1.0 -c")
+
+        # Now remove remotely, for real this time
+        client.run("remove lib/1.0 -c -r default")
+
+        client.run("install --requires=lib/1.0@", assert_error=True)
+        assert "Unable to find 'lib/1.0' in remotes" in client.out
 
 
 class RemovePackageRevisionsTest(unittest.TestCase):
@@ -249,6 +264,7 @@ def test_new_remove_recipes_expressions(populated_client, with_remote, data):
     {"remove": "bar*#*50", "rrevs": [bar_rrev, bar_rrev2]},
     {"remove": "bar*#latest", "rrevs": [bar_rrev2]},  # latest is bar_rrev
     {"remove": "bar*#!latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
+    {"remove": "bar*#~latest", "rrevs": [bar_rrev]},  # latest is bar_rrev
 ])
 def test_new_remove_recipe_revisions_expressions(populated_client, with_remote, data):
     r = "-r default" if with_remote else ""
@@ -311,6 +327,7 @@ def test_new_remove_package_expressions(populated_client, with_remote, data):
     {"remove": '{}#'.format(bar_rrev2_release), "prevs": []},
     {"remove": '{}#latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev1]},
     {"remove": '{}#!latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
+    {"remove": '{}#~latest'.format(bar_rrev2_release), "prevs": [bar_rrev2_release_prev2]},
 ])
 def test_new_remove_package_revisions_expressions(populated_client, with_remote, data):
     # Remove the ones we are not testing here

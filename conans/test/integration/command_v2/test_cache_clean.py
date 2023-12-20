@@ -9,10 +9,9 @@ def test_cache_clean():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("*").with_exports_sources("*"),
             "sorces/file.txt": ""})
     c.run("create .")
-    pref = c.created_package_reference("pkg/0.1")
+    ref_layout = c.exported_layout()
+    pkg_layout = c.created_layout()
     c.run("upload * -c -r=default")  # Force creation of tgzs
-    ref_layout = c.get_latest_ref_layout(pref.ref)
-    pkg_layout = c.get_latest_pkg_layout(pref)
     assert os.path.exists(ref_layout.source())
     assert os.path.exists(ref_layout.download_export())
     assert os.path.exists(pkg_layout.build())
@@ -61,8 +60,8 @@ def test_cache_clean_all():
 
 def test_cache_multiple_builds_same_prev_clean():
     """
-    Different consecutive builds will create different folders, even if for the
-    same exact prev, leaving trailing non-referenced folders
+    Different consecutive builds will create exactly the same folder, for the
+    same exact prev, not leaving trailing non-referenced folders
     """
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -76,7 +75,7 @@ def test_cache_multiple_builds_same_prev_clean():
     c.run("cache path pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709")
     path2 = str(c.stdout)
     assert path2 in create_out
-    assert path1 != path2
+    assert path1 == path2
 
     builds_folder = os.path.join(c.cache_folder, "p", "b")
     assert len(os.listdir(builds_folder)) == 1  # only one build

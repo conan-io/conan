@@ -1,3 +1,4 @@
+import fnmatch
 import sys
 
 from colorama import Fore, Style
@@ -51,6 +52,7 @@ class ConanOutput:
     # Singleton
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
+    _warnings_as_errors = []
 
     def __init__(self, scope=""):
         self.stream = sys.stderr
@@ -61,7 +63,11 @@ class ConanOutput:
 
     @classmethod
     def define_silence_warnings(cls, warnings):
-        cls._silent_warn_tags = warnings or []
+        cls._silent_warn_tags = warnings
+
+    @classmethod
+    def set_warnings_as_errors(cls, value):
+        cls._warnings_as_errors = value
 
     @classmethod
     def define_log_level(cls, v):
@@ -156,6 +162,7 @@ class ConanOutput:
             ret += "{}".format(msg)
 
         self.stream.write("{}\n".format(ret))
+        self.stream.flush()
 
     def trace(self, msg):
         if self._conan_output_level <= LEVEL_TRACE:
@@ -202,15 +209,28 @@ class ConanOutput:
             self._write_message(msg, fg=Color.BRIGHT_GREEN)
         return self
 
+    @staticmethod
+    def _warn_tag_matches(warn_tag, patterns):
+        lookup_tag = warn_tag or "unknown"
+        return any(fnmatch.fnmatch(lookup_tag, pattern) for pattern in patterns)
+
     def warning(self, msg, warn_tag=None):
-        if self._conan_output_level <= LEVEL_WARNING:
-            if warn_tag is not None and warn_tag in self._silent_warn_tags:
+        _treat_as_error = self._warn_tag_matches(warn_tag, self._warnings_as_errors)
+        if self._conan_output_level <= LEVEL_WARNING or (_treat_as_error and self._conan_output_level <= LEVEL_ERROR):
+            if self._warn_tag_matches(warn_tag, self._silent_warn_tags):
                 return self
             warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "
-            self._write_message(f"WARN: {warn_tag_msg}{msg}", Color.YELLOW)
+            output = f"{warn_tag_msg}{msg}"
+
+            if _treat_as_error:
+                self.error(output)
+            else:
+                self._write_message(f"WARN: {output}", Color.YELLOW)
         return self
 
-    def error(self, msg):
+    def error(self, msg, error_type=None):
+        if self._warnings_as_errors and error_type != "exception":
+            raise ConanException(msg)
         if self._conan_output_level <= LEVEL_ERROR:
             self._write_message("ERROR: {}".format(msg), Color.RED)
         return self
@@ -226,7 +246,7 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
 
     fg_ = fg or ''
     bg_ = bg or ''
-    if color_enabled(sys.stdout):
+    if (fg or bg) and color_enabled(sys.stdout):
         data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
     else:
         data = f"{' ' * indentation}{data}{endline}"

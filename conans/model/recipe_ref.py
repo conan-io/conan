@@ -90,7 +90,7 @@ class RecipeReference:
         return hash((self.name, self.version, self.user, self.channel))
 
     @staticmethod
-    def loads(rref):  # TODO: change this default to validate only on end points
+    def loads(rref):
         try:
             # timestamp
             tokens = rref.rsplit("%", 1)
@@ -134,6 +134,8 @@ class RecipeReference:
                                       "allowed by temporary config. This will break in later 2.X")
         if len(self_str) > 200:
             raise ConanException(f"Package reference too long >200 {self_str}")
+        if ":" in repr(self):
+            raise ConanException(f"Invalid recipe reference '{repr(self)}' is a package reference")
         if not allow_uppercase:
             validation_pattern = re.compile(r"^[a-z0-9_][a-z0-9_+.-]{1,100}\Z")
         else:
@@ -159,13 +161,23 @@ class RecipeReference:
 
     def matches(self, pattern, is_consumer):
         negate = False
-        if pattern.startswith("!"):
+        if pattern.startswith("!") or pattern.startswith("~"):
             pattern = pattern[1:]
             negate = True
+
+        no_user_channel = False
+        if pattern.endswith("@"):  # it means we want to match only without user/channel
+            pattern = pattern[:-1]
+            no_user_channel = True
+        elif "@#" in pattern:
+            pattern = pattern.replace("@#", "#")
+            no_user_channel = True
 
         condition = ((pattern == "&" and is_consumer) or
                       fnmatch.fnmatchcase(str(self), pattern) or
                       fnmatch.fnmatchcase(self.repr_notime(), pattern))
+        if no_user_channel:
+            condition = condition and not self.user and not self.channel
         if negate:
             return not condition
         return condition

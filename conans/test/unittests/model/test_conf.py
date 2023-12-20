@@ -9,7 +9,7 @@ from conans.model.conf import ConfDefinition
 @pytest.fixture()
 def conf_definition():
     text = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=someflags
     """)
     c = ConfDefinition()
@@ -22,7 +22,7 @@ def test_conf_definition(conf_definition):
     # Round trip
     assert c.dumps() == text
     # access
-    assert c.get("tools.build:verbosity") == "notice"
+    assert c.get("tools.build:verbosity") == "quiet"
     assert c.get("user.company.toolchain:flags") == "someflags"
     assert c.get("user.microsoft.msbuild:nonexist") is None
     assert c.get("user:nonexist") is None
@@ -53,7 +53,7 @@ def test_conf_update(conf_definition):
     c2.loads(text)
     c.update_conf_definition(c2)
     result = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=newvalue
         user.something:key=value
     """)
@@ -64,13 +64,13 @@ def test_conf_rebase(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
        user.company.toolchain:flags=newvalue
-       tools.build:verbosity=trace""")
+       tools.build:verbosity=verbose""")
     c2 = ConfDefinition()
     c2.loads(text)
     c.rebase_conf_definition(c2)
     # The c profile will have precedence, and "
     result = textwrap.dedent("""\
-        tools.build:verbosity=notice
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=someflags
     """)
     assert c.dumps() == result
@@ -256,3 +256,51 @@ def test_conf_pop():
     assert c.pop("user.microsoft.msbuild:missing") is None
     assert c.pop("user.microsoft.msbuild:missing", default="fake") == "fake"
     assert c.pop("zlib:user.company.check:shared_str") == '"False"'
+
+
+def test_conf_choices():
+    confs = textwrap.dedent("""
+    user.category:option1=1
+    user.category:option2=3""")
+    c = ConfDefinition()
+    c.loads(confs)
+    assert c.get("user.category:option1", choices=[1, 2]) == 1
+    with pytest.raises(ConanException):
+        c.get("user.category:option2", choices=[1, 2])
+
+
+def test_conf_choices_default():
+    # Does not conflict with the default value
+    confs = textwrap.dedent("""
+        user.category:option1=1""")
+    c = ConfDefinition()
+    c.loads(confs)
+    assert c.get("user.category:option1", choices=[1, 2], default=7) == 1
+    assert c.get("user.category:option2", choices=[1, 2], default=7) == 7
+
+
+@pytest.mark.parametrize("scope", ["", "pkg/1.0:"])
+@pytest.mark.parametrize("conf", [
+    "user.foo:bar=1",
+    "user:bar=1"
+])
+def test_conf_scope_patterns_ok(scope, conf):
+    final_conf = scope + conf
+    c = ConfDefinition()
+    c.loads(final_conf)
+    # Check it doesn't raise
+    c.validate()
+
+
+@pytest.mark.parametrize("conf", ["user.foo.bar=1"])
+@pytest.mark.parametrize("scope, assert_message", [
+    ("", "Either 'user.foo.bar' does not exist in configuration list"),
+    ("pkg/1.0:", "Either 'pkg/1.0:user.foo.bar' does not exist in configuration list"),
+])
+def test_conf_scope_patterns_bad(scope, conf, assert_message):
+    final_conf = scope + conf
+    c = ConfDefinition()
+    with pytest.raises(ConanException) as exc_info:
+        c.loads(final_conf)
+        c.validate()
+    assert assert_message in str(exc_info.value)

@@ -121,9 +121,9 @@ class RemoteRegistry(object):
     """Store remotes in disk and modify remotes for the 'conan remote' command.
     It never returns an _Remotes object, only Remote model"""
 
-    def __init__(self, cache):
+    def __init__(self, remotes_json):
         self._output = ConanOutput()
-        self._filename = cache.remotes_path
+        self._filename = remotes_json
 
     def _validate_url(self, url):
         """ Check if URL contains protocol and address
@@ -131,6 +131,10 @@ class RemoteRegistry(object):
         :param url: URL to be validated
         """
         if url:
+            if url.startswith("https://conan.io/center"):
+                raise ConanException("Wrong ConanCenter remote URL. You are adding the web "
+                                     "https://conan.io/center the correct remote API is "
+                                     "https://center.conan.io")
             address = urlparse(url)
             if not all([address.scheme, address.netloc]):
                 self._output.warning("The URL '%s' is invalid. It must contain scheme and hostname."

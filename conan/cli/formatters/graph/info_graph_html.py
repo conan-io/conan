@@ -45,16 +45,18 @@ graph_info_html = """
         <div style="clear:both"></div>
 
         <script type="text/javascript">
-            var nodes = new vis.DataSet([
+            var nodes = [
                 {%- for node in graph.nodes %}
+                    {% set highlight_node = error is not none and error["should_highlight_node"](node) %}
                     {
                         id: {{ node.id }},
                         label: '{{ node.short_label }}',
-                        shape: '{% if node.is_build_requires %}ellipse{% else %}box{% endif %}',
-                        color: { background: '{{ graph.binary_color(node) }}'},
+                        shape: '{% if highlight_node %}circle{% else %}{% if node.is_build_requires %}ellipse{% else %}box{% endif %}{% endif %}',
+                        color: { background: '{% if highlight_node %}red{% else %}{{ graph.binary_color(node) }}{% endif %}'},
+                        font: { color: "{% if highlight_node %}white{% else %}black{% endif %}" },
                         fulllabel: '<h3>{{ node.label }}</h3>' +
                                    '<ul>' +
-                                   '    <li><b>id</b>: {{ node.package_id }}</li>' +
+                                   '    <li><b>package id</b>: {{ node.package_id }}</li>' +
                                    {%- for key, value in node.data().items() %}
                                    {%- if value %}
                                         {%- if key in ['url', 'homepage'] %}
@@ -69,12 +71,67 @@ graph_info_html = """
                                    '</ul>'
                     }{%- if not loop.last %},{% endif %}
                 {%- endfor %}
-            ]);
-            var edges = new vis.DataSet([
+            ]
+            var edges = [
                 {%- for src, dst in graph.edges %}
                     { from: {{ src.id }}, to: {{ dst.id }} }{%- if not loop.last %},{% endif %}
                 {%- endfor %}
-            ]);
+            ]
+
+            {% if error is not none and error["type"] == "conflict" %}
+                // Add error conflict node
+                nodes.push({
+                    id: "{{ error["type"] }}",
+                    label: {{ error["context"].require.ref|string|tojson }},
+                    shape: "circle",
+                    font: { color: "white" },
+                    color: "red",
+                    fulllabel: '<h3>' +
+                               {{ error["context"].require.ref|string|tojson }} +
+                               '</h3><p>This node creates a conflict in the dependency graph</p>',
+                    shapeProperties: { borderDashes: [5, 5] }
+                })
+
+                {% if error["context"].node.id is not none %}
+                    // Add edge from node that introduces the conflict to the new error node
+                    edges.push({from: {{ graph.node_map[error["context"].node].id }},
+                                to: "{{ error["type"] }}",
+                                color: "red",
+                                dashes: false,
+                                title: "Conflict",
+                                physics: false,
+                                color: "red",
+                                arrows: "to"})
+                {% endif %}
+
+                {% if error["context"].prev_node is none and error["context"].base_previous.id is not none %}
+                    // Add edge from base node to the new error node
+                    edges.push({from: {{ graph.node_map[error["context"].base_previous].id }},
+                                to: "{{ error["type"] }}",
+                                color: "red",
+                                dashes: false,
+                                title: "Conflict",
+                                physics: false,
+                                color: "red",
+                                arrows: "to;from"})
+                {% endif %}
+
+                {% if error["context"].prev_node is not none and error["context"].prev_node.id is not none %}
+                    // Add edge from previous node that already had conflicting dependency
+                    edges.push({from: {{ graph.node_map[error["context"].prev_node].id }},
+                                to: "{{ error["type"] }}",
+                                color: "red",
+                                dashes: true,
+                                title: "Conflict",
+                                physics: false,
+                                color: "gray",
+                                arrows: "to;from"})
+                {% endif %}
+
+            {% endif %}
+
+            var nodes = new vis.DataSet(nodes);
+            var edges = new vis.DataSet(edges);
 
             var container = document.getElementById('mynetwork');
             var controls = document.getElementById('controls');

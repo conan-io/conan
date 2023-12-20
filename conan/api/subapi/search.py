@@ -13,7 +13,7 @@ class SearchAPI:
             only_none_user_channel = True
             query = query[:-1]
 
-        app = ConanApp(self.conan_api.cache_folder)
+        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         if remote:
             refs = app.remote_manager.search_recipes(remote, query)
         else:

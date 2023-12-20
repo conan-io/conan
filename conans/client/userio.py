@@ -70,22 +70,14 @@ class UserInput(object):
         """Request user to input their name and password
         :param remote_name:
         :param username If username is specified it only request password"""
-
+        self._raise_if_non_interactive()
         if not username:
-            if self._interactive:
-                self._out.write("Remote '%s' username: " % remote_name)
-            username = self._get_env_username(remote_name)
-            if not username:
-                self._raise_if_non_interactive()
-                username = self.get_username()
+            self._out.write("Remote '%s' username: " % remote_name)
+            username = self.get_username()
 
-        if self._interactive:
-            self._out.write('Please enter a password for "%s" account: ' % username)
+        self._out.write('Please enter a password for "%s" account: ' % username)
         try:
-            pwd = self._get_env_password(remote_name)
-            if not pwd:
-                self._raise_if_non_interactive()
-                pwd = self.get_password()
+            pwd = self.get_password()
         except ConanException:
             raise
         except Exception as e:
@@ -96,9 +88,9 @@ class UserInput(object):
         """Overridable for testing purpose"""
         return self.raw_input()
 
-    def get_password(self):
+    @staticmethod
+    def get_password():
         """Overridable for testing purpose"""
-        self._raise_if_non_interactive()
         try:
             return getpass.getpass("")
         except BaseException:  # For KeyboardInterrupt too
@@ -137,28 +129,5 @@ class UserInput(object):
             elif s.lower() in ['no', 'n']:
                 ret = False
             else:
-                self._out.error("%s is not a valid answer" % s)
-        return ret
-
-    def _get_env_password(self, remote_name):
-        """
-        Try CONAN_PASSWORD_REMOTE_NAME or CONAN_PASSWORD or return None
-        """
-        remote_name = remote_name.replace("-", "_").upper()
-        var_name = "CONAN_PASSWORD_%s" % remote_name
-        ret = os.getenv(var_name, None) or os.getenv("CONAN_PASSWORD", None)
-        if ret:
-            self._out.info("Got password '******' from environment")
-        return ret
-
-    def _get_env_username(self, remote_name):
-        """
-        Try CONAN_LOGIN_USERNAME_REMOTE_NAME or CONAN_LOGIN_USERNAME or return None
-        """
-        remote_name = remote_name.replace("-", "_").upper()
-        var_name = "CONAN_LOGIN_USERNAME_%s" % remote_name
-        ret = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
-
-        if ret:
-            self._out.info("Got username '%s' from environment" % ret)
+                self._out.error(f"{s} is not a valid answer")
         return ret

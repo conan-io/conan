@@ -19,6 +19,8 @@ def filter_packages(query, results: Dict[PkgReference, dict]):
     try:
         if "!" in query:
             raise ConanException("'!' character is not allowed")
+        if "~" in query:
+            raise ConanException("'~' character is not allowed")
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
