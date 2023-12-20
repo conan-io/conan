@@ -203,7 +203,7 @@ try {
         runTestsModule(moduleName, branchName, jobName)
     }
 
-    if (branchName == "develop2" || branchName =~ /^release.*/) {
+    if (branchName == "develop2") {
         deployToPypiTest()
     }
 }
