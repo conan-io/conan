@@ -135,9 +135,9 @@ class TestInstall:
 
         # Update doesn't fail, but doesn't update revision time
         c.run("install --requires libcurl/1.0 --update")
-        bins = {"libcurl/1.0": "Cache (ccifork)",
-                "openssl/2.0": "Cache (ccifork)",
-                "zlib/1.2.11": "Cache (ccifork)"}
+        bins = {"libcurl/1.0": "Cache (Updated date) (ccifork)",
+                "openssl/2.0": "Cache (Updated date) (ccifork)",
+                "zlib/1.2.11": "Cache (Updated date) (ccifork)"}
 
         c.assert_listed_require(bins)
         assert "zlib/1.2.11: Already installed!" in c.out
@@ -149,11 +149,7 @@ class TestInstall:
         save(os.path.join(c3i_folder, "recipes", "zlib", "all", "conanfile.py"),
              str(GenConanfile()) + "\n")
         c.run("install --requires=libcurl/1.0 --build missing --update")
-        # it is not updated
-        assert "zlib/1.2.11#6f5c31bb1219e9393743d1fbf2ee1b52 - Cache (ccifork)" in c.out
-        # We could remove the cached exported to force its re-creation
-        os.remove(os.path.join(c3i_folder, ".cache", "exported.json"))
-        c.run("install --requires=libcurl/1.0 --build missing --update")
+        # it is updated
         assert "zlib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (ccifork)" in c.out
 
 
@@ -167,3 +163,25 @@ class TestRestrictedOperations:
         c.run("create .")
         c.run("upload pkg/0.1 -r=ccifork", assert_error=True)
         assert "ERROR: Git remote 'ccifork' doesn't support upload" in c.out
+
+
+class TestErrorsUx:
+    def test_errors(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        zlib_config = textwrap.dedent("""
+            versions:
+              "1.2.11":
+                folder: all
+            """)
+        zlib = textwrap.dedent("""
+            class Zlib(ConanFile):
+                name = "zlib"
+                """)
+        save_files(recipes_folder,
+                   {"zlib/config.yml": zlib_config,
+                    "zlib/all/conanfile.py": zlib})
+        c = TestClient()
+        c.run(f"remote add ccifork '{folder}' --type=local")
+        c.run("install --requires=zlib/[*] --build missing", assert_error=True)
+        assert "NameError: name 'ConanFile' is not defined" in c.out

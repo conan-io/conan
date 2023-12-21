@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 from distutils.dir_util import copy_tree
@@ -12,7 +11,7 @@ from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load, save
+from conans.util.files import load
 
 
 class GitRemoteManager:
@@ -21,7 +20,6 @@ class GitRemoteManager:
         self._remote = remote
         cache_folder = self._remote.url
         self._remote_cache_dir = "{}/.cache".format(cache_folder)
-        self._exported_file = os.path.join(self._remote_cache_dir, "exported.json")
         from conan.internal.conan_app import ConanApp
         global_conf = ConfDefinition()
         self._app = ConanApp(self._remote_cache_dir, global_conf)
@@ -94,26 +92,20 @@ class GitRemoteManager:
 
     # Helper methods to implement the interface
     def _export_recipe(self, ref):
-        exported = load(self._exported_file) if os.path.isfile(self._exported_file) else "{}"
-        exported = json.loads(exported)
-        existing = exported.get(str(ref))
-        if existing is not None:
-            return RecipeReference.loads(existing["ref"])
-
         folder = self.layout.get_recipe_folder(ref)
         conanfile_path = os.path.join(folder, "conanfile.py")
         original_stderr = sys.stderr
         sys.stderr = StringIO()
         try:
-            original_stderr.write(f"Git remote processing {ref}\n")
             global_conf = ConfDefinition()
             new_ref, _ = cmd_export(self._app, global_conf, conanfile_path,
                                     ref.name, ref.version, None, None)
+        except Exception as e:
+            raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
+                                 f"{str(e)}")
         finally:
             sys.stderr = original_stderr
-        # Cache the result, so it is not constantly re-exported
-        exported[str(ref)] = {"ref": repr(new_ref)}
-        save(self._exported_file, json.dumps(exported))
+
         return new_ref
 
     @staticmethod
@@ -145,12 +137,15 @@ class _ConanCenterIndexLayout:
         return yaml.safe_load(load(config))
 
     def get_recipes_references(self, pattern):
+        name_pattern = pattern.split("/", 1)[0]
         recipes_dir = os.path.join(self._base_folder, "recipes")
         recipes = os.listdir(recipes_dir)
         recipes.sort()
         ret = []
         excluded = set()
         for r in recipes:
+            if not fnmatch(r, name_pattern):
+                continue
             folder = self._get_base_folder(r)
             config_yml = self._load_config_yml(folder)
             if config_yml is None:
@@ -165,7 +160,7 @@ class _ConanCenterIndexLayout:
                 # This check can be removed after compatibility with 2.0
                 conanfile = os.path.join(recipes_dir, r, subfolder, "conanfile.py")
                 conanfile_content = load(conanfile)
-                if "from conans" in conanfile_content or "import conants" in conanfile_content:
+                if "from conans" in conanfile_content or "import conans" in conanfile_content:
                     excluded.add(r)
                     continue
                 ret.append(RecipeReference.loads(ref))
