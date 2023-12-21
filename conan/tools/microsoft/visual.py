@@ -138,17 +138,23 @@ class VCVars:
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
         # C:\Program Files (x86)\Microsoft Visual Studio 14.0
-        vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                                winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
-                                vs_install_path=vs_install_path)
-
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+        is_ps1 = False
+        if is_ps1:
+            vcvars = '& "$PSScriptRoot/conanvcvars.bat"'
+        else:
+            vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                                    winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
+                                    vs_install_path=vs_install_path)
+        new_line = 'powershell.exe -noexit -command "& { %* }"'
         content = textwrap.dedent("""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
             echo conanvcvars.bat: Activating environment Visual Studio {} - {} - winsdk_version={} - vcvars_ver={}
             {}
-            """.format(vs_version, vcvarsarch, winsdk_version, vcvars_ver, vcvars))
+            {}
+            """.format(vs_version, vcvarsarch, winsdk_version, vcvars_ver, vcvars, new_line))
         from conan.tools.env.environment import create_env_script
         create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
 

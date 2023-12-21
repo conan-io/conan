@@ -159,6 +159,10 @@ def _generate_aggregated_env(conanfile):
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             # Only the .bat and .ps1 are made relative to current script
+            if env_script.endswith("conanvcvars.bat"):
+                path = os.path.relpath(path, conanfile.generators_folder)
+                bats.append("%~dp0/" + path)
+                ps1s.append("$PSScriptRoot/" + path)
             if env_script.endswith(".bat"):
                 path = os.path.relpath(path, conanfile.generators_folder)
                 bats.append("%~dp0/"+path)
