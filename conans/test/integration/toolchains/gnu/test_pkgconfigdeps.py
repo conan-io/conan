@@ -795,9 +795,6 @@ def test_pkg_config_deps_and_private_deps():
             self.requires("pkg/0.1")
     """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    # Now, it passes and creates the pc files correctly
+    # Now, it passes and creates the pc files correctly (the skipped one is not created)
     client.run("install .")
-    # bug???? private dependency is skipped so PC file is not created
-    # assert client.load("private.pc)
-    # But pkg still depends on it!!
-    assert "Requires: private" in get_requires_from_content(client.load("pkg.pc"))
+    assert "Requires:" not in client.load("pkg.pc")
