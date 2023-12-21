@@ -1,5 +1,6 @@
 import os
 import sys
+import textwrap
 from distutils.dir_util import copy_tree
 from fnmatch import fnmatch
 from io import StringIO
@@ -7,11 +8,12 @@ from io import StringIO
 import yaml
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load
+from conans.util.files import load, save
 
 
 class RestApiClientFolder:
@@ -24,6 +26,17 @@ class RestApiClientFolder:
         self._remote = remote
         cache_folder = self._remote.url
         self._remote_cache_dir = "{}/.cache".format(cache_folder)
+        hook_folder = HomePaths(self._remote_cache_dir).hooks_path
+        trim_hook = os.path.join(hook_folder, "hook_trim_conandata.py")
+        if not os.path.exists(trim_hook):
+            hook_content = textwrap.dedent("""\
+                from conan.tools.files import trim_conandata
+                def post_export(conanfile):
+                    if conanfile.conan_data:
+                        trim_conandata(conanfile)
+                """)
+            save(trim_hook, hook_content)
+
         from conan.internal.conan_app import ConanApp
         global_conf = ConfDefinition()
         self._app = ConanApp(self._remote_cache_dir, global_conf)
@@ -108,7 +121,10 @@ class RestApiClientFolder:
             raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
                                  f"{str(e)}")
         finally:
+            export_stderr = sys.stderr.getvalue()
             sys.stderr = original_stderr
+            ConanOutput().debug(f"Internal export for {ref}:\n"
+                                f"{textwrap.indent(export_stderr, '    ')}")
 
         return new_ref
 

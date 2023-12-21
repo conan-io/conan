@@ -182,6 +182,48 @@ class TestInstall:
         c.run("install --requires=boost/[*] --build missing")
         assert 'boost/1.0: {"potato": 42}' in c.out
 
+    def test_trim_conandata_yaml(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        config = textwrap.dedent("""
+            versions:
+              "1.0":
+                folder: all
+            """)
+        conandata = textwrap.dedent("""\
+            sources:
+              "1.0":
+                url:
+                sha256: "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e"
+            patches:
+              "1.0":
+                - patch_file: "patches/1.3/0001-fix-cmake.patch"
+            """)
+        save_files(recipes_folder,
+                   {"pkg/config.yml": config,
+                    "pkg/all/conanfile.py": str(GenConanfile("pkg")),
+                    "pkg/all/conandata.yml": conandata})
+        c = TestClient()
+        c.run(f"remote add ccifork '{folder}' --type=local")
+        c.run("install --requires=pkg/1.0 --build missing -vvv")
+        assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
+
+        # User modifies conandata.yml to add new version
+        new_conandata = textwrap.dedent("""\
+            sources:
+              "1.0":
+                url:
+                sha256: "ff0ba4c292013dbc27530b3a81e1f9a813cd39de01ca5e0f8bf355702efa593e"
+              "1.1":
+                url:
+            patches:
+              "1.0":
+                - patch_file: "patches/1.3/0001-fix-cmake.patch"
+            """)
+        save_files(recipes_folder, {"pkg/all/conandata.yml": new_conandata})
+        c.run("install --requires=pkg/1.0 --build missing --update -vvv")
+        assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
+
 
 class TestRestrictedOperations:
     def test_upload(self):
