@@ -263,7 +263,8 @@ class NewCppInfo(object):
 
 def from_old_cppinfo(old):
     ret = NewCppInfo()
-    ret.merge(old)
+    if old is not None:
+        ret.merge(old)
     ret.clear_none()
     return ret
 

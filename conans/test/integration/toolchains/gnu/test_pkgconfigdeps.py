@@ -770,3 +770,34 @@ def test_error_missing_pc_build_context():
 
     assert "example/1.0: Package '5949422937e5ea462011eb7f38efab5745e4b832' created" in c.out
     assert "example/1.0: Package '03ed74784e8b09eda4f6311a2f461897dea57a7e' created" in c.out
+
+
+def test_pkg_config_deps_and_private_deps():
+    """
+    Testing that no errors are raised when the dependency tree has a private one in the middle
+    of it.
+
+    Issue related: https://github.com/conan-io/conan/issues/15311
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("private", "0.1")})
+    client.run("create .")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1")
+                .with_require("private/0.1", private=True)}, clean_first=True)
+    client.run("create .")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class ConsumerConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "PkgConfigDeps"
+
+        def requirements(self):
+            self.requires("pkg/0.1")
+    """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    # Now, it passes and creates the pc files correctly
+    client.run("install .")
+    # bug???? private dependency is skipped so PC file is not created
+    # assert client.load("private.pc)
+    # But pkg still depends on it!!
+    assert "Requires: private" in get_requires_from_content(client.load("pkg.pc"))
