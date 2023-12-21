@@ -152,6 +152,36 @@ class TestInstall:
         # it is updated
         assert "zlib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (ccifork)" in c.out
 
+    def test_install_with_exported_files(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        boost_config = textwrap.dedent("""
+            versions:
+              "1.0":
+                folder: all
+            """)
+        boost = textwrap.dedent("""
+            import os
+            from conan.tools.files import load
+            from conan import ConanFile
+            class Boost(ConanFile):
+                name = "boost"
+                version = "1.0"
+                exports = "*"
+                def source(self):
+                    myfile = os.path.join(self.recipe_folder, "dependencies", "myfile.json")
+                    self.output.info(load(self, myfile))
+                """)
+        deps_json = '{"potato": 42}'
+        save_files(recipes_folder,
+                   {"boost/config.yml": boost_config,
+                    "boost/all/conanfile.py": boost,
+                    "boost/all/dependencies/myfile.json": deps_json})
+        c = TestClient()
+        c.run(f"remote add ccifork '{folder}' --type=local")
+        c.run("install --requires=boost/[*] --build missing")
+        assert 'boost/1.0: {"potato": 42}' in c.out
+
 
 class TestRestrictedOperations:
     def test_upload(self):

@@ -51,6 +51,11 @@ class RemoteManager:
         layout = self._cache.get_or_create_ref_layout(ref)
         layout.export_remove()
 
+        export_folder = layout.export()
+        git_remote = self._git_remote(remote)
+        if git_remote is not None:
+            return git_remote.get_recipe(ref, export_folder)
+
         download_export = layout.download_export()
         try:
             zipped_files = self._call_remote(remote, "get_recipe", ref, download_export, metadata,
