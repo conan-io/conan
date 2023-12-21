@@ -14,7 +14,11 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 
 
-class GitRemoteManager:
+class RestApiClientFolder:
+    """
+    Implements the RestAPI but instead of over HTTP for a remote server, using just
+    a local folder assuming the conan-center-index repo layout
+    """
 
     def __init__(self, remote):
         self._remote = remote

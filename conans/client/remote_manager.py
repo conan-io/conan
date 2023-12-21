@@ -7,7 +7,7 @@ from requests.exceptions import ConnectionError
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.cache.remote_registry import Remote
-from conans.client.remote_manager_git import GitRemoteManager
+from conans.client.rest_client_folder import RestApiClientFolder
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
@@ -27,9 +27,9 @@ class RemoteManager:
         self._signer = PkgSignaturesPlugin(cache)
 
     @staticmethod
-    def _git_remote(remote):
+    def _local_folder_remote(remote):
         if remote.remote_type == "local":
-            return GitRemoteManager(remote)
+            return RestApiClientFolder(remote)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -52,9 +52,10 @@ class RemoteManager:
         layout.export_remove()
 
         export_folder = layout.export()
-        git_remote = self._git_remote(remote)
-        if git_remote is not None:
-            return git_remote.get_recipe(ref, export_folder)
+        local_folder_remote = self._local_folder_remote(remote)
+        if local_folder_remote is not None:
+            local_folder_remote.get_recipe(ref, export_folder)
+            return
 
         download_export = layout.download_export()
         try:
@@ -109,9 +110,10 @@ class RemoteManager:
 
         download_folder = layout.download_export()
         export_sources_folder = layout.export_sources()
-        git_remote = self._git_remote(remote)
-        if git_remote is not None:
-            return git_remote.get_recipe_sources(ref, export_sources_folder)
+        local_folder_remote = self._local_folder_remote(remote)
+        if local_folder_remote is not None:
+            local_folder_remote.get_recipe_sources(ref, export_sources_folder)
+            return
 
         zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
         if not zipped_files:
@@ -247,9 +249,9 @@ class RemoteManager:
         enforce_disabled = kwargs.pop("enforce_disabled", True)
         if remote.disabled and enforce_disabled:
             raise ConanException("Remote '%s' is disabled" % remote.name)
-        git_remote = self._git_remote(remote)
-        if git_remote is not None:
-            return git_remote.call_method(method, *args, **kwargs)
+        local_folder_remote = self._local_folder_remote(remote)
+        if local_folder_remote is not None:
+            return local_folder_remote.call_method(method, *args, **kwargs)
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
