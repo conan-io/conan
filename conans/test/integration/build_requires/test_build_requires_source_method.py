@@ -39,6 +39,8 @@ class TestBuildEnvSource:
                 version = "0.1"
                 tool_requires = "tool/0.1"
 
+                source_buildenv = True
+
                 def source(self):
                     cmd = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"
                     self.run(cmd)
@@ -62,6 +64,8 @@ class TestBuildEnvSource:
                 version = "0.1"
                 tool_requires = "tool/0.1"
                 settings = "build_type"
+
+                source_buildenv = True
 
                 def layout(self):
                     self.folders.source = "mysrc"
@@ -101,6 +105,8 @@ class TestBuildEnvSource:
                 tool_requires = "tool/0.1"
                 settings = "build_type"
 
+                source_buildenv = True
+
                 def layout(self):
                     cmake_layout(self)
                     bt = self.settings.get_safe("build_type") or "Release"
@@ -118,7 +124,7 @@ class TestBuildEnvSource:
         c.run("source .")
         assert "MY-TOOL! tool/0.1" in c.out
 
-    def test_source_buildenv_optout(self, client):
+    def test_source_buildenv_default_fail(self, client):
         c = client
 
         pkg = textwrap.dedent("""
@@ -130,15 +136,13 @@ class TestBuildEnvSource:
                 version = "0.1"
                 tool_requires = "tool/0.1"
 
-                source_buildenv = False
-
                 def source(self):
                     cmd = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"
                     self.run(cmd)
             """)
         c.save({"conanfile.py": pkg})
         c.run("create .", assert_error=True)
-        assert "ERROR: pkg/0.1: Error in source() method, line 14" in c.out
+        assert "ERROR: pkg/0.1: Error in source() method, line 12" in c.out
 
         # Local will still work, because ``install`` generates env-scripts and no layout
         c.run("install .")
