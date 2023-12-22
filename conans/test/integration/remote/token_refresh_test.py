@@ -6,10 +6,10 @@ from mock import Mock
 from conans.client.cache.remote_registry import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
-from conans.client.userio import UserInput
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import LocalDBMock
+from conans.test.utils.test_files import temp_folder
 
 common_headers = {"X-Conan-Server-Capabilities": "oauth_token,revisions",
                   "Content-Type": "application/json"}
@@ -79,25 +79,22 @@ class TestTokenRefresh(unittest.TestCase):
     def setUp(self):
         requester = RequesterWithTokenMock()
         config = ConfDefinition()
-        self.rest_client_factory = RestApiClientFactory(requester, config=config,
-                                                        artifacts_properties=None)
+        self.rest_client_factory = RestApiClientFactory(requester, config=config)
         self.localdb = LocalDBMock()
         cache = Mock()
         cache.localdb = self.localdb
-        cache.new_config = config
-        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache)
+        cache.cache_folder = temp_folder()
+        self.auth_manager = ConanApiAuthManager(self.rest_client_factory, cache, config)
         self.remote = Remote("myremote", "myurl", True, True)
         self.ref = RecipeReference.loads("lib/1.0@conan/stable#myreciperev")
 
     def test_auth_with_token(self):
         """Test that if the capability is there, then we use the new endpoint"""
+        with mock.patch("conans.client.rest.remote_credentials.UserInput.request_login",
+                        return_value=("myuser", "mypassword")):
 
-        with mock.patch("conans.client.rest.auth_manager.UserInput",
-                        UserInput) as mocked_user_input:
-            mocked_user_input.get_username = Mock(return_value="myuser")
-            mocked_user_input.get_password = Mock(return_value="mypassword")
-
-            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".")
+            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".",
+                                                   metadata=None, only_metadata=False)
             self.assertEqual(self.localdb.user, "myuser")
             self.assertEqual(self.localdb.access_token, "access_token")
             self.assertEqual(self.localdb.refresh_token, "refresh_token")
@@ -106,14 +103,13 @@ class TestTokenRefresh(unittest.TestCase):
         """The mock will raise 401 for a token value "expired" so it will try to refresh
         and only if the refresh endpoint is called, the value will be "refreshed_access_token"
         """
-        with mock.patch("conans.client.rest.auth_manager.UserInput",
-                        UserInput) as mocked_user_input:
-            mocked_user_input.get_username = Mock(return_value="myuser")
-            mocked_user_input.get_password = Mock(return_value="mypassword")
+        with mock.patch("conans.client.rest.remote_credentials.UserInput.request_login",
+                        return_value=("myuser", "mypassword")):
             self.localdb.access_token = "expired"
             self.localdb.refresh_token = "refresh_token"
 
-            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".")
+            self.auth_manager.call_rest_api_method(self.remote, "get_recipe", self.ref, ".",
+                                                   metadata=None, only_metadata=False)
             self.assertEqual(self.localdb.user, "myuser")
             self.assertEqual(self.localdb.access_token, "refreshed_access_token")
             self.assertEqual(self.localdb.refresh_token, "refresh_token")

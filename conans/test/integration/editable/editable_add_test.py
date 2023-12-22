@@ -1,62 +1,46 @@
-import unittest
-
-import pytest
-
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-class CreateEditablePackageTest(unittest.TestCase):
+class TestEditablePackageTest:
 
     def test_install_ok(self):
-        ref = RecipeReference.loads('lib/version@user/name')
+        ref = "--name=lib --version=version  --user=user --channel=name"
         t = TestClient()
         t.save({'conanfile.py': GenConanfile()})
         t.run('editable add . {}'.format(ref))
-        self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
+        assert "Reference 'lib/version@user/name' in editable mode" in t.out
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_editable_list_search(self):
-        ref = RecipeReference.loads('lib/version@user/name')
+        ref = "--name=lib --version=version  --user=user --channel=name"
         t = TestClient()
         t.save({'conanfile.py': GenConanfile()})
         t.run('editable add . {}'.format(ref))
         t.run("editable list")
-        self.assertIn("lib/version@user/name", t.out)
-        self.assertIn("    Path:", t.out)
-
-        t.run("search")
-        self.assertIn("lib/version@user/name", t.out)
-
-    def test_install_wrong_reference(self):
-        t = TestClient()
-        t.save({'conanfile.py': GenConanfile("lib", "version")})
-        t.run('export  . --name=lib --version=version --user=user --channel=name')
-        t.run('editable add . wrong/version@user/channel', assert_error=True)
-        self.assertIn("ERROR: Name and version from reference (wrong/version@user/channel) and "
-                      "target conanfile.py (lib/version) must match", t.out)
+        assert "lib/version@user/name" in t.out
+        assert "    Path:" in t.out
 
     def test_missing_subarguments(self):
         t = TestClient()
         t.run("editable", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", t.out)
+        assert "ERROR: Exiting with code: 2" in t.out
 
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
     def test_conanfile_name(self):
         t = TestClient()
         t.save({'othername.py': GenConanfile("lib", "version")})
-        t.run('editable add ./othername.py lib/version@user/name')
-        self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
-        t.run('install --reference=lib/version@user/name')
-        self.assertIn("Installing package: lib/version@user/name", t.out)
+        t.run('editable add ./othername.py --user=user --channel=name')
+        assert "Reference 'lib/version@user/name' in editable mode" in t.out
+        t.run('install --requires=lib/version@user/name')
+        t.assert_listed_require({"lib/version@user/name": "Editable"})
 
-    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                              "TODO: cache2.0 fix with editables")
-    def test_search(self):
-        t = TestClient()
-        t.save({'conanfile.py': GenConanfile()})
-        t.run('editable add . "lib/0.1@"')
-        t.run('search lib/0.1@', assert_error=True)
-        assert "Package in editable mode cannot list binaries" in t.out
+    def test_pyrequires_remote(self):
+        t = TestClient(default_server_user=True)
+        t.save({"conanfile.py": GenConanfile("pyreq", "1.0")})
+        t.run("create .")
+        t.run("upload pyreq/1.0 -c -r=default")
+        t.run("remove pyreq/1.0 -c")
+        t.save({"conanfile.py": GenConanfile("pkg", "1.0").with_python_requires("pyreq/1.0")})
+        t.run("editable add . -nr", assert_error=True)
+        assert "Cannot resolve python_requires 'pyreq/1.0': No remote defined" in t.out
+        t.run("editable add .")
+        assert "Reference 'pkg/1.0' in editable mode" in t.out

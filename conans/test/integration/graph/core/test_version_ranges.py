@@ -1,13 +1,11 @@
 from collections import OrderedDict
-
 import pytest
 
-from conans.cli.api.model import Remote
-from conans.client.graph.graph_error import GraphError
+from conan.api.model import Remote
+from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import save
 
 
 class TestVersionRanges(GraphManagerTest):
@@ -55,7 +53,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -68,7 +66,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -82,7 +80,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -96,7 +94,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
+        assert type(deps_graph.error) == GraphMissingError
 
         self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
@@ -178,7 +176,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -201,7 +199,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -279,7 +277,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[>1.0]"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
@@ -324,9 +322,10 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, liba])
 
-    def test_two_ranges_overriden_conflict(self):
+    def test_two_ranges_overriden_no_conflict(self):
         # app -> libb/0.1 -(range >0)-> liba/0.1
         #   \ ---------liba/[<0.3>]-------------/
+        # Conan learned to solve this conflict in 2.0.14
         self.recipe_cache("liba/0.1")
         self.recipe_cache("liba/0.2")
         self.recipe_cache("liba/0.3")
@@ -335,45 +334,43 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
                                            .with_requirement("liba/[<0.3]"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        # This is no longer a conflict, and Conan knows that liba/2.0 is a valid joint solution
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(liba, "liba/0.3#123", dependents=[libb], deps=[])
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
 
 
 def test_mixed_user_channel():
     # https://github.com/conan-io/conan/issues/7846
     t = TestClient(default_server_user=True)
     t.save({"conanfile.py": GenConanfile()})
-    t.run("create . pkg/1.0@")
-    t.run("create . pkg/1.1@")
-    t.run("create . pkg/2.0@")
-    t.run("create . pkg/1.0@user/testing")
-    t.run("create . pkg/1.1@user/testing")
-    t.run("create . pkg/2.0@user/testing")
-    t.run("upload * --all --confirm -r default")
-    t.run("remove * -f")
+    t.run("create . --name=pkg --version=1.0")
+    t.run("create . --name=pkg --version=1.1")
+    t.run("create . --name=pkg --version=2.0")
+    t.run("create . --name=pkg --version=1.0 --user=user --channel=testing")
+    t.run("create . --name=pkg --version=1.1 --user=user --channel=testing")
+    t.run("create . --name=pkg --version=2.0 --user=user --channel=testing")
+    t.run("upload * --confirm -r default")
+    t.run("remove * -c")
 
-    t.run('install --reference="pkg/[>0 <2]@"')
-    assert "pkg/1.1 from 'default' - Downloaded" in t.out
-    t.run('install --reference="pkg/[>0 <2]@user/testing"')
-    assert "pkg/1.1@user/testing from 'default' - Downloaded" in t.out
+    t.run('install --requires="pkg/[>0 <2]@"')
+    t.assert_listed_require({"pkg/1.1": "Downloaded (default)"})
+    t.run('install --requires="pkg/[>0 <2]@user/testing"')
+    t.assert_listed_require({"pkg/1.1@user/testing": "Downloaded (default)"})
 
 
 def test_remote_version_ranges():
     t = TestClient(default_server_user=True)
-    save(t.cache.default_profile_path, "")
-    save(t.cache.settings_path, "")
     t.save({"conanfile.py": GenConanfile()})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
-        t.run(f"create . dep/{v}@")
-    t.run("upload * --all --confirm -r default")
+        t.run(f"create . --name=dep --version={v}")
+    t.run("upload * --confirm -r default")
     # TODO: Deprecate the comma separator for expressions
     for expr, solution in [(">0.0", "2.2.1"),
                            (">0.1 <1", "0.3"),
@@ -385,18 +382,12 @@ def test_remote_version_ranges():
                            ("~2", "2.2.1"),
                            ("~2.1", "2.1"),
                            ]:
-        t.run("remove * -f")
+        t.run("remove * -c")
         t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
         t.run("install .")
         assert str(t.out).count("Not found in local cache, looking in remotes") == 1
-        assert f"dep/{solution}:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Download" in t.out
-
-
-@pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
-def test_remote_version_ranges_optimized():
-    t = TestClient(default_server_user=True)
-    save(t.cache.default_profile_path, "")
-    save(t.cache.settings_path, "")
+        t.assert_listed_binary({f"dep/{solution}": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                                    "Download (default)")})
 
 
 def test_different_user_channel_resolved_correctly():
@@ -405,15 +396,44 @@ def test_different_user_channel_resolved_correctly():
     servers = OrderedDict([("server1", server1), ("server2", server2)])
 
     client = TestClient(servers=servers, inputs=2*["admin", "password"])
-    save(client.cache.default_profile_path, "")
-    save(client.cache.settings_path, "")
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . lib/1.0@conan/stable")
-    client.run("create . lib/1.0@conan/testing")
-    client.run("upload lib/1.0@conan/stable -r=server1 --all")
-    client.run("upload lib/1.0@conan/testing -r=server2 --all")
+    client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
+    client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
+    client.run("upload lib/1.0@conan/stable -r=server1")
+    client.run("upload lib/1.0@conan/testing -r=server2")
 
     client2 = TestClient(servers=servers)
-    client2.run("install --reference=lib/[>=1.0]@conan/testing")
+    client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out
+
+
+def test_unknown_options():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("lib", "2.0")})
+    c.run("create .")
+
+    c.run("graph info --requires=lib/[>1.2,<1.4]", assert_error=True)
+    assert '"<1.4" in version range ">1.2,<1.4" is not a valid option' in c.out
+
+    c.run("graph info --requires=lib/[>1.2,unknown_conf]")
+    assert 'WARN: Unrecognized version range option "unknown_conf" in ">1.2,unknown_conf"' in c.out
+
+
+@pytest.mark.parametrize("version_range,should_warn", [
+    [">=0.1, include_prereleases", False],
+    [">=0.1, include_prerelease=True", True],
+    [">=0.1, include_prerelease=False", True]
+])
+def test_bad_options_syntax(version_range, should_warn):
+    """We don't error out on bad options, maybe we should,
+    but for now this test ensures we don't change it without realizing"""
+    tc = TestClient()
+    tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+             "app/conanfile.py": GenConanfile("app", "1.0").with_requires(f"lib/[{version_range}]")})
+    tc.run("export lib")
+    tc.run("graph info app/conanfile.py")
+    if should_warn:
+        assert "its presence unconditionally enables prereleases" in tc.out
+    else:
+        assert "its presence unconditionally enables prereleases" not in tc.out

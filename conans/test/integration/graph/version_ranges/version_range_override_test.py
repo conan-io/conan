@@ -1,88 +1,115 @@
-# coding=utf-8
-
-import unittest
+import json
 
 import pytest
-from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
-@pytest.mark.xfail(reason="overrides have changed")
-class VersionRangeOverrideTestCase(unittest.TestCase):
+class TestVersionRangeOverride:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.t = TestClient()
         self.t.save({"libb/conanfile.py": GenConanfile(),
-                     "libC/conanfile.py":
+                     "libc/conanfile.py":
                          GenConanfile().with_require("libb/[<=2.0]@user/channel")})
-        self.t.run("export libB --name=libb --version=1.0 --user=user --channel=channel")
-        self.t.run("export libB --name=libb --version=2.0 --user=user --channel=channel")
-        self.t.run("export libB --name=libb --version=3.0 --user=user --channel=channel")
-        self.t.run("export libC --name=libC --version=1.0 --user=user --channel=channel")
+        self.t.run("export libb --name=libb --version=1.0 --user=user --channel=channel")
+        self.t.run("export libb --name=libb --version=2.0 --user=user --channel=channel")
+        self.t.run("export libb --name=libb --version=3.0 --user=user --channel=channel")
+        self.t.run("export libc --name=libc --version=1.0 --user=user --channel=channel")
 
+    def test(self):
         # Use the version range
-        self.t.save({"conanfile.py": GenConanfile().with_require("libC/1.0@user/channel")})
-        self.t.run("info . --only requires")
-        self.assertIn("libb/2.0@user/channel", self.t.out)
+        self.t.save({"conanfile.py": GenConanfile().with_require("libc/1.0@user/channel")})
+        self.t.run("graph info . --filter requires")
+        assert "libb/2.0@user/channel" in self.t.out
 
     def test_override_with_fixed_version(self):
         # Override upstream version range with a fixed version
-        self.t.save({"conanfile.py": GenConanfile().with_require("libb/3.0@user/channel")
-                                                   .with_require("libC/1.0@user/channel")})
-        self.t.run("info . --only requires")
-        self.assertIn("libb/3.0@user/channel", self.t.out)
-        self.assertIn("WARN: libC/1.0@user/channel: requirement libb/[<=2.0]@user/channel overridden"
-                      " by your conanfile to libb/3.0@user/channel", self.t.out)
+        self.t.save({"conanfile.py": GenConanfile().with_requirement("libb/3.0@user/channel",
+                                                                     override=True)
+                                                   .with_require("libc/1.0@user/channel")})
+        self.t.run("graph info . --filter requires")
+        self.t.assert_overrides({'libb/[<=2.0]@user/channel': ['libb/3.0@user/channel']})
+        assert "libb/3.0@user/channel#" in self.t.out
 
     def test_override_using_version_range(self):
         # Override upstream version range with a different (narrower) version range
-        self.t.save({"conanfile.py": GenConanfile().with_require("libb/[<2.x]@user/channel")
-                                                   .with_require("libC/1.0@user/channel")})
-        self.t.run("info . --only requires")
-        self.assertIn("libb/1.0@user/channel", self.t.out)
-        self.assertIn("WARN: libC/1.0@user/channel: requirement libb/[<=2.0]@user/channel overridden"
-                      " by your conanfile to libb/1.0@user/channel", self.t.out)
-        self.assertIn("Version range '<2.x' required by 'conanfile.py' resolved to"
-                      " 'libb/1.0@user/channel' in local cache", self.t.out)
-        self.assertIn("Version range '<=2.0' required by 'libC/1.0@user/channel' valid for"
-                      " downstream requirement 'libb/1.0@user/channel'", self.t.out)
+        self.t.save({"conanfile.py": GenConanfile().with_requirement("libb/[<2.x]@user/channel",
+                                                                     override=True)
+                                                   .with_require("libc/1.0@user/channel")})
+        self.t.run("graph info . --filter requires")
+        self.t.assert_overrides({'libb/[<=2.0]@user/channel': ['libb/[<2.x]@user/channel']})
+        assert "libb/2.0@user/channel" in self.t.out
 
     def test_override_version_range_outside(self):
         # Override upstream version range with a different (non intersecting) version range
-        self.t.save({"conanfile.py": GenConanfile().with_require("libb/[>2.x]@user/channel")
-                                                   .with_require("libC/1.0@user/channel")})
-        self.t.run("info . --only requires", assert_error=True)
-        self.assertIn("WARN: libC/1.0@user/channel: requirement libb/[<=2.0]@user/channel overridden"
-                      " by your conanfile to libb/3.0@user/channel", self.t.out)
-        self.assertIn("ERROR: Version range '<=2.0' required by 'libC/1.0@user/channel' not valid"
-                      " for downstream requirement 'libb/3.0@user/channel'", self.t.out)
+        self.t.save({"conanfile.py": GenConanfile().with_requirement("libb/[>2.x]@user/channel",
+                                                                     override=True)
+                                                   .with_require("libc/1.0@user/channel")})
+        self.t.run("graph info . --filter requires")
+        self.t.assert_overrides({'libb/[<=2.0]@user/channel': ['libb/[>2.x]@user/channel']})
+        assert "libb/3.0@user/channel" in self.t.out
 
 
-class VersionRangeOverrideFailTestCase(unittest.TestCase):
+class TestVersionRangeOverrideFail:
 
-    @pytest.mark.xfail(reason="overrides have changed")
-    def test(self):
-        # https://github.com/conan-io/conan/issues/7864
+    def test_override(self):
+        """
+        pkga -> ros_perception  -> ros_core
+           \\-----> pkgb  -----------/
+        """
+        # https://github.com/conan-io/conan/issues/8071
         t = TestClient()
         t.save({"conanfile.py": GenConanfile()})
-        t.run("create . gtest/1.8.0@PORT/stable")
-        t.run("create . gtest/1.8.1@bloomberg/stable")
+        t.run("create . --name=ros_core --version=1.1.4 --user=3rdparty --channel=unstable")
+        t.run("create . --name=ros_core --version=pr-53 --user=3rdparty --channel=snapshot")
+        t.save({"conanfile.py": GenConanfile().with_requires("ros_core/1.1.4@3rdparty/unstable")})
+        t.run("create . --name=ros_perception --version=1.1.4 --user=3rdparty --channel=unstable")
+        t.run("create . --name=ros_perception --version=pr-53 --user=3rdparty --channel=snapshot")
+        t.save({"conanfile.py": GenConanfile().with_requires("ros_core/[~1.1]@3rdparty/unstable")})
+        t.run("create . --name=pkgb --version=0.1 --user=common --channel=unstable")
+        t.save({"conanfile.py": GenConanfile("pkga", "0.1").with_requires(
+            "ros_perception/[~1.1]@3rdparty/unstable",
+            "pkgb/[~0]@common/unstable")})
+        t.run("create . ")
+        assert "ros_core/1.1.4@3rdparty/unstable" in t.out
+        assert "ros_perception/1.1.4@3rdparty/unstable" in t.out
+        assert "snapshot" not in t.out
 
-        t.save({"conanfile.py": GenConanfile().with_require("gtest/1.8.0@PORT/stable")})
-        t.run("create . intermediate/1.0@PORT/stable")
+        t.save({"conanfile.py": GenConanfile("pkga", "0.1")
+               .with_require("pkgb/[~0]@common/unstable")
+               .with_require("ros_perception/pr-53@3rdparty/snapshot")
+               .with_requirement("ros_core/pr-53@3rdparty/snapshot", override=True)})
 
-        t.save({"conanfile.py": GenConanfile().with_requires("intermediate/1.0@PORT/stable")
-               .with_tool_requires("gtest/1.8.0@PORT/stable")})
-        t.run("create . scubaclient/1.6@PORT/stable")
+        t.run("create .  --build=missing --build=pkga")
+        assert "ros_core/pr-53@3rdparty/snapshot" in t.out
+        assert "ros_perception/pr-53@3rdparty/snapshot" in t.out
 
-        # IMPORTANT: We need to override the private build-require in the profile too,
-        # otherwise it will conflict, as it will not be overriden by regular requires
-        t.save({"conanfile.py": GenConanfile().with_requires("gtest/1.8.1@bloomberg/stable",
-                                                             "scubaclient/1.6@PORT/stable"),
-                "myprofile": "[tool_requires]\ngtest/1.8.1@bloomberg/stable"})
+        # Override only the upstream without overriding the direct one
+        t.save({"conanfile.py": GenConanfile("pkga", "0.1")
+               .with_require("pkgb/[~0]@common/unstable")
+               .with_require("ros_perception/[~1.1]@3rdparty/unstable")
+               .with_requirement("ros_core/pr-53@3rdparty/snapshot", force=True)})
 
-        t.run("lock create conanfile.py --build -pr=myprofile")
-        lock = t.load("conan.lock")
-        self.assertIn("gtest/1.8.1@bloomberg/stable", lock)
-        self.assertNotIn("gtest/1.8.0@PORT/stable", lock)
+        t.run("create .  --build=missing --build=pkga")
+        assert "ros_core/pr-53@3rdparty/snapshot" in t.out
+        assert "ros_perception/1.1.4@3rdparty/unstable" in t.out
+
+        # Check information got by graph info
+        t.run("graph info . --format json")
+        info = json.loads(t.stdout)
+        expected_overrides = {
+            "ros_core/[~1.1]@3rdparty/unstable": [
+                "ros_core/pr-53@3rdparty/snapshot"
+            ],
+            "ros_core/1.1.4@3rdparty/unstable": [
+                "ros_core/pr-53@3rdparty/snapshot#4d670581ccb765839f2239cc8dff8fbd"
+            ]
+        }
+        assert info['graph']["overrides"] == expected_overrides
+        expected_resolved_ranges = {
+            "pkgb/[~0]@common/unstable": "pkgb/0.1@common/unstable",
+            "ros_perception/[~1.1]@3rdparty/unstable": "ros_perception/1.1.4@3rdparty/unstable"
+        }
+        assert info['graph']["resolved_ranges"] == expected_resolved_ranges

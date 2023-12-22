@@ -1,17 +1,8 @@
-import subprocess
-import sys
-
-from conans.model.version import Version
-
-CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
-CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"
+from conans.model.build_info import CppInfo as _CppInfo
 
 
-def args_to_string(args):
-    if not args:
-        return ""
-    # FIXME: This is ugly, hardcoding condition how to parse args
-    if sys.platform == 'win32':
-        return subprocess.list2cmdline(args)
-    else:
-        return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
+def CppInfo(conanfile):
+    # Creation of a CppInfo object, to decouple the creation from the actual internal location
+    # that at the moment doesn't require a ``conanfile`` argument, but might require in the future
+    # and allow us to refactor the location of conans.model.build_info import CppInfo
+    return _CppInfo()

@@ -4,8 +4,8 @@ import time
 import fasteners
 
 from conans.util.files import load, save
-from conans.util.log import logger
 
+logger = None
 
 class NoLock(object):
 

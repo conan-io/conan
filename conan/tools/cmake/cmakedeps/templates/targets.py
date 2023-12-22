@@ -13,16 +13,16 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        name = "" if not self.find_module_mode else "module-"
+        name = "" if not self.generating_module else "module-"
         name += self.file_name + "Targets.cmake"
         return name
 
     @property
     def context(self):
-        data_pattern = "${_DIR}/" if not self.find_module_mode else "${_DIR}/module-"
+        data_pattern = "${_DIR}/" if not self.generating_module else "${_DIR}/module-"
         data_pattern += "{}-*-data.cmake".format(self.file_name)
 
-        target_pattern = "" if not self.find_module_mode else "module-"
+        target_pattern = "" if not self.generating_module else "module-"
         target_pattern += "{}-Target-*.cmake".format(self.file_name)
 
         cmake_target_aliases = self.conanfile.cpp_info.\
@@ -66,15 +66,13 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
             if(NOT TARGET ${_COMPONENT})
                 add_library(${_COMPONENT} INTERFACE IMPORTED)
-                conan_message(STATUS "Conan: Component target declared '${_COMPONENT}'")
-            else()
-                message(WARNING "Component target name '${_COMPONENT}' already exists.")
+                message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Component target declared '${_COMPONENT}'")
             endif()
         endforeach()
 
         if(NOT TARGET {{ root_target_name }})
             add_library({{ root_target_name }} INTERFACE IMPORTED)
-            conan_message(STATUS "Conan: Target declared '{{ root_target_name }}'")
+            message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Target declared '{{ root_target_name }}'")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}
@@ -82,8 +80,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
-        else()
-            message(WARNING "Target name '{{alias}}' already exists.")
         endif()
 
         {%- endfor %}
@@ -95,8 +91,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
-        else()
-            message(WARNING "Target name '{{alias}}' already exists.")
         endif()
 
             {%- endfor %}

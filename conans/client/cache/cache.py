@@ -1,32 +1,15 @@
-import copy
 import os
 from typing import List
 
-
-from conan.cache.cache import DataCache
-from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.cli.output import ConanOutput
+from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
 from conans.client.cache.editable import EditablePackages
-from conans.client.cache.remote_registry import RemoteRegistry
-from conans.client.conf import ConanClientConfigParser, get_default_client_conf, default_settings_yml
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.model.settings import Settings
-from conans.paths import ARTIFACTS_PROPERTIES_FILE, DEFAULT_PROFILE_NAME
-from conans.util.files import load, normalize, save, remove, mkdir
+from conans.util.files import mkdir
 
-
-CONAN_CONF = 'conan.conf'
-CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
-REMOTES = "remotes.json"
-PROFILES_FOLDER = "profiles"
-HOOKS_FOLDER = "hooks"
-TEMPLATES_FOLDER = "templates"
-GENERATORS_FOLDER = "generators"
 
 
 # TODO: Rename this to ClientHome
@@ -35,23 +18,30 @@ class ClientCache(object):
     of conans commands. Accesses to real disk and reads/write things. (OLD client ConanPaths)
     """
 
-    def __init__(self, cache_folder):
+    def __init__(self, cache_folder, global_conf):
         self.cache_folder = cache_folder
-        self._output = ConanOutput()
-
-        # Caching
-        self._config = None
-        self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = os.path.join(self.cache_folder, "p")
+        self._store_folder = global_conf.get("core.cache:storage_path") or \
+                             os.path.join(self.cache_folder, "p")
 
-        mkdir(self._store_folder)
-        db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
-        self._data_cache = DataCache(self._store_folder, db_filename)
+        try:
+            mkdir(self._store_folder)
+            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            self._data_cache = DataCache(self._store_folder, db_filename)
+        except Exception as e:
+            raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 
-    def closedb(self):
-        self._data_cache.closedb()
+    @property
+    def temp_folder(self):
+        """ temporary folder where Conan puts exports and packages before the final revision
+        is computed"""
+        # TODO: Improve the path definitions, this is very hardcoded
+        return os.path.join(self.cache_folder, "p", "t")
+
+    @property
+    def builds_folder(self):
+        return os.path.join(self.cache_folder, "p", "b")
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
@@ -65,8 +55,19 @@ class ClientCache(object):
     def assign_prev(self, layout: PackageLayout):
         return self._data_cache.assign_prev(layout)
 
-    def ref_layout(self, ref: RecipeReference):
-        return self._data_cache.get_reference_layout(ref)
+    # Recipe methods
+    def recipe_layout(self, ref: RecipeReference):
+        return self._data_cache.get_recipe_layout(ref)
+
+    def get_latest_recipe_reference(self, ref):
+        # TODO: We keep this for testing only, to be removed
+        assert ref.revision is None
+        return self._data_cache.get_recipe_layout(ref).reference
+
+    def get_recipe_revisions_references(self, ref):
+        # For listing multiple revisions only
+        assert ref.revision is None
+        return self._data_cache.get_recipe_revisions_references(ref)
 
     def pkg_layout(self, ref: PkgReference):
         return self._data_cache.get_package_layout(ref)
@@ -83,207 +84,52 @@ class ClientCache(object):
     def remove_package_layout(self, layout):
         self._data_cache.remove_package(layout)
 
-    def get_recipe_timestamp(self, ref):
-        return self._data_cache.get_recipe_timestamp(ref)
-
-    def get_package_timestamp(self, ref):
-        return self._data_cache.get_package_timestamp(ref)
+    def remove_build_id(self, pref):
+        self._data_cache.remove_build_id(pref)
 
     def update_recipe_timestamp(self, ref):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
         that would affect its order in our cache """
         return self._data_cache.update_recipe_timestamp(ref)
 
-    def set_package_timestamp(self, pref):
-        return self._data_cache.update_package_timestamp(pref)
-
     def all_refs(self):
         return self._data_cache.list_references()
-
-    def exists_rrev(self, ref):
-        # Used just by inspect to check before calling get_recipe()
-        return self._data_cache.exists_rrev(ref)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
         return self._data_cache.exists_prev(pref)
 
-    def get_package_revisions_references(self, ref, only_latest_prev=False):
-        return self._data_cache.get_package_revisions_references(ref, only_latest_prev)
+    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+        return self._data_cache.get_package_revisions_references(pref, only_latest_prev)
 
-    def get_package_references(self, ref: RecipeReference) -> List[PkgReference]:
-        return self._data_cache.get_package_references(ref)
+    def get_package_references(self, ref: RecipeReference,
+                               only_latest_prev=True) -> List[PkgReference]:
+        """Get the latest package references"""
+        return self._data_cache.get_package_references(ref, only_latest_prev)
 
     def get_matching_build_id(self, ref, build_id):
         return self._data_cache.get_matching_build_id(ref, build_id)
 
-    def get_recipe_revisions_references(self, ref, only_latest_rrev=False):
-        return self._data_cache.get_recipe_revisions_references(ref, only_latest_rrev)
-
-    def get_latest_recipe_reference(self, ref):
-        return self._data_cache.get_latest_recipe_reference(ref)
-
     def get_latest_package_reference(self, pref):
         return self._data_cache.get_latest_package_reference(pref)
+
+    def get_recipe_lru(self, ref):
+        return self._data_cache.get_recipe_lru(ref)
+
+    def update_recipe_lru(self, ref):
+        self._data_cache.update_recipe_lru(ref)
+
+    def get_package_lru(self, pref):
+        return self._data_cache.get_package_lru(pref)
+
+    def update_package_lru(self, pref):
+        self._data_cache.update_package_lru(pref)
 
     @property
     def store(self):
         return self._store_folder
 
-    def editable_path(self, ref):
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        edited_ref = self.editable_packages.get(_tmp)
-        if edited_ref:
-            conanfile_path = edited_ref["path"]
-            return conanfile_path
-
-    def installed_as_editable(self, ref):
-        _tmp = copy.copy(ref)
-        _tmp.revision = None
-        edited_ref = self.editable_packages.get(_tmp)
-        return bool(edited_ref)
-
-    @property
-    def config_install_file(self):
-        return os.path.join(self.cache_folder, "config_install.json")
-
-    @property
-    def remotes_path(self):
-        return os.path.join(self.cache_folder, REMOTES)
-
-    @property
-    def remotes_registry(self) -> RemoteRegistry:
-        return RemoteRegistry(self)
-
-    @property
-    def artifacts_properties_path(self):
-        return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
-
-    def read_artifacts_properties(self):
-        ret = {}
-        if not os.path.exists(self.artifacts_properties_path):
-            save(self.artifacts_properties_path, "")
-            return ret
-        try:
-            contents = load(self.artifacts_properties_path)
-            for line in contents.splitlines():
-                if line and not line.strip().startswith("#"):
-                    tmp = line.split("=", 1)
-                    if len(tmp) != 2:
-                        raise Exception()
-                    name = tmp[0].strip()
-                    value = tmp[1].strip()
-                    ret[str(name)] = str(value)
-            return ret
-        except Exception:
-            raise ConanException("Invalid %s file!" % self.artifacts_properties_path)
-
-    @property
-    def config(self):
-        if not self._config:
-            self.initialize_config()
-            self._config = ConanClientConfigParser(self.conan_conf_path)
-        return self._config
-
-    @property
-    def new_config_path(self):
-        return os.path.join(self.cache_folder, "global.conf")
-
-    @property
-    def new_config(self):
-        """ this is the new global.conf to replace the old conan.conf that contains
-        configuration defined with the new syntax as in profiles, this config will be composed
-        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
-        """
-        if self._new_config is None:
-            self._new_config = ConfDefinition()
-            if os.path.exists(self.new_config_path):
-                self._new_config.loads(load(self.new_config_path))
-        return self._new_config
-
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
-        return LocalDB.create(localdb_filename, encryption_key=encryption_key)
-
-    @property
-    def conan_conf_path(self):
-        return os.path.join(self.cache_folder, CONAN_CONF)
-
-    @property
-    def profiles_path(self):
-        return os.path.join(self.cache_folder, PROFILES_FOLDER)
-
-    @property
-    def settings_path(self):
-        return os.path.join(self.cache_folder, CONAN_SETTINGS)
-
-    @property
-    def generators_path(self):
-        return os.path.join(self.cache_folder, GENERATORS_FOLDER)
-
-    @property
-    def default_profile_path(self):
-        # Used only in testing, and this class "reset_default_profile"
-        return os.path.join(self.cache_folder, PROFILES_FOLDER, DEFAULT_PROFILE_NAME)
-
-    @property
-    def hooks_path(self):
-        """
-        :return: Hooks folder in client cache
-        """
-        return os.path.join(self.cache_folder, HOOKS_FOLDER)
-
-    @property
-    def settings(self):
-        """Returns {setting: [value, ...]} defining all the possible
-           settings without values"""
-        self.initialize_settings()
-        content = load(self.settings_path)
-        return Settings.loads(content)
-
-    @property
-    def hooks(self):
-        """Returns a list of hooks inside the hooks folder"""
-        hooks = []
-        for hook_name in os.listdir(self.hooks_path):
-            if os.path.isfile(hook_name) and hook_name.endswith(".py"):
-                hooks.append(hook_name[:-3])
-        return hooks
-
-    @property
-    def generators(self):
-        """Returns a list of generator paths inside the generators folder"""
-        generators = []
-        if os.path.exists(self.generators_path):
-            for path in os.listdir(self.generators_path):
-                generator = os.path.join(self.generators_path, path)
-                if os.path.isfile(generator) and generator.endswith(".py"):
-                    generators.append(generator)
-        return generators
-
-    def initialize_config(self):
-        if not os.path.exists(self.conan_conf_path):
-            save(self.conan_conf_path, normalize(get_default_client_conf()))
-
-    def reset_config(self):
-        if os.path.exists(self.conan_conf_path):
-            remove(self.conan_conf_path)
-        self.initialize_config()
-
-    def reset_default_profile(self):
-        if os.path.exists(self.default_profile_path):
-            remove(self.default_profile_path)
-
-    def initialize_settings(self):
-        if not os.path.exists(self.settings_path):
-            settings_yml = default_settings_yml
-            save(self.settings_path, settings_yml)
-            save(self.settings_path + ".orig", settings_yml)  # stores a copy, to check migrations
-
-    def reset_settings(self):
-        if os.path.exists(self.settings_path):
-            remove(self.settings_path)
-        self.initialize_settings()
+        return LocalDB.create(localdb_filename)

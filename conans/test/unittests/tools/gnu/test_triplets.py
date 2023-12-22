@@ -31,7 +31,9 @@ from conans.errors import ConanException
     ["Android", "armv7", None, "arm-linux-androideabi"],
     ["Android", "armv7hf", None, "arm-linux-androideabi"],
     ["Android", "armv8", None, "aarch64-linux-android"],
-    ["Windows", "x86", "Visual Studio", "i686-windows-msvc"],
+    ["Windows", "x86", "msvc", "i686-unknown-windows"],
+    ["Windows", "x86_64", "msvc", "x86_64-unknown-windows"],
+    ["Windows", "armv8", "msvc", "aarch64-unknown-windows"],
     ["Windows", "x86", "gcc", "i686-w64-mingw32"],
     ["Windows", "x86_64", "gcc", "x86_64-w64-mingw32"],
     ["Darwin", "x86_64", None, "x86_64-apple-darwin"],
@@ -61,6 +63,8 @@ from conans.errors import ConanException
     ["Linux", "e2k-v5", None, "e2k-unknown-linux-gnu"],
     ["Linux", "e2k-v6", None, "e2k-unknown-linux-gnu"],
     ["Linux", "e2k-v7", None, "e2k-unknown-linux-gnu"],
+    ["Linux", "riscv32", None, "riscv32-linux-gnu"],
+    ["Linux", "riscv64", None, "riscv64-linux-gnu"],
 ])
 def test_get_gnu_triplet(os_, arch, compiler, expected_triplet):
     triplet = _get_gnu_triplet(os_, arch, compiler)

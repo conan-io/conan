@@ -3,11 +3,10 @@ import textwrap
 
 import patch_ng
 import pytest
-from bottle import static_file
 
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.file_server import TestFileServer
+from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
@@ -43,7 +42,7 @@ class TestConanToolFiles:
 
     def test_load_save_mkdir(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import load, save, mkdir
 
             class Pkg(ConanFile):
@@ -59,15 +58,10 @@ class TestConanToolFiles:
         client.run("source .")
 
     def test_download(self):
-        http_server = StoppableThreadBottle()
-        file_path = os.path.join(temp_folder(), "myfile.txt")
-        save(file_path, "some content")
-
-        @http_server.server.get("/myfile.txt")
-        def get_file():
-            return static_file(os.path.basename(file_path), os.path.dirname(file_path))
-
-        http_server.run_server()
+        client = TestClient()
+        file_server = TestFileServer()
+        client.servers["file_server"] = file_server
+        save(os.path.join(file_server.store, "myfile.txt"), "some content")
 
         profile = textwrap.dedent("""\
             [conf]
@@ -77,18 +71,17 @@ class TestConanToolFiles:
 
         conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile
+            from conan import ConanFile
             from conan.tools.files import download
 
             class Pkg(ConanFile):
                 name = "mypkg"
                 version = "1.0"
                 def source(self):
-                    download(self, "http://localhost:{}/myfile.txt", "myfile.txt")
+                    download(self, "{}/myfile.txt", "myfile.txt")
                     assert os.path.exists("myfile.txt")
-            """.format(http_server.port))
+            """.format(file_server.fake_url))
 
-        client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.save({"profile": profile})
         client.run("create . -pr=profile")
@@ -96,7 +89,7 @@ class TestConanToolFiles:
 
 def test_patch(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import patch
 
         class Pkg(ConanFile):
@@ -117,9 +110,68 @@ def test_patch(mock_patch_ng):
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
 
+@pytest.mark.parametrize("no_copy_source", [False, True])
+def test_patch_real(no_copy_source):
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import patch, save, load
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+            exports_sources = "*"
+            no_copy_source = %s
+
+            def layout(self):
+                self.folders.source = "src"
+                self.folders.build = "build"
+
+            def source(self):
+                save(self, "myfile.h", "//dummy contents")
+                patch(self, patch_file="patches/mypatch_h", patch_type="security")
+                self.output.info("SOURCE: {}".format(load(self, "myfile.h")))
+
+            def build(self):
+                save(self, "myfile.cpp", "//dummy contents")
+                if self.no_copy_source:
+                    patch_file = os.path.join(self.source_folder, "../patches/mypatch_cpp")
+                else:
+                    patch_file = "patches/mypatch_cpp"
+                patch(self, patch_file=patch_file, patch_type="security",
+                      base_path=self.build_folder)
+                self.output.info("BUILD: {}".format(load(self, "myfile.cpp")))
+        """ % no_copy_source)
+
+    client = TestClient()
+    patch_contents = textwrap.dedent("""\
+        --- myfile.{ext}
+        +++ myfile.{ext}
+        @@ -1 +1 @@
+        -//dummy contents
+        +//smart contents
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "patches/mypatch_h": patch_contents.format(ext="h"),
+                 "patches/mypatch_cpp": patch_contents.format(ext="cpp")})
+    client.run('create .')
+    assert "mypkg/1.0: Apply patch (security)" in client.out
+    assert "mypkg/1.0: SOURCE: //smart contents" in client.out
+    assert "mypkg/1.0: BUILD: //smart contents" in client.out
+
+    # Test local source too
+    client.run("install .")
+    client.run("source .")
+    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
+    assert "conanfile.py (mypkg/1.0): SOURCE: //smart contents" in client.out
+    client.run("build .")
+    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
+    assert "conanfile.py (mypkg/1.0): BUILD: //smart contents" in client.out
+
+
 def test_apply_conandata_patches(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -156,8 +208,8 @@ def test_apply_conandata_patches(mock_patch_ng):
            ' clang compilers.' in str(client.out)
 
     # Test local methods
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
     assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
@@ -165,7 +217,7 @@ def test_apply_conandata_patches(mock_patch_ng):
 
 def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -196,7 +248,7 @@ def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
 
 def test_no_patch_file_entry():
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -228,7 +280,7 @@ def test_no_patch_file_entry():
 
 def test_patch_string_entry(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -259,7 +311,7 @@ def test_patch_string_entry(mock_patch_ng):
 
 def test_relate_base_path_all_versions(mock_patch_ng):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.files import apply_conandata_patches
 
         class Pkg(ConanFile):
@@ -286,3 +338,60 @@ def test_relate_base_path_all_versions(mock_patch_ng):
     assert mock_patch_ng.apply_args[0].endswith(os.path.join('source_subfolder', "relative_dir"))
     assert mock_patch_ng.apply_args[1:] == (0, False)
 
+
+def test_export_conandata_patches(mock_patch_ng):
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import export_conandata_patches, load
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
+            def export_sources(self):
+                export_conandata_patches(self)
+
+            def source(self):
+                self.output.info(load(self, os.path.join(self.export_sources_folder,
+                                                         "patches/mypatch.patch")))
+        """)
+    conandata_yml = textwrap.dedent("""
+        patches:
+          - patch_file: "patches/mypatch.patch"
+    """)
+
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .", assert_error=True)
+    assert "conandata.yml not defined" in client.out
+    # Empty conandata
+    client.save({"conandata.yml": ""})
+    client.run("create .", assert_error=True)
+    assert "export_conandata_patches(): No patches defined in conandata" in client.out
+    assert "ERROR: mypkg/1.0: Error in source() method" in client.out
+    # wrong patches
+    client.save({"conandata.yml": "patches: 123"})
+    client.run("create .", assert_error=True)
+    assert "conandata.yml 'patches' should be a list or a dict"  in client.out
+
+    # No patch found
+    client.save({"conandata.yml": conandata_yml})
+    client.run("create .", assert_error=True)
+    assert "No such file or directory" in client.out
+
+    client.save({"patches/mypatch.patch": "mypatch!!!"})
+    client.run("create .")
+    assert "mypkg/1.0: mypatch!!!" in client.out
+
+    conandata_yml = textwrap.dedent("""
+        patches:
+            "1.0":
+                - patch_file: "patches/mypatch.patch"
+    """)
+    client.save({"conandata.yml": conandata_yml})
+    client.run("create .")
+    assert "mypkg/1.0: mypatch!!!" in client.out

@@ -5,7 +5,8 @@ from jinja2 import Template
 
 def gen_cmakelists(language="CXX", verify=True, project="project", libname="mylibrary",
                    libsources=None, appname="myapp", appsources=None, cmake_version="3.15",
-                   install=False, find_package=None, libtype="", deps=None, public_header=None):
+                   install=False, find_package=None, libtype="", deps=None, public_header=None,
+                   custom_content=None):
     """
     language: C, C++, C/C++
     project: the project name
@@ -33,6 +34,7 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
 
         {% if libsources %}
         add_library({{libname}} {{libtype}} {% for s in libsources %} {{s}} {% endfor %})
+        target_include_directories({{libname}} PUBLIC "include")
         {% endif %}
 
         {% if libsources and find_package %}
@@ -49,6 +51,7 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
 
         {% if appsources %}
         add_executable({{appname}} {% for s in appsources %} {{s}} {% endfor %})
+        target_include_directories({{appname}} PUBLIC "include")
         {% endif %}
 
         {% if appsources and libsources %}
@@ -73,21 +76,17 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
 
         {% if install %}
         {% if appsources %}
-        install(TARGETS {{appname}} DESTINATION ".")
+        install(TARGETS {{appname}})
         {% endif %}
         {% if libsources %}
-        install(TARGETS {{libname}} DESTINATION "."
-        {% if public_header %}
-        PUBLIC_HEADER DESTINATION include
-        {% endif %}
-        RUNTIME DESTINATION bin
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        FRAMEWORK DESTINATION Frameworks
-        BUNDLE DESTINATION bin
-        )
+        install(TARGETS {{libname}})
         {% endif %}
         {% endif %}
+
+        {% if custom_content %}
+        {{custom_content}}
+        {% endif %}
+
         """)
 
     t = Template(cmake, trim_blocks=True, lstrip_blocks=True)
@@ -104,4 +103,5 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
                      "libtype": libtype,
                      "public_header": public_header,
                      "deps": deps,
+                     "custom_content": custom_content
                      })

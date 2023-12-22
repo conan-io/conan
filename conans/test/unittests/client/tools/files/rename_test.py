@@ -2,8 +2,8 @@ import os
 import unittest
 
 from conan.tools.files import rename
-from conans.client.tools.files import chdir
 from conans.test.utils.tools import TestClient
+from conans.util.files import chdir
 
 
 class RenameTest(unittest.TestCase):

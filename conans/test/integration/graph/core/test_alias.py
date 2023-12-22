@@ -184,27 +184,6 @@ class AliasBuildRequiresTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libb, liba_build])
 
 
-class AliasPythonRequiresTest(GraphManagerTest):
-
-    def test_python_requires(self):
-        # app ----(python-requires)---> tool/(latest) -> tool/0.1
-        self.recipe_cache("tool/0.1")
-        self.recipe_cache("tool/0.2")
-        self.alias_cache("tool/latest", "tool/0.1")
-        consumer = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                name = "app"
-                version = "0.1"
-                python_requires = "tool/(latest)"
-            """)
-        deps_graph = self.build_graph(consumer)
-
-        self.assertEqual(1, len(deps_graph.nodes))
-        app = deps_graph.root
-        self._check_node(app, "app/0.1", deps=[])
-
-
 def test_mixing_aliases_and_fix_versions():
     # cd/1.0 -----------------------------> cb/latest -(alias)-> cb/1.0 -> ca/1.0
     #   \-----> cc/latest -(alias)-> cc/1.0 ->/                             /
@@ -213,18 +192,17 @@ def test_mixing_aliases_and_fix_versions():
 
     client.save({"conanfile.py": GenConanfile("ca", "1.0")})
     client.run("create . ")
-    client.run("alias ca/latest@ ca/1.0@")
+    client.alias("ca/latest@",  "ca/1.0@")
 
-    client.save({"conanfile.py": GenConanfile("cb", "1.0")
-                .with_requirement("ca/1.0@")})
-    client.run("create . cb/1.0@")
-    client.run("alias cb/latest@ cb/1.0@")
+    client.save({"conanfile.py": GenConanfile("cb", "1.0").with_requirement("ca/1.0@")})
+    client.run("create . --name=cb --version=1.0")
+    client.alias("cb/latest@",  "cb/1.0@")
 
     client.save({"conanfile.py": GenConanfile("cc", "1.0")
                 .with_requirement("cb/(latest)")
                 .with_requirement("ca/(latest)")})
     client.run("create . ")
-    client.run("alias cc/latest@ cc/1.0@")
+    client.alias("cc/latest@",  "cc/1.0@")
 
     client.save({"conanfile.py": GenConanfile("cd", "1.0")
                 .with_requirement("cb/(latest)")

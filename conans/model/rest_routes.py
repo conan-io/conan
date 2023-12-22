@@ -5,13 +5,8 @@ class RestRoutes(object):
     oauth_authenticate = "users/token"
     common_check_credentials = "users/check_credentials"
 
-    def __init__(self, matrix_params=False):
-        if matrix_params:
-            self.base = 'conans{matrix_params}'
-            self.files_base = 'files{matrix_params}'
-        else:
-            self.base = 'conans'
-            self.files_base = 'files'
+    def __init__(self):
+        self.base = 'conans'
 
     @property
     def recipe(self):

@@ -55,12 +55,12 @@ def gen_makefile(**context):
         {% for lib in libs %}
         {%- set link_libs.str = link_libs.str + ' -l' + lib|string  %}
         lib{{lib}}.a: {{lib}}.o
-        	$(AR) rcs lib{{lib}}.a {{lib}}.o
+        	$(AR) rcs lib{{lib}}.a {{lib}}.o {%if static_runtime%}--static{%endif%}
         {% endfor %}
 
         {% for s in apps %}
         {{s}}: {{s}}.o libs
-        	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o {{s}} {{s}}.o $(LIBS) {{link_libs.str}} -L.
+        	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o {{s}} {{s}}.o $(LIBS) {{link_libs.str}} -L. {%if static_runtime%}--static{%endif%}
         {% endfor %}
         """)
 

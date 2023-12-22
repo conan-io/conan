@@ -1,36 +1,46 @@
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.env.virtualrunenv import runenv_from_cpp_info
 
 
 class VirtualBuildEnv:
-    """ captures the conanfile environment that is defined from its
-    dependencies, and also from profiles
+    """ Calculates the environment variables of the build time context and produces a conanbuildenv
+        .bat or .sh script
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, auto_generate=False):
         self._conanfile = conanfile
-        self._conanfile.virtualbuildenv = False
+        if not auto_generate:
+            self._conanfile.virtualbuildenv = False
         self.basename = "conanbuildenv"
-        # TODO: Make this use the settings_build
-        self.configuration = conanfile.settings.get_safe("build_type")
-        if self.configuration:
-            self.configuration = self.configuration.lower()
-        self.arch = conanfile.settings.get_safe("arch")
-        if self.arch:
-            self.arch = self.arch.lower()
+        self.configuration = None
+        self.arch = None
 
     @property
     def _filename(self):
+        if not self.configuration:
+            # TODO: Make this use the settings_build
+            configuration = self._conanfile.settings.get_safe("build_type")
+            configuration = configuration.lower() if configuration else None
+        else:
+            configuration = self.configuration
+        if not self.arch:
+            arch = self._conanfile.settings.get_safe("arch")
+            arch = arch.lower() if arch else None
+        else:
+            arch = self.arch
         f = self.basename
-        if self.configuration:
-            f += "-" + self.configuration
-        if self.arch:
-            f += "-" + self.arch
+        if configuration:
+            f += "-" + configuration.replace(".", "_")
+        if arch:
+            f += "-" + arch.replace(".", "_")
         return f
 
     def environment(self):
-        """ collects the buildtime information from dependencies. This is the typical use case
-        of build_requires defining information for consumers
+        """
+        Returns an ``Environment`` object containing the environment variables of the build context.
+
+        :return: an ``Environment`` object instance containing the obtained variables.
         """
         # FIXME: Cache value?
         build_env = Environment()
@@ -49,10 +59,7 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 build_env.compose_env(build_require.runenv_info)
             # Then the implicit
-            if hasattr(self._conanfile, "settings_build"):
-                os_name = self._conanfile.settings_build.get_safe("os")
-            else:
-                os_name = self._conanfile.settings.get_safe("os")
+            os_name = self._conanfile.settings_build.get_safe("os")
             build_env.compose_env(runenv_from_cpp_info(build_require, os_name))
 
         # Requires in host context can also bring some direct buildenv_info
@@ -64,9 +71,18 @@ class VirtualBuildEnv:
         return build_env
 
     def vars(self, scope="build"):
+        """
+        :param scope: Scope to be used.
+        :return: An ``EnvVars`` instance containing the computed environment variables.
+        """
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        """
+        Produces the launcher scripts activating the variables for the build context.
+
+        :param scope: Scope to be used.
+        """
+        check_duplicated_generator(self, self._conanfile)
         build_env = self.environment()
-        if build_env:  # Only if there is something defined
-            build_env.vars(self._conanfile, scope=scope).save_script(self._filename)
+        build_env.vars(self._conanfile, scope=scope).save_script(self._filename)

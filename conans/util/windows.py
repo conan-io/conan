@@ -5,6 +5,7 @@ def conan_expand_user(path):
     """ wrapper to the original expanduser function, to workaround python returning
     verbatim %USERPROFILE% when some other app (git for windows) sets HOME envvar
     """
+    path = str(path)
     if path[:1] != '~':
         return path
     # In win these variables should exist and point to user directory, which

@@ -12,13 +12,13 @@ def test_exported_lockfile():
                                                                .with_exports("conan.lock")})
     client.run("create dep")
     with client.chdir("pkg"):
-        client.run("lock create conanfile.py --lockfile-out=conan.lock")
+        client.run("lock create .")
         client.run("create .")
 
     client.save({"dep/conanfile.py": GenConanfile("dep", "0.2")})
     client.run("create dep")
 
-    client.run("install --reference=pkg/0.1")
+    client.run("install --requires=pkg/0.1")
     assert "dep/0.2" not in client.out
     assert "dep/0.1" in client.out
 
@@ -43,13 +43,13 @@ def test_downstream_priority():
     client.run("create dep")
     client.run("create dep2")
     with client.chdir("pkg"):
-        client.run("lock create conanfile.py --lockfile-out=conan.lock")
+        client.run("lock create .")
         client.run("create .")
         assert "dep/0.2" in client.out
         assert "dep/0.1" not in client.out
 
     with client.chdir("consumer"):
-        client.run("lock create conanfile.py --lockfile-out=conan.lock")
+        client.run("lock create .")
         client.run("install . --build=missing --lockfile=conan.lock")
         assert "dep/0.2" not in client.out
         assert "dep/0.1" in client.out

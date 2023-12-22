@@ -4,7 +4,7 @@ import pytest
 
 from parameterized import parameterized
 
-from conans.client.graph.graph_error import GraphError
+from conans.client.graph.graph_error import GraphConflictError, GraphLoopError, GraphRuntimeError
 from conans.model.recipe_ref import RecipeReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestClient
@@ -13,14 +13,17 @@ from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID, TestCl
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
 
-    assert len(values) == len(transitive_deps)
+    assert len(values) == len(transitive_deps), f"{node}:{len(values)} != {len(transitive_deps)}"
 
     for v1, v2 in zip(values, transitive_deps):
-        assert v1.node is v2[0]
-        assert v1.require.headers is v2[1]
-        assert v1.require.libs is v2[2]
-        assert v1.require.build is v2[3]
-        assert v1.require.run is v2[4]
+        # asserts were difficult to debug
+        if v1.node is not v2[0]: raise Exception(f"{v1.node}!={v2[0]}")
+        if v1.require.headers is not v2[1]: raise Exception(f"{v1.node}!={v2[0]} headers")
+        if v1.require.libs is not v2[2]: raise Exception(f"{v1.node}!={v2[0]} libs")
+        if v1.require.build is not v2[3]: raise Exception(f"{v1.node}!={v2[0]} build")
+        if v1.require.run is not v2[4]: raise Exception(f"{v1.node}!={v2[0]} run")
+        if len(v2) >= 6:
+            if v1.require.test is not v2[5]: raise Exception(f"{v1.node}!={v2[0]} test")
 
 
 class BuildRequiresGraphTest(GraphManagerTest):
@@ -63,7 +66,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, False)])  # TODO: Check run=None
+        _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake, False, False, True, True)])
 
     @parameterized.expand([("shared", ), ("static", ), ("notrun", ), ("run", )])
@@ -131,81 +134,12 @@ class BuildRequiresGraphTest(GraphManagerTest):
         _check_transitive(lib, [(cmake2, False, False, True, True)])
         _check_transitive(cmake2, [(cmake1, False, False, True, True)])
 
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_transitive_build_require_recipe_profile(self):
-        # app -> lib -(br)-> gtest
-        # profile \---(br)-> mingw
-        # app -(br)-> mingw
-        mingw_ref = RecipeReference.loads("mingw/0.1@user/testing")
-        gtest_ref = RecipeReference.loads("gtest/0.1@user/testing")
-        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
-
-        self._cache_recipe(mingw_ref, GenConanfile().with_name("mingw").with_version("0.1"))
-        self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1"))
-        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(gtest_ref))
-        profile_build_requires = {"*": [mingw_ref]}
-        deps_graph = self.build_graph(GenConanfile("app", "0.1")
-                                                    .with_require(lib_ref),
-                                      profile_build_requires=profile_build_requires)
-
-        self.assertEqual(5, len(deps_graph.nodes))
-        app = deps_graph.root
-        lib = app.dependencies[0].dst
-        gtest = lib.dependencies[0].dst
-
-        mingw_lib = lib.dependencies[1].dst
-        mingw_app = app.dependencies[1].dst
-
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
-
-        self._check_node(lib, "lib/0.1@user/testing#123", deps=[], dependents=[app])
-        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], dependents=[lib])
-        # MinGW leaf nodes
-        self._check_node(mingw_lib, "mingw/0.1@user/testing#123", deps=[], dependents=[lib])
-        self._check_node(mingw_app, "mingw/0.1@user/testing#123", deps=[], dependents=[app])
-
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_not_conflict_transitive_build_requires(self):
-        # Same as above, but gtest->(build_require)->zlib2
-        zlib_ref = RecipeReference.loads("zlib/0.1@user/testing")
-        zlib_ref2 = RecipeReference.loads("zlib/0.2@user/testing")
-        gtest_ref = RecipeReference.loads("gtest/0.1@user/testing")
-        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
-
-        self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
-        self._cache_recipe(zlib_ref2, GenConanfile().with_name("zlib").with_version("0.2"))
-
-        self._cache_recipe(gtest_ref, GenConanfile().with_name("gtest").with_version("0.1")
-                                                    .with_tool_requires(zlib_ref2))
-        self._cache_recipe(lib_ref, GenConanfile().with_require(zlib_ref)
-                                                  .with_tool_requires(gtest_ref))
-
-        graph = self.build_graph(GenConanfile("app", "0.1")
-                                               .with_require(lib_ref))
-
-        self.assertEqual(5, len(graph.nodes))
-        app = graph.root
-        lib = app.dependencies[0].dst
-        zlib = lib.dependencies[0].dst
-        gtest = lib.dependencies[1].dst
-        zlib2 = gtest.dependencies[0].dst
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
-
-        self._check_node(lib, "lib/0.1@user/testing#123", deps=[zlib], dependents=[app])
-
-        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], dependents=[lib])
-
-    @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_private(self):
         # app -> lib -(br)-> cmake -(private)-> zlib
-        zlib_ref = RecipeReference.loads("zlib/0.1@user/testing")
-        cmake_ref = RecipeReference.loads("cmake/0.1@user/testing")
-        lib_ref = RecipeReference.loads("lib/0.1@user/testing")
-
-        self._cache_recipe(zlib_ref, GenConanfile().with_name("zlib").with_version("0.1"))
-        self._cache_recipe(cmake_ref, GenConanfile().with_require(zlib_ref, private=True))
-        self._cache_recipe(lib_ref, GenConanfile().with_tool_requires(cmake_ref))
-        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require(lib_ref))
+        self._cache_recipe("zlib/0.1", GenConanfile())
+        self._cache_recipe("cmake/0.1", GenConanfile().with_requirement("zlib/0.1", visible=False))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -213,13 +147,15 @@ class BuildRequiresGraphTest(GraphManagerTest):
         cmake = lib.dependencies[0].dst
         zlib = cmake.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(app, "app/0.1", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
+        self._check_node(cmake, "cmake/0.1#123", deps=[zlib], dependents=[lib])
+        self._check_node(zlib, "zlib/0.1#123", deps=[], dependents=[cmake])
 
-        self._check_node(lib, "lib/0.1@user/testing#123", deps=[], dependents=[app])
-
-        self._check_node(cmake, "cmake/0.1@user/testing#123", deps=[zlib], dependents=[lib])
-
-        self._check_node(zlib, "zlib/0.1@user/testing#123", deps=[], dependents=[cmake])
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, False)])
+        _check_transitive(lib, [(cmake, False, False, True, True)])
+        _check_transitive(cmake, [(zlib, True, True, False, False)])
 
 
 class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
@@ -267,7 +203,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.RUNTIME
+        assert type(deps_graph.error) == GraphRuntimeError
 
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
@@ -286,66 +222,28 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(mingw, "mingw/0.1#123", deps=[zlib2], dependents=[lib])
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
 
-    @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_conflict(self):
         # https://github.com/conan-io/conan/issues/4931
         # cheetah -> gazelle -> grass/0.1
         #    \--(br)----------> grass/0.2
-        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
-        grass02_ref = RecipeReference.loads("grass/0.2@user/testing")
-        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
 
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(grass02_ref, GenConanfile().with_name("grass").with_version("0.2"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
-                                                      .with_require(grass01_ref))
+        self._cache_recipe("grass/0.1", GenConanfile())
+        self._cache_recipe("grass/0.2", GenConanfile())
+        self._cache_recipe("gazelle/0.1", GenConanfile().with_require("grass/0.1"))
 
-        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
-                                           .with_require(gazelle_ref)
-                                           .with_tool_requires(grass02_ref))
+        deps_graph = self.build_graph(GenConanfile("cheetah", "0.1")
+                                      .with_require("gazelle/0.1")
+                                      .with_tool_requires("grass/0.2"))
 
         self.assertEqual(4, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
-
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
-
-        assert liba1.conflict == liba2
-        assert liba2.conflict == liba1
-
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_build_require_link_order(self):
-        # https://github.com/conan-io/conan/issues/4931
-        # cheetah -> gazelle -> grass
-        #    \--(br)------------/
-        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
-        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
-
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
-                                                      .with_require(grass01_ref))
-
-        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
-                                                    .with_require(gazelle_ref)
-                                                    .with_tool_requires(grass01_ref))
-
-        self.assertEqual(3, len(deps_graph.nodes))
         cheetah = deps_graph.root
         gazelle = cheetah.dependencies[0].dst
-        grass = gazelle.dependencies[0].dst
         grass2 = cheetah.dependencies[1].dst
-
-        self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], dependents=[])
-        self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
-                             ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+        grass1 = gazelle.dependencies[0].dst
+        self._check_node(cheetah, "cheetah/0.1", deps=[gazelle, grass2])
+        self._check_node(gazelle, "gazelle/0.1#123", deps=[grass1], dependents=[cheetah])
+        self._check_node(grass1, "grass/0.1#123", deps=[], dependents=[gazelle])
+        self._check_node(grass2, "grass/0.2#123", dependents=[cheetah])
 
 
 class TestTestRequire(GraphManagerTest):
@@ -365,8 +263,8 @@ class TestTestRequire(GraphManagerTest):
         self._check_node(app, "app/0.1@", deps=[gtest], dependents=[])
         self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[app])
 
-        # node, include, link, build, run
-        _check_transitive(app, [(gtest, True, True, False, False)])
+        # node, include, link, build, run, test
+        _check_transitive(app, [(gtest, True, True, False, False, True)])
 
     def test_lib_build_require(self):
         # app -> lib -(tr)-> gtest
@@ -452,6 +350,176 @@ class TestTestRequire(GraphManagerTest):
             _check_transitive(lib, [(gtest, True, True, False, False),
                                     (gtestlib, True, True, False, False)])
 
+    def test_trait_aggregated(self):
+        # app -> lib -(tr)-> gtest -> zlib
+        #         \-------------------/
+        # If zlib is in the host context, a dependency for host, better test=False trait
+        self._cache_recipe("zlib/0.1", GenConanfile())
+        self._cache_recipe("gtest/0.1", GenConanfile().with_requires("zlib/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_test_requires("gtest/0.1")
+                                                    .with_requires("zlib/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        gtest = lib.dependencies[1].dst
+        zlib = gtest.dependencies[0].dst
+        zlib2 = lib.dependencies[0].dst
+        assert zlib is zlib2
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[zlib, gtest], dependents=[app])
+        self._check_node(gtest, "gtest/0.1#123", deps=[zlib], dependents=[lib])
+        self._check_node(zlib, "zlib/0.1#123", deps=[], dependents=[gtest, lib])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, False),
+                                (zlib, True, True, False, False, False)])
+        _check_transitive(lib, [(gtest, True, True, False, False),
+                                (zlib, True, True, False, False, False)])
+
+
+class TestTestRequiresProblemsShared(GraphManagerTest):
+
+    def _check_graph(self, deps_graph, reverse):
+        self.assertEqual(3, len(deps_graph.nodes))
+        lib_c = deps_graph.root
+        if not reverse:
+            lib_a = lib_c.dependencies[0].dst
+            util = lib_a.dependencies[0].dst
+            util2 = lib_c.dependencies[1].dst
+        else:
+            util = lib_c.dependencies[0].dst
+            lib_a = lib_c.dependencies[1].dst
+            util2 = lib_a.dependencies[0].dst
+        assert util is util2
+
+        self._check_node(lib_c, "lib_c/0.1@", deps=[lib_a, util], dependents=[])
+        self._check_node(lib_a, "lib_a/0.1#123", deps=[util], dependents=[lib_c])
+        self._check_node(util, "util/0.1#123", deps=[], dependents=[lib_a, lib_c])
+
+        # node, include, link, build, run
+        _check_transitive(lib_c, [(lib_a, True, True, False, True),
+                                  (util, True, True, False, True)])
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions(self, reverse):
+        #  lib_c -(tr)-> lib_a -0.1--> util
+        #    \--------(tr)----0.1------/
+        # if versions exactly match, it shouldn't be an issue
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        deps = ("lib_a/0.1", "util/0.1") if not reverse else ("util/0.1", "lib_a/0.1")
+        deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps))
+        self._check_graph(deps_graph, reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions_conflict(self, reverse):
+        #  lib_c -(tr)-> lib_a -0.1--> util
+        #    \--------(tr)----0.2------/
+        # This should be a a conflict of versions
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/0.2", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        deps = ("lib_a/0.1", "util/0.2") if not reverse else ("util/0.2", "lib_a/0.1")
+        conanfile = GenConanfile("lib_c", "0.1").with_test_requires(*deps)
+        deps_graph = self.build_graph(conanfile, install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions_hybrid(self, reverse):
+        #  lib_c -----> lib_a--0.1--> util
+        #    \--------(tr)----0.1------/
+        # mixing requires + test_requires, should work
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/0.2", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/0.1").with_test_requires("util/0.1")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/0.1").with_requires("util/0.1")
+        deps_graph = self.build_graph(conanfile)
+        self._check_graph(deps_graph, reverse=reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_fixed_versions_hybrid_conflict(self, reverse):
+        #  lib_c -----> lib_a--0.1---> util
+        #    \--------(tr)----0.2------/
+        # Same as above, but mixing regular requires with test_requires
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/0.2", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/0.1")
+                                                      .with_package_type("shared-library"))
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/0.1").with_test_requires("util/0.2")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/0.1").with_requires("util/0.2")
+        deps_graph = self.build_graph(conanfile, install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges(self, reverse):
+        #  lib_c -(tr)-> lib_a -> util
+        #    \--------(tr)-------/
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                                                      .with_package_type("shared-library"))
+
+        deps = ("lib_a/[>=0]", "util/[>=0]") if not reverse else ("util/[>=0]", "lib_a/[>=0]")
+        deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps))
+        self._check_graph(deps_graph, reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges_conflict(self, reverse):
+        #  lib_c -(tr)-> lib_a -> util/0.1
+        #    \--------(tr)------> util/1.0
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/1.0", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                                                      .with_package_type("shared-library"))
+        deps = ("lib_a/[>=0]", "util/[>=1]") if not reverse else ("util/[>=1]", "lib_a/[>=0]")
+        deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps),
+                                      install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges_hybrid(self, reverse):
+        #  lib_c ---> lib_a -> util
+        #    \--------(tr)-------/
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                           .with_package_type("shared-library"))
+
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/[>=0.1]").with_test_requires("util/[>=0.1]")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/[>=0.1]").with_requires("util/[>=0.1]")
+        deps_graph = self.build_graph(conanfile)
+        self._check_graph(deps_graph, reverse)
+
+    @parameterized.expand([(True,), (False,)])
+    def test_version_ranges_hybrid_conflict(self, reverse):
+        #  lib_c -(tr)-> lib_a -> util/0.1
+        #    \--------(tr)------> util/1.0
+        self._cache_recipe("util/0.1", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("util/1.0", GenConanfile().with_package_type("shared-library"))
+        self._cache_recipe("lib_a/0.1", GenConanfile().with_requires("util/[>=0.1 <1]")
+                           .with_package_type("shared-library"))
+        conanfile = GenConanfile("lib_c", "0.1")
+        if not reverse:
+            conanfile = conanfile.with_requires("lib_a/[>=0.1]").with_test_requires("util/[>=1]")
+        else:
+            conanfile = conanfile.with_test_requires("lib_a/[>=0.1]").with_requires("util/[>=1]")
+        deps_graph = self.build_graph(conanfile, install=False)
+        assert type(deps_graph.error) == GraphConflictError
+
 
 class BuildRequiresPackageIDTest(GraphManagerTest):
 
@@ -488,7 +556,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
-        assert lib.package_id == "7758859d93870e39affdbe5cd5f3dff28c9bc2a7"
+        assert lib.package_id == "6b92478cba14dbdc06d4e991430d3c1c04959d4a"
         assert lib.package_id != NO_SETTINGS_PACKAGE_ID
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
@@ -500,7 +568,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         lib = app.dependencies[0].dst
-        assert lib.package_id == "be05cd51bae13fdd52ffeedb4efa6ae9d75c48f4"
+        assert lib.package_id == "2813db72897dd13aca2af071efe8ecb116f679ed"
         assert lib.package_id != NO_SETTINGS_PACKAGE_ID
 
 
@@ -543,7 +611,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
                                                                                "libc/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+        assert type(deps_graph.error) == GraphConflictError
 
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
@@ -556,6 +624,68 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[app])
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
 
+    def test_tool_requires(self):
+        # app -> libb -(br public)-> protobuf/0.1
+        #           \--------------> protobuf/0.2
+        self.recipe_conanfile("protobuf/0.1", GenConanfile())
+        self.recipe_conanfile("protobuf/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("protobuf/0.1", visible=True)
+                              .with_require("protobuf/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1"))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        protobuf_host = libb.dependencies[0].dst
+        protobuf_build = libb.dependencies[1].dst
+
+        self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
+        self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
+                         dependents=[app])
+        self._check_node(protobuf_host, "protobuf/0.2#123", deps=[], dependents=[libb])
+        self._check_node(protobuf_build, "protobuf/0.1#123", deps=[], dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
+                                (protobuf_build, False, False, True, False)])
+
+    def test_tool_requires_override(self):
+        # app -> libb -(br public)-> protobuf/0.1
+        #           \--------------> protobuf/0.2
+        #  \---(br, override)------> protobuf/0.2
+        self.recipe_conanfile("protobuf/0.1", GenConanfile())
+        self.recipe_conanfile("protobuf/0.2", GenConanfile())
+        self.recipe_conanfile("libb/0.1",
+                              GenConanfile().with_tool_requirement("protobuf/0.1", visible=True)
+                              .with_require("protobuf/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1")
+                                      .with_tool_requirement("protobuf/0.2", override=True))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        protobuf_host = libb.dependencies[0].dst
+        protobuf_build = libb.dependencies[1].dst
+
+        self._check_node(app, "app/0.1@", deps=[libb], dependents=[])
+        self._check_node(libb, "libb/0.1#123", deps=[protobuf_host, protobuf_build],
+                         dependents=[app])
+        self._check_node(protobuf_host, "protobuf/0.2#123", deps=[], dependents=[libb])
+        self._check_node(protobuf_build, "protobuf/0.2#123", deps=[], dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (protobuf_host, True, True, False, False),
+                                (protobuf_build, False, False, True, False)])
+        _check_transitive(libb, [(protobuf_host, True, True, False, False),
+                                 (protobuf_build, False, False, True, True)])
+
     def test_test_require(self):
         # app -(tr)-> gtest/0.1
         # This test should survive in 2.0
@@ -563,7 +693,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self._cache_recipe(tool_ref, GenConanfile("gtest", "0.1"))
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class Pkg(ConanFile):
                 name = "app"
                 version = "0.1"
@@ -590,7 +720,7 @@ class TestLoops(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_build_requires("cmake/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.LOOP
+        assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))
@@ -609,7 +739,7 @@ class TestLoops(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile().with_build_requires("cmake/0.1"),
                                       install=False)
 
-        assert deps_graph.error.kind == GraphError.LOOP
+        assert type(deps_graph.error) == GraphLoopError
 
         # Build requires always apply to the consumer
         self.assertEqual(4, len(deps_graph.nodes))
@@ -629,13 +759,13 @@ def test_tool_requires():
 
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
-    client.run("create . tool1/1.0@")
-    client.run("create . tool2/1.0@")
-    client.run("create . tool3/1.0@")
-    client.run("create . tool4/1.0@")
+    client.run("create . --name=tool1 --version=1.0")
+    client.run("create . --name=tool2 --version=1.0")
+    client.run("create . --name=tool3 --version=1.0")
+    client.run("create . --name=tool4 --version=1.0")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         class Pkg(ConanFile):
             tool_requires = "tool2/1.0"
             build_requires = "tool3/1.0"
@@ -648,9 +778,101 @@ def test_tool_requires():
                 assert len(self.dependencies.build.values()) == 4
     """)
     client.save({"conanfile.py": consumer})
-    client.run("create . consumer/1.0@")
-    assert """Build requirements
-    tool1/1.0 from local cache - Cache
-    tool2/1.0 from local cache - Cache
-    tool3/1.0 from local cache - Cache
-    tool4/1.0 from local cache - Cache""" in client.out
+    client.run("create . --name=consumer --version=1.0")
+    client.assert_listed_require({"tool1/1.0": "Cache",
+                                  "tool2/1.0": "Cache",
+                                  "tool3/1.0": "Cache",
+                                  "tool4/1.0": "Cache"}, build=True)
+
+
+class TestDuplicateBuildRequires:
+    """ what happens when you require and tool_require the same dependency
+    """
+    # https://github.com/conan-io/conan/issues/11179
+
+    @pytest.fixture()
+    def client(self):
+        client = TestClient()
+        msg = "self.output.info('This is the binary for OS={}'.format(self.info.settings.os))"
+        msg2 = "self.output.info('This is in context={}'.format(self.context))"
+        client.save({"conanfile.py": GenConanfile().with_settings("os").with_package_id(msg)
+                                                                       .with_package_id(msg2)})
+        client.run("create . --name=tool1 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool2 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool3 --version=1.0 -s os=Windows")
+        client.run("create . --name=tool4 --version=1.0 -s os=Windows")
+
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                tool_requires = "tool2/1.0"
+                build_requires = "tool3/1.0"
+                def requirements(self):
+                    self.requires("tool4/1.0")
+                def build_requirements(self):
+                    self.build_requires("tool4/1.0")
+                    self.tool_requires("tool1/1.0")
+                def generate(self):
+                    host_deps = sorted([d.ref for d, _ in self.dependencies.host.items()])
+                    build_deps = sorted([d.ref for d, _ in self.dependencies.build.items()])
+                    self.output.info("HOST DEPS: {}".format(host_deps))
+                    self.output.info("BUILD DEPS: {}".format(build_deps))
+                    assert len(host_deps) == 1, host_deps
+                    assert len(build_deps) == 4, build_deps
+            """)
+        client.save({"conanfile.py": consumer})
+        return client
+
+    def test_tool_requires_in_test_package(self, client):
+        """Test that tool requires can be listed as build and host requirements"""
+        test = textwrap.dedent("""\
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.tool_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+        """)
+
+        client.save({"test_package/conanfile.py": test})
+        client.run("create . -s:b os=Windows -s:h os=Linux  --build-require")
+        assert "This is the binary for OS=Linux" not in client.out
+        assert "This is in context=host" not in client.out
+        client.assert_listed_require({"consumer/1.0": "Cache"}, build=True)
+        for tool in "tool1", "tool2", "tool3", "tool4":
+            client.assert_listed_require({f"{tool}/1.0": "Cache"}, build=True)
+            assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
+            assert f"{tool}/1.0: This is in context=build" in client.out
+
+        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
+        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
+
+    def test_test_requires_in_test_package(self, client):
+        """Test that tool requires can be listed as build and host requirements"""
+        test = textwrap.dedent("""\
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.test_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+        """)
+
+        client.save({"test_package/conanfile.py": test})
+        client.run("create . -s:b os=Windows -s:h os=Linux --build=missing")
+        for tool in "tool1", "tool2", "tool3", "tool4":
+            client.assert_listed_require({f"{tool}/1.0": "Cache"}, build=True)
+            assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
+            assert f"{tool}/1.0: This is in context=build" in client.out
+        client.assert_listed_require({"consumer/1.0": "Cache",
+                                      "tool4/1.0": "Cache"})
+        client.assert_listed_binary({"tool4/1.0": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270",
+                                                   "Build")})
+
+        assert "tool4/1.0: This is the binary for OS=Linux" in client.out
+        assert "tool4/1.0: This is in context=host" in client.out
+
+        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
+        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out

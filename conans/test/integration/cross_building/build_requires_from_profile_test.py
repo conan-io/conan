@@ -1,8 +1,6 @@
 import unittest
 import textwrap
 
-import pytest
-
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
@@ -11,8 +9,9 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         [settings]
         os=Windows
         arch=x86_64
-        compiler=Visual Studio
-        compiler.version=16
+         compiler=msvc
+        compiler.version=192
+        compiler.runtime=dynamic
 
         [tool_requires]
         br2/version
@@ -32,7 +31,7 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
     """)
 
     library_conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "library"
@@ -52,12 +51,13 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
         t.run("export br1.py --name=br1 --version=version")
         t.run("export br2.py --name=br2 --version=version")
         t.run("export br3.py --name=br3 --version=version")
-        t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
+        t.run("create library.py --profile:host=profile_host --profile:build=profile_build "
+              "--build='*'")
 
 
 class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
     toolchain = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "mytoolchain"
@@ -68,7 +68,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     gtest = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -82,7 +82,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     library_conanfile = textwrap.dedent("""
-         from conans import ConanFile
+         from conan import ConanFile
          import os
 
          class Recipe(ConanFile):
@@ -107,7 +107,6 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
         os = Windows
         """)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_br_from_profile_host_and_profile_build(self):
         t = TestClient()
         t.save({'profile_host': self.profile_host,
@@ -115,30 +114,23 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
                 'library.py': self.library_conanfile,
                 'mytoolchain.py': self.toolchain,
                 "gtest.py": self.gtest})
-        t.run("create mytoolchain.py --profile=profile_build")
-        t.run("create mytoolchain.py --profile=profile_host")
+        t.run("create mytoolchain.py -pr:h=profile_host -pr:b=profile_build --build-require")
 
-        # old way, the toolchain will have the same profile (profile_host=Linux) only
-        t.run("create gtest.py --profile:host=profile_host --profile:build=profile_host")
-        self.assertIn("mytoolchain/1.0: PackageInfo OS=Linux", t.out)
-        self.assertIn("gtest/1.0: Build OS=Linux", t.out)
-
-        # new way, the toolchain can now run in Windows, but gtest in Linux
-        t.run("create gtest.py --profile=profile_host --profile:build=profile_build")
+        t.run("create gtest.py -pr=profile_host -pr:b=profile_build")
         self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
 
-        t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build")
+        t.run("create gtest.py -pr=profile_host -pr:b=profile_build --build=*")
         self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
 
-        t.run("create library.py --profile:host=profile_host --profile:build=profile_build")
+        t.run("create library.py -pr:h=profile_host -pr:b=profile_build")
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
         self.assertIn("library/version: Build OS=Linux", t.out)
         self.assertIn("mytoolchain/1.0: PackageInfo OS=Windows", t.out)
 
-        t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
+        t.run("create library.py -pr:h=profile_host -pr:b=profile_build --build=*")
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
         self.assertIn("library/version: Build OS=Linux", t.out)
@@ -147,7 +139,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
 
 class BuildRequiresBothContextsTest(unittest.TestCase):
     toolchain_creator = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
 
         class Recipe(ConanFile):
             name = "creator"
@@ -158,7 +150,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     toolchain = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -172,7 +164,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     gtest = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         import os
 
         class Recipe(ConanFile):
@@ -186,7 +178,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 self.output.info("PackageInfo OS=%s" % self.settings.os)
         """)
     library_conanfile = textwrap.dedent("""
-         from conans import ConanFile
+         from conan import ConanFile
          import os
 
          class Recipe(ConanFile):
@@ -210,10 +202,9 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
         [settings]
         os = Windows
         [tool_requires]
-        creator/1.0
+        mytoolchain*:creator/1.0
         """)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_build_requires_both_contexts(self):
         t = TestClient()
         t.save({'profile_host': self.profile_host,
@@ -222,8 +213,8 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 'creator.py': self.toolchain_creator,
                 'mytoolchain.py': self.toolchain,
                 "gtest.py": self.gtest})
-        t.run("create creator.py --profile=profile_build -pr:b=profile_build")
-        t.run("create mytoolchain.py --profile:host=profile_build -pr:b=profile_build")
+        t.run("create creator.py -pr=profile_build")
+        t.run("create mytoolchain.py -pr:h=profile_host -pr:b=profile_build --build-require")
         self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
 
@@ -232,14 +223,14 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
         self.assertNotIn("creator/1.0: PackageInfo", t.out)  # Creator is skipped now, not needed
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
 
-        t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build")
+        t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build=*")
         self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
 
         # Declaring the build_requires in the recipe works, it is just the profile that is
         # not transitive
         toolchain = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             import os
 
             class Recipe(ConanFile):
@@ -258,12 +249,12 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
         self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
 
-        t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build")
+        t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build=*")
         self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)
 
-        t.run("create library.py --profile:host=profile_host --profile:build=profile_build --build")
+        t.run("create library.py -pr:h=profile_host --profile:build=profile_build --build=*")
         self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)

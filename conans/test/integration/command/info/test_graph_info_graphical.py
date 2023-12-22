@@ -1,3 +1,4 @@
+import os
 import textwrap
 import unittest
 from datetime import datetime
@@ -10,7 +11,7 @@ class InfoTest(unittest.TestCase):
 
     def _create(self, name, version, deps=None, export=True):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
             class pkg(ConanFile):
                 name = "{name}"
                 version = "{version}"
@@ -109,8 +110,8 @@ class InfoTest(unittest.TestCase):
     def test_info_build_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . tool/0.1@user/channel")
-        client.run("create . dep/0.1@user/channel")
+        client.run("create . --name=tool --version=0.1 --user=user --channel=channel")
+        client.run("create . --name=dep --version=0.1 --user=user --channel=channel")
         conanfile = GenConanfile().with_require("dep/0.1@user/channel")
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=0.1 --user=user --channel=channel")
@@ -134,7 +135,7 @@ class InfoTest(unittest.TestCase):
 
     def test_topics_graph(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile
+            from conan import ConanFile
 
             class MyTest(ConanFile):
                 name = "pkg"
@@ -147,7 +148,7 @@ class InfoTest(unittest.TestCase):
         client.run("export . --user=lasote --channel=testing")
 
         # Topics as tuple
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html")
+        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
         html_content = client.stdout
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo, bar, qux</li>", html_content)
@@ -156,7 +157,72 @@ class InfoTest(unittest.TestCase):
         conanfile = conanfile.replace("(\"foo\", \"bar\", \"qux\")", "\"foo\"")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . --user=lasote --channel=testing")
-        client.run("graph info --reference=pkg/0.2@lasote/testing --format=html")
+        client.run("graph info --requires=pkg/0.2@lasote/testing --format=html")
         html_content = client.stdout
         self.assertIn("<h3>pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
+
+
+def test_user_templates():
+    """ Test that a user can override the builtin templates putting templates/graph.html and
+    templates/graph.dot in the home
+    """
+    c = TestClient()
+    c.save({'lib.py': GenConanfile("lib", "0.1")})
+    c.run("create lib.py")
+    template_folder = os.path.join(c.cache_folder, 'templates')
+    c.save({"graph.html": '{{ base_template_path }}',
+            "graph.dot": '{{ base_template_path }}'}, path=template_folder)
+    c.run("graph info --requires=lib/0.1 --format=html")
+    assert template_folder in c.stdout
+    c.run("graph info --requires=lib/0.1 --format=dot")
+    assert template_folder in c.stdout
+
+
+def test_graph_info_html_error_reporting_output():
+    tc = TestClient()
+    tc.save({"lib/conanfile.py": GenConanfile("lib"),
+             "ui/conanfile.py": GenConanfile("ui", "1.0").with_requirement("lib/1.0"),
+             "math/conanfile.py": GenConanfile("math", "1.0").with_requirement("lib/2.0"),
+             "libiconv/conanfile.py": GenConanfile("libiconv", "1.0").with_requirement("lib/2.0"),
+             "boost/conanfile.py": GenConanfile("boost", "1.0").with_requirement("libiconv/1.0"),
+             "openimageio/conanfile.py": GenConanfile("openimageio", "1.0").with_requirement("boost/1.0").with_requirement("lib/1.0")})
+    tc.run("export lib/ --version=1.0")
+    tc.run("export lib/ --version=2.0")
+    tc.run("export ui")
+    tc.run("export math")
+    tc.run("export libiconv")
+    tc.run("export boost")
+    tc.run("export openimageio")
+
+    tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True)
+    assert "// Add error conflict node" in tc.out
+    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
+    assert "// Add edge from base node to the new error node" not in tc.out
+    assert "// Add edge from previous node that already had conflicting dependency" in tc.out
+
+    # Ensure mapping is preserved, ui is node id 3 before ordering, but 2 after
+    assert "id: 2,\n                        label: 'ui/1.0'" in tc.out
+
+    tc.run("graph info openimageio/ --format=html", assert_error=True)
+    assert "// Add error conflict node" in tc.out
+    assert "// Add edge from node that introduces the conflict to the new error node" in tc.out
+    assert "// Add edge from base node to the new error node" in tc.out
+    assert "// Add edge from previous node that already had conflicting dependency" not in tc.out
+    # There used to be a few bugs with weird graphs, check for regressions
+    assert "jinja2.exceptions.UndefinedError" not in tc.out
+    assert "from: ," not in tc.out
+
+
+def test_graph_info_html_error_range_quoting():
+    tc = TestClient()
+    tc.save({"zlib/conanfile.py": GenConanfile("zlib"),
+             "libpng/conanfile.py": GenConanfile("libpng", "1.0").with_requirement("zlib/[>=1.0]")})
+
+    tc.run("export zlib --version=1.0")
+    tc.run("export zlib --version=0.1")
+    tc.run("export libpng")
+
+    tc.run("graph info --requires=zlib/0.1 --requires=libpng/1.0 --format=html", assert_error=True)
+    assert 'zlib/[&gt;=1.0]' not in tc.out
+    assert r'"zlib/[\u003e=1.0]"' in tc.out

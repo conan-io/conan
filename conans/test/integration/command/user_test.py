@@ -1,9 +1,12 @@
 import json
 import textwrap
+import time
 import unittest
 from collections import OrderedDict
+from datetime import timedelta
 
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.env import environment_update
 
 
 class UserTest(unittest.TestCase):
@@ -18,7 +21,7 @@ class UserTest(unittest.TestCase):
 
         with self.assertRaises(Exception):
             client.run("remote login wrong_remote foo -p bar")
-        self.assertIn("ERROR: Remote 'wrong_remote' not found in remotes", client.out)
+        self.assertIn("ERROR: Remote 'wrong_remote' can't be found or is disabled", client.out)
 
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
@@ -31,7 +34,7 @@ class UserTest(unittest.TestCase):
         # Test with wrong remote right error is reported
         with self.assertRaises(Exception):
             client.run("remote login Test_Wrong_Remote foo")
-        self.assertIn("ERROR: Remote 'Test_Wrong_Remote' not found in remotes", client.out)
+        self.assertIn("ERROR: Remote 'Test_Wrong_Remote' can't be found or is disabled", client.out)
 
         # Test user list for all remotes is reported
         client.run("remote list-users")
@@ -110,7 +113,7 @@ class UserTest(unittest.TestCase):
         servers = {"default": test_server}
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
         base = '''
-from conans import ConanFile
+from conan import ConanFile
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -119,7 +122,7 @@ class ConanLib(ConanFile):
         files = {"conanfile.py": base}
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
-        client.run("upload lib/0.1@lasote/stable -r default")
+        client.run("upload lib/0.1@lasote/stable -r default --only-recipe")
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out
         client.run("remote logout default")
@@ -128,7 +131,7 @@ class ConanLib(ConanFile):
         client.run("remote list-users")
         assert 'default:\n  No user' in client.out
         # --force will force re-authentication, otherwise not necessary to auth
-        client.run("upload lib/0.1@lasote/stable -r default --force")
+        client.run("upload lib/0.1@lasote/stable -r default --force --only-recipe")
         client.run("remote list-users")
         assert 'default:\n  Username: admin\n  authenticated: True' in client.out
 
@@ -337,3 +340,97 @@ def test_user_removed_remote_removed():
     c.run("remote remove default")
     login = c.cache.localdb.get_login(server_url)
     assert login == (None, None, None)
+
+
+class TestRemoteAuth:
+    def test_remote_auth(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
+        servers["other_server"] = TestServer(users={"lasote": "mypass"})
+        c = TestClient(servers=servers, inputs=["lasote", "mypass", "danimtb", "passpass",
+                                                "lasote", "mypass"])
+        c.run("remote auth *")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: lasote""")
+        assert text in c.out
+
+        c.run("remote auth * --format=json")
+        result = json.loads(c.stdout)
+        assert result == {'default': {'user': 'lasote'}, 'other_server': {'user': 'lasote'}}
+
+    def test_remote_auth_with_user(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass"})
+        servers["other_server"] = TestServer()
+        c = TestClient(servers=servers, inputs=["lasote", "mypass"])
+        c.run("remote set-user default lasote")
+        c.run("remote auth * --with-user")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: None""")
+        assert text in c.out
+
+    def test_remote_auth_with_user_env_var(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"lasote": "mypass"})
+        servers["other_server"] = TestServer()
+        c = TestClient(servers=servers)
+        with environment_update({"CONAN_LOGIN_USERNAME_DEFAULT": "lasote",
+                                 "CONAN_PASSWORD_DEFAULT": "mypass"}):
+            c.run("remote auth * --with-user")
+        text = textwrap.dedent("""\
+            default:
+                user: lasote
+            other_server:
+                user: None""")
+        assert text in c.out
+
+    def test_remote_auth_error(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"user": "password"})
+        c = TestClient(servers=servers, inputs=["user1", "pass", "user2", "pass", "user3", "pass"])
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_remote_auth_server_expire_token_secret(self):
+        server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password",
+                                                            "myotheruser", "otherpass",
+                                                            "user", "pass", "user", "pass",
+                                                            "user", "pass"])
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # Invalidate server secret
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato"
+        c.run("remote auth *")
+        assert "user: myotheruser" in c.out
+        # Invalidate server secret again
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato2"
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_remote_auth_server_expire_token(self):
+        server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
+        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=1)
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password",
+                                                            "myotheruser", "otherpass",
+                                                            "user", "pass", "user", "pass",
+                                                            "user", "pass"])
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # token not expired yet, should work
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # Token should expire
+        time.sleep(2)
+        c.run("remote auth *")
+        assert "user: myotheruser" in c.out
+        # Token should expire
+        time.sleep(2)
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out

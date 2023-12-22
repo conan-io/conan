@@ -1,8 +1,7 @@
 import os
 
 from conan.tools.build import build_jobs
-from conans import tools
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def _configuration_dict_to_commandlist(name, config_dict):

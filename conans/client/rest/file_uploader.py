@@ -1,8 +1,7 @@
-import os
 import time
 from copy import copy
 
-from conans.cli.output import ConanOutput
+from conan.api.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
@@ -47,11 +46,16 @@ class FileUploader(object):
         if response.status_code == 201:  # Artifactory returns 201 if the file is there
             return response
 
+    def exists(self, url, auth):
+        response = self._requester.head(url, verify=self._verify_ssl, auth=auth)
+        return bool(response.ok)
+
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None, display_name=None):
-        retry = retry if retry is not None else self._config.get("core.upload:retry", int, 1)
+               headers=None):
+        retry = retry if retry is not None else self._config.get("core.upload:retry", default=1,
+                                                                 check_type=int)
         retry_wait = retry_wait if retry_wait is not None else \
-            self._config.get("core.upload:retry_wait", int, 5)
+            self._config.get("core.upload:retry_wait", default=5, check_type=int)
 
         # Send always the header with the Sha1
         headers = copy(headers) or {}
@@ -63,7 +67,7 @@ class FileUploader(object):
 
         for counter in range(retry + 1):
             try:
-                return self._upload_file(url, abs_path, headers, auth, display_name)
+                return self._upload_file(url, abs_path, headers, auth)
             except (NotFoundException, ForbiddenException, AuthenticationException,
                     RequestErrorException):
                 raise
@@ -72,18 +76,11 @@ class FileUploader(object):
                     raise
                 else:
                     if self._output:
-                        self._output.error(exc)
+                        self._output.warning(exc, warn_tag="network")
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
-    def _upload_file(self, url, abs_path,  headers, auth, display_name):
-        file_size = os.stat(abs_path).st_size
-        file_name = os.path.basename(abs_path)
-        description = "Uploading {}".format(file_name)
-        post_description = "Uploaded {}".format(
-            file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
-
-        self._output.info(description)
+    def _upload_file(self, url, abs_path,  headers, auth):
         with open(abs_path, mode='rb') as file_handler:
             try:
                 response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,

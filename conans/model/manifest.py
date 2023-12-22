@@ -1,4 +1,5 @@
 import os
+from collections import defaultdict
 
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import timestamp_now, timestamp_to_str
@@ -23,15 +24,14 @@ class FileTreeManifest(object):
 
     @staticmethod
     def loads(text):
-        """ parses a string representation, generated with __repr__ of a
-        ConanDigest
+        """ parses a string representation, generated with __repr__
         """
         tokens = text.split("\n")
         the_time = int(tokens[0])
         file_sums = {}
         for md5line in tokens[1:]:
             if md5line:
-                filename, file_md5 = md5line.split(": ")
+                filename, file_md5 = md5line.rsplit(": ", 1)
                 file_sums[filename] = file_md5
         return FileTreeManifest(the_time, file_sums)
 
@@ -63,6 +63,26 @@ class FileTreeManifest(object):
     def save(self, folder, filename=CONAN_MANIFEST):
         path = os.path.join(folder, filename)
         save(path, repr(self))
+
+    def report_summary(self, output, suffix="Copied"):
+        ext_files = defaultdict(list)
+        for f in self.file_sums:
+            if f == "conaninfo.txt":
+                continue
+            _, ext = os.path.splitext(f)
+            ext_files[ext].append(os.path.basename(f))
+        if not ext_files:
+            if suffix != "Copied":
+                output.warning("No files in this package!")
+            return
+
+        for ext, files in ext_files.items():
+            files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
+            file_or_files = "file" if len(files) == 1 else "files"
+            if not ext:
+                output.info("%s %d %s%s" % (suffix, len(files), file_or_files, files_str))
+            else:
+                output.info("%s %d '%s' %s%s" % (suffix, len(files), ext, file_or_files, files_str))
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):

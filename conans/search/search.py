@@ -4,23 +4,23 @@ from collections import OrderedDict
 from fnmatch import translate
 from typing import Dict
 
-from conans.cli.api.model import PackageConfiguration
 from conans.errors import ConanException
-from conans.model.info import ConanInfo
+from conans.model.info import load_binary_info
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
-from conans.util.log import logger
 
 
-def filter_packages(query, results: Dict[PkgReference, PackageConfiguration]):
+def filter_packages(query, results: Dict[PkgReference, dict]):
     if query is None:
         return results
     try:
         if "!" in query:
             raise ConanException("'!' character is not allowed")
+        if "~" in query:
+            raise ConanException("'~' character is not allowed")
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
@@ -33,7 +33,7 @@ def filter_packages(query, results: Dict[PkgReference, PackageConfiguration]):
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
 
-def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageConfiguration):
+def _evaluate_postfix_with_info(postfix, binary_info):
 
     # Evaluate conaninfo with the expression
 
@@ -42,12 +42,12 @@ def _evaluate_postfix_with_info(postfix, conan_vars_info: PackageConfiguration):
         Uses conan_vars_info in the closure to evaluate it"""
         name, value = expression.split("=", 1)
         value = value.replace("\"", "")
-        return _evaluate(name, value, conan_vars_info)
+        return _evaluate(name, value, binary_info)
 
     return evaluate_postfix(postfix, evaluate_info)
 
 
-def _evaluate(prop_name, prop_value, conan_vars_info: PackageConfiguration):
+def _evaluate(prop_name, prop_value, binary_info):
     """
     Evaluates a single prop_name, prop_value like "os", "Windows" against
     conan_vars_info.serialize_min()
@@ -56,17 +56,15 @@ def _evaluate(prop_name, prop_value, conan_vars_info: PackageConfiguration):
     def compatible_prop(setting_value, _prop_value):
         return (_prop_value == setting_value) or (_prop_value == "None" and setting_value is None)
 
-    info_settings = conan_vars_info.settings
-    info_options = conan_vars_info.options
-    properties = ["os", "compiler", "arch", "build_type"]
+    # TODO: Necessary to generalize this query evaluation to include all possible fields
+    info_settings = binary_info.get("settings", {})
+    info_options = binary_info.get("options", {})
 
-    def starts_with_common_settings(_prop_name):
-        return any(_prop_name.startswith(setting + '.') for setting in properties)
-
-    if prop_name in properties or starts_with_common_settings(prop_name):
-        return compatible_prop(info_settings.get(prop_name, None), prop_value)
+    if not prop_name.startswith("options."):
+        return compatible_prop(info_settings.get(prop_name), prop_value)
     else:
-        return compatible_prop(info_options.get(prop_name, None), prop_value)
+        prop_name = prop_name[len("options."):]
+        return compatible_prop(info_options.get(prop_name), prop_value)
 
 
 def search_recipes(cache, pattern=None, ignorecase=True):
@@ -78,7 +76,6 @@ def search_recipes(cache, pattern=None, ignorecase=True):
         pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
     refs = cache.all_refs()
-    refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
         _refs = []
         for r in refs:
@@ -104,7 +101,7 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageConfiguration]:
+def get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     """
     param package_layout: Layout for the given reference
     """
@@ -120,12 +117,14 @@ def get_packages_search_info(cache, prefs) -> Dict[PkgReference, PackageConfigur
         # Read conaninfo
         info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
-            logger.error("There is no ConanInfo: %s" % str(info_path))
-            continue
+            raise ConanException(f"Corrupted package '{pkg_layout.reference}' "
+                                 f"without conaninfo.txt in: {info_path}")
         conan_info_content = load(info_path)
 
-        info = ConanInfo.loads(conan_info_content)
-        conan_vars_info = info.serialize_min()
-        result[pkg_layout.reference] = conan_vars_info
+        info = load_binary_info(conan_info_content)
+        pref = pkg_layout.reference
+        # The key shoudln't have the latest package revision, we are asking for package configs
+        pref.revision = None
+        result[pkg_layout.reference] = info
 
     return result

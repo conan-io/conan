@@ -3,35 +3,15 @@ import gzip
 import hashlib
 import os
 import platform
-import re
 import shutil
 import stat
-import sys
 import tarfile
-import tempfile
+import time
 
-
-from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
-from conans.util.log import logger
 
-
-def walk(top, **kwargs):
-    return os.walk(top, **kwargs)
-
-
-def make_read_only(folder_path):
-    for root, _, files in walk(folder_path):
-        for f in files:
-            full_path = os.path.join(root, f)
-            make_file_read_only(full_path)
-
-
-def make_file_read_only(file_path):
-    mode = os.stat(file_path).st_mode
-    os.chmod(file_path, mode & ~ stat.S_IWRITE)
-
+from conans.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
 
@@ -52,39 +32,25 @@ def is_dirty(folder):
     return os.path.exists(dirty_file)
 
 
+def remove_if_dirty(item):
+    # TODO: Apply to other places this pattern is common
+    if is_dirty(item):
+        if os.path.exists(item):
+            # To avoid circular import in conan_server
+            from conan.api.output import ConanOutput
+            ConanOutput().warning(f"{item} is dirty, removing it")
+            if os.path.isfile(item):
+                os.remove(item)
+            else:
+                rmdir(item)
+        clean_dirty(item)
+
+
 @contextmanager
 def set_dirty_context_manager(folder):
     set_dirty(folder)
     yield
     clean_dirty(folder)
-
-
-def _detect_encoding(text):
-    import codecs
-    encodings = {codecs.BOM_UTF8: "utf_8_sig",
-                 codecs.BOM_UTF16_BE: "utf_16_be",
-                 codecs.BOM_UTF16_LE: "utf_16_le",
-                 codecs.BOM_UTF32_BE: "utf_32_be",
-                 codecs.BOM_UTF32_LE: "utf_32_le",
-                 b'\x2b\x2f\x76\x38': "utf_7",
-                 b'\x2b\x2f\x76\x39': "utf_7",
-                 b'\x2b\x2f\x76\x2b': "utf_7",
-                 b'\x2b\x2f\x76\x2f': "utf_7",
-                 b'\x2b\x2f\x76\x38\x2d': "utf_7"}
-    for bom in sorted(encodings, key=len, reverse=True):
-        if text.startswith(bom):
-            try:
-                return encodings[bom], len(bom)
-            except UnicodeDecodeError:
-                continue
-    decoders = ["utf-8", "Windows-1252"]
-    for decoder in decoders:
-        try:
-            text.decode(decoder)
-            return decoder, 0
-        except UnicodeDecodeError:
-            continue
-    return None, 0
 
 
 @contextmanager
@@ -95,36 +61,6 @@ def chdir(newdir):
         yield
     finally:
         os.chdir(old_path)
-
-
-def decode_text(text, encoding="auto"):
-    bom_length = 0
-    if encoding == "auto":
-        encoding, bom_length = _detect_encoding(text)
-        if encoding is None:
-            logger.warning("can't decode %s" % str(text))
-            return text.decode("utf-8", "ignore")  # Ignore not compatible characters
-    return text[bom_length:].decode(encoding)
-
-
-def touch(fname, times=None):
-    os.utime(fname, times)
-
-
-def touch_folder(folder):
-    for dirname, _, filenames in walk(folder):
-        for fname in filenames:
-            try:
-                os.utime(os.path.join(dirname, fname), None)
-            except Exception:
-                pass
-
-
-def normalize(text):
-    if platform.system() == "Windows":
-        return re.sub("\r?\n", "\r\n", text)
-    else:
-        return text
 
 
 def md5(content):
@@ -152,6 +88,7 @@ def sha256sum(file_path):
     return _generic_algorithm_sum(file_path, "sha256")
 
 
+# FIXME: Duplicated with util/sha.py
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -167,86 +104,63 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save_append(path, content, encoding="utf-8"):
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
-
-    with open(path, "ab") as handle:
-        handle.write(to_file_bytes(content, encoding=encoding))
-
-
-def save(path, content, only_if_modified=False, encoding="utf-8"):
+def save(path, content, encoding="utf-8"):
     """
     Saves a file with given content
     Params:
         path: path to write file to
         content: contents to save in the file
-        only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
+
     dir_path = os.path.dirname(path)
-    if not os.path.isdir(dir_path):
-        try:
-            os.makedirs(dir_path)
-        except OSError as error:
-            if error.errno not in (errno.EEXIST, errno.ENOENT):
-                raise OSError("The folder {} does not exist and could not be created ({})."
-                              .format(dir_path, error.strerror))
-        except Exception:
-            raise
-
-    new_content = to_file_bytes(content, encoding)
-
-    if only_if_modified and os.path.exists(path):
-        old_content = load(path, binary=True, encoding=encoding)
-        if old_content == new_content:
-            return
-
-    with open(path, "wb") as handle:
-        handle.write(new_content)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    with open(path, "w", encoding=encoding, newline="") as handle:
+        handle.write(content)
 
 
-def mkdir_tmp():
-    return tempfile.mkdtemp(suffix='tmp_conan')
-
-
-def to_file_bytes(content, encoding="utf-8"):
-    if not isinstance(content, bytes):
-        content = bytes(content, encoding)
-    return content
-
-
-def save_files(path, files, only_if_modified=False, encoding="utf-8"):
+def save_files(path, files, encoding="utf-8"):
     for name, content in files.items():
-        save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
+        save(os.path.join(path, name), content, encoding=encoding)
 
 
-def load(path, binary=False, encoding="auto"):
+def load(path, encoding="utf-8"):
     """ Loads a file content """
-    with open(path, 'rb') as handle:
+    with open(path, 'r', encoding=encoding, newline="") as handle:
         tmp = handle.read()
-        return tmp if binary else decode_text(tmp, encoding)
+    return tmp
 
 
-def relative_dirs(path):
-    """ Walks a dir and return a list with the relative paths """
-    ret = []
-    for dirpath, _, fnames in walk(path):
-        for filename in fnames:
-            tmp = os.path.join(dirpath, filename)
-            tmp = tmp[len(path) + 1:]
-            ret.append(tmp)
-    return ret
+def load_user_encoded(path):
+    """ Exclusive for user side read-only files:
+     - conanfile.txt
+     - profile files
+     """
+    with open(path, 'rb') as handle:
+        text = handle.read()
 
+    import codecs
+    encodings = {codecs.BOM_UTF8: "utf_8_sig",
+                 codecs.BOM_UTF32_BE: "utf_32_be",
+                 codecs.BOM_UTF32_LE: "utf_32_le",
+                 codecs.BOM_UTF16_BE: "utf_16_be",
+                 codecs.BOM_UTF16_LE: "utf_16_le",
+                 b'\x2b\x2f\x76\x38': "utf_7",
+                 b'\x2b\x2f\x76\x39': "utf_7",
+                 b'\x2b\x2f\x76\x2b': "utf_7",
+                 b'\x2b\x2f\x76\x2f': "utf_7",
+                 b'\x2b\x2f\x76\x38\x2d': "utf_7"}
+    for bom, encoding in encodings.items():
+        if text.startswith(bom):
+            return text[len(bom):].decode(encoding)
 
-def get_abs_path(folder, origin):
-    if folder:
-        if os.path.isabs(folder):
-            return folder
-        return os.path.join(origin, folder)
-    return origin
+    for decoder in ["utf-8", "Windows-1252"]:
+        try:
+            return text.decode(decoder)
+        except UnicodeDecodeError:
+            continue
+    raise Exception(f"Unknown encoding of file: {path}\nIt is recommended to use utf-8 encoding")
 
 
 def _change_permissions(func, path, exc_info):
@@ -257,13 +171,58 @@ def _change_permissions(func, path, exc_info):
         raise OSError("Cannot change permissions for {}! Exception info: {}".format(path, exc_info))
 
 
-def rmdir(path):
-    try:
-        shutil.rmtree(path, onerror=_change_permissions)
-    except OSError as err:
-        if err.errno == errno.ENOENT:
+if platform.system() == "Windows":
+    def rmdir(path):
+        if not os.path.isdir(path):
             return
-        raise
+
+        retries = 3
+        delay = 0.5
+        for i in range(retries):
+            try:
+                shutil.rmtree(path, onerror=_change_permissions)
+                break
+            except OSError as err:
+                if i == retries - 1:
+                    raise ConanException(f"Couldn't remove folder: {path}\n{str(err)}\n"
+                                         "Folder might be busy or open. "
+                                         "Close any app using it and retry.")
+                time.sleep(delay)
+
+
+    def renamedir(old_path, new_path):
+        retries = 3
+        delay = 0.5
+        for i in range(retries):
+            try:
+                shutil.move(old_path, new_path)
+                break
+            except OSError as err:
+                if i == retries - 1:
+                    raise ConanException(f"Couldn't move folder: {old_path}->{new_path}\n"
+                                         f"{str(err)}\n"
+                                         "Folder might be busy or open. "
+                                         "Close any app using it and retry.")
+                time.sleep(delay)
+else:
+    def rmdir(path):
+        if not os.path.isdir(path):
+            return
+        try:
+            shutil.rmtree(path, onerror=_change_permissions)
+        except OSError as err:
+            raise ConanException(f"Couldn't remove folder: {path}\n{str(err)}\n"
+                                 "Folder might be busy or open. "
+                                 "Close any app using it and retry.")
+
+    def renamedir(old_path, new_path):
+        try:
+            shutil.move(old_path, new_path)
+        except OSError as err:
+            raise ConanException(
+                f"Couldn't move folder: {old_path}->{new_path}\n{str(err)}\n"
+                "Folder might be busy or open. "
+                "Close any app using it and retry.")
 
 
 def remove(path):
@@ -283,26 +242,6 @@ def mkdir(path):
     if os.path.exists(path):
         return
     os.makedirs(path)
-
-
-def path_exists(path, basedir):
-    """Case sensitive, for windows, optional
-    basedir for skip caps check for tmp folders in testing for example (returned always
-    in lowercase for some strange reason)"""
-    exists = os.path.exists(path)
-    if not exists or sys.platform == "linux2":
-        return exists
-
-    path = os.path.normpath(path)
-    path = os.path.relpath(path, basedir)
-    chunks = path.split(os.sep)
-    tmp = basedir
-
-    for chunk in chunks:
-        if chunk and chunk not in os.listdir(tmp):
-            return False
-        tmp = os.path.normpath(tmp + os.sep + chunk)
-    return True
 
 
 def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
@@ -325,7 +264,8 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     try:
         # Format is forced because in Python3.8, it changed and it generates different tarfiles
         # with different checksums, which break hashes of tgzs
-        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.GNU_FORMAT, **kwargs)
+        # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
+        t = tarfile.TarFile.taropen(name, mode, fileobj, format=tarfile.PAX_FORMAT, **kwargs)
     except IOError:
         fileobj.close()
         if mode == 'r':
@@ -339,71 +279,30 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
 
 
 def tar_extract(fileobj, destination_dir):
-    """Extract tar file controlling not absolute paths and fixing the routes
-    if the tar was zipped in windows"""
-    def badpath(path, base):
-        # joinpath will ignore base if path is absolute
-        return not realpath(abspath(joinpath(base, path))).startswith(base)
-
-    def safemembers(members):
-        base = realpath(abspath(destination_dir))
-
-        for finfo in members:
-            if badpath(finfo.name, base):
-                logger.warning("file:%s is skipped since it's not safe." % str(finfo.name))
-                continue
-            else:
-                # Fixes unzip a windows zipped file in linux
-                finfo.name = finfo.name.replace("\\", "/")
-                yield finfo
-
     the_tar = tarfile.open(fileobj=fileobj)
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
     # "could not change modification time", with time=0
     # the_tar.errorlevel = 2  # raise exception if any error
-    the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
+    the_tar.extractall(path=destination_dir)
     the_tar.close()
-
-
-def list_folder_subdirs(basedir, level):
-    ret = []
-    for root, dirs, _ in walk(basedir):
-        rel_path = os.path.relpath(root, basedir)
-        if rel_path == ".":
-            continue
-        dir_split = rel_path.split(os.sep)
-        if len(dir_split) == level:
-            ret.append("/".join(dir_split))
-            dirs[:] = []  # Stop iterate subdirs
-    return ret
 
 
 def exception_message_safe(exc):
     try:
         return str(exc)
     except Exception:
-        return decode_text(repr(exc))
+        return repr(exc)
 
 
 def merge_directories(src, dst, excluded=None):
-    from conans.client.file_copier import FileCopier
-    copier = FileCopier([src], dst)
-    copier(pattern="*", excludes=excluded)
-    return
-
-
-def discarded_file(filename):
-    """
-    # The __conan pattern is to be prepared for the future, in case we want to manage our
-    own files that shouldn't be uploaded
-    """
-    return filename == ".DS_Store" or filename.startswith("__conan")
+    from conan.tools.files import copy
+    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
 
 
 def gather_files(folder):
     file_dict = {}
     symlinked_folders = {}
-    for root, dirs, files in walk(folder):
+    for root, dirs, files in os.walk(folder):
         for d in dirs:
             abs_path = os.path.join(root, d)
             if os.path.islink(abs_path):
@@ -411,10 +310,64 @@ def gather_files(folder):
                 symlinked_folders[rel_path] = abs_path
                 continue
         for f in files:
-            if discarded_file(f):
+            if f == ".DS_Store":
                 continue
             abs_path = os.path.join(root, f)
             rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
             file_dict[rel_path] = abs_path
 
     return file_dict, symlinked_folders
+
+
+# FIXME: This is very repeated with the tools.unzip, but wsa needed for config-install unzip
+def unzip(filename, destination="."):
+    from conan.tools.files.files import untargz  # FIXME, importing from conan.tools
+    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar")):
+        return untargz(filename, destination)
+    if filename.endswith(".gz"):
+        with gzip.open(filename, 'rb') as f:
+            file_content = f.read()
+        target_name = filename[:-3] if destination == "." else destination
+        save(target_name, file_content)
+        return
+    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
+        return untargz(filename, destination)
+
+    import zipfile
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+
+    with zipfile.ZipFile(filename, "r") as z:
+        zip_info = z.infolist()
+        extracted_size = 0
+        for file_ in zip_info:
+            extracted_size += file_.file_size
+            z.extract(file_, full_path)
+
+
+def human_size(size_bytes):
+    """
+    format a size in bytes into a 'human' file size, e.g. B, KB, MB, GB, TB, PB
+    Note that bytes will be reported in whole numbers but KB and above will have
+    greater precision.  e.g. 43 B, 443 KB, 4.3 MB, 4.43 GB, etc
+    """
+    unit_size = 1000.0
+    suffixes_table = [('B', 0), ('KB', 1), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
+
+    num = float(size_bytes)
+    the_precision = None
+    the_suffix = None
+    for suffix, precision in suffixes_table:
+        the_precision = precision
+        the_suffix = suffix
+        if num < unit_size:
+            break
+        num /= unit_size
+
+    if the_precision == 0:
+        formatted_size = "%d" % num
+    else:
+        formatted_size = str(round(num, ndigits=the_precision))
+
+    return "%s%s" % (formatted_size, the_suffix)
