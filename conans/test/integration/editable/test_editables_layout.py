@@ -317,3 +317,14 @@ def test_editable_components_absolute_paths():
     c.run("create .")
     # This used to crash due to "include" is not absolute path, now it works
     assert "Testing the package" in c.out
+
+
+def test_editable_no_version_test_package():
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("app"),
+             "test_package/conanfile.py": GenConanfile("test_package")
+             .with_class_attribute("test_type = 'explicit'")
+            .with_test("self.output.info('Testing the package')")})
+    tc.run("editable add .")
+    tc.run("test test_package app/None")
+    assert "app/None (test package): Testing the package" in tc.out
