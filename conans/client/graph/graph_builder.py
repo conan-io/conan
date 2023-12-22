@@ -421,7 +421,7 @@ class DepsGraphBuilder(object):
                                dep.require.ref.channel == ref.channel), None)
             if transitive is None:
                 raise ConanException(
-                    f"{current_node.ref} require '{search_ref_name}': didn't find a matching host dependency")
+                    f"{current_node.ref} require '{search_ref_name}/{ref_version}': didn't find a matching host dependency")
             new_ref = transitive.require.ref
             # Final ref is the one from the transitive dependency, but with the version from the
             # tracked requirement, if any

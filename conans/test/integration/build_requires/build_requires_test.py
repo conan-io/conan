@@ -616,7 +616,7 @@ class TestBuildTrackHost:
         c.save({"conanfile.py":
                 GenConanfile("pkg").with_build_requirement("protobuf/<host_version>")})
         c.run(f"install . {build_profile}", assert_error=True)
-        assert "pkg/None require 'protobuf': didn't find a matching host dependency" in c.out
+        assert "pkg/None require 'protobuf/<host_version>': didn't find a matching host dependency" in c.out
 
     @pytest.mark.parametrize("build_profile", [False, True])
     def test_track_host_error_wrong_context(self, build_profile):
@@ -674,9 +674,10 @@ class TestBuildTrackHost:
     @pytest.mark.parametrize("host_version, assert_error, assert_msg", [
         ("libgettext>", False, "gettext/0.2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache"),
         # Error cases, just checking that we fail gracefully - no tracebacks
+        ("foo>", True, "app/1.0 require 'foo/<host_version:foo>': didn't find a matching host dependency"),
         ("libgettext", True, "Package gettext has an invalid version number: '<host_version:libgettext'"),
-        (":>", True, "app/1.0 require ':': didn't find a matching host dependency"),
-        (">", True, "app/1.0 require '': didn't find a matching host dependency"),
+        (":>", True, "app/1.0 require ':/<host_version::>': didn't find a matching host dependency"),
+        (">", True, "app/1.0 require '/<host_version:>': didn't find a matching host dependency"),
         (":", True, " Package gettext has an invalid version number: '<host_version::'"),
         ("", True, " Package gettext has an invalid version number: '<host_version:'")
     ])
@@ -719,6 +720,6 @@ class TestBuildTrackHost:
 
         c.run("create pkg", assert_error=fails)
         if fails:
-            assert "pkg/0.1 require 'protobuf': didn't find a matching host dependency" in c.out
+            assert "pkg/0.1 require 'protobuf/<host_version>': didn't find a matching host dependency" in c.out
         else:
             assert "Package '08f50edefe03c3273e386557efc23dc41a9f600b' created" in c.out
