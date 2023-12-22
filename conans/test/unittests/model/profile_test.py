@@ -127,8 +127,9 @@ def test_profile_serialize():
     profile.settings["compiler.version"] = "12"
     profile.tool_requires["*"] = ["zlib/1.2.8"]
     profile.update_package_settings({"MyPackage": [("os", "Windows")]})
-    expected_json = '{"settings": {"arch": "x86_64", "compiler": "Visual Studio", "compiler.version": "12"}, ' \
-                    '"package_settings": {"MyPackage": {"os": "Windows"}}, ' \
-                    '"options": {}, "tool_requires": {"*": ["zlib/1.2.8"]}, ' \
-                    '"conf": {"user.myfield:value": "MyVal"}, "build_env": "VAR1=1\\nVAR2=2\\n"}'
-    assert expected_json == json.dumps(profile.serialize())
+    expected_json = {
+        "settings": {"arch": "x86_64", "compiler": "Visual Studio", "compiler.version": "12"},
+        "package_settings": {"MyPackage": {"os": "Windows"}}, "options": {},
+        "tool_requires": {"*": ["'zlib/1.2.8'"]}, "conf": {"user.myfield:value": "MyVal"},
+        "build_env": "VAR1=1\nVAR2=2\n"}
+    assert expected_json == profile.serialize()

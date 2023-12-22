@@ -8,25 +8,32 @@ class VirtualBuildEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, auto_generate=False):
         self._conanfile = conanfile
-        self._conanfile.virtualbuildenv = False
+        if not auto_generate:
+            self._conanfile.virtualbuildenv = False
         self.basename = "conanbuildenv"
-        # TODO: Make this use the settings_build
-        self.configuration = conanfile.settings.get_safe("build_type")
-        if self.configuration:
-            self.configuration = self.configuration.lower()
-        self.arch = conanfile.settings.get_safe("arch")
-        if self.arch:
-            self.arch = self.arch.lower()
+        self.configuration = None
+        self.arch = None
 
     @property
     def _filename(self):
+        if not self.configuration:
+            # TODO: Make this use the settings_build
+            configuration = self._conanfile.settings.get_safe("build_type")
+            configuration = configuration.lower() if configuration else None
+        else:
+            configuration = self.configuration
+        if not self.arch:
+            arch = self._conanfile.settings.get_safe("arch")
+            arch = arch.lower() if arch else None
+        else:
+            arch = self.arch
         f = self.basename
-        if self.configuration:
-            f += "-" + self.configuration.replace(".", "_")
-        if self.arch:
-            f += "-" + self.arch.replace(".", "_")
+        if configuration:
+            f += "-" + configuration.replace(".", "_")
+        if arch:
+            f += "-" + arch.replace(".", "_")
         return f
 
     def environment(self):

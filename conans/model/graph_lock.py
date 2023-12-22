@@ -1,3 +1,4 @@
+import fnmatch
 import json
 import os
 from collections import OrderedDict
@@ -6,6 +7,7 @@ from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
+from conans.model.version_range import VersionRange
 from conans.util.files import load, save
 
 LOCKFILE = "conan.lock"
@@ -63,6 +65,23 @@ class _LockRequires:
             if existing and existing.revision is not None:
                 raise ConanException(f"Cannot add {ref} to lockfile, already exists")
             self._requires[ref] = package_ids
+
+    def remove(self, pattern):
+        ref = RecipeReference.loads(pattern)
+        version = str(ref.version)
+        remove = []
+        if version.startswith("[") and version.endswith("]"):
+            version_range = VersionRange(version[1:-1])
+            for k, v in self._requires.items():
+                if fnmatch.fnmatch(k.name, ref.name) and version_range.contains(k.version, None):
+                    new_pattern = f"{k.name}/*@{ref.user or ''}"
+                    new_pattern += f"/{ref.channel}" if ref.channel else ""
+                    if k.matches(new_pattern, False):
+                        remove.append(k)
+        else:
+            remove = [k for k in self._requires if k.matches(pattern, False)]
+        self._requires = OrderedDict((k, v) for k, v in self._requires.items() if k not in remove)
+        return remove
 
     def sort(self):
         self._requires = OrderedDict(reversed(sorted(self._requires.items())))
@@ -171,6 +190,19 @@ class Lockfile(object):
                 self._python_requires.add(r)
             self._python_requires.sort()
 
+    def remove(self, requires=None, build_requires=None, python_requires=None):
+        def _remove(reqs, self_reqs, name):
+            if reqs:
+                removed = []
+                for r in reqs:
+                    removed.extend(self_reqs.remove(r))
+                for d in removed:
+                    ConanOutput().info(f"Removed locked {name}: {d.repr_notime()}")
+
+        _remove(requires, self._requires, "require")
+        _remove(build_requires, self._build_requires, "build_require")
+        _remove(python_requires, self._python_requires, "python_require")
+
     @staticmethod
     def deserialize(data):
         """ constructs a GraphLock from a json like dict
@@ -224,7 +256,7 @@ class Lockfile(object):
                 msg = f"Override defined for {require.ref}, but multiple possible overrides" \
                       f" {overrides}. You might need to apply the 'conan graph build-order'" \
                       f" overrides for correctly building this package with this lockfile"
-                ConanOutput().error(msg)
+                ConanOutput().error(msg, error_type="exception")
             raise
 
     def _resolve_overrides(self, require):

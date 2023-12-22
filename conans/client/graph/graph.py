@@ -14,7 +14,7 @@ RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
-RECIPE_SYSTEM_TOOL = "System tool"
+RECIPE_PLATFORM = "Platform"
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -25,7 +25,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_EDITABLE_BUILD = "EditableBuild"
 BINARY_INVALID = "Invalid"
-BINARY_SYSTEM_TOOL = "System tool"
+BINARY_PLATFORM = "Platform"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -319,6 +319,7 @@ class DepsGraph(object):
         self.nodes = []
         self.aliased = {}
         self.resolved_ranges = {}
+        self.replaced_requires = {}
         self.error = False
 
     def overrides(self):
@@ -391,4 +392,5 @@ class DepsGraph(object):
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
         result["overrides"] = self.overrides().serialize()
         result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
+        result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
         return result

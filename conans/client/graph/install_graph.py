@@ -303,7 +303,7 @@ class InstallGraph:
         missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
         out = ConanOutput()
         for pref_str in missing_prefs_str:
-            out.error("Missing binary: %s" % pref_str)
+            out.error(f"Missing binary: {pref_str}", error_type="exception")
         out.writeln("")
 
         # Report details just the first one
@@ -326,12 +326,13 @@ class InstallGraph:
             else:
                 build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
                                                   for pref in missing_prefs])))
-            build_msg = f"or try to build locally from sources using the '{build_str}' argument"
+            build_msg = f"Try to build locally from sources using the '{build_str}' argument"
 
         raise ConanException(textwrap.dedent(f'''\
-           Missing prebuilt package for '{missing_pkgs}'
-           Check the available packages using 'conan list {ref}:* -r=remote'
-           {build_msg}
+           Missing prebuilt package for '{missing_pkgs}'. You can try:
+               - List all available packages using 'conan list {ref}:* -r=remote'
+               - Explain missing binaries: replace 'conan install ...' with 'conan graph explain ...'
+               - {build_msg}
 
            More Info at 'https://docs.conan.io/2/knowledge/faq.html#error-missing-prebuilt-package'
            '''))

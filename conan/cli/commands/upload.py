@@ -9,8 +9,8 @@ from conan.errors import ConanException
 
 
 def summary_upload_list(results):
-    """ Do litte format modification to serialized
-    list bundle so it looks prettier on text output
+    """ Do a little format modification to serialized
+    list bundle, so it looks prettier on text output
     """
     ConanOutput().subtitle("Upload summary")
     info = results["results"]

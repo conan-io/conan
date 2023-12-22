@@ -103,7 +103,7 @@ class Git:
 
         :return: True, if the current folder is dirty. Otherwise, False.
         """
-        status = self.run("status -s").strip()
+        status = self.run(f"status . -s").strip()
         return bool(status)
 
     def get_url_and_commit(self, remote="origin"):

@@ -6,8 +6,8 @@ from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_SYSTEM_TOOL,
-                                       BINARY_SYSTEM_TOOL)
+                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
+                                       BINARY_PLATFORM)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 
@@ -178,8 +178,8 @@ class GraphBinariesAnalyzer(object):
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID
             return
-        if node.recipe == RECIPE_SYSTEM_TOOL:
-            node.binary = BINARY_SYSTEM_TOOL
+        if node.recipe == RECIPE_PLATFORM:
+            node.binary = BINARY_PLATFORM
             return
 
         if node.recipe == RECIPE_EDITABLE:
