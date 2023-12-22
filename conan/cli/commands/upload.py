@@ -85,13 +85,13 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.package_query and args.list:
         raise ConanException("Cannot define package-query and the package list file")
-    if args.list and args.only_recipe:
-        raise ConanException("--only-recipe cannot be used with package list argument")
 
     if args.list:
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
+        if args.only_recipe:
+            package_list.only_recipes()
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
