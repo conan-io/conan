@@ -47,6 +47,17 @@ class UploadAPI:
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
+
+        # Make sure to collect the conan.lock metadatas
+        for rref, recipe_bundle in package_list.refs().items():
+            if recipe_bundle["upload"]:
+                metadata_folder = app.cache.recipe_layout(rref).metadata()
+                conan_lock = os.path.join(metadata_folder, "conan.lock")
+                if os.path.exists(conan_lock):
+                    ConanOutput(scope=str(rref)).info(f"Recipe embedded conan.lock")
+                    recipe_bundle.setdefault("files", {})["conan.lock"] = conan_lock
+                    recipe_bundle["upload"] = True
+
         signer = PkgSignaturesPlugin(app.cache)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
