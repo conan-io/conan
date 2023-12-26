@@ -46,6 +46,8 @@ class LocalAPI:
         path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api.cache_folder, self._conan_api.config.global_conf)
         conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
+        if conanfile.name is None or conanfile.version is None:
+            raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         # Retrieve conanfile.py from target_path
         target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
