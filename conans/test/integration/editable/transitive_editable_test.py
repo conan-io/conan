@@ -120,7 +120,7 @@ def test_transitive_editables_build():
     # it doesn't crash
 
 
-def test_transitive_editable_control_package_id_cache_consumers():
+def test_transitive_editable_cascade_build():
     """
     https://github.com/conan-io/conan/issues/15292
     """
@@ -162,3 +162,48 @@ def test_transitive_editable_control_package_id_cache_consumers():
     c.run("editable remove pkga")
     c.run("install app", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkga/1.0'" in c.out
+
+
+def test_transitive_editable_cascade_package_id():
+    """
+    https://github.com/conan-io/conan/issues/15292
+    """
+    c = TestClient()
+    pkga = GenConanfile("pkga", "1.0").with_package_type("static-library")
+    pkgb = GenConanfile("pkgb", "1.0").with_requires("pkga/1.0").with_package_type("static-library")
+    pkgc = GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0").with_package_type("shared-library")
+    app = GenConanfile("app", "1.0").with_requires("pkgc/1.0").with_package_type("application")
+    c.save({"pkga/conanfile.py": pkga,
+            "pkgb/conanfile.py": pkgb,
+            "pkgc/conanfile.py": pkgc,
+            "app/conanfile.py": app})
+    c.run("create pkga")
+    c.run("create pkgb")
+    pkgb_id = c.created_package_id("pkgb/1.0")
+    c.run("create pkgc")
+    c.run("install app")
+
+    # now we want to investigate pkga, we put it in editable mode
+    c.run("editable add pkga")
+    pkga = GenConanfile("pkga", "1.0").with_package_type("static-library")\
+                                      .with_class_attribute("some=42")
+    c.save({"pkga/conanfile.py": pkga})
+    c.run("install app", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkgc/1.0'" in c.out
+    c.run("install app --build=missing")
+    pkgc_id = c.created_package_id("pkgc/1.0")
+    # The consumers didn't need a new binary, even if I modified pkg
+    c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Cache"),
+                            "pkgc/1.0": (pkgc_id, "Build")})
+
+    # Changes in pkga are good, we export it
+    c.run("export pkga")
+    # Now we remove the editable
+    c.run("editable remove pkga")
+    c.run("install app", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkgc/1.0'" in c.out
+    c.run("install app --build=missing")
+    pkgc_id = c.created_package_id("pkgc/1.0")
+    # The consumers didn't need a new binary, even if I modified pkg
+    c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Cache"),
+                            "pkgc/1.0": (pkgc_id, "Build")})
