@@ -1,6 +1,5 @@
 import copy
 import os
-import re
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
@@ -14,7 +13,6 @@ from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
@@ -194,10 +192,11 @@ class DepsGraphBuilder(object):
             try:
                 result = self._proxy.get_recipe(alias, self._remotes, self._update,
                                                 self._check_update)
-                conanfile_path, recipe_status, remote, new_ref = result
+                layout, recipe_status, remote = result
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
+            conanfile_path = layout.conanfile()
             dep_conanfile = self._loader.load_basic(conanfile_path)
             try:
                 pointed_ref = RecipeReference.loads(dep_conanfile.alias)
@@ -212,11 +211,12 @@ class DepsGraphBuilder(object):
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
-        conanfile_path, recipe_status, remote, new_ref = result
+        layout, recipe_status, remote = result
+        conanfile_path = layout.conanfile()
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        return new_ref, dep_conanfile, recipe_status, remote
+        return layout, dep_conanfile, recipe_status, remote
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
@@ -305,14 +305,15 @@ class DepsGraphBuilder(object):
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
-        new_ref, dep_conanfile, recipe_status, remote = resolved
+        layout, dep_conanfile, recipe_status, remote = resolved
+        new_ref = layout.reference
         # TODO: Proxy could return the recipe_layout() and it can be reused
         # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
         if recipe_status == RECIPE_EDITABLE:
             recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
             dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         elif recipe_status != RECIPE_PLATFORM:
-            recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
+            recipe_metadata = layout.metadata()
             dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
