@@ -190,6 +190,32 @@ class TestGitCaptureSCM:
             assert "pkg/0.1: SCM COMMIT: {}".format(new_commit) in c.out
             assert "pkg/0.1: SCM URL: {}".format(url) in c.out
 
+    def test_capture_commit_modified_config(self):
+        """
+        A clean repo with the status.branch git config set to on
+        Expected to not raise an error an return the commit and url
+        """
+        folder = temp_folder()
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
+        c = TestClient()
+        with c.chdir(folder):
+            c.run_command("git config --local status.branch true")
+            c.run("export .")
+            assert "pkg/0.1: SCM COMMIT: {}".format(commit) in c.out
+            assert "pkg/0.1: SCM URL: {}".format(url) in c.out
+
+    def test_capture_commit_modified_config_untracked(self):
+        """
+        A dirty repo with the showUntrackedFiles git config set to off.
+        Expected to throw an exception
+        """
+        folder = temp_folder()
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
+        c = TestClient()
+        with c.chdir(folder):
+            c.save(files={"some_header.h": "now the repo is dirty"})
+            c.run_command("git config --local status.showUntrackedFiles no")
+            c.run("export .", assert_error=True)
 
 @pytest.mark.tool("git")
 class TestGitBasicClone:

@@ -106,7 +106,7 @@ class Git:
 
         :return: True, if the current folder is dirty. Otherwise, False.
         """
-        status = self.run(f"status . -s").strip()
+        status = self.run("status . --short --no-branch --untracked-files").strip()
         return bool(status)
 
     def get_url_and_commit(self, remote="origin", repo=False):

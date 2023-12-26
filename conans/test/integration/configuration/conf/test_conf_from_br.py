@@ -240,7 +240,7 @@ def test_conf_both_build_and_host():
             version = "0.1"
             def package_info(self):
                 myvalue = str(self.settings_target.build_type)
-                self.conf_info.define("user.team.myconf", myvalue)
+                self.conf_info.define("user.team:myconf", myvalue)
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --build-require")
@@ -255,7 +255,7 @@ def test_conf_both_build_and_host():
             tool_requires = "tool/0.1"
 
             def generate(self):
-                self.output.info(f"MYCONF {self.context}: {self.conf.get('user.team.myconf')}")
+                self.output.info(f"MYCONF {self.context}: {self.conf.get('user.team:myconf')}")
         """)
 
     client.save({"myprotobuf/conanfile.py": myprotobuf,

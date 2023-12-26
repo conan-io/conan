@@ -10,7 +10,7 @@ void cancelPrevious() {
 }
 
 String getTempFolder(String nodeName) {
-    if (nodeName=="Windows") { return "D:/J/t/" }
+    if (nodeName=="Windows") { return "C:/J/t_v2/" }
     return "/tmp/"
 }
 
@@ -21,18 +21,18 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         configs.add([node: "Linux", pyvers: ["PY36"]])
         if (moduleName=="conans/test/functional") {
             configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "M1Macos", pyvers: ["PY36"]])
+            configs.add([node: "M2Macos", pyvers: ["PY36"]])
         }
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
         configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
-        configs.add([node: "M1Macos", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
         configs.add([node: "Linux", pyvers: ["PY36"]])
         configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M1Macos", pyvers: ["PY36"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36"]])
     }
     return configs
 }
@@ -113,7 +113,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                     }
                     finally {}
                 }
-                else if (nodeName=="M1Macos") {
+                else if (nodeName=="M2Macos") {
                     def localDir = "/Users/jenkins"
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.15", "PY38=3.8.12", "PY39=3.9.10",
                              "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
@@ -203,7 +203,7 @@ try {
         runTestsModule(moduleName, branchName, jobName)
     }
 
-    if (branchName == "develop2" || branchName =~ /^release.*/) {
+    if (branchName == "develop2") {
         deployToPypiTest()
     }
 }

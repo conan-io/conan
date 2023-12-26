@@ -12,7 +12,6 @@ from conan.tools.files.files import untargz
 from conans.client.subsystems import get_cased_path
 from conans.errors import ConanException
 from conans.paths import PACKAGE_TGZ_NAME
-from conans.test import CONAN_TEST_FOLDER
 from conans.util.files import gzopen_without_timestamps
 
 
@@ -27,6 +26,11 @@ def wait_until_removed(folder):
             latest_exception = e
     else:
         raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
+
+
+CONAN_TEST_FOLDER = os.getenv('CONAN_TEST_FOLDER', None)
+if CONAN_TEST_FOLDER and not os.path.exists(CONAN_TEST_FOLDER):
+    os.makedirs(CONAN_TEST_FOLDER)
 
 
 def temp_folder(path_with_spaces=True, create_dir=True):

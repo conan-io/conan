@@ -524,3 +524,13 @@ def test_upload_with_python_requires():
     c.run("upload dep* -c -r=default")
     # This used to fail, but adding the enabled remotes to python_requires resolution, it works
     assert "tool/0.1: Downloaded recipe" in c.out
+
+
+def test_upload_list_only_recipe():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+    c.run("create .")
+    c.run("install --requires=liba/0.1 --format=json", redirect_stdout="graph.json")
+    c.run("list --graph=graph.json --format=json", redirect_stdout="installed.json")
+    c.run("upload --list=installed.json --only-recipe -r=default -c")
+    assert "conan_package.tgz" not in c.out

@@ -186,31 +186,31 @@ def test_output_level_envvar():
 
 class TestWarningHandling:
     warning_lines = ("self.output.warning('Tagged warning', warn_tag='tag')",
-             "self.output.warning('Untagged warning')")
+                     "self.output.warning('Untagged warning')")
     error_lines = ("self.output.error('Tagged error', error_type='exception')",
                    "self.output.error('Untagged error')")
 
-    def test_warning_as_error(self):
+    def test_warning_as_error_deprecated_syntax(self):
         t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.warning_lines)})
 
-        t.save_home({"global.conf": "core:warnings_as_errors=False"})
+        t.save_home({"global.conf": "core:warnings_as_errors=[]"})
         t.run("create . -vwarning")
         assert "WARN: Untagged warning" in t.out
         assert "WARN: tag: Tagged warning" in t.out
 
-        t.save_home({"global.conf": "core:warnings_as_errors=True"})
+        t.save_home({"global.conf": "core:warnings_as_errors=['*']"})
         t.run("create . -vwarning", assert_error=True)
         assert "ConanException: tag: Tagged warning" in t.out
         # We bailed early, didn't get a chance to print this one
         assert "Untagged warning" not in t.out
 
-        t.save_home({"global.conf": """core:warnings_as_errors=True\ncore:skip_warnings=["tag"]"""})
+        t.save_home({"global.conf": """core:warnings_as_errors=['*']\ncore:skip_warnings=["tag"]"""})
         t.run("create . -verror", assert_error=True)
         assert "ConanException: Untagged warning" in t.out
         assert "Tagged warning" not in t.out
 
-        t.save_home({"global.conf": "core:warnings_as_errors=False"})
+        t.save_home({"global.conf": "core:warnings_as_errors=[]"})
         t.run("create . -verror")
         assert "ERROR: Untagged warning" not in t.out
         assert "ERROR: tag: Tagged warning" not in t.out
@@ -243,12 +243,16 @@ class TestWarningHandling:
         t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.error_lines)})
 
-        t.save_home({"global.conf": "core:warnings_as_errors=False"})
+        t.save_home({"global.conf": "core:warnings_as_errors=[]"})
         t.run("create .")
         assert "ERROR: Tagged error" in t.out
         assert "ERROR: Untagged error" in t.out
 
-        t.save_home({"global.conf": "core:warnings_as_errors=True"})
+        t.save_home({"global.conf": "core:warnings_as_errors=['*']"})
         t.run("create .", assert_error=True)
         assert "ERROR: Tagged error" in t.out
         assert "ConanException: Untagged error" in t.out
+
+        t.run("create . -vquiet", assert_error=True)
+        assert "ERROR: Tagged error" not in t.out
+        assert "ConanException: Untagged error" not in t.out
