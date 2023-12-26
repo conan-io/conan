@@ -112,3 +112,14 @@ def test_download_verify_ssl_conf():
         client.run("create .")
         assert did_verify["http://verify.true"]
         assert not did_verify["http://verify.false"]
+
+
+def test_download_list_only_recipe():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+    c.run("create .")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    c.run("list *:* -r=default --format=json", redirect_stdout="pkgs.json")
+    c.run("download --list=pkgs.json --only-recipe -r=default")
+    assert "packages" not in c.out

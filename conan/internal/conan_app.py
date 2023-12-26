@@ -65,5 +65,6 @@ class ConanApp(object):
     @staticmethod
     def _configure(global_conf):
         ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
-                                                           default=False, check_type=bool))
-        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
+                                                           default=[], check_type=list))
+        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings",
+                                                            default=[], check_type=list))
