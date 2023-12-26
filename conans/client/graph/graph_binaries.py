@@ -207,6 +207,7 @@ class GraphBinariesAnalyzer(object):
 
         if node.conanfile.upload_policy == "skip":
             # Download/update shouldn't be checked in the servers if this is "skip-upload"
+            # The binary can only be in cache or missing.
             if cache_latest_prev:
                 node.binary = BINARY_CACHE
                 node.prev = cache_latest_prev.revision
