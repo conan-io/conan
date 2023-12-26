@@ -52,7 +52,7 @@ class UploadAPI:
         for rref, recipe_bundle in package_list.refs().items():
             if recipe_bundle["upload"]:
                 metadata_folder = app.cache.recipe_layout(rref).metadata()
-                conan_lock = os.path.join(metadata_folder, "conan.lock")
+                conan_lock = os.path.join(metadata_folder, "conan", "conan.lock")
                 if os.path.exists(conan_lock):
                     ConanOutput(scope=str(rref)).info(f"Recipe embedded conan.lock")
                     recipe_bundle.setdefault("files", {})["conan.lock"] = conan_lock
