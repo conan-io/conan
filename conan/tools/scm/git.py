@@ -30,9 +30,9 @@ class Git:
             #  - the ``conan source`` command, not passing profiles, buildenv not injected
             return check_output_runner("git {}".format(cmd)).strip()
 
-    def get_commit(self, repo=False):
+    def get_commit(self, repository=False):
         """
-        :param repo: By default gets the commit of the defined folder, use repo=True to get
+        :param repository: By default gets the commit of the defined folder, use repo=True to get
                      the commit of the repository instead.
         :return: The current commit, with ``git rev-list HEAD -n 1 -- <folder>``.
             The latest commit is returned, irrespective of local not committed changes.
@@ -43,7 +43,7 @@ class Git:
             # --full-history is needed to not avoid wrong commits:
             # https://github.com/conan-io/conan/issues/10971
             # https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-Defaultmode
-            path = '' if repo else '-- "."'
+            path = '' if repository else '-- "."'
             commit = self.run(f'rev-list HEAD -n 1 --full-history {path}')
             return commit
         except Exception as e:
@@ -109,7 +109,7 @@ class Git:
         status = self.run("status . --short --no-branch --untracked-files").strip()
         return bool(status)
 
-    def get_url_and_commit(self, remote="origin", repo=False):
+    def get_url_and_commit(self, remote="origin", repository=False):
         """
         This is an advanced method, that returns both the current commit, and the remote repository url.
         This method is intended to capture the current remote coordinates for a package creation,
@@ -134,7 +134,7 @@ class Git:
         to strip the credentials from the result.
 
         :param remote: Name of the remote git repository ('origin' by default).
-        :param repo: By default gets the commit of the defined folder, use repo=True to get
+        :param repository: By default gets the commit of the defined folder, use repo=True to get
                      the commit of the repository instead.
         :return: (url, commit) tuple
         """
@@ -142,7 +142,7 @@ class Git:
         if dirty:
             raise ConanException("Repo is dirty, cannot capture url and commit: "
                                  "{}".format(self.folder))
-        commit = self.get_commit(repo=repo)
+        commit = self.get_commit(repository=repository)
         url = self.get_remote_url(remote=remote)
         in_remote = self.commit_in_remote(commit, remote=remote)
         if in_remote:
