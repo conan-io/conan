@@ -28,7 +28,7 @@ class TestGitBasicCapture:
             def export(self):
                 git = Git(self, self.recipe_folder)
                 commit = git.get_commit()
-                repo_commit = git.get_commit(repo=True)
+                repo_commit = git.get_commit(repository=True)
                 url = git.get_remote_url()
                 self.output.info("URL: {}".format(url))
                 self.output.info("COMMIT: {}".format(commit))
