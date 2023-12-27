@@ -183,8 +183,8 @@ class ToolCopyTest(unittest.TestCase):
 
         folder2 = temp_folder()
         copy(None, "*", folder1, folder2, excludes=(".*", "*/.*"))
-        assert os.listdir(folder2) == ['file1.txt', 'foo']
-        assert os.listdir(os.path.join(folder2, "foo")) == ['file2.txt', 'bar']
+        assert set(os.listdir(folder2)) == {'file1.txt', 'foo'}
+        assert set(os.listdir(os.path.join(folder2, "foo"))) == {'file2.txt', 'bar'}
         assert not os.path.exists(os.path.join(folder2, ".hiddenfolder"))
         assert os.listdir(os.path.join(folder2, "foo", "bar")) == ['file4.txt']
 
