@@ -26,15 +26,20 @@ class LayoutBase:
         return self._base_folder
 
     def remove(self):
-        rmdir(self.base_folder)
+        rmdir(self._base_folder)
 
 
 class BasicLayout(LayoutBase):
+    # For editables and platform_requires
     def conanfile(self):
-        return os.path.join(self.base_folder, CONANFILE) if self.base_folder is not None else None
+        # the full conanfile path (including other other.py names) for editables
+        # None for platform_requires
+        return self._base_folder
 
     def metadata(self):
-        return os.path.join(self.base_folder, METADATA) if self.base_folder is not None else None
+        if self._base_folder is None:
+            return
+        return os.path.join(os.path.dirname(self._base_folder), METADATA)
 
 
 class RecipeLayout(LayoutBase):
