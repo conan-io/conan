@@ -616,7 +616,7 @@ class TestBuildTrackHost:
         c.save({"conanfile.py":
                 GenConanfile("pkg").with_build_requirement("protobuf/<host_version>")})
         c.run(f"install . {build_profile}", assert_error=True)
-        assert "'protobuf/<host_version>': didn't find a matching host dependency" in c.out
+        assert "pkg/None require 'protobuf/<host_version>': didn't find a matching host dependency" in c.out
 
     @pytest.mark.parametrize("build_profile", [False, True])
     def test_track_host_error_wrong_context(self, build_profile):
@@ -670,3 +670,56 @@ class TestBuildTrackHost:
         # This used to fail
         c.run(f"create pkg {build_profile}")
         assert "protobuf/1.0 from local cache - Cache" in c.out
+
+    @pytest.mark.parametrize("host_version, assert_error, assert_msg", [
+        ("libgettext>", False, "gettext/0.2:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache"),
+        # Error cases, just checking that we fail gracefully - no tracebacks
+        ("foo>", True, "app/1.0 require 'foo/<host_version:foo>': didn't find a matching host dependency"),
+        ("libgettext", True, "Package gettext has an invalid version number: '<host_version:libgettext'"),
+        (":>", True, "app/1.0 require ':/<host_version::>': didn't find a matching host dependency"),
+        (">", True, "app/1.0 require '/<host_version:>': didn't find a matching host dependency"),
+        (":", True, " Package gettext has an invalid version number: '<host_version::'"),
+        ("", True, " Package gettext has an invalid version number: '<host_version:'")
+    ])
+    def test_host_version_different_ref(self, host_version, assert_error, assert_msg):
+        tc = TestClient()
+        tc.save({"gettext/conanfile.py": GenConanfile("gettext"),
+                 "libgettext/conanfile.py": GenConanfile("libgettext"),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
+                .with_build_requires(f"gettext/<host_version:{host_version}")})
+        tc.run("create libgettext libgettext/0.2@")
+        tc.run("create gettext gettext/0.1@ --build-require")
+        tc.run("create gettext gettext/0.2@ --build-require")
+
+        tc.run("create app app/1.0@", assert_error=assert_error)
+        assert assert_msg in tc.out
+
+    @pytest.mark.parametrize("requires_tag,tool_requires_tag,fails", [
+        ("user/channel", "user/channel", False),
+        ("", "user/channel", True),
+        ("auser/achannel", "anotheruser/anotherchannel", True),
+    ])
+    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag, fails):
+        """
+        Make the tool_requires follow the regular require with the expression "<host_version>"
+        """
+        c = TestClient()
+        pkg = textwrap.dedent(f"""
+                from conan import ConanFile
+                class ProtoBuf(ConanFile):
+                    name = "pkg"
+                    version = "0.1"
+                    def requirements(self):
+                        self.requires("protobuf/1.0@{requires_tag}")
+                    def build_requirements(self):
+                        self.tool_requires("protobuf/<host_version>@{tool_requires_tag}")
+                """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg})
+        c.run(f"create protobuf 1.0@{requires_tag}")
+
+        c.run("create pkg", assert_error=fails)
+        if fails:
+            assert "pkg/0.1 require 'protobuf/<host_version>': didn't find a matching host dependency" in c.out
+        else:
+            assert "Package '08f50edefe03c3273e386557efc23dc41a9f600b' created" in c.out
