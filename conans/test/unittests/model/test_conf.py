@@ -187,8 +187,8 @@ def test_compose_conf_complex():
     c2.loads(text)
     c.update_conf_definition(c2)
     expected_text = textwrap.dedent("""\
-        user.company.cpu:jobs=5
         user.company.build:ccflags=--m otherflag
+        user.company.cpu:jobs=5
         user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6, {'b': 2}]
         user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         zlib:user.company.check:shared=!

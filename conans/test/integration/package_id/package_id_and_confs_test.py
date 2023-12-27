@@ -2,12 +2,12 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
 
 PKG_ID_NO_CONF = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
 PKG_ID_1 = "89d32f25195a77f4ae2e77414b870781853bdbc1"
 PKG_ID_2 = "7f9ed92704709f56ecc7b133322479caf3ffd7ad"
-PKG_ID_3 = "45b796ec237c7e2399944e79bee49b56fd022067"
+PKG_ID_3 = "a9f917f3bad3b48b5bceae70214764274ccd6337"
 
 
 @pytest.mark.parametrize("package_id_confs, package_id", [
@@ -98,3 +98,18 @@ def test_package_id_confs_header_only():
     assert "tools.build:cxxflags" not in client.out
 
 
+@pytest.mark.parametrize("conf,pkgconf", [
+    ("user.foo:value=1\nuser.bar:value=2", "['user.foo:value', 'user.bar:value']"),
+    ("user.foo:value=1\nuser.bar:value=2", "['user.bar:value', 'user.foo:value']"),
+    ("user.bar:value=2\nuser.foo:value=1", "['user.foo:value', 'user.bar:value']"),
+    ("user.bar:value=2\nuser.foo:value=1", "['user.bar:value', 'user.foo:value']"),
+])
+def test_package_id_order(conf, pkgconf):
+    """Ensure the order of the definitions in the conf file does not affect the package_id"""
+    tc = TestClient(light=True)
+    tc.save({"profile": f"[conf]\ntools.info.package_id:confs={pkgconf}\n" +
+                        conf,
+             "conanfile.py": GenConanfile("pkg", "1.0")})
+    tc.run("create . -pr=profile")
+    # They should all have the same pkg id - note that this did not happen before 2.0.17
+    tc.assert_listed_binary({"pkg/1.0": ("43227c40b8725e89d30a9f97c0652629933a3685", "Build")})
