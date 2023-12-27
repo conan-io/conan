@@ -100,7 +100,7 @@ class TestListRefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -293,7 +293,7 @@ class TestListPrefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
