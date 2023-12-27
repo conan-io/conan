@@ -18,7 +18,7 @@ METADATA = "metadata"
 
 class LayoutBase:
     def __init__(self, ref, base_folder):
-        self._ref = ref
+        self.reference = ref
         self._base_folder = base_folder
 
     @property
@@ -29,16 +29,15 @@ class LayoutBase:
         rmdir(self.base_folder)
 
 
-class RecipeLayout(LayoutBase):
-    # TODO: cache2.0 fix this in the future when we only have to deal
-    #  with ConanReference and not RecipeReference and PkgReference
-    @property
-    def reference(self):
-        return self._ref
+class BasicLayout(LayoutBase):
+    def conanfile(self):
+        return os.path.join(self.base_folder, CONANFILE)
 
-    @reference.setter
-    def reference(self, ref):
-        self._ref = ref
+    def metadata(self):
+        return os.path.join(self.base_folder, METADATA)
+
+
+class RecipeLayout(LayoutBase):
 
     @contextmanager
     def conanfile_write_lock(self, output):
@@ -91,15 +90,6 @@ class PackageLayout(LayoutBase):
     def __init__(self, ref, base_folder):
         super().__init__(ref, base_folder)
         self.build_id = None
-
-    @property
-    def reference(self):
-        return self._ref
-
-    # TODO: cache2.0 fix this in the future
-    @reference.setter
-    def reference(self, ref):
-        self._ref = ref
 
     # TODO: cache2.0 locks implementation
     @contextmanager
