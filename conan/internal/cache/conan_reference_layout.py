@@ -49,19 +49,19 @@ class RecipeLayout(LayoutBase):
         yield
 
     def export(self):
-        return os.path.join(self.base_folder, EXPORT_FOLDER)
+        return os.path.join(self._base_folder, EXPORT_FOLDER)
 
     def export_sources(self):
-        return os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
+        return os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
 
     def metadata(self):
         return os.path.join(self.download_export(), "metadata")
 
     def download_export(self):
-        return os.path.join(self.base_folder, DOWNLOAD_EXPORT_FOLDER)
+        return os.path.join(self._base_folder, DOWNLOAD_EXPORT_FOLDER)
 
     def source(self):
-        return os.path.join(self.base_folder, SRC_FOLDER)
+        return os.path.join(self._base_folder, SRC_FOLDER)
 
     def conanfile(self):
         return os.path.join(self.export(), CONANFILE)
@@ -84,7 +84,7 @@ class RecipeLayout(LayoutBase):
     def export_remove(self):
         export_folder = self.export()
         rmdir(export_folder)
-        export_src_folder = os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
+        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
         rmdir(export_src_folder)
         download_export = self.download_export()
         rmdir(download_export)
@@ -102,13 +102,13 @@ class PackageLayout(LayoutBase):
         yield
 
     def build(self):
-        return os.path.join(self.base_folder, BUILD_FOLDER)
+        return os.path.join(self._base_folder, BUILD_FOLDER)
 
     def package(self):
-        return os.path.join(self.base_folder, PACKAGES_FOLDER)
+        return os.path.join(self._base_folder, PACKAGES_FOLDER)
 
     def download_package(self):
-        return os.path.join(self.base_folder, DOWNLOAD_EXPORT_FOLDER)
+        return os.path.join(self._base_folder, DOWNLOAD_EXPORT_FOLDER)
 
     def metadata(self):
         return os.path.join(self.download_package(), "metadata")
