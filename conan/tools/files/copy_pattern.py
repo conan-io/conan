@@ -69,11 +69,13 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
 
         relative_path = os.path.relpath(root, src)
         compare_relative_path = relative_path.lower() if ignore_case else relative_path
-        for exclude in excludes:
-            if fnmatch.fnmatch(compare_relative_path, exclude):
-                subfolders[:] = []
-                files = []
-                break
+        # Don't try to exclude the start folder, it conflicts with excluding names starting with dots
+        if not compare_relative_path == ".":
+            for exclude in excludes:
+                if fnmatch.fnmatch(compare_relative_path, exclude):
+                    subfolders[:] = []
+                    files = []
+                    break
         for f in files:
             relative_name = os.path.normpath(os.path.join(relative_path, f))
             filenames.append(relative_name)
