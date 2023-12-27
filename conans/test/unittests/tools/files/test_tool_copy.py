@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.files import copy
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save, mkdir
+from conans.util.files import load, save, mkdir, save_files
 
 
 class ToolCopyTest(unittest.TestCase):
@@ -172,19 +172,14 @@ class ToolCopyTest(unittest.TestCase):
 
     def test_excludes_hidden_files(self):
         folder1 = temp_folder()
-        folder_foo = os.path.join(folder1, "foo")
-        folder_foo_bar = os.path.join(folder_foo, "bar")
-        folder_hidden = os.path.join(folder1, ".hiddenfolder")
-        mkdir(folder_foo)
-        mkdir(folder_foo_bar)
-        mkdir(folder_hidden)
-
-        save(os.path.join(folder1, "file1.txt"), "")
-        save(os.path.join(folder1, ".hiddenfile"), "")
-        save(os.path.join(folder_foo, "file2.txt"), "")
-        save(os.path.join(folder_foo, ".hiddenfile2"), "")
-        save(os.path.join(folder_hidden, "file3.txt"), "")
-        save(os.path.join(folder_foo_bar, "file4.txt"), "")
+        save_files(folder1, {
+            "file1.txt": "",
+            ".hiddenfile": "",
+            "foo/file2.txt": "",
+            "foo/.hiddenfile2": "",
+            ".hiddenfolder/file3.txt": "",
+            "foo/bar/file4.txt": ""
+        })
 
         folder2 = temp_folder()
         copy(None, "*", folder1, folder2, excludes=(".*", "*/.*"))
