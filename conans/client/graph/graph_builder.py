@@ -212,7 +212,7 @@ class DepsGraphBuilder(object):
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         layout, recipe_status, remote = result
-        conanfile_path = layout.conanfile()
+        conanfile_path = layout.conanfile() if recipe_status != RECIPE_EDITABLE else layout
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
@@ -306,7 +306,8 @@ class DepsGraphBuilder(object):
                 raise GraphMissingError(node, require, str(e))
 
         layout, dep_conanfile, recipe_status, remote = resolved
-        new_ref = layout.reference
+        new_ref = layout.reference if recipe_status not in (RECIPE_EDITABLE, RECIPE_PLATFORM)\
+            else require.ref
         # TODO: Proxy could return the recipe_layout() and it can be reused
         # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
         if recipe_status == RECIPE_EDITABLE:

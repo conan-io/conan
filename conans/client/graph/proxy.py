@@ -30,7 +30,7 @@ class ConanProxy:
 
         conanfile_path = self._cache.editable_packages.get_path(reference)
         if conanfile_path is not None:
-            return conanfile_path, RECIPE_EDITABLE, None, reference
+            return conanfile_path, RECIPE_EDITABLE, None
 
         # check if it there's any revision of this recipe in the local cache
         try:
