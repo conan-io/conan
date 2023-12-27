@@ -4,7 +4,6 @@ import re
 import textwrap
 import unittest
 
-import pytest
 
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conans.client.graph.graph import BINARY_INVALID
@@ -662,12 +661,11 @@ class TestValidateCppstd:
         assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out
 
     def test_exact_cppstd(self):
+        """ Using the default cppstd_compat sometimes is not desired, and a recipe can
+        explicitly opt-out this default cppstd_compat behavior, if it knows its binaries
+        won't be binary compatible among them for different cppstd values
+        """
         client = TestClient()
-        compat = textwrap.dedent("""\
-            def compatibility(conanfile):
-                return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
-            """)
-        save(os.path.join(client.cache.plugins_path, "compatibility/compatibility.py"), compat)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.errors import ConanInvalidConfiguration
@@ -676,10 +674,9 @@ class TestValidateCppstd:
                 version = "0.1"
                 settings = "compiler"
 
-                def validate(self):
-                    # This check excludes when the cppstd is a compatible one, not the main one
-                    if self.settings.compiler.cppstd is self.info.settings.compiler.cppstd:
-                        raise ConanInvalidConfiguration("Skipping compatibile cppstd alternative")
+                def compatibility(self):
+                    # It also works as class attribute, but more explicit here
+                    self.compatibility_cppstd = False
             """)
 
         client.save({"conanfile.py": conanfile})
