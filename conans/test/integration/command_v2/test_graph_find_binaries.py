@@ -203,6 +203,62 @@ class TestMissingBinaryDeps:
         assert textwrap.indent(expected, "      ") in c.out
 
 
+def test_change_in_package_type():
+    tc = TestClient(light=True)
+    tc.save({
+        "libc/conanfile.py": GenConanfile("libc", "1.0"),
+        "libb/conanfile.py": GenConanfile("libb", "1.0")
+        .with_requires("libc/1.0"),
+        "liba/conanfile.py": GenConanfile("liba", "1.0")
+        .with_requires("libb/1.0")
+    })
+
+    tc.run("create libc")
+    tc.run("create libb")
+    tc.run("create liba")
+
+    tc.save({
+        "libc/conanfile.py": GenConanfile("libc", "1.0")
+        .with_package_type("application")
+    })
+    tc.run("create libc")
+
+    tc.run("create liba", assert_error=True)
+    assert "Missing binary: libb/1.0" in tc.out
+
+    tc.run("graph explain --requires=liba/1.0")
+    # This fails, graph explain thinks everything is ok
+    assert "explanation: This binary is an exact match for the defined inputs" not in tc.out
+
+
+def test_conf_difference_shown():
+    tc = TestClient(light=True)
+    tc.save({
+        "libc/conanfile.py": GenConanfile("libc", "1.0"),
+        "libb/conanfile.py": GenConanfile("libb", "1.0")
+        .with_requires("libc/1.0"),
+        "liba/conanfile.py": GenConanfile("liba", "1.0")
+        .with_requires("libb/1.0")
+    })
+    tc.save_home({"global.conf": "tools.info.package_id:confs=['user.*']"})
+
+    tc.run("create libc")
+    tc.run("create libb")
+    tc.run("create liba")
+
+    tc.run("remove libc/*:* -c")
+
+    tc.run("create libc -c user.foo:bar=42")
+
+    tc.run("create liba", assert_error=True)
+    assert "Missing prebuilt package for 'libc/1.0'" in tc.out
+
+    tc.run("graph explain --requires=liba/1.0")
+    # This fails, graph explain thinks everything is ok
+    assert "conf: user.foo:bar=42" in tc.out
+    assert "explanation: This binary is an exact match for the defined inputs" not in tc.out
+
+
 class TestDistance:
     def test_multiple_distance_ordering(self):
         tc = TestClient()
