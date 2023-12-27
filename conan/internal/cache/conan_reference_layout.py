@@ -31,10 +31,10 @@ class LayoutBase:
 
 class BasicLayout(LayoutBase):
     def conanfile(self):
-        return os.path.join(self.base_folder, CONANFILE)
+        return os.path.join(self.base_folder, CONANFILE) if self.base_folder is not None else None
 
     def metadata(self):
-        return os.path.join(self.base_folder, METADATA)
+        return os.path.join(self.base_folder, METADATA) if self.base_folder is not None else None
 
 
 class RecipeLayout(LayoutBase):

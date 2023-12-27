@@ -309,7 +309,7 @@ class DepsGraphBuilder(object):
 
         layout, dep_conanfile, recipe_status, remote = resolved
         new_ref = layout.reference
-        recipe_metadata = layout.metadata()
+        recipe_metadata = layout.metadata()  # Can be None for platform_requires
         dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
