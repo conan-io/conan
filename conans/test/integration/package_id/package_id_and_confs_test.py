@@ -7,7 +7,7 @@ from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAG
 PKG_ID_NO_CONF = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
 PKG_ID_1 = "89d32f25195a77f4ae2e77414b870781853bdbc1"
 PKG_ID_2 = "7f9ed92704709f56ecc7b133322479caf3ffd7ad"
-PKG_ID_3 = "45b796ec237c7e2399944e79bee49b56fd022067"
+PKG_ID_3 = "a9f917f3bad3b48b5bceae70214764274ccd6337"
 
 
 @pytest.mark.parametrize("package_id_confs, package_id", [
