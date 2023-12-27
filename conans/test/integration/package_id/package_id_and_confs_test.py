@@ -111,5 +111,6 @@ def test_conf_pkg_id_user_pattern_not_defined():
     })
     tc.save_home({"global.conf": "tools.info.package_id:confs=['user.*']"})
 
+    # This used to break the build because `user.*` conf was not valid
     tc.run("create lib")
     assert "lib/1.0: Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created" in tc.out
