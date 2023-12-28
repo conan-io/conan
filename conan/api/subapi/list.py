@@ -248,14 +248,14 @@ class _BinaryDistance:
         for r in expected_requires:
             existing = binary_requires.get(r.name)
             if not existing or r != existing:
-                self.deps_diff.setdefault("expected", []).append(repr(r))
-                self.deps_diff.setdefault("existing", []).append(repr(existing))
+                self.deps_diff.setdefault("expected", set()).add(repr(r))
+                self.deps_diff.setdefault("existing", set()).add(repr(existing))
         expected_requires = {r.name: r for r in expected_requires}
         for r in binary_requires.values():
             existing = expected_requires.get(r.name)
             if not existing or r != existing:
-                self.deps_diff.setdefault("expected", []).append(repr(existing))
-                self.deps_diff.setdefault("existing", []).append(repr(r))
+                self.deps_diff.setdefault("expected", set()).add(repr(existing))
+                self.deps_diff.setdefault("existing", set()).add(repr(r))
 
     def __lt__(self, other):
         return self.distance < other.distance
