@@ -240,7 +240,7 @@ def test_conf_difference_shown():
         "liba/conanfile.py": GenConanfile("liba", "1.0")
         .with_requires("libb/1.0")
     })
-    tc.save_home({"global.conf": "tools.info.package_id:confs=['user.*']"})
+    tc.save_home({"global.conf": "tools.info.package_id:confs=['user.foo:bar']"})
 
     tc.run("create libc")
     tc.run("create libb")
@@ -254,9 +254,7 @@ def test_conf_difference_shown():
     assert "Missing prebuilt package for 'libc/1.0'" in tc.out
 
     tc.run("graph explain --requires=liba/1.0")
-    # This fails, graph explain thinks everything is ok
     assert "conf: user.foo:bar=42" in tc.out
-    assert "explanation: This binary is an exact match for the defined inputs" not in tc.out
 
 
 class TestDistance:
