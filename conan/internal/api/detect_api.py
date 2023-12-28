@@ -186,7 +186,7 @@ def detect_libcxx(compiler, version):
     elif compiler == "mcst-lcc":
         return "libstdc++"
     elif compiler == "intel-cc":
-        return "libstdc++"    
+        return "libstdc++11"    
 
 
 def default_msvc_runtime(compiler):
@@ -271,7 +271,6 @@ def detect_compiler():
                 output.error("%s detected as a frontend using apple-clang. "
                              "Compiler not supported" % command)
             return gcc, gcc_version
-        # FIXME add the Windows identifiers
         if "icpx" in command or "icx" in command:
             intel, intel_version = _intel_compiler(command)
             return intel, intel_version        
@@ -355,7 +354,7 @@ def _intel_compiler(compiler_exe="icx"):
         if ret != 0:
             return None, None
         compiler = "intel-cc"
-        installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
+        installed_version = re.search(r"([0-9][0-9][0-9][0-9]+(\.[0-9])?)", out).group()
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
             return compiler, Version(installed_version)
