@@ -89,7 +89,3 @@ class BuildMode:
         for pattern in self.build_missing_patterns:
             if ref_matches(conanfile.ref, pattern, is_consumer=False):
                 return True
-
-    def report_matches(self):
-        for pattern in self._unused_patterns:
-            ConanOutput().error(f"No package matching '{pattern}' pattern found.", error_type="context")

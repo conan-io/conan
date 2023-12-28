@@ -1,7 +1,7 @@
 from typing import Dict
 
 from conan.api.model import PackagesList
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException, NotFoundException
 from conans.model.info import load_binary_info
@@ -99,11 +99,14 @@ class ListAPI:
         search_ref = pattern.search_ref
         app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
         limit_time = timelimit(lru) if lru else None
+        out = ConanOutput()
+        remote_name = "local cache" if not remote else remote.name
         if search_ref:
             refs = self.conan_api.search.recipes(search_ref, remote=remote)
             refs = pattern.filter_versions(refs)
             refs = sorted(refs)  # Order alphabetical and older versions first
             pattern.check_refs(refs)
+            out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
         else:
             refs = [RecipeReference(pattern.name, pattern.version, pattern.user, pattern.channel)]
 
@@ -112,7 +115,12 @@ class ListAPI:
             select_bundle.add_refs(refs)
             return select_bundle
 
+        def msg_format(msg, item, total):
+            return msg + f" ({total.index(item)}/{len(total)})"
+
+        trefs = TimedOutput(5, msg_format=msg_format)
         for r in refs:  # Older versions first
+            trefs.info(f"Listing revisions of {r} in {remote_name}", r, refs)
             if pattern.is_latest_rrev or pattern.rrev is None:
                 rrev = self.latest_recipe_revision(r, remote)
                 if rrev is None:
@@ -131,7 +139,9 @@ class ListAPI:
             if pattern.package_id is None:  # Stop if not displaying binaries
                 continue
 
+            trrevs = TimedOutput(5, msg_format=msg_format)
             for rrev in rrevs:
+                trrevs.info(f"Listing binaries of {rrev.repr_notime()} in {remote_name}", rrev, rrevs)
                 prefs = []
                 if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
