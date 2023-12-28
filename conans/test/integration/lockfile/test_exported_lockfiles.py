@@ -1,23 +1,31 @@
+import os
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+# Bundle-Lockfile
 def test_exported_lockfile():
     """ POC: A conan.lock that is exported together with the recipe can be used later while
     consuming that package
     """
-    client = TestClient()
-    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
-                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
-                                                               .with_exports("conan.lock")})
-    client.run("create dep")
-    with client.chdir("pkg"):
-        client.run("lock create .")
-        client.run("create .")
+    client = TestClient(default_server_user=True)
+    client.save({"global.conf": "tools.graph:auto_lock=True"}, path=client.cache_folder)
+    client.save({"dep/conanfile.py": GenConanfile("dep"),
+                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
+    client.run("create dep --version=0.1")
+    client.run("create pkg")  # captures lockfile in metadata
 
-    client.save({"dep/conanfile.py": GenConanfile("dep", "0.2")})
-    client.run("create dep")
+    client.run("create dep --version=0.2")
 
+    assert "conan.lock" not in os.listdir(client.current_folder)
+    client.run("install --requires=pkg/0.1")
+    assert "dep/0.2" not in client.out
+    assert "dep/0.1" in client.out
+
+    # It should also work when downloading from remote
+    client.run("upload * -c -r=default")
+    client.run("remove * -c")
     client.run("install --requires=pkg/0.1")
     assert "dep/0.2" not in client.out
     assert "dep/0.1" in client.out
@@ -34,22 +42,17 @@ def test_downstream_priority():
     that doesn't match the dependency one
     """
     client = TestClient()
-    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
-                 "dep2/conanfile.py": GenConanfile("dep", "0.2"),
-                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
-                                                               .with_exports("conan.lock"),
+    client.save({"global.conf": "tools.graph:auto_lock=True"}, path=client.cache_folder)
+    client.save({"dep/conanfile.py": GenConanfile("dep"),
+                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]"),
                  "consumer/conanfile.py": GenConanfile().with_requirement("pkg/0.1")
-                                                        .with_requirement("dep/[<0.2]", force=True)})
-    client.run("create dep")
-    client.run("create dep2")
-    with client.chdir("pkg"):
-        client.run("lock create .")
-        client.run("create .")
-        assert "dep/0.2" in client.out
-        assert "dep/0.1" not in client.out
+                                                        .with_requirement("dep/[<0.2]", force=False)})
+    client.run("create dep --version=0.1")
+    client.run("create dep --version=0.2")
+    client.run("create pkg")
+    assert "dep/0.2" in client.out
+    assert "dep/0.1" not in client.out
 
-    with client.chdir("consumer"):
-        client.run("lock create .")
-        client.run("install . --build=missing --lockfile=conan.lock")
-        assert "dep/0.2" not in client.out
-        assert "dep/0.1" in client.out
+    client.run("install consumer --build=missing")
+    assert "dep/0.2" not in client.out
+    assert "dep/0.1" in client.out

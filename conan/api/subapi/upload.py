@@ -48,7 +48,7 @@ class UploadAPI:
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
 
-        # Make sure to collect the conan.lock metadatas
+        # Bundle-Lockfile: Make sure to collect the conan.lock metadatas
         for rref, recipe_bundle in package_list.refs().items():
             if recipe_bundle["upload"]:
                 metadata_folder = app.cache.recipe_layout(rref).metadata()

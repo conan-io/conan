@@ -213,19 +213,23 @@ class DepsGraphBuilder(object):
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
 
-    def _resolve_recipe(self, ref, graph_lock):
+    def _resolve_recipe(self, ref, graph_lock, profile_conf):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         layout, recipe_status, remote = result
         conanfile_path = layout.conanfile()
-        # We check if the recipe exported a "conan.lock", and if it is there, use it
-        exported_lock = os.path.join(os.path.dirname(conanfile_path), "conan.lock")
+        # Bundle-Lockfile:  check if the recipe exported a "conan.lock", and if it is there, use it
+        exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
         if os.path.isfile(exported_lock):
-            exported_lockfile = Lockfile.load(exported_lock)
-            exported_lockfile.partial = True
-            if graph_lock is not None:
-                graph_lock.merge(exported_lockfile)
-            else:
-                graph_lock = exported_lockfile
+            conf = profile_conf.get_conanfile_conf(ref, False)
+            if conf.get("tools.graph:auto_lock", check_type=bool):
+                exported_lockfile = Lockfile.load(exported_lock)
+                exported_lockfile.partial = True
+                from conan.api.output import ConanOutput
+                ConanOutput().info(f"Using lockfile from {ref}")
+                if graph_lock is not None:
+                    graph_lock.merge(exported_lockfile)
+                else:
+                    graph_lock = exported_lockfile
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
@@ -317,7 +321,9 @@ class DepsGraphBuilder(object):
                 # TODO: This range-resolve might resolve in a given remote or cache
                 # Make sure next _resolve_recipe use it
                 self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
-                resolved = self._resolve_recipe(require.ref, graph_lock)
+                conf = profile_build.conf if require.build or node.context == CONTEXT_BUILD \
+                    else profile_host.conf
+                resolved = self._resolve_recipe(require.ref, graph_lock, conf)
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
             layout, dep_conanfile, recipe_status, remote, graph_lock = resolved

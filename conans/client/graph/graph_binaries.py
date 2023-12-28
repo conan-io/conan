@@ -1,3 +1,5 @@
+import os
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.build_mode import BuildMode
@@ -7,9 +9,10 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
-                                       BINARY_PLATFORM)
+                                       BINARY_PLATFORM, DepsGraph)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
+from conans.model.graph_lock import Lockfile
 
 
 class GraphBinariesAnalyzer(object):
@@ -170,6 +173,23 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.info.invalid[0] == BINARY_INVALID):
             # BINARY_BUILD IS NOT A VIABLE fallback for invalid
             node.binary = BINARY_INVALID
+
+        # Bundle-Lockfile
+        if node.binary == BINARY_BUILD and node.conanfile.conf.get("tools.graph:auto_lock",
+                                                                   check_type=bool):
+            partial_lockfile = Lockfile(DepsGraph.from_node(node))
+            metadata_folder = node.conanfile.recipe_metadata_folder
+            bundled_lockfile = os.path.join(metadata_folder, "conan", "conan.lock")
+            if os.path.isfile(bundled_lockfile):
+                node.conanfile.output.info("Updating existing metadata lockfile with current"
+                                           "graph information")
+                exported_lockfile = Lockfile.load(bundled_lockfile)
+                exported_lockfile.partial = True
+                exported_lockfile.merge(partial_lockfile)
+            else:
+                exported_lockfile = partial_lockfile
+            node.conanfile.output.info("Storing current lockfile in metadata")
+            exported_lockfile.save(bundled_lockfile)
 
     def _process_node(self, node, build_mode, remotes, update):
         # Check that this same reference hasn't already been checked

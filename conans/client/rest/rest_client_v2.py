@@ -44,7 +44,7 @@ class RestV2Methods(RestCommonMethods):
 
         if not only_metadata:
             accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt",
-                              "metadata/sign"]
+                              "metadata/sign", "metadata/conan"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
