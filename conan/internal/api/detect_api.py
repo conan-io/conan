@@ -227,10 +227,15 @@ def default_cppstd(compiler, compiler_version):
     def _mcst_lcc_cppstd_default(version):
         return "gnu14" if version >= "1.24" else "gnu98"
 
+    def _intel_cppstd_default(version):
+        tokens = version.main
+        major = tokens[0]
+        return "17" if major >= "2023" else "14"
+
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
                "apple-clang": "gnu98",
-               "intel-cc": "17",
+               "intel-cc": _intel_cppstd_default(compiler_version),
                "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
