@@ -447,4 +447,6 @@ def default_compiler_version(compiler, version):
         return major
     elif compiler == "msvc":
         return major
+    elif compiler == "intel-cc":
+        return major
     return version
