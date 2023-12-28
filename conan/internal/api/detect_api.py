@@ -230,6 +230,7 @@ def default_cppstd(compiler, compiler_version):
     def _intel_cppstd_default(version):
         tokens = version.main
         major = tokens[0]
+        # https://www.intel.com/content/www/us/en/developer/articles/troubleshooting/icx-changes-default-cpp-std-to-cpp17-with-2023.html
         return "17" if major >= "2023" else "14"
 
     default = {"gcc": _gcc_cppstd_default(compiler_version),
@@ -359,7 +360,7 @@ def _intel_compiler(compiler_exe="icx"):
         if ret != 0:
             return None, None
         compiler = "intel-cc"
-        installed_version = re.search(r"([0-9][0-9][0-9][0-9]+(\.[0-9])?)", out).group()
+        installed_version = re.search(r"(202[0-9]+(\.[0-9])?)", out).group()
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
             return compiler, Version(installed_version)
