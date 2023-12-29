@@ -135,6 +135,15 @@ class PackagesList:
     def __init__(self):
         self.recipes = {}
 
+    def sublist(self):
+        # Returns a list of PackageList, one per ref
+        result = []
+        for r, content in self.recipes.items():
+            subpkglist = PackagesList()
+            subpkglist.recipes[r] = content
+            result.append(subpkglist)
+        return result
+
     def only_recipes(self):
         result = {}
         for ref, ref_dict in self.recipes.items():

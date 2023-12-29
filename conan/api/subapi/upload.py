@@ -1,4 +1,6 @@
 import os
+import time
+from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -56,6 +58,40 @@ class UploadAPI:
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
+
+    def full_upload(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,
+                    metadata=None, dry_run=False):
+
+        def _upload_pkglist(pkglist, subtitle=lambda _: None):
+            if check_integrity:
+                subtitle("Checking integrity of cache packages")
+                self.conan_api.cache.check_integrity(pkglist)
+            # Check if the recipes/packages are in the remote
+            subtitle("Checking server existing packages")
+            self.check_upstream(pkglist, remote, enabled_remotes, force)
+            subtitle("Preparing artifacts for upload")
+            self.prepare(pkglist, enabled_remotes, metadata)
+
+            if not dry_run:
+                subtitle("Uploading artifacts")
+                self.upload(pkglist, remote)
+                backup_files = self.get_backup_sources(pkglist)
+                self.upload_backup_sources(backup_files)
+
+        t = time.time()
+        ConanOutput().title(f"Uploading to remote {remote.name}")
+        parallel = self.conan_api.config.get("core.upload:parallel", default=1, check_type=int)
+        thread_pool = ThreadPool(parallel) if parallel > 1 else None
+        if not thread_pool or len(package_list.recipes) <= 1:
+            _upload_pkglist(package_list, subtitle=ConanOutput().subtitle)
+        else:
+            ConanOutput().subtitle(f"Uploading with {parallel} parallel threads")
+            thread_pool.map(_upload_pkglist, package_list.sublist())
+        if thread_pool:
+            thread_pool.close()
+            thread_pool.join()
+        elapsed = time.time() - t
+        ConanOutput().success(f"Upload complete in {int(elapsed)}s\n")
 
     def get_backup_sources(self, package_list=None):
         """Get list of backup source files currently present in the cache,
