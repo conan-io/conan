@@ -289,6 +289,8 @@ class Requirement:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.HEADER:
                 downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
+            elif pkg_type is PackageType.BUILD_SCRIPTS:
+                raise ConanError("build-scripts package must be used as a tool_requires(), not a regular requirement")
             else:
                 assert pkg_type == PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
