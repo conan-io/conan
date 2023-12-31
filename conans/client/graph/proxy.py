@@ -1,5 +1,3 @@
-import os.path
-
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
@@ -9,8 +7,9 @@ from conans.errors import ConanException, NotFoundException
 
 
 class ConanProxy:
-    def __init__(self, conan_app):
+    def __init__(self, conan_app, editable_packages):
         # collaborators
+        self._editable_packages = editable_packages
         self._cache = conan_app.cache
         self._remote_manager = conan_app.remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
@@ -31,7 +30,7 @@ class ConanProxy:
     def _get_recipe(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
 
-        conanfile_path = self._cache.editable_packages.get_path(reference)
+        conanfile_path = self._editable_packages.get_path(reference)
         if conanfile_path is not None:
             return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
 

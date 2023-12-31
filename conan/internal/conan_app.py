@@ -56,8 +56,8 @@ class ConanApp:
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager)
 
-        self.proxy = ConanProxy(self)
-        self.range_resolver = RangeResolver(self, global_conf)
+        self.proxy = ConanProxy(self, conan_api.local.editable_packages)
+        self.range_resolver = RangeResolver(self, global_conf, conan_api.local.editable_packages)
 
         self.pyreq_loader = PyRequireLoader(self, global_conf)
         cmd_wrap = CmdWrapper(home_paths.wrapper_path)
