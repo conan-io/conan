@@ -15,7 +15,7 @@ class InstallAPI:
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
         """
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf)
         installer.install_system_requires(deps_graph)  # TODO: Optimize InstallGraph computation
         installer.install(deps_graph, remotes)
@@ -25,7 +25,7 @@ class InstallAPI:
         :param only_info: Only allow reporting and checking, but never install
         :param graph: Dependency graph to intall packages for
         """
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf)
         installer.install_system_requires(graph, only_info)
 
@@ -34,7 +34,7 @@ class InstallAPI:
         :param remotes:
         :param graph: Dependency graph to install packages for
         """
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf)
         installer.install_sources(graph, remotes)
 
@@ -66,5 +66,5 @@ class InstallAPI:
             do_deploys(self.conan_api, deps_graph, deploy, deploy_package, base_folder)
 
         conanfile.generators = list(set(conanfile.generators).union(generators or []))
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         write_generators(conanfile, app)
