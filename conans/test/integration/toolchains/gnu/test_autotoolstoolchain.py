@@ -46,6 +46,45 @@ def test_extra_flags_via_conf():
         assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
 
 
+def test_msvc_extra_flag():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=dynamic
+        arch=x86_64
+        build_type=Release
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("AutotoolsToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat'))
+    assert 'set "CXXFLAGS=%CXXFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+    assert 'set "CFLAGS=%CFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+
+    # now verify not duplicated
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                tc = AutotoolsToolchain(self)
+                tc.extra_cxxflags.append("-FS")
+                tc.extra_cflags.append("-FS")
+                tc.generate()
+                """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat'))
+    assert 'set "CXXFLAGS=%CXXFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+    assert 'set "CFLAGS=%CFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+
+
 def test_extra_flags_order():
     client = TestClient()
     conanfile = textwrap.dedent("""
