@@ -676,7 +676,7 @@ class TestValidateCppstd:
 
                 def compatibility(self):
                     # It also works as class attribute, but more explicit here
-                    self.compatibility_cppstd = False
+                    self.conf_info.define("user.conan.plugins:compatibility_cppstd", False)
             """)
 
         client.save({"conanfile.py": conanfile})
