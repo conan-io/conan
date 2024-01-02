@@ -347,7 +347,7 @@ class Conf:
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
 
     def serialize(self):
         """
