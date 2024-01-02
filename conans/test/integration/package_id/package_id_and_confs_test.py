@@ -2,12 +2,15 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
 
 PKG_ID_NO_CONF = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
 PKG_ID_1 = "89d32f25195a77f4ae2e77414b870781853bdbc1"
 PKG_ID_2 = "7f9ed92704709f56ecc7b133322479caf3ffd7ad"
 PKG_ID_3 = "45b796ec237c7e2399944e79bee49b56fd022067"
+PKG_ID_USER_1 = "571b5dae13b37a78c1993842739bd475879092ea"
+PKG_ID_USER_2 = "54a394d26f9c35add86f20ac02cacc3c7e18f02c"
+PKG_ID_USER_3 = "002f9fb964ba1ba1fa1d38cb907968295645afb1"
 
 
 @pytest.mark.parametrize("package_id_confs, package_id", [
@@ -16,14 +19,12 @@ PKG_ID_3 = "45b796ec237c7e2399944e79bee49b56fd022067"
     ('["tools.build:cxxflags", "tools.build:cflags"]', PKG_ID_1),
     ('["tools.build:defines"]', PKG_ID_2),
     ('["tools.build:cxxflags", "tools.build:sharedlinkflags"]', PKG_ID_3),
+    ('["user.foo:value"]', PKG_ID_USER_1),
+    ('["user.foo:value", "user.bar:value"]', PKG_ID_USER_2),
+    ('["user.*"]', PKG_ID_USER_3),
 ])
 def test_package_id_including_confs(package_id_confs, package_id):
     client = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            settings = "os"
-        """)
     profile = textwrap.dedent(f"""
     include(default)
     [conf]
@@ -33,9 +34,13 @@ def test_package_id_including_confs(package_id_confs, package_id):
     tools.build:sharedlinkflags=+["--flag5", "--flag6"]
     tools.build:exelinkflags=["--flag7", "--flag8"]
     tools.build:defines=["D1", "D2"]
+
+    user.foo:value=1
+    user.bar:value=2
     """)
-    client.save({"conanfile.py": conanfile, "profile": profile})
-    client.run('create . --name=pkg --version=0.1 -s os=Windows -pr profile')
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os"),
+                 "profile": profile})
+    client.run('create . -s os=Windows -pr profile')
     client.assert_listed_binary({"pkg/0.1": (package_id, "Build")})
 
 
@@ -98,3 +103,13 @@ def test_package_id_confs_header_only():
     assert "tools.build:cxxflags" not in client.out
 
 
+def test_conf_pkg_id_user_pattern_not_defined():
+    tc = TestClient(light=True)
+    tc.save({
+        "lib/conanfile.py": GenConanfile("lib", "1.0"),
+    })
+    tc.save_home({"global.conf": "tools.info.package_id:confs=['user.*']"})
+
+    # This used to break the build because `user.*` conf was not valid
+    tc.run("create lib")
+    assert "lib/1.0: Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created" in tc.out
