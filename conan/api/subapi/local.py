@@ -2,6 +2,7 @@ import os
 
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
+from conans.client.cache.editable import EditablePackages
 from conans.client.conanfile.build import run_build_method
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.profile_node_definer import initialize_conanfile_profile
@@ -15,6 +16,7 @@ class LocalAPI:
 
     def __init__(self, conan_api):
         self._conan_api = conan_api
+        self.editable_packages = EditablePackages(conan_api.home_folder)
 
     @staticmethod
     def get_conanfile_path(path, cwd, py):
@@ -53,18 +55,16 @@ class LocalAPI:
         target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        app.cache.editable_packages.add(ref, target_path, output_folder=output_folder)
+        self.editable_packages.add(ref, target_path, output_folder=output_folder)
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
-        app = ConanApp(self._conan_api)
         if path:
             path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
-        return app.cache.editable_packages.remove(path, requires)
+        return self.editable_packages.remove(path, requires)
 
     def editable_list(self):
-        app = ConanApp(self._conan_api)
-        return app.cache.editable_packages.edited_refs
+        return self.editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
         """ calls the 'source()' method of the current (user folder) conanfile.py

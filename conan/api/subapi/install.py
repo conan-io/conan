@@ -16,7 +16,8 @@ class InstallAPI:
         :param remotes:
         """
         app = ConanApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf)
+        installer = BinaryInstaller(app, self.conan_api.config.global_conf,
+                                    self.conan_api.local.editable_packages)
         installer.install_system_requires(deps_graph)  # TODO: Optimize InstallGraph computation
         installer.install(deps_graph, remotes)
 
@@ -26,7 +27,8 @@ class InstallAPI:
         :param graph: Dependency graph to intall packages for
         """
         app = ConanApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf)
+        installer = BinaryInstaller(app, self.conan_api.config.global_conf,
+                                    self.conan_api.local.editable_packages)
         installer.install_system_requires(graph, only_info)
 
     def install_sources(self, graph, remotes):
@@ -35,7 +37,8 @@ class InstallAPI:
         :param graph: Dependency graph to install packages for
         """
         app = ConanApp(self.conan_api)
-        installer = BinaryInstaller(app, self.conan_api.config.global_conf)
+        installer = BinaryInstaller(app, self.conan_api.config.global_conf,
+                                    self.conan_api.local.editable_packages)
         installer.install_sources(graph, remotes)
 
     # TODO: Look for a better name

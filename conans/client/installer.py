@@ -168,8 +168,9 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app, global_conf):
+    def __init__(self, app, global_conf, editable_packages):
         self._app = app
+        self._editable_packages = editable_packages
         self._cache = app.cache
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
@@ -348,7 +349,7 @@ class BinaryInstaller:
         node = install_node.nodes[0]
         conanfile = node.conanfile
         ref = node.ref
-        editable = self._cache.editable_packages.get(ref)
+        editable = self._editable_packages.get(ref)
         conanfile_path = editable["path"]
         output_folder = editable.get("output_folder")
 
