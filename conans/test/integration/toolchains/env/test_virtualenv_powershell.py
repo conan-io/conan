@@ -139,7 +139,7 @@ def test_vcvars():
           return RUN_ALL_TESTS();
         }
     """)
-    client.save({"hello.cpp": hello_cpp})
+    # client.save({"hello.cpp": hello_cpp})
     cmakelists = textwrap.dedent(r"""
         cmake_minimum_required(VERSION 3.26)
 
@@ -151,8 +151,10 @@ def test_vcvars():
         add_executable(hello hello.cpp)
         target_link_libraries(hello PRIVATE GTest::gtest GTest::gtest_main)
     """)
-    client.save({"CMakeLists.txt": cmakelists})
+    # client.save({"CMakeLists.txt": cmakelists})
     client.run("install . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
+    # assert "Generating done" in client.out
+    # assert "[vcvarsall.bat] Environment initialized for:" in client.out
     conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
     vcvars = client.load(r".\build\Release\generators\conanvcvars.bat")
     assert "conanvcvars.bat" in conanbuild

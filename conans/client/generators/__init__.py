@@ -159,13 +159,13 @@ def _generate_aggregated_env(conanfile):
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             # Only the .bat and .ps1 are made relative to current script
-            if env_script.endswith("conanvcvars.bat"):
-                path = os.path.relpath(path, conanfile.generators_folder)
-                bats.append("%~dp0/" + path)
-                ps1s.append("$PSScriptRoot/" + path)
+            is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
             if env_script.endswith(".bat"):
                 path = os.path.relpath(path, conanfile.generators_folder)
-                bats.append("%~dp0/"+path)
+                if is_ps1:
+                    ps1s.append("$PSScriptRoot/" + path)
+                else:
+                    bats.append("%~dp0/"+path)
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
             elif env_script.endswith(".ps1"):
