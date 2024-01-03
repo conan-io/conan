@@ -9,6 +9,7 @@ import pytest
 from conan.tools.env.environment import environment_wrap_command
 from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run, check_vs_runtime
 from conans.test.utils.tools import TestClient, TurboTestClient
@@ -383,3 +384,43 @@ def test_autotools_arguments_override():
 
     client.run("test test_package mylib/1.0@")
     assert "mylib/1.0: Hello World Release!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only MSVC")
+def test_msvc_extra_flag():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=dynamic
+        arch=x86_64
+        build_type=Release
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("AutotoolsToolchain")
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat'))
+    assert 'set "CXXFLAGS=%CXXFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+    assert 'set "CFLAGS=%CFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+
+    # now verify not duplicated
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                tc = AutotoolsToolchain(self)
+                tc.extra_cxxflags.append("-FS")
+                tc.extra_cflags.append("-FS")
+                tc.generate()
+                """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat'))
+    assert 'set "CXXFLAGS=%CXXFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
+    assert 'set "CFLAGS=%CFLAGS% -MD -O2 -Ob2 -FS"' in toolchain
