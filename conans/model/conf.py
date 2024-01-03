@@ -313,7 +313,8 @@ class Conf:
                 return str(v)
             elif v is None:  # value was unset
                 return default
-            elif check_type is not None and not isinstance(v, check_type):
+            elif (check_type is not None and not isinstance(v, check_type) or
+                  check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
                                      f"{check_type.__name__}-like object. The value '{v}' "
                                      f"introduced is a {type(v).__name__} object")
