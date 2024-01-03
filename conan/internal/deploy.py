@@ -32,7 +32,8 @@ def _find_deployer(d, cache_deploy_folder):
     if os.path.isfile(cache_path):
         return _load(cache_path)
     builtin_deploy = {"full_deploy.py": full_deploy,
-                      "direct_deploy.py": direct_deploy}.get(d)
+                      "direct_deploy.py": direct_deploy,
+                      "runtime_deploy.py": runtime_deploy}.get(d)
     if builtin_deploy is not None:
         return builtin_deploy
     raise ConanException(f"Cannot find deployer '{d}'")
@@ -78,6 +79,72 @@ def full_deploy(graph, output_folder):
         if arch:
             folder_name = os.path.join(folder_name, arch)
         _deploy_single(dep, conanfile, output_folder, folder_name)
+
+
+def runtime_deploy(graph, output_folder):
+    """
+    Deploy all the shared libraries and the executables of the dependencies in a flat directory.
+    """
+    conanfile = graph.root.conanfile
+    conanfile.output.info(f"Deploying the runtime...")
+    for _, dep in conanfile.dependencies.items():
+        conanfile.output.verbose(f"Searching for shared libraries and executables in {dep.ref}...")
+        if dep.package_folder is None:
+            conanfile.output.verbose(f"{dep.ref} does not have any package folder")
+            continue
+        if not dep.cpp_info.bindirs and not dep.cpp_info.libdirs:
+            conanfile.output.verbose(f"{dep.ref} does not have any bin or lib directory")
+            continue
+
+        for bindir_name in dep.cpp_info.bindirs:
+            bindir_path = os.path.join(dep.package_folder, bindir_name)
+            if not os.path.isdir(bindir_path):
+                conanfile.output.verbose(f"{bindir_path} does not exist")
+                continue
+            file_count = _flatten_directory(dep, conanfile, bindir_path, output_folder)
+            conanfile.output.info(f"Copied {file_count} files from {dep.ref}, directory named {bindir_name}")
+
+        for libdir_name in dep.cpp_info.libdirs:
+            libdir_path = os.path.join(dep.package_folder, libdir_name)
+            if not os.path.isdir(libdir_path):
+                conanfile.output.verbose(f"{libdir_path} does not exist")
+                continue
+            file_count = _flatten_directory(dep, conanfile, libdir_path, output_folder, [".dll", ".dylib",".so"])
+            conanfile.output.info(f"Copied {file_count} files from {dep.ref}, directory named {libdir_name}")
+    conanfile.output.info(f"Runtime deployed!")
+
+
+def _flatten_directory(dep, conanfile, src_dir, output_dir, extension_filter = None):
+    """
+    Copy all the files from the source directory in a flat output directory.
+    An optional string, named extension_filter, can be set to copy only the files with the listed extensions.
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    file_count = 0
+    symlinks = conanfile.conf.get("tools.deployer:symlinks", check_type=bool, default=True)
+    for src_dirpath, _, src_filenames in os.walk(src_dir, followlinks=symlinks):
+        for src_filename in src_filenames:
+            if extension_filter:
+                for extension in extension_filter:
+                    if not src_filename.endswith(extension):
+                        continue
+            src_filepath = os.path.join(src_dirpath, src_filename)
+            dest_filepath = os.path.join(output_dir, src_filename)
+            if os.path.exists(dest_filepath):
+                conanfile.output.verbose(f"{src_filename} already exists and will be overwritten")
+            try:
+                file_count += 1
+                shutil.copy2(src_filepath, dest_filepath, follow_symlinks=symlinks)
+                conanfile.output.verbose(f"Copied {src_filename} into {output_dir}")
+            except Exception as e:
+                if "WinError 1314" in str(e):
+                    ConanOutput().error("runtime_deploy: Symlinks in Windows require admin privileges "
+                                        "or 'Developer mode = ON'", error_type="exception")
+                raise ConanException(f"runtime_deploy: The copy of '{dep}' files failed: {e}.\nYou can "
+                                    f"use 'tools.deployer:symlinks' conf to disable symlinks")
+    return file_count
 
 
 def _deploy_single(dep, conanfile, output_folder, folder_name):
