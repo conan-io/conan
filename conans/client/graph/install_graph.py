@@ -303,7 +303,7 @@ class InstallGraph:
         missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
         out = ConanOutput()
         for pref_str in missing_prefs_str:
-            out.error("Missing binary: %s" % pref_str)
+            out.error(f"Missing binary: {pref_str}", error_type="exception")
         out.writeln("")
 
         # Report details just the first one

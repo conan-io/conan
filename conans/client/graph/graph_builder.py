@@ -1,10 +1,10 @@
 import copy
-import os
 from collections import deque
 
+from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -192,10 +192,11 @@ class DepsGraphBuilder(object):
             try:
                 result = self._proxy.get_recipe(alias, self._remotes, self._update,
                                                 self._check_update)
-                conanfile_path, recipe_status, remote, new_ref = result
+                layout, recipe_status, remote = result
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
+            conanfile_path = layout.conanfile()
             dep_conanfile = self._loader.load_basic(conanfile_path)
             try:
                 pointed_ref = RecipeReference.loads(dep_conanfile.alias)
@@ -210,11 +211,12 @@ class DepsGraphBuilder(object):
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
-        conanfile_path, recipe_status, remote, new_ref = result
+        layout, recipe_status, remote = result
+        conanfile_path = layout.conanfile()
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        return new_ref, dep_conanfile, recipe_status, remote
+        return layout, dep_conanfile, recipe_status, remote
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
@@ -228,12 +230,14 @@ class DepsGraphBuilder(object):
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
-                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
+                            layout = BasicLayout(require.ref, None)
+                            return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
                             require.ref.revision = d.revision
-                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
+                            layout = BasicLayout(require.ref, None)
+                            return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
@@ -270,14 +274,20 @@ class DepsGraphBuilder(object):
             break  # First match executes the alternative and finishes checking others
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
-        if require.ref.version == "<host_version>":
+        require_version = str(require.ref.version)
+        if require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
                 raise ConanException(f"{node.ref} require '{require.ref}': 'host_version' can only "
                                      "be used for non-visible tool_requires")
-            req = Requirement(require.ref, headers=True, libs=True, visible=True)
+            tracking_ref = require_version.split(':', 1)
+            ref = require.ref
+            if len(tracking_ref) > 1:
+                ref = RecipeReference.loads(str(node.ref))
+                ref.name = tracking_ref[1][:-1]  # Remove the trailing >
+            req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
             if transitive is None:
-                raise ConanException(f"{node.ref} require '{require.ref}': didn't find a matching "
+                raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
@@ -297,15 +307,9 @@ class DepsGraphBuilder(object):
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
-        new_ref, dep_conanfile, recipe_status, remote = resolved
-        # TODO: Proxy could return the recipe_layout() and it can be reused
-        # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
-        if recipe_status == RECIPE_EDITABLE:
-            recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
-            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
-        elif recipe_status != RECIPE_PLATFORM:
-            recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
-            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
+        layout, dep_conanfile, recipe_status, remote = resolved
+        new_ref = layout.reference
+        dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):

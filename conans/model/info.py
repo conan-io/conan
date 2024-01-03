@@ -394,6 +394,8 @@ class ConanInfo:
         self.options.clear()
         self.requires.clear()
         self.conf.clear()
+        self.build_requires.clear()
+        self.python_requires.clear()
 
     def validate(self):
         # If the options are not fully defined, this is also an invalid case

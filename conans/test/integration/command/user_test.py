@@ -1,7 +1,9 @@
 import json
 import textwrap
+import time
 import unittest
 from collections import OrderedDict
+from datetime import timedelta
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env import environment_update
@@ -355,6 +357,10 @@ class TestRemoteAuth:
                 user: lasote""")
         assert text in c.out
 
+        c.run("remote auth * --format=json")
+        result = json.loads(c.stdout)
+        assert result == {'default': {'user': 'lasote'}, 'other_server': {'user': 'lasote'}}
+
     def test_remote_auth_with_user(self):
         servers = OrderedDict()
         servers["default"] = TestServer(users={"lasote": "mypass"})
@@ -383,3 +389,48 @@ class TestRemoteAuth:
             other_server:
                 user: None""")
         assert text in c.out
+
+    def test_remote_auth_error(self):
+        servers = OrderedDict()
+        servers["default"] = TestServer(users={"user": "password"})
+        c = TestClient(servers=servers, inputs=["user1", "pass", "user2", "pass", "user3", "pass"])
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_remote_auth_server_expire_token_secret(self):
+        server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password",
+                                                            "myotheruser", "otherpass",
+                                                            "user", "pass", "user", "pass",
+                                                            "user", "pass"])
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # Invalidate server secret
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato"
+        c.run("remote auth *")
+        assert "user: myotheruser" in c.out
+        # Invalidate server secret again
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato2"
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out
+
+    def test_remote_auth_server_expire_token(self):
+        server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
+        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=1)
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password",
+                                                            "myotheruser", "otherpass",
+                                                            "user", "pass", "user", "pass",
+                                                            "user", "pass"])
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # token not expired yet, should work
+        c.run("remote auth *")
+        assert "user: myuser" in c.out
+        # Token should expire
+        time.sleep(2)
+        c.run("remote auth *")
+        assert "user: myotheruser" in c.out
+        # Token should expire
+        time.sleep(2)
+        c.run("remote auth *")
+        assert "error: Too many failed login attempts, bye!" in c.out

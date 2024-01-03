@@ -53,6 +53,7 @@ class MesonToolchain(object):
     {% if as %}as = '{{as}}'{% endif %}
     {% if windres %}windres = '{{windres}}'{% endif %}
     {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
+    {% if pkgconfig %}pkg-config = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
     {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
@@ -182,11 +183,7 @@ class MesonToolchain(object):
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         # Read the VirtualBuildEnv to update the variables
-        # FIXME: This VirtualBuildEnv instance is breaking things!!
-        # FIXME: It shouldn't be used here, not intended for this use case
-        prev_status = self._conanfile.virtualbuildenv
-        build_env = VirtualBuildEnv(self._conanfile).vars()
-        self._conanfile.virtualbuildenv = prev_status
+        build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
         #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.

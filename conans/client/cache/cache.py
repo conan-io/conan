@@ -2,7 +2,6 @@ import os
 from typing import List
 
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
-from conans.client.cache.editable import EditablePackages
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -20,7 +19,6 @@ class ClientCache(object):
 
     def __init__(self, cache_folder, global_conf):
         self.cache_folder = cache_folder
-        self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = global_conf.get("core.cache:storage_path") or \
                              os.path.join(self.cache_folder, "p")

@@ -19,7 +19,7 @@ class UploadAPI:
     def check_upstream(self, package_list, remote, enabled_remotes, force=False):
         """Check if the artifacts are already in the specified remote, skipping them from
         the package_list in that case"""
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         for ref, bundle in package_list.refs().items():
             layout = app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -42,7 +42,7 @@ class UploadAPI:
         string (""), it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         preparator = PackagePreparator(app, self.conan_api.config.global_conf)
         preparator.prepare(package_list, enabled_remotes)
         if metadata != ['']:
@@ -52,7 +52,7 @@ class UploadAPI:
         signer.sign(package_list)
 
     def upload(self, package_list, remote):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         app.remote_manager.check_credentials(remote)
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
@@ -81,7 +81,7 @@ class UploadAPI:
             output.info("No backup sources files to upload")
             return files
 
-        app = ConanApp(self.conan_api.cache_folder, config)
+        app = ConanApp(self.conan_api)
         # TODO: verify might need a config to force it to False
         uploader = FileUploader(app.requester, verify=True, config=config)
         # TODO: For Artifactory, we can list all files once and check from there instead

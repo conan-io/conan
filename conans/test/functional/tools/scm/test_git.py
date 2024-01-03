@@ -28,9 +28,11 @@ class TestGitBasicCapture:
             def export(self):
                 git = Git(self, self.recipe_folder)
                 commit = git.get_commit()
+                repo_commit = git.get_commit(repository=True)
                 url = git.get_remote_url()
                 self.output.info("URL: {}".format(url))
                 self.output.info("COMMIT: {}".format(commit))
+                self.output.info("REPO_COMMIT: {}".format(repo_commit))
                 in_remote = git.commit_in_remote(commit)
                 self.output.info("COMMIT IN REMOTE: {}".format(in_remote))
                 self.output.info("DIRTY: {}".format(git.is_dirty()))
@@ -61,6 +63,7 @@ class TestGitBasicCapture:
         with c.chdir("myclone"):
             c.run("export .")
             assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+            assert "pkg/0.1: REPO_COMMIT: {}".format(commit) in c.out
             assert "pkg/0.1: URL: {}".format(url) in c.out
             assert "pkg/0.1: COMMIT IN REMOTE: True" in c.out
             assert "pkg/0.1: DIRTY: False" in c.out
@@ -88,6 +91,30 @@ class TestGitBasicCapture:
             assert "pkg/0.1: URL: {}".format(url) in c.out
             assert "pkg/0.1: COMMIT IN REMOTE: True" in c.out
             assert "pkg/0.1: DIRTY: False" in c.out
+
+    def test_capture_commit_local_subfolder(self):
+        """
+        A local repo, without remote, will have commit, but no URL, and sibling folders
+        can be dirty, no prob
+        """
+        c = TestClient()
+        c.save({"subfolder/conanfile.py": self.conanfile,
+                "other/myfile.txt": "content"})
+        commit = c.init_git_repo()
+        c.save({"other/myfile.txt": "change content"})
+        c.run("export subfolder")
+        assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: REPO_COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: URL: None" in c.out
+        assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
+        assert "pkg/0.1: DIRTY: False" in c.out
+        commit2 = git_add_changes_commit(c.current_folder, msg="fix")
+        c.run("export subfolder")
+        assert "pkg/0.1: COMMIT: {}".format(commit) in c.out
+        assert "pkg/0.1: REPO_COMMIT: {}".format(commit2) in c.out
+        assert "pkg/0.1: URL: None" in c.out
+        assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
+        assert "pkg/0.1: DIRTY: False" in c.out
 
 
 @pytest.mark.tool("git")
@@ -163,6 +190,32 @@ class TestGitCaptureSCM:
             assert "pkg/0.1: SCM COMMIT: {}".format(new_commit) in c.out
             assert "pkg/0.1: SCM URL: {}".format(url) in c.out
 
+    def test_capture_commit_modified_config(self):
+        """
+        A clean repo with the status.branch git config set to on
+        Expected to not raise an error an return the commit and url
+        """
+        folder = temp_folder()
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
+        c = TestClient()
+        with c.chdir(folder):
+            c.run_command("git config --local status.branch true")
+            c.run("export .")
+            assert "pkg/0.1: SCM COMMIT: {}".format(commit) in c.out
+            assert "pkg/0.1: SCM URL: {}".format(url) in c.out
+
+    def test_capture_commit_modified_config_untracked(self):
+        """
+        A dirty repo with the showUntrackedFiles git config set to off.
+        Expected to throw an exception
+        """
+        folder = temp_folder()
+        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile}, folder=folder)
+        c = TestClient()
+        with c.chdir(folder):
+            c.save(files={"some_header.h": "now the repo is dirty"})
+            c.run_command("git config --local status.showUntrackedFiles no")
+            c.run("export .", assert_error=True)
 
 @pytest.mark.tool("git")
 class TestGitBasicClone:

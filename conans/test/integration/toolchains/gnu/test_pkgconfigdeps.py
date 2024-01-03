@@ -806,3 +806,40 @@ def test_error_missing_pc_build_context():
 
     c.assert_listed_require({"example/1.0": "Cache"})
     c.assert_listed_require({"example/1.0": "Cache"}, build=True)
+
+
+def test_pkg_config_deps_and_private_deps():
+    """
+    Testing that no errors are raised when the dependency tree has a private one in the middle
+    of it.
+
+    Issue related: https://github.com/conan-io/conan/issues/15311
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("private", "0.1")})
+    client.run("create .")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class ConsumerConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "PkgConfigDeps"
+        name = "pkg"
+        version = "0.1"
+        def requirements(self):
+            self.requires("private/0.1", visible=False)
+    """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create .")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class ConsumerConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "PkgConfigDeps"
+
+        def requirements(self):
+            self.requires("pkg/0.1")
+    """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    # Now, it passes and creates the pc files correctly (the skipped one is not created)
+    client.run("install .")
+    assert "Requires:" not in client.load("pkg.pc")
