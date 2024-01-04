@@ -29,7 +29,8 @@ class PyRequires(object):
         return {r.ref.repr_notime(): r.serialize() for r in self._pyrequires.values()}
 
     def all_refs(self):
-        return [r.ref for r in self._pyrequires.values()]
+        return {r.ref: getattr(pyreq.conanfile, "package_id_python_mode", None)
+                for r, pyreq in self._pyrequires.items()}
 
     def items(self):
         return self._pyrequires.items()

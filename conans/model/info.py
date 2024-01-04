@@ -234,8 +234,9 @@ class PythonRequiresInfo:
     def __init__(self, refs, default_package_id_mode):
         self._default_package_id_mode = default_package_id_mode
         if refs:
-            self._refs = [RequirementInfo(r, None, default_package_id_mode=default_package_id_mode)
-                          for r in sorted(refs)]
+            self._refs = [RequirementInfo(r, None,
+                                          default_package_id_mode=mode or default_package_id_mode)
+                          for r, mode in sorted(refs.items())]
         else:
             self._refs = None
 
