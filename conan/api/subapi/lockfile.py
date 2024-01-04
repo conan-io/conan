@@ -60,7 +60,7 @@ class LockfileAPI:
         is_python_require = conanfile.package_type == "python-require"
         is_require = not is_python_require and not is_build_require
         if hasattr(conanfile, "python_requires"):
-            python_requires = list(conanfile.python_requires.all_refs())
+            python_requires = conanfile.python_requires.all_refs()
         else:
             python_requires = []
         python_requires = python_requires + ([ref] if is_python_require else [])
