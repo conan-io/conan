@@ -79,7 +79,7 @@ def print_list_text(results):
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
-                    k = f"{k}%{timestamp} ({timestamp_to_str(timestamp)})"
+                    k = f"{k} ({timestamp_to_str(timestamp)})"
                 result[k] = format_timestamps(v)
             return result
         return item
