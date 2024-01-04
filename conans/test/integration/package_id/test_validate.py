@@ -4,6 +4,7 @@ import re
 import textwrap
 import unittest
 
+import pytest
 
 from conan.cli.exit_codes import ERROR_INVALID_CONFIGURATION, ERROR_GENERAL
 from conans.client.graph.graph import BINARY_INVALID
@@ -660,29 +661,33 @@ class TestValidateCppstd:
                    assert_error=True)
         assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out
 
-    def test_exact_cppstd(self):
+    @pytest.mark.parametrize("use_attribute", [True, False])
+    def test_exact_cppstd(self, use_attribute):
         """ Using the default cppstd_compat sometimes is not desired, and a recipe can
         explicitly opt-out this default cppstd_compat behavior, if it knows its binaries
         won't be binary compatible among them for different cppstd values
         """
         client = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.errors import ConanInvalidConfiguration
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-                settings = "compiler"
-
-                def compatibility(self):
-                    # It also works as class attribute, but more explicit here
-                    self.conf_info.define("user.conan.plugins:compatibility_cppstd", False)
+        if use_attribute:
+            conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    settings = "compiler"
+                    extension_properties = {"compatibility_cppstd": False}
+            """)
+        else:
+            conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    settings = "compiler"
+                    def compatibility(self):
+                        self.extension_properties = {"compatibility_cppstd": False}
             """)
 
         client.save({"conanfile.py": conanfile})
 
         settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
-        client.run(f"create . {settings} -s compiler.cppstd=17")
+        client.run(f"create . --name=pkg --version=0.1 {settings} -s compiler.cppstd=17")
         client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
                                                  "Build")})
 
