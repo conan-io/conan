@@ -1,14 +1,10 @@
-import json
-import os
-
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
+from conans.client.graph.graph import BINARY_SKIP, \
     Overrides, BINARY_BUILD
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load
 
 
-class _InstallPackageReference:
+class InstallConfiguration:
     """ Represents a single, unique PackageReference to be downloaded, built, etc.
     Same PREF should only be built or downloaded once, but it is possible to have multiple
     nodes in the DepsGraph that share the same PREF.
@@ -37,7 +33,7 @@ class _InstallPackageReference:
 
     @staticmethod
     def create(node):
-        result = _InstallPackageReference()
+        result = InstallConfiguration()
         result.ref = node.ref
         result.package_id = node.pref.package_id
         result.prev = node.pref.revision
@@ -94,7 +90,7 @@ class _InstallPackageReference:
 
     @staticmethod
     def deserialize(data, filename):
-        result = _InstallPackageReference()
+        result = InstallConfiguration()
         result.ref = RecipeReference.loads(data["ref"])
         result.package_id = data["package_id"]
         result.prev = data["prev"]
@@ -115,85 +111,3 @@ class _InstallPackageReference:
         for d in other.filenames:
             if d not in self.filenames:
                 self.filenames.append(d)
-
-
-class InstallGraphConfiguration:
-    """ A graph containing the package references in order to be built/downloaded
-    """
-
-    def __init__(self, deps_graph=None):
-        self._nodes = {}  # {pref: _InstallGraphPackage}
-
-        self._is_test_package = False
-        if deps_graph is not None:
-            self._initialize_deps_graph(deps_graph)
-            self._is_test_package = deps_graph.root.conanfile.tested_reference_str is not None
-
-    @staticmethod
-    def load(filename):
-        data = json.loads(load(filename))
-        filename = os.path.basename(filename)
-        filename = os.path.splitext(filename)[0]
-        install_graph = InstallGraphConfiguration.deserialize(data, filename)
-        return install_graph
-
-    def merge(self, other):
-        """
-        @type other: InstallGraphConfiguration
-        """
-        for ref, install_node in other._nodes.items():
-            existing = self._nodes.get(ref)
-            if existing is None:
-                self._nodes[ref] = install_node
-            else:
-                existing.merge(install_node)
-
-    @staticmethod
-    def deserialize(data, filename):
-        result = InstallGraphConfiguration()
-        for level in data:
-            for item in level:
-                elem = _InstallPackageReference.deserialize(item, filename)
-                result._nodes[elem.pref] = elem
-        return result
-
-    def _initialize_deps_graph(self, deps_graph):
-        for node in deps_graph.ordered_iterate():
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary == BINARY_SKIP:
-                continue
-
-            existing = self._nodes.get(node.pref)
-            if existing is None:
-                self._nodes[node.pref] = _InstallPackageReference.create(node)
-            else:
-                existing.add(node)
-
-    def install_order(self, flat=False):
-        # a topological order by levels, returns a list of list, in order of processing
-        levels = []
-        opened = self._nodes
-        while opened:
-            current_level = []
-            closed = []
-            for o in opened.values():
-                requires = o.depends
-                if not any(n in opened for n in requires):
-                    current_level.append(o)
-                    closed.append(o)
-
-            if current_level:
-                levels.append(current_level)
-            # now initialize new level
-            opened = {k: v for k, v in opened.items() if v not in closed}
-        if flat:
-            return [r for level in levels for r in level]
-        return levels
-
-    def install_build_order(self):
-        # TODO: Rename to serialize()?
-        """ used for graph build-order and graph build-order-merge commands
-        This is basically a serialization of the build-order
-        """
-        install_order = self.install_order()
-        result = [[n.serialize() for n in level] for level in install_order]
-        return result

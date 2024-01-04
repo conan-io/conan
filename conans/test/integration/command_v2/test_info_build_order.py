@@ -314,8 +314,8 @@ def test_info_build_order_merge_multi_product_configurations():
           redirect_stdout="bo1.json")
     c.run("graph build-order consumer2  --build=missing --order=configuration --format=json",
           redirect_stdout="bo2.json")
-    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --order=configuration "
-          "--format=json", redirect_stdout="bo3.json")
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=json",
+          redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
     result = [

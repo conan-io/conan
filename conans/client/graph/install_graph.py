@@ -5,6 +5,7 @@ import textwrap
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
+from conans.client.graph.install_graph_configuration import InstallConfiguration
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -197,9 +198,10 @@ class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
     """
 
-    def __init__(self, deps_graph=None):
+    def __init__(self, deps_graph=None, order="recipe"):
         self._nodes = {}  # ref with rev: _InstallGraphNode
-
+        self._order = order
+        self._node_cls = _InstallRecipeReference if order == "recipe" else InstallConfiguration
         self._is_test_package = False
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
@@ -217,6 +219,8 @@ class InstallGraph:
         """
         @type other: InstallGraph
         """
+        if self._order != other._order:
+            raise ConanException(f"Cannot merge build-orders of `{self._order}!={other._order}")
         for ref, install_node in other._nodes.items():
             existing = self._nodes.get(ref)
             if existing is None:
@@ -226,11 +230,17 @@ class InstallGraph:
 
     @staticmethod
     def deserialize(data, filename):
-        result = InstallGraph()
+        # Automatic deduction of the order based on the data
+        try:
+            order = "recipe" if "packages" in data[0][0] else "configuration"
+        except IndexError:
+            order = "recipe"
+        result = InstallGraph(order=order)
         for level in data:
             for item in level:
-                elem = _InstallRecipeReference.deserialize(item, filename)
-                result._nodes[elem.ref] = elem
+                elem = result._node_cls.deserialize(item, filename)
+                key = elem.ref if order == "recipe" else elem.pref
+                result._nodes[key] = elem
         return result
 
     def _initialize_deps_graph(self, deps_graph):
@@ -238,9 +248,10 @@ class InstallGraph:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary == BINARY_SKIP:
                 continue
 
-            existing = self._nodes.get(node.ref)
+            key = node.ref if self._order == "recipe" else node.pref
+            existing = self._nodes.get(key)
             if existing is None:
-                self._nodes[node.ref] = _InstallRecipeReference.create(node)
+                self._nodes[key] = self._node_cls.create(node)
             else:
                 existing.add(node)
 
