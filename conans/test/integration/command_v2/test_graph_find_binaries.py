@@ -153,6 +153,67 @@ class TestFilterProfile:
         assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
                                               "highly incompatible."
 
+    def test_different_conf(self, client):
+        # We find closest match in other platforms
+        c = client
+        c.save_home({"global.conf": "tools.info.package_id:confs=['user.foo:bar']"})
+        c.run("graph explain --requires=lib/1.0 -c user.foo:bar=42 -s os=Linux")
+        expected = textwrap.dedent("""\
+            remote: Local Cache
+            settings: Linux, Release
+            options: shared=False
+            diff
+              confs
+                expected: user.foo:bar=42
+                existing: user.foo:bar=None
+              explanation: This binary has same settings, options and dependencies, but different confs
+            """)
+        assert textwrap.indent(expected, "      ") in c.out
+        c.run("graph explain --requires=lib/1.0 -pr macos --format=json")
+        cache = json.loads(c.stdout)["closest_binaries"]
+        revisions = cache["lib/1.0"]["revisions"]
+        pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
+        assert len(pkgs) == 1
+        pkg1 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
+        assert pkg1["diff"]["platform"] == {'existing': ['os=Windows'], 'expected': ['os=Macos']}
+        assert pkg1["diff"]["settings"] == {}
+        assert pkg1["diff"]["options"] == {}
+        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
+                                              "highly incompatible."
+
+    def test_different_python_requires(self):
+        c = TestClient(light=True)
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "lib/conanfile.py": GenConanfile("lib", "1.0")
+               .with_python_requires("tool/[>=1.0]")})
+        c.run("create tool --version=1.0 -s os=Linux")
+        c.run("create lib -s os=Linux")
+        c.run("create tool --version=2.0 -s os=Linux")
+        c.run("graph explain --requires=lib/1.0 -s os=Linux")
+        expected = textwrap.dedent("""\
+            remote: Local Cache
+            python_requires: tool/1.0.Z
+            diff
+              python_requires
+                expected: tool/2.0.Z
+                existing: tool/1.0.Z
+              explanation: This binary has same settings, options and dependencies, but different python_requires
+            """)
+        assert textwrap.indent(expected, "      ") in c.out
+        c.run("graph explain --requires=lib/1.0 -s os=Linux --format=json")
+        cache = json.loads(c.stdout)["closest_binaries"]
+        revisions = cache["lib/1.0"]["revisions"]
+        pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
+        assert len(pkgs) == 1
+        pkg1 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
+        assert pkg1["diff"]["platform"] == {'existing': ['os=Windows'], 'expected': ['os=Macos']}
+        assert pkg1["diff"]["settings"] == {}
+        assert pkg1["diff"]["options"] == {}
+        assert pkg1["diff"]["dependencies"] == {}
+        assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
+                                              "highly incompatible."
+
 
 class TestMissingBinaryDeps:
     @pytest.fixture(scope="class")
