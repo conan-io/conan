@@ -2,7 +2,6 @@ import json
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.dates import timestamp_to_str
 
 
 def test_user_overrides():
@@ -205,22 +204,6 @@ def test_timestamps_are_updated():
     assert f" math/1.0#{rev} - Cache" in c.out
     new_lock = c.load("conan.lock")
     assert "%0.123" not in new_lock
-
-
-def test_timestamps_human_sorted():
-    """ we can add as copied from 'conan list --format=compact
-    """
-    c = TestClient()
-    t1 = timestamp_to_str(1)
-    t2 = timestamp_to_str(2)
-    t3 = timestamp_to_str(3)
-    c.run(f'lock add --requires="math/1.0#revZ ({t2})"')
-    c.run(f'lock add --requires="math/1.0#revX ({t1})"')
-    c.run(f'lock add --requires="math/1.0#revY ({t3})"')
-    new_lock = json.loads(c.load("conan.lock"))
-    assert new_lock["requires"] == ["math/1.0#revY%3.0",
-                                    "math/1.0#revZ%2.0",
-                                    "math/1.0#revX%1.0"]
 
 
 def test_lock_add_error():

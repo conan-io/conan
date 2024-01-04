@@ -79,7 +79,7 @@ def print_list_text(results):
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
-                    k = f"{k} ({timestamp_to_str(timestamp)})"
+                    k = f"{k}%{timestamp} ({timestamp_to_str(timestamp)})"
                 result[k] = format_timestamps(v)
             return result
         return item
@@ -109,7 +109,7 @@ def prepare_pkglist_compact(pkglist):
             new_rrev = f"{ref}#{rrev}"
             timestamp = rrev_info.pop("timestamp", None)
             if timestamp:
-                new_rrev += f" ({timestamp_to_str(timestamp)})"
+                new_rrev += f"%{timestamp} ({timestamp_to_str(timestamp)})"
 
             packages = rrev_info.pop("packages", None)
             if packages:
