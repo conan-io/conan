@@ -9,11 +9,11 @@ from conans.model.recipe_ref import ref_matches
 from conans.util.files import rmdir, mkdir
 
 
-def _find_deployer(d, cache_deploy_folder):
+def _find_deployer(d, cache_deploy_folders):
     """ Implements the logic of finding a deployer, with priority:
     - 1) absolute paths
     - 2) relative to cwd
-    - 3) in the cache/extensions/deploy folder
+    - 3) in the cache/extensions/deploy folders
     - 4) built-in
     """
     def _load(path):
@@ -28,9 +28,10 @@ def _find_deployer(d, cache_deploy_folder):
     local_path = os.path.normpath(os.path.join(cwd, d))
     if os.path.isfile(local_path):
         return _load(local_path)
-    cache_path = os.path.join(cache_deploy_folder, d)
-    if os.path.isfile(cache_path):
-        return _load(cache_path)
+    for cache_deploy_folder in cache_deploy_folders:
+        cache_path = os.path.join(cache_deploy_folder, d)
+        if os.path.isfile(cache_path):
+            return _load(cache_path)
     builtin_deploy = {"full_deploy.py": full_deploy,
                       "direct_deploy.py": direct_deploy}.get(d)
     if builtin_deploy is not None:
@@ -52,9 +53,13 @@ def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
                 conanfile.deploy_folder = deploy_folder
                 conanfile.deploy()
     # Handle the deploys
-    cache = HomePaths(conan_api.cache_folder)
+
+    deployers_paths = conan_api.config.get("core:extensions_paths", default=["CONAN_HOME"],
+                                           check_type=list)
+    deployers_paths = [HomePaths(conan_api.cache_folder if path == "CONAN_HOME" else path).deployers_path
+                       for path in deployers_paths]
     for d in deploy or []:
-        deployer = _find_deployer(d, cache.deployers_path)
+        deployer = _find_deployer(d, deployers_paths)
         # IMPORTANT: Use always kwargs to not break if it changes in the future
         deployer(graph=graph, output_folder=deploy_folder)
 

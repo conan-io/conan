@@ -43,7 +43,10 @@ class ConanApp(object):
         self.cache = ClientCache(self.cache_folder, global_conf)
 
         home_paths = HomePaths(self.cache_folder)
-        self.hook_manager = HookManager(home_paths.hooks_path)
+        hooks_paths = global_conf.get("core:extensions_paths", default=["CONAN_HOME"], check_type=list)
+        hooks_paths = [HomePaths(self.cache_folder if path == "CONAN_HOME" else path).deployers_path
+                       for path in hooks_paths]
+        self.hook_manager = HookManager(hooks_paths)
 
         # Wraps an http_requester to inject proxies, certs, etc
         self.requester = ConanRequester(global_conf, cache_folder)
