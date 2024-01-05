@@ -7,7 +7,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
     apple_sdk_path
-from conan.tools.build.cross_building import cross_building
+from conan.tools.build.cross_building import can_run
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
@@ -152,7 +152,7 @@ class MesonToolchain(object):
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
-        if cross_building(conanfile, skip_x64_x86=True):
+        if not can_run(conanfile):
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
