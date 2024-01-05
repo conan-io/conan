@@ -21,7 +21,7 @@ Conan is a package manager for C and C++ developers:
 - It is fully decentralized. Users can host their packages on their servers, privately. Integrates with Artifactory and Bintray.
 - Portable. Works across all platforms, including Linux, OSX, Windows (with native and first-class support, WSL, MinGW),
   Solaris, FreeBSD, embedded and cross-compiling, docker, WSL
-- Manage binaries. It can create, upload and download binaries for any configuration and platform,
+- Manage binaries. It can create, upload, and download binaries for any configuration and platform,
   even cross-compiling, saving lots of time in development and continuous integration. The binary compatibility can be configured
   and customized. Manage all your artifacts in the same way on all platforms.
 - Integrates with any build system, including any proprietary and custom one. Provides tested support for major build systems
@@ -61,7 +61,7 @@ You can run Conan from source in Windows, MacOS, and Linux:
   $ cd conan-io && sudo pip install -e .
   ```
 
-  If you are in Windows, using ``sudo`` is not required. Some Linux distros won't allow you to put Python packages in editable mode in the root Python installation, and creating a virtual environment ``venv`` first, is mandatory.
+  If you are in Windows, using ``sudo`` is not required. Some Linux distros won't allow you to put Python packages in editable mode in the root Python installation, and creating a virtual environment ``venv`` first is mandatory.
 
 - **You are ready, try to run Conan:**
 
@@ -163,3 +163,4 @@ use a separate server for testing purposes.
 ## License
 
 [MIT LICENSE](LICENSE.md)
+
