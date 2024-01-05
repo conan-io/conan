@@ -32,8 +32,8 @@ class PyRequires(object):
         return [r.ref for r in self._pyrequires.values()]
 
     def info_requires(self):
-        return {r.ref: getattr(pyreq.conanfile, "package_id_python_mode", None)
-                for r, pyreq in self._pyrequires.items()}
+        return {pyreq.ref: getattr(pyreq.conanfile, "package_id_python_mode", None)
+                for pyreq in self._pyrequires.values()}
 
     def items(self):
         return self._pyrequires.items()
