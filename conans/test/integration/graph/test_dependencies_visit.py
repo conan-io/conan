@@ -99,7 +99,7 @@ asserts = [
      False, "=>zlib/0.1"),
     ('print("=>{}".format(self.dependencies.get("zlib", build=False).ref))',
      False, "=>zlib/0.2"),
-    ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=True).ref))',
+    ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=False).ref))',
      False, "=>zlib/0.1"),
     ('self.dependencies.get("cmake", build=True)', True,
      'There are more than one requires matching the specified filters: {\'build\': True}\n'
