@@ -135,8 +135,11 @@ class PackagesList:
     def __init__(self):
         self.recipes = {}
 
-    def sublist(self):
-        # Returns a list of PackageList, one per ref
+    def split(self):
+        """
+        Returns a list of PackageList, splitted one per reference.
+        This can be useful to parallelize things like upload, parallelizing per-reference
+        """
         result = []
         for r, content in self.recipes.items():
             subpkglist = PackagesList()

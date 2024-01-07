@@ -59,8 +59,16 @@ class UploadAPI:
         executor = UploadExecutor(app)
         executor.upload(package_list, remote)
 
-    def full_upload(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,
+    def upload_full(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,
                     metadata=None, dry_run=False):
+        """ Does the whole process of uploading, including the possibility of parallelizing
+        per recipe:
+        - calls check_integrity
+        - checks which revision already exist in the server (not necessary to upoad)
+        - prepare the artifacts to upload (compress .tgz)
+        - execute the actual upload
+        - upload potential sources backups
+        """
 
         def _upload_pkglist(pkglist, subtitle=lambda _: None):
             if check_integrity:
@@ -86,7 +94,7 @@ class UploadAPI:
             _upload_pkglist(package_list, subtitle=ConanOutput().subtitle)
         else:
             ConanOutput().subtitle(f"Uploading with {parallel} parallel threads")
-            thread_pool.map(_upload_pkglist, package_list.sublist())
+            thread_pool.map(_upload_pkglist, package_list.split())
         if thread_pool:
             thread_pool.close()
             thread_pool.join()
