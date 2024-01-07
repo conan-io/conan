@@ -91,6 +91,9 @@ tools_locations = {
             "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
                      'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
                      'Linux': "/usr/share/cmake-3.23.5/bin"}
+        },
+        "3.28": {
+            "disabled": True  # TODO: Still not in CI
         }
     },
     'ninja': {

@@ -826,7 +826,7 @@ class GenericSystemBlock(Block):
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        result = self._get_winsdk_version(system_version, generator)
+        result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
 
         return {"toolset": toolset,
