@@ -410,7 +410,7 @@ class TestTestRequire(GraphManagerTest):
         self._cache_recipe("gtest/1.11", GenConanfile())
         self._cache_recipe("abseil/1.0", GenConanfile().with_test_requires("gtest/[>=1 <1.14]"))
         self._cache_recipe("gtest/1.14", GenConanfile().with_requires("abseil/1.0"))
-        deps_graph = self.build_graph(GenConanfile("opencv", "1.0").with_require("gtest/1.14"))
+        deps_graph = self.build_graph(GenConanfile("opencv", "1.0").with_test_requires("gtest/1.14"))
 
         self.assertEqual(4, len(deps_graph.nodes))
         opencv = deps_graph.root
