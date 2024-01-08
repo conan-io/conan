@@ -119,6 +119,12 @@ def _get_libs(dep, cpp_info=None) -> list:
             if not os.path.isfile(full_path):  # Make sure that directories are excluded
                 continue
             name, ext = os.path.splitext(f)
+            # Users may not name their libraries in a conventional way. For example, directly
+            # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
+            # Issue related: https://github.com/conan-io/conan/issues/11331
+            if ext and f in libs:  # let's ensure that it has any extension
+                _save_lib_path(f, full_path)
+                continue
             if name not in libs and name.startswith("lib"):
                 name = name[3:]  # libpkg -> pkg
             # FIXME: Should it read a conf variable to know unexpected extensions?

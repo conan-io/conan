@@ -103,7 +103,9 @@ def test_bazeldeps_relativize_path(path, pattern, expected):
     # no lib matching + Win + static
     (["noexist", "mylibwin"], False, [('mylibwin', False, '{base_folder}/lib/mylibwin.lib', None)]),
     # protobuf (Issue related https://github.com/conan-io/conan/issues/15390)
-    (["protoc"], True, [])
+    (["protoc"], True, []),
+    # non-conventional library name (Issue related https://github.com/conan-io/conan/pull/11343)
+    (["libmylib.so"], True, [('libmylib.so', True, '{base_folder}/lib/libmylib.so', None)]),
 ])
 def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
     cpp_info.libs = libs
