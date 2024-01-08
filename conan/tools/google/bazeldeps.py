@@ -118,15 +118,10 @@ def _get_libs(dep, cpp_info=None) -> list:
             full_path = os.path.join(libdir, f)
             if not os.path.isfile(full_path):  # Make sure that directories are excluded
                 continue
-            # Users may not name their libraries in a conventional way. For example, directly
-            # use the basename of the lib file as lib name.
-            if f in libs:
-                _save_lib_path(f, full_path)
-                continue
             name, ext = os.path.splitext(f)
             if name not in libs and name.startswith("lib"):
                 name = name[3:]  # libpkg -> pkg
-             # FIXME: Should it read a conf variable to know unexpected extensions?
+            # FIXME: Should it read a conf variable to know unexpected extensions?
             if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
                (not is_shared and ext in (".a", ".lib")):
                 if name in libs:

@@ -20,6 +20,7 @@ def cpp_info():
     save(ConanFileMock(), os.path.join(bindirs, "mylibwin2.dll"), "")
     save(ConanFileMock(), os.path.join(bindirs, "myliblin.so"), "")
     save(ConanFileMock(), os.path.join(bindirs, "mylibmac.dylib"), "")
+    save(ConanFileMock(), os.path.join(bindirs, "protoc"), "")  # binary
     save(ConanFileMock(), os.path.join(libdirs, "myliblin.a"), "")
     save(ConanFileMock(), os.path.join(libdirs, "mylibmac.a"), "")
     save(ConanFileMock(), os.path.join(libdirs, "mylibwin.lib"), "")
@@ -101,6 +102,8 @@ def test_bazeldeps_relativize_path(path, pattern, expected):
     (["noexist"], False, []),
     # no lib matching + Win + static
     (["noexist", "mylibwin"], False, [('mylibwin', False, '{base_folder}/lib/mylibwin.lib', None)]),
+    # protobuf (Issue related https://github.com/conan-io/conan/issues/15390)
+    (["protoc"], True, [])
 ])
 def test_bazeldeps_get_libs(cpp_info, libs, is_shared, expected):
     cpp_info.libs = libs
