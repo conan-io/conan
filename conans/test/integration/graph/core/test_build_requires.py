@@ -405,6 +405,24 @@ class TestTestRequire(GraphManagerTest):
         _check_transitive(lib, [(gtest, True, True, False, False),
                                 (zlib, True, True, False, False, False)])
 
+    def test_test_require_loop(self):
+        # https://github.com/conan-io/conan/issues/15412
+        self._cache_recipe("gtest/1.11", GenConanfile())
+        self._cache_recipe("abseil/1.0", GenConanfile().with_test_requires("gtest/[>=1 <1.14]"))
+        self._cache_recipe("gtest/1.14", GenConanfile().with_requires("abseil/1.0"))
+        deps_graph = self.build_graph(GenConanfile("opencv", "1.0").with_require("gtest/1.14"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        opencv = deps_graph.root
+        gtest14 = opencv.dependencies[0].dst
+        abseil = gtest14.dependencies[0].dst
+        gtest11 = abseil.dependencies[0].dst
+
+        self._check_node(opencv, "opencv/1.0@", deps=[gtest14], dependents=[])
+        self._check_node(gtest14, "gtest/1.14#123", deps=[abseil], dependents=[opencv])
+        self._check_node(abseil, "abseil/1.0#123", deps=[gtest11], dependents=[gtest14])
+        self._check_node(gtest11, "gtest/1.11#123", deps=[], dependents=[abseil])
+
 
 class TestTestRequiresProblemsShared(GraphManagerTest):
 
