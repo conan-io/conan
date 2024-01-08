@@ -1,6 +1,5 @@
 import copy
 import os
-import re
 from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
@@ -14,7 +13,6 @@ from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
-from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
@@ -280,11 +278,12 @@ class DepsGraphBuilder(object):
             tracking_ref = require_version.split(':', 1)
             ref = require.ref
             if len(tracking_ref) > 1:
-                ref = RecipeReference.loads(str(node.ref))
+                ref = RecipeReference.loads(str(require.ref))
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None:
+            if transitive is None or transitive.require.ref.user != ref.user \
+                    or transitive.require.ref.channel != ref.channel:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
