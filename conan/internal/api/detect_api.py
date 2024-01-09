@@ -263,11 +263,11 @@ def detect_compiler():
         if "clang" in command.lower():
             return _clang_compiler(command)
         if "gcc" in command or "g++" in command or "c++" in command:
-            gcc, gcc_version = _gcc_compiler(command)
+            gcc, gcc_version, compiler_exe = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
                              "Compiler not supported" % command)
-            return gcc, gcc_version, command
+            return gcc, gcc_version, compiler_exe
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
         if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
