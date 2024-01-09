@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 
 
 class TestFilterProfile:
-    @pytest.fixture(scope="class")
+    @pytest.fixture()
     def client(self):
         c = TestClient()
         c.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os", "build_type")
@@ -169,28 +169,29 @@ class TestFilterProfile:
               explanation: This binary has same settings, options and dependencies, but different confs
             """)
         assert textwrap.indent(expected, "      ") in c.out
-        c.run("graph explain --requires=lib/1.0 -pr macos --format=json")
+        c.run("graph explain --requires=lib/1.0 -c user.foo:bar=42 -s os=Linux -f=json")
         cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
-        pkg1 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
-        assert pkg1["diff"]["platform"] == {'existing': ['os=Windows'], 'expected': ['os=Macos']}
+        pkg1 = pkgs["499989797d9192081b8f16f7d797b107a2edd8da"]
+        assert pkg1["diff"]["platform"] == {}
         assert pkg1["diff"]["settings"] == {}
         assert pkg1["diff"]["options"] == {}
         assert pkg1["diff"]["dependencies"] == {}
-        assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
-                                              "highly incompatible."
+        assert pkg1["diff"]["confs"] == {"expected": ["user.foo:bar=42"],
+                                         "existing": ["user.foo:bar=None"]}
+        assert pkg1["diff"]["explanation"] == "This binary has same settings, options and " \
+                                              "dependencies, but different confs"
 
     def test_different_python_requires(self):
         c = TestClient(light=True)
         c.save({"tool/conanfile.py": GenConanfile("tool"),
-                "lib/conanfile.py": GenConanfile("lib", "1.0")
-               .with_python_requires("tool/[>=1.0]")})
-        c.run("create tool --version=1.0 -s os=Linux")
-        c.run("create lib -s os=Linux")
-        c.run("create tool --version=2.0 -s os=Linux")
-        c.run("graph explain --requires=lib/1.0 -s os=Linux")
+                "lib/conanfile.py": GenConanfile("lib", "1.0").with_python_requires("tool/[>=1.0]")})
+        c.run("create tool --version=1.0")
+        c.run("create lib")
+        c.run("create tool --version=2.0")
+        c.run("graph explain --requires=lib/1.0")
         expected = textwrap.dedent("""\
             remote: Local Cache
             python_requires: tool/1.0.Z
@@ -204,19 +205,21 @@ class TestFilterProfile:
         c.run("graph explain --requires=lib/1.0 -s os=Linux --format=json")
         cache = json.loads(c.stdout)["closest_binaries"]
         revisions = cache["lib/1.0"]["revisions"]
-        pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
+        pkgs = revisions["7bf17caa5bf9d2ed1dd8b337e9623fc0"]["packages"]
         assert len(pkgs) == 1
-        pkg1 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
-        assert pkg1["diff"]["platform"] == {'existing': ['os=Windows'], 'expected': ['os=Macos']}
+        pkg1 = pkgs["5ccdb706197ca94edc0ecee9ef0d0b11b887d937"]
+        assert pkg1["diff"]["platform"] == {}
         assert pkg1["diff"]["settings"] == {}
         assert pkg1["diff"]["options"] == {}
         assert pkg1["diff"]["dependencies"] == {}
-        assert pkg1["diff"]["explanation"] == "This binary belongs to another OS or Architecture, " \
-                                              "highly incompatible."
+        assert pkg1["diff"]["python_requires"] == {"expected": ["tool/2.0.Z"],
+                                                   "existing": ["tool/1.0.Z"]}
+        assert pkg1["diff"]["explanation"] == "This binary has same settings, options and " \
+                                              "dependencies, but different python_requires"
 
 
 class TestMissingBinaryDeps:
-    @pytest.fixture(scope="class")
+    @pytest.fixture()
     def client(self):
         c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep").with_settings("os"),

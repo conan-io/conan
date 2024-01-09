@@ -239,63 +239,67 @@ class _BinaryDistance:
                 diff.setdefault("existing", []).append(f"{k}={value}")
 
         self.settings_target_diff = {}
-        self.calculate_diff(binary_config.get("settings_target", {}),
-                            expected_config.get("settings_target", {}),
-                            self.settings_target_diff)
+        self._calculate_diff(binary_config.get("settings_target", {}),
+                             expected_config.get("settings_target", {}),
+                             self.settings_target_diff)
 
         self.options_diff = {}
-        self.calculate_diff(binary_config.get("options", {}),
-                            expected_config.get("options", {}),
-                            self.options_diff)
+        self._calculate_diff(binary_config.get("options", {}),
+                             expected_config.get("options", {}),
+                             self.options_diff)
 
         self.deps_diff = {}
-        self.calculate_requirement_diff(binary_config.get("requires", []),
-                                        expected_config.get("requires", []),
-                                        self.deps_diff)
+        self._calculate_requirement_diff(binary_config.get("requires", []),
+                                         expected_config.get("requires", []),
+                                         self.deps_diff)
 
         self.build_requires_diff = {}
-        self.calculate_requirement_diff(binary_config.get("build_requires", []),
-                                        expected_config.get("build_requires", []),
-                                        self.build_requires_diff)
+        self._calculate_requirement_diff(binary_config.get("build_requires", []),
+                                         expected_config.get("build_requires", []),
+                                         self.build_requires_diff)
 
         self.python_requires_diff = {}
-        self.calculate_requirement_diff(binary_config.get("python_requires", []),
-                                        expected_config.get("python_requires", []),
-                                        self.python_requires_diff)
+        self._calculate_requirement_diff(binary_config.get("python_requires", []),
+                                         expected_config.get("python_requires", []),
+                                         self.python_requires_diff)
 
         self.confs_diff = {}
-        self.calculate_diff(binary_config.get("conf", {}),
-                            expected_config.get("conf", {}),
-                            self.confs_diff,
-                            reverse=True)
+        self._calculate_diff(binary_config.get("conf", {}),
+                             expected_config.get("conf", {}),
+                             self.confs_diff)
 
-    def calculate_requirement_diff(self, binary_requires, expected_requires, output):
+    @staticmethod
+    def _calculate_requirement_diff(binary_requires, expected_requires, output):
         binary_requires = [RecipeReference.loads(r) for r in binary_requires]
         expected_requires = [RecipeReference.loads(r) for r in expected_requires]
         binary_requires = {r.name: r for r in binary_requires}
         for r in expected_requires:
             existing = binary_requires.get(r.name)
             if not existing or r != existing:
-                output.setdefault("expected", set()).add(repr(r))
-                output.setdefault("existing", set()).add(repr(existing))
+                output.setdefault("expected", []).append(repr(r))
+                output.setdefault("existing", []).append(repr(existing))
         expected_requires = {r.name: r for r in expected_requires}
         for r in binary_requires.values():
             existing = expected_requires.get(r.name)
             if not existing or r != existing:
-                output.setdefault("expected", set()).add(repr(existing))
-                output.setdefault("existing", set()).add(repr(r))
+                if repr(existing) not in output.get("expected", ()):
+                    output.setdefault("expected", []).append(repr(existing))
+                if repr(r) not in output.get("existing", ()):
+                    output.setdefault("existing", []).append(repr(r))
 
-    def calculate_diff(self, binary_confs, expected_confs, output, reverse=False):
+    @staticmethod
+    def _calculate_diff(binary_confs, expected_confs, output):
         for k, v in expected_confs.items():
             value = binary_confs.get(k)
             if value != v:
                 output.setdefault("expected", []).append(f"{k}={v}")
                 output.setdefault("existing", []).append(f"{k}={value}")
-        if reverse:
-            for k, v in binary_confs.items():
-                value = expected_confs.get(k)
-                if value != v:
+        for k, v in binary_confs.items():
+            value = expected_confs.get(k)
+            if value != v:
+                if f"{k}={value}" not in output.get("expected", ()):
                     output.setdefault("expected", []).append(f"{k}={value}")
+                if f"{k}={v}" not in output.get("existing", ()):
                     output.setdefault("existing", []).append(f"{k}={v}")
 
     def __lt__(self, other):
