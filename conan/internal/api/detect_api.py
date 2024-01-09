@@ -122,7 +122,7 @@ def _get_e2k_architecture():
     }.get(platform.processor())
 
 
-def detect_libcxx(compiler, version):
+def detect_libcxx(compiler, version, compiler_exe):
     assert isinstance(version, Version)
 
     def _detect_gcc_libcxx(version_, executable):
@@ -166,7 +166,7 @@ def detect_libcxx(compiler, version):
     if compiler == "apple-clang":
         return "libc++"
     elif compiler == "gcc":
-        libcxx = _detect_gcc_libcxx(version, "g++")
+        libcxx = _detect_gcc_libcxx(version, compiler_exe or "g++")
         return libcxx
     elif compiler == "cc":
         if platform.system() == "SunOS":
@@ -179,7 +179,7 @@ def detect_libcxx(compiler, version):
         elif platform.system() == "Windows":
             return  # by default windows will assume LLVM/Clang with VS backend
         else:  # Linux
-            libcxx = _detect_gcc_libcxx(version, "clang++")
+            libcxx = _detect_gcc_libcxx(version, compiler_exe or "clang++")
             return libcxx
     elif compiler == "sun-cc":
         return "libCstd"
@@ -267,7 +267,7 @@ def detect_compiler():
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
                              "Compiler not supported" % command)
-            return gcc, gcc_version
+            return gcc, gcc_version, command
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
         if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
@@ -276,28 +276,28 @@ def detect_compiler():
 
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
-        return None, None
+        return None, None, None
 
     if platform.system() == "Windows":
         version = _detect_vs_ide_version()
         version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
         if version:
-            return 'msvc', Version(version)
+            return 'msvc', Version(version), None
 
     if platform.system() == "SunOS":
-        sun_cc, sun_cc_version = _sun_cc_compiler()
+        sun_cc, sun_cc_version, compiler_exe = _sun_cc_compiler()
         if sun_cc:
-            return sun_cc, sun_cc_version
+            return sun_cc, sun_cc_version, compiler_exe
 
     if platform.system() in ["Darwin", "FreeBSD"]:
-        clang, clang_version = _clang_compiler()  # prioritize clang
+        clang, clang_version, compiler_exe = _clang_compiler()  # prioritize clang
         if clang:
-            return clang, clang_version
+            return clang, clang_version, compiler_exe
         return
     else:
-        gcc, gcc_version = _gcc_compiler()
+        gcc, gcc_version, compiler_exe = _gcc_compiler()
         if gcc:
-            return gcc, gcc_version
+            return gcc, gcc_version, compiler_exe
         return _clang_compiler()
 
 
@@ -326,11 +326,11 @@ def _gcc_compiler(compiler_exe="gcc"):
             _, out = detect_runner("%s --version" % compiler_exe)
             out = out.lower()
             if "clang" in out:
-                return None, None
+                return None, None, None
 
         ret, out = detect_runner('%s -dumpversion' % compiler_exe)
         if ret != 0:
-            return None, None
+            return None, None, None
         compiler = "gcc"
         installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
@@ -338,9 +338,9 @@ def _gcc_compiler(compiler_exe="gcc"):
         # number ("7.1.1").
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
-            return compiler, Version(installed_version)
+            return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
-        return None, None
+        return None, None, None
 
 
 def _sun_cc_compiler(compiler_exe="cc"):
@@ -354,28 +354,28 @@ def _sun_cc_compiler(compiler_exe="cc"):
             installed_version = re.search(r"([0-9]+\.[0-9]+)", out).group()
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
-            return compiler, Version(installed_version)
+            return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
-        return None, None
+        return None, None, None
 
 
 def _clang_compiler(compiler_exe="clang"):
     try:
         ret, out = detect_runner('%s --version' % compiler_exe)
         if ret != 0:
-            return None, None
+            return None, None, None
         if "Apple" in out:
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
         else:
-            return None, None
+            return None, None, None
         installed_version = re.search(r"([0-9]+\.[0-9])", out).group()
         if installed_version:
             ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
-            return compiler, Version(installed_version)
+            return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
-        return None, None
+        return None, None, None
 
 
 def _msvc_cl_compiler(compiler_exe="cl"):
@@ -386,20 +386,20 @@ def _msvc_cl_compiler(compiler_exe="cl"):
         compiler_exe = compiler_exe.strip('"')
         ret, out = detect_runner(f'"{compiler_exe}" /?')
         if ret != 0:
-            return None, None
+            return None, None, None
         first_line = out.splitlines()[0]
         if "Microsoft" not in first_line:
-            return None, None
+            return None, None, None
         compiler = "msvc"
         version_regex = re.search(r"(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.([0-9]+)\.?([0-9]+)?",
                                   first_line)
         if not version_regex:
-            return None, None
+            return None, None, None
         # 19.36.32535 -> 193
         version = f"{version_regex.group('major')}{version_regex.group('minor')[0]}"
-        return compiler, Version(version)
+        return compiler, Version(version), compiler_exe
     except (Exception,):  # to disable broad-except
-        return None, None
+        return None, None, None
 
 
 def default_compiler_version(compiler, version):

@@ -14,7 +14,7 @@ def detect_defaults_settings():
     arch = detect_arch()
     if arch:
         result.append(("arch", arch))
-    compiler, version = detect_compiler()
+    compiler, version, compiler_exe = detect_compiler()
     if not compiler:
         result.append(("build_type", "Release"))
         ConanOutput().warning("No compiler was detected (one may not be needed)")
@@ -28,7 +28,7 @@ def detect_defaults_settings():
         result.append(("compiler.runtime", runtime))
     if runtime_version:
         result.append(("compiler.runtime_version", runtime_version))
-    libcxx = detect_libcxx(compiler, version)
+    libcxx = detect_libcxx(compiler, version, compiler_exe)
     if libcxx:
         result.append(("compiler.libcxx", libcxx))
     cppstd = detect_cppstd(compiler, version)
