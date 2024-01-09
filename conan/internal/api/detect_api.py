@@ -122,7 +122,7 @@ def _get_e2k_architecture():
     }.get(platform.processor())
 
 
-def detect_libcxx(compiler, version, compiler_exe):
+def detect_libcxx(compiler, version, compiler_exe=None):
     assert isinstance(version, Version)
 
     def _detect_gcc_libcxx(version_, executable):
