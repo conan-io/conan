@@ -13,7 +13,7 @@ from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, gzopen_without_timestamps
+from conans.util.files import rmdir, gzopen_without_timestamps, mkdir
 
 
 class CacheAPI:
@@ -22,50 +22,50 @@ class CacheAPI:
         self.conan_api = conan_api
 
     def export_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         ref.revision = None if ref.revision == "latest" else ref.revision
         ref_layout = app.cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export", ref_layout.export())
 
     def recipe_metadata_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         ref = _resolve_latest_ref(app, ref)
         ref_layout = app.cache.recipe_layout(ref)
         return _check_folder_existence(ref, "metadata", ref_layout.metadata())
 
     def export_source_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         ref.revision = None if ref.revision == "latest" else ref.revision
         ref_layout = app.cache.recipe_layout(ref)
         return _check_folder_existence(ref, "export_sources", ref_layout.export_sources())
 
     def source_path(self, ref: RecipeReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         ref.revision = None if ref.revision == "latest" else ref.revision
         ref_layout = app.cache.recipe_layout(ref)
         return _check_folder_existence(ref, "source", ref_layout.source())
 
     def build_path(self, pref: PkgReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return _check_folder_existence(pref, "build", ref_layout.build())
 
     def package_metadata_path(self, pref: PkgReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return _check_folder_existence(pref, "metadata", ref_layout.metadata())
 
     def package_path(self, pref: PkgReference):
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         pref = _resolve_latest_pref(app, pref)
         ref_layout = app.cache.pkg_layout(pref)
         return _check_folder_existence(pref, "package", ref_layout.package())
 
     def check_integrity(self, package_list):
         """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         checker = IntegrityChecker(app)
         checker.check(package_list)
 
@@ -81,7 +81,7 @@ class CacheAPI:
         :return:
         """
 
-        app = ConanApp(self.conan_api.cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         if temp:
             rmdir(app.cache.temp_folder)
             # Clean those build folders that didn't succeed to create a package and wont be in DB
@@ -111,8 +111,9 @@ class CacheAPI:
 
     def save(self, package_list, tgz_path):
         cache_folder = self.conan_api.cache_folder
-        app = ConanApp(cache_folder, self.conan_api.config.global_conf)
+        app = ConanApp(self.conan_api)
         out = ConanOutput()
+        mkdir(os.path.dirname(tgz_path))
         name = os.path.basename(tgz_path)
         with open(tgz_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)

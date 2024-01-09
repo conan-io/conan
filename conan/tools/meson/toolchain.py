@@ -53,6 +53,7 @@ class MesonToolchain(object):
     {% if as %}as = '{{as}}'{% endif %}
     {% if windres %}windres = '{{windres}}'{% endif %}
     {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
+    {% if pkgconfig %}pkg-config = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
     {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
