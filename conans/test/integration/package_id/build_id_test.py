@@ -134,6 +134,50 @@ class TestBuildIdTest:
         client.run("create . --name=pkg --version=0.1 ", assert_error=True)
         assert "ERROR: pkg/0.1: Error in build() method, line 5" in client.out
 
+    def test_any_os_arch(self):
+        conanfile_os = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+
+            class MyTest(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "arch", "build_type"
+
+                def build_id(self):
+                    self.info_build.settings.build_type = "Any"
+                    self.info_build.settings.os = "Any"
+                    self.info_build.settings.arch = "Any"
+
+                def build(self):
+                    self.output.info("Building my code!")
+
+                def package(self):
+                    self.output.info("Packaging %s-%s!" % (self.settings.os, self.settings.arch))
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_os})
+        client.run("create .  -s os=Windows -s arch=x86_64 -s build_type=Release")
+        print(client.out)
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
+        # Debug must not build
+        client.run("create .  -s os=Windows -s build_type=Debug")
+        assert "pkg/0.1: Calling build()" not in client.out
+        assert "Building my code!" not in client.out
+        assert "Packaging Debug!" in client.out
+
+        client.run("create . -s os=Linux -s build_type=Release")
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Building my code!" in client.out
+        assert "Packaging Release!" in client.out
+        client.run("create .  -s os=Linux -s build_type=Debug")
+        assert "Building my code!" in client.out
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Packaging Debug!" in client.out
+
 
 def test_remove_require():
     c = TestClient()
