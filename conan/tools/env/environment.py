@@ -41,9 +41,9 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             path_ps1 = "{}.ps1".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
-            if os.path.isfile(path_ps1) and "ps1" in accept:
+            elif os.path.isfile(path_ps1) and "ps1" in accept:
                 ps1s.append(path_ps1)
-            if os.path.isfile(path_sh) and "sh" in accept:
+            elif os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
 
