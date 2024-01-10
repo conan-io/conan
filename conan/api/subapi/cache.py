@@ -13,7 +13,7 @@ from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, gzopen_without_timestamps
+from conans.util.files import rmdir, gzopen_without_timestamps, mkdir
 
 
 class CacheAPI:
@@ -113,6 +113,7 @@ class CacheAPI:
         cache_folder = self.conan_api.cache_folder
         app = ConanApp(self.conan_api)
         out = ConanOutput()
+        mkdir(os.path.dirname(tgz_path))
         name = os.path.basename(tgz_path)
         with open(tgz_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)

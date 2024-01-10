@@ -1214,3 +1214,11 @@ def test_avoid_ovewrite_user_cmakepresets():
     c.run('install . -g CMakeToolchain', assert_error=True)
     assert "Error in generator 'CMakeToolchain': Existing CMakePresets.json not generated" in c.out
     assert "Use --output-folder or define a 'layout' to avoid collision" in c.out
+
+
+def test_presets_njobs():
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert presets["buildPresets"][0]["jobs"] == 42
