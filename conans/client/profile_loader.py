@@ -131,9 +131,9 @@ class ProfileLoader:
 
         try:
             text = rtemplate.render(context)
-        except:
-            raise ConanException("Error while rendering the profile template file. "
-                                 "Check your Jinja2 syntax")
+        except Exception as e:
+            raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
+                                 f"Check your Jinja2 syntax: {str(e)}")
 
         try:
             return self._recurse_load_profile(text, profile_path)
