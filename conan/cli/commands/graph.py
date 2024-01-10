@@ -255,17 +255,15 @@ def graph_explain(conan_api, parser,  subparser, *args):
     # compute ref and conaninfo
     missing = args.missing
     for node in deps_graph.ordered_iterate():
-        if node.binary == BINARY_MISSING:
-            if not missing or ref_matches(node.ref, missing, is_consumer=None):
-                ref = node.ref
-                conaninfo = node.conanfile.info
-                break
+        if ((not missing and node.binary == BINARY_MISSING)   # First missing binary or
+                or (missing and ref_matches(node.ref, missing, is_consumer=None))):  # specified one
+            ref = node.ref
+            conaninfo = node.conanfile.info
+            break
     else:
         raise ConanException("There is no missing binary")
 
     pkglist = conan_api.list.explain_missing_binaries(ref, conaninfo, remotes)
 
     ConanOutput().title("Closest binaries")
-    return {
-        "closest_binaries": pkglist.serialize(),
-    }
+    return {"closest_binaries": pkglist.serialize()}
