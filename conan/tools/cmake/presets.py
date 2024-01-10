@@ -185,13 +185,13 @@ class _CMakePresets:
         ret = {"name": build_preset_name, "configurePreset": configure_preset_name}
         if multiconfig:
             ret["configuration"] = build_type
-        build_preset_jobs = build_jobs(conanfile)
-        ret["jobs"] = build_preset_jobs
         return ret
 
     @staticmethod
     def _build_preset_fields(conanfile, multiconfig, preset_prefix):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
+        build_preset_jobs = build_jobs(conanfile)
+        ret["jobs"] = build_preset_jobs
         return ret
 
     @staticmethod
