@@ -1,7 +1,9 @@
 import os
 import textwrap
 
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.env import environment_update
 
 
 class TestCustomCommands:
@@ -254,3 +256,33 @@ class TestCustomCommands:
         client.run("danimtb:mycommand")
         foldername = os.path.basename(client.cache_folder)
         assert f'Conan cache folder from cmd_mycode: {foldername}' in client.out
+
+    def test_custom_command_from_other_location(self):
+        """
+        Tests that setting developer env variable ``_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH``
+        will append that folder to the Conan custom command default location.
+        """
+        myhello = textwrap.dedent("""
+            from conan.api.output import cli_out_write
+            from conan.cli.command import conan_command
+
+            @conan_command(group="custom commands")
+            def hello(conan_api, parser, *args, **kwargs):
+                '''
+                My Hello doc
+                '''
+                cli_out_write("Hello {}!")
+            """)
+
+        client = TestClient()
+        my_local_layer_path = temp_folder(path_with_spaces=False)
+        layer_path = os.path.join(client.cache_folder, 'extensions', 'commands')
+        client.save({os.path.join(layer_path, 'cmd_hello.py'): myhello.format("world")})
+        client.save({"cmd_hello.py": myhello.format("Overridden")}, path=my_local_layer_path)
+        with environment_update({"_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH": my_local_layer_path}):
+            client.run("hello")
+            # Local commands have preference over Conan custom ones if they collide
+            assert "Hello Overridden!" in client.out
+        # Without the variable it only loads the default custom commands location
+        client.run("hello")
+        assert "Hello world!" in client.out
