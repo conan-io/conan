@@ -50,6 +50,8 @@ class Cli:
         conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         # Important! This variable should be only used for testing/debugging purpose
         developer_custom_commands_path = os.getenv("_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH")
+        # Notice that in case of having same custom commands file names, the developer one has
+        # preference over the Conan default location because of the sys.path.append(xxxx)
         custom_commands_folders = [developer_custom_commands_path, conan_custom_commands_path] \
             if developer_custom_commands_path else [conan_custom_commands_path]
 
@@ -90,7 +92,9 @@ class Cli:
             if command_wrapper.doc:
                 name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
                 self._commands[name] = command_wrapper
-                self._groups[command_wrapper.group].append(name)
+                # Avoiding duplicated command help messages
+                if name not in self._groups[command_wrapper.group]:
+                    self._groups[command_wrapper.group].append(name)
             for name, value in getmembers(imported_module):
                 if isinstance(value, ConanSubCommand):
                     if name.startswith("{}_".format(method_name)):
