@@ -144,23 +144,20 @@ class VCVars:
                                 winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
 
-        content = f"""\
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        ps_command = 'powershell.exe -noexit -command "%1"' if is_ps1 else ""
+        content = textwrap.dedent(f"""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
             echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
-            {vcvars}"""
+            {vcvars}
+            echo hola%1
+            {ps_command}
+            """)
 
-        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         from conan.tools.env.environment import create_env_script
-        if is_ps1:
-
-            bat_content = textwrap.dedent(content + f'\n echo cmd env \n powershell.exe -noexit -command "exit"')
-            ps_content = textwrap.dedent(content + f'\n echo powershell env \n powershell.exe -noexit -command ""')
-            create_env_script(conanfile, bat_content, CONAN_VCVARS_BAT, scope)
-            create_env_script(conanfile, ps_content, CONAN_VCVARS_PS1, scope)
-        else:
-            create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
+        create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
 
 
 def vs_ide_version(conanfile):

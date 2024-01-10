@@ -152,6 +152,7 @@ def _generate_aggregated_env(conanfile):
 
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         subsystem = deduce_subsystem(conanfile, group)
         bats = []
         shs = []
@@ -159,16 +160,8 @@ def _generate_aggregated_env(conanfile):
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             #when using powershell and vcvars it needs to create
-            is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
-            if is_ps1 and "conanvcvars" in env_script:
-                if env_script.endswith("conanvcvars.bat"):
-                    path = os.path.relpath(path, conanfile.generators_folder)
-                    bats.append("%~dp0/"+path)
-                elif env_script.endswith("conanvcvarsps.bat"):
-                    path = os.path.relpath(path, conanfile.generators_folder)
-                    ps1s.append("$PSScriptRoot/" + path)
             # Only the .bat and .ps1 are made relative to current script
-            elif env_script.endswith(".bat"):
+            if env_script.endswith(".bat"):
                 path = os.path.relpath(path, conanfile.generators_folder)
                 if is_ps1:
                     ps1s.append("$PSScriptRoot/" + path)
@@ -189,6 +182,8 @@ def _generate_aggregated_env(conanfile):
                  sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
+                if is_ps1:
+                    return "\r\n".join(["@echo off"] + ['call "{}" exit'.format(b) for b in files])
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
             filename = "conan{}.bat".format(group)
             generated.append(filename)
