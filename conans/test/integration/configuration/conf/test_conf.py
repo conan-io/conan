@@ -307,6 +307,15 @@ def test_global_conf_auto_created():
     assert "# core:non_interactive = True" in global_conf
 
 
+def test_command_line_core_conf():
+    c = TestClient()
+    c.run("config show * -gc core:default_profile=potato")
+    assert "core:default_profile: potato" in c.out
+    c.run("config show * -gc core:default_profile=potato -gc core:default_build_profile=orange")
+    assert "core:default_profile: potato" in c.out
+    assert "core:default_build_profile: orange" in c.out
+
+
 def test_build_test_consumer_only():
     c = TestClient()
     dep = textwrap.dedent("""

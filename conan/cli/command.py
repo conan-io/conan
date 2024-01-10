@@ -50,6 +50,8 @@ class BaseConanCommand:
                             help="Level of detail of the output. Valid options from less verbose "
                                  "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
                                  "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
+        parser.add_argument("-gc", "--global-conf", action="append",
+                            help="Global configuration for Conan")
 
     @property
     def _help_formatters(self):
@@ -100,9 +102,14 @@ class ConanArgumentParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def parse_args(self, args=None, namespace=None):
+    def parse_args(self, args=None, namespace=None, conan_api=None):
         args = super().parse_args(args)
         ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
+        if conan_api and args.global_conf:
+            from conans.model.conf import ConfDefinition
+            confs = ConfDefinition()
+            confs.loads("\n".join(args.global_conf))
+            conan_api.config.global_conf.update_conf_definition(confs)
         return args
 
 
