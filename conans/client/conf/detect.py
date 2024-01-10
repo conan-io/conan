@@ -1,6 +1,6 @@
 from conan.api.output import ConanOutput
 from conan.internal.api.detect_api import detect_os, detect_arch, default_msvc_runtime, \
-    detect_libcxx, detect_cppstd, detect_compiler, default_compiler_version
+    detect_libcxx, detect_cppstd, detect_default_compiler, default_compiler_version
 
 
 def detect_defaults_settings():
@@ -14,7 +14,7 @@ def detect_defaults_settings():
     arch = detect_arch()
     if arch:
         result.append(("arch", arch))
-    compiler, version, compiler_exe = detect_compiler()
+    compiler, version, compiler_exe = detect_default_compiler()
     if not compiler:
         result.append(("build_type", "Release"))
         ConanOutput().warning("No compiler was detected (one may not be needed)")

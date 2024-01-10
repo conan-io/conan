@@ -243,17 +243,17 @@ def detect_cppstd(compiler, compiler_version):
     return cppstd
 
 
-def detect_compiler():
+def detect_default_compiler():
     """
-    find the default compiler on the build machine
-    search order and priority:
-    1. CC and CXX environment variables are always top priority
-    2. Visual Studio detection (Windows only) via vswhere or registry or environment variables
-    3. Apple Clang (Mac only)
-    4. cc executable
-    5. gcc executable
-    6. clang executable
-    """
+        find the default compiler on the build machine
+        search order and priority:
+        1. CC and CXX environment variables are always top priority
+        2. Visual Studio detection (Windows only) via vswhere or registry or environment variables
+        3. Apple Clang (Mac only)
+        4. cc executable
+        5. gcc executable
+        6. clang executable
+        """
     output = ConanOutput(scope="detect_api")
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
@@ -341,6 +341,12 @@ def _gcc_compiler(compiler_exe="gcc"):
             return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
         return None, None, None
+
+
+def detect_compiler():
+    ConanOutput(scope="detect_api").warning("detect_compiler() is deprecated, use detect_default_compiler()")
+    compiler, version, _ = detect_default_compiler()
+    return compiler, version
 
 
 def _sun_cc_compiler(compiler_exe="cc"):

@@ -11,7 +11,7 @@ class TestProfileDetectAPI:
 
         client = TestClient()
         tpl1 = textwrap.dedent("""
-            {% set compiler, version, compiler_exe = detect_api.detect_compiler() %}
+            {% set compiler, version, compiler_exe = detect_api.detect_default_compiler() %}
             {% set runtime, _ = detect_api.default_msvc_runtime(compiler) %}
             [settings]
             compiler={{compiler}}
