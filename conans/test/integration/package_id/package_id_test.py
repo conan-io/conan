@@ -159,8 +159,7 @@ def test_package_id_requires_info():
 
 
 def test_package_id_validate_settings():
-    """ ``self.info`` has some validation, the first time it executes
-    https://github.com/conan-io/conan/issues/12693
+    """ ``self.info`` has no validation, as it allows to be mutated
     """
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -173,8 +172,8 @@ def test_package_id_validate_settings():
         """)
     c = TestClient()
     c.save({"conanfile.py": conanfile})
-    c.run("create . --name=pkg --version=0.1", assert_error=True)
-    assert "ConanException: Invalid setting 'DONT_EXIST' is not a valid 'settings.os' value" in c.out
+    c.run("create . --name=pkg --version=0.1")
+    # It used to fail,
 
 
 class TestBuildRequiresHeaderOnly:
