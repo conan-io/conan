@@ -1,9 +1,7 @@
 import textwrap
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import save
 
 
@@ -49,39 +47,31 @@ def test_remove_option_setting():
     assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
-@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 def test_value_parse():
     # https://github.com/conan-io/conan/issues/2816
     conanfile = textwrap.dedent("""
-        import os
         from conan import ConanFile
-        from conan.tools.files import copy
 
         class TestConan(ConanFile):
             name = "test"
             version = "0.1"
             settings = "os", "arch", "build_type"
-            exports_sources = "header.h"
 
             def package_id(self):
                 self.info.settings.arch = "kk=kk"
-
-            def package(self):
-                copy(self, "header.h", self.source_folder,
-                     os.path.join(self.package_folder, "include"), keep_path=True)
         """)
-    server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-    servers = {"default": server}
-    client = TestClient(servers=servers, inputs=["lasote", "mypass"])
-    client.save({"conanfile.py": conanfile,
-                 "header.h": "header content"})
-    client.run("create . danimtb/testing")
-    client.run("search test/0.1@danimtb/testing")
+
+    client = TestClient(default_server_user=True)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . ")
+    client.run("list *:*")
     assert "arch: kk=kk" in client.out
-    client.run("upload test/0.1@danimtb/testing -r default")
-    client.run("remove test/0.1@danimtb/testing --confirm")
-    client.run("install --requires=test/0.1@danimtb/testing")
-    client.run("search test/0.1@danimtb/testing")
+    client.run("upload * -r default -c")
+    client.run("list *:* -r=default")
+    assert "arch: kk=kk" in client.out
+    client.run("remove * -c")
+    client.run("install --requires=test/0.1")
+    client.run("list *:*")
     assert "arch: kk=kk" in client.out
 
 

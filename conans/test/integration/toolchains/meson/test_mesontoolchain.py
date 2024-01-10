@@ -254,6 +254,7 @@ def test_env_vars_from_build_require():
     assert "as = 'AS_VALUE'" in content
     assert "windres = 'WINDRES_VALUE'" in content
     assert "pkgconfig = 'PKG_CONFIG_VALUE'" in content
+    assert "pkg-config = 'PKG_CONFIG_VALUE'" in content
 
 
 def test_check_c_cpp_ld_list_formats():

@@ -87,6 +87,20 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("install . --name=other --version=1.2")
         self.assertIn("", client.out)
 
+    def test_set_version_name_appending(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+               class Lib(ConanFile):
+                   def set_name(self):
+                       self.name = self.name + ".extra"
+                   def set_version(self):
+                       self.version = self.version + ".extra"
+               """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=pkg --version=1.0")
+        self.assertIn("pkg.extra/1.0.extra: Exported", client.out)
+
     def test_set_version_name_only_not_cli(self):
         client = TestClient()
         conanfile = textwrap.dedent("""

@@ -121,7 +121,8 @@ compiler:
         libcxx: [libstdc++, libc++]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     intel-cc:
-        version: ["2021.1", "2021.2", "2021.3"]
+        version: ["2021.1", "2021.2", "2021.3", "2021.4", "2022.1", "2022.2",
+                  "2022.3", "2023.0", "2023.1", "2023.2", "2024.0",]
         update: [null, ANY]
         mode: ["icx", "classic", "dpcpp"]
         libcxx: [null, libstdc++, libstdc++11, libc++]

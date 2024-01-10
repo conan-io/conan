@@ -1,5 +1,6 @@
 import fnmatch
 import sys
+import time
 
 from colorama import Fore, Style
 
@@ -252,3 +253,19 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
         data = f"{' ' * indentation}{data}{endline}"
 
     sys.stdout.write(data)
+
+
+class TimedOutput:
+    def __init__(self, interval, out=None, msg_format=None):
+        self._interval = interval
+        self._msg_format = msg_format
+        self._t = time.time()
+        self._out = out or ConanOutput()
+
+    def info(self, msg, *args, **kwargs):
+        t = time.time()
+        if t - self._t > self._interval:
+            self._t = t
+            if self._msg_format:
+                msg = self._msg_format(msg, *args, **kwargs)
+            self._out.info(msg)

@@ -185,6 +185,8 @@ def detect_libcxx(compiler, version):
         return "libCstd"
     elif compiler == "mcst-lcc":
         return "libstdc++"
+    elif compiler == "intel-cc":
+        return "libstdc++11"    
 
 
 def default_msvc_runtime(compiler):
@@ -230,9 +232,16 @@ def default_cppstd(compiler, compiler_version):
     def _mcst_lcc_cppstd_default(version):
         return "gnu14" if version >= "1.24" else "gnu98"
 
+    def _intel_cppstd_default(version):
+        tokens = version.main
+        major = tokens[0]
+        # https://www.intel.com/content/www/us/en/developer/articles/troubleshooting/icx-changes-default-cpp-std-to-cpp17-with-2023.html
+        return "17" if major >= "2023" else "14"
+
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
                "apple-clang": "gnu98",
+               "intel-cc": _intel_cppstd_default(compiler_version),
                "msvc": _visual_cppstd_default(compiler_version),
                "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
@@ -273,6 +282,9 @@ def detect_compiler():
                 output.error("%s detected as a frontend using apple-clang. "
                              "Compiler not supported" % command)
             return gcc, gcc_version
+        if "icpx" in command or "icx" in command:
+            intel, intel_version = _intel_compiler(command)
+            return intel, intel_version        
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(command)
         if (platform.system() == "Windows" and command.rstrip('"').endswith(("cl", "cl.exe"))
@@ -347,6 +359,18 @@ def _gcc_compiler(compiler_exe="gcc"):
     except (Exception,):  # to disable broad-except
         return None, None
 
+def _intel_compiler(compiler_exe="icx"):
+    try:
+        ret, out = detect_runner("%s --version" % compiler_exe)
+        if ret != 0:
+            return None, None
+        compiler = "intel-cc"
+        installed_version = re.search(r"(202[0-9]+(\.[0-9])?)", out).group()
+        if installed_version:
+            ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, installed_version))
+            return compiler, Version(installed_version)
+    except (Exception,):  # to disable broad-except
+        return None, None
 
 def _sun_cc_compiler(compiler_exe="cc"):
     try:
@@ -427,5 +451,7 @@ def default_compiler_version(compiler, version):
     elif compiler == "intel" and (major < 19 or (major == 19 and minor == 0)):
         return major
     elif compiler == "msvc":
+        return major
+    elif compiler == "intel-cc":
         return major
     return version

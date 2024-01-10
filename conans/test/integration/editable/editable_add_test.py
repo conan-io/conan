@@ -44,3 +44,19 @@ class TestEditablePackageTest:
         assert "Cannot resolve python_requires 'pyreq/1.0': No remote defined" in t.out
         t.run("editable add .")
         assert "Reference 'pkg/1.0' in editable mode" in t.out
+
+
+def test_editable_no_name_version_test_package():
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile(),
+             "test_package/conanfile.py": GenConanfile("test_package")
+             .with_class_attribute("test_type = 'explicit'")
+            .with_test("self.output.info('Testing the package')")})
+    tc.run("editable add . --name=foo", assert_error=True)
+    assert "ERROR: Editable package recipe should declare its name and version" in tc.out
+
+    tc.run("editable add . --version=1.0", assert_error=True)
+    assert "ERROR: Editable package recipe should declare its name and version" in tc.out
+
+    tc.run("editable add .", assert_error=True)
+    assert "ERROR: Editable package recipe should declare its name and version" in tc.out
