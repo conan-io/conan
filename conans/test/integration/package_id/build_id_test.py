@@ -142,12 +142,13 @@ class TestBuildIdTest:
             class MyTest(ConanFile):
                 name = "pkg"
                 version = "0.1"
-                settings = "os", "arch", "build_type"
+                settings = "os", "arch", "build_type", "compiler"
 
                 def build_id(self):
-                    self.info_build.settings.build_type = "Any"
-                    self.info_build.settings.os = "Any"
-                    self.info_build.settings.arch = "Any"
+                    self.info_build.settings.build_type = "AnyValue"
+                    self.info_build.settings.os = "AnyValue"
+                    self.info_build.settings.arch = "AnyValue"
+                    self.info_build.settings.compiler = "AnyValue"
 
                 def build(self):
                     self.output.info("Building my code!")
