@@ -223,7 +223,7 @@ def list(conan_api: ConanAPI, parser, *args):
                              " time limit like --lru=5d (days) or --lru=4w (weeks),"
                              " h (hours), m(minutes)")
 
-    args = parser.parse_args(*args)
+    args = parser.parse_args(*args, conan_api=conan_api)
 
     if args.pattern is None and args.graph is None:
         raise ConanException("Missing pattern or graph json file")

@@ -8,6 +8,7 @@ from mock import patch
 from conan import conan_version
 from conan.internal.api import detect_api
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
@@ -314,6 +315,16 @@ def test_command_line_core_conf():
     c.run("config show * -gc core:default_profile=potato -gc core:default_build_profile=orange")
     assert "core:default_profile: potato" in c.out
     assert "core:default_build_profile: orange" in c.out
+
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+
+    tfolder = temp_folder()
+    c.run(f'list * -gc core.cache:storage_path="{tfolder}"')
+    assert "WARN: There are no matching recipe references" in c.out
+    c.run(f'list *')
+    assert "WARN: There are no matching recipe references" not in c.out
+    assert "pkg/0.1" in c.out
 
 
 def test_build_test_consumer_only():
