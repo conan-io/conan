@@ -72,7 +72,7 @@ class SettingsItem(object):
         else:
             result._definition = {k: v.copy_conaninfo_settings()
                                   for k, v in self._definition.items()}
-            result._definition["ANY"] = SettingsItem([], "ANY")
+            result._definition["ANY"] = Settings()
         return result
 
     def __bool__(self):

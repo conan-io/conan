@@ -59,6 +59,7 @@ def test_value_parse():
 
             def package_id(self):
                 self.info.settings.arch = "kk=kk"
+                self.info.settings.os = "yy=yy"
         """)
 
     client = TestClient(default_server_user=True)
