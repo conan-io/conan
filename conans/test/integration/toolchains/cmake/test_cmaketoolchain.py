@@ -1237,7 +1237,7 @@ def test_add_cmakeexe_to_presets():
             settings = "os", "compiler", "arch", "build_type"
             def package(self):
                 with chdir(self, self.package_folder):
-                    save(self, f"bin/{}", f"")
+                    save(self, "bin/{}", "")
         """)
 
     consumer = textwrap.dedent("""
