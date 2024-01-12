@@ -109,4 +109,4 @@ class TestInRepo:
         # Of course the recipe can also be created locally
         path = os.path.join(repo_folder, "recipes/pkg/all")
         c.run(f'create "{path}" --version=0.1')
-        print(c.out)
+        assert "pkg/0.1: Created package" in c.out

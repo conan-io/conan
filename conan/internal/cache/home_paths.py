@@ -13,6 +13,10 @@ class HomePaths:
         self._home = home_folder
 
     @property
+    def oss_recipes_path(self):
+        return os.path.join(self._home, ".cache_oss_recipes")
+
+    @property
     def global_conf_path(self):
         return os.path.join(self._home, "global.conf")
 

@@ -7,13 +7,15 @@ from io import StringIO
 
 import yaml
 
+from conan.api.model import OSS_RECIPES, OSS_RECIPES_GIT
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load, save
+from conans.util.files import load, save, mkdir, chdir
+from conans.util.runners import check_output_runner
 
 
 class RestApiClientOSSRecipes:
@@ -22,11 +24,25 @@ class RestApiClientOSSRecipes:
     a local folder assuming the conan-center-index repo layout
     """
 
-    def __init__(self, remote):
+    def __init__(self, remote, cache):
         self._remote = remote
-        cache_folder = self._remote.url
-        self._remote_cache_dir = "{}/.cache".format(cache_folder)
-        hook_folder = HomePaths(self._remote_cache_dir).hooks_path
+        oss_recipes_path = HomePaths(cache.cache_folder).oss_recipes_path
+        # TODO: What when a remote name changes or is removed
+        oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
+        cache_oss_recipes_path = os.path.join(oss_recipes_path, ".conan")
+        if remote.remote_type == OSS_RECIPES:
+            repo_folder = self._remote.url
+        else:
+            assert remote.remote_type == OSS_RECIPES_GIT
+            repo_folder = oss_recipes_path
+            if not os.path.exists(repo_folder):  # clone it
+                output = ConanOutput()
+                output.info(f"Remote {remote.name} not cloned yet. Cloning {remote.url}")
+                mkdir(repo_folder)
+                with chdir(repo_folder):
+                    check_output_runner(f'git clone "{remote.url}" .')
+
+        hook_folder = HomePaths(cache_oss_recipes_path).hooks_path
         trim_hook = os.path.join(hook_folder, "hook_trim_conandata.py")
         if not os.path.exists(trim_hook):
             hook_content = textwrap.dedent("""\
@@ -39,9 +55,9 @@ class RestApiClientOSSRecipes:
 
         from conan.internal.conan_app import ConanApp
         from conan.api.conan_api import ConanAPI
-        conan_api = ConanAPI(self._remote_cache_dir)
+        conan_api = ConanAPI(cache_oss_recipes_path)
         self._app = ConanApp(conan_api)
-        self._layout = _OSSRecipesRepoLayout(cache_folder)
+        self._layout = _OSSRecipesRepoLayout(repo_folder)
 
     def call_method(self, method_name, *args, **kwargs):
         return getattr(self, method_name)(*args, **kwargs)

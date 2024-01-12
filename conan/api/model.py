@@ -10,6 +10,7 @@ from conans.util.files import load
 from conans.model.version_range import VersionRange
 
 OSS_RECIPES = "oss-recipes"
+OSS_RECIPES_GIT = "oss-recipes-git"
 
 
 class Remote:

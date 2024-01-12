@@ -1,14 +1,18 @@
 import json
+import os
 from collections import OrderedDict
 
 from conan.api.output import cli_out_write, Color
 from conan.api.conan_api import ConanAPI
-from conan.api.model import Remote, OSS_RECIPES
+from conan.api.model import Remote, OSS_RECIPES, OSS_RECIPES_GIT
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.rest.remote_credentials import RemoteCredentials
 from conan.errors import ConanException
+from conans.util.files import chdir
+from conans.util.runners import check_output_runner
 
 
 def formatter_remote_list_json(remotes):
@@ -72,7 +76,7 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the definition of the remote even if duplicated")
-    subparser.add_argument("-t", "--type", choices=[OSS_RECIPES],
+    subparser.add_argument("-t", "--type", choices=[OSS_RECIPES, OSS_RECIPES_GIT],
                            help="Define the remote type")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
@@ -283,3 +287,24 @@ def remote(conan_api, parser, *args):
     """
     Manage the remote list and the users authenticated on them.
     """
+
+
+@conan_subcommand()
+def remote_pull(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Do a git pull for the given remotes
+    """
+    subparser.add_argument("remote", help="Pattern or name of the oss-recipes remotes to pull")
+    args = parser.parse_args(*args)
+
+    oss_recipes_path = HomePaths(conan_api.home_folder).oss_recipes_path
+    remotes = conan_api.remotes.list(pattern=args.remote)
+    if not remotes:
+        raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
+
+    for r in remotes:
+        if r.remote_type != OSS_RECIPES_GIT:
+            continue
+        remote_folder = os.path.join(oss_recipes_path, r.name)
+        with chdir(remote_folder):
+            check_output_runner('git pull')
