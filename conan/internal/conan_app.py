@@ -36,8 +36,10 @@ class ConanFileHelpers:
         self.cache = cache
 
 
-class ConanApp(object):
-    def __init__(self, cache_folder, global_conf):
+class ConanApp:
+    def __init__(self, conan_api):
+        global_conf = conan_api.config.global_conf
+        cache_folder = conan_api.home_folder
         self._configure(global_conf)
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, global_conf)
@@ -54,8 +56,8 @@ class ConanApp(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager)
 
-        self.proxy = ConanProxy(self)
-        self.range_resolver = RangeResolver(self, global_conf)
+        self.proxy = ConanProxy(self, conan_api.local.editable_packages)
+        self.range_resolver = RangeResolver(self, global_conf, conan_api.local.editable_packages)
 
         self.pyreq_loader = PyRequireLoader(self, global_conf)
         cmd_wrap = CmdWrapper(home_paths.wrapper_path)

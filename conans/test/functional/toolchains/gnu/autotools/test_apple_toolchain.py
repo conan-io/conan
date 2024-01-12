@@ -141,6 +141,6 @@ def test_catalyst(arch):
     t.run_command('lipo -info "%s"' % app)
     assert "architecture: %s" % expected_arch in t.out
 
-    #FIXME: recover when ci is fixed for M2 
+    #FIXME: recover when ci is fixed for M2
     #t.run_command('"%s"' % app)
     #assert "running catalyst 160100" in t.out

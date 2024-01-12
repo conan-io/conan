@@ -1,5 +1,7 @@
 import fnmatch
 import sys
+import time
+from threading import Lock
 
 from colorama import Fore, Style
 
@@ -53,6 +55,7 @@ class ConanOutput:
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
     _warnings_as_errors = []
+    lock = Lock()
 
     def __init__(self, scope=""):
         self.stream = sys.stderr
@@ -126,8 +129,11 @@ class ConanOutput:
 
         if newline:
             data = "%s\n" % data
-        self.stream.write(data)
-        self.stream.flush()
+
+        with self.lock:
+            self.stream.write(data)
+            self.stream.flush()
+
         return self
 
     def rewrite_line(self, line):
@@ -161,8 +167,9 @@ class ConanOutput:
         else:
             ret += "{}".format(msg)
 
-        self.stream.write("{}\n".format(ret))
-        self.stream.flush()
+        with self.lock:
+            self.stream.write("{}\n".format(ret))
+            self.stream.flush()
 
     def trace(self, msg):
         if self._conan_output_level <= LEVEL_TRACE:
@@ -252,3 +259,19 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
         data = f"{' ' * indentation}{data}{endline}"
 
     sys.stdout.write(data)
+
+
+class TimedOutput:
+    def __init__(self, interval, out=None, msg_format=None):
+        self._interval = interval
+        self._msg_format = msg_format
+        self._t = time.time()
+        self._out = out or ConanOutput()
+
+    def info(self, msg, *args, **kwargs):
+        t = time.time()
+        if t - self._t > self._interval:
+            self._t = t
+            if self._msg_format:
+                msg = self._msg_format(msg, *args, **kwargs)
+            self._out.info(msg)

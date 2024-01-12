@@ -88,6 +88,7 @@ class RemoteManager:
 
         # Make sure that the source dir is deleted
         rmdir(layout.source())
+        return layout
 
     def get_recipe_metadata(self, ref, remote, metadata):
         """

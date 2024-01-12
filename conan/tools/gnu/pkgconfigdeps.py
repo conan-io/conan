@@ -286,7 +286,7 @@ class _PCGenerator:
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
-            # If no requires were found, let's try to get all the direct dependencies,
+            # If no requires were found, let's try to get all the direct visible dependencies,
             # e.g., requires = "other_pkg/1.0"
             requires = [_get_package_name(req, self._build_context_suffix)
                         for req in self._transitive_reqs.values()]
