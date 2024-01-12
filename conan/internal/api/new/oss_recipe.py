@@ -1,5 +1,3 @@
-from conan.internal.api.new.cmake_lib import test_conanfile_v2, test_cmake_v2
-
 config_yml = """\
 versions:
   "{{version}}":

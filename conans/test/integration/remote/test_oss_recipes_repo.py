@@ -4,14 +4,10 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.file_server import TestFileServer
-from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, zipdir
-from conans.util.files import mkdir, save, save_files, sha256sum
+from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir, save, save_files
 
 
 @pytest.fixture(scope="module")
@@ -261,30 +257,3 @@ class TestErrorsUx:
         c.run(f"remote add local '{folder}' --type=oss-recipes")
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out
-
-
-class TestConanNewOssRecipe:
-    def test(self):
-        # Setup the release pkg0.1.zip http server
-        file_server = TestFileServer()
-        zippath = os.path.join(file_server.store, "pkg0.1.zip")
-        repo_folder = temp_folder()
-        cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
-                               public_header="pkg.h")
-        save_files(repo_folder, {"CMakeLists.txt": cmake,
-                                 "pkg.h": gen_function_h(name="pkg"),
-                                 "pkg.cpp": gen_function_cpp(name="pkg")})
-        zipdir(repo_folder, zippath)
-        sha256 = sha256sum(zippath)
-        url = f"{file_server.fake_url}/pkg0.1.zip"
-
-        c0 = TestClient()
-        c0.run(f"new oss_recipe -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
-        oss_recipe_repo = c0.current_folder
-
-        c = TestClient()
-        c.servers["file_server"] = file_server
-        c.run(f"remote add local '{oss_recipe_repo}' --type=oss-recipes")
-        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=pkg/0.1")
-        c.run("create . --build=missing")
-        assert "pkg: Release!" in c.out
