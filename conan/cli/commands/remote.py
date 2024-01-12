@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from conan.api.output import cli_out_write, Color
 from conan.api.conan_api import ConanAPI
-from conan.api.model import Remote
+from conan.api.model import Remote, OSS_RECIPES
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
@@ -72,7 +72,7 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the definition of the remote even if duplicated")
-    subparser.add_argument("-t", "--type", choices=["local"],
+    subparser.add_argument("-t", "--type", choices=[OSS_RECIPES],
                            help="Define the remote type")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)

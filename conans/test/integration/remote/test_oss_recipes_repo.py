@@ -4,10 +4,14 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.utils.file_server import TestFileServer
+from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir, save, save_files
+from conans.test.utils.tools import TestClient, zipdir
+from conans.util.files import mkdir, save, save_files, sha256sum
 
 
 @pytest.fixture(scope="module")
@@ -65,10 +69,10 @@ def c3i_folder():
 class TestSearchList:
     def test_basic_search(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add ccifork '{c3i_folder}' --type=local")
+        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
         client.run("search *")
         assert textwrap.dedent("""\
-            ccifork
+            local
               libcurl
                 libcurl/1.0
               openssl
@@ -82,43 +86,43 @@ class TestSearchList:
 
     def test_list_refs(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add ccifork '{c3i_folder}' --type=local")
-        client.run("list *#* -r=ccifork --format=json")
+        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run("list *#* -r=local --format=json")
         listjson = json.loads(client.stdout)
-        revs = listjson["ccifork"]["libcurl/1.0"]["revisions"]
+        revs = listjson["local"]["libcurl/1.0"]["revisions"]
         assert len(revs) == 1 and "e468388f0e4e098d5b62ad68979aebd5" in revs
-        revs = listjson["ccifork"]["openssl/1.0"]["revisions"]
+        revs = listjson["local"]["openssl/1.0"]["revisions"]
         assert len(revs) == 1 and "b35ffb31b6d5a9d8af39f5de3cf4fd63" in revs
-        revs = listjson["ccifork"]["openssl/1.1"]["revisions"]
+        revs = listjson["local"]["openssl/1.1"]["revisions"]
         assert len(revs) == 1 and "b35ffb31b6d5a9d8af39f5de3cf4fd63" in revs
-        revs = listjson["ccifork"]["openssl/2.0"]["revisions"]
+        revs = listjson["local"]["openssl/2.0"]["revisions"]
         assert len(revs) == 1 and "e50e871efca149f160fa6354c8534449" in revs
-        revs = listjson["ccifork"]["zlib/1.2.8"]["revisions"]
+        revs = listjson["local"]["zlib/1.2.8"]["revisions"]
         assert len(revs) == 1 and "6f5c31bb1219e9393743d1fbf2ee1b52" in revs
-        revs = listjson["ccifork"]["zlib/1.2.11"]["revisions"]
+        revs = listjson["local"]["zlib/1.2.11"]["revisions"]
         assert len(revs) == 1 and "6f5c31bb1219e9393743d1fbf2ee1b52" in revs
 
     def test_list_rrevs(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add ccifork '{c3i_folder}' --type=local")
-        client.run("list libcurl/1.0#* -r=ccifork --format=json")
+        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run("list libcurl/1.0#* -r=local --format=json")
         listjson = json.loads(client.stdout)
-        revs = listjson["ccifork"]["libcurl/1.0"]["revisions"]
+        revs = listjson["local"]["libcurl/1.0"]["revisions"]
         assert len(revs) == 1 and "e468388f0e4e098d5b62ad68979aebd5" in revs
 
     def test_list_binaries(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add ccifork '{c3i_folder}' --type=local")
-        client.run("list libcurl/1.0:* -r=ccifork --format=json")
+        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run("list libcurl/1.0:* -r=local --format=json")
         listjson = json.loads(client.stdout)
-        rev = listjson["ccifork"]["libcurl/1.0"]["revisions"]["e468388f0e4e098d5b62ad68979aebd5"]
+        rev = listjson["local"]["libcurl/1.0"]["revisions"]["e468388f0e4e098d5b62ad68979aebd5"]
         assert rev["packages"] == {}
 
 
 class TestInstall:
     def test_install(self, c3i_folder):
         c = TestClient()
-        c.run(f"remote add ccifork '{c3i_folder}' --type=local")
+        c.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
         c.run("install --requires=libcurl/1.0 --build missing")
         assert "zlib/1.2.11: CONANDATA: {}" in c.out
         assert "zlib/1.2.11: BUILDING: //myheader" in c.out
@@ -135,9 +139,9 @@ class TestInstall:
 
         # Update doesn't fail, but doesn't update revision time
         c.run("install --requires libcurl/1.0 --update")
-        bins = {"libcurl/1.0": "Cache (Updated date) (ccifork)",
-                "openssl/2.0": "Cache (Updated date) (ccifork)",
-                "zlib/1.2.11": "Cache (Updated date) (ccifork)"}
+        bins = {"libcurl/1.0": "Cache (Updated date) (local)",
+                "openssl/2.0": "Cache (Updated date) (local)",
+                "zlib/1.2.11": "Cache (Updated date) (local)"}
 
         c.assert_listed_require(bins)
         assert "zlib/1.2.11: Already installed!" in c.out
@@ -150,7 +154,7 @@ class TestInstall:
              str(GenConanfile()) + "\n")
         c.run("install --requires=libcurl/1.0 --build missing --update")
         # it is updated
-        assert "zlib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (ccifork)" in c.out
+        assert "zlib/1.2.11#dd82451a95902c89bb66a2b980c72de5 - Updated (local)" in c.out
 
     def test_install_with_exported_files(self):
         folder = temp_folder()
@@ -178,7 +182,7 @@ class TestInstall:
                     "boost/all/conanfile.py": boost,
                     "boost/all/dependencies/myfile.json": deps_json})
         c = TestClient()
-        c.run(f"remote add ccifork '{folder}' --type=local")
+        c.run(f"remote add local '{folder}' --type=oss-recipes")
         c.run("install --requires=boost/[*] --build missing")
         assert 'boost/1.0: {"potato": 42}' in c.out
 
@@ -204,7 +208,7 @@ class TestInstall:
                     "pkg/all/conanfile.py": str(GenConanfile("pkg")),
                     "pkg/all/conandata.yml": conandata})
         c = TestClient()
-        c.run(f"remote add ccifork '{folder}' --type=local")
+        c.run(f"remote add local '{folder}' --type=oss-recipes")
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
 
@@ -230,11 +234,11 @@ class TestRestrictedOperations:
         folder = temp_folder()
         c3i_folder = os.path.join(folder, "recipes")
         c = TestClient()
-        c.run(f"remote add ccifork '{c3i_folder}' --type=local")
+        c.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
-        c.run("upload pkg/0.1 -r=ccifork", assert_error=True)
-        assert "ERROR: Git remote 'ccifork' doesn't support upload" in c.out
+        c.run("upload pkg/0.1 -r=local", assert_error=True)
+        assert "ERROR: Git remote 'local' doesn't support upload" in c.out
 
 
 class TestErrorsUx:
@@ -254,6 +258,33 @@ class TestErrorsUx:
                    {"zlib/config.yml": zlib_config,
                     "zlib/all/conanfile.py": zlib})
         c = TestClient()
-        c.run(f"remote add ccifork '{folder}' --type=local")
+        c.run(f"remote add local '{folder}' --type=oss-recipes")
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out
+
+
+class TestConanNewOssRecipe:
+    def test(self):
+        # Setup the release pkg0.1.zip http server
+        file_server = TestFileServer()
+        zippath = os.path.join(file_server.store, "pkg0.1.zip")
+        repo_folder = temp_folder()
+        cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
+                               public_header="pkg.h")
+        save_files(repo_folder, {"CMakeLists.txt": cmake,
+                                 "pkg.h": gen_function_h(name="pkg"),
+                                 "pkg.cpp": gen_function_cpp(name="pkg")})
+        zipdir(repo_folder, zippath)
+        sha256 = sha256sum(zippath)
+        url = f"{file_server.fake_url}/pkg0.1.zip"
+
+        c0 = TestClient()
+        c0.run(f"new oss_recipe -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
+        oss_recipe_repo = c0.current_folder
+
+        c = TestClient()
+        c.servers["file_server"] = file_server
+        c.run(f"remote add local '{oss_recipe_repo}' --type=oss-recipes")
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=pkg/0.1")
+        c.run("create . --build=missing")
+        assert "pkg: Release!" in c.out

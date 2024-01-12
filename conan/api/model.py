@@ -9,6 +9,8 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 from conans.model.version_range import VersionRange
 
+OSS_RECIPES = "oss-recipes"
+
 
 class Remote:
 
@@ -30,8 +32,9 @@ class Remote:
                 self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
-        if self.remote_type == "local":
-            return "{}: {} [Local: True, Enabled: {}]".format(self.name, self.url, not self.disabled)
+        if self.remote_type == OSS_RECIPES:
+            return "{}: {} [{}, Enabled: {}]".format(self.name, self.url, OSS_RECIPES,
+                                                     not self.disabled)
         return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
                                                              not self.disabled)
 

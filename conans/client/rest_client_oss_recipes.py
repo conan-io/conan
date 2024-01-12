@@ -16,7 +16,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save
 
 
-class RestApiClientFolder:
+class RestApiClientOSSRecipes:
     """
     Implements the RestAPI but instead of over HTTP for a remote server, using just
     a local folder assuming the conan-center-index repo layout
@@ -38,9 +38,10 @@ class RestApiClientFolder:
             save(trim_hook, hook_content)
 
         from conan.internal.conan_app import ConanApp
-        global_conf = ConfDefinition()
-        self._app = ConanApp(self._remote_cache_dir, global_conf)
-        self.layout = _ConanCenterIndexLayout(cache_folder)
+        from conan.api.conan_api import ConanAPI
+        conan_api = ConanAPI(self._remote_cache_dir)
+        self._app = ConanApp(conan_api)
+        self._layout = _OSSRecipesRepoLayout(cache_folder)
 
     def call_method(self, method_name, *args, **kwargs):
         return getattr(self, method_name)(*args, **kwargs)
@@ -69,7 +70,7 @@ class RestApiClientFolder:
         raise ConanException(f"Git remote '{self._remote.name}' doesn't support upload")
 
     def search(self, pattern=None):
-        return self.layout.get_recipes_references(pattern)
+        return self._layout.get_recipes_references(pattern)
 
     def search_packages(self, reference):
         assert self and reference
@@ -109,7 +110,7 @@ class RestApiClientFolder:
 
     # Helper methods to implement the interface
     def _export_recipe(self, ref):
-        folder = self.layout.get_recipe_folder(ref)
+        folder = self._layout.get_recipe_folder(ref)
         conanfile_path = os.path.join(folder, "conanfile.py")
         original_stderr = sys.stderr
         sys.stderr = StringIO()
@@ -141,7 +142,7 @@ class RestApiClientFolder:
         return ret
 
 
-class _ConanCenterIndexLayout:
+class _OSSRecipesRepoLayout:
 
     def __init__(self, base_folder):
         self._base_folder = base_folder

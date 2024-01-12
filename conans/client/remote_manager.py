@@ -4,10 +4,11 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
+from conan.api.model import OSS_RECIPES
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conans.client.cache.remote_registry import Remote
-from conans.client.rest_client_folder import RestApiClientFolder
+from conans.client.rest_client_oss_recipes import RestApiClientOSSRecipes
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
@@ -28,8 +29,8 @@ class RemoteManager:
 
     @staticmethod
     def _local_folder_remote(remote):
-        if remote.remote_type == "local":
-            return RestApiClientFolder(remote)
+        if remote.remote_type == OSS_RECIPES:
+            return RestApiClientOSSRecipes(remote)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
@@ -55,7 +56,7 @@ class RemoteManager:
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
-            return
+            return layout
 
         download_export = layout.download_export()
         try:
