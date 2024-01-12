@@ -1222,3 +1222,40 @@ def test_presets_njobs():
     c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
+
+
+def test_add_cmakeexe_to_presets():
+    c = TestClient()
+
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import chdir, save
+        class Tool(ConanFile):
+            name = "cmake"
+            version = "3.27"
+            settings = "os", "compiler", "arch", "build_type"
+            def package(self):
+                with chdir(self, self.package_folder):
+                    save(self, f"bin/{}", f"")
+        """)
+
+    consumer = textwrap.dedent("""
+        [tool_requires]
+        cmake/3.27
+        [layout]
+        cmake_layout
+    """)
+
+    cmake_exe = "cmake.exe" if platform.system() == "Windows" else "cmake"
+
+    c.save({"tool.py": tool.format(cmake_exe),
+            "conanfile.txt": consumer})
+    c.run("create tool.py")
+    c.run("install . -g CMakeToolchain -g CMakeDeps")
+
+    presets_path = os.path.join("build", "Release", "generators", "CMakePresets.json") \
+        if platform.system() != "Windows" else os.path.join("build", "generators", "CMakePresets.json")
+    presets = json.loads(c.load(presets_path))
+
+    assert cmake_exe == os.path.basename(presets["configurePresets"][0].get("cmakeExecutable"))
