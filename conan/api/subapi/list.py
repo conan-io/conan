@@ -221,45 +221,72 @@ class ListAPI:
 
 
 class _BinaryDistance:
-    def __init__(self, pref, binary_config, expected_config, remote=None):
+    def __init__(self, pref, binary, expected, remote=None):
         self.remote = remote
         self.pref = pref
-        self.binary_config = binary_config
+        self.binary_config = binary
 
-        # Settings
-        self.platform_diff = {}
-        self.settings_diff = {}
-        binary_settings = binary_config.get("settings", {})
-        expected_settings = expected_config.get("settings", {})
-        for k, v in expected_settings.items():
-            value = binary_settings.get(k)
-            if value is not None and value != v:
-                diff = self.platform_diff if k in ("os", "arch") else self.settings_diff
-                diff.setdefault("expected", []).append(f"{k}={v}")
-                diff.setdefault("existing", []).append(f"{k}={value}")
+        # Settings, special handling for os/arch
+        binary_settings = binary.get("settings", {})
+        expected_settings = expected.get("settings", {})
 
-        # Options
-        self.options_diff = {}
-        binary_options = binary_config.get("options", {})
-        expected_options = expected_config.get("options", {})
-        for k, v in expected_options.items():
-            value = binary_options.get(k)
-            if value is not None and value != v:
-                self.options_diff.setdefault("expected", []).append(f"{k}={v}")
-                self.options_diff.setdefault("existing", []).append(f"{k}={value}")
+        platform = {k: v for k, v in binary_settings.items() if k in ("os", "arch")}
+        expected_platform = {k: v for k, v in expected_settings.items() if k in ("os", "arch")}
+        self.platform_diff = self._calculate_diff(platform, expected_platform)
 
-        # Requires
-        self.deps_diff = {}
-        binary_requires = binary_config.get("requires", [])
-        expected_requires = expected_config.get("requires", [])
+        binary_settings = {k: v for k, v in binary_settings.items() if k not in ("os", "arch")}
+        expected_settings = {k: v for k, v in expected_settings.items() if k not in ("os", "arch")}
+        self.settings_diff = self._calculate_diff(binary_settings, expected_settings)
+
+        self.settings_target_diff = self._calculate_diff(binary, expected, "settings_target")
+        self.options_diff = self._calculate_diff(binary, expected, "options")
+        self.deps_diff = self._requirement_diff(binary, expected, "requires")
+        self.build_requires_diff = self._requirement_diff(binary, expected, "build_requires")
+        self.python_requires_diff = self._requirement_diff(binary, expected, "python_requires")
+        self.confs_diff = self._calculate_diff(binary,  expected, "conf")
+
+    @staticmethod
+    def _requirement_diff(binary_requires, expected_requires, item):
+        binary_requires = binary_requires.get(item, {})
+        expected_requires = expected_requires.get(item, {})
+        output = {}
         binary_requires = [RecipeReference.loads(r) for r in binary_requires]
         expected_requires = [RecipeReference.loads(r) for r in expected_requires]
         binary_requires = {r.name: r for r in binary_requires}
         for r in expected_requires:
             existing = binary_requires.get(r.name)
             if not existing or r != existing:
-                self.deps_diff.setdefault("expected", []).append(repr(r))
-                self.deps_diff.setdefault("existing", []).append(repr(existing))
+                output.setdefault("expected", []).append(repr(r))
+                output.setdefault("existing", []).append(repr(existing))
+        expected_requires = {r.name: r for r in expected_requires}
+        for r in binary_requires.values():
+            existing = expected_requires.get(r.name)
+            if not existing or r != existing:
+                if repr(existing) not in output.get("expected", ()):
+                    output.setdefault("expected", []).append(repr(existing))
+                if repr(r) not in output.get("existing", ()):
+                    output.setdefault("existing", []).append(repr(r))
+        return output
+
+    @staticmethod
+    def _calculate_diff(binary_confs, expected_confs, item=None):
+        if item is not None:
+            binary_confs = binary_confs.get(item, {})
+            expected_confs = expected_confs.get(item, {})
+        output = {}
+        for k, v in expected_confs.items():
+            value = binary_confs.get(k)
+            if value != v:
+                output.setdefault("expected", []).append(f"{k}={v}")
+                output.setdefault("existing", []).append(f"{k}={value}")
+        for k, v in binary_confs.items():
+            value = expected_confs.get(k)
+            if value != v:
+                if f"{k}={value}" not in output.get("expected", ()):
+                    output.setdefault("expected", []).append(f"{k}={value}")
+                if f"{k}={v}" not in output.get("existing", ()):
+                    output.setdefault("existing", []).append(f"{k}={v}")
+        return output
 
     def __lt__(self, other):
         return self.distance < other.distance
@@ -269,22 +296,38 @@ class _BinaryDistance:
             return "This binary belongs to another OS or Architecture, highly incompatible."
         if self.settings_diff:
             return "This binary was built with different settings."
+        if self.settings_target_diff:
+            return "This binary was built with different settings_target."
         if self.options_diff:
             return "This binary was built with the same settings, but different options"
         if self.deps_diff:
             return "This binary has same settings and options, but different dependencies"
+        if self.build_requires_diff:
+            return "This binary has same settings, options and dependencies, but different build_requires"
+        if self.python_requires_diff:
+            return "This binary has same settings, options and dependencies, but different python_requires"
+        if self.confs_diff:
+            return "This binary has same settings, options and dependencies, but different confs"
         return "This binary is an exact match for the defined inputs"
 
     @property
     def distance(self):
         return (len(self.platform_diff.get("expected", [])),
                 len(self.settings_diff.get("expected", [])),
+                len(self.settings_target_diff.get("expected", [])),
                 len(self.options_diff.get("expected", [])),
-                len(self.deps_diff.get("expected", [])))
+                len(self.deps_diff.get("expected", [])),
+                len(self.build_requires_diff.get("expected", [])),
+                len(self.python_requires_diff.get("expected", [])),
+                len(self.confs_diff.get("expected", [])))
 
     def serialize(self):
         return {"platform": self.platform_diff,
                 "settings": self.settings_diff,
+                "settings_target": self.settings_target_diff,
                 "options": self.options_diff,
                 "dependencies": self.deps_diff,
+                "build_requires": self.build_requires_diff,
+                "python_requires": self.python_requires_diff,
+                "confs": self.confs_diff,
                 "explanation": self.explanation()}
