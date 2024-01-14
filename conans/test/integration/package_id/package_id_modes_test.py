@@ -118,16 +118,23 @@ class TestDepDefinedMode:
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/[*]")})
         c.run("create dep --version=0.1")
         c.run("create pkg")
-        c.assert_listed_binary({"pkg/0.1": ("fcf70699eb821f51cd4f3e228341ac4f405ad220", "Build")})
+        c.assert_listed_binary({"pkg/0.1": ("331c17383dcdf37f79bc2b86fa55ac56afdc6fec", "Build")})
 
-        # using dep 0.2, still same, because dependency chose "minor"
+        # using dep 0.2, still same, because dependency chose "major"
         c.run("create dep --version=0.1.1")
         c.run("create pkg")
-        c.assert_listed_binary({"pkg/0.1": ("fcf70699eb821f51cd4f3e228341ac4f405ad220", "Build")})
+        c.assert_listed_binary({"pkg/0.1": ("331c17383dcdf37f79bc2b86fa55ac56afdc6fec", "Build")})
 
-        # using dep 0.2, still same, because dependency chose "minor"
+        # using dep 0.2, still same, because dependency chose "major"
         c.run("create dep --version=0.2")
         c.run("create pkg")
-        c.assert_listed_binary({"pkg/0.1": ("56934f87c11792e356423e081c7cd490f3c1fbe0", "Build")})
+        c.assert_listed_binary({"pkg/0.1": ("331c17383dcdf37f79bc2b86fa55ac56afdc6fec", "Build")})
+        c.run("list *:*")
+        assert "dep/0.Y.Z" in c.out
 
-
+        # using dep 0.2, new package_id, because dependency chose "major"
+        c.run("create dep --version=1.0")
+        c.run("create pkg")
+        c.assert_listed_binary({"pkg/0.1": ("9b015e30b768df0217ffa2c270f60227c998e609", "Build")})
+        c.run("list *:*")
+        assert "dep/1.Y.Z" in c.out
