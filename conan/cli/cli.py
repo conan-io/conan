@@ -47,35 +47,43 @@ class Cli:
             for k, v in self._commands.items():  # Fill groups data too
                 self._groups[v.group].append(k)
 
-        custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
-        if not os.path.isdir(custom_commands_path):
-            return
+        conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
+        # Important! This variable should be only used for testing/debugging purpose
+        developer_custom_commands_path = os.getenv("_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH")
+        # Notice that in case of having same custom commands file names, the developer one has
+        # preference over the Conan default location because of the sys.path.append(xxxx)
+        custom_commands_folders = [developer_custom_commands_path, conan_custom_commands_path] \
+            if developer_custom_commands_path else [conan_custom_commands_path]
 
-        sys.path.append(custom_commands_path)
-        for module in pkgutil.iter_modules([custom_commands_path]):
-            module_name = module[1]
-            if module_name.startswith("cmd_"):
-                try:
-                    self._add_command(module_name, module_name.replace("cmd_", ""))
-                except Exception as e:
-                    ConanOutput().error(f"Error loading custom command '{module_name}.py': {e}",
-                                        error_type="exception")
-        # layers
-        for folder in os.listdir(custom_commands_path):
-            layer_folder = os.path.join(custom_commands_path, folder)
-            sys.path.append(layer_folder)
-            if not os.path.isdir(layer_folder):
-                continue
-            for module in pkgutil.iter_modules([layer_folder]):
+        for custom_commands_path in custom_commands_folders:
+            if not os.path.isdir(custom_commands_path):
+                return
+
+            sys.path.append(custom_commands_path)
+            for module in pkgutil.iter_modules([custom_commands_path]):
                 module_name = module[1]
                 if module_name.startswith("cmd_"):
-                    module_path = f"{folder}.{module_name}"
                     try:
-                        self._add_command(module_path, module_name.replace("cmd_", ""),
-                                          package=folder)
+                        self._add_command(module_name, module_name.replace("cmd_", ""))
                     except Exception as e:
-                        ConanOutput().error(f"Error loading custom command {module_path}: {e}",
+                        ConanOutput().error(f"Error loading custom command '{module_name}.py': {e}",
                                             error_type="exception")
+            # layers
+            for folder in os.listdir(custom_commands_path):
+                layer_folder = os.path.join(custom_commands_path, folder)
+                sys.path.append(layer_folder)
+                if not os.path.isdir(layer_folder):
+                    continue
+                for module in pkgutil.iter_modules([layer_folder]):
+                    module_name = module[1]
+                    if module_name.startswith("cmd_"):
+                        module_path = f"{folder}.{module_name}"
+                        try:
+                            self._add_command(module_path, module_name.replace("cmd_", ""),
+                                              package=folder)
+                        except Exception as e:
+                            ConanOutput().error(f"Error loading custom command {module_path}: {e}",
+                                                error_type="exception")
 
     def _add_command(self, import_path, method_name, package=None):
         try:
@@ -84,7 +92,9 @@ class Cli:
             if command_wrapper.doc:
                 name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
                 self._commands[name] = command_wrapper
-                self._groups[command_wrapper.group].append(name)
+                # Avoiding duplicated command help messages
+                if name not in self._groups[command_wrapper.group]:
+                    self._groups[command_wrapper.group].append(name)
             for name, value in getmembers(imported_module):
                 if isinstance(value, ConanSubCommand):
                     if name.startswith("{}_".format(method_name)):
