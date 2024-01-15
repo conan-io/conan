@@ -19,9 +19,9 @@ class TestConanNewOssRecipe:
         repo_folder = temp_folder()
         cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
                                public_header="pkg.h")
-        save_files(repo_folder, {"CMakeLists.txt": cmake,
-                                 "pkg.h": gen_function_h(name="pkg"),
-                                 "pkg.cpp": gen_function_cpp(name="pkg")})
+        save_files(repo_folder, {"pkg/CMakeLists.txt": cmake,
+                                 "pkg/pkg.h": gen_function_h(name="pkg"),
+                                 "pkg/pkg.cpp": gen_function_cpp(name="pkg")})
         zipdir(repo_folder, zippath)
         sha256 = sha256sum(zippath)
         url = f"{file_server.fake_url}/pkg0.1.zip"
