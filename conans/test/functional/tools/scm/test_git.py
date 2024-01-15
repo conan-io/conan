@@ -25,6 +25,8 @@ class TestGitBasicCapture:
             name = "pkg"
             version = "0.1"
 
+            git_excluded = ["myfile.txt", "mynew.txt"]
+
             def export(self):
                 git = Git(self, self.recipe_folder)
                 commit = git.get_commit()
@@ -115,6 +117,24 @@ class TestGitBasicCapture:
         assert "pkg/0.1: URL: None" in c.out
         assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
         assert "pkg/0.1: DIRTY: False" in c.out
+
+    def test_git_excluded(self):
+        """
+        A local repo, without remote, will have commit, but no URL
+        """
+        c = TestClient()
+        c.save({"conanfile.py": self.conanfile,
+                "myfile.txt": ""})
+        c.init_git_repo()
+        c.run("export . -vvv")
+        assert "pkg/0.1: DIRTY: False" in c.out
+        c.save({"myfile.txt": "changed",
+                "mynew.txt": "new"})
+        c.run("export .")
+        assert "pkg/0.1: DIRTY: False" in c.out
+        c.save({"other.txt": "new"})
+        c.run("export .")
+        assert "pkg/0.1: DIRTY: True" in c.out
 
 
 @pytest.mark.tool("git")

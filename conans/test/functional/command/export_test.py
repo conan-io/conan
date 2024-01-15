@@ -60,3 +60,24 @@ class TestRevisionModeSCM:
         t.run("export .", assert_error=True)
         # It errors, because no commits yet
         assert "Cannot detect revision using 'scm' mode from repository" in t.out
+
+    def test_revision_mode_scm_excluded_files(self):
+        t = TestClient()
+        git_excluded = 'git_excluded = ["*.cpp", "*.txt", "src/*"]'
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute('revision_mode = "scm"') \
+                                              .with_class_attribute(git_excluded)
+        commit = t.init_git_repo({'conanfile.py': str(conanfile),
+                                  "test.cpp": "mytest"})
+
+        t.run(f"export .")
+        assert t.exported_recipe_revision() == commit
+
+        t.save({"test.cpp": "mytest2",
+                "new.txt": "new",
+                "src/potato": "hello"})
+        t.run(f"export . -vvv")
+        assert t.exported_recipe_revision() == commit
+
+        t.save({"test.py": ""})
+        t.run(f"export .", assert_error=True)
+        assert "ERROR: Can't have a dirty repository using revision_mode='scm'" in t.out

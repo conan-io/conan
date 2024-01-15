@@ -1,3 +1,4 @@
+import fnmatch
 import os
 
 from conan.tools.files import chdir
@@ -107,7 +108,16 @@ class Git:
         :return: True, if the current folder is dirty. Otherwise, False.
         """
         status = self.run("status . --short --no-branch --untracked-files").strip()
-        return bool(status)
+        self._conanfile.output.debug(f"Git status:\n{status}")
+        excluded = getattr(self._conanfile, "git_excluded", None)
+        if not excluded:
+            return bool(status)
+        # Parse the status output, line by line, and match it with "git_excluded"
+        lines = [line.strip() for line in status.splitlines()]
+        lines = [line.split()[1] for line in lines if line]
+        lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in excluded)]
+        self._conanfile.output.debug(f"Filtered git status: {lines}")
+        return bool(lines)
 
     def get_url_and_commit(self, remote="origin", repository=False):
         """
