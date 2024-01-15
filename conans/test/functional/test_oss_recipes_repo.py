@@ -34,7 +34,7 @@ class TestConanNewOssRecipe:
         c.servers["file_server"] = file_server
         c.run(f"remote add local '{oss_recipe_repo}' --type=oss-recipes")
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=pkg/0.1")
-        c.run("create . --build=missing")
+        c.run("create . --version=0.1 --build=missing")
         assert "pkg: Release!" in c.out
 
 
