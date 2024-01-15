@@ -24,7 +24,7 @@ sources:
 conanfile = """\
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
-from conan.tools.files import apply_conandata_patches, export_conandata_patches, get, load, replace_in_file, save
+from conan.tools.files import apply_conandata_patches, export_conandata_patches, get
 
 
 class {{package_name}}Recipe(ConanFile):
