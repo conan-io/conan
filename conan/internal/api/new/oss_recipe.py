@@ -29,7 +29,6 @@ from conan.tools.files import apply_conandata_patches, export_conandata_patches,
 
 class {{package_name}}Recipe(ConanFile):
     name = "{{name}}"
-    version = "{{version}}"
     package_type = "library"
 
     # Optional metadata
