@@ -225,6 +225,51 @@ class TestInstall:
         c.run("install --requires=pkg/1.0 --build missing --update -vvv")
         assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
 
+    def test_export_patches(self):
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        zlib_config = textwrap.dedent("""
+            versions:
+              "0.1":
+                folder: all
+            """)
+        zlib = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import export_conandata_patches, apply_conandata_patches
+            class Zlib(ConanFile):
+                name = "zlib"
+                exports_sources = "*.cpp"
+                def export_sources(self):
+                    export_conandata_patches(self)
+
+                def source(self):
+                    apply_conandata_patches(self)
+                    """)
+        conandata_yml = textwrap.dedent("""\
+            versions:
+              "0.1":
+            patches:
+              "0.1":
+                - patch_file: "patches/patch1"
+                    """)
+        patch = textwrap.dedent("""\
+            --- a/main.cpp
+            +++ b/main.cpp
+            @@ -0,0 +1 @@
+            +hello
+            """)
+        save_files(recipes_folder,
+                   {"zlib/config.yml": zlib_config,
+                    "zlib/all/conanfile.py": zlib,
+                    "zlib/all/conandata.yml": conandata_yml,
+                    "zlib/all/patches/patch1": patch,
+                    "zlib/all/main.cpp": "\n"})
+        client = TestClient()
+        client.run(f"remote add local '{folder}' --type=oss-recipes")
+        client.run("install --requires=zlib/0.1 --build=missing -vv")
+        assert "zlib/0.1: Copied 1 file: patch1" in client.out
+        assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
+
 
 class TestRestrictedOperations:
     def test_upload(self):
