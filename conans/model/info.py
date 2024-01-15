@@ -66,6 +66,7 @@ class RequirementInfo:
         self._package_id = package_id
         self.name = self.version = self.user = self.channel = self.package_id = None
         self.recipe_revision = None
+        self.package_id_mode = default_package_id_mode
 
         try:
             func_package_id_mode = getattr(self, default_package_id_mode)
@@ -234,14 +235,15 @@ class PythonRequiresInfo:
     def __init__(self, refs, default_package_id_mode):
         self._default_package_id_mode = default_package_id_mode
         if refs:
-            self._refs = [RequirementInfo(r, None, default_package_id_mode=default_package_id_mode)
-                          for r in sorted(refs)]
+            self._refs = [RequirementInfo(r, None,
+                                          default_package_id_mode=mode or default_package_id_mode)
+                          for r, mode in sorted(refs.items())]
         else:
             self._refs = None
 
     def copy(self):
         # For build_id() implementation
-        refs = [r._ref for r in self._refs] if self._refs else None
+        refs = {r._ref: r.package_id_mode for r in self._refs} if self._refs else None
         return PythonRequiresInfo(refs, self._default_package_id_mode)
 
     def __bool__(self):
