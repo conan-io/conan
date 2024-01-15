@@ -66,6 +66,7 @@ class TestSearchList:
     def test_basic_search(self, c3i_folder):
         client = TestClient()
         client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        assert "WARN" not in client.out  # Make sure it does not complain about url
         client.run("search *")
         assert textwrap.dedent("""\
             local

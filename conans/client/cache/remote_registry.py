@@ -2,7 +2,7 @@ import json
 import os
 from urllib.parse import urlparse
 
-from conan.api.model import Remote
+from conan.api.model import Remote, OSS_RECIPES, OSS_RECIPES_GIT
 from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save
@@ -162,7 +162,8 @@ class RemoteRegistry(object):
         return ret
 
     def add(self, remote: Remote, force=False, index=None):
-        self._validate_url(remote.url)
+        if remote.remote_type not in (OSS_RECIPES, OSS_RECIPES_GIT):
+            self._validate_url(remote.url)
         remotes = self._load_remotes()
         remotes.add(remote, force=force, index=index)
         self.save_remotes(remotes)
@@ -175,7 +176,7 @@ class RemoteRegistry(object):
 
     def update(self, remote_name, url, secure, disabled, index):
         if url is not None:
-            self._validate_url(url)
+            self._validate_url(url)  # TODO: Pending to not warn for oss-recipes repos
         remotes = self._load_remotes()
         remotes.update(remote_name, url, secure, disabled, index)
         self.save_remotes(remotes)
