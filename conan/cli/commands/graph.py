@@ -115,14 +115,10 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     if not args.file or len(args.file) < 2:
         raise ConanException("At least 2 files are needed to be merged")
 
-    result = None
-    for f in args.file:
-        f = make_abs_path(f)
-        install_graph = InstallGraph.load(f)
-        if result is None:
-            result = install_graph
-        else:
-            result.merge(install_graph)
+    result = InstallGraph.load(make_abs_path(args.file[0]))
+    for f in args.file[1:]:
+        install_graph = InstallGraph.load(make_abs_path(f))
+        result.merge(install_graph)
 
     install_order_serialized = result.install_build_order()
     return install_order_serialized
