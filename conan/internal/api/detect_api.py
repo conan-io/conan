@@ -204,6 +204,11 @@ def default_msvc_runtime(compiler):
     return None, None
 
 
+def detect_msvc_update(version):
+    from conans.client.conf.detect_vs import vs_detect_update
+    return vs_detect_update(version)
+
+
 def default_cppstd(compiler, compiler_version):
     """ returns the default cppstd for the compiler-version. This is not detected, just the default
     """
