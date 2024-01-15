@@ -27,7 +27,11 @@ class TestConanNewOssRecipe:
         url = f"{file_server.fake_url}/pkg0.1.zip"
 
         c0 = TestClient()
+        c0.servers["file_server"] = file_server
         c0.run(f"new oss_recipe -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
+        # A local create is possible, and it includes a test_package
+        c0.run("create recipes/pkg/all --version=0.1")
+        assert "pkg: Release!" in c0.out
         oss_recipe_repo = c0.current_folder
 
         c = TestClient()
@@ -152,3 +156,7 @@ class TestOssRecipeGit:
         c.run("list *:* -r=local")
         assert "pkg/0.1" in c.out
         assert "pkg/0.2" in c.out
+
+        # Finally lets remove the remote, check that the clone is cleared
+        c.run(f'remote remove local')
+        assert "Removing temporary clone for 'local' oss-recipes-git remote" in c.out

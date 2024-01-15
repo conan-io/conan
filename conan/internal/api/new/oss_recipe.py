@@ -1,3 +1,5 @@
+from conan.internal.api.new.cmake_lib import test_conanfile_v2, test_cmake_v2
+
 config_yml = """\
 versions:
   "{{version}}":
@@ -95,6 +97,17 @@ class {{package_name}}Recipe(ConanFile):
     {%- endif %}
 """
 
+
+test_main = """#include "{{name}}.h"
+
+int main() {
+    {{package_name}}();
+}
+"""
+
 oss_recipe_files = {"recipes/{{name}}/config.yml": config_yml,
                     "recipes/{{name}}/all/conandata.yml": conandata_yml,
-                    "recipes/{{name}}/all/conanfile.py": conanfile}
+                    "recipes/{{name}}/all/conanfile.py": conanfile,
+                    "recipes/{{name}}/all/test_package/conanfile.py": test_conanfile_v2,
+                    "recipes/{{name}}/all/test_package/CMakeLists.txt": test_cmake_v2,
+                    "recipes/{{name}}/all/test_package/src/example.cpp": test_main}
