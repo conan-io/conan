@@ -1,7 +1,7 @@
 import fnmatch
 import os
 
-from conan.api.model import OSS_RECIPES_GIT
+from conan.api.model import OSS_RECIPES_GIT, OSS_RECIPES
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
@@ -72,11 +72,11 @@ class RemotesAPI:
         app = ConanApp(self.conan_api)
         remotes = self.list(pattern, only_enabled=False)
         for remote in remotes:
-            if remote.remote_type == OSS_RECIPES_GIT:
+            if remote.remote_type in (OSS_RECIPES, OSS_RECIPES_GIT):
                 oss_recipes_path = HomePaths(self.conan_api.cache_folder).oss_recipes_path
                 oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
-                ConanOutput().info(f"Removing temporary clone for '{remote.name}' "
-                                   f"oss-recipes-git remote")
+                ConanOutput().info(f"Removing temporary files for '{remote.name}' "
+                                   f"oss-recipes remote")
                 rmdir(oss_recipes_path)
             RemoteRegistry(self._remotes_file).remove(remote.name)
             users_clean(app.cache.localdb, remote.url)

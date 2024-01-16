@@ -117,6 +117,10 @@ class TestInRepo:
         c.run(f'create "{path}" --version=0.1')
         assert "pkg/0.1: Created package" in c.out
 
+        # Finally lets remove the remote, check that the clone is cleared
+        c.run('remote remove local')
+        assert "Removing temporary files for 'local' oss-recipes remote" in c.out
+
 
 class TestOssRecipeGit:
     def test_conan_new_oss_recipe(self):
@@ -158,5 +162,5 @@ class TestOssRecipeGit:
         assert "pkg/0.2" in c.out
 
         # Finally lets remove the remote, check that the clone is cleared
-        c.run(f'remote remove local')
-        assert "Removing temporary clone for 'local' oss-recipes-git remote" in c.out
+        c.run('remote remove local')
+        assert "Removing temporary files for 'local' oss-recipes remote" in c.out
