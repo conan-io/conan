@@ -28,7 +28,7 @@ class RemotesAPI:
         :param only_enabled:
         :return:
         """
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         if only_enabled:
             remotes = [r for r in remotes if not r.disabled]
         if pattern:
@@ -36,32 +36,32 @@ class RemotesAPI:
         return remotes
 
     def disable(self, pattern):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         disabled = _filter(remotes, pattern, only_enabled=False)
         if disabled:
             for r in disabled:
                 r.disabled = True
-            self._save(remotes)
+            _save(self._remotes_file, remotes)
         return remotes
 
     def enable(self, pattern):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         enabled = _filter(remotes, pattern, only_enabled=False)
         if enabled:
             for r in enabled:
                 r.disabled = False
-            self._save(remotes)
+            _save(self._remotes_file, remotes)
         return remotes
 
     def get(self, remote_name):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         try:
             return {r.name: r for r in remotes}[remote_name]
         except KeyError:
             raise ConanException(f"Remote '{remote_name}' doesn't exist")
 
     def add(self, remote: Remote, force=False, index=None):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         _validate_url(remote.url)
         current = {r.name: r for r in remotes}.get(remote.name)
         if current:  # same name remote existing!
@@ -80,19 +80,19 @@ class RemotesAPI:
         else:
             remotes = [r for r in remotes if r.name != remote.name]
             remotes.insert(index, remote)
-        self._save(remotes)
+        _save(self._remotes_file, remotes)
 
     def remove(self, pattern: str):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         removed = _filter(remotes, pattern, only_enabled=False)
         remotes = [r for r in remotes if r not in removed]
-        self._save(remotes)
+        _save(self._remotes_file, remotes)
         app = ConanApp(self.conan_api)
         for remote in removed:
             users_clean(app.cache.localdb, remote.url)
 
     def update(self, remote_name, url=None, secure=None, disabled=None, index=None):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         try:
             remote = {r.name: r for r in remotes}[remote_name]
         except KeyError:
@@ -109,10 +109,10 @@ class RemotesAPI:
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
             remotes.insert(index, remote)
-        self._save(remotes)
+        _save(self._remotes_file, remotes)
 
     def rename(self, remote_name: str, new_name: str):
-        remotes = self._load()
+        remotes = _load(self._remotes_file)
         d = {r.name: r for r in remotes}
         if new_name in d:
             raise ConanException(f"Remote '{new_name}' already exists")
@@ -120,7 +120,7 @@ class RemotesAPI:
             d[remote_name].name = new_name
         except KeyError:
             raise ConanException(f"Remote '{remote_name}' doesn't exist")
-        self._save(remotes)
+        _save(self._remotes_file, remotes)
 
     def user_info(self, remote: Remote):
         app = ConanApp(self.conan_api)
@@ -152,27 +152,29 @@ class RemotesAPI:
         user, token, _ = app.cache.localdb.get_login(remote.url)
         return user
 
-    def _load(self):
-        if not os.path.exists(self._remotes_file):
-            remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center.conan.io", True, False)
-            self._save([remote])
-            return [remote]
 
-        data = json.loads(load(self._remotes_file))
-        result = []
-        for r in data.get("remotes", []):
-            remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False))
-            result.append(remote)
-        return result
+def _load(remotes_file):
+    if not os.path.exists(remotes_file):
+        remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center.conan.io", True, False)
+        _save(remotes_file, [remote])
+        return [remote]
 
-    def _save(self, remotes):
-        remote_list = []
-        for r in remotes:
-            remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
-            if r.disabled:
-                remote["disabled"] = True
-            remote_list.append(remote)
-        save(self._remotes_file, json.dumps({"remotes": remote_list}, indent=True))
+    data = json.loads(load(remotes_file))
+    result = []
+    for r in data.get("remotes", []):
+        remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False))
+        result.append(remote)
+    return result
+
+
+def _save(remotes_file, remotes):
+    remote_list = []
+    for r in remotes:
+        remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
+        if r.disabled:
+            remote["disabled"] = True
+        remote_list.append(remote)
+    save(remotes_file, json.dumps({"remotes": remote_list}, indent=True))
 
 
 def _filter(remotes, pattern, only_enabled=True):
