@@ -36,7 +36,7 @@ def add_oss_recipes_remote(conan_api, remote):
         # Finally, once it is cloned, change the remote URL to point to the local folder
         remote.url = repo_folder
 
-    cache_oss_recipes_path = os.path.join(oss_recipes_path, ".conan")
+    cache_oss_recipes_path = os.path.join(repo_folder, ".conan")
     hook_folder = HomePaths(cache_oss_recipes_path).hooks_path
     trim_hook = os.path.join(hook_folder, "hook_trim_conandata.py")
     hook_content = textwrap.dedent("""\
