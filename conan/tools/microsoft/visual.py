@@ -8,7 +8,7 @@ from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
 
 CONAN_VCVARS_BAT = "conanvcvars.bat"
-CONAN_VCVARS_PS1 = "conanvcvarsps.bat"
+CONAN_VCVARS_PS1 = "conanvcvars.ps1"
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -139,24 +139,34 @@ class VCVars:
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
         # C:\Program Files (x86)\Microsoft Visual Studio 14.0
-
         vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
                                 winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
 
-        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
-        ps_command = 'powershell.exe -noexit -command "%1"' if is_ps1 else ""
         content = textwrap.dedent(f"""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
             echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
             {vcvars}
-            echo hola%1
-            {ps_command}
             """)
-
         from conan.tools.env.environment import create_env_script
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        if is_ps1:
+            generator_path = conanfile.generators_path
+            content_ps1 = textwrap.dedent(f"""\
+            pushd "{generator_path}"
+            cmd /c "conanvcvars.bat&set" |
+            foreach {{
+              if ($_ -match "=") {{
+                $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+              }}
+            }}
+            popd
+            write-host conanvcvars.ps1: Activated environment
+            """)
+            create_env_script(conanfile, content_ps1, CONAN_VCVARS_PS1, scope)
+
         create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
 
 

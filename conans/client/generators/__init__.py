@@ -152,19 +152,15 @@ def _generate_aggregated_env(conanfile):
 
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
-        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         subsystem = deduce_subsystem(conanfile, group)
         bats = []
         shs = []
         ps1s = []
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
-            #when using powershell and vcvars it needs to create
             # Only the .bat and .ps1 are made relative to current script
             if env_script.endswith(".bat"):
                 path = os.path.relpath(path, conanfile.generators_folder)
-                if is_ps1:
-                    ps1s.append("$PSScriptRoot/" + path)
                 bats.append("%~dp0/"+path)
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
@@ -182,8 +178,6 @@ def _generate_aggregated_env(conanfile):
                  sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
-                if is_ps1:
-                    return "\r\n".join(["@echo off"] + ['call "{}" exit'.format(b) for b in files])
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
             filename = "conan{}.bat".format(group)
             generated.append(filename)
@@ -192,7 +186,13 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                return "\r\n".join(['& "{}"'.format(b) for b in files])
+                content = "\r\n"
+                for b in files:
+                    if "vcvars" in b:
+                        content += 'if (-not $env:VSCMD_ARG_HOST_ARCH){{  & "{}" }}\n'.format(b)
+                    else:
+                        content += '& "{}"\n'.format(b)
+                return content
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
