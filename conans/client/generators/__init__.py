@@ -189,7 +189,7 @@ def _generate_aggregated_env(conanfile):
                 content = "\r\n"
                 for b in files:
                     if "vcvars" in b:
-                        content += 'if (-not $env:VSCMD_ARG_HOST_ARCH){{  & "{}" }}\n'.format(b)
+                        content += 'if (-not $env:VSCMD_ARG_HOST_ARCH){{ & "{}" }}\n'.format(b)
                     else:
                         content += '& "{}"\n'.format(b)
                 return content

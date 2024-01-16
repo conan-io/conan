@@ -123,16 +123,19 @@ def test_vcvars():
         from conan.tools.cmake import CMake, cmake_layout, CMakeToolchain, CMakeDeps
 
         class Conan(ConanFile):
-            settings = "os", "compiler", "build_type", "arch"
+           settings = "os", "compiler", "build_type", "arch"
 
-            generators = 'CMakeDeps', 'CMakeToolchain'
+           test_requires = [("gtest/1.12.1")]
 
-            def layout(self):
-                cmake_layout(self)
+           generators = 'CMakeDeps', 'CMakeToolchain'
 
-            def build(self):
-                cmake = CMake(self)
-                cmake.build()
+           def layout(self):
+              cmake_layout(self)
+
+           def build(self):
+              cmake = CMake(self)
+              cmake.configure()
+              cmake.build()
     """)
     client.save({"conanfile.py": conanfile})
     hello_cpp = textwrap.dedent(r"""
@@ -156,11 +159,8 @@ def test_vcvars():
         target_link_libraries(hello PRIVATE GTest::gtest GTest::gtest_main)
     """)
     client.save({"CMakeLists.txt": cmakelists})
-    client.run('build . -c tools.cmake.cmaketoolchain:generator="Ninja" -c tools.env.virtualenv:powershell=True -s compiler.version=193')
-    # client.run("install . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
-    # assert "Generating done" in client.out
-    # assert "[vcvarsall.bat] Environment initialized for:" in client.out
+    client.run("install . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
     conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
-    vcvars = client.load(r".\build\Release\generators\conanvcvars.bat")
-    assert "conanvcvars.bat" in conanbuild
-    assert "powershell.exe" in vcvars
+    vcvars_ps1 = client.load(r".\build\Release\generators\conanvcvars.ps1")
+    assert "conanvcvars.ps1" in conanbuild
+    assert "conanvcvars.bat&set" in vcvars_ps1
