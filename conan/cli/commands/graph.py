@@ -56,6 +56,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
+    subparser.add_argument("--order", choices=['recipe', 'configuration'], default="recipe",
+                           help='Select which order method')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -93,7 +95,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
-    install_graph = InstallGraph(deps_graph)
+    install_graph = InstallGraph(deps_graph, order=args.order)
     install_order_serialized = install_graph.install_build_order()
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
@@ -110,11 +112,12 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
     args = parser.parse_args(*args)
+    if not args.file or len(args.file) < 2:
+        raise ConanException("At least 2 files are needed to be merged")
 
-    result = InstallGraph()
-    for f in args.file:
-        f = make_abs_path(f)
-        install_graph = InstallGraph.load(f)
+    result = InstallGraph.load(make_abs_path(args.file[0]))
+    for f in args.file[1:]:
+        install_graph = InstallGraph.load(make_abs_path(f))
         result.merge(install_graph)
 
     install_order_serialized = result.install_build_order()
