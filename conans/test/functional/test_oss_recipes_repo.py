@@ -2,10 +2,8 @@ import os
 import textwrap
 
 from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.file_server import TestFileServer
-from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, zipdir
 from conans.util.files import save_files, sha256sum
