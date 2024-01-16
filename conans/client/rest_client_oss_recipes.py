@@ -7,19 +7,18 @@ from io import StringIO
 
 import yaml
 
-from conan.api.model import OSS_RECIPES, OSS_RECIPES_GIT
+from conan.api.model import OSS_RECIPES
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load, save, mkdir, chdir, rmdir
-from conans.util.runners import check_output_runner
+from conans.util.files import load, save, rmdir
 
 
 def add_oss_recipes_remote(conan_api, remote):
-    if remote.remote_type not in (OSS_RECIPES, OSS_RECIPES_GIT):
+    if remote.remote_type != OSS_RECIPES:
         return
     oss_recipes_path = HomePaths(conan_api.cache_folder).oss_recipes_path
     repo_folder = os.path.join(oss_recipes_path, remote.name)
@@ -28,13 +27,6 @@ def add_oss_recipes_remote(conan_api, remote):
     if os.path.exists(repo_folder):
         output.warning(f"The cache folder for remote {remote.name} existed, removing it")
         rmdir(repo_folder)
-    if remote.remote_type == OSS_RECIPES_GIT:
-        output.info(f"Remote {remote.name} cloning {remote.url}")
-        mkdir(repo_folder)
-        with chdir(repo_folder):
-            check_output_runner(f'git clone "{remote.url}" . {remote.extra_args or ""}')
-        # Finally, once it is cloned, change the remote URL to point to the local folder
-        remote.url = repo_folder
 
     cache_oss_recipes_path = os.path.join(repo_folder, ".conan")
     hook_folder = HomePaths(cache_oss_recipes_path).hooks_path
@@ -49,7 +41,7 @@ def add_oss_recipes_remote(conan_api, remote):
 
 
 def remove_oss_recipes_remote(conan_api, remote):
-    if remote.remote_type in (OSS_RECIPES, OSS_RECIPES_GIT):
+    if remote.remote_type == OSS_RECIPES:
         oss_recipes_path = HomePaths(conan_api.cache_folder).oss_recipes_path
         oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
         ConanOutput().info(f"Removing temporary files for '{remote.name}' "

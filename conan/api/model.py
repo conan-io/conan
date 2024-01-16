@@ -10,19 +10,16 @@ from conans.util.files import load
 from conans.model.version_range import VersionRange
 
 OSS_RECIPES = "oss-recipes"
-OSS_RECIPES_GIT = "oss-recipes-git"
 
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False, remote_type=None,
-                 extra_args=None):
+    def __init__(self, name, url, verify_ssl=True, disabled=False, remote_type=None):
         self._name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
         self.remote_type = remote_type
-        self.extra_args = extra_args
 
     @property
     def name(self):
