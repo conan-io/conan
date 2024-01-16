@@ -25,10 +25,8 @@ class TestGitBasicCapture:
             name = "pkg"
             version = "0.1"
 
-            git_excluded = ["myfile.txt", "mynew.txt"]
-
             def export(self):
-                git = Git(self, self.recipe_folder)
+                git = Git(self, self.recipe_folder, excluded=["myfile.txt", "mynew.txt"])
                 commit = git.get_commit()
                 repo_commit = git.get_commit(repository=True)
                 url = git.get_remote_url()

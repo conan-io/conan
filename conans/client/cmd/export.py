@@ -96,7 +96,8 @@ def _calc_revision(scoped_output, path, manifest, revision_mode, conanfile):
         revision = manifest.summary_hash
     else:
         # Exception to the rule that tools should only be used in recipes, this Git helper is ok
-        git = Git(conanfile, folder=path)
+        excluded = getattr(conanfile, "revision_mode_excluded", None)
+        git = Git(conanfile, folder=path, excluded=excluded)
         try:
             revision = git.get_commit(repository=(revision_mode == "scm"))
         except Exception as exc:

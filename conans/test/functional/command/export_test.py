@@ -63,7 +63,7 @@ class TestRevisionModeSCM:
 
     def test_revision_mode_scm_excluded_files(self):
         t = TestClient()
-        git_excluded = 'git_excluded = ["*.cpp", "*.txt", "src/*"]'
+        git_excluded = 'revision_mode_excluded = ["*.cpp", "*.txt", "src/*"]'
         conanfile = GenConanfile("pkg", "0.1").with_class_attribute('revision_mode = "scm"') \
                                               .with_class_attribute(git_excluded)
         commit = t.init_git_repo({'conanfile.py': str(conanfile),

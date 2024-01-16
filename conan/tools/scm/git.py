@@ -11,13 +11,14 @@ class Git:
     """
     Git is a wrapper for several common patterns used with *git* tool.
     """
-    def __init__(self, conanfile, folder="."):
+    def __init__(self, conanfile, folder=".", excluded=None):
         """
         :param conanfile: Conanfile instance.
         :param folder: Current directory, by default ``.``, the current working directory.
         """
         self._conanfile = conanfile
         self.folder = folder
+        self._excluded = excluded
 
     def run(self, cmd):
         """
@@ -109,13 +110,12 @@ class Git:
         """
         status = self.run("status . --short --no-branch --untracked-files").strip()
         self._conanfile.output.debug(f"Git status:\n{status}")
-        excluded = getattr(self._conanfile, "git_excluded", None)
-        if not excluded:
+        if not self._excluded:
             return bool(status)
-        # Parse the status output, line by line, and match it with "git_excluded"
+        # Parse the status output, line by line, and match it with "_excluded"
         lines = [line.strip() for line in status.splitlines()]
         lines = [line.split()[1] for line in lines if line]
-        lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in excluded)]
+        lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in self._excluded)]
         self._conanfile.output.debug(f"Filtered git status: {lines}")
         return bool(lines)
 
