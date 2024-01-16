@@ -21,7 +21,7 @@ def compute_package_id(node, new_config):
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
-        python_requires = python_requires.all_refs()
+        python_requires = python_requires.info_requires()
 
     data = OrderedDict()
     build_data = OrderedDict()

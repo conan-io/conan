@@ -246,6 +246,32 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(grass2, "grass/0.2#123", dependents=[cheetah])
 
 
+class TestBuildRequiresVisible(GraphManagerTest):
+
+    def test_visible_build(self):
+        self._cache_recipe("liba/0.1", GenConanfile())
+        self._cache_recipe("libb/0.1", GenConanfile().with_requirement("liba/0.1", build=True))
+        self._cache_recipe("libc/0.1", GenConanfile().with_requirement("libb/0.1", visible=False))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("libc/0.1"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[libc], dependents=[])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", deps=[], dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libc, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, False, True, False)])  # liba is build & visible!
+        _check_transitive(libb, [(liba, True, True, True, False)])
+
+
 class TestTestRequire(GraphManagerTest):
 
     def test_basic(self):

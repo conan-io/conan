@@ -1,6 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json
@@ -101,6 +101,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
+    ConanOutput().success("Integrity check: ok")
 
 
 @conan_subcommand(formatters={"text": print_list_text,

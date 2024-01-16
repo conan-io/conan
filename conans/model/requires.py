@@ -268,7 +268,7 @@ class Requirement:
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=True, direct=False)
+                                             run=False, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires

@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.files import copy
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save, mkdir
+from conans.util.files import load, save, mkdir, save_files
 
 
 class ToolCopyTest(unittest.TestCase):
@@ -161,6 +161,7 @@ class ToolCopyTest(unittest.TestCase):
         save(os.path.join(folder1, "MyLib.txt"), "")
         save(os.path.join(folder1, "MyLibImpl.txt"), "")
         save(os.path.join(folder1, "MyLibTests.txt"), "")
+
         folder2 = temp_folder()
         copy(None, "*.txt", folder1, folder2, excludes="*Test*.txt")
         self.assertEqual({'MyLib.txt', 'MyLibImpl.txt'}, set(os.listdir(folder2)))
@@ -168,6 +169,24 @@ class ToolCopyTest(unittest.TestCase):
         folder2 = temp_folder()
         copy(None, "*.txt", folder1, folder2, excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
+
+    def test_excludes_hidden_files(self):
+        folder1 = temp_folder()
+        save_files(folder1, {
+            "file1.txt": "",
+            ".hiddenfile": "",
+            "foo/file2.txt": "",
+            "foo/.hiddenfile2": "",
+            ".hiddenfolder/file3.txt": "",
+            "foo/bar/file4.txt": ""
+        })
+
+        folder2 = temp_folder()
+        copy(None, "*", folder1, folder2, excludes=(".*", "*/.*"))
+        assert set(os.listdir(folder2)) == {'file1.txt', 'foo'}
+        assert set(os.listdir(os.path.join(folder2, "foo"))) == {'file2.txt', 'bar'}
+        assert not os.path.exists(os.path.join(folder2, ".hiddenfolder"))
+        assert os.listdir(os.path.join(folder2, "foo", "bar")) == ['file4.txt']
 
     def test_excludes_camelcase_folder(self):
         # https://github.com/conan-io/conan/issues/8153
