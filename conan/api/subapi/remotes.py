@@ -1,14 +1,12 @@
 import fnmatch
 import os
 
-from conan.api.model import OSS_RECIPES_GIT, OSS_RECIPES
-from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conans.client.cache.remote_registry import Remote, RemoteRegistry
 from conans.client.cmd.user import user_set, users_clean, users_list
+from conans.client.rest_client_oss_recipes import add_oss_recipes_remote, remove_oss_recipes_remote
 from conans.errors import ConanException
-from conans.util.files import rmdir
 
 
 class RemotesAPI:
@@ -66,18 +64,14 @@ class RemotesAPI:
         return RemoteRegistry(self._remotes_file).read(remote_name)
 
     def add(self, remote: Remote, force=False, index=None):
+        add_oss_recipes_remote(self.conan_api, remote)
         return RemoteRegistry(self._remotes_file).add(remote, force=force, index=index)
 
     def remove(self, pattern: str):
         app = ConanApp(self.conan_api)
         remotes = self.list(pattern, only_enabled=False)
         for remote in remotes:
-            if remote.remote_type in (OSS_RECIPES, OSS_RECIPES_GIT):
-                oss_recipes_path = HomePaths(self.conan_api.cache_folder).oss_recipes_path
-                oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
-                ConanOutput().info(f"Removing temporary files for '{remote.name}' "
-                                   f"oss-recipes remote")
-                rmdir(oss_recipes_path)
+            remove_oss_recipes_remote(self.conan_api, remote)
             RemoteRegistry(self._remotes_file).remove(remote.name)
             users_clean(app.cache.localdb, remote.url)
 

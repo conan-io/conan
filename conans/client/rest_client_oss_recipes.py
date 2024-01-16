@@ -14,8 +14,47 @@ from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load, save, mkdir, chdir
+from conans.util.files import load, save, mkdir, chdir, rmdir
 from conans.util.runners import check_output_runner
+
+
+def add_oss_recipes_remote(conan_api, remote):
+    if remote.remote_type not in (OSS_RECIPES, OSS_RECIPES_GIT):
+        return
+    oss_recipes_path = HomePaths(conan_api.cache_folder).oss_recipes_path
+    repo_folder = os.path.join(oss_recipes_path, remote.name)
+
+    output = ConanOutput()
+    if os.path.exists(repo_folder):
+        output.warning(f"The cache folder for remote {remote.name} existed, removing it")
+        rmdir(repo_folder)
+    if remote.remote_type == OSS_RECIPES_GIT:
+        output.info(f"Remote {remote.name} cloning {remote.url}")
+        mkdir(repo_folder)
+        with chdir(repo_folder):
+            check_output_runner(f'git clone "{remote.url}" . {remote.extra_args or ""}')
+        # Finally, once it is cloned, change the remote URL to point to the local folder
+        remote.url = repo_folder
+
+    cache_oss_recipes_path = os.path.join(oss_recipes_path, ".conan")
+    hook_folder = HomePaths(cache_oss_recipes_path).hooks_path
+    trim_hook = os.path.join(hook_folder, "hook_trim_conandata.py")
+    hook_content = textwrap.dedent("""\
+        from conan.tools.files import trim_conandata
+        def post_export(conanfile):
+            if conanfile.conan_data:
+                trim_conandata(conanfile)
+        """)
+    save(trim_hook, hook_content)
+
+
+def remove_oss_recipes_remote(conan_api, remote):
+    if remote.remote_type in (OSS_RECIPES, OSS_RECIPES_GIT):
+        oss_recipes_path = HomePaths(conan_api.cache_folder).oss_recipes_path
+        oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
+        ConanOutput().info(f"Removing temporary files for '{remote.name}' "
+                           f"oss-recipes remote")
+        rmdir(oss_recipes_path)
 
 
 class RestApiClientOSSRecipes:
@@ -27,31 +66,9 @@ class RestApiClientOSSRecipes:
     def __init__(self, remote, cache):
         self._remote = remote
         oss_recipes_path = HomePaths(cache.cache_folder).oss_recipes_path
-        # TODO: What when a remote name changes or is removed
         oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
         cache_oss_recipes_path = os.path.join(oss_recipes_path, ".conan")
-        if remote.remote_type == OSS_RECIPES:
-            repo_folder = self._remote.url
-        else:
-            assert remote.remote_type == OSS_RECIPES_GIT
-            repo_folder = oss_recipes_path
-            if not os.path.exists(repo_folder):  # clone it
-                output = ConanOutput()
-                output.info(f"Remote {remote.name} not cloned yet. Cloning {remote.url}")
-                mkdir(repo_folder)
-                with chdir(repo_folder):
-                    check_output_runner(f'git clone "{remote.url}" .')
-
-        hook_folder = HomePaths(cache_oss_recipes_path).hooks_path
-        trim_hook = os.path.join(hook_folder, "hook_trim_conandata.py")
-        if not os.path.exists(trim_hook):
-            hook_content = textwrap.dedent("""\
-                from conan.tools.files import trim_conandata
-                def post_export(conanfile):
-                    if conanfile.conan_data:
-                        trim_conandata(conanfile)
-                """)
-            save(trim_hook, hook_content)
+        repo_folder = self._remote.url
 
         from conan.internal.conan_app import ConanApp
         from conan.api.conan_api import ConanAPI

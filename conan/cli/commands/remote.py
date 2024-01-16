@@ -78,9 +78,14 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Force the definition of the remote even if duplicated")
     subparser.add_argument("-t", "--type", choices=[OSS_RECIPES, OSS_RECIPES_GIT],
                            help="Define the remote type")
+    subparser.add_argument("-a", "--args",
+                           help=f'"git clone" extra arguments string for --type={OSS_RECIPES_GIT}')
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
-    r = Remote(args.name, args.url, args.secure, disabled=False, remote_type=args.type)
+    if args.args and args.type != OSS_RECIPES_GIT:
+        raise ConanException(f"The --args argument is only valid for --type={OSS_RECIPES_GIT}")
+    r = Remote(args.name, args.url, args.secure, disabled=False, remote_type=args.type,
+               extra_args=args.args)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 

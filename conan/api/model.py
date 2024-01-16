@@ -15,12 +15,14 @@ OSS_RECIPES_GIT = "oss-recipes-git"
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False, remote_type=None):
+    def __init__(self, name, url, verify_ssl=True, disabled=False, remote_type=None,
+                 extra_args=None):
         self._name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
         self.remote_type = remote_type
+        self.extra_args = extra_args
 
     @property
     def name(self):

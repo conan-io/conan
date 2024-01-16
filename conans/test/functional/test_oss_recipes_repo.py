@@ -136,12 +136,9 @@ class TestOssRecipeGit:
         url_folder, commit = create_local_git_repo(files)
 
         c = TestClient()
-        c.run(f'remote add local "{url_folder}" --type=oss-recipes-git')
+        c.run(f'remote add local "{url_folder}" --type=oss-recipes-git -a="-v"')
+        assert "Remote local cloning" in c.out
         c.run("list *:* -r=local")
-        assert "Remote local not cloned yet" in c.out
-        assert "pkg/0.1" in c.out
-        c.run("list *:* -r=local")
-        assert "Remote local not cloned yet" not in c.out
         assert "pkg/0.1" in c.out
 
         config_yml = textwrap.dedent("""\
