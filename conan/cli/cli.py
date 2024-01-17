@@ -20,6 +20,7 @@ from conans import __version__ as client_version
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 
+_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
 class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
@@ -49,7 +50,7 @@ class Cli:
 
         conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
         # Important! This variable should be only used for testing/debugging purpose
-        developer_custom_commands_path = os.getenv("_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH")
+        developer_custom_commands_path = os.getenv(_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH)
         # Notice that in case of having same custom commands file names, the developer one has
         # preference over the Conan default location because of the sys.path.append(xxxx)
         custom_commands_folders = [developer_custom_commands_path, conan_custom_commands_path] \
