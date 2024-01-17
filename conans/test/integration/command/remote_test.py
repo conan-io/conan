@@ -372,9 +372,7 @@ class TestRemoteRecipeFilter(unittest.TestCase):
         assert "ERROR: Package 'lib/1.0' not resolved: Unable to find 'lib/1.0' in remotes" in self.client.out
         self.client.run("remove * -c")
 
-        self.client.run('remote update default --filter="lib/*"')
+        self.client.run('remote update default --filter="lib/*" --filter="app/*"')
         self.client.run("install --requires=app/1.0 -r=default")
         assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
         assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" in self.client.out
-        self.client.run("remove * -c")
-

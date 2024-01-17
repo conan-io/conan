@@ -114,8 +114,7 @@ class _Remotes:
             self._remotes = {r.name: r for r in remotes}
 
         if filters is not None:
-            remote.filters = remote.filters or []
-            remote.filters.extend(filters)
+            remote.filters = filters
 
     def items(self):
         return list(self._remotes.values())
