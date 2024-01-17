@@ -335,7 +335,7 @@ def test_add_wrong_conancenter():
     c.run("remote add whatever https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center.conan.io" in c.out
-    c.run("remote add conancenter htpps://center.conan.io")
+    c.run("remote add conancenter https://center.conan.io")
     c.run("remote update conancenter --url=https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center.conan.io" in c.out
