@@ -80,19 +80,21 @@ class RestApiClientOSSRecipes:
         return self._copy_files(export_sources, dest_folder)
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
-        raise ConanException(f"The remote '{self._remote.name}' doesn't support binary packages")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support "
+                             "binary packages")
 
     def upload_recipe(self, ref, files_to_upload):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support upload")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support upload")
 
     def upload_package(self, pref, files_to_upload):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support upload")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support upload")
 
     def authenticate(self, user, password):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support authentication")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support "
+                             "authentication")
 
     def check_credentials(self):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support upload")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support upload")
 
     def search(self, pattern=None):
         return self._layout.get_recipes_references(pattern)
@@ -102,13 +104,13 @@ class RestApiClientOSSRecipes:
         return {}
 
     def remove_recipe(self, ref):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support remove")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support remove")
 
     def remove_all_packages(self, ref):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support remove")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support remove")
 
     def remove_packages(self, prefs):
-        raise ConanException(f"Git remote '{self._remote.name}' doesn't support remove")
+        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support remove")
 
     def get_recipe_revisions_references(self, ref):
         ref = self._export_recipe(ref)

@@ -65,7 +65,7 @@ def c3i_folder():
 class TestSearchList:
     def test_basic_search(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")  # Keep --type for test
         assert "WARN" not in client.out  # Make sure it does not complain about url
         client.run("search *")
         assert textwrap.dedent("""\
@@ -83,7 +83,7 @@ class TestSearchList:
 
     def test_list_refs(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run(f"remote add local '{c3i_folder}'")
         client.run("list *#* -r=local --format=json")
         listjson = json.loads(client.stdout)
         revs = listjson["local"]["libcurl/1.0"]["revisions"]
@@ -101,7 +101,7 @@ class TestSearchList:
 
     def test_list_rrevs(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run(f"remote add local '{c3i_folder}'")
         client.run("list libcurl/1.0#* -r=local --format=json")
         listjson = json.loads(client.stdout)
         revs = listjson["local"]["libcurl/1.0"]["revisions"]
@@ -109,7 +109,7 @@ class TestSearchList:
 
     def test_list_binaries(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        client.run(f"remote add local '{c3i_folder}'")
         client.run("list libcurl/1.0:* -r=local --format=json")
         listjson = json.loads(client.stdout)
         rev = listjson["local"]["libcurl/1.0"]["revisions"]["e468388f0e4e098d5b62ad68979aebd5"]
@@ -119,7 +119,7 @@ class TestSearchList:
 class TestInstall:
     def test_install(self, c3i_folder):
         c = TestClient()
-        c.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        c.run(f"remote add local '{c3i_folder}'")
         c.run("install --requires=libcurl/1.0 --build missing")
         assert "zlib/1.2.11: CONANDATA: {}" in c.out
         assert "zlib/1.2.11: BUILDING: //myheader" in c.out
@@ -179,7 +179,7 @@ class TestInstall:
                     "boost/all/conanfile.py": boost,
                     "boost/all/dependencies/myfile.json": deps_json})
         c = TestClient()
-        c.run(f"remote add local '{folder}' --type=oss-recipes")
+        c.run(f"remote add local '{folder}'")
         c.run("install --requires=boost/[*] --build missing")
         assert 'boost/1.0: {"potato": 42}' in c.out
 
@@ -205,7 +205,7 @@ class TestInstall:
                     "pkg/all/conanfile.py": str(GenConanfile("pkg")),
                     "pkg/all/conandata.yml": conandata})
         c = TestClient()
-        c.run(f"remote add local '{folder}' --type=oss-recipes")
+        c.run(f"remote add local '{folder}'")
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
 
@@ -265,7 +265,7 @@ class TestInstall:
                     "zlib/all/patches/patch1": patch,
                     "zlib/all/main.cpp": "\n"})
         client = TestClient()
-        client.run(f"remote add local '{folder}' --type=oss-recipes")
+        client.run(f"remote add local '{folder}'")
         client.run("install --requires=zlib/0.1 --build=missing -vv")
         assert "zlib/0.1: Copied 1 file: patch1" in client.out
         assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
@@ -275,12 +275,13 @@ class TestRestrictedOperations:
     def test_upload(self):
         folder = temp_folder()
         c3i_folder = os.path.join(folder, "recipes")
+        mkdir(c3i_folder)
         c = TestClient()
-        c.run(f"remote add local '{c3i_folder}' --type=oss-recipes")
+        c.run(f"remote add local '{c3i_folder}'")
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
         c.run("upload pkg/0.1 -r=local", assert_error=True)
-        assert "ERROR: Git remote 'local' doesn't support upload" in c.out
+        assert "ERROR: Remote oss-recipes 'local' doesn't support upload" in c.out
 
 
 class TestErrorsUx:
@@ -300,6 +301,6 @@ class TestErrorsUx:
                    {"zlib/config.yml": zlib_config,
                     "zlib/all/conanfile.py": zlib})
         c = TestClient()
-        c.run(f"remote add local '{folder}' --type=oss-recipes")
+        c.run(f"remote add local '{folder}'")
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out

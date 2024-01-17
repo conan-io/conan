@@ -2,17 +2,15 @@ import json
 import os
 from collections import OrderedDict
 
-from conan.api.output import cli_out_write, Color
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote, OSS_RECIPES
+from conan.api.output import cli_out_write, Color
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
-from conan.internal.cache.home_paths import HomePaths
-from conans.client.rest.remote_credentials import RemoteCredentials
 from conan.errors import ConanException
-from conans.util.files import chdir
-from conans.util.runners import check_output_runner
+from conans.client.rest.remote_credentials import RemoteCredentials
 
 
 def formatter_remote_list_json(remotes):
@@ -80,7 +78,10 @@ def remote_add(conan_api, parser, subparser, *args):
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
 
-    r = Remote(args.name, args.url, args.secure, disabled=False, remote_type=args.type)
+    url_folder = make_abs_path(args.url)
+    remote_type = args.type or (OSS_RECIPES if os.path.isdir(url_folder) else None)
+    url = url_folder if remote_type == OSS_RECIPES else args.url
+    r = Remote(args.name, url, args.secure, disabled=False, remote_type=remote_type)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
