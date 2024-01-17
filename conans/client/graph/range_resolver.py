@@ -64,9 +64,6 @@ class RangeResolver:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
-        (ConanOutput()
-         .info("Searching remote recipe: %s" % search_ref)
-         .info("For filters: %s" % remote.filters))
         if remote.filters and not any(search_ref.matches(f, is_consumer=False) for f in remote.filters):
             return []
         pattern = str(search_ref)
