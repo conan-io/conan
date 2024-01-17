@@ -125,8 +125,6 @@ def test_vcvars():
         class Conan(ConanFile):
            settings = "os", "compiler", "build_type", "arch"
 
-           test_requires = [("gtest/1.12.1")]
-
            generators = 'CMakeDeps', 'CMakeToolchain'
 
            def layout(self):
@@ -139,11 +137,8 @@ def test_vcvars():
     """)
     client.save({"conanfile.py": conanfile})
     hello_cpp = textwrap.dedent(r"""
-        #include "gtest/gtest.h"
-
         int main(int argc, char **argv) {
-          ::testing::InitGoogleTest(&argc, argv);
-          return RUN_ALL_TESTS();
+            return 0;
         }
     """)
     client.save({"hello.cpp": hello_cpp})
@@ -153,14 +148,13 @@ def test_vcvars():
         project(hello-world LANGUAGES CXX)
         message("C++ compiler: ${CMAKE_CXX_COMPILER}")
 
-        find_package(GTest REQUIRED)
-
         add_executable(hello hello.cpp)
-        target_link_libraries(hello PRIVATE GTest::gtest GTest::gtest_main)
     """)
     client.save({"CMakeLists.txt": cmakelists})
-    client.run("install . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
+    client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
     conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
     vcvars_ps1 = client.load(r".\build\Release\generators\conanvcvars.ps1")
+    #check that the conanvcvars.ps1 is being added to the conanbuild.ps1
     assert "conanvcvars.ps1" in conanbuild
+    #check that the conanvcvars.ps1 is setting the environment
     assert "conanvcvars.bat&set" in vcvars_ps1
