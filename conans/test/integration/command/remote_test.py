@@ -349,30 +349,47 @@ def test_add_wrong_conancenter():
 class TestRemoteRecipeFilter(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(light=True, default_server_user=True)
-        self.client.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+        self.client.save({"conanfile.py": GenConanfile(),
                           "app/conanfile.py": GenConanfile("app", "1.0")
-                         .with_requires("lib/1.0")})
-        self.client.run("create lib")
+                          .with_requires("liba/1.0")
+                          .with_requires("libb/[>=1.0]")})
+        self.client.run("create . --name=liba --version=1.0")
+        self.client.run("create . --name=libb --version=1.0")
         self.client.run("create app")
         self.client.run("upload * -r=default -c")
         self.client.run("remove * -c")
 
     def test_filter_remotes(self):
         self.client.run("install --requires=app/1.0 -r=default")
-        assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
-        assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" in self.client.out
+        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
+        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
         self.client.run("remove * -c")
 
         # lib/2.* pattern does not match the one being required by app, should not be found
-        self.client.run('remote update default --filter="app/*" --filter="lib/2.*"')
+        self.client.run('remote update default --filter="app/*" --filter="liba/2.*"')
 
         self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
-        assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
-        assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" not in self.client.out
-        assert "ERROR: Package 'lib/1.0' not resolved: Unable to find 'lib/1.0' in remotes" in self.client.out
+        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
+        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" not in self.client.out
+        assert "ERROR: Package 'liba/1.0' not resolved: Unable to find 'liba/1.0' in remotes" in self.client.out
         self.client.run("remove * -c")
 
-        self.client.run('remote update default --filter="lib/*" --filter="app/*"')
+        self.client.run('remote update default --filter="liba/*" --filter="app/*"')
+        self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
+        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
+        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
+        assert "ERROR: Package 'libb/[>=1.0]' not resolved" in self.client.out
+        self.client.run("remove * -c")
+
+        self.client.run('remote update default --filter="liba/*" --filter="app/*"')
+        self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
+        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
+        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
+        assert "ERROR: Package 'libb/[>=1.0]' not resolved" in self.client.out
+        self.client.run("remove * -c")
+
+        self.client.run('remote update default --filter="*"')
         self.client.run("install --requires=app/1.0 -r=default")
-        assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
-        assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" in self.client.out
+        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
+        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
+        assert "libb/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
