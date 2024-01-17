@@ -186,13 +186,7 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                content = "\r\n"
-                for b in files:
-                    if "vcvars" in b:
-                        content += 'if (-not $env:VSCMD_ARG_HOST_ARCH){{ & "{}" }}\n'.format(b)
-                    else:
-                        content += '& "{}"\n'.format(b)
-                return content
+                return "\r\n".join(['& "{}"'.format(b) for b in files])
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))

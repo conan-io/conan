@@ -153,17 +153,15 @@ class VCVars:
         from conan.tools.env.environment import create_env_script
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
-            generator_path = conanfile.generators_path
             content_ps1 = textwrap.dedent(f"""\
-            pushd "{generator_path}"
-            cmd /c "conanvcvars.bat&set" |
-            foreach {{
-              if ($_ -match "=") {{
-                $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
-              }}
-            }}
-            popd
-            write-host conanvcvars.ps1: Activated environment
+            if (-not $env:VSCMD_ARG_HOST_ARCH){{
+                cmd /c "$PSScriptRoot/conanvcvars.bat&set" |
+                foreach {{
+                  if ($_ -match "=") {{
+                    $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+                  }}
+                }}
+                write-host conanvcvars.ps1: Activated environment}}
             """)
             create_env_script(conanfile, content_ps1, CONAN_VCVARS_PS1, scope)
 
