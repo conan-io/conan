@@ -30,8 +30,11 @@ class Remote:
                 self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
-        return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
-                                                             not self.disabled)
+        filtered_msg = ""
+        if self.filters:
+            filtered_msg = ", Filtered: {}".format(", ".join(self.filters))
+        return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
+                                                               not self.disabled, filtered_msg)
 
     def __repr__(self):
         return str(self)
