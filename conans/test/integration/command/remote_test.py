@@ -2,12 +2,14 @@ import json
 import unittest
 from collections import OrderedDict
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 
 
-class RemoteTest(unittest.TestCase):
+class RemoteServerTest(unittest.TestCase):
 
     def setUp(self):
         self.servers = OrderedDict()
@@ -15,7 +17,7 @@ class RemoteTest(unittest.TestCase):
             test_server = TestServer()
             self.servers["remote%d" % i] = test_server
 
-        self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"])
+        self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"], light=True)
 
     def test_list_json(self):
         self.client.run("remote list --format=json")
@@ -84,24 +86,6 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list")
         self.assertNotIn("remote0", self.client.out)
 
-    def test_rename(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("export . --name=hello --version=0.1 --user=user --channel=testing")
-        client.run("remote add r1 https://r1")
-        client.run("remote add r2 https://r2")
-        client.run("remote add r3 https://r3")
-        client.run("remote rename r2 mynewr2")
-        client.run("remote list")
-        lines = str(client.out).splitlines()
-        self.assertIn("r1: https://r1", lines[0])
-        self.assertIn("mynewr2: https://r2", lines[1])
-        self.assertIn("r3: https://r3", lines[2])
-
-        # Rename to an existing one
-        client.run("remote rename mynewr2 r1", assert_error=True)
-        self.assertIn("Remote 'r1' already exists", client.out)
-
     def test_insert(self):
         self.client.run("remote add origin https://myurl --index", assert_error=True)
 
@@ -119,8 +103,69 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("origin3: https://myurl3", lines[1])
         self.assertIn("origin: https://myurl", lines[2])
 
+    def test_duplicated_error(self):
+        """ check remote name are not duplicated
+        """
+        self.client.run("remote add remote1 http://otherurl", assert_error=True)
+        self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use --force to continue)",
+                      self.client.out)
+
+        self.client.run("remote list")
+        assert "otherurl" not in self.client.out
+        self.client.run("remote add remote1 http://otherurl --force")
+        self.assertIn("WARN: Remote 'remote1' already exists in remotes", self.client.out)
+
+        self.client.run("remote list")
+        assert "remote1: http://otherurl" in self.client.out
+
+    def test_missing_subarguments(self):
+        self.client.run("remote", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+    def test_invalid_url(self):
+        self.client.run("remote add foobar foobar.com")
+        self.assertIn("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname.",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertIn("foobar.com", self.client.out)
+
+        self.client.run("remote update foobar --url pepe.org")
+        self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
+                      self.client.out)
+        self.client.run("remote list")
+        self.assertIn("pepe.org", self.client.out)
+
+    def test_errors(self):
+        self.client.run("remote update origin --url http://foo.com", assert_error=True)
+        self.assertIn("ERROR: Remote 'origin' doesn't exist", self.client.out)
+
+        self.client.run("remote remove origin", assert_error=True)
+        self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
+
+
+
+
+class RemoteModificationTest(unittest.TestCase):
+    def test_rename(self):
+        client = TestClient(light=True)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . --name=hello --version=0.1 --user=user --channel=testing")
+        client.run("remote add r1 https://r1")
+        client.run("remote add r2 https://r2")
+        client.run("remote add r3 https://r3")
+        client.run("remote rename r2 mynewr2")
+        client.run("remote list")
+        lines = str(client.out).splitlines()
+        self.assertIn("r1: https://r1", lines[0])
+        self.assertIn("mynewr2: https://r2", lines[1])
+        self.assertIn("r3: https://r3", lines[2])
+
+        # Rename to an existing one
+        client.run("remote rename mynewr2 r1", assert_error=True)
+        self.assertIn("Remote 'r1' already exists", client.out)
+
     def test_update_insert(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
@@ -142,7 +187,7 @@ class RemoteTest(unittest.TestCase):
 
     def test_update_insert_same_url(self):
         # https://github.com/conan-io/conan/issues/5107
-        client = TestClient()
+        client = TestClient(light=True)
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
@@ -153,7 +198,7 @@ class RemoteTest(unittest.TestCase):
         self.assertLess(str(client.out).find("r1"), str(client.out).find("r3"))
 
     def test_verify_ssl(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run("remote add my-remote http://someurl")
         client.run("remote add my-remote2 http://someurl2 --insecure")
         client.run("remote add my-remote3 http://someurl3")
@@ -173,7 +218,7 @@ class RemoteTest(unittest.TestCase):
         self.assertEqual(data["remotes"][2]["verify_ssl"], True)
 
     def test_remote_disable(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run("remote add my-remote0 http://someurl0")
         client.run("remote add my-remote1 http://someurl1")
         client.run("remote add my-remote2 http://someurl2")
@@ -221,7 +266,7 @@ class RemoteTest(unittest.TestCase):
         assert "Enabled: False" not in client.out
 
     def test_invalid_remote_disable(self):
-        client = TestClient()
+        client = TestClient(light=True)
 
         client.run("remote disable invalid_remote", assert_error=True)
         msg = "ERROR: Remote 'invalid_remote' can't be found or is disabled"
@@ -236,7 +281,7 @@ class RemoteTest(unittest.TestCase):
         """
         Check that we don't raise an error if the remote is already in the required state
         """
-        client = TestClient()
+        client = TestClient(light=True)
 
         client.run("remote add my-remote0 http://someurl0")
         client.run("remote enable my-remote0")
@@ -246,57 +291,18 @@ class RemoteTest(unittest.TestCase):
         client.run("remote disable my-remote0")
 
     def test_verify_ssl_error(self):
-        client = TestClient()
+        client = TestClient(light=True)
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
         self.assertIn("unrecognized arguments: some_invalid_option=foo", client.out)
         data = json.loads(load(client.cache.remotes_path))
         self.assertEqual(data["remotes"], [])
 
-    def test_errors(self):
-        self.client.run("remote update origin --url http://foo.com", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' doesn't exist", self.client.out)
-
-        self.client.run("remote remove origin", assert_error=True)
-        self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
-
-    def test_duplicated_error(self):
-        """ check remote name are not duplicated
-        """
-        self.client.run("remote add remote1 http://otherurl", assert_error=True)
-        self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use --force to continue)",
-                      self.client.out)
-
-        self.client.run("remote list")
-        assert "otherurl" not in self.client.out
-        self.client.run("remote add remote1 http://otherurl --force")
-        self.assertIn("WARN: Remote 'remote1' already exists in remotes", self.client.out)
-
-        self.client.run("remote list")
-        assert "remote1: http://otherurl" in self.client.out
-
-    def test_missing_subarguments(self):
-        self.client.run("remote", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
-
-    def test_invalid_url(self):
-        self.client.run("remote add foobar foobar.com")
-        self.assertIn("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname.",
-                      self.client.out)
-        self.client.run("remote list")
-        self.assertIn("foobar.com", self.client.out)
-
-        self.client.run("remote update foobar --url pepe.org")
-        self.assertIn("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname.",
-                      self.client.out)
-        self.client.run("remote list")
-        self.assertIn("pepe.org", self.client.out)
-
 
 def test_add_duplicated_url():
     """ allow duplicated URL with --force
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.run("remote add remote1 http://url")
     c.run("remote add remote2 http://url", assert_error=True)
     assert "ERROR: Remote url already existing in remote 'remote1'" in c.out
@@ -320,7 +326,7 @@ def test_add_duplicated_name_url():
     """ do not add extra remote with same name and same url
         # https://github.com/conan-io/conan/issues/13569
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.run("remote add remote1 http://url")
     c.run("remote add remote1 http://url --force")
     assert "WARN: Remote 'remote1' already exists in remotes" in c.out
@@ -331,10 +337,44 @@ def test_add_duplicated_name_url():
 def test_add_wrong_conancenter():
     """ Avoid common error of adding the wrong ConanCenter URL
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.run("remote add whatever https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center.conan.io" in c.out
     c.run("remote update conancenter --url=https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center.conan.io" in c.out
+
+
+class TestRemoteRecipeFilter(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(light=True, default_server_user=True)
+        self.client.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
+                          "app/conanfile.py": GenConanfile("app", "1.0")
+                         .with_requires("lib/1.0")})
+        self.client.run("create lib")
+        self.client.run("create app")
+        self.client.run("upload * -r=default -c")
+        self.client.run("remove * -c")
+
+    def test_filter_remotes(self):
+        self.client.run("install --requires=app/1.0 -r=default")
+        assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
+        assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" in self.client.out
+        self.client.run("remove * -c")
+
+        # lib/2.* pattern does not match the one being required by app, should not be found
+        self.client.run('remote update default --filter="app/*" --filter="lib/2.*"')
+
+        self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
+        assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
+        assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" not in self.client.out
+        assert "ERROR: Package 'lib/1.0' not resolved: Unable to find 'lib/1.0' in remotes" in self.client.out
+        self.client.run("remove * -c")
+
+        self.client.run('remote update default --filter="lib/*"')
+        self.client.run("install --requires=app/1.0 -r=default")
+        assert "app/1.0: Downloaded recipe revision 6d87b1d33fd24eba1f2f71124fd07f9c" in self.client.out
+        assert "lib/1.0: Downloaded recipe revision 5abc78f3a076cc58852154c7546ff7e5" in self.client.out
+        self.client.run("remove * -c")
+

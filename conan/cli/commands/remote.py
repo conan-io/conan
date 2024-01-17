@@ -72,9 +72,11 @@ def remote_add(conan_api, parser, subparser, *args):
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the definition of the remote even if duplicated")
+    subparser.add_argument("--filter", action="append", default=None,
+                           help="Add recipe reference pattern filter to this remote")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
-    r = Remote(args.name, args.url, args.secure, disabled=False)
+    r = Remote(args.name, args.url, args.secure, disabled=False, filters=args.filter)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
@@ -102,11 +104,12 @@ def remote_update(conan_api, parser, subparser, *args):
                            help="Allow insecure server connections when using SSL")
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
+    subparser.add_argument("--filter", action="append", default=None, help="Add recipe reference pattern filter to this remote")
     subparser.set_defaults(secure=None)
     args = parser.parse_args(*args)
-    if args.url is None and args.secure is None and args.index is None:
+    if args.url is None and args.secure is None and args.index is None and args.filter is None:
         subparser.error("Please add at least one argument to update")
-    conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index)
+    conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index, filters=args.filter)
 
 
 @conan_subcommand()
