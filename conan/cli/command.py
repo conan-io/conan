@@ -99,17 +99,18 @@ class BaseConanCommand:
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, conan_api, *args, **kwargs):
+        self._conan_api = conan_api
         super().__init__(*args, **kwargs)
 
-    def parse_args(self, args=None, namespace=None, conan_api=None):
+    def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
         ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
-        if conan_api and args.global_conf:
+        if args.global_conf:
             from conans.model.conf import ConfDefinition
             confs = ConfDefinition()
             confs.loads("\n".join(args.global_conf))
-            conan_api.config.global_conf.update_conf_definition(confs)
+            self._conan_api.config.global_conf.update_conf_definition(confs)
         return args
 
 
@@ -125,7 +126,8 @@ class ConanCommand(BaseConanCommand):
         self._subcommands[subcommand.name] = subcommand
 
     def run(self, conan_api, *args):
-        parser = ConanArgumentParser(description=self._doc, prog="conan {}".format(self._name),
+        parser = ConanArgumentParser(conan_api, description=self._doc,
+                                     prog="conan {}".format(self._name),
                                      formatter_class=SmartFormatter)
         self._init_log_levels(parser)
         self._init_formatters(parser)
@@ -142,10 +144,10 @@ class ConanCommand(BaseConanCommand):
                 sub = self._subcommands[args[0][0]]
             except (KeyError, IndexError):  # display help
                 for sub in self._subcommands.values():
-                    sub.set_parser(subcommand_parser)
+                    sub.set_parser(subcommand_parser, conan_api)
                 parser.parse_args(*args)
             else:
-                sub.set_parser(subcommand_parser)
+                sub.set_parser(subcommand_parser, conan_api)
                 sub.run(conan_api, parser, *args)
 
     @property
@@ -167,8 +169,8 @@ class ConanSubCommand(BaseConanCommand):
     def set_name(self, parent_name):
         self._name = self._subcommand_name.replace(f'{parent_name}-', '', 1)
 
-    def set_parser(self, subcommand_parser):
-        self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
+    def set_parser(self, subcommand_parser, conan_api):
+        self._parser = subcommand_parser.add_parser(self._name, conan_api=conan_api, help=self._doc)
         self._parser.description = self._doc
         self._init_formatters(self._parser)
         self._init_log_levels(self._parser)
