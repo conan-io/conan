@@ -430,8 +430,7 @@ class TestClient(object):
             text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)
         # Using internal env variable to add another custom commands folder
-        if custom_commands_folder:
-            os.environ.update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH: custom_commands_folder})
+        self._custom_commands_folder = custom_commands_folder
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -526,7 +525,12 @@ class TestClient(object):
         error = SUCCESS
         trace = None
         try:
-            command.run(args)
+            if self._custom_commands_folder:
+                with environment_update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH:
+                                             self._custom_commands_folder}):
+                    command.run(args)
+            else:
+                command.run(args)
         except BaseException as e:  # Capture all exceptions as argparse
             trace = traceback.format_exc()
             error = command.exception_exit_error(e)
