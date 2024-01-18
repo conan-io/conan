@@ -3,6 +3,7 @@ import os
 
 from conan.tools.files import chdir
 from conan.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
@@ -19,6 +20,16 @@ class Git:
         self._conanfile = conanfile
         self.folder = folder
         self._excluded = excluded
+        global_conf = conanfile._conan_helpers.global_conf
+        conf_excluded = global_conf.get("core.scm:excluded", check_type=list)
+        if conf_excluded:
+            if excluded:
+                c = ConfDefinition()
+                c.loads(f"core.scm:excluded={excluded}")
+                c.update_conf_definition(global_conf)
+                self._excluded = c.get("core.scm:excluded", check_type=list)
+            else:
+                self._excluded = conf_excluded
 
     def run(self, cmd):
         """

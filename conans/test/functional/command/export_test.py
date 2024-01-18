@@ -5,6 +5,7 @@ import pytest
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.scm import git_add_changes_commit
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.tool("git")
@@ -61,11 +62,18 @@ class TestRevisionModeSCM:
         # It errors, because no commits yet
         assert "Cannot detect revision using 'scm' mode from repository" in t.out
 
-    def test_revision_mode_scm_excluded_files(self):
+    @pytest.mark.parametrize("conf_excluded, recipe_excluded",
+                             [("", ["*.cpp", "*.txt", "src/*"]),
+                              (["*.cpp", "*.txt", "src/*"], ""),
+                              ('+["*.cpp", "*.txt"]', ["src/*"]),
+                              ('+["*.cpp"]', ["*.txt", "src/*"])])
+    def test_revision_mode_scm_excluded_files(self, conf_excluded, recipe_excluded):
         t = TestClient()
-        git_excluded = 'revision_mode_excluded = ["*.cpp", "*.txt", "src/*"]'
+        recipe_excluded = f'revision_mode_excluded = {recipe_excluded}' if recipe_excluded else ""
+        conf_excluded = f'core.scm:excluded={conf_excluded}' if conf_excluded else ""
+        save(t.cache.global_conf_path, conf_excluded)
         conanfile = GenConanfile("pkg", "0.1").with_class_attribute('revision_mode = "scm"') \
-                                              .with_class_attribute(git_excluded)
+                                              .with_class_attribute(recipe_excluded)
         commit = t.init_git_repo({'conanfile.py': str(conanfile),
                                   "test.cpp": "mytest"})
 

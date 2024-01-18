@@ -10,7 +10,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import rmdir, save_files
+from conans.util.files import rmdir, save_files, save
 
 
 @pytest.mark.tool("git")
@@ -133,6 +133,11 @@ class TestGitBasicCapture:
         c.save({"other.txt": "new"})
         c.run("export .")
         assert "pkg/0.1: DIRTY: True" in c.out
+
+        conf_excluded = f'core.scm:excluded+=["other.txt"]'
+        save(c.cache.global_conf_path, conf_excluded)
+        c.run("export .")
+        assert "pkg/0.1: DIRTY: False" in c.out
 
 
 @pytest.mark.tool("git")
