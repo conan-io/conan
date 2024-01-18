@@ -16,17 +16,27 @@ CONAN_CENTER_REMOTE_NAME = "conancenter"
 
 
 class RemotesAPI:
+    """ The RemotesAPI manages the definition of remotes, contained in the "remotes.json" file
+    in the Conan home, supporting addition, removal, update, rename, enable, disable of remotes.
+    These operations do not contact the servers or check their existence at all. If they are not
+    available, they will fail later when used.
+
+    The ``user_xxx`` methods perform authentication related tasks, and some of them will contact
+    the servers to perform such authentication
+    """
 
     def __init__(self, conan_api):
+        # This method is private, the subapi is not instantiated by users
         self.conan_api = conan_api
         self._remotes_file = HomePaths(self.conan_api.cache_folder).remotes_path
 
     def list(self, pattern=None, only_enabled=True):
         """
+        Obtain a list of ``Remote`` objects matching the pattern.
         :param pattern: if None, all remotes will be listed
                         it can be a single value or a list of values
-        :param only_enabled:
-        :return:
+        :param only_enabled: boolean, by default return only enabled remotes
+        :return: A list of ``Remote`` objects matching the
         """
         remotes = _load(self._remotes_file)
         if only_enabled:
@@ -36,6 +46,11 @@ class RemotesAPI:
         return remotes
 
     def disable(self, pattern):
+        """
+        Disable all remotes matching ``pattern``
+        @param pattern: single ``str`` or list of ``str``
+        @return: the list of all ``Remote`` objects
+        """
         remotes = _load(self._remotes_file)
         disabled = _filter(remotes, pattern, only_enabled=False)
         if disabled:
@@ -45,6 +60,11 @@ class RemotesAPI:
         return remotes
 
     def enable(self, pattern):
+        """
+        Enable all remotes matching ``pattern``
+        @param pattern: single ``str`` or list of ``str``
+        @return: the list of all ``Remote`` objects
+        """
         remotes = _load(self._remotes_file)
         enabled = _filter(remotes, pattern, only_enabled=False)
         if enabled:
@@ -126,11 +146,11 @@ class RemotesAPI:
         app = ConanApp(self.conan_api)
         return users_list(app.cache.localdb, remotes=[remote])[0]
 
-    def login(self, remote: Remote, username, password):
+    def user_login(self, remote: Remote, username, password):
         app = ConanApp(self.conan_api)
         app.remote_manager.authenticate(remote, username, password)
 
-    def logout(self, remote: Remote):
+    def user_logout(self, remote: Remote):
         app = ConanApp(self.conan_api)
         # The localdb only stores url + username + token, not remote name, so use URL as key
         users_clean(app.cache.localdb, remote.url)
@@ -139,7 +159,7 @@ class RemotesAPI:
         app = ConanApp(self.conan_api)
         return user_set(app.cache.localdb, username, remote)
 
-    def auth(self, remote: Remote, with_user=False):
+    def user_auth(self, remote: Remote, with_user=False):
         app = ConanApp(self.conan_api)
         if with_user:
             user, token, _ = app.cache.localdb.get_login(remote.url)
