@@ -4,6 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conans.model.conf import CORE_CONF_PATTERN
 
 
 class OnceArgument(argparse.Action):
@@ -50,7 +51,7 @@ class BaseConanCommand:
                             help="Level of detail of the output. Valid options from less verbose "
                                  "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
                                  "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
-        parser.add_argument("-gc", "--global-conf", action="append",
+        parser.add_argument("-cc", "--core-conf", action="append",
                             help="Global configuration for Conan")
 
     @property
@@ -106,10 +107,14 @@ class ConanArgumentParser(argparse.ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
         ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
-        if args.global_conf:
+        if args.core_conf:
             from conans.model.conf import ConfDefinition
             confs = ConfDefinition()
-            confs.loads("\n".join(args.global_conf))
+            for c in args.core_conf:
+                if not CORE_CONF_PATTERN.match(c):
+                    raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
+            confs.loads("\n".join(args.core_conf))
+            confs.validate()
             self._conan_api.config.global_conf.update_conf_definition(confs)
         return args
 

@@ -310,9 +310,9 @@ def test_global_conf_auto_created():
 
 def test_command_line_core_conf():
     c = TestClient()
-    c.run("config show * -gc core:default_profile=potato")
+    c.run("config show * -cc core:default_profile=potato")
     assert "core:default_profile: potato" in c.out
-    c.run("config show * -gc core:default_profile=potato -gc core:default_build_profile=orange")
+    c.run("config show * -cc core:default_profile=potato -cc core:default_build_profile=orange")
     assert "core:default_profile: potato" in c.out
     assert "core:default_build_profile: orange" in c.out
 
@@ -320,11 +320,14 @@ def test_command_line_core_conf():
     c.run("export .")
 
     tfolder = temp_folder()
-    c.run(f'list * -gc core.cache:storage_path="{tfolder}"')
+    c.run(f'list * -cc core.cache:storage_path="{tfolder}"')
     assert "WARN: There are no matching recipe references" in c.out
     c.run(f'list *')
     assert "WARN: There are no matching recipe references" not in c.out
     assert "pkg/0.1" in c.out
+
+    c.run("list * -cc user.xxx:yyy=zzz", assert_error=True)
+    assert "ERROR: Only core. values are allowed in --core-conf. Got user.xxx:yyy=zzz" in c.out
 
 
 def test_build_test_consumer_only():
