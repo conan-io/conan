@@ -70,7 +70,6 @@ class VirtualRunEnv:
         # Top priority: profile
         profile_env = self._conanfile.runenv
         self._runenv.compose_env(profile_env)
-        # FIXME: Cache value?
 
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
