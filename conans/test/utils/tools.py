@@ -30,7 +30,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conans import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
-from conan.cli.cli import Cli
+from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conans.client.cache.cache import ClientCache
 from conans.util.env import environment_update
 from conans.errors import NotFoundException, ConanException
@@ -372,7 +372,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
-                 default_server_user=None, light=False):
+                 default_server_user=None, light=False, custom_commands_folder=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -390,7 +390,7 @@ class TestClient(object):
             server_users = {"admin": "password"}
             inputs = ["admin", "password"]
 
-            # Allow write permissions to users
+            # Allow writing permissions to users
             server = TestServer(users=server_users, write_permissions=[("*/*@*/*", "*")])
             servers = {"default": server}
 
@@ -428,6 +428,8 @@ class TestClient(object):
         else:
             text = default_profiles[platform.system()]
         save(self.cache.default_profile_path, text)
+        # Using internal env variable to add another custom commands folder
+        self._custom_commands_folder = custom_commands_folder
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -521,7 +523,12 @@ class TestClient(object):
         error = SUCCESS
         trace = None
         try:
-            command.run(args)
+            if self._custom_commands_folder:
+                with environment_update({_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH:
+                                             self._custom_commands_folder}):
+                    command.run(args)
+            else:
+                command.run(args)
         except BaseException as e:  # Capture all exceptions as argparse
             trace = traceback.format_exc()
             error = command.exception_exit_error(e)
