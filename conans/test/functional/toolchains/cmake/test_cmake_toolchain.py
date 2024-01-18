@@ -1656,21 +1656,25 @@ def test_add_generate_env_to_presets():
                 deps.generate()
                 tc = CMakeToolchain(self)
                 tc.presets_build_environment = buildenv
-                tc.presets_run_environment = runenv
                 tc.generate()
     """)
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(MyProject)
-        # build var should be available at configure
-        set(MY_BUILD_VAR $ENV{MY_BUILD_VAR})
-        set(MY_ADDED_BUILD_VAR $ENV{MY_BUILD_VAR})
-        if (MY_BUILD_VAR)
-            message("MY_BUILD_VAR:${MY_BUILD_VAR}")
-        else()
-            message("MY_BUILD_VAR NOT FOUND")
-        endif()
+
+        function(check_and_report_variable var_name)
+            set(var_value $ENV{${var_name}})
+            if (var_value)
+                message("${var_name}:${var_value}")
+            else()
+                message(FATAL_ERROR "${var_name} NOT FOUND")
+            endif()
+        endfunction()
+
+        check_and_report_variable("MY_BUILD_VAR")
+        check_and_report_variable("MY_ADDED_BUILD_VAR")
+        check_and_report_variable("PATH_VAR")
     """)
 
     c.save({"tool.py": tool,
@@ -1684,4 +1688,5 @@ def test_add_generate_env_to_presets():
     preset = "conan-default" if platform.system() == "Windows" else "conan-release"
 
     c.run_command(f"cmake --preset {preset}")
-    assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
+    assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE_OVERRIDEN" in c.out
+    assert "MY_ADDED_BUILD_VAR:MY_ADDED_BUILD_VAR_VALUE" in c.out
