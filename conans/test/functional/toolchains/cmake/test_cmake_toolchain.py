@@ -1607,3 +1607,79 @@ def test_add_env_to_presets():
 
     c.run_command("ctest --preset conan-debug")
     assert "tests passed" in c.out
+
+
+#@pytest.mark.tool("cmake", "3.23")
+def test_add_generate_env_to_presets():
+    c = TestClient()
+
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import chdir, save
+        class Tool(ConanFile):
+            version = "0.1"
+            name = "tool"
+            settings = "os", "compiler", "arch", "build_type"
+            def package_info(self):
+                self.buildenv_info.define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE")
+        """)
+
+    consumer = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+        from conan.tools.env import VirtualBuildEnv
+        class mypkgRecipe(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            tool_requires = "tool/0.1"
+            #generators = "CMakeDeps", "CMakeToolchain"
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                buildenv = VirtualBuildEnv(self)
+                buildenv.environment().define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE_OVERRIDEN")
+                buildenv.environment().define("MY_ADDED_BUILD_VAR", "MY_ADDED_BUILD_VAR_VALUE")
+                buildenv.generate()
+
+                #buildenv = VirtualBuildEnv(self)
+                #envvars = buildenv.environment()
+                #envvars.define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE_OVERRIDEN")
+                #envvarsbuild = envvars.vars(self, scope="run")
+                #envvarsbuild.save_script("myproject-run-{}".format(str(self.settings.build_type).lower()))
+
+
+                deps = CMakeDeps(self)
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+    """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyProject)
+        # build var should be available at configure
+        set(MY_BUILD_VAR $ENV{MY_BUILD_VAR})
+        set(MY_ADDED_BUILD_VAR $ENV{MY_BUILD_VAR})
+        if (MY_BUILD_VAR)
+            message("MY_BUILD_VAR:${MY_BUILD_VAR}")
+        else()
+            message("MY_BUILD_VAR NOT FOUND")
+        endif()
+    """)
+
+    c.save({"tool.py": tool,
+            "conanfile.py": consumer,
+            "CMakeLists.txt": cmakelists})
+
+    c.run("create tool.py")
+
+    c.run("install .")
+
+    preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+
+    c.run_command(f"cmake --preset {preset}")
+    assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
