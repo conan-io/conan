@@ -154,7 +154,7 @@ class VCVars:
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
             content_ps1 = textwrap.dedent(f"""\
-            if (-not $env:VSCMD_ARG_HOST_ARCH){{
+            if (-not $env:VSCMD_ARG_VCVARS_VER){{
                 cmd /c "$PSScriptRoot/conanvcvars.bat&set" |
                 foreach {{
                   if ($_ -match "=") {{
