@@ -1609,7 +1609,7 @@ def test_add_env_to_presets():
     assert "tests passed" in c.out
 
 
-#@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_add_generate_env_to_presets():
     c = TestClient()
 
