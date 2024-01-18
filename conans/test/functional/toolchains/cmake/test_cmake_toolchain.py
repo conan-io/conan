@@ -1649,7 +1649,7 @@ def test_add_generate_env_to_presets():
                 #envvars = buildenv.environment()
                 #envvars.define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE_OVERRIDEN")
                 #envvarsbuild = envvars.vars(self, scope="run")
-                #envvarsbuild.save_script("myproject-run-{}".format(str(self.settings.build_type).lower()))
+                #envvarsbuild.save_script("myproject-build-{}".format(str(self.settings.build_type).lower()))
 
 
                 deps = CMakeDeps(self)
