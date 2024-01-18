@@ -1655,6 +1655,8 @@ def test_add_generate_env_to_presets():
                 deps = CMakeDeps(self)
                 deps.generate()
                 tc = CMakeToolchain(self)
+                tc.presets_build_environment = buildenv
+                tc.presets_run_environment = runenv
                 tc.generate()
     """)
 
