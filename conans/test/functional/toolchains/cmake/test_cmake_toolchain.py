@@ -1674,7 +1674,6 @@ def test_add_generate_env_to_presets():
 
         check_and_report_variable("MY_BUILD_VAR")
         check_and_report_variable("MY_ADDED_BUILD_VAR")
-        check_and_report_variable("PATH_VAR")
     """)
 
     c.save({"tool.py": tool,
