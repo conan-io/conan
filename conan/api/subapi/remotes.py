@@ -16,7 +16,7 @@ CONAN_CENTER_REMOTE_NAME = "conancenter"
 
 
 class RemotesAPI:
-    """ The RemotesAPI manages the definition of remotes, contained in the "remotes.json" file
+    """ The ``RemotesAPI`` manages the definition of remotes, contained in the "remotes.json" file
     in the Conan home, supporting addition, removal, update, rename, enable, disable of remotes.
     These operations do not contact the servers or check their existence at all. If they are not
     available, they will fail later when used.
@@ -33,10 +33,10 @@ class RemotesAPI:
     def list(self, pattern=None, only_enabled=True):
         """
         Obtain a list of ``Remote`` objects matching the pattern.
-        :param pattern: if None, all remotes will be listed
-                        it can be a single value or a list of values
+
+        :param pattern: ``None``, single ``str`` or list of ``str``. If it is ``None``, all remotes will be returned (equivalent to ``pattern="*"``).
         :param only_enabled: boolean, by default return only enabled remotes
-        :return: A list of ``Remote`` objects matching the
+        :return: A list of ``Remote`` objects
         """
         remotes = _load(self._remotes_file)
         if only_enabled:
@@ -48,32 +48,45 @@ class RemotesAPI:
     def disable(self, pattern):
         """
         Disable all remotes matching ``pattern``
-        @param pattern: single ``str`` or list of ``str``
-        @return: the list of all ``Remote`` objects
+
+        :param pattern: single ``str`` or list of ``str``
+        :return: the list of disabled ``Remote`` objects  (even if they were already disabled)
         """
         remotes = _load(self._remotes_file)
         disabled = _filter(remotes, pattern, only_enabled=False)
+        result = []
         if disabled:
             for r in disabled:
                 r.disabled = True
+                result.append(r)
             _save(self._remotes_file, remotes)
-        return remotes
+        return result
 
     def enable(self, pattern):
         """
-        Enable all remotes matching ``pattern``
-        @param pattern: single ``str`` or list of ``str``
-        @return: the list of all ``Remote`` objects
+        Enable all remotes matching ``pattern``.
+
+        :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
+        wildcards like "*" and no remote is found matching that exact name, it will raise an error.
+        :return: the list of enabled ``Remote`` objects (even if they were already enabled)
         """
         remotes = _load(self._remotes_file)
         enabled = _filter(remotes, pattern, only_enabled=False)
+        result = []
         if enabled:
             for r in enabled:
                 r.disabled = False
+                result.append(r)
             _save(self._remotes_file, remotes)
-        return remotes
+        return result
 
     def get(self, remote_name):
+        """
+        Obtain a ``Remote`` object
+
+        :param remote_name: the exact name of the remote to be returned
+        :return: the ``Remote`` object, or raise an Exception if the remote does not exist.
+        """
         remotes = _load(self._remotes_file)
         try:
             return {r.name: r for r in remotes}[remote_name]
@@ -81,6 +94,14 @@ class RemotesAPI:
             raise ConanException(f"Remote '{remote_name}' doesn't exist")
 
     def add(self, remote: Remote, force=False, index=None):
+        """
+        Add a new ``Remote`` object to the existing ones
+
+        :param remote: a ``Remote`` object to be added
+        :param force: do not fail if the remote already exist (but default it failes)
+        :param index: if not defined, the new remote will be last one. Pass an integer to insert
+        the remote in that position instead of the last one
+        """
         remotes = _load(self._remotes_file)
         _validate_url(remote.url)
         current = {r.name: r for r in remotes}.get(remote.name)
@@ -102,7 +123,14 @@ class RemotesAPI:
             remotes.insert(index, remote)
         _save(self._remotes_file, remotes)
 
-    def remove(self, pattern: str):
+    def remove(self, pattern):
+        """
+        Remove the remotes matching the ``pattern``
+
+        :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
+        wildcards like "*" and no remote is found matching that exact name, it will raise an error.
+        :return: The list of removed ``Remote`` objects
+        """
         remotes = _load(self._remotes_file)
         removed = _filter(remotes, pattern, only_enabled=False)
         remotes = [r for r in remotes if r not in removed]
@@ -110,8 +138,10 @@ class RemotesAPI:
         app = ConanApp(self.conan_api)
         for remote in removed:
             users_clean(app.cache.localdb, remote.url)
+        return removed
 
-    def update(self, remote_name, url=None, secure=None, disabled=None, index=None):
+    def update(self, remote_name, url=None, secure=None, disabled=None, index=None,
+               allowed_packages=None):
         remotes = _load(self._remotes_file)
         try:
             remote = {r.name: r for r in remotes}[remote_name]
@@ -125,6 +155,8 @@ class RemotesAPI:
             remote.verify_ssl = secure
         if disabled is not None:
             remote.disabled = disabled
+        if allowed_packages is not None:
+            remote.allowed_packages = allowed_packages
 
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
@@ -182,7 +214,8 @@ def _load(remotes_file):
     data = json.loads(load(remotes_file))
     result = []
     for r in data.get("remotes", []):
-        remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False))
+        remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
+                        r.get("allowed_packages"))
         result.append(remote)
     return result
 
@@ -193,6 +226,8 @@ def _save(remotes_file, remotes):
         remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
         if r.disabled:
             remote["disabled"] = True
+        if r.allowed_packages:
+            remote["allowed_packages"] = r.allowed_packages
         remote_list.append(remote)
     save(remotes_file, json.dumps({"remotes": remote_list}, indent=True))
 
