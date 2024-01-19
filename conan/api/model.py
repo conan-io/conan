@@ -14,16 +14,14 @@ OSS_RECIPES = "oss-recipes"
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False, remote_type=None):
-        self._name = name  # Read only, is the key
+    def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None,
+                 remote_type=None):
+        self.name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
+        self.allowed_packages = allowed_packages
         self.remote_type = remote_type
-
-    @property
-    def name(self):
-        return self._name
 
     def __eq__(self, other):
         if other is None:
@@ -32,11 +30,14 @@ class Remote:
                 self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
+        allowed_msg = ""
+        if self.allowed_packages:
+            allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
         if self.remote_type == OSS_RECIPES:
-            return "{}: {} [{}, Enabled: {}]".format(self.name, self.url, OSS_RECIPES,
-                                                     not self.disabled)
-        return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
-                                                             not self.disabled)
+            return "{}: {} [{}, Enabled: {}{}]".format(self.name, self.url, OSS_RECIPES,
+                                                       not self.disabled, allowed_msg)
+        return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
+                                                               not self.disabled, allowed_msg)
 
     def __repr__(self):
         return str(self)

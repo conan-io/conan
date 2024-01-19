@@ -16,7 +16,8 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 excluded_test_packages = ["conans.test.{}*".format(d)
                          for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
+                         if os.path.isdir(os.path.join(here, "conans/test", d)) and
+                          d not in ("utils", "assets")]
 
 
 def get_requires(filename):

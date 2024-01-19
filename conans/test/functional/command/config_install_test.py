@@ -7,7 +7,7 @@ import unittest
 import pytest
 from mock import patch
 
-from conans.client.cache.remote_registry import Remote
+from conan.api.model import Remote
 from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.paths import DEFAULT_CONAN_HOME

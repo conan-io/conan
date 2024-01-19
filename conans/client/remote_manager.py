@@ -5,10 +5,10 @@ from typing import List
 from requests.exceptions import ConnectionError
 
 from conan.api.model import OSS_RECIPES
+from conans.client.rest_client_oss_recipes import RestApiClientOSSRecipes
+from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
-from conans.client.cache.remote_registry import Remote
-from conans.client.rest_client_oss_recipes import RestApiClientOSSRecipes
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException
