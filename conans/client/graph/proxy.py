@@ -97,7 +97,8 @@ class ConanProxy:
 
         results = []
         for remote in remotes:
-            if remote.filters and not any(reference.matches(f, is_consumer=False) for f in remote.filters):
+            if remote.allowed_packages and not any(reference.matches(f, is_consumer=False)
+                                                   for f in remote.allowed_packages):
                 output.debug(f"Excluding remote {remote.name} because recipe is filtered out")
                 continue
             output.info(f"Checking remote: {remote.name}")

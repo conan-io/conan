@@ -12,12 +12,12 @@ from conans.model.version_range import VersionRange
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False, filters=None):
+    def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None):
         self._name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
-        self.filters = filters
+        self.allowed_packages = allowed_packages
 
     @property
     def name(self):
@@ -30,11 +30,11 @@ class Remote:
                 self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
-        filtered_msg = ""
-        if self.filters:
-            filtered_msg = ", Filtered: {}".format(", ".join(self.filters))
+        allowed_msg = ""
+        if self.allowed_packages:
+            allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
         return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
-                                                               not self.disabled, filtered_msg)
+                                                               not self.disabled, allowed_msg)
 
     def __repr__(self):
         return str(self)

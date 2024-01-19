@@ -72,9 +72,9 @@ class RemotesAPI:
             RemoteRegistry(self._remotes_file).remove(remote.name)
             users_clean(app.cache.localdb, remote.url)
 
-    def update(self, remote_name, url=None, secure=None, disabled=None, index=None, filters=None):
+    def update(self, remote_name, url=None, secure=None, disabled=None, index=None, allowed_packages=None):
         RemoteRegistry(self._remotes_file).update(remote_name, url, secure, disabled=disabled,
-                                                  index=index, filters=filters)
+                                                  index=index, allowed_packages=allowed_packages)
 
     def rename(self, remote_name: str, new_name: str):
         RemoteRegistry(self._remotes_file).rename(remote_name, new_name)

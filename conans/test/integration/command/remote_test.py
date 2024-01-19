@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from collections import OrderedDict
 
@@ -17,7 +18,7 @@ class RemoteServerTest(unittest.TestCase):
             test_server = TestServer()
             self.servers["remote%d" % i] = test_server
 
-        self.client = TestClient(servers=self.servers, inputs=3*["admin", "password"], light=True)
+        self.client = TestClient(servers=self.servers, inputs=3 * ["admin", "password"], light=True)
 
     def test_list_json(self):
         self.client.run("remote list --format=json")
@@ -141,8 +142,6 @@ class RemoteServerTest(unittest.TestCase):
 
         self.client.run("remote remove origin", assert_error=True)
         self.assertIn("ERROR: Remote 'origin' can't be found or is disabled", self.client.out)
-
-
 
 
 class RemoteModificationTest(unittest.TestCase):
@@ -346,50 +345,56 @@ def test_add_wrong_conancenter():
     assert "the correct remote API is https://center.conan.io" in c.out
 
 
-class TestRemoteRecipeFilter(unittest.TestCase):
-    def setUp(self):
-        self.client = TestClient(light=True, default_server_user=True)
-        self.client.save({"conanfile.py": GenConanfile(),
-                          "app/conanfile.py": GenConanfile("app", "1.0")
-                          .with_requires("liba/1.0")
-                          .with_requires("libb/[>=1.0]")})
-        self.client.run("create . --name=liba --version=1.0")
-        self.client.run("create . --name=libb --version=1.0")
-        self.client.run("create app")
-        self.client.run("upload * -r=default -c")
-        self.client.run("remove * -c")
+def test_allowed_packages_remotes():
+    tc = TestClient(light=True, default_server_user=True)
+    tc.save({"conanfile.py": GenConanfile(),
+             "app/conanfile.py": GenConanfile("app", "1.0")
+            .with_requires("liba/1.0")
+            .with_requires("libb/[>=1.0]")})
+    tc.run("create . --name=liba --version=1.0")
+    tc.run("create . --name=libb --version=1.0")
+    tc.run("create app")
+    tc.run("upload * -r=default -c")
+    tc.run("remove * -c")
 
-    def test_filter_remotes(self):
-        self.client.run("install --requires=app/1.0 -r=default")
-        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
-        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
-        self.client.run("remove * -c")
+    tc.run("install --requires=app/1.0 -r=default")
+    assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
+    assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out
+    tc.run("remove * -c")
 
-        # lib/2.* pattern does not match the one being required by app, should not be found
-        self.client.run('remote update default --filter="app/*" --filter="liba/2.*"')
+    # lib/2.* pattern does not match the one being required by app, should not be found
+    tc.run('remote update default --allowed-packages="app/*" --allowed-packages="liba/2.*"')
 
-        self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
-        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
-        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" not in self.client.out
-        assert "ERROR: Package 'liba/1.0' not resolved: Unable to find 'liba/1.0' in remotes" in self.client.out
-        self.client.run("remove * -c")
+    tc.run("install --requires=app/1.0 -r=default", assert_error=True)
+    assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
+    assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" not in tc.out
+    assert "ERROR: Package 'liba/1.0' not resolved: Unable to find 'liba/1.0' in remotes" in tc.out
+    tc.run("remove * -c")
 
-        self.client.run('remote update default --filter="liba/*" --filter="app/*"')
-        self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
-        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
-        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
-        assert "ERROR: Package 'libb/[>=1.0]' not resolved" in self.client.out
-        self.client.run("remove * -c")
+    tc.run('remote update default --allowed-packages="liba/*" --allowed-packages="app/*"')
+    tc.run("install --requires=app/1.0 -r=default", assert_error=True)
+    assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
+    assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out
+    assert "ERROR: Package 'libb/[>=1.0]' not resolved" in tc.out
+    tc.run("remove * -c")
 
-        self.client.run('remote update default --filter="liba/*" --filter="app/*"')
-        self.client.run("install --requires=app/1.0 -r=default", assert_error=True)
-        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
-        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
-        assert "ERROR: Package 'libb/[>=1.0]' not resolved" in self.client.out
-        self.client.run("remove * -c")
+    tc.run('remote update default --allowed-packages="liba/*" --allowed-packages="app/*"')
+    tc.run("install --requires=app/1.0 -r=default", assert_error=True)
+    assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
+    assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out
+    assert "ERROR: Package 'libb/[>=1.0]' not resolved" in tc.out
+    tc.run("remove * -c")
 
-        self.client.run('remote update default --filter="*"')
-        self.client.run("install --requires=app/1.0 -r=default")
-        assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in self.client.out
-        assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
-        assert "libb/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in self.client.out
+    tc.run('remote update default --allowed-packages="*"')
+    tc.run("install --requires=app/1.0 -r=default")
+    assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
+    assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out
+    assert "libb/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" in tc.out
+
+
+def test_remote_allowed_packages_new():
+    """Test that the allowed packages are saved in the remotes.json file when adding a new remote"""
+    tc = TestClient(light=True)
+    tc.run("remote add foo https://foo --allowed-packages='liba/*'")
+    remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+    assert remotes[0]["allowed_packages"] == ["liba/*"]
