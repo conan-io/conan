@@ -283,6 +283,7 @@ def test_check_c_cpp_ld_list_formats():
     assert "ld = ['aarch64-poky-linux-ld', '--sysroot=/opt/sysroots/cortexa53-crypto-poky-linux']" in content
 
 
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
 def test_apple_meson_add_min_version_flag():
     default = textwrap.dedent("""
     [settings]
