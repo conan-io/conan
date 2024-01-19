@@ -236,7 +236,7 @@ class RemoteModificationTest(unittest.TestCase):
         self.assertEqual(data["remotes"][3]["disabled"], True)
 
         # check that they are still listed, as disabled
-        client.run("remote list *")
+        client.run("remote list")
         assert "my-remote0: http://someurl0 [Verify SSL: True, Enabled: False]" in client.out
         assert "my-remote3: http://someurl3 [Verify SSL: True, Enabled: False]" in client.out
 

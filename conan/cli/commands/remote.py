@@ -56,6 +56,7 @@ def remote_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List current remotes.
     """
+    parser.parse_args(*args)
     return conan_api.remotes.list(only_enabled=False)
 
 
@@ -83,7 +84,7 @@ def remote_add(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters={"text": print_remote_list})
 def remote_remove(conan_api, parser, subparser, *args):
     """
-    Remove a remote.
+    Remove remotes.
     """
     subparser.add_argument("remote", help="Name of the remote to remove. "
                                           "Accepts 'fnmatch' style wildcards.")  # to discuss

@@ -130,4 +130,4 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB.create(localdb_filename)
+        return LocalDB(localdb_filename)

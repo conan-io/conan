@@ -8,7 +8,6 @@ from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 
-from conans.client.cmd.user import user_set, users_clean, users_list
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -34,9 +33,11 @@ class RemotesAPI:
         """
         Obtain a list of ``Remote`` objects matching the pattern.
 
-        :param pattern: ``None``, single ``str`` or list of ``str``. If it is ``None``, all remotes will be returned (equivalent to ``pattern="*"``).
+        :param pattern: ``None``, single ``str`` or list of ``str``. If it is ``None``,
+          all remotes will be returned (equivalent to ``pattern="*"``).
         :param only_enabled: boolean, by default return only enabled remotes
         :return: A list of ``Remote`` objects
+
         """
         remotes = _load(self._remotes_file)
         if only_enabled:
@@ -49,7 +50,8 @@ class RemotesAPI:
         """
         Disable all remotes matching ``pattern``
 
-        :param pattern: single ``str`` or list of ``str``
+        :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
+          wildcards like "*" and no remote is found matching that exact name, it will raise an error.
         :return: the list of disabled ``Remote`` objects  (even if they were already disabled)
         """
         remotes = _load(self._remotes_file)
@@ -67,7 +69,7 @@ class RemotesAPI:
         Enable all remotes matching ``pattern``.
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
-        wildcards like "*" and no remote is found matching that exact name, it will raise an error.
+          wildcards like "*" and no remote is found matching that exact name, it will raise an error.
         :return: the list of enabled ``Remote`` objects (even if they were already enabled)
         """
         remotes = _load(self._remotes_file)
@@ -100,7 +102,7 @@ class RemotesAPI:
         :param remote: a ``Remote`` object to be added
         :param force: do not fail if the remote already exist (but default it failes)
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
-        the remote in that position instead of the last one
+          the remote in that position instead of the last one
         """
         remotes = _load(self._remotes_file)
         _validate_url(remote.url)
@@ -128,7 +130,7 @@ class RemotesAPI:
         Remove the remotes matching the ``pattern``
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
-        wildcards like "*" and no remote is found matching that exact name, it will raise an error.
+          wildcards like "*" and no remote is found matching that exact name, it will raise an error.
         :return: The list of removed ``Remote`` objects
         """
         remotes = _load(self._remotes_file)
@@ -137,11 +139,21 @@ class RemotesAPI:
         _save(self._remotes_file, remotes)
         app = ConanApp(self.conan_api)
         for remote in removed:
-            users_clean(app.cache.localdb, remote.url)
+            app.cache.localdb.clean(remote_url=remote.url)
         return removed
 
-    def update(self, remote_name, url=None, secure=None, disabled=None, index=None,
+    def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
                allowed_packages=None):
+        """
+        Update an existing remote
+
+        :param remote_name: The name of the remote to update, must exist
+        :param url: optional url to update, if not defined it will not be updated
+        :param secure:  optional ssl secure connection to update
+        :param disabled: optional disabled state
+        :param index:  optional integer to change the order of the remote
+        :param allowed_packages: optional list of packages allowed from this remote
+        """
         remotes = _load(self._remotes_file)
         try:
             remote = {r.name: r for r in remotes}[remote_name]
@@ -164,6 +176,12 @@ class RemotesAPI:
         _save(self._remotes_file, remotes)
 
     def rename(self, remote_name: str, new_name: str):
+        """
+        Change the name of an existing remote
+
+        :param remote_name: The previous existing name
+        :param new_name: The new name
+        """
         remotes = _load(self._remotes_file)
         d = {r.name: r for r in remotes}
         if new_name in d:
@@ -175,23 +193,45 @@ class RemotesAPI:
         _save(self._remotes_file, remotes)
 
     def user_info(self, remote: Remote):
+        # TODO: Review
         app = ConanApp(self.conan_api)
-        return users_list(app.cache.localdb, remotes=[remote])[0]
+        user_info = {}
+        user, token, _ = app.cache.localdb.get_login(remote.url)
+        user_info["name"] = remote.name
+        user_info["user_name"] = user
+        user_info["authenticated"] = True if token else False
+        return user_info
 
-    def user_login(self, remote: Remote, username, password):
+    def user_login(self, remote: Remote, username: str, password: str):
+        """
+        Perform user authentication against the given remote with the provided username and password
+
+        :param remote: a ``Remote`` object
+        :param username: the user login as ``str``
+        :param password: password ``str``
+        """
         app = ConanApp(self.conan_api)
         app.remote_manager.authenticate(remote, username, password)
 
     def user_logout(self, remote: Remote):
+        """
+        Logout from the given ``Remote``
+
+        :param remote: The ``Remote`` object to logout
+        """
         app = ConanApp(self.conan_api)
         # The localdb only stores url + username + token, not remote name, so use URL as key
-        users_clean(app.cache.localdb, remote.url)
+        app.cache.localdb.clean(remote_url=remote.url)
 
     def user_set(self, remote: Remote, username):
+        # TODO: Review
         app = ConanApp(self.conan_api)
-        return user_set(app.cache.localdb, username, remote)
+        if username == "":
+            username = None
+        app.cache.localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
 
     def user_auth(self, remote: Remote, with_user=False):
+        # TODO: Review
         app = ConanApp(self.conan_api)
         if with_user:
             user, token, _ = app.cache.localdb.get_login(remote.url)
