@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
@@ -63,6 +64,9 @@ class RangeResolver:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
+        if remote.allowed_packages and not any(search_ref.matches(f, is_consumer=False)
+                                               for f in remote.allowed_packages):
+            return []
         pattern = str(search_ref)
         pattern_cached = self._cached_remote_found.setdefault(pattern, {})
         results = pattern_cached.get(remote.name)

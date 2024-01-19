@@ -33,8 +33,9 @@ class _Remotes:
         data = json.loads(text)
         for r in data.get("remotes", []):
             disabled = r.get("disabled", False)
+            allowed_packages = r.get("allowed_packages", None)
             # TODO: Remote.serialize/deserialize
-            remote = Remote(r["name"], r["url"], r["verify_ssl"], disabled)
+            remote = Remote(r["name"], r["url"], r["verify_ssl"], disabled, allowed_packages)
             result._remotes[r["name"]] = remote
         return result
 
@@ -44,6 +45,8 @@ class _Remotes:
             remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
             if r.disabled:
                 remote["disabled"] = True
+            if r.allowed_packages:
+                remote["allowed_packages"] = r.allowed_packages
             remote_list.append(remote)
         ret = {"remotes": remote_list}
         return json.dumps(ret, indent=True)
@@ -94,7 +97,7 @@ class _Remotes:
                 else:
                     ConanOutput().warning(msg + " Adding duplicated remote url because '--force'.")
 
-    def update(self, remote_name, url=None, secure=None, disabled=None, index=None, force=False):
+    def update(self, remote_name, url=None, secure=None, disabled=None, index=None, force=False, allowed_packages=None):
         remote = self[remote_name]
         if url is not None:
             self._check_urls(url, force, remote)
@@ -109,6 +112,9 @@ class _Remotes:
             remotes = list(self._remotes.values())
             remotes.insert(index, remote)
             self._remotes = {r.name: r for r in remotes}
+
+        if allowed_packages is not None:
+            remote.allowed_packages = allowed_packages
 
     def items(self):
         return list(self._remotes.values())
@@ -170,11 +176,11 @@ class RemoteRegistry(object):
         remotes.remove(remote_name)
         self.save_remotes(remotes)
 
-    def update(self, remote_name, url, secure, disabled, index):
+    def update(self, remote_name, url, secure, disabled, index, allowed_packages):
         if url is not None:
             self._validate_url(url)
         remotes = self._load_remotes()
-        remotes.update(remote_name, url, secure, disabled, index)
+        remotes.update(remote_name, url, secure, disabled, index, allowed_packages=allowed_packages)
         self.save_remotes(remotes)
 
     def rename(self, remote, new_name):
