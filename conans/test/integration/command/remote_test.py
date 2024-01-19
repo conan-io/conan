@@ -395,6 +395,6 @@ def test_allowed_packages_remotes():
 def test_remote_allowed_packages_new():
     """Test that the allowed packages are saved in the remotes.json file when adding a new remote"""
     tc = TestClient(light=True)
-    tc.run("remote add foo https://foo --allowed-packages='liba/*'")
+    tc.run("remote add foo https://foo -ap='liba/*'")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
     assert remotes["remotes"][0]["allowed_packages"] == ["liba/*"]
