@@ -128,12 +128,12 @@ def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requi
     out = ConanOutput()
     out.title("Testing the package")
     # TODO: Better modeling when we are testing a python_requires
-    if len(deps_graph.nodes) == 1 and not tested_python_requires:
+    conanfile = deps_graph.root.conanfile
+    if len(deps_graph.nodes) == 1 and not hasattr(conanfile, "python_requires"):
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
-    conanfile = deps_graph.root.conanfile
     # To make sure the folders are correct
     conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
     if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:

@@ -73,7 +73,8 @@ class GraphAPI:
                                          channel=tested_reference.channel,
                                          graph_lock=lockfile, remotes=remotes,
                                          tested_python_requires=tested_python_requires,
-                                         update=update)
+                                         update=update,
+                                         tested_python_require_ref=str(tested_reference))
         initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
         conanfile.display_name = "%s (test package)" % str(tested_reference)
         conanfile.output.scope = conanfile.display_name
