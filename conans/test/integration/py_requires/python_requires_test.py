@@ -1052,6 +1052,7 @@ class TestTestPackagePythonRequire:
                 "test_package/conanfile.py": test})
         c.run("create . ")
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
+        assert "WARN: deprecated: test_package/conanfile.py should declare 'python_requires" in c.out
         c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out
 
