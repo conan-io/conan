@@ -155,12 +155,14 @@ class VCVars:
         if is_ps1:
             content_ps1 = textwrap.dedent(f"""\
             if (-not $env:VSCMD_ARG_VCVARS_VER){{
-                cmd /c "$PSScriptRoot/conanvcvars.bat&set" |
+                Push-Location "$PSScriptRoot"
+                cmd /c "conanvcvars.bat&set" |
                 foreach {{
                   if ($_ -match "=") {{
                     $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
                   }}
                 }}
+                Pop-Location
                 write-host conanvcvars.ps1: Activated environment}}
             """)
             create_env_script(conanfile, content_ps1, CONAN_VCVARS_PS1, scope)

@@ -152,6 +152,11 @@ def test_vcvars():
     """)
     client.save({"CMakeLists.txt": cmakelists})
     client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
+    client.run_command(r'powershell.exe ".\build\Release\generators\conanbuild.ps1; dir env:"')
+    #check the conanbuid.ps1 activation message
+    assert "conanvcvars.ps1: Activated environment" in client.out
+    #check that the new env variables are set
+    assert "VSCMD_ARG_VCVARS_VER" in client.out
     conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
     vcvars_ps1 = client.load(r".\build\Release\generators\conanvcvars.ps1")
     #check that the conanvcvars.ps1 is being added to the conanbuild.ps1
