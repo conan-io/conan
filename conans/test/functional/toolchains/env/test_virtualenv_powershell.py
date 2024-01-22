@@ -121,11 +121,17 @@ def test_vcvars():
     conanfile = textwrap.dedent(r"""
         from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout, CMakeToolchain, CMakeDeps
+        from conan.tools.env import VirtualBuildEnv
 
         class Conan(ConanFile):
            settings = "os", "compiler", "build_type", "arch"
 
            generators = 'CMakeDeps', 'CMakeToolchain'
+
+           # def generate(self):
+           #     venv = VirtualBuildEnv(self)
+           #     venv.environment().define("foo", "bar")
+           #     venv.generate("asdfa")
 
            def layout(self):
               cmake_layout(self)
