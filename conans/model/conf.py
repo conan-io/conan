@@ -48,6 +48,8 @@ BUILT_IN_CONFS = {
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Gzip compression
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
+    # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
+    "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",

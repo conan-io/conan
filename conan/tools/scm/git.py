@@ -1,7 +1,9 @@
+import fnmatch
 import os
 
 from conan.tools.files import chdir
 from conan.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
@@ -10,13 +12,24 @@ class Git:
     """
     Git is a wrapper for several common patterns used with *git* tool.
     """
-    def __init__(self, conanfile, folder="."):
+    def __init__(self, conanfile, folder=".", excluded=None):
         """
         :param conanfile: Conanfile instance.
         :param folder: Current directory, by default ``.``, the current working directory.
         """
         self._conanfile = conanfile
         self.folder = folder
+        self._excluded = excluded
+        global_conf = conanfile._conan_helpers.global_conf
+        conf_excluded = global_conf.get("core.scm:excluded", check_type=list)
+        if conf_excluded:
+            if excluded:
+                c = ConfDefinition()
+                c.loads(f"core.scm:excluded={excluded}")
+                c.update_conf_definition(global_conf)
+                self._excluded = c.get("core.scm:excluded", check_type=list)
+            else:
+                self._excluded = conf_excluded
 
     def run(self, cmd):
         """
@@ -107,7 +120,15 @@ class Git:
         :return: True, if the current folder is dirty. Otherwise, False.
         """
         status = self.run("status . --short --no-branch --untracked-files").strip()
-        return bool(status)
+        self._conanfile.output.debug(f"Git status:\n{status}")
+        if not self._excluded:
+            return bool(status)
+        # Parse the status output, line by line, and match it with "_excluded"
+        lines = [line.strip() for line in status.splitlines()]
+        lines = [line.split()[1] for line in lines if line]
+        lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in self._excluded)]
+        self._conanfile.output.debug(f"Filtered git status: {lines}")
+        return bool(lines)
 
     def get_url_and_commit(self, remote="origin", repository=False):
         """
