@@ -4,8 +4,8 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
-from conan.api.model import OSS_RECIPES
-from conans.client.rest_client_oss_recipes import RestApiClientOSSRecipes
+from conan.api.model import LOCAL_RECIPES_INDEX
+from conans.client.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
@@ -28,8 +28,8 @@ class RemoteManager:
         self._signer = PkgSignaturesPlugin(cache)
 
     def _local_folder_remote(self, remote):
-        if remote.remote_type == OSS_RECIPES:
-            return RestApiClientOSSRecipes(remote, self._cache)
+        if remote.remote_type == LOCAL_RECIPES_INDEX:
+            return RestApiClientLocalRecipesIndex(remote, self._cache)
 
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")

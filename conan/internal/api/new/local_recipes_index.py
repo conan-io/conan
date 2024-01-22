@@ -105,9 +105,9 @@ int main() {
 }
 """
 
-oss_recipe_files = {"recipes/{{name}}/config.yml": config_yml,
-                    "recipes/{{name}}/all/conandata.yml": conandata_yml,
-                    "recipes/{{name}}/all/conanfile.py": conanfile,
-                    "recipes/{{name}}/all/test_package/conanfile.py": test_conanfile_v2,
-                    "recipes/{{name}}/all/test_package/CMakeLists.txt": test_cmake_v2,
-                    "recipes/{{name}}/all/test_package/src/example.cpp": test_main}
+local_recipes_index_files = {"recipes/{{name}}/config.yml": config_yml,
+                             "recipes/{{name}}/all/conandata.yml": conandata_yml,
+                             "recipes/{{name}}/all/conanfile.py": conanfile,
+                             "recipes/{{name}}/all/test_package/conanfile.py": test_conanfile_v2,
+                             "recipes/{{name}}/all/test_package/CMakeLists.txt": test_cmake_v2,
+                             "recipes/{{name}}/all/test_package/src/example.cpp": test_main}

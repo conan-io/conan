@@ -7,7 +7,7 @@ from io import StringIO
 
 import yaml
 
-from conan.api.model import OSS_RECIPES
+from conan.api.model import LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.cmd.export import cmd_export
@@ -17,19 +17,19 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load, save, rmdir
 
 
-def add_oss_recipes_remote(conan_api, remote):
-    if remote.remote_type != OSS_RECIPES:
+def add_local_recipes_index_remote(conan_api, remote):
+    if remote.remote_type != LOCAL_RECIPES_INDEX:
         return
-    oss_recipes_path = HomePaths(conan_api.cache_folder).oss_recipes_path
-    repo_folder = os.path.join(oss_recipes_path, remote.name)
+    local_recipes_index_path = HomePaths(conan_api.cache_folder).local_recipes_index_path
+    repo_folder = os.path.join(local_recipes_index_path, remote.name)
 
     output = ConanOutput()
     if os.path.exists(repo_folder):
         output.warning(f"The cache folder for remote {remote.name} existed, removing it")
         rmdir(repo_folder)
 
-    cache_oss_recipes_path = os.path.join(repo_folder, ".conan")
-    hook_folder = HomePaths(cache_oss_recipes_path).hooks_path
+    cache_path = os.path.join(repo_folder, ".conan")
+    hook_folder = HomePaths(cache_path).hooks_path
     trim_hook = os.path.join(hook_folder, "hook_trim_conandata.py")
     hook_content = textwrap.dedent("""\
         from conan.tools.files import trim_conandata
@@ -40,16 +40,16 @@ def add_oss_recipes_remote(conan_api, remote):
     save(trim_hook, hook_content)
 
 
-def remove_oss_recipes_remote(conan_api, remote):
-    if remote.remote_type == OSS_RECIPES:
-        oss_recipes_path = HomePaths(conan_api.cache_folder).oss_recipes_path
-        oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
+def remove_local_recipes_index_remote(conan_api, remote):
+    if remote.remote_type == LOCAL_RECIPES_INDEX:
+        local_recipes_index_path = HomePaths(conan_api.cache_folder).local_recipes_index_path
+        local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
         ConanOutput().info(f"Removing temporary files for '{remote.name}' "
-                           f"oss-recipes remote")
-        rmdir(oss_recipes_path)
+                           f"local-recipes-index remote")
+        rmdir(local_recipes_index_path)
 
 
-class RestApiClientOSSRecipes:
+class RestApiClientLocalRecipesIndex:
     """
     Implements the RestAPI but instead of over HTTP for a remote server, using just
     a local folder assuming the conan-center-index repo layout
@@ -57,16 +57,16 @@ class RestApiClientOSSRecipes:
 
     def __init__(self, remote, cache):
         self._remote = remote
-        oss_recipes_path = HomePaths(cache.cache_folder).oss_recipes_path
-        oss_recipes_path = os.path.join(oss_recipes_path, remote.name)
-        cache_oss_recipes_path = os.path.join(oss_recipes_path, ".conan")
+        local_recipes_index_path = HomePaths(cache.cache_folder).local_recipes_index_path
+        local_recipes_index_path = os.path.join(local_recipes_index_path, remote.name)
+        local_recipes_index_path = os.path.join(local_recipes_index_path, ".conan")
         repo_folder = self._remote.url
 
         from conan.internal.conan_app import ConanApp
         from conan.api.conan_api import ConanAPI
-        conan_api = ConanAPI(cache_oss_recipes_path)
+        conan_api = ConanAPI(local_recipes_index_path)
         self._app = ConanApp(conan_api)
-        self._layout = _OSSRecipesRepoLayout(repo_folder)
+        self._layout = _LocalRecipesIndexLayout(repo_folder)
 
     def call_method(self, method_name, *args, **kwargs):
         return getattr(self, method_name)(*args, **kwargs)
@@ -80,21 +80,21 @@ class RestApiClientOSSRecipes:
         return self._copy_files(export_sources, dest_folder)
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support "
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support "
                              "binary packages")
 
     def upload_recipe(self, ref, files_to_upload):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support upload")
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support upload")
 
     def upload_package(self, pref, files_to_upload):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support upload")
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support upload")
 
     def authenticate(self, user, password):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support "
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support "
                              "authentication")
 
     def check_credentials(self):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support upload")
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support upload")
 
     def search(self, pattern=None):
         return self._layout.get_recipes_references(pattern)
@@ -104,13 +104,13 @@ class RestApiClientOSSRecipes:
         return {}
 
     def remove_recipe(self, ref):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support remove")
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support remove")
 
     def remove_all_packages(self, ref):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support remove")
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support remove")
 
     def remove_packages(self, prefs):
-        raise ConanException(f"Remote oss-recipes '{self._remote.name}' doesn't support remove")
+        raise ConanException(f"Remote local-recipes-index '{self._remote.name}' doesn't support remove")
 
     def get_recipe_revisions_references(self, ref):
         ref = self._export_recipe(ref)
@@ -169,7 +169,7 @@ class RestApiClientOSSRecipes:
         return ret
 
 
-class _OSSRecipesRepoLayout:
+class _LocalRecipesIndexLayout:
 
     def __init__(self, base_folder):
         self._base_folder = base_folder

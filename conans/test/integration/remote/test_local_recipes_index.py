@@ -65,7 +65,7 @@ def c3i_folder():
 class TestSearchList:
     def test_basic_search(self, c3i_folder):
         client = TestClient()
-        client.run(f"remote add local '{c3i_folder}' --type=oss-recipes")  # Keep --type for test
+        client.run(f"remote add local '{c3i_folder}' --type=local-recipes-index")  # Keep --type test
         assert "WARN" not in client.out  # Make sure it does not complain about url
         client.run("search *")
         assert textwrap.dedent("""\
@@ -281,7 +281,7 @@ class TestRestrictedOperations:
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
         c.run("upload pkg/0.1 -r=local", assert_error=True)
-        assert "ERROR: Remote oss-recipes 'local' doesn't support upload" in c.out
+        assert "ERROR: Remote local-recipes-index 'local' doesn't support upload" in c.out
 
 
 class TestErrorsUx:

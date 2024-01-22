@@ -9,8 +9,8 @@ from conans.test.utils.tools import TestClient, zipdir
 from conans.util.files import save_files, sha256sum
 
 
-class TestConanNewOssRecipe:
-    def test_conan_new_oss_recipe(self):
+class TestLocalRecipeIndexNew:
+    def test_conan_new_local_recipes_index(self):
         # Setup the release pkg0.1.zip http server
         file_server = TestFileServer()
         zippath = os.path.join(file_server.store, "pkg0.1.zip")
@@ -26,15 +26,15 @@ class TestConanNewOssRecipe:
 
         c0 = TestClient()
         c0.servers["file_server"] = file_server
-        c0.run(f"new oss_recipe -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
+        c0.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url={url} -d sha256={sha256}")
         # A local create is possible, and it includes a test_package
         c0.run("create recipes/pkg/all --version=0.1")
         assert "pkg: Release!" in c0.out
-        oss_recipe_repo = c0.current_folder
+        remote_folder = c0.current_folder
 
         c = TestClient()
         c.servers["file_server"] = file_server
-        c.run(f"remote add local '{oss_recipe_repo}' --type=oss-recipes")
+        c.run(f"remote add local '{remote_folder}'")
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=pkg/0.1")
         c.run("create . --version=0.1 --build=missing")
         assert "pkg: Release!" in c.out
@@ -43,7 +43,7 @@ class TestConanNewOssRecipe:
 class TestInRepo:
     def test_in_repo(self):
         """testing that it is possible to put a "recipes" folder inside a source repo, and
-        use it as oss-recipes-repository, exporting the source from itself
+        use it as local-recipes-index repository, exporting the source from itself
         """
         repo_folder = temp_folder()
         cmake = gen_cmakelists(libname="pkg", libsources=["pkg.cpp"], install=True,
@@ -105,7 +105,7 @@ class TestInRepo:
                                  "pkg.cpp": gen_function_cpp(name="pkg")})
 
         c = TestClient()
-        c.run(f"remote add local '{repo_folder}' --type=oss-recipes")
+        c.run(f"remote add local '{repo_folder}'")
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=pkg/0.1")
         c.run("create . --build=missing")
         assert "pkg: Release!" in c.out
@@ -117,4 +117,4 @@ class TestInRepo:
 
         # Finally lets remove the remote, check that the clone is cleared
         c.run('remote remove local')
-        assert "Removing temporary files for 'local' oss-recipes remote" in c.out
+        assert "Removing temporary files for 'local' local-recipes-index remote" in c.out

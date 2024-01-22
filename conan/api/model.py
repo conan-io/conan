@@ -9,7 +9,7 @@ from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 from conans.model.version_range import VersionRange
 
-OSS_RECIPES = "oss-recipes"
+LOCAL_RECIPES_INDEX = "local-recipes-index"
 
 
 class Remote:
@@ -33,8 +33,8 @@ class Remote:
         allowed_msg = ""
         if self.allowed_packages:
             allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
-        if self.remote_type == OSS_RECIPES:
-            return "{}: {} [{}, Enabled: {}{}]".format(self.name, self.url, OSS_RECIPES,
+        if self.remote_type == LOCAL_RECIPES_INDEX:
+            return "{}: {} [{}, Enabled: {}{}]".format(self.name, self.url, LOCAL_RECIPES_INDEX,
                                                        not self.disabled, allowed_msg)
         return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
                                                                not self.disabled, allowed_msg)

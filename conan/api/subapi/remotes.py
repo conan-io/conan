@@ -3,11 +3,12 @@ import json
 import os
 from urllib.parse import urlparse
 
-from conan.api.model import Remote, OSS_RECIPES
+from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
-from conans.client.rest_client_oss_recipes import add_oss_recipes_remote, remove_oss_recipes_remote
+from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
+    remove_local_recipes_index_remote
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -105,9 +106,9 @@ class RemotesAPI:
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
           the remote in that position instead of the last one
         """
-        add_oss_recipes_remote(self.conan_api, remote)
+        add_local_recipes_index_remote(self.conan_api, remote)
         remotes = _load(self._remotes_file)
-        if remote.remote_type != OSS_RECIPES:
+        if remote.remote_type != LOCAL_RECIPES_INDEX:
             _validate_url(remote.url)
         current = {r.name: r for r in remotes}.get(remote.name)
         if current:  # same name remote existing!
@@ -142,7 +143,7 @@ class RemotesAPI:
         _save(self._remotes_file, remotes)
         app = ConanApp(self.conan_api)
         for remote in removed:
-            remove_oss_recipes_remote(self.conan_api, remote)
+            remove_local_recipes_index_remote(self.conan_api, remote)
             app.cache.localdb.clean(remote_url=remote.url)
         return removed
 
@@ -164,7 +165,7 @@ class RemotesAPI:
         except KeyError:
             raise ConanException(f"Remote '{remote_name}' doesn't exist")
         if url is not None:
-            if remote.remote_type != OSS_RECIPES:
+            if remote.remote_type != LOCAL_RECIPES_INDEX:
                 _validate_url(url)
             _check_urls(remotes, url, force=False, current=remote)
             remote.url = url
