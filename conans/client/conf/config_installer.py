@@ -8,6 +8,8 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
+from conans.model.recipe_ref import RecipeReference
+from conans.model.requires import Requirement
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 from conans.util.runners import detect_runner
 
@@ -231,9 +233,20 @@ def _process_config(config, cache, requester):
         raise ConanException("Failed conan config install: %s" % str(e))
 
 
-def configuration_install(app, uri, verify_ssl, config_type=None,
+def configuration_install(app, conan_api, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None):
     cache, requester = app.cache, app.requester
+
+    if config_type == "pkg":
+        remotes = conan_api.remotes.list()
+        ref = RecipeReference.loads(uri)
+        require = Requirement(ref)
+        app.range_resolver.resolve(require, "config-install", remotes, update=True)
+        # TODO: What if we allow different configurations per-platform, like "settings.os"?
+        layout, status, remote = app.proxy.get_recipe(require.ref, remotes, update=True,
+                                                      check_update=True)
+        uri = layout.export()
+        config_type = "dir"
 
     # Execute and store the new one
     config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,

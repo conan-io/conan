@@ -616,3 +616,28 @@ class TestConfigInstall:
             client.save({"profiles/debug/address-sanitizer": ""})
             client.run("config install .")
         assert os.path.isdir(debug_cache_folder)
+
+    def test_config_install_from_pkg(self):
+        client = TestClient(default_server_user=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Conf(ConanFile):
+                name = "myconf"
+                version = "0.1"
+                package_type = "configuration"
+                exports = "*"
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "global.conf": "user.myteam:myconf=myvalue"})
+        client.run("create .")
+        client.run("upload * -r=default -c")
+        client.run("remove * -c")
+
+        # Now install it
+        client.run("config install myconf/[*] --type=pkg")
+        client.run("config show *")
+        assert "user.myteam:myconf: myvalue" in client.out
+        # Just to make sure it doesn't crash in the update
+        client.run("config install myconf/[*] --type=pkg")
+        client.run("config show *")
+        assert "user.myteam:myconf: myvalue" in client.out

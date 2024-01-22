@@ -28,7 +28,7 @@ def config_install(conan_api, parser, subparser, *args):
                               help="Allow insecure server connections when using SSL. "
                                    "Equivalent to --verify-ssl=False",
                               dest="verify_ssl")
-    subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
+    subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url", "pkg"],
                            help='Type of remote config')
     subparser.add_argument("-a", "--args",
                            help='String with extra arguments for "git clone"')

@@ -51,8 +51,13 @@ def create(conan_api, parser, *args):
 
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
+    is_configuration = conanfile.package_type == "configuration"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
                                                          args.build_require)
+    if is_configuration:
+        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+        return {"graph": None,  # will raise if json
+                "conan_api": conan_api}
 
     print_profiles(profile_host, profile_build)
     if args.build is not None and args.build_test is None:
