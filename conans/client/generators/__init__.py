@@ -142,6 +142,8 @@ def _receive_conf(conanfile):
 
 def _generate_aggregated_env(conanfile):
 
+    from conan.tools.cmake.presets import _CMakePresets
+
     def deactivates(filenames):
         # FIXME: Probably the order needs to be reversed
         result = []
@@ -188,8 +190,6 @@ def _generate_aggregated_env(conanfile):
                     file_json = json.loads(file_content)
                     combined_environment.update(file_json)
                 preset_type = "testPresets" if group == "run" else "configurePresets"
-
-                from conan.tools.cmake.presets import _CMakePresets
                 preset_name = _CMakePresets.environment_preset_name(conanfile, group)
 
                 preset = {

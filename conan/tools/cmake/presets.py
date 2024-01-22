@@ -206,10 +206,7 @@ class _CMakePresets:
 
     @staticmethod
     def environment_preset_name(conanfile, scope):
-        build_type = conanfile.settings.get_safe("build_type")
-        arch = conanfile.settings.get_safe("arch")
-        preset_name = "-".join(filter(None, ["conan", scope, "environment", build_type, arch])).lower()
-        return preset_name
+        return "environment-" + _CMakePresets._build_and_test_preset_name(conanfile) + "-" + scope
 
     @staticmethod
     def _build_and_test_preset_name(conanfile):
