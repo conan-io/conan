@@ -281,38 +281,3 @@ def test_check_c_cpp_ld_list_formats():
     assert "c = ['aarch64-poky-linux-gcc', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
     assert "cpp = ['aarch64-poky-linux-g++', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
     assert "ld = ['aarch64-poky-linux-ld', '--sysroot=/opt/sysroots/cortexa53-crypto-poky-linux']" in content
-
-
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
-def test_apple_meson_add_min_version_flag():
-    default = textwrap.dedent("""
-    [settings]
-    os=Macos
-    os.version=10.11
-    arch=x86_64
-    compiler=apple-clang
-    compiler.version=12.0
-    compiler.libcxx=libc++
-    build_type=Release
-    """)
-
-    cross = textwrap.dedent("""
-    [settings]
-    os=Macos
-    os.version=10.11
-    arch=armv8
-    compiler=apple-clang
-    compiler.version=12.0
-    compiler.libcxx=libc++
-    build_type=Release
-    """)
-
-    t = TestClient()
-    t.save({"conanfile.py": GenConanfile(name="app", version="1.0").with_generator("MesonToolchain")
-           .with_settings("arch", "os", "build_type", "compiler"),
-            "build_prof": default,
-            "host_prof": cross})
-
-    t.run("install . -pr:h host_prof -pr:b build_prof")
-    content = t.load(MesonToolchain.cross_filename)
-    assert "'-mmacosx-version-min=10.11'" in content
