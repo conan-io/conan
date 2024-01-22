@@ -1,4 +1,5 @@
 import inspect
+import json
 import os
 import traceback
 import importlib
@@ -121,7 +122,6 @@ def write_generators(conanfile, app):
             from conan.tools.env import VirtualRunEnv
             env = VirtualRunEnv(conanfile)
             env.generate()
-
     _generate_aggregated_env(conanfile)
 
     hook_manager.execute("post_generate", conanfile=conanfile)
@@ -156,6 +156,7 @@ def _generate_aggregated_env(conanfile):
         bats = []
         shs = []
         ps1s = []
+        jsons = []
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             # Only the .bat and .ps1 are made relative to current script
@@ -164,6 +165,8 @@ def _generate_aggregated_env(conanfile):
                 bats.append("%~dp0/"+path)
             elif env_script.endswith(".sh"):
                 shs.append(subsystem_path(subsystem, path))
+            elif env_script.endswith(".json"):
+                jsons.append(subsystem_path(subsystem, path))
             elif env_script.endswith(".ps1"):
                 path = os.path.relpath(path, conanfile.generators_folder)
                 # This $PSScriptRoot uses the current script directory
@@ -176,6 +179,34 @@ def _generate_aggregated_env(conanfile):
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
             save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                  sh_content(deactivates(shs)))
+        if jsons:
+            def jsons_content(files):
+                combined_environment = {}
+                for file in files:
+                    with open(file, 'r') as f:
+                        file_content = f.read()
+                    file_json = json.loads(file_content)
+                    combined_environment.update(file_json)
+                preset_type = "testPresets" if group == "run" else "configurePresets"
+
+                from conan.tools.cmake.presets import _CMakePresets
+                preset_name = _CMakePresets.environment_preset_name(conanfile, group)
+
+                preset = {
+                    "version": 4,
+                    preset_type: [
+                        {
+                            "vendor": {"conan": dict()},
+                            "name": preset_name,
+                            "hidden": True,
+                            "environment": combined_environment,
+                        }
+                    ]
+                }
+                return json.dumps(preset, indent=4)
+            filename = "conan-{}-presets.json".format(group)
+            generated.append(filename)
+            save(os.path.join(conanfile.generators_folder, filename), jsons_content(jsons))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])

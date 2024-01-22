@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 from collections import OrderedDict
@@ -508,6 +509,12 @@ class EnvVars:
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
+    def save_json(self, file_location):
+        env_vars = EnvVars(self._conanfile, self._values, self._scope)
+        env = {name: value for name, value in env_vars.items(variable_reference="$penv{{{name}}}")}
+        content = json.dumps(env, indent=1)
+        save(file_location, content)
+
     def save_script(self, filename):
         """
         Saves a script file (bat, sh, ps1) with a launcher to set the environment.
@@ -540,7 +547,10 @@ class EnvVars:
             self.save_sh(path)
 
         if self._scope:
+            json_path = os.path.splitext(path)[0] + ".json"
+            self.save_json(json_path)
             register_env_script(self._conanfile, path, self._scope)
+            register_env_script(self._conanfile, json_path, self._scope)
 
 
 class ProfileEnvironment:
