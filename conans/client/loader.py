@@ -40,8 +40,7 @@ class ConanFileLoader:
                                       update, check_update)[0]
 
     def load_basic_module(self, conanfile_path, graph_lock=None, display="", remotes=None,
-                          update=None, check_update=None, tested_python_requires=None,
-                          tested_python_require_ref=None):
+                          update=None, check_update=None, tested_python_requires=None):
         """ loads a conanfile basic object without evaluating anything, returns the module too
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
@@ -55,9 +54,9 @@ class ConanFileLoader:
 
         try:
             module, conanfile = _parse_conanfile(conanfile_path)
-            if getattr(conanfile, "python_requires", None) == "tested_reference_str":
-                assert tested_python_require_ref
-                conanfile.python_requires = [tested_python_require_ref]
+            if isinstance(tested_python_requires, RecipeReference):
+                if getattr(conanfile, "python_requires", None) == "tested_reference_str":
+                    conanfile.python_requires = tested_python_requires.repr_notime()
             elif tested_python_requires:
                 conanfile.python_requires = tested_python_requires
 
@@ -97,14 +96,12 @@ class ConanFileLoader:
         return data or {}
 
     def load_named(self, conanfile_path, name, version, user, channel, graph_lock=None,
-                   remotes=None, update=None, check_update=None, tested_python_requires=None,
-                   tested_python_require_ref=None):
+                   remotes=None, update=None, check_update=None, tested_python_requires=None):
         """ loads the basic conanfile object and evaluates its name and version
         """
         conanfile, _ = self.load_basic_module(conanfile_path, graph_lock, remotes=remotes,
                                               update=update, check_update=check_update,
-                                              tested_python_requires=tested_python_requires,
-                                              tested_python_require_ref=tested_python_require_ref)
+                                              tested_python_requires=tested_python_requires)
 
         # Export does a check on existing name & version
         if name:
@@ -157,13 +154,12 @@ class ConanFileLoader:
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
                       channel=None, graph_lock=None,  remotes=None, update=None, check_update=None,
-                      tested_python_requires=None, tested_python_require_ref=None):
+                      tested_python_requires=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel, graph_lock,
                                     remotes, update, check_update,
-                                    tested_python_requires=tested_python_requires,
-                                    tested_python_require_ref=tested_python_require_ref)
+                                    tested_python_requires=tested_python_requires)
 
         ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
         if str(ref):

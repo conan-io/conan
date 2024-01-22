@@ -38,7 +38,7 @@ def test(conan_api, parser, *args):
     print_profiles(profile_host, profile_build)
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
-                          args.update, build_modes=args.build)
+                          args.update, build_modes=args.build, tested_python_requires=ref)
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
@@ -74,5 +74,5 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
 
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     _check_tested_reference_matches(deps_graph, ref, out)
-    test_package(conan_api, deps_graph, path, tested_python_requires)
+    test_package(conan_api, deps_graph, path)
     return deps_graph
