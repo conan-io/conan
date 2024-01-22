@@ -128,11 +128,6 @@ def test_vcvars():
 
            generators = 'CMakeDeps', 'CMakeToolchain'
 
-           # def generate(self):
-           #     venv = VirtualBuildEnv(self)
-           #     venv.environment().define("foo", "bar")
-           #     venv.generate("asdfa")
-
            def layout(self):
               cmake_layout(self)
 
