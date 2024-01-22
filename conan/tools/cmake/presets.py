@@ -96,7 +96,7 @@ class _CMakePresets:
         build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, add_env)
 
-        ret = {"version": 4,
+        ret = {"version": 4 if add_env else 3,
                "vendor": {"conan": {}},
                "cmakeMinimumRequired": {"major": 3, "minor": 15, "patch": 0},
                "configurePresets": [conf],
