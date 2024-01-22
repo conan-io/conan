@@ -144,7 +144,7 @@ def test_vcvars():
     """)
     client.save({"hello.cpp": hello_cpp})
     cmakelists = textwrap.dedent(r"""
-        cmake_minimum_required(VERSION 3.20)
+        cmake_minimum_required(VERSION 3.15)
 
         project(hello-world LANGUAGES CXX)
         message("C++ compiler: ${CMAKE_CXX_COMPILER}")
