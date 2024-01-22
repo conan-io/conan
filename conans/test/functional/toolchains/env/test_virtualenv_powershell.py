@@ -152,7 +152,7 @@ def test_vcvars():
         add_executable(hello hello.cpp)
     """)
     client.save({"CMakeLists.txt": cmakelists})
-    client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja -s compiler.version=193")
+    client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja")
     client.run_command(r'powershell.exe ".\build\Release\generators\conanbuild.ps1; dir env:"')
     #check the conanbuid.ps1 activation message
     assert "conanvcvars.ps1: Activated environment" in client.out
