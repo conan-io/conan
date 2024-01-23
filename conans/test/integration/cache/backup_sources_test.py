@@ -83,8 +83,6 @@ class TestDownloadCacheBackupSources:
         self.file_server = TestFileServer()
         self.client.servers["file_server"] = self.file_server
         self.download_cache_folder = temp_folder()
-        # To test #15501 that it works even with extra files in the local cache
-        save(os.path.join(self.download_cache_folder, "s", "extrafile"), "Hello, world!")
 
     def test_upload_sources_backup(self):
         http_server_base_folder_backups = os.path.join(self.file_server.store, "backups")
@@ -155,8 +153,15 @@ class TestDownloadCacheBackupSources:
                             f"core.sources:exclude_urls=['{self.file_server.fake_url}/mycompanystorage/', '{self.file_server.fake_url}/mycompanystorage2/']"},
             path=self.client.cache.cache_folder)
         self.client.run("create .")
+
         self.client.run("upload * -c -r=default")
-        assert "FileNotFoundError: [Errno 2] No such file or directory" not in self.client.out
+
+        # To test #15501 that it works even with extra files in the local cache
+        extra_file_path = os.path.join(self.download_cache_folder, "s", "extrafile")
+        save(extra_file_path, "Hello, world!")
+        self.client.run("upload * -c -r=default", assert_error=True)
+        assert "Missing metadata file for backup source" in self.client.out
+        os.unlink(extra_file_path)
 
         server_contents = os.listdir(http_server_base_folder_backups)
         assert hello_world_sha256 in server_contents

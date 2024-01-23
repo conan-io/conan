@@ -3,7 +3,7 @@ import os
 from contextlib import contextmanager
 from threading import Lock
 
-from conan.api.output import ConanOutput
+from conans.errors import ConanException
 from conans.util.dates import timestamp_now
 from conans.util.files import load, save
 from conans.util.locks import SimpleLock
@@ -80,8 +80,7 @@ class DownloadCache:
                 blob_path = os.path.join(path_backups, path)
                 metadata_path = os.path.join(blob_path + ".json")
                 if not os.path.exists(metadata_path):
-                    ConanOutput().warning(f"Missing metadata file for backup source {blob_path}")
-                    continue
+                    raise ConanException(f"Missing metadata file for backup source {blob_path}")
                 metadata = json.loads(load(metadata_path))
                 refs = metadata["references"]
                 # unknown entries are not uploaded at this moment unless no package_list is passed
