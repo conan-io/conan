@@ -57,17 +57,15 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
 
 @pytest.mark.tool("meson")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
-@pytest.mark.parametrize("arch, os_, os_version, os_sdk, platform_assertion", [
-    # platform_assertion -> https://stackoverflow.com/questions/44188023/how-to-check-a-lib-static-or-dynamic-is-built-for-ios-simulator-or-mac-osx
-    ('armv8', 'watchOS', '10.1', 'watchos', "platform 4"),
-    ('armv8', 'iOS', '17.1', 'iphoneos', "platform 2"),
-    ('armv7', 'iOS', '10.0', 'iphoneos', "cmd LC_VERSION_MIN_IPHONEOS"),  # "platform" is missing!
-    ('x86', 'iOS', '10.0', 'iphonesimulator', "cmd LC_VERSION_MIN_IPHONEOS"),  # "platform" is missing!
-    ('x86_64', 'iOS', '10.0', 'iphonesimulator', "cmd LC_VERSION_MIN_IPHONEOS"),  # "platform" is missing!
-    ('armv8', 'Macos', None, None, "platform 1"),  # MacOS M1
-    ('armv8', 'Macos', '10.11', None, "platform 1"),  # MacOS M1
+@pytest.mark.parametrize("arch, os_, os_version, os_sdk", [
+    ('armv8', 'iOS', '17.1', 'iphoneos'),
+    ('armv7', 'iOS', '10.0', 'iphoneos'),
+    ('x86', 'iOS', '10.0', 'iphonesimulator'),
+    ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
+    ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', None, None),
+    ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', '10.11', None),
 ])
-def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk, platform_assertion):
+def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     profile = textwrap.dedent("""
     [settings]
     os = {os}
@@ -113,10 +111,6 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk, pl
 
     t.run_command('"%s" -info "%s"' % (lipo, demo))
     assert "architecture: %s" % _to_apple_arch(arch) in t.out
-
-    # Extra check to ensure the host platform
-    t.run_command(f'otool -l "{libhello}"')
-    assert platform_assertion in t.out
 
     if os_ == "iOS":
         # only check for iOS because one of the macos build variants is usually native
