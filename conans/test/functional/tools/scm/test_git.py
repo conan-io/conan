@@ -524,14 +524,14 @@ class TestGitBasicSCMFlow:
             version = "0.1"
 
             def export(self):
-                Git(self).to_conandata()
+                Git(self).coordinates_to_conandata()
                 trim_conandata(self)  # to test it does not affect
 
             def layout(self):
                 self.folders.source = "."
 
             def source(self):
-                Git(self).from_conandata()
+                Git(self).checkout_from_conandata_coordinates()
                 self.output.info("MYCMAKE: {}".format(load(self, "CMakeLists.txt")))
                 self.output.info("MYFILE: {}".format(load(self, "src/myfile.h")))
 

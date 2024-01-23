@@ -238,11 +238,11 @@ class Git:
         files = files.splitlines()
         return files
 
-    def to_conandata(self):
+    def coordinates_to_conandata(self):
         scm_url, scm_commit = self.get_url_and_commit()
         update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
-    def from_conandata(self):
+    def checkout_from_conandata_coordinates(self):
         sources = self._conanfile.conan_data["scm"]
         self.clone(url=sources["url"], target=".")
         self.checkout(commit=sources["commit"])
