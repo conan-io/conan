@@ -25,7 +25,6 @@ class UploadUpstreamChecker:
         self._app = app
 
     def check(self, upload_bundle, remote, force):
-        ConanOutput().subtitle("Checking server existing packages")
         for ref, recipe_bundle in upload_bundle.refs().items():
             self._check_upstream_recipe(ref, recipe_bundle, remote, force)
             for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle).items():
@@ -81,7 +80,6 @@ class PackagePreparator:
         self._global_conf = global_conf
 
     def prepare(self, upload_bundle, enabled_remotes):
-        ConanOutput().subtitle("Preparing artifacts for upload")
         for ref, bundle in upload_bundle.refs().items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -211,31 +209,30 @@ class UploadExecutor:
     """
     def __init__(self, app: ConanApp):
         self._app = app
-        self._output = ConanOutput()
 
     def upload(self, upload_data, remote):
-        ConanOutput().subtitle("Uploading artifacts")
         for ref, bundle in upload_data.refs().items():
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
             for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
                 if prev_bundle.get("upload"):
                     self.upload_package(pref, prev_bundle, remote)
-        ConanOutput().success("Upload complete\n")
 
     def upload_recipe(self, ref, bundle, remote):
-        self._output.info(f"Uploading recipe '{ref.repr_notime()}'")
+        output = ConanOutput(scope=str(ref))
+        output.info(f"Uploading recipe '{ref.repr_notime()}'")
         t1 = time.time()
         cache_files = bundle["files"]
 
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
 
         duration = time.time() - t1
-        self._output.debug(f"Upload {ref} in {duration} time")
+        output.debug(f"Upload {ref} in {duration} time")
         return ref
 
     def upload_package(self, pref, prev_bundle, remote):
-        self._output.info(f"Uploading package '{pref.repr_notime()}'")
+        output = ConanOutput(scope=str(pref.ref))
+        output.info(f"Uploading package '{pref.repr_notime()}'")
         cache_files = prev_bundle["files"]
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
@@ -243,7 +240,7 @@ class UploadExecutor:
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
-        self._output.debug(f"Upload {pref} in {duration} time")
+        output.debug(f"Upload {pref} in {duration} time")
 
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None):

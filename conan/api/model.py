@@ -12,15 +12,12 @@ from conans.model.version_range import VersionRange
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False):
-        self._name = name  # Read only, is the key
+    def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None):
+        self.name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
-
-    @property
-    def name(self):
-        return self._name
+        self.allowed_packages = allowed_packages
 
     def __eq__(self, other):
         if other is None:
@@ -29,8 +26,11 @@ class Remote:
                 self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
-        return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
-                                                             not self.disabled)
+        allowed_msg = ""
+        if self.allowed_packages:
+            allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
+        return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
+                                                               not self.disabled, allowed_msg)
 
     def __repr__(self):
         return str(self)
@@ -134,6 +134,18 @@ class MultiPackagesList:
 class PackagesList:
     def __init__(self):
         self.recipes = {}
+
+    def split(self):
+        """
+        Returns a list of PackageList, splitted one per reference.
+        This can be useful to parallelize things like upload, parallelizing per-reference
+        """
+        result = []
+        for r, content in self.recipes.items():
+            subpkglist = PackagesList()
+            subpkglist.recipes[r] = content
+            result.append(subpkglist)
+        return result
 
     def only_recipes(self):
         result = {}

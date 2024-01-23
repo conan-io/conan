@@ -15,7 +15,6 @@ import hashlib
 from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
-from conans.client.cmd.user import update_localdb
 from conans.client.rest.remote_credentials import RemoteCredentials
 from conans.errors import AuthenticationException, ConanException, ForbiddenException
 
@@ -120,6 +119,4 @@ class ConanApiAuthManager(object):
             raise ConanException("Password contains not allowed symbols")
 
         # Store result in DB
-        remote_name, prev_user, user = update_localdb(self._localdb, user, token, refresh_token,
-                                                      remote)
-        return remote_name, prev_user, user
+        self._localdb.store(user, token, refresh_token, remote.url)

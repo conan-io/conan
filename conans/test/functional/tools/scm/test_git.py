@@ -10,7 +10,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
-from conans.util.files import rmdir, save_files
+from conans.util.files import rmdir, save_files, save
 
 
 @pytest.mark.tool("git")
@@ -26,7 +26,7 @@ class TestGitBasicCapture:
             version = "0.1"
 
             def export(self):
-                git = Git(self, self.recipe_folder)
+                git = Git(self, self.recipe_folder, excluded=["myfile.txt", "mynew.txt"])
                 commit = git.get_commit()
                 repo_commit = git.get_commit(repository=True)
                 url = git.get_remote_url()
@@ -114,6 +114,29 @@ class TestGitBasicCapture:
         assert "pkg/0.1: REPO_COMMIT: {}".format(commit2) in c.out
         assert "pkg/0.1: URL: None" in c.out
         assert "pkg/0.1: COMMIT IN REMOTE: False" in c.out
+        assert "pkg/0.1: DIRTY: False" in c.out
+
+    def test_git_excluded(self):
+        """
+        A local repo, without remote, will have commit, but no URL
+        """
+        c = TestClient()
+        c.save({"conanfile.py": self.conanfile,
+                "myfile.txt": ""})
+        c.init_git_repo()
+        c.run("export . -vvv")
+        assert "pkg/0.1: DIRTY: False" in c.out
+        c.save({"myfile.txt": "changed",
+                "mynew.txt": "new"})
+        c.run("export .")
+        assert "pkg/0.1: DIRTY: False" in c.out
+        c.save({"other.txt": "new"})
+        c.run("export .")
+        assert "pkg/0.1: DIRTY: True" in c.out
+
+        conf_excluded = f'core.scm:excluded+=["other.txt"]'
+        save(c.cache.global_conf_path, conf_excluded)
+        c.run("export .")
         assert "pkg/0.1: DIRTY: False" in c.out
 
 

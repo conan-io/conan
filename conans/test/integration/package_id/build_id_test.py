@@ -134,6 +134,41 @@ class TestBuildIdTest:
         client.run("create . --name=pkg --version=0.1 ", assert_error=True)
         assert "ERROR: pkg/0.1: Error in build() method, line 5" in client.out
 
+    def test_any_os_arch(self):
+        conanfile_os = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+
+            class MyTest(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "arch", "build_type", "compiler"
+
+                def build_id(self):
+                    self.info_build.settings.build_type = "AnyValue"
+                    self.info_build.settings.os = "AnyValue"
+                    self.info_build.settings.arch = "AnyValue"
+                    self.info_build.settings.compiler = "AnyValue"
+
+                def build(self):
+                    self.output.info("Building my code!")
+
+                def package(self):
+                    self.output.info("Packaging %s-%s!" % (self.settings.os, self.settings.arch))
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_os})
+        client.run("create .  -s os=Windows -s arch=x86_64 -s build_type=Release")
+        assert "pkg/0.1: Calling build()" in client.out
+        assert "Building my code!" in client.out
+        assert "Packaging Windows-x86_64!" in client.out
+        # Others must not build
+        client.run("create .  -s os=Linux -s arch=x86 -s build_type=Debug")
+        assert "pkg/0.1: Calling build()" not in client.out
+        assert "Building my code!" not in client.out
+        assert "Packaging Linux-x86!" in client.out
+
 
 def test_remove_require():
     c = TestClient()

@@ -10,7 +10,7 @@ class LocalStoreTest(unittest.TestCase):
     def test_localdb(self):
         tmp_dir = temp_folder()
         db_file = os.path.join(tmp_dir, "dbfile")
-        localdb = LocalDB.create(db_file)
+        localdb = LocalDB(db_file)
 
         # Test write and read login
         user, token, access_token = localdb.get_login("myurl1")
