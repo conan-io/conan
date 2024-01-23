@@ -126,3 +126,19 @@ def test_vcvars_winsdk_version():
 
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  amd64 8.1 -vcvars_ver=14.3' in vcvars
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_deactivate_vcvars_message():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class TestConan(ConanFile):
+                generators = "VCVars"
+                settings = "os", "compiler", "arch", "build_type"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install .')
+    client.run_command(r'conanbuild.bat')
+    assert "[vcvarsall.bat] Environment initialized" in client.out
+    client.run_command(r'deactivate_conanvcvars.bat')
+    assert "vcvars env cannot be deactivated" in client.out
