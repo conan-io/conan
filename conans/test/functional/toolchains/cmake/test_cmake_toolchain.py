@@ -1626,36 +1626,39 @@ def test_add_generate_env_to_presets():
         """)
 
     consumer = textwrap.dedent("""
-        import os
         from conan import ConanFile
-        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
-        from conan.tools.env import VirtualBuildEnv
+        from conan.tools.cmake import cmake_layout, CMakeToolchain, CMakeDeps
+        from conan.tools.env import VirtualBuildEnv, VirtualRunEnv, Environment
+
         class mypkgRecipe(ConanFile):
             name = "mypkg"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             tool_requires = "tool/0.1"
-            #generators = "CMakeDeps", "CMakeToolchain"
+
             def layout(self):
                 cmake_layout(self)
 
             def generate(self):
+
                 buildenv = VirtualBuildEnv(self)
                 buildenv.environment().define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE_OVERRIDEN")
-                buildenv.environment().define("MY_ADDED_BUILD_VAR", "MY_ADDED_BUILD_VAR_VALUE")
                 buildenv.generate()
 
-                #buildenv = VirtualBuildEnv(self)
-                #envvars = buildenv.environment()
-                #envvars.define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE_OVERRIDEN")
-                #envvarsbuild = envvars.vars(self, scope="run")
-                #envvarsbuild.save_script("myproject-build-{}".format(str(self.settings.build_type).lower()))
+                runenv = VirtualRunEnv(self)
+                runenv.environment().define("MY_RUN_VAR", "MY_RUNVAR_SET_IN_GENERATE")
+                runenv.generate()
 
+                env = Environment()
+                env.define("MY_ENV_VAR", "MY_ENV_VAR_VALUE")
+                env = env.vars(self)
+                env.save_script("other_env")
 
                 deps = CMakeDeps(self)
                 deps.generate()
                 tc = CMakeToolchain(self)
-                tc.presets_build_environment = buildenv
+                tc.presets_build_environment = buildenv.environment().compose_env(env)
+                tc.presets_run_environment = runenv.environment()
                 tc.generate()
     """)
 
@@ -1673,7 +1676,18 @@ def test_add_generate_env_to_presets():
         endfunction()
 
         check_and_report_variable("MY_BUILD_VAR")
-        check_and_report_variable("MY_ADDED_BUILD_VAR")
+        check_and_report_variable("MY_ENV_VAR")
+
+        enable_testing()
+
+        if(WIN32)
+            set(ENV_CHECK_COMMAND set)
+        else()
+            set(ENV_CHECK_COMMAND env)
+        endif()
+
+        add_test(NAME CheckEnvironmentVariable
+                 COMMAND ${ENV_CHECK_COMMAND})
     """)
 
     c.save({"tool.py": tool,
@@ -1688,4 +1702,7 @@ def test_add_generate_env_to_presets():
 
     c.run_command(f"cmake --preset {preset}")
     assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE_OVERRIDEN" in c.out
-    assert "MY_ADDED_BUILD_VAR:MY_ADDED_BUILD_VAR_VALUE" in c.out
+    assert "MY_ENV_VAR:MY_ENV_VAR_VALUE" in c.out
+
+    c.run_command(f"ctest --preset {preset} --verbose")
+    assert "MY_RUNVAR_SET_IN_GENERATE" in c.out

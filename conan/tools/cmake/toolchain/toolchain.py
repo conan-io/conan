@@ -222,8 +222,8 @@ class CMakeToolchain(object):
         if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
                                     check_type=str, choices=("disabled", "")) != "disabled":
 
-            build_env = self.presets_build_environment.vars() if self.presets_build_environment else VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-            run_env = self.presets_run_environment.vars() if self.presets_run_environment else VirtualRunEnv(self._conanfile, auto_generate=True).vars()
+            build_env = self.presets_build_environment.vars(self._conanfile) if self.presets_build_environment else VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+            run_env = self.presets_run_environment.vars(self._conanfile) if self.presets_run_environment else VirtualRunEnv(self._conanfile, auto_generate=True).vars()
 
             buildenv = {name: value for name, value in
                         build_env.items(variable_reference="$penv{{{name}}}")}
