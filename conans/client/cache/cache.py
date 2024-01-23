@@ -35,11 +35,11 @@ class ClientCache(object):
         """ temporary folder where Conan puts exports and packages before the final revision
         is computed"""
         # TODO: Improve the path definitions, this is very hardcoded
-        return os.path.join(self.cache_folder, "p", "t")
+        return os.path.join(self._store_folder, "t")
 
     @property
     def builds_folder(self):
-        return os.path.join(self.cache_folder, "p", "b")
+        return os.path.join(self._store_folder, "b")
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
