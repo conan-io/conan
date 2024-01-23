@@ -54,7 +54,10 @@ class ConanFileLoader:
 
         try:
             module, conanfile = _parse_conanfile(conanfile_path)
-            if tested_python_requires:
+            if isinstance(tested_python_requires, RecipeReference):
+                if getattr(conanfile, "python_requires", None) == "tested_reference_str":
+                    conanfile.python_requires = tested_python_requires.repr_notime()
+            elif tested_python_requires:
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
