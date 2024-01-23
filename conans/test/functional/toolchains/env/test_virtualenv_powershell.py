@@ -4,6 +4,8 @@ import textwrap
 
 import pytest
 
+from assets.cmake import gen_cmakelists
+from assets.sources import gen_function_cpp
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -136,22 +138,10 @@ def test_vcvars():
               cmake.configure()
               cmake.build()
     """)
-    client.save({"conanfile.py": conanfile})
-    hello_cpp = textwrap.dedent(r"""
-        int main(int argc, char **argv) {
-            return 0;
-        }
-    """)
-    client.save({"hello.cpp": hello_cpp})
-    cmakelists = textwrap.dedent(r"""
-        cmake_minimum_required(VERSION 3.15)
+    hello_cpp = gen_function_cpp(name="main")
+    cmakelists = gen_cmakelists(appname="hello", appsources=["hello.cpp"])
+    client.save({"conanfile.py": conanfile, "hello.cpp": hello_cpp, "CMakeLists.txt": cmakelists})
 
-        project(hello-world LANGUAGES CXX)
-        message("C++ compiler: ${CMAKE_CXX_COMPILER}")
-
-        add_executable(hello hello.cpp)
-    """)
-    client.save({"CMakeLists.txt": cmakelists})
     client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja")
     client.run_command(r'powershell.exe ".\build\Release\generators\conanbuild.ps1; dir env:"')
     #check the conanbuid.ps1 activation message

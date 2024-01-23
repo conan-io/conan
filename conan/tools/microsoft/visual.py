@@ -151,6 +151,8 @@ class VCVars:
             {vcvars}
             """)
         from conan.tools.env.environment import create_env_script
+        create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
+
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
             content_ps1 = textwrap.dedent(f"""\
@@ -167,7 +169,6 @@ class VCVars:
             """)
             create_env_script(conanfile, content_ps1, CONAN_VCVARS_PS1, scope)
 
-        create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
 
 
 def vs_ide_version(conanfile):
