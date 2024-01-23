@@ -539,7 +539,7 @@ class EnvVars:
             if value:
                 result.append('set -gx {} "{}"'.format(varname, value))
             else:
-                result.append('set -e {}'.format(varname))
+                result.append('set -ge {}'.format(varname))
 
         content = "\n".join(result)
         content = relativize_generated_file(content, self._conanfile, "$script_folder")
