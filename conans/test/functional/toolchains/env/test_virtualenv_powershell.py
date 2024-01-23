@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
-from assets.cmake import gen_cmakelists
-from assets.sources import gen_function_cpp
+from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
