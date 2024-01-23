@@ -107,6 +107,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
         ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
+        if getattr(args, "lockfile_packages", None):
+            ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
         if args.core_conf:
             from conans.model.conf import ConfDefinition
             confs = ConfDefinition()
