@@ -508,11 +508,51 @@ class EnvVars:
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
+    def save_fish(self, file_location, generate_deactivate=True):
+        filepath, filename = os.path.split(file_location)
+        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        values = self._values.keys()
+        if len(values) == 0:
+            # Empty environment, nothing to restore (Easier to handle in Fish)
+            deactivate = ("""echo "echo Nothing to restore" > {deactivate_file}"""
+                          .format(deactivate_file=deactivate_file))
+        else:
+            deactivate = textwrap.dedent("""\
+               echo "echo Restoring environment" > "{deactivate_file}"
+               for v in {vars}
+                   set is_defined "true"
+                   set value (printenv $v); or set is_defined ""
+                   if test -n "$value" -o -n "$is_defined"
+                       echo set -gx "$v" "$value" >> "{deactivate_file}"
+                   else
+                       echo set -ge "$v" >> "{deactivate_file}"
+                   end
+               end
+               """.format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys())))
+        capture = textwrap.dedent("""\
+              {deactivate}
+              """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
+            value = value.replace('"', '\\"')
+            if value:
+                result.append('set -gx {} "{}"'.format(varname, value))
+            else:
+                result.append('set -e {}'.format(varname))
+
+        content = "\n".join(result)
+        content = relativize_generated_file(content, self._conanfile, "$script_folder")
+        content = f'set script_folder "{os.path.abspath(filepath)}"\n' + content
+        save(file_location, content)
+
     def save_script(self, filename):
         """
         Saves a script file (bat, sh, ps1) with a launcher to set the environment.
         If the conf "tools.env.virtualenv:powershell" is set to True it will generate powershell
         launchers if Windows.
+
+        If the conf "tools.env.virtualenv:fish" is set to True it will generate fish launchers.
 
         :param filename: Name of the file to generate. If the extension is provided, it will generate
                          the launcher script for that extension, otherwise the format will be deduced
@@ -522,18 +562,27 @@ class EnvVars:
         if ext:
             is_bat = ext == ".bat"
             is_ps1 = ext == ".ps1"
+            is_fish = ext == ".fish"
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
-            if is_ps1:
+            is_fish = self._conanfile.conf.get("tools.env.virtualenv:fish", check_type=bool)
+            if is_fish:
+                filename = filename + ".fish"
+                is_bat = False
+                is_ps1 = False
+            elif is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False
+                is_fish = False
             else:
                 filename = filename + (".bat" if is_bat else ".sh")
 
         path = os.path.join(self._conanfile.generators_folder, filename)
         if is_bat:
             self.save_bat(path)
+        elif is_fish:
+            self.save_fish(path)
         elif is_ps1:
             self.save_ps1(path)
         else:
