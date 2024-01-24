@@ -252,7 +252,8 @@ class TestGitBasicClone:
 
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
-        c.run("create .")
+        c.run("create . -v")
+        assert "pkg/0.1: Running git clone" in c.out
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
 
