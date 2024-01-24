@@ -1267,6 +1267,12 @@ def test_add_cmakeexe_to_presets():
 
     assert cmake_exe == os.path.basename(presets["configurePresets"][0].get("cmakeExecutable"))
 
+    # if we set "tools.cmake:cmake_program" that will have preference
+    c.run("install . -g CMakeToolchain -g CMakeDeps -c tools.cmake:cmake_program='/other/path/cmake'")
+    presets = json.loads(c.load(presets_path))
+
+    assert '/other/path/cmake' == presets["configurePresets"][0].get("cmakeExecutable")
+
     # if we have a platform_tool_requires it will not be set because  it is filtered before
     # so it will not be in direct_build dependencies
     c.run("install . -g CMakeToolchain -g CMakeDeps -pr:h=./myprofile")

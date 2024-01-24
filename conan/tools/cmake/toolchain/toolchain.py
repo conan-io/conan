@@ -240,7 +240,7 @@ class CMakeToolchain(object):
             runenv = {name: value for name, value in
                       run_env.items(variable_reference="$penv{{{name}}}")}
 
-            cmake_executable = self._find_cmake_exe()
+            cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None) or self._find_cmake_exe()
 
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
                             self.user_presets_path, self.presets_prefix, buildenv, runenv,
