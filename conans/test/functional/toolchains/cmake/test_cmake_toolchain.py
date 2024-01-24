@@ -1704,5 +1704,5 @@ def test_add_generate_env_to_presets():
     assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE_OVERRIDEN" in c.out
     assert "MY_ENV_VAR:MY_ENV_VAR_VALUE" in c.out
 
-    c.run_command(f"ctest --preset {preset} --verbose")
+    c.run_command(f"ctest --preset conan-release --verbose")
     assert "MY_RUNVAR_SET_IN_GENERATE" in c.out
