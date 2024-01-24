@@ -24,6 +24,7 @@ class Git:
 
         :return: The console output of the command.
         """
+        self._conanfile.output.verbose(f"Running git {cmd}")
         with chdir(self._conanfile, self.folder):
             # We tried to use self.conanfile.run(), but it didn't work:
             #  - when using win_bash, crashing because access to .settings (forbidden in source())
