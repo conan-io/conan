@@ -557,18 +557,31 @@ def test_install_json_format():
 
 
 def test_install_json_format_not_visible():
+    """
+    The dependencies that are needed at built time, even if they are not visible, or not standard
+    libraries (headers=False, libs=False, run=False), like for example some build assets
+    So direct dependencies of a consumer package or a package that needs to be built cannot be
+    skipped
+    """
     c = TestClient()
-    dep = GenConanfile("dep", "0.1")
+    dep = GenConanfile("dep", "0.1").with_package_file("somefile.txt", "contents!!!")
     app = textwrap.dedent("""
+        import os
         from conan import ConanFile
+        from conan.tools.files import load
 
-        class RtPkcs11EcpConanfile(ConanFile):
+        class Pkg(ConanFile):
             settings = "os", "arch", "build_type"
-            name="pkg_a"
+            name="pkg"
             version="0.0.1"
 
             def requirements(self):
                 self.requires("dep/0.1", visible=False, headers=False, libs=False, run=False)
+
+            def build(self):
+                p = os.path.join(self.dependencies["dep"].package_folder, "somefile.txt")
+                c = load(self, p)
+                self.output.info(f"LOADED! {c}")
         """)
     c.save({"dep/conanfile.py": dep,
             "app/conanfile.py": app})
@@ -578,3 +591,6 @@ def test_install_json_format_not_visible():
     data = json.loads(c.stdout)
     pkg_folder = data["graph"]["nodes"]["1"]["package_folder"]
     assert pkg_folder is not None
+
+    c.run("create app")
+    assert "pkg/0.0.1: LOADED! contents!!!" in c.out
