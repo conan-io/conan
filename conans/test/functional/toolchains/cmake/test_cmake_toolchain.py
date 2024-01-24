@@ -1681,7 +1681,7 @@ def test_add_generate_env_to_presets():
         enable_testing()
 
         if(WIN32)
-            set(ENV_CHECK_COMMAND set)
+            set(ENV_CHECK_COMMAND set.exe)
         else()
             set(ENV_CHECK_COMMAND env)
         endif()
