@@ -1240,6 +1240,12 @@ def test_add_cmakeexe_to_presets():
                     save(self, "bin/{}", "")
         """)
 
+    profile = textwrap.dedent("""
+        include(default)
+        [platform_tool_requires]
+        cmake/3.27
+    """)
+
     consumer = textwrap.dedent("""
         [tool_requires]
         cmake/3.27
@@ -1250,7 +1256,8 @@ def test_add_cmakeexe_to_presets():
     cmake_exe = "cmake.exe" if platform.system() == "Windows" else "cmake"
 
     c.save({"tool.py": tool.format(cmake_exe),
-            "conanfile.txt": consumer})
+            "conanfile.txt": consumer,
+            "myprofile": profile})
     c.run("create tool.py")
     c.run("install . -g CMakeToolchain -g CMakeDeps")
 
@@ -1259,3 +1266,10 @@ def test_add_cmakeexe_to_presets():
     presets = json.loads(c.load(presets_path))
 
     assert cmake_exe == os.path.basename(presets["configurePresets"][0].get("cmakeExecutable"))
+
+    # if we have a platform_tool_requires it will not be set because  it is filtered before
+    # so it will not be in direct_build dependencies
+    c.run("install . -g CMakeToolchain -g CMakeDeps -pr:h=./myprofile")
+
+    presets = json.loads(c.load(presets_path))
+    assert presets["configurePresets"][0].get("cmakeExecutable") is None
