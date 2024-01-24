@@ -126,7 +126,9 @@ class TestConan(ConanFile):
                      "libs/what": "",
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
-        client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
+        client.run("export-pkg . --user=lasote --channel=stable -s os=Windows -vvv")
+        assert "copy(pattern=*.h) copied 1 files" in client.out
+        assert "copy(pattern=*.lib) copied 1 files" in client.out
         package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
