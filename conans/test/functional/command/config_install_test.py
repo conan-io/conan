@@ -617,27 +617,39 @@ class TestConfigInstall:
             client.run("config install .")
         assert os.path.isdir(debug_cache_folder)
 
+
+class TestConfigInstallPkg:
     def test_config_install_from_pkg(self):
-        client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""\
-            from conan import ConanFile
-            class Conf(ConanFile):
-                name = "myconf"
-                version = "0.1"
-                package_type = "configuration"
-                exports = "*"
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "global.conf": "user.myteam:myconf=myvalue"})
-        client.run("create .")
-        client.run("upload * -r=default -c")
-        client.run("remove * -c")
+        c = TestClient(default_server_user=True)
+        conanfile = GenConanfile("myconf", "0.1").with_package_type("configuration") \
+                                                 .with_exports("*")
+        c.save({"conanfile.py": conanfile,
+                "global.conf": "user.myteam:myconf=myvalue"})
+        c.run("create .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
 
         # Now install it
-        client.run("config install myconf/[*] --type=pkg")
-        client.run("config show *")
-        assert "user.myteam:myconf: myvalue" in client.out
+        c.run("config install myconf/[*] --type=pkg")
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
         # Just to make sure it doesn't crash in the update
-        client.run("config install myconf/[*] --type=pkg")
-        client.run("config show *")
-        assert "user.myteam:myconf: myvalue" in client.out
+        c.run("config install myconf/[*] --type=pkg")
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
+
+    def test_cant_use_as_dependency(self):
+        c = TestClient()
+        conanfile = GenConanfile("myconf", "0.1").with_package_type("configuration")
+        c.save({"myconf/conanfile.py": conanfile,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("myconf/0.1")})
+        c.run("create myconf")
+        c.run("install --requires=myconf/0.1", assert_error=True)
+        assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement" in c.out
+        c.run("install pkg", assert_error=True)
+        assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement, " \
+               "but pkg/0.1 is requiring it" in c.out
+
+    def test_lockfile(self):
+        """ it should be able to install the config using a lockfile
+        """

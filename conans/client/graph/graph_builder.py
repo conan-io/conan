@@ -311,9 +311,7 @@ class DepsGraphBuilder(object):
                 raise GraphMissingError(node, require, str(e))
 
         layout, dep_conanfile, recipe_status, remote = resolved
-        if dep_conanfile.package_type is PackageType.CONF:
-            raise ConanException(f"Configuration package {dep_conanfile} cannot be used as "
-                                 f"requirement, but {node.ref} is requiring it")
+
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
         # If the node is virtual or a test package, the require is also "root"
@@ -350,6 +348,9 @@ class DepsGraphBuilder(object):
                 down_options = Options(options_values=node.conanfile.default_build_options)
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
+        if dep_conanfile.package_type is PackageType.CONF:
+            raise ConanException(f"Configuration package {dep_conanfile} cannot be used as "
+                                 f"requirement, but {node.ref} is requiring it")
         require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
