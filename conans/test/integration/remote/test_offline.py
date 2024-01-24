@@ -1,7 +1,8 @@
 import re
 
+from conans.errors import ConanConnectionError
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestRequester
 
 
 def test_offline():
@@ -38,7 +39,7 @@ def test_offline_build_requires():
     package is not in the cache, it will be checked in servers
     https://github.com/conan-io/conan/issues/15339
 
-    Approaches:
+    Approaches to avoid the WARNING:
     - conan remote disable <remotes>
     - conan install ... -nr (--no-remotes)
     - prepopulate the cache with all tool-requires with `-c:a tools.graph:skip_binaries=False`
@@ -52,20 +53,24 @@ def test_offline_build_requires():
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1")
     assert "Install finished successfully" in c.out
-    c.servers = {"default": None}
-    c.run("install --requires=pkg/0.1", assert_error=True)
-    # At the moment this fails, it doesn't work offline, because the package for the build-require
-    # is not locally installed, and Conan will check for it. Later it might decide that it can
-    # be skipped, but initially it will look for it, and as it is not in the cache, it will look
-    # in the remotes.
-    assert "ERROR: 'NoneType' object has no attribute 'fake_url'. [Remote: default]" in c.out
+
+    class MyHttpRequester(TestRequester):
+
+        def get(self, _, **kwargs):
+            raise ConanConnectionError("ALL BAD")
+
+    c.requester_class = MyHttpRequester
+    c.run("install --requires=pkg/0.1")
+    assert "tool/0.1: WARN: Failed checking binary in remote default" in c.out
     # Explicitly telling that no-remotes, works
     c.run("install --requires=pkg/0.1 -nr")
+    assert "tool/0.1: WARN" not in c.out
     assert "Install finished successfully" in c.out
 
     # graph info also breaks
-    c.run("graph info --requires=pkg/0.1", assert_error=True)
-    assert "ERROR: 'NoneType' object has no attribute 'fake_url'. [Remote: default]" in c.out
+    c.run("graph info --requires=pkg/0.1")
+    assert "tool/0.1: WARN: Failed checking binary in remote default" in c.out
 
     c.run("graph info --requires=pkg/0.1 -nr")
+    assert "tool/0.1: WARN" not in c.out
     assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
