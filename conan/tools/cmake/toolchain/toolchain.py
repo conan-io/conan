@@ -185,7 +185,7 @@ class CMakeToolchain(object):
         return content
 
     def _find_cmake_exe(self):
-        for req in self._conanfile.dependencies.build.values():
+        for req in self._conanfile.dependencies.direct_build.values():
             if req.ref.name == "cmake":
                 for bindir in req.cpp_info.bindirs:
                     cmake_path = os.path.join(bindir, "cmake")
