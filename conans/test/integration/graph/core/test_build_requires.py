@@ -222,66 +222,54 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(mingw, "mingw/0.1#123", deps=[zlib2], dependents=[lib])
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
 
-    @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_conflict(self):
         # https://github.com/conan-io/conan/issues/4931
         # cheetah -> gazelle -> grass/0.1
         #    \--(br)----------> grass/0.2
-        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
-        grass02_ref = RecipeReference.loads("grass/0.2@user/testing")
-        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
 
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(grass02_ref, GenConanfile().with_name("grass").with_version("0.2"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
-                                                      .with_require(grass01_ref))
+        self._cache_recipe("grass/0.1", GenConanfile())
+        self._cache_recipe("grass/0.2", GenConanfile())
+        self._cache_recipe("gazelle/0.1", GenConanfile().with_require("grass/0.1"))
 
-        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
-                                           .with_require(gazelle_ref)
-                                           .with_tool_requires(grass02_ref))
+        deps_graph = self.build_graph(GenConanfile("cheetah", "0.1")
+                                      .with_require("gazelle/0.1")
+                                      .with_tool_requires("grass/0.2"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        cheetah = deps_graph.root
+        gazelle = cheetah.dependencies[0].dst
+        grass2 = cheetah.dependencies[1].dst
+        grass1 = gazelle.dependencies[0].dst
+        self._check_node(cheetah, "cheetah/0.1", deps=[gazelle, grass2])
+        self._check_node(gazelle, "gazelle/0.1#123", deps=[grass1], dependents=[cheetah])
+        self._check_node(grass1, "grass/0.1#123", deps=[], dependents=[gazelle])
+        self._check_node(grass2, "grass/0.2#123", dependents=[cheetah])
+
+
+class TestBuildRequiresVisible(GraphManagerTest):
+
+    def test_visible_build(self):
+        self._cache_recipe("liba/0.1", GenConanfile())
+        self._cache_recipe("libb/0.1", GenConanfile().with_requirement("liba/0.1", build=True))
+        self._cache_recipe("libc/0.1", GenConanfile().with_requirement("libb/0.1", visible=False))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("libc/0.1"))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
 
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
+        self._check_node(app, "app/0.1@", deps=[libc], dependents=[])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", deps=[], dependents=[libb])
 
-        assert liba1.conflict == liba2
-        assert liba2.conflict == liba1
-
-    @pytest.mark.xfail(reason="Not updated yet")
-    def test_build_require_link_order(self):
-        # https://github.com/conan-io/conan/issues/4931
-        # cheetah -> gazelle -> grass
-        #    \--(br)------------/
-        grass01_ref = RecipeReference.loads("grass/0.1@user/testing")
-        gazelle_ref = RecipeReference.loads("gazelle/0.1@user/testing")
-
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
-                                                      .with_require(grass01_ref))
-
-        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
-                                                    .with_require(gazelle_ref)
-                                                    .with_tool_requires(grass01_ref))
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        cheetah = deps_graph.root
-        gazelle = cheetah.dependencies[0].dst
-        grass = gazelle.dependencies[0].dst
-        grass2 = cheetah.dependencies[1].dst
-
-        self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], dependents=[])
-        self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
-                             ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+        # node, include, link, build, run
+        _check_transitive(app, [(libc, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, False, False, True, False)])  # liba is build & visible!
+        _check_transitive(libb, [(liba, True, True, True, False)])
 
 
 class TestTestRequire(GraphManagerTest):

@@ -5,6 +5,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.api.output import ConanOutput
 from conans.client.loader import load_python_file
 from conans.errors import ConanException
+from conans.model.recipe_ref import ref_matches
 from conans.util.files import rmdir, mkdir
 
 
@@ -37,8 +38,19 @@ def _find_deployer(d, cache_deploy_folder):
     raise ConanException(f"Cannot find deployer '{d}'")
 
 
-def do_deploys(conan_api, graph, deploy, deploy_folder):
+def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
     mkdir(deploy_folder)
+    # handle the recipe deploy()
+    if deploy_package:
+        for node in graph.ordered_iterate():
+            conanfile = node.conanfile
+            if not conanfile.ref or not any(ref_matches(conanfile.ref, p, None)
+                                            for p in deploy_package):
+                continue
+            if hasattr(conanfile, "deploy"):
+                conanfile.output.info("Executing deploy()")
+                conanfile.deploy_folder = deploy_folder
+                conanfile.deploy()
     # Handle the deploys
     cache = HomePaths(conan_api.cache_folder)
     for d in deploy or []:
@@ -77,7 +89,7 @@ def _deploy_single(dep, conanfile, output_folder, folder_name):
     except Exception as e:
         if "WinError 1314" in str(e):
             ConanOutput().error("full_deploy: Symlinks in Windows require admin privileges "
-                                "or 'Developer mode = ON'")
+                                "or 'Developer mode = ON'", error_type="exception")
         raise ConanException(f"full_deploy: The copy of '{dep}' files failed: {e}.\nYou can "
                              f"use 'tools.deployer:symlinks' conf to disable symlinks")
     dep.set_deploy_folder(new_folder)

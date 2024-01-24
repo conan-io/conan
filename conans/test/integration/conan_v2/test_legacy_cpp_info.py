@@ -65,20 +65,3 @@ class TestLegacy1XRecipes:
         assert "Recipe 'pkg/1.0' seems broken." in c.out
         assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
 
-    def test_legacy_build(self):
-        c = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "1.0"
-
-                def build(self):
-                    raise Exception("Build broken")
-            """)
-        c.save({"pkg/conanfile.py": conanfile,
-                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0")})
-        c.run("export pkg")
-        c.run("install app --build=missing", assert_error=True)
-        assert "Recipe 'pkg/1.0' cannot build its binary" in c.out
-        assert "It is possible that this recipe is not Conan 2.0 ready" in c.out

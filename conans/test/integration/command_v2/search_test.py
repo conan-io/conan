@@ -113,7 +113,7 @@ class TestRemotes:
             "    {}\n".format(recipe_name)
         )
 
-        assert expected_output == self.client.out
+        assert expected_output in self.client.out
 
     def test_search_in_all_remotes(self):
         remote1 = "remote1"
@@ -144,7 +144,7 @@ class TestRemotes:
         self._add_recipe(remote2, remote2_recipe2)
 
         self.client.run("search test_recipe")
-        assert expected_output == self.client.out
+        assert expected_output in self.client.out
 
     def test_search_in_one_remote(self):
         remote1 = "remote1"
@@ -201,7 +201,7 @@ class TestRemotes:
         self._add_recipe(remote2, remote2_recipe2)
 
         self.client.run("search test_recipe")
-        assert expected_output == self.client.out
+        assert expected_output in self.client.out
 
     def test_search_in_missing_remote(self):
         remote1 = "remote1"

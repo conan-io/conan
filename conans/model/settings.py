@@ -72,6 +72,7 @@ class SettingsItem(object):
         else:
             result._definition = {k: v.copy_conaninfo_settings()
                                   for k, v in self._definition.items()}
+            result._definition["ANY"] = Settings()
         return result
 
     def __bool__(self):
@@ -106,6 +107,11 @@ class SettingsItem(object):
             raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
             raise ConanException("'%s' value not defined" % self._name)
+        return self._get_definition()
+
+    def _get_definition(self):
+        if self._value not in self._definition and "ANY" in self._definition:
+            return self._definition["ANY"]
         return self._definition[self._value]
 
     def __getattr__(self, item):
@@ -142,7 +148,7 @@ class SettingsItem(object):
         partial_name = ".".join(self._name.split(".")[1:])
         result.append((partial_name, self._value))
         if isinstance(self._definition, dict):
-            sub_config_dict = self._definition[self._value]
+            sub_config_dict = self._get_definition()
             result.extend(sub_config_dict.values_list)
         return result
 
@@ -150,7 +156,7 @@ class SettingsItem(object):
         if self._value is None and None not in self._definition:
             raise ConanException("'%s' value not defined" % self._name)
         if isinstance(self._definition, dict):
-            self._definition[self._value].validate()
+            self._get_definition().validate()
 
     def possible_values(self):
         if isinstance(self._definition, list):

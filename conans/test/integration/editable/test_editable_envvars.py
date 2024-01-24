@@ -65,10 +65,10 @@ def test_editable_conf():
             def layout(self):
                 self.folders.source = "mysource"
                 self.folders.build = "mybuild"
-                self.layouts.source.conf_info.append_path("user.myconf", "mylocalsrc")
-                self.layouts.build.conf_info.append_path("user.myconf", "mylocalbuild")
-                self.layouts.build.conf_info.update_path("user.mydictconf", {"a": "mypatha", "b": "mypathb"})
-                self.layouts.build.conf_info.define_path("user.mydictconf2", {"c": "mypathc"})
+                self.layouts.source.conf_info.append_path("user:myconf", "mylocalsrc")
+                self.layouts.build.conf_info.append_path("user:myconf", "mylocalbuild")
+                self.layouts.build.conf_info.update_path("user:mydictconf", {"a": "mypatha", "b": "mypathb"})
+                self.layouts.build.conf_info.define_path("user:mydictconf2", {"c": "mypathc"})
         """)
 
     pkg = textwrap.dedent("""
@@ -76,11 +76,11 @@ def test_editable_conf():
         class Pkg(ConanFile):
             requires = "dep/1.0"
             def generate(self):
-                conf = self.dependencies["dep"].conf_info.get("user.myconf")
+                conf = self.dependencies["dep"].conf_info.get("user:myconf")
                 self.output.info(f"CONF: {conf}")
-                dictconf = self.dependencies["dep"].conf_info.get("user.mydictconf", check_type=dict)
+                dictconf = self.dependencies["dep"].conf_info.get("user:mydictconf", check_type=dict)
                 self.output.info(f"CONFDICT: {dictconf}")
-                dictconf2 = self.dependencies["dep"].conf_info.get("user.mydictconf2", check_type=dict)
+                dictconf2 = self.dependencies["dep"].conf_info.get("user:mydictconf2", check_type=dict)
                 self.output.info(f"CONFDICT: {dictconf2}")
         """)
     c.save({"dep/conanfile.py": dep,

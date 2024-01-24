@@ -31,6 +31,10 @@ class PyRequires(object):
     def all_refs(self):
         return [r.ref for r in self._pyrequires.values()]
 
+    def info_requires(self):
+        return {pyreq.ref: getattr(pyreq.conanfile, "package_id_python_mode", None)
+                for pyreq in self._pyrequires.values()}
+
     def items(self):
         return self._pyrequires.items()
 
@@ -120,7 +124,9 @@ class PyRequireLoader(object):
             recipe = self._proxy.get_recipe(ref, remotes, update, check_update)
         except ConanException as e:
             raise ConanException(f"Cannot resolve python_requires '{ref}': {str(e)}")
-        path, recipe_status, remote, new_ref = recipe
+        layout, recipe_status, remote = recipe
+        path = layout.conanfile()
+        new_ref = layout.reference
         conanfile, module = loader.load_basic_module(path, graph_lock, remotes=remotes,
                                                      update=update, check_update=check_update)
         conanfile.name = new_ref.name

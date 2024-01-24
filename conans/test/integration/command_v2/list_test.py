@@ -100,7 +100,7 @@ class TestListRefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -293,7 +293,7 @@ class TestListPrefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -761,13 +761,13 @@ class TestListCompact:
         expected = textwrap.dedent("""\
             pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2a67a51fbf36a4ee345b2125dd2642be60ffd3ec
               settings: Macos, armv8
-              options(diff): shared=True
+              options: shared=True
             pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:2d46abc802bbffdf2af11591e3e452bc6149ea2b
               settings: Linux, armv8
-              options(diff): shared=False
+              options: shared=False
             pkg/1.0#03591c8b22497dd74214e08b3bf2a56f:d2e97769569ac0a583d72c10a37d5ca26de7c9fa
               settings: Windows, x86
-              options(diff): shared=False
+              options: shared=False
             """)
         assert textwrap.indent(expected, "      ") in c.stdout
 
@@ -778,14 +778,16 @@ class TestListCompact:
         c.run("create pkg -s os=Windows -s arch=x86")
         c.run("create other")
         c.run("list *:* --format=compact")
-        expected_output = re.sub(r"\(.*\)", "(timestamp)", c.stdout)
+        expected_output = re.sub(r"%.* ", "%timestamp ",
+                                 re.sub(r"\(.*\)", "(timestamp)", c.stdout))
+
         expected = textwrap.dedent("""\
             Local Cache
               other/1.0
-                other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd (timestamp)
+                other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd%timestamp (timestamp)
                   other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd:da39a3ee5e6b4b0d3255bfef95601890afd80709
               pkg/1.0
-                pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e (timestamp)
+                pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e%timestamp (timestamp)
                   pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e:c11e463c49652ba9c5adc62573ee49f966bd8417
                     settings: Windows, x86
             """)

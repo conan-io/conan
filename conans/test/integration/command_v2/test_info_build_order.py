@@ -62,6 +62,55 @@ def test_info_build_order():
     assert bo_json == result
 
 
+def test_info_build_order_configuration():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("export dep --name=dep --version=0.1")
+    c.run("export pkg --name=pkg --version=0.1")
+    c.run("graph build-order consumer --build=missing --order=configuration --format=json")
+    bo_json = json.loads(c.stdout)
+
+    result = [
+        [
+            {
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                "pref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "depends": [],
+                "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                'prev': None,
+                'filenames': [],
+                "context": "host",
+                "binary": "Build",
+                'build_args': '--require=dep/0.1 --build=dep/0.1',
+                "options": [],
+                "overrides": {}
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
+                "pref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "depends": [
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                ],
+                "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                'prev': None,
+                'filenames': [],
+                "context": "host",
+                "binary": "Build",
+                'build_args': '--require=pkg/0.1 --build=pkg/0.1',
+                "options": [],
+                "overrides": {}
+
+            }
+        ]
+    ]
+
+    assert bo_json == result
+
+
 def test_info_build_order_build_require():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
@@ -245,6 +294,83 @@ def test_info_build_order_merge_multi_product():
                         "overrides": {}
                     }
                 ]]
+            }
+        ]
+    ]
+
+    assert bo_json == result
+
+
+def test_info_build_order_merge_multi_product_configurations():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+            "consumer1/conanfile.txt": "[requires]\npkg/0.1",
+            "consumer2/conanfile.txt": "[requires]\npkg/0.2"})
+    c.run("export dep --name=dep --version=0.1")
+    c.run("export pkg --name=pkg --version=0.1")
+    c.run("export pkg --name=pkg --version=0.2")
+    c.run("graph build-order consumer1  --build=missing --order=configuration --format=json",
+          redirect_stdout="bo1.json")
+    c.run("graph build-order consumer2  --build=missing --order=configuration --format=json",
+          redirect_stdout="bo2.json")
+    c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=json",
+          redirect_stdout="bo3.json")
+
+    bo_json = json.loads(c.load("bo3.json"))
+    result = [
+        [
+            {
+                "ref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd",
+                "pref": "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "package_id": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "prev": None,
+                "context": "host",
+                "binary": "Build",
+                "options": [],
+                "filenames": [
+                    "bo1",
+                    "bo2"
+                ],
+                "depends": [],
+                "overrides": {},
+                "build_args": "--require=dep/0.1 --build=dep/0.1"
+            }
+        ],
+        [
+            {
+                "ref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032",
+                "pref": "pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "prev": None,
+                "context": "host",
+                "binary": "Build",
+                "options": [],
+                "filenames": [
+                    "bo1"
+                ],
+                "depends": [
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                ],
+                "overrides": {},
+                "build_args": "--require=pkg/0.1 --build=pkg/0.1"
+            },
+            {
+                "ref": "pkg/0.2#1ac8dd17c0f9f420935abd3b6a8fa032",
+                "pref": "pkg/0.2#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "package_id": "59205ba5b14b8f4ebc216a6c51a89553021e82c1",
+                "prev": None,
+                "context": "host",
+                "binary": "Build",
+                "options": [],
+                "filenames": [
+                    "bo2"
+                ],
+                "depends": [
+                    "dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709"
+                ],
+                "overrides": {},
+                "build_args": "--require=pkg/0.2 --build=pkg/0.2"
             }
         ]
     ]

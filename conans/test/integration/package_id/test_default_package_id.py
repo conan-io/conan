@@ -21,7 +21,7 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
     """ test that some consumer package ids are changed when the dependency change one of its
     options
     """
-    c = TestClient()
+    c = TestClient(light=True)
     dep = GenConanfile("dep", "0.1").with_option("myopt", [True, False]) \
         .with_package_type(typedep).with_class_attribute('implements = ["auto_shared_fpic", "auto_header_only"]')
     consumer = GenConanfile("consumer", "0.1").with_requires("dep/0.1")\
@@ -62,7 +62,7 @@ def test_default_package_id_options(typedep, typeconsumer, different_id):
 def test_default_package_id_versions(typedep, versiondep, typeconsumer, different_id):
     """ test that some consumer package ids are changed when the dependency changes its version
     """
-    c = TestClient()
+    c = TestClient(light=True)
     dep = GenConanfile("dep").with_package_type(typedep)
     consumer = GenConanfile("consumer", "0.1").with_requires("dep/[>0.0]") \
         .with_package_type(typeconsumer)

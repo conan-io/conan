@@ -268,7 +268,7 @@ class Requirement:
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=True, direct=False)
+                                             run=False, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -466,6 +466,18 @@ class Requirements:
                 except TypeError:
                     raise ConanException("Wrong 'tool_requires' definition, "
                                          "did you mean 'build_requirements()'?")
+
+    def reindex(self, require, new_name):
+        """ This operation is necessary when the reference name of a package is changed
+        as a result of an "alternative" replacement of the package name, otherwise the dictionary
+        gets broken by modified key
+        """
+        result = OrderedDict()
+        for k, v in self._requires.items():
+            if k is require:
+                k.ref.name = new_name
+            result[k] = v
+        self._requires = result
 
     def values(self):
         return self._requires.values()

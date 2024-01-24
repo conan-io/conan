@@ -5,20 +5,23 @@ import fnmatch
 
 from collections import OrderedDict
 
-
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
-    "core:skip_warnings": "Do not show warnings in this list",
+    "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
+                               "Current warning tags are 'network', 'deprecated'",
+    "core:skip_warnings": "Do not show warnings matching any of the patterns in this list. "
+                          "Current warning tags are 'network', 'deprecated'",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
     "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.upload:parallel": "Number of concurrent threads to upload packages",
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
@@ -45,6 +48,8 @@ BUILT_IN_CONFS = {
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Gzip compression
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
+    # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
+    "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -64,6 +69,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake:install_strip": "Add --strip to cmake.install()",
@@ -80,7 +86,8 @@ BUILT_IN_CONFS = {
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
-    "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
+    "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
+    "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
@@ -113,10 +120,9 @@ BUILT_IN_CONFS = {
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
-
-CORE_CONF_PATTERN = re.compile(r"^core[.:]")
-TOOLS_CONF_PATTERN = re.compile(r"^tools[.:]")
-USER_CONF_PATTERN = re.compile(r"^user[.:]")
+CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
+TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
+USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 
 def _is_profile_module(module_name):
@@ -253,7 +259,6 @@ class _ConfValue(object):
 
 
 class Conf:
-
     # Putting some default expressions to check that any value could be false
     boolean_false_expressions = ("0", '"0"', "false", '"false"', "off")
 
@@ -311,7 +316,8 @@ class Conf:
                 return str(v)
             elif v is None:  # value was unset
                 return default
-            elif check_type is not None and not isinstance(v, check_type):
+            elif (check_type is not None and not isinstance(v, check_type) or
+                  check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
                                      f"{check_type.__name__}-like object. The value '{v}' "
                                      f"introduced is a {type(v).__name__} object")
@@ -345,7 +351,7 @@ class Conf:
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
 
     def serialize(self):
         """
@@ -479,7 +485,7 @@ class Conf:
         # Reading the list of all the configurations selected by the user to use for the package_id
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
-            matching_confs = [c for c in self._values if re.match(conf_name, c)] or [conf_name]
+            matching_confs = [c for c in self._values if re.match(conf_name, c)]
             for name in matching_confs:
                 value = self.get(name)
                 # Pruning any empty values, those should not affect package ID
@@ -494,12 +500,12 @@ class Conf:
     @staticmethod
     def _check_conf_name(conf):
         if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
-                                 f" Run 'conan config list' to see all the available confs.")
+            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
+                                 f"the conf format introduced is not valid. Run 'conan config list' "
+                                 f"to see all the available confs.")
 
 
 class ConfDefinition:
-
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
                ("=!", "unset"), ("*=", "update"), ("=", "define"))

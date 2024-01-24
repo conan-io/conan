@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
 
@@ -259,7 +257,6 @@ class CompatibleIDsTest(unittest.TestCase):
         client.assert_listed_binary({"pkg/0.1@user/testing": (package_id, "Cache")})
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
-    @pytest.mark.xfail(reason="lockfiles have been deactivated at the moment")
     def test_compatible_lockfile(self):
         # https://github.com/conan-io/conan/issues/9002
         client = TestClient()
@@ -275,17 +272,17 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile})
-        client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -s os=Linux")
-        self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
-        self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
-                      " created", client.out)
+        client.run("create . --name=pkg --version=0.1 -s os=Linux")
+        self.assertIn("pkg/0.1: PackageInfo!: OS: Linux!", client.out)
+        self.assertIn("pkg/0.1: Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' built",
+                      client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
-        client.run("lock create conanfile.py -s os=Windows --lockfile-out=deps.lock")
-        client.run("install conanfile.py --lockfile=deps.lock")
-        self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
-        self.assertIn("pkg/0.1@user/stable:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
-        self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
+        client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
+        client.run("lock create . -s os=Windows --lockfile-out=deps.lock")
+        client.run("install . -s os=Windows --lockfile=deps.lock")
+        self.assertIn("pkg/0.1: PackageInfo!: OS: Linux!", client.out)
+        self.assertIn("9a4eb3c8701508aa9458b1a73d0633783ecc2270", client.out)
+        self.assertIn("pkg/0.1: Already installed!", client.out)
 
     def test_compatible_diamond(self):
         # https://github.com/conan-io/conan/issues/9880

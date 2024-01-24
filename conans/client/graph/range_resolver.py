@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
@@ -6,8 +7,9 @@ from conans.search.search import search_recipes
 
 class RangeResolver:
 
-    def __init__(self, conan_app, global_conf):
+    def __init__(self, conan_app, global_conf, editable_packages):
         self._cache = conan_app.cache
+        self._editable_packages = editable_packages
         self._remote_manager = conan_app.remote_manager
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
@@ -54,7 +56,7 @@ class RangeResolver:
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]
-            local_found.extend(r for r in self._cache.editable_packages.edited_refs
+            local_found.extend(r for r in self._editable_packages.edited_refs
                                if r.name == search_ref.name and r.user == search_ref.user
                                and r.channel == search_ref.channel)
             self._cached_cache[pattern] = local_found
@@ -62,6 +64,9 @@ class RangeResolver:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
+        if remote.allowed_packages and not any(search_ref.matches(f, is_consumer=False)
+                                               for f in remote.allowed_packages):
+            return []
         pattern = str(search_ref)
         pattern_cached = self._cached_remote_found.setdefault(pattern, {})
         results = pattern_cached.get(remote.name)

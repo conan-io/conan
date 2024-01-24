@@ -1,7 +1,9 @@
+import fnmatch
 import os
 
 from conan.tools.files import chdir
 from conan.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.util.files import mkdir
 from conans.util.runners import check_output_runner
 
@@ -10,13 +12,24 @@ class Git:
     """
     Git is a wrapper for several common patterns used with *git* tool.
     """
-    def __init__(self, conanfile, folder="."):
+    def __init__(self, conanfile, folder=".", excluded=None):
         """
         :param conanfile: Conanfile instance.
         :param folder: Current directory, by default ``.``, the current working directory.
         """
         self._conanfile = conanfile
         self.folder = folder
+        self._excluded = excluded
+        global_conf = conanfile._conan_helpers.global_conf
+        conf_excluded = global_conf.get("core.scm:excluded", check_type=list)
+        if conf_excluded:
+            if excluded:
+                c = ConfDefinition()
+                c.loads(f"core.scm:excluded={excluded}")
+                c.update_conf_definition(global_conf)
+                self._excluded = c.get("core.scm:excluded", check_type=list)
+            else:
+                self._excluded = conf_excluded
 
     def run(self, cmd):
         """
@@ -30,8 +43,10 @@ class Git:
             #  - the ``conan source`` command, not passing profiles, buildenv not injected
             return check_output_runner("git {}".format(cmd)).strip()
 
-    def get_commit(self):
+    def get_commit(self, repository=False):
         """
+        :param repository: By default gets the commit of the defined folder, use repo=True to get
+                     the commit of the repository instead.
         :return: The current commit, with ``git rev-list HEAD -n 1 -- <folder>``.
             The latest commit is returned, irrespective of local not committed changes.
         """
@@ -41,7 +56,8 @@ class Git:
             # --full-history is needed to not avoid wrong commits:
             # https://github.com/conan-io/conan/issues/10971
             # https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-Defaultmode
-            commit = self.run('rev-list HEAD -n 1 --full-history -- "."')
+            path = '' if repository else '-- "."'
+            commit = self.run(f'rev-list HEAD -n 1 --full-history {path}')
             return commit
         except Exception as e:
             raise ConanException("Unable to get git commit in '%s': %s" % (self.folder, str(e)))
@@ -103,10 +119,18 @@ class Git:
 
         :return: True, if the current folder is dirty. Otherwise, False.
         """
-        status = self.run("status -s").strip()
-        return bool(status)
+        status = self.run("status . --short --no-branch --untracked-files").strip()
+        self._conanfile.output.debug(f"Git status:\n{status}")
+        if not self._excluded:
+            return bool(status)
+        # Parse the status output, line by line, and match it with "_excluded"
+        lines = [line.strip() for line in status.splitlines()]
+        lines = [line.split()[1] for line in lines if line]
+        lines = [line for line in lines if not any(fnmatch.fnmatch(line, p) for p in self._excluded)]
+        self._conanfile.output.debug(f"Filtered git status: {lines}")
+        return bool(lines)
 
-    def get_url_and_commit(self, remote="origin"):
+    def get_url_and_commit(self, remote="origin", repository=False):
         """
         This is an advanced method, that returns both the current commit, and the remote repository url.
         This method is intended to capture the current remote coordinates for a package creation,
@@ -131,13 +155,15 @@ class Git:
         to strip the credentials from the result.
 
         :param remote: Name of the remote git repository ('origin' by default).
+        :param repository: By default gets the commit of the defined folder, use repo=True to get
+                     the commit of the repository instead.
         :return: (url, commit) tuple
         """
         dirty = self.is_dirty()
         if dirty:
             raise ConanException("Repo is dirty, cannot capture url and commit: "
                                  "{}".format(self.folder))
-        commit = self.get_commit()
+        commit = self.get_commit(repository=repository)
         url = self.get_remote_url(remote=remote)
         in_remote = self.commit_in_remote(commit, remote=remote)
         if in_remote:

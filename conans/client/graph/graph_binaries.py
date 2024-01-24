@@ -6,8 +6,8 @@ from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
-                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_SYSTEM_TOOL,
-                                       BINARY_SYSTEM_TOOL)
+                                       BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
+                                       BINARY_PLATFORM)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter
 
@@ -29,7 +29,8 @@ class GraphBinariesAnalyzer(object):
         with_deps_to_build = False
         # check dependencies, if they are being built, "cascade" will try to build this one too
         if build_mode.cascade:
-            with_deps_to_build = any(dep.dst.binary == BINARY_BUILD for dep in node.dependencies)
+            with_deps_to_build = any(dep.dst.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
+                                     for dep in node.dependencies)
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
             conanfile.output.info('Forced build from source')
@@ -178,8 +179,8 @@ class GraphBinariesAnalyzer(object):
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID
             return
-        if node.recipe == RECIPE_SYSTEM_TOOL:
-            node.binary = BINARY_SYSTEM_TOOL
+        if node.recipe == RECIPE_PLATFORM:
+            node.binary = BINARY_PLATFORM
             return
 
         if node.recipe == RECIPE_EDITABLE:
@@ -206,12 +207,11 @@ class GraphBinariesAnalyzer(object):
                 break
 
         if node.conanfile.upload_policy == "skip":
+            # Download/update shouldn't be checked in the servers if this is "skip-upload"
+            # The binary can only be in cache or missing.
             if cache_latest_prev:
                 node.binary = BINARY_CACHE
                 node.prev = cache_latest_prev.revision
-            elif build_mode.allowed(node.conanfile):
-                node.should_build = True
-                node.binary = BINARY_BUILD
             else:
                 node.binary = BINARY_MISSING
         elif cache_latest_prev is None:  # This binary does NOT exist in the cache

@@ -1,29 +1,44 @@
 import os
-import platform
 import shutil
 
 import pytest
 
-from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture(scope="session")
-def _transitive_libraries():
+def _matrix_client():
+    """
+    engine/1.0->matrix/1.0
+    """
     c = TestClient()
+    c.run("new cmake_lib -d name=matrix -d version=1.0")
+    c.run("create . -tf=")
+    return c
 
-    c.save(pkg_cmake("liba", "0.1"))
-    if platform.system() != "Windows":
-        c.run("create . -o liba/*:fPIC=True")
-    else:
-        c.run("create .")
-    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
-    c.run("create .")
-    if platform.system() != "Windows":
-        c.run("create . -o libb/*:shared=True")
-    else:
-        c.run("create . -o libb/*:shared=True -o liba/*:fPIC=True")
+
+@pytest.fixture()
+def matrix_client(_matrix_client):
+    c = TestClient()
+    c.cache_folder = os.path.join(temp_folder(), ".conan2")
+    shutil.copytree(_matrix_client.cache_folder, c.cache_folder)
+    return c
+
+
+@pytest.fixture(scope="session")
+def _transitive_libraries(_matrix_client):
+    """
+    engine/1.0->matrix/1.0
+    """
+    c = TestClient()
+    c.cache_folder = os.path.join(temp_folder(), ".conan2")
+    shutil.copytree(_matrix_client.cache_folder, c.cache_folder)
+    c.save({}, clean_first=True)
+    c.run("new cmake_lib -d name=engine -d version=1.0 -d requires=matrix/1.0")
+    # create both static and shared
+    c.run("create . -tf=")
+    c.run("create . -o engine/*:shared=True -tf=")
     return c
 
 
