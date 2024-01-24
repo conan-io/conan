@@ -1013,12 +1013,16 @@ class TestTestPackagePythonRequire:
             from conan import ConanFile
 
             class Tool(ConanFile):
+                python_requires = "tested_reference_str"
                 def test(self):
                     self.output.info("{}!!!".format(self.python_requires["common"].module.mycommon()))
             """)
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
         c.run("create .")
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+        c.run("test test_package common/0.1")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):
@@ -1048,6 +1052,7 @@ class TestTestPackagePythonRequire:
                 "test_package/conanfile.py": test})
         c.run("create . ")
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
+        assert "WARN: deprecated: test_package/conanfile.py should declare 'python_requires" in c.out
         c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out
 

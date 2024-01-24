@@ -1,7 +1,12 @@
 import os.path
+import re
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 def test_cache_clean():
@@ -113,3 +118,16 @@ def test_cache_multiple_builds_diff_prev_clean():
     assert len(os.listdir(builds_folder)) == 2  # two builds will remain, both are valid
     c.run('remove * -c')
     assert len(os.listdir(builds_folder)) == 0  # no folder remain
+
+
+def test_cache_clean_custom_storage():
+    c = TestClient()
+    t = temp_folder(path_with_spaces=False)
+    save(c.cache.global_conf_path, f"core.cache:storage_path={t}")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_cmake_build()})
+    c.run("create .", assert_error=True)
+    build_folder = re.search(r"pkg/0.1: Building your package in (\S+)", str(c.out)).group(1)
+    assert os.listdir(build_folder)
+    # now clean
+    c.run("cache clean")
+    assert not os.path.exists(build_folder)

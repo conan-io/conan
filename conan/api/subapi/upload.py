@@ -99,7 +99,7 @@ class UploadAPI:
             thread_pool.close()
             thread_pool.join()
         elapsed = time.time() - t
-        ConanOutput().success(f"Upload complete in {int(elapsed)}s\n")
+        ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
 
     def get_backup_sources(self, package_list=None):
         """Get list of backup source files currently present in the cache,

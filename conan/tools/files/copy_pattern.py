@@ -37,6 +37,12 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
+    if conanfile:  # Some usages still pass None
+        copied = '\n    '.join(files_to_copy)
+        conanfile.output.debug(f"copy(pattern={pattern}) copied {len(copied_files)} files\n"
+                               f"  from {src}\n"
+                               f"  to {dst}\n"
+                               f"  Files:\n    {copied}")
     return copied_files
 
 
@@ -106,10 +112,7 @@ def _copy_files(files, src, dst, keep_path):
         abs_src_name = os.path.join(src, filename)
         filename = filename if keep_path else os.path.basename(filename)
         abs_dst_name = os.path.normpath(os.path.join(dst, filename))
-        try:
-            os.makedirs(os.path.dirname(abs_dst_name))
-        except Exception:
-            pass
+        os.makedirs(os.path.dirname(abs_dst_name), exist_ok=True)
         if os.path.islink(abs_src_name):
             linkto = os.readlink(abs_src_name)  # @UndefinedVariable
             try:

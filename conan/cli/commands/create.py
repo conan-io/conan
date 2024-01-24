@@ -9,7 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conans.util.files import mkdir
+from conans.util.files import mkdir, load
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -103,7 +103,9 @@ def create(conan_api, parser, *args):
     if test_conanfile_path:
         # TODO: We need arguments for:
         #  - decide update policy "--test_package_update"
-        tested_python_requires = ref.repr_notime() if is_python_require else None
+        # If it is a string, it will be injected always, if it is a RecipeReference, then it will
+        # be replaced only if ``python_requires = "tested_reference_str"``
+        tested_python_requires = ref.repr_notime() if is_python_require else ref
         from conan.cli.commands.test import run_test
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
@@ -129,16 +131,16 @@ def _check_tested_reference_matches(deps_graph, tested_ref, out):
                     "tested is '{}'".format(missmatch[0], tested_ref))
 
 
-def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requires=None):
+def test_package(conan_api, deps_graph, test_conanfile_path):
     out = ConanOutput()
     out.title("Testing the package")
     # TODO: Better modeling when we are testing a python_requires
-    if len(deps_graph.nodes) == 1 and not tested_python_requires:
+    conanfile = deps_graph.root.conanfile
+    if len(deps_graph.nodes) == 1 and not hasattr(conanfile, "python_requires"):
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
-    conanfile = deps_graph.root.conanfile
     # To make sure the folders are correct
     conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
     if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:
