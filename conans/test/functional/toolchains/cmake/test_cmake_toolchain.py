@@ -1495,7 +1495,7 @@ def test_redirect_stdout():
     assert re.search("Install stderr: ''", client.out)
 
 
-#@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "3.23")
 class TestEnvironmentInPresets:
     @pytest.fixture(scope="class")
     def _init_client(self):
