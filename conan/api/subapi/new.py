@@ -14,7 +14,8 @@ class NewAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def get_builtin_template(self, template_name):
+    @staticmethod
+    def get_builtin_template(template_name):
         from conan.internal.api.new.basic import basic_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
