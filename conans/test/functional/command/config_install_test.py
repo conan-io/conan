@@ -621,11 +621,20 @@ class TestConfigInstall:
 class TestConfigInstallPkg:
     def test_config_install_from_pkg(self):
         c = TestClient(default_server_user=True)
-        conanfile = GenConanfile("myconf", "0.1").with_package_type("configuration") \
-                                                 .with_exports("*")
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class Conf(ConanFile):
+                name = "myconf"
+                version = "0.1"
+                package_type = "configuration"
+                def package(self):
+                    copy(self, "*", src=self.build_folder, dst=self.package_folder)
+                """)
+
         c.save({"conanfile.py": conanfile,
                 "global.conf": "user.myteam:myconf=myvalue"})
-        c.run("create .")
+        c.run("export-pkg .")
         c.run("upload * -r=default -c")
         c.run("remove * -c")
 
@@ -649,6 +658,14 @@ class TestConfigInstallPkg:
         c.run("install pkg", assert_error=True)
         assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement, " \
                "but pkg/0.1 is requiring it" in c.out
+
+    def test_cant_use_without_type(self):
+        c = TestClient()
+        conanfile = GenConanfile("myconf", "0.1")
+        c.save({"myconf/conanfile.py": conanfile})
+        c.run("create myconf")
+        c.run("config install myconf/[*] --type=pkg", assert_error=True)
+        assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
 
     def test_lockfile(self):
         """ it should be able to install the config using a lockfile

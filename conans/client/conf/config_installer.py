@@ -8,8 +8,7 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
-from conans.model.requires import Requirement
+from conans.model.pkg_type import PackageType
 from conans.util.files import mkdir, rmdir, remove, unzip, chdir
 from conans.util.runners import detect_runner
 
@@ -239,13 +238,22 @@ def configuration_install(app, conan_api, uri, verify_ssl, config_type=None,
 
     if config_type == "pkg":
         remotes = conan_api.remotes.list()
-        ref = RecipeReference.loads(uri)
-        require = Requirement(ref)
-        app.range_resolver.resolve(require, "config-install", remotes, update=True)
-        # TODO: What if we allow different configurations per-platform, like "settings.os"?
-        layout, status, remote = app.proxy.get_recipe(require.ref, remotes, update=True,
-                                                      check_update=True)
-        uri = layout.export()
+        lockfile = None
+        profile_host = profile_build = conan_api.profiles.get_profile([])
+
+        # TODO: Remove output to stderr, reads a bit confusing
+        deps_graph = conan_api.graph.load_graph_requires([uri], None, profile_host, profile_build,
+                                                         lockfile, remotes, True, no_conf=False)
+        deps_graph.report_graph_error()
+        conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=True, lockfile=lockfile)
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+
+        pkg = deps_graph.root.dependencies[0].dst
+        if pkg.conanfile.package_type is not PackageType.CONF:
+            raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
+        if pkg.dependencies:
+            raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
+        uri = pkg.conanfile.package_folder  # layout.export()
         config_type = "dir"
 
     # Execute and store the new one
