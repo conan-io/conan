@@ -111,6 +111,21 @@ def test_info_build_order_configuration():
     assert bo_json == result
 
 
+def test_info_build_order_configuration_text_formatter():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile(),
+            "pkg/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("export dep --name=dep --version=0.1")
+    c.run("export pkg --name=pkg --version=0.1")
+    c.run("graph build-order consumer --build=missing --order=configuration --format=text")
+    assert textwrap.dedent("""\
+    ======== Computing the build order ========
+    dep/0.1#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709 - Build
+    pkg/0.1#1ac8dd17c0f9f420935abd3b6a8fa032:59205ba5b14b8f4ebc216a6c51a89553021e82c1 - Build
+    """) in c.out
+
+
 def test_info_build_order_build_require():
     c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile(),
