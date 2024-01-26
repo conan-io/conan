@@ -41,9 +41,13 @@ def cli_build_order(build_order):
     # TODO: Very simple cli output, probably needs to be improved
     for level in build_order:
         for item in level:
-            for package_level in item['packages']:
-                for package in package_level:
-                    cli_out_write(f"{item['ref']}:{package['package_id']} - {package['binary']}")
+            # If this is a configuration order, it has no packages entry, each item is a package
+            if 'packages' in item:
+                for package_level in item['packages']:
+                    for package in package_level:
+                        cli_out_write(f"{item['ref']}:{package['package_id']} - {package['binary']}")
+            else:
+                cli_out_write(f"{item['ref']}:{item['package_id']} - {item['binary']}")
 
 
 def json_build_order(build_order):
