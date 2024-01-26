@@ -65,11 +65,9 @@ class GraphBinariesAnalyzer(object):
             except NotFoundException:
                 pass
             except ConanConnectionError:
-                # Not fail yet, the binary might be "Skip" and if we are offline we don't need a
-                # hard error
-                node.conanfile.output.warning(f"Failed checking binary in remote {r.name}, "
-                                              f"remote not available")
-
+                ConanOutput().error(f"Failed checking for binary '{pref}' in remote '{r.name}': "
+                                    "remote not available")
+                raise
         if not remotes and update:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 

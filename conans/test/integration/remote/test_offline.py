@@ -1,6 +1,5 @@
 import re
 
-from conans.errors import ConanConnectionError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestRequester
 
@@ -57,19 +56,23 @@ def test_offline_build_requires():
     class MyHttpRequester(TestRequester):
 
         def get(self, _, **kwargs):
-            raise ConanConnectionError("ALL BAD")
+            from requests.exceptions import ConnectionError
+            raise ConnectionError("ALL BAD")
 
     c.requester_class = MyHttpRequester
-    c.run("install --requires=pkg/0.1")
-    assert "tool/0.1: WARN: Failed checking binary in remote default" in c.out
+    # this will fail
+    c.run("install --requires=pkg/0.1", assert_error=True)
+    assert "ERROR: Failed checking for binary 'tool/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709'" \
+           in c.out
     # Explicitly telling that no-remotes, works
     c.run("install --requires=pkg/0.1 -nr")
     assert "tool/0.1: WARN" not in c.out
     assert "Install finished successfully" in c.out
 
     # graph info also breaks
-    c.run("graph info --requires=pkg/0.1")
-    assert "tool/0.1: WARN: Failed checking binary in remote default" in c.out
+    c.run("graph info --requires=pkg/0.1", assert_error=True)
+    assert "ERROR: Failed checking for binary 'tool/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709'" \
+           in c.out
 
     c.run("graph info --requires=pkg/0.1 -nr")
     assert "tool/0.1: WARN" not in c.out
