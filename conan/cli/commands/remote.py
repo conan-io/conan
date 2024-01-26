@@ -56,6 +56,7 @@ def remote_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List current remotes.
     """
+    parser.parse_args(*args)
     return conan_api.remotes.list(only_enabled=False)
 
 
@@ -80,15 +81,17 @@ def remote_add(conan_api, parser, subparser, *args):
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"text": print_remote_list})
 def remote_remove(conan_api, parser, subparser, *args):
     """
-    Remove a remote.
+    Remove remotes.
     """
     subparser.add_argument("remote", help="Name of the remote to remove. "
                                           "Accepts 'fnmatch' style wildcards.")  # to discuss
     args = parser.parse_args(*args)
-    conan_api.remotes.remove(args.remote)
+    remotes = conan_api.remotes.remove(args.remote)
+    cli_out_write("Removed remotes:")
+    return remotes
 
 
 @conan_subcommand()
@@ -190,7 +193,7 @@ def remote_login(conan_api, parser, subparser, *args):
     ret = OrderedDict()
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
-        conan_api.remotes.login(r, user, password)
+        conan_api.remotes.user_login(r, user, password)
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
 
@@ -215,7 +218,7 @@ def remote_set_user(conan_api, parser, subparser, *args):
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
         if previous_info["user_name"] != args.username:
-            conan_api.remotes.logout(r)
+            conan_api.remotes.user_logout(r)
             conan_api.remotes.user_set(r, args.username)
         ret[r.name] = {"previous_info": previous_info, "info": conan_api.remotes.user_info(r)}
     return ret
@@ -236,7 +239,7 @@ def remote_logout(conan_api, parser, subparser, *args):
     ret = OrderedDict()
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
-        conan_api.remotes.logout(r)
+        conan_api.remotes.user_logout(r)
         info = conan_api.remotes.user_info(r)
         ret[r.name] = {"previous_info": previous_info, "info": info}
     return ret
@@ -274,7 +277,7 @@ def remote_auth(conan_api, parser, subparser, *args):
     results = {}
     for r in remotes:
         try:
-            results[r.name] = {"user": conan_api.remotes.auth(r, args.with_user)}
+            results[r.name] = {"user": conan_api.remotes.user_auth(r, args.with_user)}
         except Exception as e:
             results[r.name] = {"error": str(e)}
     return results
