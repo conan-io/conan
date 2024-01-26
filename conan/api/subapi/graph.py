@@ -113,8 +113,7 @@ class GraphAPI:
             profile.options.scope(tool_requires[0])
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
-                            lockfile, remotes, update, check_updates=False, python_requires=None,
-                            no_conf=True):
+                            lockfile, remotes, update, check_updates=False, python_requires=None):
         requires = [RecipeReference.loads(r) if isinstance(r, str) else r for r in requires] \
             if requires else None
         tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
@@ -134,8 +133,7 @@ class GraphAPI:
                                      lockfile=lockfile,
                                      remotes=remotes,
                                      update=update,
-                                     check_update=check_updates,
-                                     no_conf=no_conf)
+                                     check_update=check_updates)
         return deps_graph
 
     def load_graph_consumer(self, path, name, version, user, channel,
@@ -153,7 +151,7 @@ class GraphAPI:
         return deps_graph
 
     def load_graph(self, root_node, profile_host, profile_build, lockfile=None, remotes=None,
-                   update=False, check_update=False, no_conf=True):
+                   update=False, check_update=False):
         """ Compute the dependency graph, starting from a root package, evaluation the graph with
         the provided configuration in profile_build, and profile_host. The resulting graph is a
         graph of recipes, but packages are not computed yet (package_ids) will be empty in the
@@ -178,8 +176,7 @@ class GraphAPI:
 
         remotes = remotes or []
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, check_update, self.conan_api.config.global_conf,
-                                   no_conf=no_conf)
+                                   update, check_update, self.conan_api.config.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 

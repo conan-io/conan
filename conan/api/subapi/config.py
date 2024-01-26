@@ -9,8 +9,13 @@ from conans.client.conf import default_settings_yml
 from conan.internal.api import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
+from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
+from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.graph.profile_node_definer import consumer_definer
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition, BUILT_IN_CONFS
+from conans.model.pkg_type import PackageType
+from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
 from conans.util.files import load, save
 
@@ -29,9 +34,40 @@ class ConfigAPI:
         # TODO: We probably want to split this into git-folder-http cases?
         from conans.client.conf.config_installer import configuration_install
         app = ConanApp(self.conan_api)
-        return configuration_install(app, self.conan_api, path_or_url, verify_ssl,
+        return configuration_install(app, path_or_url, verify_ssl,
                                      config_type=config_type, args=args,
                                      source_folder=source_folder, target_folder=target_folder)
+
+    def install_pkg(self, ref):
+        conan_api = self.conan_api
+        remotes = conan_api.remotes.list()
+        lockfile = None
+        profile_host = profile_build = conan_api.profiles.get_profile([])
+
+        app = ConanApp(self.conan_api)
+        conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
+        consumer_definer(conanfile, profile_build, profile_host)
+        root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        remotes = remotes or []
+        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
+                                   True, True, self.conan_api.config.global_conf,
+                                   no_conf=False)
+        deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
+        deps_graph.report_graph_error()
+        pkg = deps_graph.root.dependencies[0].dst
+        if pkg.conanfile.package_type is not PackageType.CONF:
+            raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
+        if pkg.dependencies:
+            raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
+
+        conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=True, lockfile=lockfile)
+        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+
+        uri = pkg.conanfile.package_folder  # layout.export()
+        config_type = "dir"
+        from conans.client.conf.config_installer import configuration_install
+        app = ConanApp(self.conan_api)
+        return configuration_install(app, uri, verify_ssl=False, config_type=config_type)
 
     def get(self, name, default=None, check_type=None):
         return self.global_conf.get(name, default=default, check_type=check_type)

@@ -39,6 +39,9 @@ def config_install(conan_api, parser, subparser, *args):
                            help='Install to that path in the conan cache')
     args = parser.parse_args(*args)
     verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) else get_bool_from_text(args.verify_ssl)
+    if args.type == "pkg":
+        conan_api.config.install_pkg(args.item)
+        return
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
                              source_folder=args.source_folder,
                              target_folder=args.target_folder)
