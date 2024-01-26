@@ -39,7 +39,7 @@ class Git:
         :return: The console output of the command.
         """
         print_cmd = cmd if hidden_output is None else cmd.replace(hidden_output, "<hidden>")
-        self._conanfile.output.verbose(f"RUN: git {print_cmd}", fg=Color.BRIGHT_BLUE)
+        self._conanfile.output.info(f"RUN: git {print_cmd}", fg=Color.BRIGHT_BLUE)
         with chdir(self._conanfile, self.folder):
             # We tried to use self.conanfile.run(), but it didn't work:
             #  - when using win_bash, crashing because access to .settings (forbidden in source())
