@@ -253,7 +253,9 @@ class TestGitBasicClone:
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
         c.run("create . -v")
-        assert "pkg/0.1: Running git clone" in c.out
+        # Clone is not printed, it might contain tokens
+        assert 'pkg/0.1: RUN: git clone "<hidden>"  "."' in c.out
+        assert "pkg/0.1: RUN: git checkout" in c.out
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
 
@@ -385,7 +387,8 @@ class TestGitShallowClone:
 
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
-        c.run("create .")
+        c.run("create . -v")
+        assert 'pkg/0.1: RUN: git remote add origin "<hidden>"' in c.out
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
 

@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import Color
 from conan.tools.files import chdir
 from conan.errors import ConanException
 from conans.util.files import mkdir
@@ -18,13 +19,14 @@ class Git:
         self._conanfile = conanfile
         self.folder = folder
 
-    def run(self, cmd):
+    def run(self, cmd, hidden_output=None):
         """
         Executes ``git <cmd>``
 
         :return: The console output of the command.
         """
-        self._conanfile.output.verbose(f"Running git {cmd}")
+        print_cmd = cmd if hidden_output is None else cmd.replace(hidden_output, "<hidden>")
+        self._conanfile.output.verbose(f"RUN: git {print_cmd}", fg=Color.BRIGHT_BLUE)
         with chdir(self._conanfile, self.folder):
             # We tried to use self.conanfile.run(), but it didn't work:
             #  - when using win_bash, crashing because access to .settings (forbidden in source())
@@ -183,7 +185,8 @@ class Git:
         mkdir(self.folder)
         self._conanfile.output.info("Cloning git repo")
         target_path = f'"{target}"' if target else ""  # quote in case there are spaces in path
-        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path))
+        # Avoid printing the clone command, it can contain tokens
+        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path), hidden_output=url)
 
     def fetch_commit(self, url, commit):
         """
@@ -194,7 +197,7 @@ class Git:
             url = url.replace("\\", "/")  # Windows local directory
         self._conanfile.output.info("Shallow fetch of git repo")
         self.run('init')
-        self.run(f'remote add origin "{url}"')
+        self.run(f'remote add origin "{url}"', hidden_output=url)
         self.run(f'fetch --depth 1 origin {commit}')
         self.run('checkout FETCH_HEAD')
 
