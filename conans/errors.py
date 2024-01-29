@@ -224,18 +224,10 @@ class PackageNotFoundException(NotFoundException):
                                                          self.remote_message())
 
 
-class UserInterfaceErrorException(RequestErrorException):
-    """
-        420 error
-    """
-    pass
-
-
 EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
                           RequestErrorException: 400,
                           AuthenticationException: 401,
                           ForbiddenException: 403,
                           NotFoundException: 404,
                           RecipeNotFoundException: 404,
-                          PackageNotFoundException: 404,
-                          UserInterfaceErrorException: 420}
+                          PackageNotFoundException: 404}

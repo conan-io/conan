@@ -74,7 +74,7 @@ def remote_add(conan_api, parser, subparser, *args):
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the definition of the remote even if duplicated")
     subparser.add_argument("-ap", "--allowed-packages", action="append", default=None,
-                           help="Add recipe reference pattern to list of allowed packages for this remote")
+                           help="Add recipe reference pattern to the list of allowed packages for this remote")
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
     r = Remote(args.name, args.url, args.secure, disabled=False, allowed_packages=args.allowed_packages)
@@ -108,7 +108,7 @@ def remote_update(conan_api, parser, subparser, *args):
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-ap", "--allowed-packages", action="append", default=None,
-                           help="Add recipe reference pattern to list of allowed packages for this remote")
+                           help="Add recipe reference pattern to the list of allowed packages for this remote")
     subparser.set_defaults(secure=None)
     args = parser.parse_args(*args)
     if args.url is None and args.secure is None and args.index is None and args.allowed_packages is None:

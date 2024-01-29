@@ -9,7 +9,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter
+    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError
 
 
 class GraphBinariesAnalyzer(object):
@@ -64,7 +64,10 @@ class GraphBinariesAnalyzer(object):
                     break
             except NotFoundException:
                 pass
-
+            except ConanConnectionError:
+                ConanOutput().error(f"Failed checking for binary '{pref}' in remote '{r.name}': "
+                                    "remote not available")
+                raise
         if not remotes and update:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
