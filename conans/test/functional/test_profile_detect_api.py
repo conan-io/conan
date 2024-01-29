@@ -18,7 +18,6 @@ class TestProfileDetectAPI:
             compiler={{compiler}}
             compiler.version={{detect_api.default_compiler_version(compiler, version)}}
             compiler.runtime={{runtime}}
-            compiler.libcxx={{detect_api.detect_libcxx(compiler, version, compiler_exe)}}
             compiler.cppstd={{detect_api.default_cppstd(compiler, version)}}
             compiler.update={{detect_api.detect_msvc_update(version)}}
 
