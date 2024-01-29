@@ -17,6 +17,9 @@ class Git:
         """
         :param conanfile: Conanfile instance.
         :param folder: Current directory, by default ``.``, the current working directory.
+        :param excluded: Files to be excluded from the "dirty" checks. It will compose with the
+          configuration ``core.scm:excluded`` (the configuration has higher priority).
+          It is a list of patterns to ``fnmatch``.
         """
         self._conanfile = conanfile
         self.folder = folder
@@ -112,13 +115,15 @@ class Git:
             # This will raise if commit not present.
             self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
             return True
-        except Exception as e:
+        except Exception:
             # Don't raise an error because the fetch could fail for many more reasons than the branch.
             return False
 
     def is_dirty(self):
         """
         Returns if the current folder is dirty, running ``git status -s``
+        The ``Git(..., excluded=[])`` argument and the ``core.scm:excluded`` configuration will
+        define file patterns to be skipped from this check.
 
         :return: True, if the current folder is dirty. Otherwise, False.
         """
