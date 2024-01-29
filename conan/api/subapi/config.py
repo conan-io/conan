@@ -34,9 +34,8 @@ class ConfigAPI:
         # TODO: We probably want to split this into git-folder-http cases?
         from conans.client.conf.config_installer import configuration_install
         app = ConanApp(self.conan_api)
-        return configuration_install(app, path_or_url, verify_ssl,
-                                     config_type=config_type, args=args,
-                                     source_folder=source_folder, target_folder=target_folder)
+        configuration_install(app, path_or_url, verify_ssl, config_type=config_type, args=args,
+                              source_folder=source_folder, target_folder=target_folder)
 
     def install_pkg(self, ref):
         conan_api = self.conan_api

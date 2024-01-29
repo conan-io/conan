@@ -7,7 +7,8 @@ from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
 
-CONAN_VCVARS_FILE = "conanvcvars.bat"
+CONAN_VCVARS_BAT = "conanvcvars.bat"
+CONAN_VCVARS_PS1 = "conanvcvars.ps1"
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -142,15 +143,32 @@ class VCVars:
                                 winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
 
-        content = textwrap.dedent("""\
+        content = textwrap.dedent(f"""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
-            echo conanvcvars.bat: Activating environment Visual Studio {} - {} - winsdk_version={} - vcvars_ver={}
-            {}
-            """.format(vs_version, vcvarsarch, winsdk_version, vcvars_ver, vcvars))
+            echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
+            {vcvars}
+            """)
         from conan.tools.env.environment import create_env_script
-        create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
+        create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
+
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        if is_ps1:
+            content_ps1 = textwrap.dedent(f"""\
+            if (-not $env:VSCMD_ARG_VCVARS_VER){{
+                Push-Location "$PSScriptRoot"
+                cmd /c "conanvcvars.bat&set" |
+                foreach {{
+                  if ($_ -match "=") {{
+                    $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+                  }}
+                }}
+                Pop-Location
+                write-host conanvcvars.ps1: Activated environment}}
+            """)
+            create_env_script(conanfile, content_ps1, CONAN_VCVARS_PS1, scope)
+
 
 
 def vs_ide_version(conanfile):

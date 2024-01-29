@@ -1,6 +1,7 @@
 import fnmatch
 import os
 
+from conan.api.output import Color
 from conan.tools.files import chdir, update_conandata
 from conan.errors import ConanException
 from conans.model.conf import ConfDefinition
@@ -16,6 +17,9 @@ class Git:
         """
         :param conanfile: Conanfile instance.
         :param folder: Current directory, by default ``.``, the current working directory.
+        :param excluded: Files to be excluded from the "dirty" checks. It will compose with the
+          configuration ``core.scm:excluded`` (the configuration has higher priority).
+          It is a list of patterns to ``fnmatch``.
         """
         self._conanfile = conanfile
         self.folder = folder
@@ -31,12 +35,14 @@ class Git:
             else:
                 self._excluded = conf_excluded
 
-    def run(self, cmd):
+    def run(self, cmd, hidden_output=None):
         """
         Executes ``git <cmd>``
 
         :return: The console output of the command.
         """
+        print_cmd = cmd if hidden_output is None else cmd.replace(hidden_output, "<hidden>")
+        self._conanfile.output.info(f"RUN: git {print_cmd}", fg=Color.BRIGHT_BLUE)
         with chdir(self._conanfile, self.folder):
             # We tried to use self.conanfile.run(), but it didn't work:
             #  - when using win_bash, crashing because access to .settings (forbidden in source())
@@ -109,13 +115,15 @@ class Git:
             # This will raise if commit not present.
             self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
             return True
-        except Exception as e:
+        except Exception:
             # Don't raise an error because the fetch could fail for many more reasons than the branch.
             return False
 
     def is_dirty(self):
         """
         Returns if the current folder is dirty, running ``git status -s``
+        The ``Git(..., excluded=[])`` argument and the ``core.scm:excluded`` configuration will
+        define file patterns to be skipped from this check.
 
         :return: True, if the current folder is dirty. Otherwise, False.
         """
@@ -203,7 +211,8 @@ class Git:
         mkdir(self.folder)
         self._conanfile.output.info("Cloning git repo")
         target_path = f'"{target}"' if target else ""  # quote in case there are spaces in path
-        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path))
+        # Avoid printing the clone command, it can contain tokens
+        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path), hidden_output=url)
 
     def fetch_commit(self, url, commit):
         """
@@ -214,7 +223,7 @@ class Git:
             url = url.replace("\\", "/")  # Windows local directory
         self._conanfile.output.info("Shallow fetch of git repo")
         self.run('init')
-        self.run(f'remote add origin "{url}"')
+        self.run(f'remote add origin "{url}"', hidden_output=url)
         self.run(f'fetch --depth 1 origin {commit}')
         self.run('checkout FETCH_HEAD')
 
