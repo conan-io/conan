@@ -338,6 +338,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                 tc.preprocessor_definitions["spaces2"] = "me you"
                 tc.preprocessor_definitions["foobar2"] = "bazbuz"
                 tc.preprocessor_definitions["answer2"] = 42
+                tc.preprocessor_definitions["NOVALUE_DEF"] = None
                 tc.preprocessor_definitions.release["escape_release"] = "release partially \"escaped\""
                 tc.preprocessor_definitions.release["spaces_release"] = "release me you"
                 tc.preprocessor_definitions.release["foobar_release"] = "release bazbuz"
@@ -382,6 +383,9 @@ def test_cmake_toolchain_definitions_complex_strings():
             SHOW_DEFINE(foobar_debug);
             SHOW_DEFINE(answer_debug);
             #endif
+            #ifdef NOVALUE_DEF
+            printf("NO VALUE!!!!");
+            #endif
             return 0;
         }
         """)
@@ -411,6 +415,7 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'spaces_release=release me you' in client.out
     assert 'foobar_release=release bazbuz' in client.out
     assert 'answer_release=42' in client.out
+    assert "NO VALUE!!!!" in client.out
 
     client.run("install . -pr=./profile -s build_type=Debug")
     client.run("build . -pr=./profile -s build_type=Debug")
