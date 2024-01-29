@@ -21,6 +21,7 @@ BUILT_IN_CONFS = {
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
     "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.upload:parallel": "Number of concurrent threads to upload packages",
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
@@ -47,6 +48,8 @@ BUILT_IN_CONFS = {
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Gzip compression
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
+    # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
+    "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -314,7 +317,8 @@ class Conf:
                 return str(v)
             elif v is None:  # value was unset
                 return default
-            elif check_type is not None and not isinstance(v, check_type):
+            elif (check_type is not None and not isinstance(v, check_type) or
+                  check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
                                      f"{check_type.__name__}-like object. The value '{v}' "
                                      f"introduced is a {type(v).__name__} object")
@@ -348,7 +352,7 @@ class Conf:
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
 
     def serialize(self):
         """
@@ -482,7 +486,7 @@ class Conf:
         # Reading the list of all the configurations selected by the user to use for the package_id
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
-            matching_confs = [c for c in self._values if re.match(conf_name, c)] or [conf_name]
+            matching_confs = [c for c in self._values if re.match(conf_name, c)]
             for name in matching_confs:
                 value = self.get(name)
                 # Pruning any empty values, those should not affect package ID

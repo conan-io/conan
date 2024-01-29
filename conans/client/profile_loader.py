@@ -126,8 +126,14 @@ class ProfileLoader:
                    "profile_name": file_path,
                    "conan_version": conan_version,
                    "detect_api": detect_api}
+
         rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
-        text = rtemplate.render(context)
+
+        try:
+            text = rtemplate.render(context)
+        except Exception as e:
+            raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
+                                 f"Check your Jinja2 syntax: {str(e)}")
 
         try:
             return self._recurse_load_profile(text, profile_path)

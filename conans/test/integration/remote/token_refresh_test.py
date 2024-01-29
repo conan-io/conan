@@ -3,7 +3,7 @@ import unittest
 import mock
 from mock import Mock
 
-from conans.client.cache.remote_registry import Remote
+from conan.api.model import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.model.conf import ConfDefinition

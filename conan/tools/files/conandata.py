@@ -58,7 +58,7 @@ def trim_conandata(conanfile):
     version = str(conanfile.version)
     result = {}
     for k, v in conandata.items():
-        if not isinstance(v, dict):
+        if k == "scm" or not isinstance(v, dict):
             result[k] = v
             continue  # to allow user extra conandata, common to all versions
         version_data = v.get(version)

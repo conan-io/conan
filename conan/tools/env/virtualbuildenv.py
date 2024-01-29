@@ -9,6 +9,7 @@ class VirtualBuildEnv:
     """
 
     def __init__(self, conanfile, auto_generate=False):
+        self._buildenv = None
         self._conanfile = conanfile
         if not auto_generate:
             self._conanfile.virtualbuildenv = False
@@ -42,33 +43,36 @@ class VirtualBuildEnv:
 
         :return: an ``Environment`` object instance containing the obtained variables.
         """
-        # FIXME: Cache value?
-        build_env = Environment()
+
+        if self._buildenv is None:
+            self._buildenv = Environment()
+        else:
+            return self._buildenv
 
         # Top priority: profile
         profile_env = self._conanfile.buildenv
-        build_env.compose_env(profile_env)
+        self._buildenv.compose_env(profile_env)
 
         build_requires = self._conanfile.dependencies.build.topological_sort
         for require, build_require in reversed(build_requires.items()):
             if require.direct:  # Only buildenv_info from direct deps is propagated
                 # higher priority, explicit buildenv_info
                 if build_require.buildenv_info:
-                    build_env.compose_env(build_require.buildenv_info)
+                    self._buildenv.compose_env(build_require.buildenv_info)
             # Lower priority, the runenv of all transitive "requires" of the build requires
             if build_require.runenv_info:
-                build_env.compose_env(build_require.runenv_info)
+                self._buildenv.compose_env(build_require.runenv_info)
             # Then the implicit
             os_name = self._conanfile.settings_build.get_safe("os")
-            build_env.compose_env(runenv_from_cpp_info(build_require, os_name))
+            self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
 
         # Requires in host context can also bring some direct buildenv_info
         host_requires = self._conanfile.dependencies.host.topological_sort
         for require in reversed(host_requires.values()):
             if require.buildenv_info:
-                build_env.compose_env(require.buildenv_info)
+                self._buildenv.compose_env(require.buildenv_info)
 
-        return build_env
+        return self._buildenv
 
     def vars(self, scope="build"):
         """

@@ -109,7 +109,7 @@ def prepare_pkglist_compact(pkglist):
             new_rrev = f"{ref}#{rrev}"
             timestamp = rrev_info.pop("timestamp", None)
             if timestamp:
-                new_rrev += f" ({timestamp_to_str(timestamp)})"
+                new_rrev += f"%{timestamp} ({timestamp_to_str(timestamp)})"
 
             packages = rrev_info.pop("packages", None)
             if packages:

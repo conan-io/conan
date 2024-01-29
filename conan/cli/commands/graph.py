@@ -41,9 +41,13 @@ def cli_build_order(build_order):
     # TODO: Very simple cli output, probably needs to be improved
     for level in build_order:
         for item in level:
-            for package_level in item['packages']:
-                for package in package_level:
-                    cli_out_write(f"{item['ref']}:{package['package_id']} - {package['binary']}")
+            # If this is a configuration order, it has no packages entry, each item is a package
+            if 'packages' in item:
+                for package_level in item['packages']:
+                    for package in package_level:
+                        cli_out_write(f"{item['ref']}:{package['package_id']} - {package['binary']}")
+            else:
+                cli_out_write(f"{item['ref']}:{item['package_id']} - {item['binary']}")
 
 
 def json_build_order(build_order):
@@ -56,6 +60,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
+    subparser.add_argument("--order", choices=['recipe', 'configuration'], default="recipe",
+                           help='Select which order method')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -93,7 +99,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
-    install_graph = InstallGraph(deps_graph)
+    install_graph = InstallGraph(deps_graph, order=args.order)
     install_order_serialized = install_graph.install_build_order()
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
@@ -110,11 +116,12 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
     args = parser.parse_args(*args)
+    if not args.file or len(args.file) < 2:
+        raise ConanException("At least 2 files are needed to be merged")
 
-    result = InstallGraph()
-    for f in args.file:
-        f = make_abs_path(f)
-        install_graph = InstallGraph.load(f)
+    result = InstallGraph.load(make_abs_path(args.file[0]))
+    for f in args.file[1:]:
+        install_graph = InstallGraph.load(make_abs_path(f))
         result.merge(install_graph)
 
     install_order_serialized = result.install_build_order()
@@ -255,17 +262,15 @@ def graph_explain(conan_api, parser,  subparser, *args):
     # compute ref and conaninfo
     missing = args.missing
     for node in deps_graph.ordered_iterate():
-        if node.binary == BINARY_MISSING:
-            if not missing or ref_matches(node.ref, missing, is_consumer=None):
-                ref = node.ref
-                conaninfo = node.conanfile.info
-                break
+        if ((not missing and node.binary == BINARY_MISSING)   # First missing binary or
+                or (missing and ref_matches(node.ref, missing, is_consumer=None))):  # specified one
+            ref = node.ref
+            conaninfo = node.conanfile.info
+            break
     else:
         raise ConanException("There is no missing binary")
 
     pkglist = conan_api.list.explain_missing_binaries(ref, conaninfo, remotes)
 
     ConanOutput().title("Closest binaries")
-    return {
-        "closest_binaries": pkglist.serialize(),
-    }
+    return {"closest_binaries": pkglist.serialize()}

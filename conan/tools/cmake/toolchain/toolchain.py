@@ -160,6 +160,8 @@ class CMakeToolchain(object):
         self.find_builddirs = True
         self.user_presets_path = "CMakeUserPresets.json"
         self.presets_prefix = "conan"
+        self.presets_build_environment = None
+        self.presets_run_environment = None
 
     def _context(self):
         """ Returns dict, the context for the template
@@ -183,6 +185,18 @@ class CMakeToolchain(object):
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
         content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
+
+    def _find_cmake_exe(self):
+        for req in self._conanfile.dependencies.direct_build.values():
+            if req.ref.name == "cmake":
+                for bindir in req.cpp_info.bindirs:
+                    cmake_path = os.path.join(bindir, "cmake")
+                    cmake_exe_path = os.path.join(bindir, "cmake.exe")
+
+                    if os.path.exists(cmake_path):
+                        return cmake_path
+                    elif os.path.exists(cmake_exe_path):
+                        return cmake_exe_path
 
     def generate(self):
         """
@@ -215,21 +229,24 @@ class CMakeToolchain(object):
             else:
                 cache_variables[name] = value
 
-        buildenv, runenv = None, None
+        buildenv, runenv, cmake_executable = None, None, None
 
         if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
                                     check_type=str, choices=("disabled", "")) != "disabled":
 
-            build_env = VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-            run_env = VirtualRunEnv(self._conanfile, auto_generate=True).vars()
+            build_env = self.presets_build_environment.vars(self._conanfile) if self.presets_build_environment else VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+            run_env = self.presets_run_environment.vars(self._conanfile) if self.presets_run_environment else VirtualRunEnv(self._conanfile, auto_generate=True).vars()
 
             buildenv = {name: value for name, value in
                         build_env.items(variable_reference="$penv{{{name}}}")}
             runenv = {name: value for name, value in
                       run_env.items(variable_reference="$penv{{{name}}}")}
 
+            cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None) or self._find_cmake_exe()
+
         write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
-                            self.user_presets_path, self.presets_prefix, buildenv, runenv)
+                            self.user_presets_path, self.presets_prefix, buildenv, runenv,
+                            cmake_executable)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

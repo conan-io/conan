@@ -2,8 +2,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -61,88 +59,40 @@ class MyConanfile(ConanFile):
         client.run("export . --user=lasote --channel=stable")
         client.run('install --requires=mylib/0.1@lasote/stable --build="*"')
 
-    @pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
     def test_profile_applied_ok(self):
-        br = '''
-import os
-from conan import ConanFile
+        br = textwrap.dedent('''
+            from conan import ConanFile
 
-class BuildRequireConanfile(ConanFile):
-    name = "br"
-    version = "1.0"
-    settings = "os", "compiler", "arch"
+            class BuildRequireConanfile(ConanFile):
+                name = "br"
+                version = "1.0"
 
-    def package_info(self):
-        self.buildenv_info.define("MyVAR", "from_build_require")
-'''
+                def package_info(self):
+                    self.buildenv_info.define("MyVAR", "from_build_require")
+            ''')
 
+        cf = textwrap.dedent('''
+            import os, platform
+            from conan import ConanFile
+
+            class MyConanfile(ConanFile):
+                requires = "br/1.0"
+                def build(self):
+                    if platform.system() == "Windows":
+                        self.run("set MyVAR")
+                    else:
+                        self.run("printenv MyVAR")
+            ''')
         client = TestClient()
-
-        default_profile = """
-[settings]
-os=Windows
-compiler=Visual Studio
-compiler.version=14
-compiler.runtime=MD
-arch=x86
-
-[options]
-mypackage:option1=2
-"""
-        save(client.cache.default_profile_path, default_profile)
-
-        client.save({CONANFILE: br})
-        client.run("export . --user=lasote --channel=stable")
-
-        cf = '''
-import os, platform
-from conan import ConanFile
-from conan.tools.env import VirtualBuildEnv
-
-class MyConanfile(ConanFile):
-    name = "mypackage"
-    version = "0.1"
-    settings = "os", "compiler", "arch"
-    options = {"option1": ["1", "2"]}
-    default_options = {"option1": 1}
-    generators = "VirtualBuildEnv"
-
-    def configure(self):
-        assert(self.settings.os=="Windows")
-        assert(self.settings.compiler=="Visual Studio")
-        assert(self.settings.compiler.version=="14")
-        assert(self.settings.compiler.runtime=="MD")
-        assert(self.settings.arch=="x86")
-        assert(self.options.option1=="2")
-
-    def build(self):
-        # This has changed, the value from profile higher priority than build require
-        build_env = VirtualBuildEnv(self).vars()
-        with build_env.apply():
-            if platform.system() == "Windows":
-                self.run("set MyVAR")
-            else:
-                self.run("printenv MyVAR")
-        '''
-
-        # First apply just the default profile, we should get the env MYVAR="from_build_require"
-        profile_host = """include(default)
-[tool_requires]
-br/1.0@lasote/stable"""
-        client.save({CONANFILE: cf,
-                     "profile_host": profile_host}, clean_first=True)
-        client.run("export . --user=lasote --channel=stable")
-        client.run('install --requires=mypackage/0.1@lasote/stable -pr=profile_host --build missing')
+        client.save({"br/conanfile.py": br,
+                     "consumer/conanfile.py": cf,
+                     "profile": "[buildenv]\nMyVAR=23"})
+        client.run("create br")
+        client.run("build consumer")
         assert "from_build_require" in client.out
-
-        # Then declare in the default profile the var, it should be prioritized from the br
-        default_profile_2 = default_profile + "\n[buildenv]\nMyVAR=23"
-        save(client.cache.default_profile_path, default_profile_2)
-        client.save({CONANFILE: cf,
-                     "profile_host": profile_host}, clean_first=True)
-        client.run("export . --user=lasote --channel=stable")
-        client.run('install --requires=mypackage/0.1@lasote/stable  -pr=profile_host --build')
+        client.run("build consumer -pr=profile")
         assert "23" in client.out
+        assert "from_build_require" not in client.out
 
     def test_env_default_profile(self):
         conanfile = '''

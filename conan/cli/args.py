@@ -31,7 +31,7 @@ def add_lockfile_args(parser):
     parser.add_argument("--lockfile-out", action=OnceArgument,
                         help="Filename of the updated lockfile")
     parser.add_argument("--lockfile-packages", action="store_true",
-                        help="Lock package-id and package-revision information")
+                        help=argparse.SUPPRESS)
     parser.add_argument("--lockfile-clean", action="store_true",
                         help="Remove unused entries from the lockfile")
     parser.add_argument("--lockfile-overrides",
