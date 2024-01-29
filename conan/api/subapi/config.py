@@ -39,8 +39,9 @@ class ConfigAPI:
 
     def install_pkg(self, ref):
         conan_api = self.conan_api
-        remotes = conan_api.remotes.list()
-        lockfile = None
+        remotes = conan_api.remotes.list()  # ready to use remotes arguments
+        lockfile = None  # Ready to pass a lockfile if we want and use it
+        # Ready to use profiles as inputs
         profile_host = profile_build = conan_api.profiles.get_profile([])
 
         app = ConanApp(self.conan_api)
@@ -66,7 +67,7 @@ class ConfigAPI:
         config_type = "dir"
         from conans.client.conf.config_installer import configuration_install
         app = ConanApp(self.conan_api)
-        return configuration_install(app, uri, verify_ssl=False, config_type=config_type)
+        configuration_install(app, uri, verify_ssl=False, config_type=config_type)
 
     def get(self, name, default=None, check_type=None):
         return self.global_conf.get(name, default=default, check_type=check_type)
