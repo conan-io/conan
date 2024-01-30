@@ -1,3 +1,4 @@
+import json
 import textwrap
 import unittest
 
@@ -119,9 +120,13 @@ def test_per_package_settings_target():
     c.run("create . -s:b arch=x86_64 -s:h arch=armv7 --build-require")
     pkg_id = c.created_package_id("gcc/0.1")
 
-    c.run("install --tool-requires=gcc/0.1 -s:b arch=x86_64 -s arch=armv8 -s:h gcc*:arch=armv7")
+    c.run("install --tool-requires=gcc/0.1 -s:b arch=x86_64 -s arch=armv8 -s:h gcc*:arch=armv7"
+          " --format=json")
     # it will not fail due to armv8, but use the binary for armv7
     c.assert_listed_binary({"gcc/0.1": (pkg_id, "Cache")}, build=True)
+
+    graph = json.loads(c.stdout)
+    assert graph["graph"]["nodes"]["1"]["info"]["settings_target"] == {"arch": "armv7"}
 
 
 def test_per_package_settings_build():

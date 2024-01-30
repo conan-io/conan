@@ -1,3 +1,4 @@
+import json
 import textwrap
 
 import pytest
@@ -32,3 +33,9 @@ def test_package_id(client):
     client.assert_listed_binary({"pkg/0.1": ("7501c16e6c5c93e534dd760829859340e2dc73bc", "Build")})
     client.run("create . --name=pkg --version=0.1 -pr=profile2")
     client.assert_listed_binary({"pkg/0.1": ("4eb2bd276f75d2df8fa0f4b58bd86014b7f51693", "Build")})
+
+
+def test_json_output(client):
+    client.run("create . --name=pkg --version=0.1 -c user.myconf:myitem=1 --format=json")
+    graph = json.loads(client.stdout)
+    assert graph["graph"]["nodes"]["1"]["info"]["conf"] == {'user.myconf:myitem': 1}
