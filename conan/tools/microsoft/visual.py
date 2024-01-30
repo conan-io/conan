@@ -153,7 +153,7 @@ class VCVars:
         from conan.tools.env.environment import create_env_script
         conan_vcvars_bat = f"{CONAN_VCVARS}.bat"
         create_env_script(conanfile, content, conan_vcvars_bat, scope)
-        create_deactivate_file(conanfile, conan_vcvars_bat)
+        _create_deactivate_file(conanfile, conan_vcvars_bat)
 
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
@@ -171,12 +171,11 @@ class VCVars:
             """)
             conan_vcvars_ps1 = f"{CONAN_VCVARS}.ps1"
             create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
-            create_deactivate_file(conanfile, conan_vcvars_ps1)
+            _create_deactivate_file(conanfile, conan_vcvars_ps1)
 
 
 
-
-def create_deactivate_file(conanfile, filename):
+def _create_deactivate_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
     message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
     is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
