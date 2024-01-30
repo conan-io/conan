@@ -178,7 +178,7 @@ class VCVars:
 def _create_deactivate_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
     message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
-    is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+    is_ps1 = filename.endswith(".ps1")
     if is_ps1:
         content = f"Write-Host {message}"
     else:
