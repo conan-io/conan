@@ -1,58 +1,94 @@
 import os
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-# Bundle-Lockfile
 def test_exported_lockfile():
     """ POC: A conan.lock that is exported together with the recipe can be used later while
     consuming that package
     """
-    client = TestClient(default_server_user=True)
-    client.save({"global.conf": "tools.graph:auto_lock=True"}, path=client.cache_folder)
-    client.save({"dep/conanfile.py": GenConanfile("dep"),
-                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
-    client.run("create dep --version=0.1")
-    client.run("create pkg")  # captures lockfile in metadata
+    c = TestClient(default_server_user=True)
+    c.save({"global.conf": "tools.graph:auto_lock=True"}, path=c.cache_folder)
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
+    c.run("create dep --version=0.1")
+    c.run("create pkg")  # captures lockfile in metadata
 
-    client.run("create dep --version=0.2")
+    c.run("create dep --version=0.2")
 
-    assert "conan.lock" not in os.listdir(client.current_folder)
-    client.run("install --requires=pkg/0.1")
-    assert "dep/0.2" not in client.out
-    assert "dep/0.1" in client.out
+    assert "conan.lock" not in os.listdir(c.current_folder)
+    c.run("install --requires=pkg/0.1")
+    assert "dep/0.2" not in c.out
+    assert "dep/0.1" in c.out
 
     # It should also work when downloading from remote
-    client.run("upload * -c -r=default")
-    client.run("remove * -c")
-    client.run("install --requires=pkg/0.1")
-    assert "dep/0.2" not in client.out
-    assert "dep/0.1" in client.out
+    c.run("upload * -c -r=default")
+    c.run("remove * -c")
+    c.run("install --requires=pkg/0.1")
+    assert "dep/0.2" not in c.out
+    assert "dep/0.1" in c.out
 
 
-def test_downstream_priority():
-    """ The downstream lockfile should always have priority. So far it works, because
-    a) when the consumer locks, it is already using the same set of locked dependencies
-    b) if the consumer forces other versions different to dependency locked ones, they will have
-       priority anyway, irrespective of the merge. The merge at the moment is still prioritizing
-       the latest, which might not be the downstream locked one
-    The possible way to achieve a failure in this approach at the moment is if we implement a
-    "ignore exported lockfiles" config, so downstream consumer can lock to a different version
-    that doesn't match the dependency one
+@pytest.mark.parametrize("override", [False, True])
+def test_downstream_override(override):
     """
-    client = TestClient()
-    client.save({"global.conf": "tools.graph:auto_lock=True"}, path=client.cache_folder)
-    client.save({"dep/conanfile.py": GenConanfile("dep"),
-                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]"),
-                 "consumer/conanfile.py": GenConanfile().with_requirement("pkg/0.1")
-                                                        .with_requirement("dep/[<0.2]", force=False)})
-    client.run("create dep --version=0.1")
-    client.run("create dep --version=0.2")
-    client.run("create pkg")
-    assert "dep/0.2" in client.out
-    assert "dep/0.1" not in client.out
+    The downstream lockfile should always have priority.
+    Even if the packaged lockfile forces 0.2, if the downstream consumer wants 0.1, it will
+    force 0.1. It works for override and regular requires too
+    """
+    c = TestClient()
+    c.save({"global.conf": "tools.graph:auto_lock=True"}, path=c.cache_folder)
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_requirement("pkg/0.1")
+                                                          .with_requirement("dep/[<0.2]",
+                                                                            override=override)})
+    c.run("create dep --version=0.1")
+    c.run("create dep --version=0.2")
+    c.run("create pkg")
+    assert "dep/0.2" in c.out
+    assert "dep/0.1" not in c.out
 
-    client.run("install consumer --build=missing")
-    assert "dep/0.2" not in client.out
-    assert "dep/0.1" in client.out
+    # verify that the in-recipe lockfile works
+    c.run("create dep --version=0.3")
+    c.run("install --requires=pkg/0.1")
+    assert "dep/0.2" in c.out
+    assert "dep/0.3" not in c.out
+
+    # But the consumer will have higher priority
+    c.run("install app --build=missing")
+    assert "dep/0.2" not in c.out
+    assert "dep/0.1" in c.out
+
+    c.run("create app")
+    # it will also contain a lockfile inside app
+    c.run("install --requires=app/0.1")
+    assert "dep/0.2" not in c.out
+    assert "dep/0.1" in c.out
+
+
+def test_diamond():
+    c = TestClient()
+    c.save({"global.conf": "tools.graph:auto_lock=True"}, path=c.cache_folder)
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+            "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("dep/[*]"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("dep/[*]"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkga/0.1", "pkgb/0.1")})
+    c.run("create dep --version=0.1")
+    c.run("create pkga")
+    c.run("create dep --version=0.2")
+    c.run("create pkgb")
+
+    # First resolved wins, in this case dep/0.1
+    c.run("install app --build=missing")
+    assert "dep/0.1" in c.out
+    assert "dep/0.2" not in c.out
+
+    c.save({"app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkgb/0.1", "pkga/0.1")})
+    # First resolved wins, in this case dep/0.1
+    c.run("install app --build=missing")
+    assert "dep/0.2" in c.out
+    assert "dep/0.1" not in c.out

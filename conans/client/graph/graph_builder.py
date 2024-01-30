@@ -223,11 +223,14 @@ class DepsGraphBuilder(object):
             conf = profile_conf.get_conanfile_conf(ref, False)
             if conf.get("tools.graph:auto_lock", check_type=bool):
                 exported_lockfile = Lockfile.load(exported_lock)
+                #print("EXPORTED LOCKFILE FOR ", ref, exported_lockfile.dumps())
                 exported_lockfile.partial = True
                 from conan.api.output import ConanOutput
                 ConanOutput().info(f"Using lockfile from {ref}")
                 if graph_lock is not None:
+                    #print("DOWNSTREAM LOCKFILE FOR ", ref, graph_lock.dumps())
                     graph_lock.merge(exported_lockfile)
+                    #print("MERGED LOCKFILE FOR ", ref, graph_lock.dumps())
                 else:
                     graph_lock = exported_lockfile
 
