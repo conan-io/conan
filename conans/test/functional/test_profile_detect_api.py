@@ -20,6 +20,8 @@ class TestProfileDetectAPI:
             compiler.runtime={{runtime}}
             compiler.cppstd={{detect_api.default_cppstd(compiler, version)}}
             compiler.update={{detect_api.detect_msvc_update(version)}}
+            # This next line fails, here as a flag that the test ran
+            compiler.libcxx={{detect_api.detect_libcxx(compiler, version, compiler_exe)}}
 
             [conf]
             tools.microsoft.msbuild:vs_version={{detect_api.default_msvc_ide_version(version)}}
