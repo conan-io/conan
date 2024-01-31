@@ -75,6 +75,10 @@ class _PackageOption:
         return other == self.__str__()
 
     @property
+    def name(self):
+        return self._name
+
+    @property
     def value(self):
         return self._value
 
@@ -180,10 +184,8 @@ class _PackageOptions:
 
     def _set(self, item, value):
         # programmatic way to define values, for Conan codebase
-        strong = False
-        if item[-1] == "!":
-            strong = True
-            item = item[:-1]
+        strong = item[-1] == "!"
+        item = item[:-1] if strong else item
 
         current_value = self._data.get(item)
         if self._freeze and current_value.value is not None and current_value != value:
