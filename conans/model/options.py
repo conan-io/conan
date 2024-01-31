@@ -210,10 +210,8 @@ class _PackageOptions:
         @type other: _PackageOptions
         """
         for k, v in other._data.items():
-            option = k[:-1] if k[-1] == "!" else k  # strong
-            if is_pattern and option not in self._data:
+            if is_pattern and k not in self._data:
                 continue
-            assert isinstance(v, _PackageOption)
             self._set(k, v)
 
 
