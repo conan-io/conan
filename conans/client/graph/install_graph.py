@@ -4,7 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD
+    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -112,6 +112,13 @@ class _InstallRecipeReference:
         self.depends = []  # Other REFs, defines the graph topology and operation ordering
 
     @property
+    def need_build(self):
+        for package in self.packages.values():
+            if package.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
+                return True
+        return False
+
+    @property
     def node(self):
         return self._node
 
@@ -211,6 +218,10 @@ class _InstallConfiguration:
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
+
+    @property
+    def need_build(self):
+        return self.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
 
     @property
     def pref(self):
@@ -362,6 +373,19 @@ class InstallGraph:
                 self._nodes[key] = self._node_cls.create(node)
             else:
                 existing.add(node)
+
+    def reduce(self):
+        result = {}
+        for k, node in self._nodes.items():
+            if node.need_build:
+                result[k] = node
+            else:  # Eliminate this element from the graph
+                dependencies = node.depends
+                # Find all consumers
+                for n in self._nodes.values():
+                    if k in n.depends:
+                        n.depends = [d for d in n.depends if d != k] + dependencies
+        self._nodes = result
 
     def install_order(self, flat=False):
         # a topological order by levels, returns a list of list, in order of processing

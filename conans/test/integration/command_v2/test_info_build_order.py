@@ -60,6 +60,9 @@ def test_info_build_order():
     ]
 
     assert bo_json == result
+    c.run("graph build-order consumer --build=missing --reduce --format=json")
+    bo_json = json.loads(c.stdout)
+    assert bo_json == result
 
 
 def test_info_build_order_configuration():
@@ -108,6 +111,9 @@ def test_info_build_order_configuration():
         ]
     ]
 
+    assert bo_json == result
+    c.run("graph build-order consumer --build=missing --order=configuration --reduce --format=json")
+    bo_json = json.loads(c.stdout)
     assert bo_json == result
 
 
@@ -526,3 +532,26 @@ def test_info_build_order_broken_recipe():
     c.run("graph build-order --requires=dep/0.1 --format=json", assert_error=True)
     assert "ImportError" in c.out
     assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
+
+
+class TestBuildOrderReduce:
+    def test_reduce(self):
+        c = TestClient()
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
+                "libc/conanfile.py": GenConanfile("libc", "0.1").with_requires("libb/0.1"),
+                "consumer/conanfile.txt": "[requires]\nlibc/0.1"})
+        c.run("create liba")
+        c.run("create libb")
+        c.run("create libc")
+        c.run("remove liba:* -c")
+        c.run("remove libc:* -c")
+        c.run("graph build-order consumer --build=missing --reduce --format=json")
+        bo_json = json.loads(c.stdout)
+        assert len(bo_json) == 2  # 2 levels
+        level0 = bo_json[0]
+        assert len(level0) == 1
+        assert level0[0]["ref"] == "liba/0.1#a658e7beaaae5d6be0b6f67dcc9859e2"
+        level1 = bo_json[1]
+        assert len(level1) == 1
+        assert level1[0]["depends"] == ["liba/0.1#a658e7beaaae5d6be0b6f67dcc9859e2"]

@@ -62,6 +62,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     common_graph_args(subparser)
     subparser.add_argument("--order", choices=['recipe', 'configuration'], default="recipe",
                            help='Select how to order the output, "recipe" by default if not set.')
+    subparser.add_argument("--reduce", action='store_true', default=False,
+                           help='Reduce the build order, output only those to build')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -100,6 +102,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     out = ConanOutput()
     out.title("Computing the build order")
     install_graph = InstallGraph(deps_graph, order=args.order)
+    if args.reduce:
+        install_graph.reduce()
     install_order_serialized = install_graph.install_build_order()
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
