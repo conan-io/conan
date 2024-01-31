@@ -33,11 +33,13 @@ from conans.test.utils.tools import TestClient
     ("dep/1.3", "dep/1.1", "dep/1.1@system", "dep/1.3"),
     ("dep/1.3", "dep/*@comp", "dep/*@system", "dep/1.3"),
     ("dep/[>=1.0 <2]", "dep/2.1", "dep/2.1@system", "dep/1.1"),
+    # PATTERN - PATTERN REPLACE
+    ("dep/[>=1.3 <2]", "dep/*", "dep/[>=1.0 <1.9]", "dep/1.1"),
 ])
 @pytest.mark.parametrize("tool_require", [False, True])
 class TestReplaceRequires:
     def test_alternative(self, tool_require, require, pattern, alternative, pkg):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = GenConanfile().with_tool_requires(require) if tool_require else \
             GenConanfile().with_requires(require)
         profile_tag = "replace_requires" if not tool_require else "replace_tool_requires"
@@ -63,7 +65,7 @@ class TestReplaceRequires:
         c.assert_listed_require({f"{pkg}#{rrev}": "Cache"}, build=tool_require)
 
     def test_diamond(self, tool_require, require, pattern, alternative, pkg):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = GenConanfile().with_tool_requires(require) if tool_require else \
             GenConanfile().with_requires(require)
         profile_tag = "replace_requires" if not tool_require else "replace_tool_requires"
@@ -110,7 +112,7 @@ class TestReplaceRequires:
     ("pkg/version:pid", ":")
 ])
 def test_replace_requires_errors(pattern, replace):
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
             "app/conanfile.py": GenConanfile().with_requires("pkg/0.2"),
             "profile": f"[replace_requires]\n{pattern}: {replace}"})
@@ -124,7 +126,7 @@ def test_replace_requires_invalid_requires_errors():
     replacing for something incorrect not existing is not an error per-se, it is valid that
     a recipe requires("pkg/2.*"), and then it will fail because such package doesn't exist
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"app/conanfile.py": GenConanfile().with_requires("pkg/0.2"),
             "profile": f"[replace_requires]\npkg/0.2: pkg/2.*"})
     c.run("install app -pr=profile", assert_error=True)
@@ -133,7 +135,7 @@ def test_replace_requires_invalid_requires_errors():
 
 
 def test_replace_requires_json_format():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.2"),
             "app/conanfile.py": GenConanfile().with_requires("pkg/0.1"),
             "profile": f"[replace_requires]\npkg/0.1: pkg/0.2"})

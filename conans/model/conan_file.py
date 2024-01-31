@@ -165,6 +165,8 @@ class ConanFile:
         result["cpp_info"] = self.cpp_info.serialize()
         result["conf_info"] = self.conf_info.serialize()
         result["label"] = self.display_name
+        if self.info is not None:
+            result["info"] = self.info.serialize()
         return result
 
     @property

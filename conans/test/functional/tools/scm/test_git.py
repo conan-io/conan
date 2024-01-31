@@ -275,7 +275,10 @@ class TestGitBasicClone:
 
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
-        c.run("create .")
+        c.run("create . -v")
+        # Clone is not printed, it might contain tokens
+        assert 'pkg/0.1: RUN: git clone "<hidden>"  "."' in c.out
+        assert "pkg/0.1: RUN: git checkout" in c.out
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
 
@@ -407,7 +410,8 @@ class TestGitShallowClone:
 
         c = TestClient()
         c.save({"conanfile.py": self.conanfile.format(url=url, commit=commit)})
-        c.run("create .")
+        c.run("create . -v")
+        assert 'pkg/0.1: RUN: git remote add origin "<hidden>"' in c.out
         assert "pkg/0.1: MYCMAKE: mycmake" in c.out
         assert "pkg/0.1: MYFILE: myheader!" in c.out
 
@@ -481,7 +485,7 @@ class TestGitBasicSCMFlow:
     - export() stores it in conandata.yml
     - source() recovers the info from conandata.yml and clones it
     """
-    conanfile = textwrap.dedent("""
+    conanfile_full = textwrap.dedent("""
         import os
         from conan import ConanFile
         from conan.tools.scm import Git
@@ -513,10 +517,40 @@ class TestGitBasicSCMFlow:
                 self.output.info("MYCMAKE-BUILD: {}".format(load(self, cmake)))
                 self.output.info("MYFILE-BUILD: {}".format(load(self, file_h)))
         """)
+    conanfile_scm = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.scm import Git
+        from conan.tools.files import load, trim_conandata
 
-    def test_full_scm(self):
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                Git(self).coordinates_to_conandata()
+                trim_conandata(self)  # to test it does not affect
+
+            def layout(self):
+                self.folders.source = "."
+
+            def source(self):
+                Git(self).checkout_from_conandata_coordinates()
+                self.output.info("MYCMAKE: {}".format(load(self, "CMakeLists.txt")))
+                self.output.info("MYFILE: {}".format(load(self, "src/myfile.h")))
+
+            def build(self):
+                cmake = os.path.join(self.source_folder, "CMakeLists.txt")
+                file_h = os.path.join(self.source_folder, "src/myfile.h")
+                self.output.info("MYCMAKE-BUILD: {}".format(load(self, cmake)))
+                self.output.info("MYFILE-BUILD: {}".format(load(self, file_h)))
+        """)
+
+    @pytest.mark.parametrize("conanfile_scm", [False, True])
+    def test_full_scm(self, conanfile_scm):
+        conanfile = self.conanfile_scm if conanfile_scm else self.conanfile_full
         folder = os.path.join(temp_folder(), "myrepo")
-        url, commit = create_local_git_repo(files={"conanfile.py": self.conanfile,
+        url, commit = create_local_git_repo(files={"conanfile.py": conanfile,
                                                    "src/myfile.h": "myheader!",
                                                    "CMakeLists.txt": "mycmake"}, folder=folder)
 
@@ -543,15 +577,17 @@ class TestGitBasicSCMFlow:
         assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake" in c.out
         assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
 
-    def test_branch_flow(self):
+    @pytest.mark.parametrize("conanfile_scm", [False, True])
+    def test_branch_flow(self, conanfile_scm):
         """ Testing that when a user creates a branch, and pushes a commit,
         the package can still be built from sources, and get_url_and_commit() captures the
         remote URL and not the local
         """
+        conanfile = self.conanfile_scm if conanfile_scm else self.conanfile_full
         url = git_create_bare_repo()
         c = TestClient(default_server_user=True)
         c.run_command('git clone "{}" .'.format(url))
-        c.save({"conanfile.py": self.conanfile,
+        c.save({"conanfile.py": conanfile,
                 "src/myfile.h": "myheader!",
                 "CMakeLists.txt": "mycmake"})
         c.run_command("git checkout -b mybranch")

@@ -136,11 +136,9 @@ def export_source(conanfile, destination_source_folder):
         conanfile.exports_sources = (conanfile.exports_sources,)
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
-    copied = []
     for pattern in included_sources:
-        _tmp = copy(conanfile, pattern, src=conanfile.recipe_folder,
-                    dst=destination_source_folder, excludes=excluded_sources)
-        copied.extend(_tmp)
+        copy(conanfile, pattern, src=conanfile.recipe_folder,
+             dst=destination_source_folder, excludes=excluded_sources)
 
     conanfile.folders.set_base_export_sources(destination_source_folder)
     _run_method(conanfile, "export_sources")
@@ -163,11 +161,9 @@ def export_recipe(conanfile, destination_folder):
 
     included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
-    copied = []
     for pattern in included_exports:
-        tmp = copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
-                   excludes=excluded_exports)
-        copied.extend(tmp)
+        copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
+             excludes=excluded_exports)
 
     conanfile.folders.set_base_export(destination_folder)
     _run_method(conanfile, "export")
