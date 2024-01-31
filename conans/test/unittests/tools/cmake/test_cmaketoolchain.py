@@ -1,19 +1,16 @@
-import os
 import types
 
 import pytest
 from mock import Mock
 
-from conan.tools.cmake import CMakeToolchain
 from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture

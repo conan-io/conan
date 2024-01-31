@@ -7,7 +7,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.toolchains.apple.test_xcodetoolchain import _get_filename
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 _expected_dep_xconfig = [
     "SYSTEM_HEADER_SEARCH_PATHS = $(inherited) $(SYSTEM_HEADER_SEARCH_PATHS_{name}_{name})",
@@ -111,7 +111,7 @@ def test_generator_files_with_custom_config():
             options = {"XcodeConfigName": [None, "ANY"]}
             default_options = {"XcodeConfigName": None}
             requires = "hello/0.1", "goodbye/0.1"
-            
+
             def generate(self):
                 xcode = XcodeDeps(self)
                 if self.options.get_safe("XcodeConfigName"):
@@ -127,9 +127,9 @@ def test_generator_files_with_custom_config():
             cli_command = "install . -s build_type={} -s arch=x86_64 -s os.sdk_version=12.1  --build missing".format(build_type)
             if use_custom_config:
                 cli_command += " -o XcodeConfigName={}".format(custom_config_name)
-                configuration_name = custom_config_name 
+                configuration_name = custom_config_name
             else:
-                configuration_name = build_type            
+                configuration_name = build_type
 
             client.run(cli_command)
 
