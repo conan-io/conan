@@ -14,9 +14,10 @@ def option_not_exist_msg(option_name, existing_options):
 
 
 class _PackageOption:
-    def __init__(self, name, value, possible_values=None):
+    def __init__(self, name, value, possible_values=None, strong=False):
         self._name = name
         self._value = value  # Value None = not defined
+        self.strong = strong
         # possible_values only possible origin is recipes
         if possible_values is None:
             self._possible_values = None
@@ -27,10 +28,11 @@ class _PackageOption:
     def dumps(self, scope=None):
         if self._value is None:
             return None
+        strong = "!" if self.strong else ""
         if scope:
-            return "%s:%s=%s" % (scope, self._name, self._value)
+            return "%s:%s%s=%s" % (scope, self._name, strong, self._value)
         else:
-            return "%s=%s" % (self._name, self._value)
+            return "%s=%s%s" % (self._name, strong, self._value)
 
     def copy_conaninfo_option(self):
         # To generate a copy without validation, for package_id info.options value
@@ -71,10 +73,6 @@ class _PackageOption:
         if self._value is None:
             return False  # Other is not None here
         return other == self.__str__()
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def value(self):
@@ -182,12 +180,21 @@ class _PackageOptions:
 
     def _set(self, item, value):
         # programmatic way to define values, for Conan codebase
+        strong = False
+        if item[-1] == "!":
+            strong = True
+            item = item[:-1]
+
         current_value = self._data.get(item)
         if self._freeze and current_value.value is not None and current_value != value:
             raise ConanException(f"Incorrect attempt to modify option '{item}' "
                                  f"from '{current_value}' to '{value}'")
         self._ensure_exists(item)
-        self._data.setdefault(item, _PackageOption(item, None)).value = value
+        v = self._data.setdefault(item, _PackageOption(item, None, strong=strong))
+        new_value_strong = strong or (isinstance(value, _PackageOption) and value.strong)
+        if new_value_strong or not v.strong:
+            v.value = value
+            v.strong = new_value_strong
 
     def items(self):
         result = []
@@ -201,8 +208,10 @@ class _PackageOptions:
         @type other: _PackageOptions
         """
         for k, v in other._data.items():
-            if is_pattern and k not in self._data:
+            option = k[:-1] if k[-1] == "!" else k  # strong
+            if is_pattern and option not in self._data:
                 continue
+            assert isinstance(v, _PackageOption)
             self._set(k, v)
 
 
