@@ -61,7 +61,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
     """
     common_graph_args(subparser)
     subparser.add_argument("--order", choices=['recipe', 'configuration'], default="recipe",
-                           help='Select which order method')
+                           help='Select how to order the output, "recipe" by default if not set.')
     args = parser.parse_args(*args)
 
     # parameter validation

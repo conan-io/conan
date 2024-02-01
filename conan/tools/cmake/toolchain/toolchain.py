@@ -112,7 +112,11 @@ class CMakeToolchain(object):
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() %}
+        {% if value is none %}
+        add_compile_definitions("{{ it }}")
+        {% else %}
         add_compile_definitions("{{ it }}={{ value }}")
+        {% endif %}
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}

@@ -128,6 +128,7 @@ class MultiPackagesList:
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_refs([ref])  # Binary listed forces recipe listed
                 cache_list.add_prefs(ref, [pref])
+                cache_list.add_configurations({pref: node["info"]})
         return pkglist
 
 

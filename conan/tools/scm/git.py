@@ -17,6 +17,9 @@ class Git:
         """
         :param conanfile: Conanfile instance.
         :param folder: Current directory, by default ``.``, the current working directory.
+        :param excluded: Files to be excluded from the "dirty" checks. It will compose with the
+          configuration ``core.scm:excluded`` (the configuration has higher priority).
+          It is a list of patterns to ``fnmatch``.
         """
         self._conanfile = conanfile
         self.folder = folder
@@ -112,13 +115,15 @@ class Git:
             # This will raise if commit not present.
             self.run("fetch {} --dry-run --depth=1 {}".format(remote, commit))
             return True
-        except Exception as e:
+        except Exception:
             # Don't raise an error because the fetch could fail for many more reasons than the branch.
             return False
 
     def is_dirty(self):
         """
         Returns if the current folder is dirty, running ``git status -s``
+        The ``Git(..., excluded=[])`` argument and the ``core.scm:excluded`` configuration will
+        define file patterns to be skipped from this check.
 
         :return: True, if the current folder is dirty. Otherwise, False.
         """
@@ -243,10 +248,21 @@ class Git:
         return files
 
     def coordinates_to_conandata(self):
+        """
+        Capture the "url" and "commit" from the Git repo, calling ``get_url_and_commit()``, and then
+        store those in the ``conandata.yml`` under the "scm" key. This information can be
+        used later to clone and checkout the exact source point that was used to create this
+        package, and can be useful even if the recipe uses ``exports_sources`` as mechanism to
+        embed the sources.
+        """
         scm_url, scm_commit = self.get_url_and_commit()
         update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def checkout_from_conandata_coordinates(self):
+        """
+        Reads the "scm" field from the ``conandata.yml``, that must contain at least "url" and
+        "commit" and then do a ``clone(url, target=".")`` followed by a ``checkout(commit)``.
+        """
         sources = self._conanfile.conan_data["scm"]
         self.clone(url=sources["url"], target=".")
         self.checkout(commit=sources["commit"])
