@@ -316,11 +316,11 @@ class Requirement:
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
 
+        if self.visible is False:
+            downstream_require.visible = False
+
         if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
             # If non-default, then the consumer requires has priority
-            if self.visible is False:
-                downstream_require.visible = False
-
             if self.headers is False:
                 downstream_require.headers = False
 
