@@ -180,6 +180,11 @@ tools_locations = {
     #     "exe": "dpcpp",
     #     "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
     # }
+    # TODO: Fish is not yet installed in CI. Uncomment this line whenever it's done
+    # 'fish': {
+    #     "default": "3.6",
+    #     "3.6": {"path": {"Darwin": f"{homebrew_root}/bin"}}
+    # }
 }
 
 
