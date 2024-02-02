@@ -697,7 +697,8 @@ class GenericSystemBlock(Block):
                 compiler_update = str(settings.compiler.update)
                 if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
                     # The equivalent of compiler 19.26 is toolset 14.26
-                    toolset = "version=14.{}{}".format(compiler_version[-1], compiler_update)
+                    compiler_ver = int(compiler_version[-1]) * 10 + int(compiler_update)
+                    toolset = "version=14.{}".format(compiler_ver)
                 else:
                     toolset = msvc_version_to_toolset_version(compiler_version)
         elif compiler == "clang":

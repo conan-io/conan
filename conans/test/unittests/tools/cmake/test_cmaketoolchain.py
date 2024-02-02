@@ -198,7 +198,7 @@ def conanfile_msvc():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],
                            "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
-                                                 "update": [None]}},
+                                                 "update": ["ANY"]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]})
     c.settings.build_type = "Release"
@@ -221,6 +221,19 @@ def test_toolset(conanfile_msvc):
     assert 'set(CMAKE_GENERATOR_TOOLSET "v143" CACHE STRING "" FORCE)' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+def test_toolset_update_version(conanfile_msvc):
+    conanfile_msvc.settings.compiler.update = "8"
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "version=14.38" CACHE STRING "" FORCE)' in toolchain.content
+
+
+def test_toolset_update_version_overflow(conanfile_msvc):
+    # https://github.com/conan-io/conan/issues/15583
+    conanfile_msvc.settings.compiler.update = "10"
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "version=14.40" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_toolset_x64(conanfile_msvc):
