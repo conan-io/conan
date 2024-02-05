@@ -3,7 +3,6 @@ import textwrap
 
 from conan.internal import check_duplicated_generator
 from conans.client.conf.detect_vs import vs_installation_path
-from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
@@ -102,9 +101,10 @@ class VCVars:
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
 
-        # Derive subsystem name from the current scope.
-        subsystem = deduce_subsystem(conanfile, scope)
-        if subsystem != WINDOWS:
+        os_ = conanfile.settings.get_safe("os")
+        build_os_ = conanfile.settings_build.get_safe("os")
+
+        if os_ != "Windows" or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
