@@ -1,3 +1,6 @@
+import time
+from multiprocessing.pool import ThreadPool
+
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
@@ -65,3 +68,28 @@ class DownloadAPI:
         output.info(f"Downloading package '{pref.repr_notime()}'")
         app.remote_manager.get_package(pref, remote, metadata)
         return True
+
+    def download_full(self, package_list, remote, metadata):
+        """Download the recipes and packages specified in the package_list from the remote,
+        parallelized based on `core.download:parallel`"""
+        def _download_pkglist(pkglist):
+            for ref, recipe_bundle in pkglist.refs().items():
+                self.recipe(ref, remote, metadata)
+                for pref, _ in pkglist.prefs(ref, recipe_bundle).items():
+                    self.package(pref, remote, metadata)
+
+        t = time.time()
+        parallel = self.conan_api.config.get("core.download:parallel", default=1, check_type=int)
+        thread_pool = ThreadPool(parallel) if parallel > 1 else None
+        if not thread_pool or len(package_list.refs()) <= 1:
+            _download_pkglist(package_list)
+        else:
+            ConanOutput().subtitle(f"Downloading with {parallel} parallel threads")
+            thread_pool.map(_download_pkglist, package_list.split())
+
+        if thread_pool:
+            thread_pool.close()
+            thread_pool.join()
+
+        elapsed = time.time() - t
+        ConanOutput().success(f"Download completed in {int(elapsed)}s\n")
