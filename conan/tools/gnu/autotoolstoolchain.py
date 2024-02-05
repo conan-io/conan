@@ -108,11 +108,30 @@ class AutotoolsToolchain:
         return list(filter(bool, v))
 
     @property
+    def _bitcode_flags(self):
+        if (
+            self._conanfile.settings.get_safe("os") in ["iOS", "tvOS", "watchOS"]
+            and self._conanfile.conf.get("tools.apple:enable_bitcode", check_type=bool)
+        ):
+            return ["-fembed-bitcode"]
+        return []
+
+    @property
+    def _arc_flags(self):
+        if (
+            is_apple_os(self._conanfile)
+            and self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
+        ):
+            return ["-fobjc-arc"]
+        return []
+
+    @property
     def cxxflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag]
-        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag] + \
+                      self._bitcode_flags + self._arc_flags
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + conf_flags
         return self._filter_list_empty_fields(ret)
@@ -121,7 +140,8 @@ class AutotoolsToolchain:
     def cflags(self):
         fpic = "-fPIC" if self.fpic else None
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
-        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
+        apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag] + \
+                      self._bitcode_flags + self._arc_flags
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + conf_flags
         return self._filter_list_empty_fields(ret)
