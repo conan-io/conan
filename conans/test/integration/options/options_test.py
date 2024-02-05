@@ -668,9 +668,9 @@ class TestTransitiveOptionsSharedInvisible:
         self.check(client, False)
 
 
-class TestStrongOptions:
+class TestImportantOptions:
     @pytest.mark.parametrize("pkg", ["liba", "libb", "app"])
-    def test_strong_options(self, pkg):
+    def test_important_options(self, pkg):
         c = TestClient()
 
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3])
@@ -697,16 +697,16 @@ class TestStrongOptions:
         c.run("graph info app -o *:myoption=3")
         assert "liba/0.1: MYOPTION: 2" in c.out
 
-        # And the profile can always strong-override the option
+        # And the profile can always important-override the option
         c.run("graph info app -o *:myoption!=3")
         assert "liba/0.1: MYOPTION: 3" in c.out
 
-    def test_profile_shows_strong(self):
+    def test_profile_shows_important(self):
         c = TestClient()
         c.run("profile show  -o *:myoption!=3")
         assert "*:myoption!=3" in c.out
 
-    def test_strong_options_recipe_priority(self):
+    def test_important_options_recipe_priority(self):
         c = TestClient()
 
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3, 4])\
