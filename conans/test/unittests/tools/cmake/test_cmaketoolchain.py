@@ -232,6 +232,12 @@ def test_toolset_x64(conanfile_msvc):
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
 
 
+def test_toolset_cuda(conanfile_msvc):
+    conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_cuda", "C:/Path/To/CUDA")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,cuda=C:/Path/To/CUDA" CACHE STRING "" FORCE)' in toolchain.content
+
+
 def test_older_msvc_toolset():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],

@@ -7,9 +7,9 @@ from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
+from conans.util.files import save
 
-CONAN_VCVARS_BAT = "conanvcvars.bat"
-CONAN_VCVARS_PS1 = "conanvcvars.ps1"
+CONAN_VCVARS = "conanvcvars"
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -154,7 +154,9 @@ class VCVars:
             {vcvars}
             """)
         from conan.tools.env.environment import create_env_script
-        create_env_script(conanfile, content, CONAN_VCVARS_BAT, scope)
+        conan_vcvars_bat = f"{CONAN_VCVARS}.bat"
+        create_env_script(conanfile, content, conan_vcvars_bat, scope)
+        _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
 
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
@@ -170,9 +172,22 @@ class VCVars:
                 Pop-Location
                 write-host conanvcvars.ps1: Activated environment}}
             """)
-            create_env_script(conanfile, content_ps1, CONAN_VCVARS_PS1, scope)
+            conan_vcvars_ps1 = f"{CONAN_VCVARS}.ps1"
+            create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
+            _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
 
 
+
+def _create_deactivate_vcvars_file(conanfile, filename):
+    deactivate_filename = f"deactivate_{filename}"
+    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    is_ps1 = filename.endswith(".ps1")
+    if is_ps1:
+        content = f"Write-Host {message}"
+    else:
+        content = f"echo {message}"
+    path = os.path.join(conanfile.generators_folder, deactivate_filename)
+    save(path, content)
 
 def vs_ide_version(conanfile):
     """
