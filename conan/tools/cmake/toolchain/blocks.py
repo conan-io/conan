@@ -14,6 +14,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
+from conans.client.generators import relativize_path
 from conans.client.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conans.util.files import load
@@ -194,6 +195,8 @@ class LinkerScriptsBlock(Block):
         if not linker_scripts:
             return
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
+        linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                          for p in linker_scripts]
         linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
         return {"linker_script_flags": " ".join(linker_script_flags)}
 
@@ -280,6 +283,8 @@ class AndroidSystemBlock(Block):
         if not android_ndk_path:
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk_path = android_ndk_path.replace("\\", "/")
+        android_ndk_path = relativize_path(android_ndk_path, self._conanfile,
+                                           "${CMAKE_CURRENT_LIST_DIR}")
 
         use_cmake_legacy_toolchain = self._conanfile.conf.get("tools.android:cmake_legacy_toolchain",
                                                               check_type=bool)
@@ -377,6 +382,8 @@ class AppleSystemBlock(Block):
             "enable_visibility": enable_visibility
         }
         if host_sdk_name:
+            host_sdk_name = relativize_path(host_sdk_name, self._conanfile,
+                                            "${CMAKE_CURRENT_LIST_DIR}")
             ctxt_toolchain["cmake_osx_sysroot"] = host_sdk_name
         # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
         if host_architecture:
@@ -538,7 +545,9 @@ class UserToolchain(Block):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_toolchain",
                                                   default=[], check_type=list)
-        return {"paths": [ut.replace("\\", "/") for ut in user_toolchain]}
+        paths = [relativize_path(p.replace("\\", "/"), self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                 for p in user_toolchain]
+        return {"paths": paths}
 
 
 class ExtraFlagsBlock(Block):
@@ -681,8 +690,7 @@ class GenericSystemBlock(Block):
         {% endif %}
         """)
 
-    @staticmethod
-    def get_toolset(generator, conanfile):
+    def get_toolset(self, generator, conanfile):
         toolset = None
         if generator is None or ("Visual" not in generator and "Xcode" not in generator):
             return None
@@ -713,6 +721,8 @@ class GenericSystemBlock(Block):
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
         toolset_cuda = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_cuda")
         if toolset_cuda is not None:
+            toolset_cuda = relativize_path(toolset_cuda, self._conanfile,
+                                           "${CMAKE_CURRENT_LIST_DIR}")
             toolset_cuda = f"cuda={toolset_cuda}"
             toolset = toolset_cuda if toolset is None else f"{toolset},{toolset_cuda}"
         return toolset
@@ -829,6 +839,9 @@ class GenericSystemBlock(Block):
         # This is handled by the tools.apple:sdk_path and CMAKE_OSX_SYSROOT in Apple
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
+        if cmake_sysroot is not None:
+            cmake_sysroot = relativize_path(cmake_sysroot, self._conanfile,
+                                            "${CMAKE_CURRENT_LIST_DIR}")
 
         result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
