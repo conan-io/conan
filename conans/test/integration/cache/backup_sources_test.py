@@ -677,3 +677,32 @@ class TestDownloadCacheBackupSources:
         # This used to crash because we were trying to list a missing dir if only exports were made
         assert "[Errno 2] No such file or directory" not in self.client.out
         assert sha256 in os.listdir(http_server_base_folder_backup)
+
+    def test_backup_source_dirty_download_handling(self):
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        self.client.save(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}"},
+            path=self.client.cache.cache_folder)
+
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("source .")
+
+        # Now simulate a dirty download, the file is there but the sha256 is wrong
+        save(os.path.join(self.download_cache_folder, "s", sha256), "Bye bye, world!")
+
+        # Now try to source again, it should detect the dirty download and re-download it
+        self.client.run("source .", assert_error=True)
+        assert f"ConanException: sha256 signature failed for '{sha256}' file." in self.client.out

@@ -61,6 +61,7 @@ class SourcesCachingDownloader:
             remove_if_dirty(cached_path)
 
             if os.path.exists(cached_path):
+                self._file_downloader.check_checksum(cached_path, md5, sha1, sha256)
                 self._output.info(f"Source {urls} retrieved from local download cache")
             else:
                 with set_dirty_context_manager(cached_path):
