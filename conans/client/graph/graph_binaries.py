@@ -386,7 +386,11 @@ class GraphBinariesAnalyzer(object):
             new_root_nodes = set()
             for node in root_nodes:
                 # The nodes that are directly required by this one to build correctly
-                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
+                is_consumer = not (node.recipe != RECIPE_CONSUMER and
+                                   node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
+                                                       BINARY_EDITABLE))
+                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files
+                                    or (d.require.direct and is_consumer))
 
                 # second pass, transitive affected. Packages that have some dependency that is required
                 # cannot be skipped either. In theory the binary could be skipped, but build system
