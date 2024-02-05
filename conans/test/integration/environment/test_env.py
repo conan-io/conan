@@ -841,3 +841,14 @@ def test_runenv_info_propagated():
     c.run("create tool --build-require -s:b build_type=Release -s:h build_type=Debug")
     assert "tool/0.1 (test package): Building TEST_PACKAGE IN Debug!!" in c.out
     assert "MYLIBVAR=MYLIBVALUE:Release" in c.out
+
+
+def test_deactivate_relocatable_substitute():
+    c = TestClient()
+    # this cannot be tested in CI, because permissions over root folder
+    # c.current_folder = "/build"
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("install . -s os=Linux -s:b os=Linux")
+    conanbuild = c.load("conanbuildenv.sh")
+    result = os.path.join("$script_folder", "deactivate_conanbuildenv.sh")
+    assert fr'"{result}"' in conanbuild

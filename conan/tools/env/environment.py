@@ -476,7 +476,7 @@ class EnvVars:
 
     def save_sh(self, file_location, generate_deactivate=True):
         filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
+        deactivate_file = os.path.join("$script_folder", "deactivate_{}".format(filename))
         deactivate = textwrap.dedent("""\
            echo "echo Restoring environment" > "{deactivate_file}"
            for v in {vars}
