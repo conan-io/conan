@@ -61,6 +61,11 @@ def test_info_build_order():
 
     assert bo_json == result
 
+    c.run("graph build-order consumer --order-by=recipe --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "recipe"
+    assert bo_json["order"] == result
+
 
 def test_info_build_order_configuration():
     c = TestClient()
