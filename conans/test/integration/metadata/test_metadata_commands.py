@@ -89,6 +89,26 @@ class TestMetadataCommands:
         content = load(os.path.join(metadata_path, "logs", "mylogs.txt"))
         assert "mylogs2!!!!" in content
 
+    def test_download_specific(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        revision = c.exported_recipe_revision()
+
+        # Add some metadata
+        _, myfile = self.save_metadata_file(c, "pkg/0.1", "mylogs.txt")
+
+        # Now upload everything
+        c.run("upload * -c -r=default")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+
+        c.run(f'download pkg/0.1#{revision} --only-recipe -r=default --metadata="logs"')
+        c.run(f"cache path pkg/0.1#{revision} --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+
+        content = load(os.path.join(metadata_path, "logs", "mylogs.txt"))
+        assert "pkg/0.1!!!!" in content
+
     def test_folder_exist(self, create_conan_pkg):
         """ so we can cp -R to the metadata folder, having to create the folder in the cache
         is weird
