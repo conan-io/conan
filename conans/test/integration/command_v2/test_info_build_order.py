@@ -2,6 +2,8 @@ import json
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -535,7 +537,8 @@ def test_info_build_order_broken_recipe():
 
 
 class TestBuildOrderReduce:
-    def test_reduce(self):
+    @pytest.mark.parametrize("order", ["recipe", "configuration"])
+    def test_build_order_reduce(self, order):
         c = TestClient()
         c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1"),
@@ -546,12 +549,65 @@ class TestBuildOrderReduce:
         c.run("create libc")
         c.run("remove liba:* -c")
         c.run("remove libc:* -c")
-        c.run("graph build-order consumer --build=missing --reduce --format=json")
+        c.run(f"graph build-order consumer --order={order} --build=missing --reduce --format=json")
         bo_json = json.loads(c.stdout)
         assert len(bo_json) == 2  # 2 levels
-        level0 = bo_json[0]
+        level0, level1 = bo_json
         assert len(level0) == 1
         assert level0[0]["ref"] == "liba/0.1#a658e7beaaae5d6be0b6f67dcc9859e2"
-        level1 = bo_json[1]
+        # then libc -> directly on liba, no libb involved
         assert len(level1) == 1
-        assert level1[0]["depends"] == ["liba/0.1#a658e7beaaae5d6be0b6f67dcc9859e2"]
+        assert level1[0]["ref"] == "libc/0.1#c04c370ad966390e67388565b56f019a"
+        depends = "liba/0.1#a658e7beaaae5d6be0b6f67dcc9859e2"
+        if order == "configuration":
+            depends += ":da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        assert level1[0]["depends"] == [depends]
+
+    @pytest.mark.parametrize("order", ["recipe", "configuration"])
+    def test_build_order_merge_reduce(self, order):
+        c = TestClient()
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_settings("os"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_settings("os")
+                                                                .with_requires("liba/0.1"),
+                "libc/conanfile.py": GenConanfile("libc", "0.1").with_settings("os")
+                                                                .with_requires("libb/0.1"),
+                "consumer/conanfile.txt": "[requires]\nlibc/0.1"})
+        for _os in ("Windows", "Linux"):
+            c.run(f"create liba -s os={_os}")
+            c.run(f"create libb -s os={_os}")
+            c.run(f"create libc -s os={_os}")
+
+        c.run("remove liba:* -c")
+        c.run("remove libc:* -c")
+        c.run(f"graph build-order consumer --order={order} --build=missing -s os=Windows "
+              "--format=json", redirect_stdout="windows.json")
+        c.run(f"graph build-order consumer --order={order} --build=missing -s os=Linux "
+              "--format=json", redirect_stdout="linux.json")
+
+        c.run(f"graph build-order-merge --file=windows.json --file=linux.json --reduce "
+              "--format=json")
+        bo_json = json.loads(c.stdout)
+        assert len(bo_json) == 2  # 2 levels
+        level0, level1 = bo_json
+        if order == "recipe":
+            assert len(level0) == 1
+            assert level0[0]["ref"] == "liba/0.1#8c6ed89c12ab2ce78b239224bd7cb79e"
+            # then libc -> directly on liba, no libb involved
+            assert len(level1) == 1
+            assert level1[0]["ref"] == "libc/0.1#66db2600b9d6a2a61c9051fcf47da4a3"
+            depends = "liba/0.1#8c6ed89c12ab2ce78b239224bd7cb79e"
+            assert level1[0]["depends"] == [depends]
+        else:
+            assert len(level0) == 2
+            liba1 = "liba/0.1#8c6ed89c12ab2ce78b239224bd7cb79e:" \
+                    "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
+            liba2 = "liba/0.1#8c6ed89c12ab2ce78b239224bd7cb79e:" \
+                    "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
+            assert level0[0]["pref"] == liba1
+            assert level0[1]["pref"] == liba2
+            # then libc -> directly on liba, no libb involved
+            assert len(level1) == 2
+            assert level1[0]["ref"] == "libc/0.1#66db2600b9d6a2a61c9051fcf47da4a3"
+            assert level1[0]["depends"] == [liba1]
+            assert level1[1]["ref"] == "libc/0.1#66db2600b9d6a2a61c9051fcf47da4a3"
+            assert level1[1]["depends"] == [liba2]

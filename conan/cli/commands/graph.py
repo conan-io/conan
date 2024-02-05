@@ -63,7 +63,8 @@ def graph_build_order(conan_api, parser, subparser, *args):
     subparser.add_argument("--order", choices=['recipe', 'configuration'], default="recipe",
                            help='Select how to order the output, "recipe" by default if not set.')
     subparser.add_argument("--reduce", action='store_true', default=False,
-                           help='Reduce the build order, output only those to build')
+                           help='Reduce the build order, output only those to build. Use this '
+                                'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -119,6 +120,9 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
+    subparser.add_argument("--reduce", action='store_true', default=False,
+                           help='Reduce the build order, output only those to build. Use this '
+                                'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
     if not args.file or len(args.file) < 2:
         raise ConanException("At least 2 files are needed to be merged")
@@ -128,6 +132,8 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
         install_graph = InstallGraph.load(make_abs_path(f))
         result.merge(install_graph)
 
+    if args.reduce:
+        result.reduce()
     install_order_serialized = result.install_build_order()
     return install_order_serialized
 

@@ -384,7 +384,9 @@ class InstallGraph:
                 # Find all consumers
                 for n in self._nodes.values():
                     if k in n.depends:
-                        n.depends = [d for d in n.depends if d != k] + dependencies
+                        n.depends = [d for d in n.depends if d != k]  # Discard the removed node
+                        # Add new edges, without repetition
+                        n.depends.extend(d for d in dependencies if d not in n.depends)
         self._nodes = result
 
     def install_order(self, flat=False):
