@@ -1,7 +1,8 @@
 import time
 from multiprocessing.pool import ThreadPool
+from typing import Optional, List
 
-from conan.api.model import Remote
+from conan.api.model import Remote, PackagesList
 from conan.api.output import ConanOutput
 from conan.internal.conan_app import ConanApp
 from conans.errors import ConanException
@@ -14,7 +15,10 @@ class DownloadAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def recipe(self, ref: RecipeReference, remote: Remote, metadata=None):
+    def recipe(self, ref: RecipeReference, remote: Remote, metadata: Optional[List[str]] = None):
+        """Download the recipe specified in the ref from the remote.
+        If the recipe is already in the cache it will be skipped,
+        but the specified metadata will be downloaded."""
         output = ConanOutput()
         app = ConanApp(self.conan_api)
         assert ref.revision, f"Reference '{ref}' must have revision"
@@ -43,7 +47,10 @@ class DownloadAPI:
         app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
         return True
 
-    def package(self, pref: PkgReference, remote: Remote, metadata=None):
+    def package(self, pref: PkgReference, remote: Remote, metadata: Optional[List[str]] = None):
+        """Download the package specified in the pref from the remote.
+        If the package is already in the cache it will be skipped,
+        but the specified metadata will be downloaded."""
         output = ConanOutput()
         app = ConanApp(self.conan_api)
         try:
@@ -59,7 +66,7 @@ class DownloadAPI:
                 app.remote_manager.get_package_metadata(pref, remote, metadata)
             return False
 
-        if pref.timestamp is None:  # we didnt obtain the timestamp before (in general it should be)
+        if pref.timestamp is None:  # we didn't obtain the timestamp before (in general it should be)
             # Respect the timestamp of the server
             server_pref = app.remote_manager.get_package_revision_reference(pref, remote)
             assert server_pref == pref
@@ -69,7 +76,8 @@ class DownloadAPI:
         app.remote_manager.get_package(pref, remote, metadata)
         return True
 
-    def download_full(self, package_list, remote, metadata):
+    def download_full(self, package_list: PackagesList, remote: Remote,
+                      metadata: Optional[List[str]] = None):
         """Download the recipes and packages specified in the package_list from the remote,
         parallelized based on `core.download:parallel`"""
         def _download_pkglist(pkglist):
