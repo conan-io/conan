@@ -76,6 +76,9 @@ class DownloadCache:
         files_to_upload = []
 
         for path in os.listdir(path_backups):
+            if path.endswith(".dirty"):
+                # There can be dirty downloads, just ignore them
+                continue
             if not path.endswith(".json"):
                 blob_path = os.path.join(path_backups, path)
                 metadata_path = os.path.join(blob_path + ".json")
