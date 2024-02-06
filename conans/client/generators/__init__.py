@@ -1,5 +1,6 @@
 import inspect
 import os
+import re
 import traceback
 import importlib
 
@@ -206,6 +207,25 @@ def relativize_generated_file(content, conanfile, placeholder):
     rel_path = os.path.relpath(abs_base_path, generators_folder)
     new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
     new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
-    content = content.replace(abs_base_path, new_path)
-    content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
+
+    def replace(text, old, new):
+        sep = "\\" if "\\" in old else "/"
+        if sep == "\\":
+            oldp = old.replace("\\", "\\\\")  # escape
+            sep = "\\\\"
+        else:
+            oldp = old
+        regex = fr"({oldp}[^?%*:;|<>\"\n]*{sep}?)"
+
+        def repl(x):
+            p = x.group()
+            if os.path.exists(p):
+                return p.replace(old, new, 1)
+            return p
+
+        text = re.sub(regex, repl, text, 0, re.MULTILINE)
+        return text
+
+    content = replace(content, abs_base_path, new_path)
+    content = replace(content, abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
     return content
