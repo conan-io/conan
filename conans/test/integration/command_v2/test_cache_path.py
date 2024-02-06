@@ -1,3 +1,6 @@
+import json
+import os
+
 import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -111,3 +114,14 @@ def test_cache_path_does_not_exist_folder():
     client.run(f"install --requires mypkg/0.1")
     client.run(f"cache path {pref} --folder build", assert_error=True)
     assert f"ERROR: 'build' folder does not exist for the reference {pref}" in client.out
+
+def test_cache_path_output_json():
+    client = TestClient()
+    conanfile = GenConanfile("mypkg", "0.1")
+    client.save({"conanfile.py": conanfile})
+    client.run("export .")
+    layout = client.exported_layout()
+    client.run("cache path mypkg/0.1 --format=json", redirect_stdout="out.json")
+    output = json.loads(client.load("out.json"))
+    cache_path = os.path.join(layout.base_folder, "e")
+    assert output == {"cache_path": f"{cache_path}"}
