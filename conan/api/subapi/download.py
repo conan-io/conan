@@ -49,6 +49,7 @@ class DownloadAPI:
 
     def package(self, pref: PkgReference, remote: Remote, metadata: Optional[List[str]] = None):
         """Download the package specified in the pref from the remote.
+        The recipe for this package binary must already exist in the cache.
         If the package is already in the cache it will be skipped,
         but the specified metadata will be downloaded."""
         output = ConanOutput()
