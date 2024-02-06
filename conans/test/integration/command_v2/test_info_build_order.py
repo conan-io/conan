@@ -61,6 +61,11 @@ def test_info_build_order():
 
     assert bo_json == result
 
+    c.run("graph build-order consumer --order-by=recipe --build=missing --format=json")
+    bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "recipe"
+    assert bo_json["order"] == result
+
 
 def test_info_build_order_configuration():
     c = TestClient()
@@ -71,6 +76,7 @@ def test_info_build_order_configuration():
     c.run("export pkg --name=pkg --version=0.1")
     c.run("graph build-order consumer --build=missing --order=configuration --format=json")
     bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "configuration"
 
     result = [
         [
@@ -108,7 +114,7 @@ def test_info_build_order_configuration():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_configuration_text_formatter():
@@ -333,6 +339,7 @@ def test_info_build_order_merge_multi_product_configurations():
           redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
+    assert bo_json["order_by"] == "configuration"
     result = [
         [
             {
@@ -390,7 +397,7 @@ def test_info_build_order_merge_multi_product_configurations():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_merge_conditionals():

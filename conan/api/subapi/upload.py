@@ -62,9 +62,9 @@ class UploadAPI:
     def upload_full(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,
                     metadata=None, dry_run=False):
         """ Does the whole process of uploading, including the possibility of parallelizing
-        per recipe:
+        per recipe based on `core.upload:parallel`:
         - calls check_integrity
-        - checks which revision already exist in the server (not necessary to upoad)
+        - checks which revision already exist in the server (not necessary to upload)
         - prepare the artifacts to upload (compress .tgz)
         - execute the actual upload
         - upload potential sources backups
