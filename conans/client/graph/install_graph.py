@@ -317,11 +317,13 @@ class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
     """
 
-    def __init__(self, deps_graph, order="recipe"):
+    def __init__(self, deps_graph, order_by=None):
         self._nodes = {}  # ref with rev: _InstallGraphNode
-        self._order = order
-        self._node_cls = _InstallRecipeReference if order == "recipe" else _InstallConfiguration
+        order_by = order_by or "recipe"
+        self._order = order_by
+        self._node_cls = _InstallRecipeReference if order_by == "recipe" else _InstallConfiguration
         self._is_test_package = False
+        self.reduced = False
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
             self._is_test_package = deps_graph.root.conanfile.tested_reference_str is not None
@@ -338,8 +340,10 @@ class InstallGraph:
         """
         @type other: InstallGraph
         """
+        if self.reduced or other.reduced:
+            raise ConanException("Reduced build-order files cannot be merged")
         if self._order != other._order:
-            raise ConanException(f"Cannot merge build-orders of `{self._order}!={other._order}")
+            raise ConanException(f"Cannot merge build-orders of {self._order}!={other._order}")
         for ref, install_node in other._nodes.items():
             existing = self._nodes.get(ref)
             if existing is None:
@@ -349,12 +353,12 @@ class InstallGraph:
 
     @staticmethod
     def deserialize(data, filename):
-        # Automatic deduction of the order based on the data
-        try:
-            order = "recipe" if "packages" in data[0][0] else "configuration"
-        except IndexError:
-            order = "recipe"
-        result = InstallGraph(None, order=order)
+        legacy = isinstance(data, list)
+        order, data, reduced = ("recipe", data, False) if legacy else \
+            (data["order_by"], data["order"], data["reduced"])
+        result = InstallGraph(None, order_by=order)
+        result.reduced = reduced
+        result.legacy = legacy
         for level in data:
             for item in level:
                 elem = result._node_cls.deserialize(item, filename)
@@ -388,6 +392,7 @@ class InstallGraph:
                         # Add new edges, without repetition
                         n.depends.extend(d for d in dependencies if d not in n.depends)
         self._nodes = result
+        self.reduced = True
 
     def install_order(self, flat=False):
         # a topological order by levels, returns a list of list, in order of processing
@@ -416,7 +421,9 @@ class InstallGraph:
         This is basically a serialization of the build-order
         """
         install_order = self.install_order()
-        result = [[n.serialize() for n in level] for level in install_order]
+        result = {"order_by": self._order,
+                  "reduced": self.reduced,
+                  "order": [[n.serialize() for n in level] for level in install_order]}
         return result
 
     def raise_errors(self):

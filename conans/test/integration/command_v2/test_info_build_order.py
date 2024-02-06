@@ -62,9 +62,16 @@ def test_info_build_order():
     ]
 
     assert bo_json == result
-    c.run("graph build-order consumer --build=missing --reduce --format=json")
+
+    c.run("graph build-order consumer --order-by=recipe --build=missing --format=json")
     bo_json = json.loads(c.stdout)
-    assert bo_json == result
+    assert bo_json["order_by"] == "recipe"
+    assert bo_json["order"] == result
+
+    c.run("graph build-order consumer --build=missing --order-by=recipe --reduce --format=json")
+    bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "recipe"
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_configuration():
@@ -76,6 +83,7 @@ def test_info_build_order_configuration():
     c.run("export pkg --name=pkg --version=0.1")
     c.run("graph build-order consumer --build=missing --order=configuration --format=json")
     bo_json = json.loads(c.stdout)
+    assert bo_json["order_by"] == "configuration"
 
     result = [
         [
@@ -113,10 +121,11 @@ def test_info_build_order_configuration():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json["order"] == result
+
     c.run("graph build-order consumer --build=missing --order=configuration --reduce --format=json")
     bo_json = json.loads(c.stdout)
-    assert bo_json == result
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_configuration_text_formatter():
@@ -341,6 +350,7 @@ def test_info_build_order_merge_multi_product_configurations():
           redirect_stdout="bo3.json")
 
     bo_json = json.loads(c.load("bo3.json"))
+    assert bo_json["order_by"] == "configuration"
     result = [
         [
             {
@@ -398,7 +408,7 @@ def test_info_build_order_merge_multi_product_configurations():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json["order"] == result
 
 
 def test_info_build_order_merge_conditionals():
@@ -551,8 +561,9 @@ class TestBuildOrderReduce:
         c.run("remove libc:* -c")
         c.run(f"graph build-order consumer --order={order} --build=missing --reduce --format=json")
         bo_json = json.loads(c.stdout)
-        assert len(bo_json) == 2  # 2 levels
-        level0, level1 = bo_json
+        order_json = bo_json["order"]
+        assert len(order_json) == 2  # 2 levels
+        level0, level1 = order_json
         assert len(level0) == 1
         assert level0[0]["ref"] == "liba/0.1#a658e7beaaae5d6be0b6f67dcc9859e2"
         # then libc -> directly on liba, no libb involved
@@ -587,8 +598,9 @@ class TestBuildOrderReduce:
         c.run(f"graph build-order-merge --file=windows.json --file=linux.json --reduce "
               "--format=json")
         bo_json = json.loads(c.stdout)
-        assert len(bo_json) == 2  # 2 levels
-        level0, level1 = bo_json
+        order_json = bo_json["order"]
+        assert len(order_json) == 2  # 2 levels
+        level0, level1 = order_json
         if order == "recipe":
             assert len(level0) == 1
             assert level0[0]["ref"] == "liba/0.1#8c6ed89c12ab2ce78b239224bd7cb79e"
@@ -611,3 +623,32 @@ class TestBuildOrderReduce:
             assert level1[0]["depends"] == [liba1]
             assert level1[1]["ref"] == "libc/0.1#66db2600b9d6a2a61c9051fcf47da4a3"
             assert level1[1]["depends"] == [liba2]
+
+    def test_error_reduced(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+        c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
+        c.run("graph build-order . --order-by=recipe --reduce --format=json",
+              redirect_stdout="bo2.json")
+        c.run(f"graph build-order-merge --file=bo1.json --file=bo2.json", assert_error=True)
+        assert "ERROR: Reduced build-order file cannot be merged: bo2.json"
+        # different order
+        c.run(f"graph build-order-merge --file=bo2.json --file=bo1.json", assert_error=True)
+        assert "ERROR: Reduced build-order file cannot be merged: bo2.json"
+
+    def test_error_different_orders(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+        c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
+        c.run("graph build-order . --order-by=recipe --format=json", redirect_stdout="bo2.json")
+        c.run("graph build-order . --order-by=configuration --format=json",
+              redirect_stdout="bo3.json")
+        c.run(f"graph build-order-merge --file=bo1.json --file=bo2.json")
+        # Not error
+        c.run(f"graph build-order-merge --file=bo1.json --file=bo3.json", assert_error=True)
+        assert "ERROR: Cannot merge build-orders of recipe!=configuration" in c.out
+        c.run(f"graph build-order-merge --file=bo2.json --file=bo3.json", assert_error=True)
+        assert "ERROR: Cannot merge build-orders of recipe!=configuration" in c.out
+        # different order
+        c.run(f"graph build-order-merge --file=bo3.json --file=bo2.json", assert_error=True)
+        assert "ERROR: Cannot merge build-orders of configuration!=recipe" in c.out

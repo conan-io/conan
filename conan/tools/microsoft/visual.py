@@ -100,8 +100,11 @@ class VCVars:
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
+
         os_ = conanfile.settings.get_safe("os")
-        if os_ != "Windows":
+        build_os_ = conanfile.settings_build.get_safe("os")
+
+        if os_ != "Windows" or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
