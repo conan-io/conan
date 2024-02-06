@@ -1,12 +1,13 @@
 import json
 import os
+import shutil
 import textwrap
 from unittest import mock
 
 import pytest
 from bottle import static_file, HTTPError, request
 
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -678,7 +679,7 @@ class TestDownloadCacheBackupSources:
         assert "[Errno 2] No such file or directory" not in self.client.out
         assert sha256 in os.listdir(http_server_base_folder_backup)
 
-    def test_backup_source_dirty_download_handling(self):
+    def test_backup_source_corrupted_download_handling(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
 
         sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
@@ -706,3 +707,39 @@ class TestDownloadCacheBackupSources:
         # Now try to source again, it should detect the dirty download and re-download it
         self.client.run("source .", assert_error=True)
         assert f"ConanException: sha256 signature failed for '{sha256}' file." in self.client.out
+
+    def test_backup_source_dirty_download_handle(self):
+        def custom_download(this, *args, **kwargs):
+            raise ConanException()
+
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+                               from conan import ConanFile
+                               from conan.tools.files import download
+                               class Pkg2(ConanFile):
+                                   def source(self):
+                                       download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                                                sha256="{sha256}")
+                               """)
+
+        self.client.save(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"tools.files.download:retry=0"},
+            path=self.client.cache.cache_folder)
+
+        self.client.save({"conanfile.py": conanfile})
+
+        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader._download_file",
+                        custom_download):
+            self.client.run("source .", assert_error=True)
+            # The mock does not actually download a file, let's add it for the test
+            shutil.copy2(os.path.join(http_server_base_folder_internet, "myfile.txt"),
+                         os.path.join(self.download_cache_folder, "s", sha256))
+
+        # A .dirty file was created, now try to source again, it should detect the dirty download and re-download it
+        self.client.run("source .")
+        assert f"{sha256} is dirty, removing it" in self.client.out
