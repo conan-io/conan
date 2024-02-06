@@ -102,6 +102,14 @@ class TestMetadataCommands:
         c.run("upload * -c -r=default")
         assert "pkg/0.1: Recipe metadata: 1 files" in c.out
 
+        # Ensure upload works fine, the potential issue would be in the download
+        assert "mylogs.txt" in os.listdir(
+            os.path.join(c.servers["default"].server_store._store_folder, "pkg", "0.1", "_", "_",
+                         revision, "export", "metadata", "logs"))
+
+        # Remove local cache
+        c.run("remove * -c")
+
         c.run(f'download pkg/0.1#{revision} --only-recipe -r=default --metadata="logs"')
         c.run(f"cache path pkg/0.1#{revision} --folder=metadata")
         metadata_path = str(c.stdout).strip()
@@ -220,5 +228,6 @@ class TestMetadataCommands:
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run("export .")
 
-        client.run('upload * --confirm --remote=default --metadata="" --metadata="logs/*"', assert_error=True)
+        client.run('upload * --confirm --remote=default --metadata="" --metadata="logs/*"',
+                   assert_error=True)
         assert "ERROR: Empty string and patterns can not be mixed for metadata." in client.out
