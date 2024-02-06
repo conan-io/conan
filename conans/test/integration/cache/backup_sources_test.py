@@ -737,6 +737,9 @@ class TestDownloadCacheBackupSources:
             self.client.run("source .", assert_error=True)
             # The mock does not actually download a file, let's add it for the test
             save(os.path.join(self.download_cache_folder, "s", sha256), "__corrupted download__")
+            # Check that the dirty file was not removed.
+            # This check should go away once we refactor dirty handling
+            assert os.path.exists(os.path.join(self.download_cache_folder, "s", f"{sha256}.dirty"))
 
         # A .dirty file was created, now try to source again, it should detect the dirty download and re-download it
         self.client.run("source .")
