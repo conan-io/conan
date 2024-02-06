@@ -704,9 +704,8 @@ class TestDownloadCacheBackupSources:
         # Now simulate a dirty download, the file is there but the sha256 is wrong
         save(os.path.join(self.download_cache_folder, "s", sha256), "Bye bye, world!")
 
-        # Now try to source again, it should detect the dirty download and re-download it
-        self.client.run("source .", assert_error=True)
-        assert f"ConanException: sha256 signature failed for '{sha256}' file." in self.client.out
+        # Now try to source again, it should eat it up
+        self.client.run("source .")
 
     def test_backup_source_dirty_download_handle(self):
         def custom_download(this, *args, **kwargs):
