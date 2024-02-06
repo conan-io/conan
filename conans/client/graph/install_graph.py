@@ -306,10 +306,11 @@ class InstallGraph:
     """ A graph containing the package references in order to be built/downloaded
     """
 
-    def __init__(self, deps_graph, order="recipe"):
+    def __init__(self, deps_graph, order_by=None):
         self._nodes = {}  # ref with rev: _InstallGraphNode
-        self._order = order
-        self._node_cls = _InstallRecipeReference if order == "recipe" else _InstallConfiguration
+        order_by = order_by or "recipe"
+        self._order = order_by
+        self._node_cls = _InstallRecipeReference if order_by == "recipe" else _InstallConfiguration
         self._is_test_package = False
         if deps_graph is not None:
             self._initialize_deps_graph(deps_graph)
@@ -338,12 +339,10 @@ class InstallGraph:
 
     @staticmethod
     def deserialize(data, filename):
-        # Automatic deduction of the order based on the data
-        try:
-            order = "recipe" if "packages" in data[0][0] else "configuration"
-        except IndexError:
-            order = "recipe"
-        result = InstallGraph(None, order=order)
+        legacy = isinstance(data, list)
+        order, data = ("recipe", data) if legacy else (data["order_by"], data["order"])
+        result = InstallGraph(None, order_by=order)
+        result.legacy = legacy
         for level in data:
             for item in level:
                 elem = result._node_cls.deserialize(item, filename)
@@ -390,7 +389,8 @@ class InstallGraph:
         This is basically a serialization of the build-order
         """
         install_order = self.install_order()
-        result = [[n.serialize() for n in level] for level in install_order]
+        result = {"order_by": self._order,
+                  "order": [[n.serialize() for n in level] for level in install_order]}
         return result
 
     def raise_errors(self):
