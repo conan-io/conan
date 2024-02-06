@@ -303,6 +303,8 @@ class _InstallConfiguration:
         return result
 
     def merge(self, other):
+        assert self.binary == other.binary, f"Binary for {self.ref}: {self.binary}!={other.binary}"
+
         assert self.ref == other.ref
         for d in other.depends:
             if d not in self.depends:
