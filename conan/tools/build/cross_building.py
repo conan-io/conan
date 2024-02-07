@@ -7,7 +7,8 @@ def cross_building(conanfile=None, skip_x64_x86=False):
     :param conanfile: The current recipe object. Always use ``self``.
     :param skip_x64_x86: Do not consider cross building when building to 32 bits from 64 bits:
            x86_64 to x86, sparcv9 to sparc or ppc64 to ppc32
-    :return: ``True`` if we are cross building, ``False`` otherwise.
+    :return: ``bool`` value from ``tools.build.cross_building:cross_build`` if exists, otherwise,
+             it returns ``True`` if we are cross-building, else, ``False``.
     """
     cross_build = conanfile.conf.get("tools.build.cross_building:cross_build", check_type=bool)
     if cross_build is not None:
