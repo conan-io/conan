@@ -1,6 +1,7 @@
 from conan.internal.conan_app import ConanApp
 from conan.internal.deploy import do_deploys
 from conans.client.generators import write_generators
+from conans.client.graph.install_graph import InstallGraph
 from conans.client.installer import BinaryInstaller
 from conans.errors import ConanInvalidConfiguration
 
@@ -18,8 +19,11 @@ class InstallAPI:
         app = ConanApp(self.conan_api)
         installer = BinaryInstaller(app, self.conan_api.config.global_conf,
                                     self.conan_api.local.editable_packages)
-        installer.install_system_requires(deps_graph)  # TODO: Optimize InstallGraph computation
-        installer.install(deps_graph, remotes)
+        install_graph = InstallGraph(deps_graph)
+        install_graph.raise_errors()
+        install_order = install_graph.install_order()
+        installer.install_system_requires(deps_graph, install_order=install_order)
+        installer.install(deps_graph, remotes, install_order=install_order)
 
     def install_system_requires(self, graph, only_info=False):
         """ Install binaries for dependency graph

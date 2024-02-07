@@ -199,9 +199,10 @@ class BinaryInstaller:
         config_source(export_source_folder, conanfile, self._hook_manager)
 
     @staticmethod
-    def install_system_requires(graph, only_info=False):
-        install_graph = InstallGraph(graph)
-        install_order = install_graph.install_order()
+    def install_system_requires(graph, only_info=False, install_order=None):
+        if install_order is None:
+            install_graph = InstallGraph(graph)
+            install_order = install_graph.install_order()
 
         for level in install_order:
             for install_reference in level:
@@ -236,15 +237,14 @@ class BinaryInstaller:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
 
-    def install(self, deps_graph, remotes):
+    def install(self, deps_graph, remotes, install_order=None):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
+        if install_order is None:
+            install_graph = InstallGraph(deps_graph)
+            install_graph.raise_errors()
+            install_order = install_graph.install_order()
 
         ConanOutput().title("Installing packages")
-
-        # order by levels and separate the root node (ref=None) from the rest
-        install_graph = InstallGraph(deps_graph)
-        install_graph.raise_errors()
-        install_order = install_graph.install_order()
 
         package_count = sum([sum(len(install_reference.packages.values())
                                  for level in install_order
