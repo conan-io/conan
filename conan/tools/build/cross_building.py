@@ -9,6 +9,9 @@ def cross_building(conanfile=None, skip_x64_x86=False):
            x86_64 to x86, sparcv9 to sparc or ppc64 to ppc32
     :return: ``True`` if we are cross building, ``False`` otherwise.
     """
+    force = conanfile.conf.get("tools.build.cross_building:force", check_type=bool)
+    if force is not None:
+        return force
 
     build_os = conanfile.settings_build.get_safe('os')
     build_arch = conanfile.settings_build.get_safe('arch')
