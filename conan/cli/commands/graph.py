@@ -63,6 +63,9 @@ def graph_build_order(conan_api, parser, subparser, *args):
     common_graph_args(subparser)
     subparser.add_argument("--order-by", choices=['recipe', 'configuration'],
                            help='Select how to order the output, "recipe" by default if not set.')
+    subparser.add_argument("--reduce", action='store_true', default=False,
+                           help='Reduce the build order, output only those to build. Use this '
+                                'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
 
     # parameter validation
@@ -102,7 +105,12 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
+
     install_graph = InstallGraph(deps_graph, order_by=args.order_by)
+    if args.reduce:
+        if args.order_by is None:
+            raise ConanException("--reduce needs --order-by argument defined")
+        install_graph.reduce()
     install_order_serialized = install_graph.install_build_order()
     if args.order_by is None:  # legacy
         install_order_serialized = install_order_serialized["order"]
@@ -120,15 +128,24 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
+    subparser.add_argument("--reduce", action='store_true', default=False,
+                           help='Reduce the build order, output only those to build. Use this '
+                                'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
     if not args.file or len(args.file) < 2:
         raise ConanException("At least 2 files are needed to be merged")
 
     result = InstallGraph.load(make_abs_path(args.file[0]))
+    if result.reduced:
+        raise ConanException(f"Reduced build-order file cannot be merged: {args.file[0]}")
     for f in args.file[1:]:
         install_graph = InstallGraph.load(make_abs_path(f))
+        if install_graph.reduced:
+            raise ConanException(f"Reduced build-order file cannot be merged: {f}")
         result.merge(install_graph)
 
+    if args.reduce:
+        result.reduce()
     install_order_serialized = result.install_build_order()
     if getattr(result, "legacy"):
         install_order_serialized = install_order_serialized["order"]
