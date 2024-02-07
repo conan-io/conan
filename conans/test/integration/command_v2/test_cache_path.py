@@ -121,6 +121,6 @@ def test_cache_path_output_json():
     client.save({"conanfile.py": conanfile})
     client.run("export .")
     layout = client.exported_layout()
-    client.run("cache path mypkg/0.1 --format=json", redirect_stdout="out.json")
-    output = json.loads(client.load("out.json"))
+    client.run("cache path mypkg/0.1 --format=json")
+    output = json.loads(client.stdout)
     assert output == {"cache_path": os.path.join(layout.base_folder, "e")}
