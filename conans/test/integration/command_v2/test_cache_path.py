@@ -123,5 +123,4 @@ def test_cache_path_output_json():
     layout = client.exported_layout()
     client.run("cache path mypkg/0.1 --format=json", redirect_stdout="out.json")
     output = json.loads(client.load("out.json"))
-    cache_path = os.path.join(layout.base_folder, "e")
-    assert output == {"cache_path": f"{cache_path}"}
+    assert output == {"cache_path": os.path.join(layout.base_folder, "e")}
