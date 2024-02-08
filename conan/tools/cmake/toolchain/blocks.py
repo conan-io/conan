@@ -583,6 +583,14 @@ class ExtraFlagsBlock(Block):
             self._conanfile.output.warning("tools.build:cxxflags or cflags are defined, but Android NDK toolchain may be overriding "
                                            "the values. Consider setting tools.android:cmake_legacy_toolchain to False.")
 
+        if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_include = load(CONAN_TOOLCHAIN_FILENAME)
+            msvc_runtime_value = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
+                                           existing_include)
+            if msvc_runtime_value:
+                capture = msvc_runtime_value.group(1)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:([A-Za-z]*)>", capture)
+
         return {
             "cxxflags": cxxflags,
             "cflags": cflags,
@@ -609,7 +617,7 @@ class CMakeFlagsInitBlock(Block):
               string(APPEND CMAKE_EXE_LINKER_FLAGS_${config}_INIT " ${CONAN_EXE_LINKER_FLAGS_${config}}")
             endif()
         endforeach()
-        {% else %}
+
         if(DEFINED CONAN_CXX_FLAGS)
           string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
         endif()
@@ -622,7 +630,7 @@ class CMakeFlagsInitBlock(Block):
         if(DEFINED CONAN_EXE_LINKER_FLAGS)
           string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
         endif()
-        {% endif %}
+
         """)
 
     @property
