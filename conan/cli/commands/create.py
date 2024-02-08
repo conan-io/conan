@@ -9,7 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conans.util.files import mkdir
+from conans.util.files import mkdir, load
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -21,10 +21,14 @@ def create(conan_api, parser, *args):
     add_lockfile_args(parser)
     add_common_install_arguments(parser)
     parser.add_argument("--build-require", action='store_true', default=False,
-                        help='Whether the provided reference is a build-require')
+                        help='Whether the package being created is a build-require (to be used'
+                             ' as tool_requires() by other packages)')
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
+    parser.add_argument("-bt", "--build-test", action="append",
+                        help="Same as '--build' but only for the test_package requires. By default"
+                             " if not specified it will take the '--build' value if specified")
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -51,9 +55,17 @@ def create(conan_api, parser, *args):
                                                          args.build_require)
 
     print_profiles(profile_host, profile_build)
+    if args.build is not None and args.build_test is None:
+        args.build_test = args.build
 
-    deps_graph = None
-    if not is_python_require:
+    if is_python_require:
+        deps_graph = conan_api.graph.load_graph_requires([], [],
+                                                         profile_host=profile_host,
+                                                         profile_build=profile_build,
+                                                         lockfile=lockfile,
+                                                         remotes=remotes, update=args.update,
+                                                         python_requires=[ref])
+    else:
         requires = [ref] if not args.build_require else None
         tool_requires = [ref] if args.build_require else None
         # FIXME: Dirty: package type still raw, not processed yet
@@ -86,12 +98,15 @@ def create(conan_api, parser, *args):
     if test_conanfile_path:
         # TODO: We need arguments for:
         #  - decide update policy "--test_package_update"
-        tested_python_requires = ref.repr_notime() if is_python_require else None
+        # If it is a string, it will be injected always, if it is a RecipeReference, then it will
+        # be replaced only if ``python_requires = "tested_reference_str"``
+        tested_python_requires = ref.repr_notime() if is_python_require else ref
         from conan.cli.commands.test import run_test
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
         run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
-                 update=False, build_modes=args.build, tested_python_requires=tested_python_requires)
+                 update=False, build_modes=args.build, build_modes_test=args.build_test,
+                 tested_python_requires=tested_python_requires, tested_graph=deps_graph)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,
@@ -111,16 +126,16 @@ def _check_tested_reference_matches(deps_graph, tested_ref, out):
                     "tested is '{}'".format(missmatch[0], tested_ref))
 
 
-def test_package(conan_api, deps_graph, test_conanfile_path, tested_python_requires=None):
+def test_package(conan_api, deps_graph, test_conanfile_path):
     out = ConanOutput()
     out.title("Testing the package")
     # TODO: Better modeling when we are testing a python_requires
-    if len(deps_graph.nodes) == 1 and not tested_python_requires:
+    conanfile = deps_graph.root.conanfile
+    if len(deps_graph.nodes) == 1 and not hasattr(conanfile, "python_requires"):
         raise ConanException("The conanfile at '{}' doesn't declare any requirement, "
                              "use `self.tested_reference_str` to require the "
                              "package being created.".format(test_conanfile_path))
     conanfile_folder = os.path.dirname(test_conanfile_path)
-    conanfile = deps_graph.root.conanfile
     # To make sure the folders are correct
     conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
     if conanfile.build_folder and conanfile.build_folder != conanfile.source_folder:

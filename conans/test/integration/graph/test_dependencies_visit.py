@@ -29,6 +29,18 @@ def test_dependencies_visit():
                 self.output.info("DefPRefBuild: {}!!!".format(dep.pref.repr_notime()))
                 for r, d in self.dependencies.build.items():
                     self.output.info("DIRECTBUILD {}: {}".format(r.direct, d))
+
+                if "openssl" in self.dependencies:
+                    self.output.info("OpenSSL found in deps")
+
+                if "cmake" in self.dependencies:
+                    self.output.info("cmake found in default deps")
+
+                if "cmake" in self.dependencies.build:
+                    self.output.info("cmake found in deps.build")
+
+                if "badlib" in self.dependencies:
+                    self.output.info("badlib found in deps")
         """)
     client.save({"conanfile.py": conanfile})
 
@@ -47,6 +59,12 @@ def test_dependencies_visit():
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
+
+    assert "OpenSSL found in deps" in client.out
+    assert "badlib found in deps" not in client.out
+
+    assert "cmake found in default deps" not in client.out
+    assert "cmake found in deps.build" in client.out
 
 
 def test_dependencies_visit_settings_options():
@@ -81,7 +99,7 @@ asserts = [
      False, "=>zlib/0.1"),
     ('print("=>{}".format(self.dependencies.get("zlib", build=False).ref))',
      False, "=>zlib/0.2"),
-    ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=True).ref))',
+    ('print("=>{}".format(self.dependencies.get("zlib", build=True, visible=False).ref))',
      False, "=>zlib/0.1"),
     ('self.dependencies.get("cmake", build=True)', True,
      'There are more than one requires matching the specified filters: {\'build\': True}\n'
@@ -89,6 +107,9 @@ asserts = [
      '- cmake/0.2, Traits: build=True, headers=False, libs=False, run=False, visible=False'
      ),
     ('self.dependencies["missing"]', True, "'missing' not found in the dependency set"),
+    ('self.output.info("Missing in deps: " + str("missing" in self.dependencies))', False, "Missing in deps: False"),
+    ('self.output.info("Zlib in deps: " + str("zlib" in self.dependencies))', False, "Zlib in deps: True"),
+    ('self.output.info("Zlib in deps.build: " + str("zlib" in self.dependencies.build))', False, "Zlib in deps.build: True"),
 ]
 
 

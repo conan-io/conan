@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import stat
@@ -8,7 +9,6 @@ import pytest
 import requests
 from mock import patch
 
-from conans import REVISIONS
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -38,7 +38,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("create .")
 
-        pkg_folder = client.created_package_folder("hello/0.1")
+        pkg_folder = client.created_layout().package()
         set_dirty(pkg_folder)
 
         client.run("upload * -r=default -c", assert_error=True)
@@ -99,13 +99,19 @@ class UploadTest(unittest.TestCase):
         assert "Uploading recipe 'hello0/1.2.1@" in client.out
         assert "Uploading package 'hello0/1.2.1@" in client.out
 
+    def test_pattern_upload_no_recipes(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("upload bogus/*@dummy/testing --confirm -r default", assert_error=True)
+        self.assertIn("No recipes found matching pattern 'bogus/*@dummy/testing'", client.out)
+
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . --user=user --channel=testing")
-        ref = RecipeReference.loads("hello0/1.2.1@user/testing")
+        layout = client.exported_layout()
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
@@ -114,16 +120,14 @@ class UploadTest(unittest.TestCase):
                        assert_error=True)
             self.assertIn("Error gzopen conan_sources.tgz", client.out)
 
-            latest_rrev = client.cache.get_latest_recipe_reference(ref)
-            export_download_folder = client.cache.ref_layout(latest_rrev).download_export()
+            export_download_folder = layout.download_export()
 
             tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm -r default --only-recipe")
-        self.assertIn("WARN: hello0/1.2.1@user/testing: Removing conan_sources.tgz, "
-                      "marked as dirty", client.out)
+        self.assertIn("Removing conan_sources.tgz, marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -150,9 +154,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(is_dirty(tgz))
 
         client.run("upload * --confirm -r default")
-        self.assertIn("WARN: hello0/1.2.1@user/testing:%s: "
-                      "Removing conan_package.tgz, marked as dirty" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
+        self.assertIn("WARN: Removing conan_package.tgz, marked as dirty", client.out)
         self.assertTrue(os.path.exists(tgz))
         self.assertFalse(is_dirty(tgz))
 
@@ -162,11 +164,7 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
         client.run("create . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        pkg_ids = client.cache.get_package_references(latest_rrev)
-        latest_prev = client.cache.get_latest_package_reference(pkg_ids[0])
-        package_folder = client.cache.pkg_layout(latest_prev).package()
+        package_folder = client.created_layout().package()
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload hello0/1.2.1@frodo/stable --check -r default", assert_error=True)
@@ -189,11 +187,10 @@ class UploadTest(unittest.TestCase):
         client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
         client2.run("export . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        latest_rrev = client2.cache.get_latest_recipe_reference(ref)
-        manifest, _ = client2.cache.ref_layout(latest_rrev).recipe_manifests()
+        layout = client2.exported_layout()
+        manifest, _ = layout.recipe_manifests()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(latest_rrev).export())
+        manifest.save(layout.export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         assert "Uploading recipe 'hello0/1.2.1@frodo/stable#" in client2.out
 
@@ -216,11 +213,10 @@ class UploadTest(unittest.TestCase):
         client2 = TestClient(servers=client.servers, inputs=["admin", "password"])
         client2.save(files)
         client2.run("export . --user=frodo --channel=stable")
-        ref = RecipeReference.loads("hello0/1.2.1@frodo/stable")
-        rrev2 = client2.cache.get_latest_recipe_reference(ref)
-        manifest, _ = client2.cache.ref_layout(rrev2).recipe_manifests()
+        layout = client2.exported_layout()
+        manifest, _ = layout.recipe_manifests()
         manifest.time += 10
-        manifest.save(client2.cache.ref_layout(rrev2).export())
+        manifest.save(layout.export())
         client2.run("upload hello0/1.2.1@frodo/stable -r default")
         self.assertIn(f"Recipe 'hello0/1.2.1@frodo/stable#761f54e34d59deb172d6078add7050a7' already "
                       "in server, skipping upload", client2.out)
@@ -478,8 +474,7 @@ class UploadTest(unittest.TestCase):
                 else:
                     return requests.get(url, **kwargs)
 
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")],
-                            server_capabilities=[REVISIONS])
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
         client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
                             inputs=["user", "password"])
@@ -516,3 +511,39 @@ def test_upload_only_without_user_channel():
     c.run("search * -r=default")
     assert "lib/1.0@user/channel" in c.out
     assert "lib/1.0" in c.out
+
+
+def test_upload_with_python_requires():
+    # https://github.com/conan-io/conan/issues/14503
+    c = TestClient(default_server_user=True)
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+            "dep/conanfile.py": GenConanfile("dep", "0.1").with_python_requires("tool/[>=0.1]")})
+    c.run("create tool")
+    c.run("create dep")
+    c.run("upload tool* -c -r=default")
+    c.run("remove tool* -c")
+    c.run("upload dep* -c -r=default")
+    # This used to fail, but adding the enabled remotes to python_requires resolution, it works
+    assert "tool/0.1: Downloaded recipe" in c.out
+
+
+def test_upload_list_only_recipe():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+    c.run("create .")
+    c.run("install --requires=liba/0.1 --format=json", redirect_stdout="graph.json")
+    c.run("list --graph=graph.json --format=json", redirect_stdout="installed.json")
+    c.run("upload --list=installed.json --only-recipe -r=default -c")
+    assert "conan_package.tgz" not in c.out
+
+
+def test_upload_json_output():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
+                                                       .with_shared_option(False)})
+    c.run("create . -s os=Linux")
+    c.run("upload * -r=default -c --format=json")
+    list_pkgs = json.loads(c.stdout)
+    revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
+    pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}

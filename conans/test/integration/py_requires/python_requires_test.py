@@ -114,7 +114,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         reuse = textwrap.dedent("""
             from conan import ConanFile
             class PkgTest(ConanFile):
-                python_requires = "base/[>1.0,<1.2]@user/testing"
+                python_requires = "base/[>1.0 <1.2]@user/testing"
                 python_requires_extend = "base.MyConanfileBase"
             """)
 
@@ -912,6 +912,37 @@ def test_transitive_diamond_python_requires():
            client.out
 
 
+class TestConflictPyRequires:
+    # https://github.com/conan-io/conan/issues/15016
+    def test_diamond_conflict_fixed(self):
+        c = TestClient()
+
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "sub1/conanfile.py": GenConanfile("sub1", "1.0").with_python_requires("tool/1.0"),
+                "sub2/conanfile.py": GenConanfile("sub2", "1.0").with_python_requires("tool/1.1"),
+                "app/conanfile.py": GenConanfile().with_python_requires("sub1/1.0", "sub2/1.0")})
+        c.run("export tool --version=1.0")
+        c.run("export tool --version=1.1")
+        c.run("export sub1")
+        c.run("export sub2")
+        c.run("install app", assert_error=True)
+        assert "Conflict in py_requires tool/1.0 - tool/1.1" in c.out
+
+    def test_diamond_conflict_ranges(self):
+        c = TestClient()
+
+        c.save({"tool/conanfile.py": GenConanfile("tool"),
+                "sub1/conanfile.py": GenConanfile("sub1", "1.0").with_python_requires("tool/[*]"),
+                "sub2/conanfile.py": GenConanfile("sub2", "1.0").with_python_requires("tool/1.0"),
+                "app/conanfile.py": GenConanfile().with_python_requires("sub1/1.0", "sub2/1.0")})
+        c.run("export tool --version=1.0")
+        c.run("export tool --version=1.1")
+        c.run("export sub1")
+        c.run("export sub2")
+        c.run("install app", assert_error=True)
+        assert "Conflict in py_requires tool/1.1 - tool/1.0" in c.out
+
+
 def test_multiple_reuse():
     """ test how to enable the multiple code reuse for custom user generators
         # https://github.com/conan-io/conan/issues/11589
@@ -982,12 +1013,16 @@ class TestTestPackagePythonRequire:
             from conan import ConanFile
 
             class Tool(ConanFile):
+                python_requires = "tested_reference_str"
                 def test(self):
                     self.output.info("{}!!!".format(self.python_requires["common"].module.mycommon()))
             """)
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
         c.run("create .")
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+        c.run("test test_package common/0.1")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):
@@ -1017,6 +1052,7 @@ class TestTestPackagePythonRequire:
                 "test_package/conanfile.py": test})
         c.run("create . ")
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
+        assert "WARN: deprecated: test_package/conanfile.py should declare 'python_requires" in c.out
         c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out
 
@@ -1199,3 +1235,14 @@ def test_transitive_range_not_found_in_cache():
     c.run("create . ")
     c.assert_listed_require({"pr/1.0": "Cache"}, python=True)
     assert "pr/[>0]: pr/1.0" in c.out
+
+
+def test_export_pkg():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
+    c.run("export-pkg .", assert_error=True)
+    assert "export-pkg can only be used for binaries, not for 'python-require'" in c.out
+    # Make sure nothing is exported
+    c.run("list *")
+    assert "WARN: There are no matching recipe references" in c.out
+    assert "pytool/0.1" not in c.out

@@ -298,7 +298,7 @@ def test_apple_arch_flag():
 
     # Only set when crossbuilding
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",
@@ -365,7 +365,7 @@ def test_apple_isysrootflag():
 
     # Only set when crossbuilding
     conanfile = ConanFileMock()
-    conanfile.conf = {"tools.apple:sdk_path": "/path/to/sdk"}
+    conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")
     conanfile.settings = MockSettings(
         {"build_type": "Debug",
          "os": "Macos",

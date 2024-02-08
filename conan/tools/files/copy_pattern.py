@@ -37,6 +37,12 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path)
     copied_files.extend(_copy_files_symlinked_to_folders(files_symlinked_to_folders, src, dst))
+    if conanfile:  # Some usages still pass None
+        copied = '\n    '.join(files_to_copy)
+        conanfile.output.debug(f"copy(pattern={pattern}) copied {len(copied_files)} files\n"
+                               f"  from {src}\n"
+                               f"  to {dst}\n"
+                               f"  Files:\n    {copied}")
     return copied_files
 
 
@@ -69,11 +75,13 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
 
         relative_path = os.path.relpath(root, src)
         compare_relative_path = relative_path.lower() if ignore_case else relative_path
-        for exclude in excludes:
-            if fnmatch.fnmatch(compare_relative_path, exclude):
-                subfolders[:] = []
-                files = []
-                break
+        # Don't try to exclude the start folder, it conflicts with excluding names starting with dots
+        if not compare_relative_path == ".":
+            for exclude in excludes:
+                if fnmatch.fnmatch(compare_relative_path, exclude):
+                    subfolders[:] = []
+                    files = []
+                    break
         for f in files:
             relative_name = os.path.normpath(os.path.join(relative_path, f))
             filenames.append(relative_name)
@@ -104,10 +112,7 @@ def _copy_files(files, src, dst, keep_path):
         abs_src_name = os.path.join(src, filename)
         filename = filename if keep_path else os.path.basename(filename)
         abs_dst_name = os.path.normpath(os.path.join(dst, filename))
-        try:
-            os.makedirs(os.path.dirname(abs_dst_name))
-        except Exception:
-            pass
+        os.makedirs(os.path.dirname(abs_dst_name), exist_ok=True)
         if os.path.islink(abs_src_name):
             linkto = os.readlink(abs_src_name)  # @UndefinedVariable
             try:

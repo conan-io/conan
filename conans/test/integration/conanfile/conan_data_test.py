@@ -1,15 +1,15 @@
 import os
+import shutil
 import sys
 import textwrap
 import unittest
 
-import pytest
 import yaml
-from bottle import static_file
 
 from conans.model.recipe_ref import RecipeReference
+from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import tgz_with_contents
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.tools import TestClient
 from conans.util.files import md5sum, sha1sum, sha256sum, load
 
 
@@ -87,9 +87,11 @@ sources:
         client.run("install . --build='*'")
         self.assertIn("My URL:", client.out)
 
-    @pytest.mark.slow
-    @pytest.mark.local_bottle
     def test_conan_data_as_source_newtools(self):
+        client = TestClient()
+        file_server = TestFileServer()
+        client.servers["file_server"] = file_server
+
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
         if sys.version_info.major == 3 and sys.version_info.minor >= 9:
             # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
@@ -105,17 +107,8 @@ sources:
         self.assertEqual(sha1_value, sha1sum(tgz_path))
         self.assertEqual(sha256_value, sha256sum(tgz_path))
 
-        # Instance stoppable thread server and add endpoints
-        thread = StoppableThreadBottle()
+        shutil.copy2(tgz_path, file_server.store)
 
-        @thread.server.get("/myfile.tar.gz")
-        def get_file():
-            return static_file(os.path.basename(tgz_path), root=os.path.dirname(tgz_path),
-                               mimetype="")
-
-        thread.run_server()
-
-        client = TestClient()
         conanfile = textwrap.dedent("""
                 from conan import ConanFile
                 from conan.tools.files import get
@@ -129,20 +122,19 @@ sources:
         conandata = textwrap.dedent("""
                 sources:
                   all:
-                    url: "http://localhost:{}/myfile.tar.gz"
+                    url: "{}/myfile.tar.gz"
                     md5: "{}"
                     sha1: "{}"
                     sha256: "{}"
                 """)
         client.save({"conanfile.py": conanfile,
-                     "conandata.yml": conandata.format(thread.port, md5_value, sha1_value,
+                     "conandata.yml": conandata.format(file_server.fake_url, md5_value, sha1_value,
                                                        sha256_value)})
-        ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+
+        client.run(f"create . --name=pkg --version=0.1")
         self.assertIn("OK!", client.out)
 
-        latest_rrev = client.cache.get_latest_recipe_reference(ref)
-        ref_layout = client.cache.ref_layout(latest_rrev)
+        ref_layout = client.exported_layout()
         source_folder = ref_layout.source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
         self.assertEqual("foo", load(downloaded_file))
@@ -275,3 +267,59 @@ class TestConanDataUpdate:
         c.save({"conanfile.py": conanfile})
         c.run("export .")  # It doesn't fail
         assert "pkg/0.1: Calling export()" in c.out
+
+
+def test_conandata_trim():
+    """ test the explict trim_conandata() helper
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import trim_conandata
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            def export(self):
+                trim_conandata(self)
+        """)
+    conandata_yml = textwrap.dedent("""\
+        sources:
+          "1.0":
+            url: "url1"
+            sha256: "sha1"
+        patches:
+          "1.0":
+            - patch_file: "patches/some_patch"
+              base_path: "source_subfolder"
+        something: else
+          """)
+    c.save({"conanfile.py": conanfile,
+            "conandata.yml": conandata_yml})
+    c.run("export . --version=1.0")
+    layout = c.exported_layout()
+    data1 = load(os.path.join(layout.export(), "conandata.yml"))
+    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    conandata_yml2 = textwrap.dedent("""\
+        sources:
+         "1.0":
+           url: "url1"
+           sha256: "sha1"
+         "1.1":
+           url: "url2"
+           sha256: "sha2"
+        patches:
+         "1.1":
+           - patch_file: "patches/some_patch2"
+             base_path: "source_subfolder"
+         "1.0":
+           - patch_file: "patches/some_patch"
+             base_path: "source_subfolder"
+        something: else
+        """)
+    c.save({"conandata.yml": conandata_yml2})
+    c.run("export . --version=1.0")
+    layout = c.exported_layout()
+    data2 = load(os.path.join(layout.export(), "conandata.yml"))
+    assert "1.1" not in data2
+    assert data1 == data2
+    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out

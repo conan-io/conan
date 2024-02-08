@@ -10,7 +10,7 @@ from conans.test.integration.toolchains.apple.test_xcodetoolchain import _get_fi
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 _expected_dep_xconfig = [
-    "HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_{name}_{name})",
+    "SYSTEM_HEADER_SEARCH_PATHS = $(inherited) $(SYSTEM_HEADER_SEARCH_PATHS_{name}_{name})",
     "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(GCC_PREPROCESSOR_DEFINITIONS_{name}_{name})",
     "OTHER_CFLAGS = $(inherited) $(OTHER_CFLAGS_{name}_{name})",
     "OTHER_CPLUSPLUSFLAGS = $(inherited) $(OTHER_CPLUSPLUSFLAGS_{name}_{name})",
@@ -20,7 +20,7 @@ _expected_dep_xconfig = [
 ]
 
 _expected_conf_xconfig = [
-    "HEADER_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
+    "SYSTEM_HEADER_SEARCH_PATHS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
     "GCC_PREPROCESSOR_DEFINITIONS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
     "OTHER_CFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
     "OTHER_CPLUSPLUSFLAGS_{name}_{name}[config={configuration}][arch={architecture}][sdk={sdk}{sdk_version}] = ",
@@ -88,6 +88,62 @@ def test_generator_files():
 
         check_contents(client, ["hello", "goodbye"], build_type, "x86_64", "12.1")
 
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_generator_files_with_custom_config():
+    client = TestClient()
+
+    client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                                           .with_package_info(cpp_info={"libs": ["hello"]},
+                                                              env_info={})})
+    client.run("export hello.py --name=hello --version=0.1")
+
+    client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                                             .with_package_info(cpp_info={"libs": ["goodbye"]},
+                                                                env_info={})})
+    client.run("export goodbye.py --name=goodbye --version=0.1")
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.apple import XcodeDeps
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"XcodeConfigName": [None, "ANY"]}
+            default_options = {"XcodeConfigName": None}
+            requires = "hello/0.1", "goodbye/0.1"
+            
+            def generate(self):
+                xcode = XcodeDeps(self)
+                if self.options.get_safe("XcodeConfigName"):
+                    xcode.configuration = str(self.options.get_safe("XcodeConfigName"))
+                xcode.generate()
+        """)
+
+    client.save({"conanfile.py": conanfile_py})
+    custom_config_name = "CustomConfig"
+
+    for use_custom_config in [True, False]:
+        for build_type in ["Release", "Debug"]:
+            cli_command = "install . -s build_type={} -s arch=x86_64 -s os.sdk_version=12.1  --build missing".format(build_type)
+            if use_custom_config:
+                cli_command += " -o XcodeConfigName={}".format(custom_config_name)
+                configuration_name = custom_config_name 
+            else:
+                configuration_name = build_type            
+
+            client.run(cli_command)
+
+            for config_file in expected_files(client.current_folder, configuration_name, "x86_64", "12.1"):
+                assert os.path.isfile(config_file)
+
+            conandeps = client.load("conandeps.xcconfig")
+            assert '#include "conan_hello.xcconfig"' in conandeps
+            assert '#include "conan_goodbye.xcconfig"' in conandeps
+
+            conan_config = client.load("conan_config.xcconfig")
+            assert '#include "conandeps.xcconfig"' in conan_config
+
+            check_contents(client, ["hello", "goodbye"],  configuration_name, "x86_64", "12.1",)
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_xcodedeps_aggregate_components():
@@ -478,3 +534,50 @@ def test_skipped_not_included():
     assert re.search(r"Skipped binaries\n\s+(.*?)", client.out, re.DOTALL)
     dep_xconfig = client.load("consumer/conan_pkg_pkg.xcconfig")
     assert "conan_dep.xcconfig" not in dep_xconfig
+
+
+def test_correctly_handle_transitive_components():
+    # https://github.com/conan-io/conan/issues/14887
+    client = TestClient()
+    has_components = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgWithComponents(ConanFile):
+            name = 'has_components'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def package_info(self):
+                self.cpp_info.components['first'].libs = ['first']
+                self.cpp_info.components['second'].libs = ['donottouch']
+                self.cpp_info.components['second'].requires = ['first']
+        """)
+
+    uses_components = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgUsesComponent(ConanFile):
+            name = 'uses_components'
+            version = '1.0'
+            settings = 'os', 'compiler', 'arch', 'build_type'
+            def requirements(self):
+                self.requires('has_components/1.0')
+            def package_info(self):
+                self.cpp_info.libs = ['uses_only_first']
+                self.cpp_info.requires = ['has_components::first']
+        """)
+
+    consumer = textwrap.dedent("""
+        [requires]
+        uses_components/1.0
+        """)
+
+    client.save({"has_components.py": has_components,
+                 "uses_components.py": uses_components,
+                 "consumer.txt": consumer})
+    client.run("create has_components.py")
+    client.run("create uses_components.py")
+    client.run("install consumer.txt -g XcodeDeps")
+    conandeps = client.load("conandeps.xcconfig")
+    assert '#include "conan_has_components.xcconfig"' not in conandeps
+    assert '#include "conan_uses_components.xcconfig"' in conandeps
+    conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
+    assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
+    assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig

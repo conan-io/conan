@@ -3,6 +3,7 @@ import os
 
 from jinja2 import Template, StrictUndefined
 
+from conans.errors import ConanException
 from conans.util.files import load
 from conans import __version__
 
@@ -13,7 +14,8 @@ class NewAPI:
     def __init__(self, conan_api):
         self.conan_api = conan_api
 
-    def get_builtin_template(self, template_name):
+    @staticmethod
+    def get_builtin_template(template_name):
         from conan.internal.api.new.basic import basic_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
@@ -83,6 +85,8 @@ class NewAPI:
     def render(template_files, definitions):
         result = {}
         name = definitions.get("name", "Pkg")
+        if isinstance(name, list):
+            raise ConanException(f"name argument can't be multiple: {name}")
         definitions["conan_version"] = __version__
 
         def ensure_list(key):

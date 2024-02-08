@@ -1,7 +1,6 @@
 import os
 import unittest
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -12,8 +11,7 @@ class RemoveEmptyDirsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("export . --user=lasote --channel=stable")
-        rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote/stable"))
-        ref_layout = client.cache.ref_layout(rrev)
+        ref_layout = client.exported_layout()
         self.assertTrue(os.path.exists(ref_layout.base_folder))
         client.run("remove hello* -c")
         self.assertFalse(os.path.exists(ref_layout.base_folder))
@@ -22,12 +20,10 @@ class RemoveEmptyDirsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("export . --user=lasote --channel=stable")
-        rrev = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote/stable"))
-        ref_layout = client.cache.ref_layout(rrev)
+        ref_layout = client.exported_layout()
         self.assertTrue(os.path.exists(ref_layout.base_folder))
         client.run("export . --user=lasote2 --channel=stable")
-        rrev2 = client.cache.get_latest_recipe_reference(RecipeReference.loads("hello/0.1@lasote2/stable"))
-        ref_layout2 = client.cache.ref_layout(rrev2)
+        ref_layout2 = client.exported_layout()
         self.assertTrue(os.path.exists(ref_layout2.base_folder))
         client.run("remove hello/0.1@lasote/stable -c")
         self.assertFalse(os.path.exists(ref_layout.base_folder))

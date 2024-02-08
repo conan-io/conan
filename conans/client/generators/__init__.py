@@ -3,6 +3,7 @@ import os
 import traceback
 import importlib
 
+from conan.internal.cache.home_paths import HomePaths
 from conans.client.subsystems import deduce_subsystem, subsystem_path
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import save, mkdir, chdir
@@ -21,6 +22,8 @@ _generators = {"CMakeToolchain": "conan.tools.cmake", "CMakeDeps": "conan.tools.
                "IntelCC": "conan.tools.intel",
                "XcodeDeps": "conan.tools.apple", "XcodeToolchain": "conan.tools.apple",
                "PremakeDeps": "conan.tools.premake",
+               "MakeDeps": "conan.tools.gnu",
+               "SConsDeps": "conan.tools.scons"
                }
 
 
@@ -58,7 +61,7 @@ def load_cache_generators(path):
         mod, _ = load_python_file(full_path)
         for name, value in inspect.getmembers(mod):
             if inspect.isclass(value) and not name.startswith("_"):
-                result = {name: value}
+                result[name] = value
     return result
 
 
@@ -67,9 +70,8 @@ def write_generators(conanfile, app):
     _receive_conf(conanfile)
 
     hook_manager = app.hook_manager
-    cache = app.cache
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
-    global_generators = load_cache_generators(cache.custom_generators_path)
+    global_generators = load_cache_generators(HomePaths(app.cache_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
     if conanfile.generators:
@@ -93,7 +95,7 @@ def write_generators(conanfile, app):
                     continue
                 except Exception as e:
                     # When a generator fails, it is very useful to have the whole stacktrace
-                    conanfile.output.error(traceback.format_exc())
+                    conanfile.output.error(traceback.format_exc(), error_type="exception")
                     raise ConanException(f"Error in generator '{generator_name}': {str(e)}") from e
     finally:
         # restore the generators attribute, so it can raise

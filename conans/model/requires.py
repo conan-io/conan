@@ -32,10 +32,11 @@ class Requirement:
         self.overriden_ref = None  # to store if the requirement has been overriden (store old ref)
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
+        self.skip = False
 
     @property
-    def skip(self):
-        return not (self.headers or self.libs or self.run or self.build)
+    def files(self):  # require needs some files in dependency package
+        return self.headers or self.libs or self.run or self.build
 
     @staticmethod
     def _default_if_none(field, default_value):
@@ -147,10 +148,13 @@ class Requirement:
         return "{}, Traits: {}".format(self.ref, traits)
 
     def serialize(self):
-        serializable = ("ref", "run", "libs", "skip", "test", "force", "direct", "build",
+        result = {"ref": str(self.ref)}
+        serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
                         "package_id_mode", "visible")
-        return {attribute: str(getattr(self, attribute)) for attribute in serializable}
+        for attribute in serializable:
+            result[attribute] = getattr(self, attribute)
+        return result
 
     def copy_requirement(self):
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
@@ -220,7 +224,7 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 (self.visible and other.visible) or
+                 ((self.visible or self.test) and (other.visible or other.test)) or
                  (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
@@ -264,7 +268,7 @@ class Requirement:
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=False, visible=True, direct=False)
+                                             run=False, visible=self.visible, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -276,20 +280,7 @@ class Requirement:
             return
 
         # Regular and test requires
-        if dep_pkg_type is PackageType.SHARED:
-            if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
-            elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
-            elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
-            elif pkg_type is PackageType.HEADER:
-                downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
-            else:
-                assert pkg_type == PackageType.UNKNOWN
-                # TODO: This is undertested, changing it did not break tests
-                downstream_require = require.copy_requirement()
-        elif dep_pkg_type is PackageType.STATIC:
+        if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
@@ -325,11 +316,11 @@ class Requirement:
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
 
+        if self.visible is False:
+            downstream_require.visible = False
+
         if pkg_type is not PackageType.HEADER:  # These rules are not valid for header-only
             # If non-default, then the consumer requires has priority
-            if self.visible is False:
-                downstream_require.visible = False
-
             if self.headers is False:
                 downstream_require.headers = False
 
@@ -421,8 +412,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None, options=None):
-        self._requires.test_require(ref, run=run, options=options)
+    def __call__(self, ref, run=None, options=None, force=None):
+        self._requires.test_require(ref, run=run, options=options, force=force)
 
 
 class Requirements:
@@ -476,6 +467,18 @@ class Requirements:
                     raise ConanException("Wrong 'tool_requires' definition, "
                                          "did you mean 'build_requirements()'?")
 
+    def reindex(self, require, new_name):
+        """ This operation is necessary when the reference name of a package is changed
+        as a result of an "alternative" replacement of the package name, otherwise the dictionary
+        gets broken by modified key
+        """
+        result = OrderedDict()
+        for k, v in self._requires.items():
+            if k is require:
+                k.ref.name = new_name
+            result[k] = v
+        self._requires = result
+
     def values(self):
         return self._requires.values()
 
@@ -523,7 +526,7 @@ class Requirements:
             req.override = True
             self._requires[req] = req
 
-    def test_require(self, ref, run=None, options=None):
+    def test_require(self, ref, run=None, options=None, force=None):
         """
              Represent a testing framework like gtest
 
@@ -539,7 +542,7 @@ class Requirements:
         # libs = True => We need to link with it
         # headers = True => We need to include it
         req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
-                          test=True, package_id_mode=None, options=options)
+                          test=True, package_id_mode=None, options=options, force=force)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

@@ -104,21 +104,14 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save(path, content, only_if_modified=False, encoding="utf-8"):
+def save(path, content, encoding="utf-8"):
     """
     Saves a file with given content
     Params:
         path: path to write file to
         content: contents to save in the file
-        only_if_modified: file won't be modified if the content hasn't changed
         encoding: target file text encoding
     """
-    # avoid re-wring it so the modified date doesn't change and does not affect build systems
-    if only_if_modified and os.path.exists(path):
-        with open(path, "r", encoding=encoding, newline="") as f:
-            old_content = f.read()
-        if old_content == content:
-            return
 
     dir_path = os.path.dirname(path)
     if dir_path:
@@ -127,9 +120,9 @@ def save(path, content, only_if_modified=False, encoding="utf-8"):
         handle.write(content)
 
 
-def save_files(path, files, only_if_modified=False, encoding="utf-8"):
+def save_files(path, files, encoding="utf-8"):
     for name, content in files.items():
-        save(os.path.join(path, name), content, only_if_modified=only_if_modified, encoding=encoding)
+        save(os.path.join(path, name), content, encoding=encoding)
 
 
 def load(path, encoding="utf-8"):
@@ -301,9 +294,9 @@ def exception_message_safe(exc):
         return repr(exc)
 
 
-def merge_directories(src, dst, excluded=None):
+def merge_directories(src, dst):
     from conan.tools.files import copy
-    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
+    copy(None, pattern="*", src=src, dst=dst)
 
 
 def gather_files(folder):

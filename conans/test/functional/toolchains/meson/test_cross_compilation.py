@@ -7,7 +7,9 @@ import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
+from conans.util.runners import conan_run
 
 _conanfile_py = textwrap.dedent("""
 from conan import ConanFile
@@ -54,19 +56,17 @@ option('STRING_DEFINITION', type : 'string', description : 'a string option')
 
 
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 @pytest.mark.parametrize("arch, os_, os_version, os_sdk", [
-    ('armv8', 'iOS', '10.0', 'iphoneos'),
+    ('armv8', 'iOS', '17.1', 'iphoneos'),
     ('armv7', 'iOS', '10.0', 'iphoneos'),
     ('x86', 'iOS', '10.0', 'iphonesimulator'),
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
-    ('armv8', 'Macos', None, None)  # MacOS M1
+    ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', None, None),
+    ('armv8' if platform.machine() == "x86_64" else "x86_64", 'Macos', '10.11', None),
 ])
 def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     profile = textwrap.dedent("""
-    include(default)
-
     [settings]
     os = {os}
     {os_version}
@@ -95,15 +95,15 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
             "main.cpp": app,
             "profile_host": profile})
 
-    t.run("install . --profile:build=default --profile:host=profile_host")
-    t.run("build .")
+    t.run("build . --profile:build=default --profile:host=profile_host")
 
     libhello = os.path.join(t.current_folder, "build", "libhello.a")
     assert os.path.isfile(libhello) is True
     demo = os.path.join(t.current_folder, "build", "demo")
     assert os.path.isfile(demo) is True
 
-    xcrun = XCRun(None, os_sdk)
+    conanfile = ConanFileMock({}, runner=conan_run)
+    xcrun = XCRun(conanfile, os_sdk)
     lipo = xcrun.find('lipo')
 
     t.run_command('"%s" -info "%s"' % (lipo, libhello))
@@ -112,10 +112,17 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
     t.run_command('"%s" -info "%s"' % (lipo, demo))
     assert "architecture: %s" % _to_apple_arch(arch) in t.out
 
-    # only check for iOS because one of the macos build variants is usually native
     if os_ == "iOS":
+        # only check for iOS because one of the macos build variants is usually native
         content = t.load("conan_meson_cross.ini")
         assert "needs_exe_wrapper = true" in content
+    elif os_ == "Macos" and not os_version:
+        content = t.load("conan_meson_cross.ini")
+        assert "'-mmacosx-version-min=" not in content
+    elif os_ == "Macos" and os_version:
+        # Issue related: https://github.com/conan-io/conan/issues/15459
+        content = t.load("conan_meson_cross.ini")
+        assert f"'-mmacosx-version-min={os_version}'" in content
 
 
 @pytest.mark.tool("meson")
@@ -154,7 +161,6 @@ def test_windows_cross_compiling_x86():
 @pytest.mark.tool("meson")
 @pytest.mark.tool("android_ndk")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Android NDK only tested in MacOS for now")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     profile_host = textwrap.dedent("""
     include(default)
@@ -184,8 +190,7 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
                  "main.cpp": app,
                  "profile_host": profile_host})
 
-    client.run("install . --profile:build=default --profile:host=profile_host")
-    client.run("build .")
+    client.run("build . --profile:build=default --profile:host=profile_host")
     content = client.load(os.path.join("conan_meson_cross.ini"))
     assert "needs_exe_wrapper = true" in content
     assert "Target machine cpu family: {}".format(expected_arch if expected_arch != "i386" else "x86") in client.out

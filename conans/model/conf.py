@@ -1,9 +1,9 @@
+import copy
 import re
 import os
 import fnmatch
 
 from collections import OrderedDict
-
 
 from conans.errors import ConanException
 from conans.model.recipe_ref import ref_matches
@@ -11,13 +11,17 @@ from conans.model.recipe_ref import ref_matches
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
-    "core:skip_warnings": "Do not show warnings in this list",
+    "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
+                               "Current warning tags are 'network', 'deprecated'",
+    "core:skip_warnings": "Do not show warnings matching any of the patterns in this list. "
+                          "Current warning tags are 'network', 'deprecated'",
     "core:default_profile": "Defines the default host profile ('default' by default)",
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
     "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
     "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.upload:parallel": "Number of concurrent threads to upload packages",
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
@@ -43,7 +47,9 @@ BUILT_IN_CONFS = {
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Gzip compression
-    "core.gzip:compresslevel": "The Gzip compresion level for Conan artifacts (default=9)",
+    "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
+    # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
+    "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -51,8 +57,8 @@ BUILT_IN_CONFS = {
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
-    "tools.build.cross_building:can_run": "Bool value that indicates whether is possible to run a non-native "
-                                          "app on the same architecture. It's used by 'can_run' tool",
+    "tools.build.cross_building:can_run": "(boolean) Indicates whether is possible to run a non-native app on the same architecture. It's used by 'can_run' tool",
+    "tools.build.cross_building:cross_build": "(boolean) Decides whether cross-building or not regardless of arch/OS settings. Used by 'cross_building' tool",
     "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
     "tools.compilation:verbosity": "Verbosity of compilation tools if set. Possible values are 'quiet' and 'verbose'",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
@@ -63,19 +69,26 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:system_version": "Define CMAKE_SYSTEM_VERSION in CMakeToolchain",
     "tools.cmake.cmaketoolchain:system_processor": "Define CMAKE_SYSTEM_PROCESSOR in CMakeToolchain",
     "tools.cmake.cmaketoolchain:toolset_arch": "Toolset architecture to be used as part of CMAKE_GENERATOR_TOOLSET in CMakeToolchain",
+    "tools.cmake.cmaketoolchain:toolset_cuda": "(Experimental) Path to a CUDA toolset to use, or version if installed at the system level",
+    "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake:cmake_program": "Path to CMake executable",
+    "tools.cmake:install_strip": "Add --strip to cmake.install()",
+    "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.files.download:verify": "If set, overrides recipes on whether to perform SSL verification for their downloaded files. Only recommended to be set while testing",
+    "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
-    "tools.google.bazel:configs": "Define Bazel config file",
-    "tools.google.bazel:bazelrc_path": "Defines Bazel rc-path",
+    "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
+    "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
-    "tools.microsoft.msbuild:vs_version": "Defines the IDE version when using the new msvc compiler",
+    "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
+    "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
     "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
@@ -85,7 +98,7 @@ BUILT_IN_CONFS = {
     "tools.microsoft.bash:active": "If Conan is already running inside bash terminal in Windows",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
-    "tools.system.package_manager:tool": "Default package manager tool: 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
+    "tools.system.package_manager:tool": "Default package manager tool: 'apk', 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
@@ -108,10 +121,9 @@ BUILT_IN_CONFS = {
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
-
-CORE_CONF_PATTERN = re.compile(r"^core[.:]")
-TOOLS_CONF_PATTERN = re.compile(r"^tools[.:]")
-USER_CONF_PATTERN = re.compile(r"^user[.:]")
+CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
+TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
+USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 
 def _is_profile_module(module_name):
@@ -149,7 +161,8 @@ class _ConfValue(object):
         return self._value
 
     def copy(self):
-        return _ConfValue(self._name, self._value, self._path, self._update)
+        # Using copy for when self._value is a mutable list
+        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
 
     def dumps(self):
         if self._value is None:
@@ -247,7 +260,6 @@ class _ConfValue(object):
 
 
 class Conf:
-
     # Putting some default expressions to check that any value could be false
     boolean_false_expressions = ("0", '"0"', "false", '"false"', "off")
 
@@ -267,6 +279,9 @@ class Conf:
         """
         return other._values == self._values
 
+    def clear(self):
+        self._values.clear()
+
     def validate(self):
         for conf in self._values:
             self._check_conf_name(conf)
@@ -284,6 +299,7 @@ class Conf:
         :param default: Default value in case of conf does not have the conf_name key.
         :param check_type: Check the conf type(value) is the same as the given by this param.
                            There are two default smart conversions for bool and str types.
+        :param choices: list of possible values this conf can have, if value not in it, errors.
         """
         # Skipping this check only the user.* configurations
         self._check_conf_name(conf_name)
@@ -301,7 +317,8 @@ class Conf:
                 return str(v)
             elif v is None:  # value was unset
                 return default
-            elif check_type is not None and not isinstance(v, check_type):
+            elif (check_type is not None and not isinstance(v, check_type) or
+                  check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
                                      f"{check_type.__name__}-like object. The value '{v}' "
                                      f"introduced is a {type(v).__name__} object")
@@ -328,14 +345,14 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = self._values.copy()
+        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
         return c
 
     def dumps(self):
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
 
     def serialize(self):
         """
@@ -469,10 +486,12 @@ class Conf:
         # Reading the list of all the configurations selected by the user to use for the package_id
         package_id_confs = self.get("tools.info.package_id:confs", default=[], check_type=list)
         for conf_name in package_id_confs:
-            value = self.get(conf_name)
-            # Pruning any empty values, those should not affect package ID
-            if value:
-                result.define(conf_name, value)
+            matching_confs = [c for c in self._values if re.match(conf_name, c)]
+            for name in matching_confs:
+                value = self.get(name)
+                # Pruning any empty values, those should not affect package ID
+                if value:
+                    result.define(name, value)
         return result
 
     def set_relative_base_folder(self, folder):
@@ -482,12 +501,12 @@ class Conf:
     @staticmethod
     def _check_conf_name(conf):
         if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
-                                 f" Run 'conan config list' to see all the available confs.")
+            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
+                                 f"the conf format introduced is not valid. Run 'conan config list' "
+                                 f"to see all the available confs.")
 
 
 class ConfDefinition:
-
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
                ("=!", "unset"), ("*=", "update"), ("=", "define"))

@@ -37,6 +37,19 @@ class TestListUpload:
             assert f"Uploading recipe '{r}'" in client.out
         assert str(client.out).count("Uploading package") == 2
 
+    def test_list_upload_empty_list(self, client):
+        client.run(f"install --requires=zlib/1.0.0@user/channel -f json",
+                   redirect_stdout="install_graph.json")
+
+        # Generate an empty pkglist.json
+        client.run(f"list --format=json --graph=install_graph.json --graph-binaries=bogus",
+                   redirect_stdout="pkglist.json")
+
+        # No binaries should be uploaded since the pkglist is empty, but the command
+        # should not error
+        client.run("upload --list=pkglist.json -r=default")
+        assert "No packages were uploaded because the package list is empty." in client.out
+
 
 class TestGraphCreatedUpload:
     def test_create_upload(self):
@@ -53,18 +66,33 @@ class TestGraphCreatedUpload:
         assert "Uploading package 'zlib" in c.out
 
 
+class TestExportUpload:
+    def test_export_upload(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("export zlib --format=pkglist", redirect_stdout="pkglist.json")
+        c.run("upload --list=pkglist.json -r=default -c")
+        assert "Uploading recipe 'zlib/1.0#c570d63921c5f2070567da4bf64ff261'" in c.out
+
+
 class TestCreateGraphToPkgList:
     def test_graph_pkg_list_only_built(self):
         c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
-                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")
+                                                              .with_settings("os")
+                                                              .with_shared_option(False)})
         c.run("create zlib")
-        c.run("create app --format=json", redirect_stdout="graph.json")
+        c.run("create app --format=json -s os=Windows", redirect_stdout="graph.json")
         c.run("list --graph=graph.json --graph-binaries=build --format=json")
         pkglist = json.loads(c.stdout)["Local Cache"]
         assert len(pkglist) == 1
-        assert len(pkglist["app/1.0"]["revisions"]
-                   ["0fa1ff1b90576bb782600e56df642e19"]["packages"]) == 1
+        pkgs = pkglist["app/1.0"]["revisions"]["8263c3c32802e14a2f03a0b1fcce0d95"]["packages"]
+        assert len(pkgs) == 1
+        pkg_app = pkgs["e0bcc80c3f095670b71e535c193114d0155426cb"]
+        assert pkg_app["info"]["requires"] == ["zlib/1.0.Z"]
+        assert pkg_app["info"]["settings"] == {'os': 'Windows'}
+        assert pkg_app["info"]["options"] == {'shared': 'False'}
 
     def test_graph_pkg_list_all_recipes_only(self):
         """
@@ -78,8 +106,41 @@ class TestCreateGraphToPkgList:
         c.run("list --graph=graph.json --graph-recipes=* --format=json")
         pkglist = json.loads(c.stdout)["Local Cache"]
         assert len(pkglist) == 2
-        assert len(pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]) == 0
-        assert len(pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]) == 0
+        assert "packages" not in pkglist["app/1.0"]["revisions"]["0fa1ff1b90576bb782600e56df642e19"]
+        assert "packages" not in pkglist["zlib/1.0"]["revisions"]["c570d63921c5f2070567da4bf64ff261"]
+
+    def test_graph_pkg_list_python_requires(self):
+        """
+        include python_requires too
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"pytool/conanfile.py": GenConanfile("pytool", "0.1"),
+                "zlib/conanfile.py": GenConanfile("zlib", "1.0").with_python_requires("pytool/0.1"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+        c.run("create pytool")
+        c.run("create zlib")
+        c.run("upload * -c -r=default")
+        c.run("remove * -c")
+        c.run("create app --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 3
+        assert "96aec08148a2392127462c800e1c8af6" in pkglist["pytool/0.1"]["revisions"]
+        pkglist = json.loads(c.stdout)["default"]
+        assert len(pkglist) == 2
+        assert "96aec08148a2392127462c800e1c8af6" in pkglist["pytool/0.1"]["revisions"]
+
+    def test_graph_pkg_list_create_python_requires(self):
+        """
+        include python_requires too
+        """
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
+        c.run("create . --format=json", redirect_stdout="graph.json")
+        c.run("list --graph=graph.json --format=json")
+        pkglist = json.loads(c.stdout)["Local Cache"]
+        assert len(pkglist) == 1
+        assert "62a6a9e5347b789bfc6572948ea19f85" in pkglist["pytool/0.1"]["revisions"]
 
 
 class TestGraphInfoToPkgList:
@@ -197,16 +258,26 @@ class TestListRemove:
         assert "There are no matching recipe references" in client.out
 
     @pytest.mark.parametrize("remote", [False, True])
-    def test_remove_packages(self, client, remote):
+    def test_remove_packages_no_revisions(self, client, remote):
         # It is necessary to do *#* for actually removing something
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c")
+        assert "No binaries to remove for 'zli/1.0.0#f034dc90894493961d92dd32a9ee3b78'" in client.out
+        assert "No binaries to remove for 'zlib/1.0.0@user/channel" \
+               "#ffd4bc45820ddb320ab224685b9ba3fb" in client.out
+
+    @pytest.mark.parametrize("remote", [False, True])
+    def test_remove_packages(self, client, remote):
+        # It is necessary to do *#* for actually removing something
+        remote = "-r=default" if remote else ""
+        client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
+        client.run(f"remove --list=pkglist.json {remote} -c")
+
         assert "Removed recipe and all binaries" not in client.out
-        assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78:" \
-               " Removed binaries" in client.out
-        assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb:" \
-               " Removed binaries" in client.out
+        assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78: Removed binaries" in client.out
+        assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb: " \
+               "Removed binaries" in client.out
         client.run(f"list *:* {remote}")
         assert "zli/1.0.0" in client.out
         assert "zlib/1.0.0@user/channel" in client.out

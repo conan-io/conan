@@ -17,6 +17,7 @@ class _PackageOption:
     def __init__(self, name, value, possible_values=None):
         self._name = name
         self._value = value  # Value None = not defined
+        self.important = False
         # possible_values only possible origin is recipes
         if possible_values is None:
             self._possible_values = None
@@ -27,10 +28,11 @@ class _PackageOption:
     def dumps(self, scope=None):
         if self._value is None:
             return None
+        important = "!" if self.important else ""
         if scope:
-            return "%s:%s=%s" % (scope, self._name, self._value)
+            return "%s:%s%s=%s" % (scope, self._name, important, self._value)
         else:
-            return "%s=%s" % (self._name, self._value)
+            return "%s%s=%s" % (self._name, important, self._value)
 
     def copy_conaninfo_option(self):
         # To generate a copy without validation, for package_id info.options value
@@ -71,6 +73,10 @@ class _PackageOption:
         if self._value is None:
             return False  # Other is not None here
         return other == self.__str__()
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def value(self):
@@ -135,10 +141,8 @@ class _PackageOptions:
         return self._data.get(field, default)
 
     def rm_safe(self, field):
-        try:
-            delattr(self, field)
-        except ConanException:
-            pass
+        # This should never raise any exception, in any case
+        self._data.pop(field, None)
 
     def validate(self):
         for child in self._data.values():
@@ -150,10 +154,6 @@ class _PackageOptions:
         for k, v in self._data.items():
             result._data[k] = v.copy_conaninfo_option()
         return result
-
-    @property
-    def fields(self):
-        return sorted(list(self._data.keys()))
 
     def _ensure_exists(self, field):
         if self._constrained and field not in self._data:
@@ -168,7 +168,6 @@ class _PackageOptions:
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        current_value = self._data.get(field)
         # It is always possible to remove an option, even if it is frozen (freeze=True),
         # and it got a value, because it is the only way an option could be removed
         # conditionally to other option value (like fPIC if shared)
@@ -185,12 +184,19 @@ class _PackageOptions:
 
     def _set(self, item, value):
         # programmatic way to define values, for Conan codebase
+        important = item[-1] == "!"
+        item = item[:-1] if important else item
+
         current_value = self._data.get(item)
         if self._freeze and current_value.value is not None and current_value != value:
             raise ConanException(f"Incorrect attempt to modify option '{item}' "
                                  f"from '{current_value}' to '{value}'")
         self._ensure_exists(item)
-        self._data.setdefault(item, _PackageOption(item, None)).value = value
+        v = self._data.setdefault(item, _PackageOption(item, None))
+        new_value_important = important or (isinstance(value, _PackageOption) and value.important)
+        if new_value_important or not v.important:
+            v.value = value
+            v.important = new_value_important
 
     def items(self):
         result = []
@@ -380,12 +386,13 @@ class Options:
         which is the state that a package should define in order to reproduce
         """
         assert isinstance(down_options, Options)
+        # We need to store a copy for internal propagation for test_requires and tool_requires
+        private_deps_options = Options()
+        private_deps_options._deps_package_options = self._deps_package_options.copy()
         # self_options are the minimal necessary for a build-order
         # TODO: check this, isn't this just a copy?
         self_options = Options()
-        for pattern, options in down_options._deps_package_options.items():
-            self_options._deps_package_options.setdefault(pattern,
-                                                          _PackageOptions()).update_options(options)
+        self_options._deps_package_options = down_options._deps_package_options.copy()
 
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
@@ -402,4 +409,4 @@ class Options:
         # not be able to do ``self.options["mydep"]`` because it will be empty. self.dependencies
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
-        return self_options, upstream_options
+        return self_options, upstream_options, private_deps_options

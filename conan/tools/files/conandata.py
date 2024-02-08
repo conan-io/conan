@@ -39,3 +39,31 @@ def update_conandata(conanfile, data):
     recursive_dict_update(conandata, data)
     new_content = yaml.safe_dump(conandata)
     save(path, new_content)
+
+
+def trim_conandata(conanfile):
+    """
+    Tool to modify the ``conandata.yml`` once it is exported, to limit it to the current version
+    only
+    """
+    if not hasattr(conanfile, "export_folder") or conanfile.export_folder is None:
+        raise ConanException("The 'trim_conandata()' can only be used in the 'export()' method")
+    path = os.path.join(conanfile.export_folder, "conandata.yml")
+    if not os.path.exists(path):
+        raise ConanException("conandata.yml file doesn't exist")
+
+    conandata = load(path)
+    conandata = yaml.safe_load(conandata)
+
+    version = str(conanfile.version)
+    result = {}
+    for k, v in conandata.items():
+        if k == "scm" or not isinstance(v, dict):
+            result[k] = v
+            continue  # to allow user extra conandata, common to all versions
+        version_data = v.get(version)
+        if version_data is not None:
+            result[k] = {version: version_data}
+
+    new_conandata_yml = yaml.safe_dump(result, default_flow_style=False)
+    save(path, new_conandata_yml)

@@ -38,7 +38,7 @@ def test(conan_api, parser, *args):
     print_profiles(profile_host, profile_build)
 
     deps_graph = run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile,
-                          args.update, build_modes=args.build)
+                          args.update, build_modes=args.build, tested_python_requires=ref)
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
@@ -48,13 +48,18 @@ def test(conan_api, parser, *args):
 
 
 def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfile, update,
-             build_modes, tested_python_requires=None):
+             build_modes, tested_python_requires=None, build_modes_test=None, tested_graph=None):
     root_node = conan_api.graph.load_root_test_conanfile(path, ref,
                                                          profile_host, profile_build,
                                                          remotes=remotes,
                                                          update=update,
                                                          lockfile=lockfile,
                                                          tested_python_requires=tested_python_requires)
+    if isinstance(tested_python_requires, str):  # create python-require
+        conanfile = root_node.conanfile
+        if not getattr(conanfile, "python_requires", None) == "tested_reference_str":
+            ConanOutput().warning("test_package/conanfile.py should declare 'python_requires"
+                                  " = \"tested_reference_str\"'", warn_tag="deprecated")
 
     out = ConanOutput()
     out.title("Launching test_package")
@@ -68,10 +73,11 @@ def run_test(conan_api, path, ref, profile_host, profile_build, remotes, lockfil
     deps_graph.report_graph_error()
 
     conan_api.graph.analyze_binaries(deps_graph, build_modes, remotes=remotes, update=update,
-                                     lockfile=lockfile)
+                                     lockfile=lockfile, build_modes_test=build_modes_test,
+                                     tested_graph=tested_graph)
     print_graph_packages(deps_graph)
 
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
     _check_tested_reference_matches(deps_graph, ref, out)
-    test_package(conan_api, deps_graph, path, tested_python_requires)
+    test_package(conan_api, deps_graph, path)
     return deps_graph

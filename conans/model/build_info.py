@@ -117,30 +117,8 @@ class _Component:
     @staticmethod
     def deserialize(contents):
         result = _Component()
-        # TODO: Refactor to avoid this repetition
-        fields = [
-            "includedirs",
-            "srcdirs",
-            "libdirs",
-            "resdirs",
-            "bindirs",
-            "builddirs",
-            "frameworkdirs",
-            "system_libs",
-            "frameworks",
-            "libs",
-            "defines",
-            "cflags",
-            "cxxflags",
-            "sharedlinkflags",
-            "exelinkflags",
-            "objects",
-            "sysroot",
-            "requires",
-            "properties"
-        ]
-        for f in fields:
-            setattr(result, f"_{f}", contents[f])
+        for field, value in contents.items():
+            setattr(result, f"_{field}", value)
         return result
 
     @property
@@ -412,6 +390,9 @@ class _Component:
     def deploy_base_folder(self, package_folder, deploy_folder):
         def relocate(el):
             rel_path = os.path.relpath(el, package_folder)
+            if rel_path.startswith(".."):
+                # If it is pointing to a folder outside of the package, then do not relocate
+                return el
             return os.path.join(deploy_folder, rel_path)
 
         for varname in _DIRS_VAR_NAMES:
@@ -481,7 +462,8 @@ class CppInfo:
         self._package.sysroot = self._package.sysroot or other._package.sysroot
         # COMPONENTS
         for cname, c in other.components.items():
-            self.components[cname].merge(c, overwrite)
+            # Make sure each component created on the fly does not bring new defaults
+            self.components.setdefault(cname, _Component(set_defaults=False)).merge(c, overwrite)
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories definitions, that are relative"""

@@ -106,7 +106,7 @@ class RetryDownloadTests(unittest.TestCase):
                 uploader.upload(url="fake", abs_path=self.filename, retry=2)
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["ERROR: any exception"], 2)
+            self.assertEqual(counter["WARN: network: any exception"], 2)
             self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)
 
     def test_error_500(self):
@@ -118,5 +118,5 @@ class RetryDownloadTests(unittest.TestCase):
                 uploader.upload(url="fake", abs_path=self.filename, retry=2)
             output_lines = output.getvalue().splitlines()
             counter = Counter(output_lines)
-            self.assertEqual(counter["ERROR: 500 Server Error: content"], 2)
+            self.assertEqual(counter["WARN: network: 500 Server Error: content"], 2)
             self.assertEqual(counter["Waiting 0 seconds to retry..."], 2)

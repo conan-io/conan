@@ -130,10 +130,10 @@ def test_requiremens_inspect():
             'options:',
             'options_definitions:',
             'package_type: None',
-            "requires: [{'ref': 'zlib/1.2.13', 'run': 'False', 'libs': 'True', 'skip': "
-            "'False', 'test': 'False', 'force': 'False', 'direct': 'True', 'build': "
-            "'False', 'transitive_headers': 'None', 'transitive_libs': 'None', 'headers': "
-            "'True', 'package_id_mode': 'None', 'visible': 'True'}]",
+            "requires: [{'ref': 'zlib/1.2.13', 'run': False, 'libs': True, 'skip': "
+            "False, 'test': False, 'force': False, 'direct': True, 'build': "
+            "False, 'transitive_headers': None, 'transitive_libs': None, 'headers': "
+            "True, 'package_id_mode': None, 'visible': True}]",
             'revision_mode: hash'] == tc.out.splitlines()
 
 
@@ -168,9 +168,20 @@ def test_pythonrequires_remote():
             self.version = "1.0"
     """)
     tc.save({"conanfile.py": conanfile})
-    tc.run("inspect . -r default")
+    # Not specifying the remote also works
+    tc.run("inspect .")
+    assert "pyreq/1.0: Downloaded recipe revision 0ca726ab0febe1100901fffb27dc421f" in tc.out
     assert "name: my_company_package" in tc.out
     assert "version: 1.0" in tc.out
+    # It now finds it on the cache, because it was downloaded
+    tc.run("inspect . -nr")
+    assert "name: my_company_package" in tc.out
+    assert "version: 1.0" in tc.out
+    assert "'recipe': 'Cache'" in tc.out
+    tc.run("remove pyreq/* -c")
+    # And now no remotes fails
+    tc.run("inspect . -nr", assert_error=True)
+    assert "Cannot resolve python_requires 'pyreq/1.0': No remote defined" in tc.out
 
 
 def test_serializable_inspect():

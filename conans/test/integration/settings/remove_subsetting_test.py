@@ -2,8 +2,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
@@ -52,68 +50,6 @@ class Pkg(ConanFile):
 
         client.run("build ..", assert_error=True)
         self.assertIn("'settings.build_type' doesn't exist", client.out)
-
-    @pytest.mark.xfail(reason="Move this to CMakeToolchain")
-    def test_remove_subsetting(self):
-        # https://github.com/conan-io/conan/issues/2049
-        client = TestClient()
-        base = '''from conan import ConanFile
-class ConanLib(ConanFile):
-    name = "lib"
-    version = "0.1"
-'''
-        test = """from conan import ConanFile, CMake
-class ConanLib(ConanFile):
-    settings = "compiler", "arch"
-
-    def configure(self):
-        del self.settings.compiler.libcxx
-
-    def test(self):
-        pass
-
-    def build(self):
-        cmake = CMake(self)
-        self.output.info("TEST " + cmake.command_line)
-"""
-        client.save({"conanfile.py": base,
-                     "test_package/conanfile.py": test})
-        client.run("create . --user=user --channel=testing -s arch=x86_64 -s compiler=gcc "
-                   "-s compiler.version=4.9 -s compiler.libcxx=libstdc++11")
-        self.assertNotIn("LIBCXX", client.out)
-
-    @pytest.mark.xfail(reason="Move this to CMakeToolchain")
-    def test_remove_subsetting_build(self):
-        # https://github.com/conan-io/conan/issues/2049
-        client = TestClient()
-
-        conanfile = """from conan import ConanFile, CMake
-class ConanLib(ConanFile):
-    settings = "compiler", "arch"
-
-    def package(self):
-        try:
-            self.settings.compiler.libcxx
-        except Exception as e:
-            self.output.error("PACKAGE " + str(e))
-
-    def configure(self):
-        del self.settings.compiler.libcxx
-
-    def build(self):
-        try:
-            self.settings.compiler.libcxx
-        except Exception as e:
-            self.output.error("BUILD " + str(e))
-        cmake = CMake(self)
-        self.output.info("BUILD " + cmake.command_line)
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("build . -s arch=x86_64 -s compiler=gcc -s compiler.version=4.9 "
-                   "-s compiler.libcxx=libstdc++11")
-        self.assertIn("ERROR: BUILD 'settings.compiler.libcxx' doesn't exist for 'gcc'",
-                      client.out)
-        self.assertNotIn("LIBCXX", client.out)
 
 
 def test_settings_and_options_rm_safe():

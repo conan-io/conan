@@ -1,3 +1,4 @@
+import json
 import textwrap
 import unittest
 
@@ -75,3 +76,75 @@ class PerPackageSettingTest(unittest.TestCase):
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing %s -s compiler.libcxx=libstdc++ "
                    "-s pkg*:compiler.libcxx=libstdc++11" % settings)
         self.assertIn("consumer/0.1@user/testing: Created package", client.out)
+
+    def test_per_package_setting_all_packages_without_user_channel(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                def configure(self):
+                    self.output.info(f"I am a {self.settings.os} pkg!!!")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name=pkg1 --version=0.1 -s os=Windows")
+        client.run("create . --name=pkg2 --version=0.1 --user=user -s os=Linux")
+        client.run("create . --name=pkg3 --version=0.1 --user=user --channel=channel -s os=Linux")
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1@user",
+                                                                  "pkg3/0.1@user/channel")})
+        client.run("install . -s os=Linux -s *@:os=Windows")
+        assert "pkg1/0.1: I am a Windows pkg!!!" in client.out
+        assert "pkg2/0.1@user: I am a Linux pkg!!!" in client.out
+        assert "pkg3/0.1@user/channel: I am a Linux pkg!!!" in client.out
+
+
+def test_per_package_settings_target():
+    c = TestClient()
+    gcc = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "gcc"
+            version = "0.1"
+            settings = "arch"
+
+            def configure(self):
+                self.settings_target.rm_safe("os")
+                self.settings_target.rm_safe("compiler")
+                self.settings_target.rm_safe("build_type")
+
+            def package_id(self):
+                self.info.settings_target = self.settings_target
+        """)
+    c.save({"conanfile.py": gcc})
+    c.run("create . -s:b arch=x86_64 -s:h arch=armv7 --build-require")
+    pkg_id = c.created_package_id("gcc/0.1")
+
+    c.run("install --tool-requires=gcc/0.1 -s:b arch=x86_64 -s arch=armv8 -s:h gcc*:arch=armv7"
+          " --format=json")
+    # it will not fail due to armv8, but use the binary for armv7
+    c.assert_listed_binary({"gcc/0.1": (pkg_id, "Cache")}, build=True)
+
+    graph = json.loads(c.stdout)
+    assert graph["graph"]["nodes"]["1"]["info"]["settings_target"] == {"arch": "armv7"}
+
+
+def test_per_package_settings_build():
+    c = TestClient()
+    cmake = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "cmake"
+            version = "0.1"
+            settings = "build_type"
+
+            def build(self):
+                self.output.info(f"Building myself with {self.settings.build_type}!!")
+        """)
+    c.save({"conanfile.py": cmake})
+    c.run("export .")
+
+    c.run("install --tool-requires=cmake/0.1 -s:b build_type=Release -s:b cmake*:build_type=Debug "
+          "--build=missing")
+    assert "cmake/0.1: Building myself with Debug!!" in c.out

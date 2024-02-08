@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import textwrap
 from collections import OrderedDict
 
@@ -29,6 +30,9 @@ def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
     client.run("install --requires=pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    client.run("install . --channel=testing", assert_error=True)
+    assert "ERROR: Can't specify --channel without --user" in client.out
 
 
 def test_install_args_error():
@@ -196,8 +200,6 @@ def test_install_with_path_errors(client):
     assert "Conanfile not found" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
-                          "of the folders")
 def test_install_argument_order(client):
     # https://github.com/conan-io/conan/issues/2520
     conanfile_boost = textwrap.dedent("""
@@ -206,30 +208,30 @@ def test_install_argument_order(client):
             name = "boost"
             version = "0.1"
             options = {"shared": [True, False]}
-            default_options = "shared=True"
+            default_options = {"shared": True}
         """)
-    conanfile = GenConanfile().with_require("boost/0.1@conan/stable")
+    conanfile = GenConanfile().with_require("boost/0.1")
 
     client.save({"conanfile.py": conanfile,
                  "conanfile_boost.py": conanfile_boost})
-    client.run("create conanfile_boost.py conan/stable")
+    client.run("create conanfile_boost.py ")
     client.run("install . -o boost/*:shared=True --build=missing")
-    output_0 = "%s" % client.out
+    output_0 = client.out
     client.run("install . -o boost/*:shared=True --build missing")
-    output_1 = "%s" % client.out
+    output_1 = client.out
     client.run("install -o boost/*:shared=True . --build missing")
-    output_2 = "%s" % client.out
+    output_2 = client.out
     client.run("install -o boost/*:shared=True --build missing .")
-    output_3 = "%s" % client.out
+    output_3 = client.out
     assert "ERROR" not in output_3
     assert output_0 == output_1
     assert output_1 == output_2
     assert output_2 == output_3
 
     client.run("install -o boost/*:shared=True --build boost . --build missing")
-    output_4 = "%s" % client.out
+    output_4 = client.out
     client.run("install -o boost/*:shared=True --build missing --build boost .")
-    output_5 = "%s" % client.out
+    output_5 = client.out
     assert output_4 == output_5
 
 
@@ -485,3 +487,110 @@ def test_upload_skip_binaries_not_hit_server():
     c.run("install --requires=pkg/0.1 --build=missing")
     # This would crash if hits the server, but it doesnt
     assert "pkg/0.1: Created package" in c.out
+
+
+def test_upload_skip_build_missing():
+    c = TestClient(default_server_user=True)
+    pkg1 = GenConanfile("pkg1", "1.0").with_class_attribute('upload_policy = "skip"')
+    pkg2 = GenConanfile("pkg2", "1.0").with_requirement("pkg1/1.0", visible=False)
+    pkg3 = GenConanfile("pkg3", "1.0").with_requirement("pkg2/1.0")
+    c.save({"pkg1/conanfile.py": pkg1,
+            "pkg2/conanfile.py": pkg2,
+            "pkg3/conanfile.py": pkg3,
+            })
+    c.run("create pkg1")
+    c.run("create pkg2")
+    c.run("remove pkg1/*:* -c")  # remove binaries
+    c.run("create pkg3 --build=missing")
+    assert re.search(r"Skipped binaries(\s*)pkg1/1.0", c.out)
+
+
+def test_upload_skip_build_compatibles():
+    c = TestClient()
+    pkg1 = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg1(ConanFile):
+            name = "pkg1"
+            version = "1.0"
+            settings = "build_type"
+            upload_policy = "skip"
+            def compatibility(self):
+                if self.settings.build_type == "Debug":
+                    return [{"settings": [("build_type", "Release")]}]
+            """)
+    pkg2 = GenConanfile("pkg2", "1.0").with_requirement("pkg1/1.0")
+    pkg3 = GenConanfile("pkg3", "1.0").with_requirement("pkg2/1.0")
+    c.save({"pkg1/conanfile.py": pkg1,
+            "pkg2/conanfile.py": pkg2,
+            "pkg3/conanfile.py": pkg3,
+            })
+    c.run("create pkg1 -s build_type=Release")
+    pkg1id = c.created_package_id("pkg1/1.0")
+    c.run("create pkg2 -s build_type=Release")
+    c.run("remove pkg1/*:* -c")  # remove binaries
+    c.run("create pkg3 -s build_type=Release --build=missing")
+    c.assert_listed_binary({"pkg1/1.0": (pkg1id, "Build")})
+    c.run("install pkg3 -s build_type=Debug --build=missing")
+    c.assert_listed_binary({"pkg1/1.0": (pkg1id, "Cache")})
+
+
+def test_install_json_format():
+    # https://github.com/conan-io/conan/issues/14414
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "build_type"
+
+            def package_info(self):
+                self.conf_info.define("user.myteam:myconf", "myvalue")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    client.run("install --requires=pkg/0.1 --format=json")
+    data = json.loads(client.stdout)
+    conf_info = data["graph"]["nodes"]["1"]["conf_info"]
+    assert {'user.myteam:myconf': 'myvalue'} == conf_info
+
+
+def test_install_json_format_not_visible():
+    """
+    The dependencies that are needed at built time, even if they are not visible, or not standard
+    libraries (headers=False, libs=False, run=False), like for example some build assets
+    So direct dependencies of a consumer package or a package that needs to be built cannot be
+    skipped
+    """
+    c = TestClient()
+    dep = GenConanfile("dep", "0.1").with_package_file("somefile.txt", "contents!!!")
+    app = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import load
+
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            name="pkg"
+            version="0.0.1"
+
+            def requirements(self):
+                self.requires("dep/0.1", visible=False, headers=False, libs=False, run=False)
+
+            def build(self):
+                p = os.path.join(self.dependencies["dep"].package_folder, "somefile.txt")
+                c = load(self, p)
+                self.output.info(f"LOADED! {c}")
+        """)
+    c.save({"dep/conanfile.py": dep,
+            "app/conanfile.py": app})
+    c.run("export-pkg dep")
+    c.run("install app --format=json")
+    c.assert_listed_binary({"dep/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")})
+    data = json.loads(c.stdout)
+    pkg_folder = data["graph"]["nodes"]["1"]["package_folder"]
+    assert pkg_folder is not None
+
+    c.run("create app")
+    assert "pkg/0.0.1: LOADED! contents!!!" in c.out

@@ -28,7 +28,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                             for components_target_name in components_targets_names]
 
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
-        auto_link = self.conanfile.cpp_info.get_property("cmake_set_interface_link_directories")
+        auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
+                                                self.conanfile)
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,

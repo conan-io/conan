@@ -187,8 +187,8 @@ def test_compose_conf_complex():
     c2.loads(text)
     c.update_conf_definition(c2)
     expected_text = textwrap.dedent("""\
-        user.company.cpu:jobs=5
         user.company.build:ccflags=--m otherflag
+        user.company.cpu:jobs=5
         user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6, {'b': 2}]
         user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         zlib:user.company.check:shared=!
@@ -220,6 +220,7 @@ def test_conf_get_check_type_and_default():
         zlib:user.company.check:shared_str="False"
         zlib:user.company.check:static_str=off
         user.company.list:newnames+=myname
+        core.download:parallel=True
     """)
     c = ConfDefinition()
     c.loads(text)
@@ -238,6 +239,10 @@ def test_conf_get_check_type_and_default():
     assert c.get("zlib:user.company.check:static_str") == "off"
     assert c.get("zlib:user.company.check:static_str", check_type=bool) is False  # smart conversion
     assert c.get("user.company.list:newnames") == ["myname"]  # Placeholder is removed
+    with pytest.raises(ConanException) as exc_info:
+        c.get("core.download:parallel", check_type=int)
+    assert ("[conf] core.download:parallel must be a int-like object. "
+            "The value 'True' introduced is a bool object") in str(exc_info.value)
 
 
 def test_conf_pop():
@@ -277,3 +282,30 @@ def test_conf_choices_default():
     c.loads(confs)
     assert c.get("user.category:option1", choices=[1, 2], default=7) == 1
     assert c.get("user.category:option2", choices=[1, 2], default=7) == 7
+
+
+@pytest.mark.parametrize("scope", ["", "pkg/1.0:"])
+@pytest.mark.parametrize("conf", [
+    "user.foo:bar=1",
+    "user:bar=1"
+])
+def test_conf_scope_patterns_ok(scope, conf):
+    final_conf = scope + conf
+    c = ConfDefinition()
+    c.loads(final_conf)
+    # Check it doesn't raise
+    c.validate()
+
+
+@pytest.mark.parametrize("conf", ["user.foo.bar=1"])
+@pytest.mark.parametrize("scope, assert_message", [
+    ("", "Either 'user.foo.bar' does not exist in configuration list"),
+    ("pkg/1.0:", "Either 'pkg/1.0:user.foo.bar' does not exist in configuration list"),
+])
+def test_conf_scope_patterns_bad(scope, conf, assert_message):
+    final_conf = scope + conf
+    c = ConfDefinition()
+    with pytest.raises(ConanException) as exc_info:
+        c.loads(final_conf)
+        c.validate()
+    assert assert_message in str(exc_info.value)

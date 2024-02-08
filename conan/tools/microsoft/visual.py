@@ -6,8 +6,9 @@ from conans.client.conf.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
+from conans.util.files import save
 
-CONAN_VCVARS_FILE = "conanvcvars.bat"
+CONAN_VCVARS = "conanvcvars"
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -99,8 +100,11 @@ class VCVars:
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
+
         os_ = conanfile.settings.get_safe("os")
-        if os_ != "Windows":
+        build_os_ = conanfile.settings_build.get_safe("os")
+
+        if os_ != "Windows" or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
@@ -132,24 +136,58 @@ class VCVars:
             vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
         vcvarsarch = _vcvars_arch(conanfile)
 
+        winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+        winsdk_version = winsdk_version or conanfile.settings.get_safe("os.version")
         # The vs_install_path is like
         # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
         # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
         # C:\Program Files (x86)\Microsoft Visual Studio 14.0
         vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                                winsdk_version=None, vcvars_ver=vcvars_ver,
+                                winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
 
-        content = textwrap.dedent("""\
+        content = textwrap.dedent(f"""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
-            echo conanvcvars.bat: Activating environment Visual Studio {} - {} - vcvars_ver={}
-            {}
-            """.format(vs_version, vcvarsarch, vcvars_ver, vcvars))
+            echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
+            {vcvars}
+            """)
         from conan.tools.env.environment import create_env_script
-        create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
+        conan_vcvars_bat = f"{CONAN_VCVARS}.bat"
+        create_env_script(conanfile, content, conan_vcvars_bat, scope)
+        _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
 
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        if is_ps1:
+            content_ps1 = textwrap.dedent(f"""\
+            if (-not $env:VSCMD_ARG_VCVARS_VER){{
+                Push-Location "$PSScriptRoot"
+                cmd /c "conanvcvars.bat&set" |
+                foreach {{
+                  if ($_ -match "=") {{
+                    $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+                  }}
+                }}
+                Pop-Location
+                write-host conanvcvars.ps1: Activated environment}}
+            """)
+            conan_vcvars_ps1 = f"{CONAN_VCVARS}.ps1"
+            create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
+            _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
+
+
+
+def _create_deactivate_vcvars_file(conanfile, filename):
+    deactivate_filename = f"deactivate_{filename}"
+    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    is_ps1 = filename.endswith(".ps1")
+    if is_ps1:
+        content = f"Write-Host {message}"
+    else:
+        content = f"echo {message}"
+    path = os.path.join(conanfile.generators_folder, deactivate_filename)
+    save(path, content)
 
 def vs_ide_version(conanfile):
     """
@@ -232,7 +270,9 @@ def _vcvars_path(version, vs_install_path):
     # TODO: This comes from conans/client/tools/win.py vcvars_command()
     vs_path = vs_install_path or vs_installation_path(version)
     if not vs_path or not os.path.isdir(vs_path):
-        raise ConanException("VS non-existing installation: Visual Studio %s" % version)
+        raise ConanException(f"VS non-existing installation: Visual Studio {version}. "
+                             "If using a non-default toolset from a VS IDE version consider "
+                             "specifying it with the 'tools.microsoft.msbuild:vs_version' conf")
 
     if int(version) > 14:
         vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")

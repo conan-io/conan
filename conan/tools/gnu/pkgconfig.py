@@ -1,7 +1,8 @@
+from io import StringIO
+
 from conan.tools.build import cmd_args_to_string
 from conan.tools.env import Environment
 from conan.errors import ConanException
-from conans.util.runners import check_output_runner
 
 
 class PkgConfig:
@@ -23,11 +24,16 @@ class PkgConfig:
     def _parse_output(self, option):
         executable = self._conanfile.conf.get("tools.gnu:pkg_config", default="pkg-config")
         command = cmd_args_to_string([executable, '--' + option, self._library, '--print-errors'])
+
         env = Environment()
         if self._pkg_config_path:
             env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
         with env.vars(self._conanfile).apply():
-            return check_output_runner(command).strip()
+            # This way we get the environment from ConanFile, from profile (default buildenv)
+            output = StringIO()
+            self._conanfile.run(command, stdout=output, quiet=True)
+        value = output.getvalue().strip()
+        return value
 
     def _get_option(self, option):
         if option not in self._info:
@@ -88,6 +94,7 @@ class PkgConfig:
         """
         if not self.provides:
             raise ConanException("PkgConfig error, '{}' files not available".format(self._library))
+        self._conanfile.output.verbose(f"PkgConfig fill cpp_info for {self._library}")
         if is_system:
             cpp_info.system_libs = self.libs
         else:

@@ -58,6 +58,10 @@ def _get_gnu_triplet(os_, arch, compiler=None):
         elif "e2k" in arch:
             # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
             machine = "e2k-unknown"
+        elif "riscv64" in arch:
+            machine = 'riscv64'
+        elif 'riscv32' in arch:
+            machine = "riscv32"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -78,6 +82,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
                  "iOS": "apple-ios",
                  "watchOS": "apple-watchos",
                  "tvOS": "apple-tvos",
+                 "visionOS": "apple-xros",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
                  "Emscripten": "local-emscripten",

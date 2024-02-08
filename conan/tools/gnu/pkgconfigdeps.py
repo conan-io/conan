@@ -1,12 +1,13 @@
 import os
+import re
 import textwrap
 from collections import namedtuple
 
 from jinja2 import Template, StrictUndefined
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conan.errors import ConanException
 from conans.model.dependencies import get_transitive_requires
 from conans.util.files import save
 
@@ -75,8 +76,8 @@ def _get_suffix(req, build_context_suffix=None):
     return build_context_suffix.get(req.ref.name, "")
 
 
-def _get_formatted_dirs(folders, prefix_path_):
-    ret = []
+def _get_formatted_dirs(folder_name, folders, prefix_path_):
+    ret = {}
     for i, directory in enumerate(folders):
         directory = os.path.normpath(directory).replace("\\", "/")
         prefix = ""
@@ -85,7 +86,9 @@ def _get_formatted_dirs(folders, prefix_path_):
         elif directory.startswith(prefix_path_):
             prefix = "${prefix}/"
             directory = os.path.relpath(directory, prefix_path_).replace("\\", "/")
-        ret.append("%s%s" % (prefix, directory))
+        suffix = str(i) if i else ""
+        var_name = f"{folder_name}{suffix}"
+        ret[var_name] = f"{prefix}{directory}"
     return ret
 
 
@@ -95,71 +98,19 @@ _PCInfo = namedtuple("PCInfo", ['name', 'requires', 'description', 'cpp_info', '
 class _PCContentGenerator:
 
     template = textwrap.dedent("""\
-        {%- macro get_libs(libdirs, cpp_info, gnudeps_flags) -%}
-        {%- for _ in libdirs -%}
-        {{ '-L"${libdir%s}"' % (loop.index0 or "") + " " }}
-        {%- endfor -%}
-        {%- for sys_lib in (cpp_info.libs + cpp_info.system_libs) -%}
-        {{ "-l%s" % sys_lib + " " }}
-        {%- endfor -%}
-        {%- for shared_flag in (cpp_info.sharedlinkflags + cpp_info.exelinkflags) -%}
-        {{  shared_flag + " " }}
-        {%- endfor -%}
-        {%- for framework in (gnudeps_flags.frameworks + gnudeps_flags.framework_paths) -%}
-        {{ framework + " " }}
-        {%- endfor -%}
-        {%- endmacro -%}
-
-        {%- macro get_cflags(includedirs, cxxflags, cflags, defines) -%}
-        {%- for _ in includedirs -%}
-        {{ '-I"${includedir%s}"' % (loop.index0 or "") + " " }}
-        {%- endfor -%}
-        {%- for cxxflag in cxxflags -%}
-        {{ cxxflag + " " }}
-        {%- endfor -%}
-        {%- for cflag in cflags-%}
-        {{ cflag + " " }}
-        {%- endfor -%}
-        {%- for define in defines-%}
-        {{  "-D%s" % define + " " }}
-        {%- endfor -%}
-        {%- endmacro -%}
-
-        prefix={{ prefix_path }}
-        {% for path in libdirs %}
-        {{ "libdir{}={}".format((loop.index0 or ""), path) }}
+        {% for k, v in pc_variables.items() %}
+        {{ "{}={}".format(k, v) }}
         {% endfor %}
-        {% for path in includedirs %}
-        {{ "includedir%s=%s" % ((loop.index0 or ""), path) }}
-        {% endfor %}
-        {% for path in bindirs %}
-        {{ "bindir{}={}".format((loop.index0 or ""), path) }}
-        {% endfor %}
-        {% if pkg_config_custom_content %}
-        # Custom PC content
-        {{ pkg_config_custom_content }}
-        {% endif %}
 
         Name: {{ name }}
         Description: {{ description }}
         Version: {{ version }}
-        Libs: {{ get_libs(libdirs, cpp_info, gnudeps_flags) }}
-        Cflags: {{ get_cflags(includedirs, cxxflags, cflags, defines) }}
-        {% if requires|length %}
-        Requires: {{ requires|join(' ') }}
+        {% if libflags %}
+        Libs: {{ libflags }}
         {% endif %}
-    """)
-
-    shortened_template = textwrap.dedent("""\
-        prefix={{ prefix_path }}
-        {% if pkg_config_custom_content %}
-        # Custom PC content
-        {{ pkg_config_custom_content }}
+        {% if cflags %}
+        Cflags: {{ cflags }}
         {% endif %}
-
-        Name: {{ name }}
-        Description: {{ description }}
-        Version: {{ version }}
         {% if requires|length %}
         Requires: {{ requires|join(' ') }}
         {% endif %}
@@ -175,50 +126,76 @@ class _PCContentGenerator:
             else self._dep.package_folder
         return root_folder.replace("\\", "/")
 
-    def content(self, info):
-        assert isinstance(info, _PCInfo) and info.cpp_info is not None
-
+    def _get_pc_variables(self, cpp_info):
+        """
+        Get all the freeform variables defined by Conan and
+        users (through ``pkg_config_custom_content``). This last ones will override the
+        Conan defined variables.
+        """
         prefix_path = self._get_prefix_path()
-        version = info.cpp_info.get_property("component_version") or self._dep.ref.version
-        libdirs = _get_formatted_dirs(info.cpp_info.libdirs, prefix_path)
-        includedirs = _get_formatted_dirs(info.cpp_info.includedirs, prefix_path)
-        bindirs = _get_formatted_dirs(info.cpp_info.bindirs, prefix_path)
-        custom_content = info.cpp_info.get_property("pkg_config_custom_content")
+        pc_variables = {"prefix": prefix_path}
+        if cpp_info is None:
+            return pc_variables
+        # Already formatted directories
+        pc_variables.update(_get_formatted_dirs("libdir", cpp_info.libdirs, prefix_path))
+        pc_variables.update(_get_formatted_dirs("includedir", cpp_info.includedirs, prefix_path))
+        pc_variables.update(_get_formatted_dirs("bindir", cpp_info.bindirs, prefix_path))
+        # Get the custom content introduced by user and sanitize it
+        custom_content = cpp_info.get_property("pkg_config_custom_content")
+        if isinstance(custom_content, dict):
+            pc_variables.update(custom_content)
+        elif custom_content:  # Legacy: custom content is string
+            pc_variable_pattern = re.compile("^(.*)=(.*)")
+            for line in custom_content.splitlines():
+                match = pc_variable_pattern.match(line)
+                if match:
+                    key, value = match.group(1).strip(), match.group(2).strip()
+                    pc_variables[key] = value
+        return pc_variables
 
-        context = {
-            "prefix_path": prefix_path,
-            "libdirs": libdirs,
-            "includedirs": includedirs,
-            "bindirs": bindirs,
-            "pkg_config_custom_content": custom_content,
-            "name": info.name,
-            "description": info.description,
-            "version": version,
-            "requires": info.requires,
-            "cpp_info": info.cpp_info,
-            "cxxflags": [var.replace('"', '\\"') for var in info.cpp_info.cxxflags],
-            "cflags": [var.replace('"', '\\"') for var in info.cpp_info.cflags],
-            "defines": [var.replace('"', '\\"') for var in info.cpp_info.defines],
-            "gnudeps_flags": GnuDepsFlags(self._conanfile, info.cpp_info)
-        }
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
-        return template.render(context)
+    def _get_lib_flags(self, libdirvars, cpp_info):
+        gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
+        libdirsflags = ['-L"${%s}"' % d for d in libdirvars]
+        system_libs = ["-l%s" % l for l in (cpp_info.libs + cpp_info.system_libs)]
+        shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
+        framework_flags = gnudeps_flags.frameworks + gnudeps_flags.framework_paths
+        return " ".join(libdirsflags + system_libs + shared_flags + framework_flags)
 
-    def shortened_content(self, info):
-        assert isinstance(info, _PCInfo)
-        custom_content = info.cpp_info.get_property("pkg_config_custom_content") if info.cpp_info \
-            else None
+    def _get_cflags(self, includedirvars, cpp_info):
+        includedirsflags = ['-I"${%s}"' % d for d in includedirvars]
+        cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
+        cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
+        defines = ["-D%s" % var.replace('"', '\\"') for var in cpp_info.defines]
+        return " ".join(includedirsflags + cxxflags + cflags + defines)
+
+    def _get_context(self, info):
+        pc_variables = self._get_pc_variables(info.cpp_info)
         context = {
-            "prefix_path": self._get_prefix_path(),
-            "pkg_config_custom_content": custom_content,
             "name": info.name,
             "description": info.description,
             "version": self._dep.ref.version,
-            "requires": info.requires
+            "requires": info.requires,
+            "pc_variables": pc_variables,
+            "cflags": "",
+            "libflags": ""
         }
-        template = Template(self.shortened_template, trim_blocks=True,
-                            lstrip_blocks=True, undefined=StrictUndefined)
+        if info.cpp_info is not None:
+            context.update({
+                "version": (info.cpp_info.get_property("component_version") or
+                            info.cpp_info.get_property("system_package_version") or
+                            self._dep.ref.version),
+                "cflags": self._get_cflags([d for d in pc_variables if d.startswith("includedir")],
+                                           info.cpp_info),
+                "libflags": self._get_lib_flags([d for d in pc_variables if d.startswith("libdir")],
+                                                info.cpp_info)
+            })
+        return context
+
+    def content(self, info):
+        assert isinstance(info, _PCInfo)
+        context = self._get_context(info)
+        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
+                            undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -309,7 +286,7 @@ class _PCGenerator:
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
         # If we have found some component requires it would be enough
         if not requires:
-            # If no requires were found, let's try to get all the direct dependencies,
+            # If no requires were found, let's try to get all the direct visible dependencies,
             # e.g., requires = "other_pkg/1.0"
             requires = [_get_package_name(req, self._build_context_suffix)
                         for req in self._transitive_reqs.values()]
@@ -340,7 +317,7 @@ class _PCGenerator:
             pc_files[f"{info.name}.pc"] = self._content_generator.content(info)
             for alias in info.aliases:
                 alias_info = _PCInfo(alias, [info.name], f"Alias {alias} for {info.name}", None, [])
-                pc_files[f"{alias}.pc"] = self._content_generator.shortened_content(alias_info)
+                pc_files[f"{alias}.pc"] = self._content_generator.content(alias_info)
 
         pc_files = {}
         # If the package has no components, then we have to calculate only the root pc file
@@ -365,11 +342,11 @@ class _PCGenerator:
             package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}",
                                    self._dep.cpp_info, _get_package_aliases(self._dep))
             # It'll be enough creating a shortened PC file. This file will be like an alias
-            pc_files[f"{package_info.name}.pc"] = self._content_generator.shortened_content(package_info)
+            pc_files[f"{package_info.name}.pc"] = self._content_generator.content(package_info)
             for alias in package_info.aliases:
                 alias_info = _PCInfo(alias, [package_info.name],
                                      f"Alias {alias} for {package_info.name}", None, [])
-                pc_files[f"{alias}.pc"] = self._content_generator.shortened_content(alias_info)
+                pc_files[f"{alias}.pc"] = self._content_generator.content(alias_info)
 
         return pc_files
 

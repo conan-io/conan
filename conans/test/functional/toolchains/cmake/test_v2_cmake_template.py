@@ -1,10 +1,7 @@
 import os
-import re
 
 import pytest
 
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 
@@ -16,12 +13,7 @@ def test_cmake_lib_template():
     client.run("build .")
 
     client.run("export-pkg .")
-    package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-    ref = RecipeReference.loads("hello/0.1")
-    ref = client.cache.get_latest_recipe_reference(ref)
-    pref = PkgReference(ref, package_id)
-    pref = client.cache.get_latest_package_reference(pref)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.created_layout().package()
     assert os.path.exists(os.path.join(package_folder, "include", "hello.h"))
 
     # Create works

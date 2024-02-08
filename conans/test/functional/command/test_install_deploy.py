@@ -52,7 +52,8 @@ def client(_client):
 
 
 @pytest.mark.tool("cmake")
-def test_install_deploy(client):
+@pytest.mark.parametrize("powershell", [False, True])
+def test_install_deploy(client, powershell):
     c = client
     custom_content = 'message(STATUS "MY_TOOL_VARIABLE=${MY_TOOL_VARIABLE}!")'
     cmake = gen_cmakelists(appname="my_app", appsources=["main.cpp"], find_package=["hello", "tool"],
@@ -73,8 +74,9 @@ def test_install_deploy(client):
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["hello"], calls=["hello"])},
            clean_first=True)
+    pwsh = "-c tools.env.virtualenv:powershell=True" if powershell else ""
     c.run("install . -o *:shared=True "
-          "--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps")
+          f"--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps {pwsh}")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
     arch = c.get_default_host_profile().settings['arch']
     deps = c.load(f"mydeploy/hello-release-{arch}-data.cmake")
@@ -93,7 +95,10 @@ def test_install_deploy(client):
     assert "MY_TOOL_VARIABLE=Hello world!!" in c2.out
     c2.run_command("cmake --build . --config Release")
     if platform.system() == "Windows":  # Only the .bat env-generators are relocatable
-        cmd = r"mydeploy\conanrun.bat && Release\my_app.exe"
+        if powershell:
+            cmd = r"powershell.exe mydeploy\conanrun.ps1 ; Release\my_app.exe"
+        else:
+            cmd = r"mydeploy\conanrun.bat && Release\my_app.exe"
         # For Lunux: cmd = ". mydeploy/conanrun.sh && ./my_app"
         c2.run_command(cmd)
         assert "hello/0.1: Hello World Release!" in c2.out
@@ -400,3 +405,33 @@ def test_deploy_output_locations():
     tc.run(f"install . --deployer=my_deploy -of='{tmp_folder}' --deployer-folder='{deployer_output}'")
     assert f"Deployer output: {deployer_output}" in tc.out
     assert f"Deployer output: {tmp_folder}" not in tc.out
+
+
+def test_not_deploy_absolute_paths():
+    """ Absolute paths, for system packages, don't need to be relativized
+    https://github.com/conan-io/conan/issues/15242
+    """
+    c = TestClient()
+    some_abs_path = temp_folder().replace("\\", "/")
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.includedirs = ["{some_abs_path}/myusr/include"]
+                self.cpp_info.libdirs = ["{some_abs_path}/myusr/lib"]
+                self.buildenv_info.define_path("MYPATH", "{some_abs_path}/mypath")
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    # if we deploy one --requires, we get that package
+    c.run("install  --requires=pkg/1.0 --deployer=full_deploy -g CMakeDeps -g CMakeToolchain "
+          "-s os=Linux -s:b os=Linux -s arch=x86_64 -s:b arch=x86_64")
+    data = c.load("pkg-release-x86_64-data.cmake")
+    assert f'set(pkg_INCLUDE_DIRS_RELEASE "{some_abs_path}/myusr/include")' in data
+    assert f'set(pkg_LIB_DIRS_RELEASE "{some_abs_path}/myusr/lib")' in data
+
+    env = c.load("conanbuildenv-release-x86_64.sh")
+    assert f'export MYPATH="{some_abs_path}/mypath"' in env

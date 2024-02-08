@@ -7,7 +7,7 @@ from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_st
 from conan import ConanFile
 from conans.model.conf import ConfDefinition, Conf
 from conans.model.settings import Settings
-from conans.test.utils.mocks import ConanFileMock, MockSettings, MockConanfile, MockOptions
+from conans.test.utils.mocks import ConanFileMock, MockSettings, ConanFileMock, MockOptions
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load
 
@@ -151,7 +151,6 @@ def test_resource_compile():
           <PreprocessorDefinitions>
              MYTEST=MYVALUE;%(PreprocessorDefinitions)
           </PreprocessorDefinitions>
-          <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
         </ResourceCompile>"""
 
     props_file = load(props_file)  # Remove all blanks and CR to compare
@@ -233,7 +232,7 @@ def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected)
                              "compiler.runtime": runtime,
                              "compiler.version": "17",
                              "cppstd": "17"})
-    conanfile = MockConanfile(settings, options)
+    conanfile = ConanFileMock(settings, options)
     assert is_msvc_static_runtime(conanfile) == expected
 
 
@@ -274,7 +273,6 @@ def test_msbuildtoolchain_changing_flags_via_attributes():
     expected_resource_compile = """
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/flag1 /flag2 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>"""
     assert expected_cl_compile in toolchain
     assert expected_link in toolchain

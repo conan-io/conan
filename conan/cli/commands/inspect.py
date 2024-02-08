@@ -17,14 +17,18 @@ def inspect_text_formatter(data):
             cli_out_write("{}: {}".format(name, str(value)))
 
 
-@conan_command(group="Consumer", formatters={"text": inspect_text_formatter, "json": default_json_formatter})
+@conan_command(group="Consumer", formatters={"text": inspect_text_formatter,
+                                             "json": default_json_formatter})
 def inspect(conan_api, parser, *args):
     """
     Inspect a conanfile.py to return its public fields.
     """
     parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
-    parser.add_argument("-r", "--remote", default=None, action="append",
-                        help="Remote names. Accepts wildcards ('*' means all the remotes available)")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-r", "--remote", default=None, action="append",
+                       help="Remote names. Accepts wildcards ('*' means all the remotes available)")
+    group.add_argument("-nr", "--no-remote", action="store_true",
+                       help='Do not use remote, resolve exclusively in the cache')
     parser.add_argument("-l", "--lockfile", action=OnceArgument,
                         help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                              "existing 'conan.lock' file")
@@ -37,11 +41,11 @@ def inspect(conan_api, parser, *args):
                                                conanfile_path=path,
                                                cwd=os.getcwd(),
                                                partial=args.lockfile_partial)
-    remotes = conan_api.remotes.list(args.remote) if args.remote else []
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     conanfile = conan_api.local.inspect(path, remotes=remotes, lockfile=lockfile)
     result = conanfile.serialize()
     # Some of the serialization info is not initialized so it's pointless to show it to the user
-    for item in ("cpp_info", "system_requires", "recipe_folder"):
+    for item in ("cpp_info", "system_requires", "recipe_folder", "conf_info"):
         if item in result:
             del result[item]
 
