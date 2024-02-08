@@ -22,6 +22,7 @@ from conans.util.files import exception_message_safe
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
+
 class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
@@ -33,6 +34,7 @@ class Cli:
         assert isinstance(conan_api, ConanAPI), \
             "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
+        self._conan_api.cli.cli = self
         self._groups = defaultdict(list)
         self._commands = {}
 

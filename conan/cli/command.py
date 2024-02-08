@@ -132,6 +132,14 @@ class ConanCommand(BaseConanCommand):
         subcommand.set_name(self.name)
         self._subcommands[subcommand.name] = subcommand
 
+    def run_cli(self, conan_api, *args):
+        parser = ConanArgumentParser(conan_api, description=self._doc,
+                                     prog="conan {}".format(self._name),
+                                     formatter_class=SmartFormatter)
+        self._init_log_levels(parser)
+        self._init_formatters(parser)
+        return self._method(conan_api, parser, *args)
+
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
                                      prog="conan {}".format(self._name),

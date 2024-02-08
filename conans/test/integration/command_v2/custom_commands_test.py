@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 
@@ -286,3 +287,25 @@ class TestCustomCommands:
         # Without the variable it only loads the default custom commands location
         client.run("hello")
         assert "Hello world!" in client.out
+
+    def test_command_reuse_interface(self):
+        mycommand = textwrap.dedent("""
+            import json
+            from conan.cli.command import conan_command
+            from conan.api.output import cli_out_write
+
+            @conan_command(group="custom commands")
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \"""
+                mycommand help
+                \"""
+                result = conan_api.cli.list("*", "-c")
+                cli_out_write(json.dumps(result["results"], indent=2))
+            """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand})
+        c.run("mycommand", redirect_stdout="file.json")
+        assert json.loads(c.load("file.json")) == {"Local Cache": {}}
