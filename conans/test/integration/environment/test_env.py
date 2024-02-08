@@ -851,4 +851,4 @@ def test_deactivate_relocatable_substitute():
     c.run("install . -s os=Linux -s:b os=Linux")
     conanbuild = c.load("conanbuildenv.sh")
     result = os.path.join("$script_folder", "deactivate_conanbuildenv.sh")
-    assert fr'"{result}"' in conanbuild
+    assert f'"{result}"' in conanbuild
