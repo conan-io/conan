@@ -347,27 +347,44 @@ class GraphBinariesAnalyzer(object):
             ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
                                   "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
                                   "more efficient re-builds")
-        for node in deps_graph.ordered_iterate():
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                if node.path is not None and node.path.endswith(".py"):
-                    # For .py we keep evaluating the package_id, validate(), etc
-                    self._evaluate_package_id(node)
-                elif node.path is not None and node.path.endswith(".txt"):
-                    # To support the ``[layout]`` in conanfile.txt
-                    # TODO: Refactorize this a bit, the call to ``layout()``
-                    if hasattr(node.conanfile, "layout"):
-                        with conanfile_exception_formatter(node.conanfile, "layout"):
-                            node.conanfile.layout()
-            else:
+
+        def _evaluate_single(n):
+            mode = main_mode if mainprefs is None or str(n.pref) in mainprefs else test_mode
+            if lockfile:
+                locked_prev = lockfile.resolve_prev(n)
+                if locked_prev:
+                    self._process_locked_node(n, mode, locked_prev)
+                    return
+            self._evaluate_node(n, mode, remotes, update)
+
+        levels = deps_graph.by_levels()
+        for level in levels[:-1]:
+            for node in level:
                 self._evaluate_package_id(node)
-                build_mode = main_mode if mainprefs is None or str(node.pref) in mainprefs \
-                    else test_mode
-                if lockfile:
-                    locked_prev = lockfile.resolve_prev(node)
-                    if locked_prev:
-                        self._process_locked_node(node, build_mode, locked_prev)
-                        continue
-                self._evaluate_node(node, build_mode, remotes, update)
+            # group by pref to paralelize
+            nodes = {}
+            for node in level:
+                nodes.setdefault(node.pref, []).append(node)
+            # PARALLEL
+            for pref, pref_nodes in nodes.items():
+                _evaluate_single(pref_nodes[0])
+            # END OF PARALLEL
+            for pref, pref_nodes in nodes.items():
+                for n in pref_nodes[1:]:
+                    _evaluate_single(n)
+
+        # Last level is always necessarily a consumer or a virtual
+        assert len(levels[-1]) == 1
+        node = levels[-1][0]
+        assert node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL)
+        if node.path is not None:
+            if node.path.endswith(".py"):
+                # For .py we keep evaluating the package_id, validate(), etc
+                compute_package_id(node, self._global_conf)
+            # To support the ``[layout]`` in conanfile.txt
+            if hasattr(node.conanfile, "layout"):
+                with conanfile_exception_formatter(node.conanfile, "layout"):
+                    node.conanfile.layout()
 
         self._skip_binaries(deps_graph)
 
