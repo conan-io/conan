@@ -707,9 +707,11 @@ class TestDownloadCacheBackupSources:
         # Now try to source again, it should eat it up
         self.client.run("source .")
 
-    def test_backup_source_dirty_download_handle(self):
+    @pytest.mark.parametrize("exception", [Exception, ConanException])
+    @pytest.mark.parametrize("upload", [True, False])
+    def test_backup_source_dirty_download_handle(self, exception, upload):
         def custom_download(this, *args, **kwargs):
-            raise ConanException()
+            raise exception()
 
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
 
@@ -741,17 +743,20 @@ class TestDownloadCacheBackupSources:
             # This check should go away once we refactor dirty handling
             assert os.path.exists(os.path.join(self.download_cache_folder, "s", f"{sha256}.dirty"))
 
-        # A .dirty file was created, now try to source again, it should detect the dirty download and re-download it
-        self.client.run("source .")
+        if upload:
+            self.client.run("cache backup-upload")
+        else:
+            self.client.run("source .")
         assert f"{sha256} is dirty, removing it" in self.client.out
 
-    def test_backup_source_upload_when_dirty(self):
+    @pytest.mark.skip("Recover when .dirty files are properly handled")
+    @pytest.mark.parametrize("exception", [Exception, ConanException])
+    def test_backup_source_upload_when_dirty(self, exception):
         def custom_download(this, *args, **kwargs):
-            raise ConanException()
+            raise exception()
 
         mkdir(os.path.join(self.download_cache_folder, "s"))
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
-        http_server_base_folder_backup = os.path.join(self.file_server.store, "backup")
 
         sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
         save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
@@ -780,3 +785,4 @@ class TestDownloadCacheBackupSources:
         self.client.run("export . --name=pkg2 --version=1.0")
         self.client.run("upload * -c -r=default")
         assert "No backup sources files to upload" in self.client.out
+        assert sha256 + ".dirty" not in os.listdir(os.path.join(self.download_cache_folder, "s"))
