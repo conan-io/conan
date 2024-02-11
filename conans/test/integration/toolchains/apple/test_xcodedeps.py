@@ -325,14 +325,15 @@ def test_xcodedeps_traits():
                 clean_first=True)
     client.run("install lib_b.py -g XcodeDeps")
 
-    not_existing = [f"conan_lib_a_cmp1_release_{arch}.xcconfig", "conan_lib_a_cmp1.xcconfig",
+    # this changed from non-existing to existing after https://github.com/conan-io/conan/pull/15128
+    existing = [f"conan_lib_a_cmp1_release_{arch}.xcconfig", "conan_lib_a_cmp1.xcconfig",
                     f"conan_lib_a_cmp2_release_{arch}.xcconfig", "conan_lib_a_cmp2.xcconfig",
                     "conan_lib_a.xcconfig"]
 
-    for file in not_existing:
-        assert not os.path.exists(os.path.join(client.current_folder, file))
+    for file in existing:
+        assert os.path.exists(os.path.join(client.current_folder, file))
 
-    assert '#include "conan_lib_a.xcconfig"' not in client.load("conandeps.xcconfig")
+    assert '#include "conan_lib_a.xcconfig"' in client.load("conandeps.xcconfig")
 
     requirements = """
     def requirements(self):
