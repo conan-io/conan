@@ -1,6 +1,5 @@
 import os
 
-from conan.tools.env import Environment
 from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.util.files import save
