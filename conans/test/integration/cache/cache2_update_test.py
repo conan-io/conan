@@ -411,7 +411,7 @@ class TestUpdateFlows:
         # |                | 1.1 REV0 (1000)|                |                |                |
         # |                | 1.2 REV0 (1000)|                |                |                |
 
-        self.client.run('install --requires=liba/[>1.0.0]@ --update')
+        self.client.run("install --requires=liba/[>1.0.0]@ --update")
         # check all servers
         # --> result: install 1.2 from server2
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
