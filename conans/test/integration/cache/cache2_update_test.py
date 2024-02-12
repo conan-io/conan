@@ -110,7 +110,11 @@ class TestUpdateFlows:
         # |             |            | REV (10)   | REV (20)  | REV  (30)  |
         # |             |            |            |           |            |
 
-        self.client.run("install --requires=liba/1.0.0@ --update")
+        self.client.run("install --requires=liba/1.0.0@ --update='foo/*'")
+        # Won't find foo to update, nothing to do
+        self.client.assert_listed_require({"liba/1.0.0": "Cache (server0)"})
+
+        self.client.run("install --requires=liba/1.0.0@ --update='*'")
         # It will first check all the remotes and
         # will find the latest revision: REV1 from server2 we already have that
         # revision but the date is newer
@@ -303,8 +307,10 @@ class TestUpdateFlows:
         # |             | REV0 (1000)|            |           |            |
         # |             |            |            |           |            |
 
-        self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update")
+        self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update='foo/*'")
+        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 
+        self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update='*'")
         # now we have the same revision with different dates in the servers and in the cache
         # in this case, if we specify --update we will check all the remotes, if that revision
         # has a newer date in the servers we will take that date from the server but we will not
@@ -405,7 +411,7 @@ class TestUpdateFlows:
         # |                | 1.1 REV0 (1000)|                |                |                |
         # |                | 1.2 REV0 (1000)|                |                |                |
 
-        self.client.run("install --requires=liba/[>1.0.0]@ --update")
+        self.client.run('install --requires=liba/[>1.0.0]@ --update="libb/*"')
         # check all servers
         # --> result: install 1.2 from server2
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
@@ -438,3 +444,35 @@ class TestUpdateFlows:
         self.client.assert_listed_require({"liba/1.2.0": "Downloaded (server2)"})
         assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
                "from remote 'server2' " in self.client.out
+
+
+@pytest.mark.parametrize("update,result", [["*", {"liba/1.1": "Downloaded (default)",
+                                                  "libb/1.1": "Downloaded (default)"}],
+                                           ["liba/*", {"liba/1.1": "Downloaded (default)",
+                                                       "libb/1.0": "Cache (default)"}],
+                                           ["libb/*", {"liba/1.0": "Cache (default)",
+                                                       "libb/1.1": "Downloaded (default)"}],
+                                           ["", {"liba/1.0": "Cache (default)",
+                                                 "libb/1.0": "Cache (default)"}],
+                                           # None only passes legacy --update, no args, tp ensure it works
+                                           [None, {"liba/1.1": "Downloaded (default)",
+                                                   "libb/1.1": "Downloaded (default)"}]
+                                           ])
+def test_muliref_update_pattern(update, result):
+    tc = TestClient(light=True, default_server_user=True)
+    tc.save({"liba/conanfile.py": GenConanfile("liba"),
+             "libb/conanfile.py": GenConanfile("libb")})
+    tc.run("create liba --version=1.0")
+    tc.run("create libb --version=1.0")
+
+    tc.run("create liba --version=1.1")
+    tc.run("create libb --version=1.1")
+
+    tc.run("upload * -c -r default")
+    tc.run('remove "*/1.1" -c')
+
+    update_flag = f"--update={update}" if update is not None else "--update"
+
+    tc.run(f'install --requires="liba/[>=1.0]" --requires="libb/[>=1.0]" -r default {update_flag}')
+
+    tc.assert_listed_require(result)

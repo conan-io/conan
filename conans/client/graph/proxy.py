@@ -92,6 +92,18 @@ class ConanProxy:
                 status = RECIPE_INCACHE_DATE_UPDATED
         return recipe_layout, status, remote
 
+    @staticmethod
+    def _should_update(reference, update):
+        if update is None:
+            return False
+        assert isinstance(update, list)
+        # Legacy syntax had --update without pattern, that manifests as a True in the list
+        # (Usually one element, but support having more than one just in case)
+        # Note that it can't be false, the True is a flag set by Conan to update all
+        if any(isinstance(u, bool) for u in update):
+            return True
+        return any(reference.matches(pattern, is_consumer=False) for pattern in update)
+
     def _find_newest_recipe_in_remotes(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
 
@@ -107,7 +119,7 @@ class ConanProxy:
                     ref = self._remote_manager.get_latest_recipe_reference(reference, remote)
                 else:
                     ref = self._remote_manager.get_recipe_revision_reference(reference, remote)
-                if not update and not check_update:
+                if not self._should_update(reference, update) and not check_update:
                     return remote, ref
                 results.append({'remote': remote, 'ref': ref})
             except NotFoundException:

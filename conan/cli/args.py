@@ -52,8 +52,8 @@ def add_common_install_arguments(parser):
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. Also, if using revisions, it will update to the "
                    "latest revision for the resolved version range.")
-    parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help=update_help)
+
+    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const=True)
     add_profiles_args(parser)
 
 
