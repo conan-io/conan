@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to submit a report. 
+        Thanks for taking the time to submit a report.
         **Please don't forget to update the issue title.**
         Include all applicable information to help us reproduce your problem.
   - type: textarea
@@ -18,6 +18,16 @@ body:
         * Compiler+version:
         * Conan version:
         * Python version:
+    validations:
+      required: false
+  - type: textarea
+    id: example
+    attributes:
+      label: Minimal example if possible (a repository, or the conanfile, profiles, etc.)
+      description: Sources needed to reproduce the issue
+      placeholder: |
+        Provide an existing testing repository, or the conanfile.py, Conan profiles, etc. In summary
+        all the files needed to be able to reproduce the bug locally. It'll save us a lot of time!
     validations:
       required: false
   - type: textarea
