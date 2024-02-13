@@ -338,7 +338,7 @@ class _PCGenerator:
         # if it does not already exist in components one
         # Issue related: https://github.com/conan-io/conan/issues/10341
         pkg_name = _get_package_name(self._dep, self._build_context_suffix)
-        if f"{pkg_name}.pc" not in pc_files:
+        if not f"{pkg_name}.pc".lower() in [x.lower() for x in pc_files]:
             package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}",
                                    self._dep.cpp_info, _get_package_aliases(self._dep))
             # It'll be enough creating a shortened PC file. This file will be like an alias

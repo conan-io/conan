@@ -113,3 +113,68 @@ def test_pkgconfigdeps_bindir_and_meson():
     # Executing directly "meson test" fails if the bindir field does not exist
     client.run_command("meson test -C test_package/build-release")
     assert "1/1 ./src/example OK"
+
+
+@pytest.mark.tool("meson")
+@pytest.mark.tool("pkg_config")
+def test_pkgconfigdeps_pc_name_conflict():
+    """
+    This test checks that a pc file provided by component is not overwritten by
+    conan with pc file named after the package if the names collide.
+    Cases insensitive filesystems have to be taken into account.
+    """
+    client = TestClient()
+    client.run("new meson_lib -d name=hello -d version=1.0")
+    client.run("create . -tf=\"\"")
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain, Meson
+    from conan.tools.layout import basic_layout
+    from conan.tools.files import copy
+
+    class helloConan(ConanFile):
+        name = "hello"
+        version = "1.0"
+        package_type = "library"
+
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        options = {"shared": [True, False], "fPIC": [True, False]}
+        default_options = {"shared": False, "fPIC": True}
+
+        # Sources are located in the same place as this recipe, copy them to the recipe
+        exports_sources = "meson.build", "src/*"
+
+        def config_options(self):
+            if self.settings.os == "Windows":
+                self.options.rm_safe("fPIC")
+
+        def configure(self):
+            if self.options.shared:
+                self.options.rm_safe("fPIC")
+
+        def layout(self):
+            basic_layout(self)
+
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.generate()
+
+        def build(self):
+            meson = Meson(self)
+            meson.configure()
+            meson.build()
+
+        def package(self):
+            meson = Meson(self)
+            meson.install()
+
+        def package_info(self):
+            self.cpp_info.components["component"].set_property("pkg_config_name", "Hello")
+            self.cpp_info.components["component"].libs = ["hello"]
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("build test_package/conanfile.py")
+    client.run_command("meson test -C test_package/build-release")
+    assert "1/1 ./src/example OK"
