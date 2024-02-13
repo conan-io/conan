@@ -1,4 +1,5 @@
 import copy
+import os
 
 from collections import deque
 
@@ -13,6 +14,7 @@ from conans.client.graph.profile_node_definer import initialize_conanfile_profil
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
+from conans.model.graph_lock import Lockfile
 from conans.model.options import Options
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
@@ -49,9 +51,10 @@ class DepsGraphBuilder(object):
                 (require, node) = open_requires.popleft()
                 if require.override:
                     continue
-                new_node = self._expand_require(require, node, dep_graph, profile_host,
-                                                profile_build, graph_lock)
-                if new_node:
+                result = self._expand_require(require, node, dep_graph, profile_host,
+                                              profile_build, graph_lock)
+                if result:
+                    new_node, graph_lock = result
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
                     open_requires.extendleft((r, new_node)
@@ -89,9 +92,9 @@ class DepsGraphBuilder(object):
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
-            new_node = self._create_new_node(node, require, graph, profile_host, profile_build,
-                                             graph_lock)
-            return new_node
+            new_node, graph_lock = self._create_new_node(node, require, graph, profile_host,
+                                                         profile_build, graph_lock)
+            return new_node, graph_lock
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
             # Keep previous "test" status only if current is also test
@@ -210,14 +213,31 @@ class DepsGraphBuilder(object):
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
 
-    def _resolve_recipe(self, ref, graph_lock):
+    def _resolve_recipe(self, ref, graph_lock, profile_conf):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         layout, recipe_status, remote = result
         conanfile_path = layout.conanfile()
+        # Bundle-Lockfile:  check if the recipe exported a "conan.lock", and if it is there, use it
+        exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
+        if os.path.isfile(exported_lock):
+            conf = profile_conf.get_conanfile_conf(ref, False)
+            if conf.get("tools.graph:auto_lock", check_type=bool):
+                exported_lockfile = Lockfile.load(exported_lock)
+                #print("EXPORTED LOCKFILE FOR ", ref, exported_lockfile.dumps())
+                exported_lockfile.partial = True
+                from conan.api.output import ConanOutput
+                ConanOutput().info(f"Using lockfile from {ref}")
+                if graph_lock is not None:
+                    #print("DOWNSTREAM LOCKFILE FOR ", ref, graph_lock.dumps())
+                    graph_lock.merge(exported_lockfile)
+                    #print("MERGED LOCKFILE FOR ", ref, graph_lock.dumps())
+                else:
+                    graph_lock = exported_lockfile
+
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        return layout, dep_conanfile, recipe_status, remote
+        return layout, dep_conanfile, recipe_status, remote, graph_lock
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
@@ -305,13 +325,17 @@ class DepsGraphBuilder(object):
                 # TODO: This range-resolve might resolve in a given remote or cache
                 # Make sure next _resolve_recipe use it
                 self._resolver.resolve(require, str(node.ref), self._remotes, self._update)
-                resolved = self._resolve_recipe(require.ref, graph_lock)
+                conf = profile_build.conf if require.build or node.context == CONTEXT_BUILD \
+                    else profile_host.conf
+                resolved = self._resolve_recipe(require.ref, graph_lock, conf)
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
-
-        layout, dep_conanfile, recipe_status, remote = resolved
+            layout, dep_conanfile, recipe_status, remote, graph_lock = resolved
+        else:
+            layout, dep_conanfile, recipe_status, remote = resolved
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
+
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
@@ -357,7 +381,7 @@ class DepsGraphBuilder(object):
         if ancestor is not None:
             raise GraphLoopError(new_node, require, ancestor)
 
-        return new_node
+        return new_node, graph_lock
 
     @staticmethod
     def _remove_overrides(dep_graph):

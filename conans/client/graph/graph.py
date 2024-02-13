@@ -322,6 +322,20 @@ class DepsGraph(object):
         self.replaced_requires = {}
         self.error = False
 
+    @staticmethod
+    def from_node(node):
+        result = DepsGraph()
+        opened = {node}
+        while opened:
+            first = opened.pop()
+            if first is not node:
+                result.nodes.append(first)
+            for d in first.dependencies:
+                dst = d.dst
+                if dst not in result.nodes and dst not in opened:
+                    opened.add(dst)
+        return result
+
     def overrides(self):
         return Overrides.create(self.nodes)
 
