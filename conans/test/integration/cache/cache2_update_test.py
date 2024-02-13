@@ -308,7 +308,7 @@ class TestUpdateFlows:
         # |             |            |            |           |            |
 
         self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update='foo/*'")
-        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server0)"})
+        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
 
         self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update='*'")
         # now we have the same revision with different dates in the servers and in the cache
@@ -411,7 +411,7 @@ class TestUpdateFlows:
         # |                | 1.1 REV0 (1000)|                |                |                |
         # |                | 1.2 REV0 (1000)|                |                |                |
 
-        self.client.run('install --requires=liba/[>1.0.0]@ --update')
+        self.client.run('install --requires=liba/[>1.0.0]@ --update="libb/*"')
         # check all servers
         # --> result: install 1.2 from server2
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
