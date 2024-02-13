@@ -446,6 +446,8 @@ class TestUpdateFlows:
                                                        "libb/1.0": "Cache"}],
                                            ["libb/*", {"liba/1.0": "Cache",
                                                        "libb/1.1": "Downloaded (default)"}],
+                                           ["!libb/*", {"liba/1.1": "Downloaded (default)",
+                                                        "libb/1.0": "Cache"}],
                                            ["", {"liba/1.0": "Cache",
                                                  "libb/1.0": "Cache"}],
                                            # None only passes legacy --update, no args, tp ensure it works
