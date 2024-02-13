@@ -276,7 +276,7 @@ def detect_default_compiler():
         command = cc or cxx
         if "clang" in command.lower():
             return _clang_compiler(command)
-        if "gcc" in command or "g++" in command or "c++" in command:
+        if "cc" in command or "g++" in command or "c++" in command:
             gcc, gcc_version, compiler_exe = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
