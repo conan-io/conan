@@ -43,7 +43,10 @@ class _PackageBuilder(object):
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
         skip_build = False
-        build_folder = package_layout.build()
+        if os.path.isabs(conanfile.folders.build):
+            build_folder = conanfile.folders.build
+        else:
+            build_folder = package_layout.build()
         recipe_build_id = build_id(conanfile)
         pref = package_layout.reference
         if recipe_build_id is not None and pref.package_id != recipe_build_id:
