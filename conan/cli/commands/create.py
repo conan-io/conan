@@ -2,7 +2,7 @@ import os
 import shutil
 
 from conan.api.output import ConanOutput
-from conan.cli.args import add_lockfile_args, add_common_install_arguments
+from conan.cli.args import add_lockfile_args, add_common_install_arguments, protect_update
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
 from conan.cli.formatters.graph import format_graph_json
@@ -30,6 +30,7 @@ def create(conan_api, parser, *args):
                         help="Same as '--build' but only for the test_package requires. By default"
                              " if not specified it will take the '--build' value if specified")
     args = parser.parse_args(*args)
+    protect_update(args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)

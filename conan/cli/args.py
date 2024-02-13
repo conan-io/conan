@@ -57,6 +57,14 @@ def add_common_install_arguments(parser):
     add_profiles_args(parser)
 
 
+def protect_update(args):
+    if getattr(args, "update", None) is not None:
+        class UpdateList(list):
+            def __bool__(self):
+                assert False, "This should not be called"
+        setattr(args, "update", UpdateList(args.update))
+
+
 def add_profiles_args(parser):
     contexts = ["build", "host"]
 
