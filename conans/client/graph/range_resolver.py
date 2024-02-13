@@ -1,4 +1,3 @@
-from conan.api.output import ConanOutput
 from conans.client.graph.proxy import should_update_reference
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
