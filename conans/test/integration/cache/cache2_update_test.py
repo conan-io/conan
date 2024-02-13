@@ -110,11 +110,7 @@ class TestUpdateFlows:
         # |             |            | REV (10)   | REV (20)  | REV  (30)  |
         # |             |            |            |           |            |
 
-        self.client.run("install --requires=liba/1.0.0@ --update='foo/*'")
-        # Won't find foo to update, nothing to do
-        self.client.assert_listed_require({"liba/1.0.0": "Cache (server0)"})
-
-        self.client.run("install --requires=liba/1.0.0@ --update='*'")
+        self.client.run("install --requires=liba/1.0.0@ --update")
         # It will first check all the remotes and
         # will find the latest revision: REV1 from server2 we already have that
         # revision but the date is newer
@@ -307,10 +303,8 @@ class TestUpdateFlows:
         # |             | REV0 (1000)|            |           |            |
         # |             |            |            |           |            |
 
-        self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update='foo/*'")
-        self.client.assert_listed_require({"liba/1.0.0": "Cache (Updated date) (server2)"})
+        self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update")
 
-        self.client.run(f"install --requires={server_rrev}@#{server_rrev.revision} --update='*'")
         # now we have the same revision with different dates in the servers and in the cache
         # in this case, if we specify --update we will check all the remotes, if that revision
         # has a newer date in the servers we will take that date from the server but we will not
@@ -411,7 +405,7 @@ class TestUpdateFlows:
         # |                | 1.1 REV0 (1000)|                |                |                |
         # |                | 1.2 REV0 (1000)|                |                |                |
 
-        self.client.run('install --requires=liba/[>1.0.0]@ --update="libb/*"')
+        self.client.run("install --requires=liba/[>1.0.0]@ --update")
         # check all servers
         # --> result: install 1.2 from server2
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
