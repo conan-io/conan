@@ -1,5 +1,5 @@
-import mock
 import textwrap
+
 import pytest
 
 from conan.tools.microsoft import unix_path, unix_path_package_info_legacy

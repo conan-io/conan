@@ -666,3 +666,69 @@ class TestTransitiveOptionsSharedInvisible:
         client.save({"app/conanfile.py": conanfile})
         client.run("create app --build=missing")
         self.check(client, False)
+
+
+class TestImportantOptions:
+    @pytest.mark.parametrize("pkg", ["liba", "libb", "app"])
+    def test_important_options(self, pkg):
+        c = TestClient()
+
+        liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3])
+        libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
+        app = GenConanfile().with_requires("libb/0.1")
+        if pkg == "liba":
+            liba.with_default_option("myoption!", 2)
+        elif pkg == "libb":
+            libb.with_default_option("*:myoption!", 2)
+        elif pkg == "app":
+            app.with_default_option("*:myoption!", 2)
+        package_id = textwrap.dedent("""
+            def package_id(self):
+                self.output.info(f"MYOPTION: {self.info.options.myoption}")
+            """)
+        liba = str(liba) + textwrap.indent(package_id, "    ")
+
+        c.save({"liba/conanfile.py": liba,
+                "libb/conanfile.py": libb,
+                "app/conanfile.py": app})
+        c.run("export liba")
+        c.run("export libb")
+
+        c.run("graph info app -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+
+        # And the profile can always important-override the option
+        c.run("graph info app -o *:myoption!=3")
+        assert "liba/0.1: MYOPTION: 3" in c.out
+
+    def test_profile_shows_important(self):
+        c = TestClient()
+        c.run("profile show  -o *:myoption!=3")
+        assert "*:myoption!=3" in c.out
+
+    def test_important_options_recipe_priority(self):
+        c = TestClient()
+
+        liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3, 4])\
+                                          .with_default_option("myoption!", 1)
+        libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")\
+                                          .with_default_option("*:myoption!", 2)
+        app = GenConanfile().with_requires("libb/0.1").with_default_option("*:myoption!", 3)
+
+        package_id = textwrap.dedent("""
+            def package_id(self):
+                self.output.info(f"MYOPTION: {self.info.options.myoption}")
+            """)
+        liba = str(liba) + textwrap.indent(package_id, "    ")
+
+        c.save({"liba/conanfile.py": liba,
+                "libb/conanfile.py": libb,
+                "app/conanfile.py": app})
+        c.run("export liba")
+        c.run("export libb")
+
+        c.run("graph info app")
+        assert "liba/0.1: MYOPTION: 3" in c.out
+
+        c.run("graph info app -o *:myoption!=4")
+        assert "liba/0.1: MYOPTION: 4" in c.out

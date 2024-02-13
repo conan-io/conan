@@ -1,12 +1,13 @@
 import json
 import os
+import shutil
 import textwrap
 from unittest import mock
 
 import pytest
 from bottle import static_file, HTTPError, request
 
-from conans.errors import NotFoundException
+from conans.errors import NotFoundException, ConanException
 from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
@@ -22,12 +23,12 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
                         custom_download):
-            client = TestClient(default_server_user=True)
+            client = TestClient(default_server_user=True, light=True)
             tmp_folder = temp_folder()
             client.save({"global.conf": f"core.sources:download_cache={tmp_folder}\n"
                                         "core.sources:download_urls=['origin', 'http://myback']"},
                         path=client.cache.cache_folder)
-            sha256 = "d9014c4624844aa5bac314773d6b689ad467fa4e1d1a50a1b8a99d5a95f72ff5"
+            sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
             conanfile = textwrap.dedent(f"""
                 from conan import ConanFile
                 from conan.tools.files import download
@@ -79,7 +80,7 @@ class TestDownloadCacheBackupSources:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.client = TestClient(default_server_user=True)
+        self.client = TestClient(default_server_user=True, light=True)
         self.file_server = TestFileServer()
         self.client.servers["file_server"] = self.file_server
         self.download_cache_folder = temp_folder()
@@ -294,7 +295,7 @@ class TestDownloadCacheBackupSources:
         assert "ConanException: Error 500 downloading file " in self.client.out
 
     def test_upload_sources_backup_creds_needed(self):
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, light=True)
         download_cache_folder = temp_folder()
         http_server = StoppableThreadBottle()
         http_server_base_folder_backups = temp_folder()
@@ -446,7 +447,7 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
                         custom_download):
-            client = TestClient(default_server_user=True)
+            client = TestClient(default_server_user=True, light=True)
             download_cache_folder = temp_folder()
 
             sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
@@ -501,7 +502,7 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {self.file_server.fake_url}/internal_error/myfile.txt found in remote backup {self.file_server.fake_url}/backup2/" in self.client.out
 
     def test_ok_when_origin_authorization_error(self):
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, light=True)
         download_cache_folder = temp_folder()
         http_server = StoppableThreadBottle()
 
@@ -677,3 +678,111 @@ class TestDownloadCacheBackupSources:
         # This used to crash because we were trying to list a missing dir if only exports were made
         assert "[Errno 2] No such file or directory" not in self.client.out
         assert sha256 in os.listdir(http_server_base_folder_backup)
+
+    def test_backup_source_corrupted_download_handling(self):
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        self.client.save(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}"},
+            path=self.client.cache.cache_folder)
+
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("source .")
+
+        # Now simulate a dirty download, the file is there but the sha256 is wrong
+        save(os.path.join(self.download_cache_folder, "s", sha256), "Bye bye, world!")
+
+        # Now try to source again, it should eat it up
+        self.client.run("source .")
+
+    @pytest.mark.parametrize("exception", [Exception, ConanException])
+    @pytest.mark.parametrize("upload", [True, False])
+    def test_backup_source_dirty_download_handle(self, exception, upload):
+        def custom_download(this, *args, **kwargs):
+            raise exception()
+
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+                               from conan import ConanFile
+                               from conan.tools.files import download
+                               class Pkg2(ConanFile):
+                                   def source(self):
+                                       download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                                                sha256="{sha256}")
+                               """)
+
+        self.client.save(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"tools.files.download:retry=0"},
+            path=self.client.cache.cache_folder)
+
+        self.client.save({"conanfile.py": conanfile})
+
+        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader._download_file",
+                        custom_download):
+            self.client.run("source .", assert_error=True)
+            # The mock does not actually download a file, let's add it for the test
+            save(os.path.join(self.download_cache_folder, "s", sha256), "__corrupted download__")
+            # Check that the dirty file was not removed.
+            # This check should go away once we refactor dirty handling
+            assert os.path.exists(os.path.join(self.download_cache_folder, "s", f"{sha256}.dirty"))
+
+        if upload:
+            self.client.run("cache backup-upload")
+        else:
+            self.client.run("source .")
+        assert f"{sha256} is dirty, removing it" in self.client.out
+
+    @pytest.mark.skip("Recover when .dirty files are properly handled")
+    @pytest.mark.parametrize("exception", [Exception, ConanException])
+    def test_backup_source_upload_when_dirty(self, exception):
+        def custom_download(this, *args, **kwargs):
+            raise exception()
+
+        mkdir(os.path.join(self.download_cache_folder, "s"))
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+                   from conan import ConanFile
+                   from conan.tools.files import download
+                   class Pkg2(ConanFile):
+                       def source(self):
+                           download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                                    sha256="{sha256}")
+                   """)
+
+        self.client.save(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['{self.file_server.fake_url}/backup/', 'origin']\n"
+                            f"core.sources:upload_url={self.file_server.fake_url}/backup/"},
+            path=self.client.cache.cache_folder)
+
+        self.client.save({"conanfile.py": conanfile})
+        with mock.patch("conans.client.downloaders.file_downloader.FileDownloader._download_file",
+                        custom_download):
+            self.client.run("source .", assert_error=True)
+
+        # A .dirty file was created, now try to source again, it should detect the dirty download and re-download it
+        self.client.run("export . --name=pkg2 --version=1.0")
+        self.client.run("upload * -c -r=default")
+        assert "No backup sources files to upload" in self.client.out
+        assert sha256 + ".dirty" not in os.listdir(os.path.join(self.download_cache_folder, "s"))

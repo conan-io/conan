@@ -1,4 +1,3 @@
-import textwrap
 import unittest
 
 from conans.test.utils.tools import GenConanfile, TestClient

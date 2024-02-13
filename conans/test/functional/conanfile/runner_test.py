@@ -2,7 +2,6 @@ import os
 import textwrap
 import unittest
 
-from conans.util.env import environment_update
 from conans.test.utils.tools import TestClient
 
 

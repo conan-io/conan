@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.files import copy
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load, save, mkdir, save_files
+from conans.util.files import load, save, mkdir, save_files, chdir
 
 
 class ToolCopyTest(unittest.TestCase):
@@ -275,3 +275,12 @@ class ToolCopyTest(unittest.TestCase):
                          sorted(os.listdir(os.path.join(dst_folder, "include"))))
         self.assertEqual(sorted(["AttributeStorage.h", "file.h"]),
                          sorted(os.listdir(os.path.join(dst_folder, "include", "sub"))))
+
+    def test_empty_parent_folder_makedirs(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "file.h"), "")
+        sources = os.path.join(src_folder, "src")
+        os.makedirs(sources)
+        with chdir(sources):
+            copy(None, "*", "..", dst=".")  # This used to crash
+            assert "file.h" in os.listdir(sources)
