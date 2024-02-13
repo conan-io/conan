@@ -1,4 +1,5 @@
 from conan.api.output import ConanOutput
+from conans.client.graph.proxy import should_update_reference
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
 from conans.model.version_range import VersionRange
@@ -32,7 +33,7 @@ class RangeResolver:
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
-        if resolved_ref is None or self._should_update(search_ref, update):
+        if resolved_ref is None or should_update_reference(search_ref, update):
             remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update)
             if resolved_ref is None or (remote_resolved_ref is not None and
                                         resolved_ref.version < remote_resolved_ref.version):
@@ -78,18 +79,6 @@ class RangeResolver:
             pattern_cached.update({remote.name: results})
         return results
 
-    @staticmethod
-    def _should_update(search_ref, update):
-        if update is None:
-            return False
-        assert isinstance(update, list)
-        # Legacy syntax had --update without pattern, that manifests as a True in the list
-        # (Usually one element, but support having more than one just in case)
-        # Note that it can't be false, the True is a flag set by Conan to update all
-        if any(isinstance(u, bool) for u in update):
-            return True
-        return any(search_ref.matches(pattern, is_consumer=False) for pattern in update)
-
     def _resolve_remote(self, search_ref, version_range, remotes, update):
         update_candidates = []
         for remote in remotes:
@@ -97,7 +86,7 @@ class RangeResolver:
             resolved_version = self._resolve_version(version_range, remote_results,
                                                      self._resolve_prereleases)
             if resolved_version:
-                if not self._should_update(search_ref, update):
+                if not should_update_reference(search_ref, update):
                     return resolved_version  # Return first valid occurrence in first remote
                 else:
                     update_candidates.append(resolved_version)

@@ -443,11 +443,11 @@ class TestUpdateFlows:
 @pytest.mark.parametrize("update,result", [["*", {"liba/1.1": "Downloaded (default)",
                                                   "libb/1.1": "Downloaded (default)"}],
                                            ["liba/*", {"liba/1.1": "Downloaded (default)",
-                                                       "libb/1.0": "Cache (default)"}],
-                                           ["libb/*", {"liba/1.0": "Cache (default)",
+                                                       "libb/1.0": "Cache"}],
+                                           ["libb/*", {"liba/1.0": "Cache",
                                                        "libb/1.1": "Downloaded (default)"}],
-                                           ["", {"liba/1.0": "Cache (default)",
-                                                 "libb/1.0": "Cache (default)"}],
+                                           ["", {"liba/1.0": "Cache",
+                                                 "libb/1.0": "Cache"}],
                                            # None only passes legacy --update, no args, tp ensure it works
                                            [None, {"liba/1.1": "Downloaded (default)",
                                                    "libb/1.1": "Downloaded (default)"}]
