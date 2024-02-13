@@ -3,7 +3,7 @@ import os
 
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
-from conan.cli.args import common_graph_args, validate_common_graph_args, protect_update
+from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
@@ -175,7 +175,6 @@ def graph_info(conan_api, parser, subparser, *args):
                            help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
-    protect_update(args)
     # parameter validation
     validate_common_graph_args(args)
     if args.format in ("html", "dot") and args.filter:
