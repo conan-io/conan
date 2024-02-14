@@ -4,7 +4,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD
+    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
 from conans.errors import ConanInvalidConfiguration, ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -370,7 +370,8 @@ class InstallGraph:
 
     def _initialize_deps_graph(self, deps_graph):
         for node in deps_graph.ordered_iterate():
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) or node.binary == BINARY_SKIP:
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) \
+                    or node.binary in (BINARY_SKIP, BINARY_PLATFORM):
                 continue
 
             key = node.ref if self._order == "recipe" else node.pref
