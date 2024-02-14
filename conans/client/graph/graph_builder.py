@@ -222,9 +222,16 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
-        dep_type = "platform_tool_requires" if require.build or node.context == CONTEXT_BUILD\
-            else "platform_requires"
-        system_reqs = getattr(profile, dep_type)
+        if node.context == CONTEXT_BUILD:
+            # If we are in the build context, the platform_tool_requires ALSO applies to the
+            # regular requires. It is not possible in the build context to have tool-requires
+            # and regular requires to the same package from Conan and from Platform
+            system_reqs = profile.platform_tool_requires
+            if not require.build:
+                system_reqs = system_reqs + profile.platform_requires
+        else:
+            system_reqs = profile.platform_tool_requires if require.build \
+                else profile.platform_requires
         if system_reqs:
             version_range = require.version_range
             for d in system_reqs:

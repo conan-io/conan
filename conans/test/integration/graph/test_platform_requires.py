@@ -58,6 +58,19 @@ class TestPlatformRequires:
         client.run("create . -pr=profile", assert_error=True)
         assert "ERROR: Package 'dep/1.0' not resolved: No remote defined" in client.out
 
+    def test_platform_requires_build_context(self):
+        """
+        platform_requires must work in the build context too
+        """
+        client = TestClient(light=True)
+        client.save({"tool/conanfile.py": GenConanfile("tool", "1.0").with_requires("dep/1.0"),
+                     "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
+                     "profile": "[settings]\nos=Linux\n[platform_requires]\ndep/1.0"})
+        client.run("create tool -pr:b=profile --build-require")
+        assert "dep/1.0 - Platform" in client.out
+        client.run("create pkg -pr:b=profile")
+        assert "dep/1.0 - Platform" in client.out
+
     def test_graph_info_platform_requires_range(self):
         """
         graph info doesn't crash
