@@ -7,6 +7,7 @@ from six.moves.urllib.parse import urlparse
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
+from conans.util.env_reader import get_env
 from conans.util.files import load, save
 from conans.model.ref import PackageReference, ConanFileReference
 
@@ -320,6 +321,8 @@ class RemoteRegistry(object):
         self.initialize_remotes()
 
     def load_remotes(self):
+        if not os.path.exists(self._filename) and get_env("CONAN_NO_DEFAULT_REMOTES", False):
+            return Remotes.loads("{}")
         self.initialize_remotes()
         content = load(self._filename)
         return Remotes.loads(content)
