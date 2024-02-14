@@ -222,7 +222,8 @@ class DepsGraphBuilder(object):
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
-        dep_type = "platform_tool_requires" if require.build else "platform_requires"
+        dep_type = "platform_tool_requires" if require.build or node.context == CONTEXT_BUILD\
+            else "platform_requires"
         system_reqs = getattr(profile, dep_type)
         if system_reqs:
             version_range = require.version_range

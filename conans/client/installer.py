@@ -7,7 +7,7 @@ from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_PLATFORM, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
+    BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
@@ -295,9 +295,6 @@ class BinaryInstaller:
         self._remote_manager.get_package(node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, handled_count, total_count):
-        if package.binary == BINARY_PLATFORM:
-            return
-
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return

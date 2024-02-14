@@ -136,6 +136,15 @@ class TestPlatformRequires:
         assert "ERROR: Package 'dep/1.1' not resolved" in client.out
 
 
+class TestPlatformTestRequires:
+    def test_platform_requires(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_test_requires("dep/1.0"),
+                     "profile": "[platform_requires]\ndep/1.0"})
+        client.run("create . -pr=profile")
+        assert "dep/1.0 - Platform" in client.out
+
+
 class TestPlatformRequiresLock:
 
     def test_platform_requires_range(self):
