@@ -53,7 +53,7 @@ def add_common_install_arguments(parser):
                    "satisfies the range. Also, if using revisions, it will update to the "
                    "latest revision for the resolved version range.")
 
-    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const=True)
+    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)
 
 

@@ -442,6 +442,8 @@ class TestUpdateFlows:
 
 @pytest.mark.parametrize("update,result", [["*", {"liba/1.1": "Downloaded (default)",
                                                   "libb/1.1": "Downloaded (default)"}],
+                                           ["liba/0.1", {"liba/1.0": "Cache",
+                                                         "libb/1.0": "Cache"}],
                                            ["liba/*", {"liba/1.1": "Downloaded (default)",
                                                        "libb/1.0": "Cache"}],
                                            ["libb/*", {"liba/1.0": "Cache",

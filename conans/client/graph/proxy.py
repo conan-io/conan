@@ -147,11 +147,5 @@ class ConanProxy:
 def should_update_reference(reference, update):
     if update is None:
         return False
-    if not isinstance(update, list):
-        assert False
-    # Legacy syntax had --update without pattern, that manifests as a True in the list
-    # (Usually one element, but support having more than one just in case)
-    # Note that it can't be false, the True is a flag set by Conan to update all
-    if any(isinstance(u, bool) for u in update):
-        return True
+    # Legacy syntax had --update without pattern, it manifests as a "*" pattern
     return any(reference.matches(pattern, is_consumer=False) for pattern in update)
