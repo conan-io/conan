@@ -1686,3 +1686,87 @@ class TestEnvironmentInPresets:
 
         c.run_command(f"ctest --preset conan-release")
         assert "tests passed" in c.out
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Windows", reason="neeed multi-config")
+def test_cmake_toolchain_cxxflags_multi_config():
+    c = TestClient()
+    profile_release = textwrap.dedent(r"""
+        include(default)
+        [conf]
+        tools.build:defines=["answer=42"]
+        tools.build:cxxflags=["/Zc:__cplusplus"]
+        """)
+    profile_debug = textwrap.dedent(r"""
+        include(default)
+        [settings]
+        build_type=Debug
+        [conf]
+        tools.build:defines=["answer=123"]
+        tools.build:cxxflags=["/W4"]
+        """)
+
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Test(ConanFile):
+            exports_sources = "CMakeLists.txt", "src/*"
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        ''')
+
+    main = textwrap.dedent(r"""
+        #include <iostream>
+        #include <stdio.h>
+
+        #define STR(x)   #x
+        #define SHOW_DEFINE(x) printf("%s=%s\n", #x, STR(x))
+
+        int main() {
+            SHOW_DEFINE(answer);
+            char a = 123L;  // to trigger warnings
+
+            #if __cplusplus
+            std::cout << "CPLUSPLUS: __cplusplus" << __cplusplus<< "\n";
+            #endif
+        }
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        add_executable(example src/main.cpp)
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "profile_release": profile_release,
+            "profile_debug": profile_debug,
+            "src/main.cpp": main,
+            "CMakeLists.txt": cmakelists}, clean_first=True)
+    c.run("install . -pr=./profile_release")
+    c.run("install . -pr=./profile_debug")
+
+    with c.chdir("build"):
+        c.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
+        c.run_command("cmake --build . --config Release")
+        assert "warning C4189" not in c.out
+        c.run_command("cmake --build . --config Debug")
+        assert "warning C4189" in c.out
+
+    c.run_command(r"build\Release\example.exe")
+    assert 'answer=42' in c.out
+    assert "CPLUSPLUS: __cplusplus20" in c.out
+
+    c.run_command(r"build\Debug\example.exe")
+    assert 'answer=123' in c.out
+    assert "CPLUSPLUS: __cplusplus19" in c.out
