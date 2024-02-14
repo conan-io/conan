@@ -440,19 +440,25 @@ class TestUpdateFlows:
                "from remote 'server2' " in self.client.out
 
 
-@pytest.mark.parametrize("update,result", [["*", {"liba/1.1": "Downloaded (default)",
+@pytest.mark.parametrize("update,result", [
+                                           # Not a real pattern, works to support legacy syntax
+                                           ["*", {"liba/1.1": "Downloaded (default)",
                                                   "libb/1.1": "Downloaded (default)"}],
-                                           ["liba/0.1", {"liba/1.0": "Cache",
-                                                         "libb/1.0": "Cache"}],
-                                           ["liba/*", {"liba/1.1": "Downloaded (default)",
+                                           ["libc", {"liba/1.0": "Cache",
+                                                     "libb/1.0": "Cache"}],
+                                           ["liba", {"liba/1.1": "Downloaded (default)",
                                                        "libb/1.0": "Cache"}],
-                                           ["libb/*", {"liba/1.0": "Cache",
+                                           ["libb", {"liba/1.0": "Cache",
                                                        "libb/1.1": "Downloaded (default)"}],
-                                           ["!libb/*", {"liba/1.1": "Downloaded (default)",
-                                                        "libb/1.0": "Cache"}],
                                            ["", {"liba/1.0": "Cache",
                                                  "libb/1.0": "Cache"}],
-                                           # None only passes legacy --update, no args, tp ensure it works
+                                           # Patterns not supported, only full name match
+                                           ["lib*", {"liba/1.0": "Cache",
+                                                     "libb/1.0": "Cache"}],
+                                           ["liba/*", {"liba/1.0": "Cache",
+                                                       "libb/1.0": "Cache"}],
+                                           # None only passes legacy --update without args,
+                                           # to ensure it works, it should be the same as passing *
                                            [None, {"liba/1.1": "Downloaded (default)",
                                                    "libb/1.1": "Downloaded (default)"}]
                                            ])

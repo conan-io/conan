@@ -148,4 +148,4 @@ def should_update_reference(reference, update):
     if update is None:
         return False
     # Legacy syntax had --update without pattern, it manifests as a "*" pattern
-    return any(reference.matches(pattern, is_consumer=False) for pattern in update)
+    return any(name == "*" or reference.name == name for name in update)
