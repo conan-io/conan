@@ -12,6 +12,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, libcxx_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version
 from conans.client.subsystems import deduce_subsystem, WINDOWS
@@ -544,24 +545,61 @@ class UserToolchain(Block):
 class ExtraFlagsBlock(Block):
     """This block is adding flags directly from user [conf] section"""
 
-    template = textwrap.dedent("""
-        # Extra c, cxx, linkflags and defines
+    _template = textwrap.dedent("""
+        # Conan conf flags start: {{config}}
         {% if cxxflags %}
-        string(APPEND CONAN_CXX_FLAGS "{% for cxxflag in cxxflags %} {{ cxxflag }}{% endfor %}")
+        string(APPEND CONAN_CXX_FLAGS{{suffix}} "{% for cxxflag in cxxflags %} {{ cxxflag }}{% endfor %}")
         {% endif %}
         {% if cflags %}
-        string(APPEND CONAN_C_FLAGS "{% for cflag in cflags %} {{ cflag }}{% endfor %}")
+        string(APPEND CONAN_C_FLAGS{{suffix}} "{% for cflag in cflags %} {{ cflag }}{% endfor %}")
         {% endif %}
         {% if sharedlinkflags %}
-        string(APPEND CONAN_SHARED_LINKER_FLAGS "{% for sharedlinkflag in sharedlinkflags %} {{ sharedlinkflag }}{% endfor %}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS{{suffix}} "{% for sharedlinkflag in sharedlinkflags %} {{ sharedlinkflag }}{% endfor %}")
         {% endif %}
         {% if exelinkflags %}
-        string(APPEND CONAN_EXE_LINKER_FLAGS "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
+        string(APPEND CONAN_EXE_LINKER_FLAGS{{suffix}} "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
         {% if defines %}
+        {% if config %}
+        add_compile_definitions($<$<CONFIG:{{config}}>:{% for define in defines %}" {{ define }}"{% endfor %}>)
+        {% else %}
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}
+        {% endif %}
+        # Conan conf flags end
     """)
+
+    @property
+    def template(self):
+        if not is_multi_configuration(self._toolchain.generator):
+            return self._template
+
+        sections = {}
+        if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_toolchain = load(CONAN_TOOLCHAIN_FILENAME)
+            lines = existing_toolchain.splitlines()
+            current_section = None
+            for line in lines:
+                if line.startswith("# Conan conf flags start: "):
+                    section_name = line.split(":", 1)[1].strip()
+                    current_section = [line]
+                    sections[section_name] = current_section
+                elif line == "# Conan conf flags end":
+                    current_section.append(line)
+                    current_section = None
+                elif current_section is not None:
+                    current_section.append(line)
+            sections.pop("", None)  # Just in case it had a single config before
+
+        config = self._conanfile.settings.get_safe("build_type")
+        for k, v in sections.items():
+            if k != config:
+                v.insert(0, "{% raw %}")
+                v.append("{% endraw %}")
+        sections[config] = [self._template]
+        sections = ["\n".join(lines) for lines in sections.values()]
+        sections = "\n".join(sections)
+        return sections
 
     def context(self):
         # Now, it's time to get all the flags defined by the user
@@ -579,7 +617,14 @@ class ExtraFlagsBlock(Block):
             self._conanfile.output.warning("tools.build:cxxflags or cflags are defined, but Android NDK toolchain may be overriding "
                                            "the values. Consider setting tools.android:cmake_legacy_toolchain to False.")
 
+        config = ""
+        suffix = ""
+        if is_multi_configuration(self._toolchain.generator):
+            config = self._conanfile.settings.get_safe("build_type")
+            suffix = f"_{config.upper()}" if config else ""
         return {
+            "config": config,
+            "suffix": suffix,
             "cxxflags": cxxflags,
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
@@ -590,6 +635,22 @@ class ExtraFlagsBlock(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
+        foreach(config ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER ${config} config)
+            if(DEFINED CONAN_CXX_FLAGS_${config})
+              string(APPEND CMAKE_CXX_FLAGS_${config}_INIT " ${CONAN_CXX_FLAGS_${config}}")
+            endif()
+            if(DEFINED CONAN_C_FLAGS_${config})
+              string(APPEND CMAKE_C_FLAGS_${config}_INIT " ${CONAN_C_FLAGS_${config}}")
+            endif()
+            if(DEFINED CONAN_SHARED_LINKER_FLAGS_${config})
+              string(APPEND CMAKE_SHARED_LINKER_FLAGS_${config}_INIT " ${CONAN_SHARED_LINKER_FLAGS_${config}}")
+            endif()
+            if(DEFINED CONAN_EXE_LINKER_FLAGS_${config})
+              string(APPEND CMAKE_EXE_LINKER_FLAGS_${config}_INIT " ${CONAN_EXE_LINKER_FLAGS_${config}}")
+            endif()
+        endforeach()
+
         if(DEFINED CONAN_CXX_FLAGS)
           string(APPEND CMAKE_CXX_FLAGS_INIT " ${CONAN_CXX_FLAGS}")
         endif()
@@ -602,6 +663,7 @@ class CMakeFlagsInitBlock(Block):
         if(DEFINED CONAN_EXE_LINKER_FLAGS)
           string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
         endif()
+
         """)
 
 

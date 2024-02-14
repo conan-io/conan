@@ -1246,3 +1246,37 @@ def test_export_pkg():
     c.run("list *")
     assert "WARN: There are no matching recipe references" in c.out
     assert "pytool/0.1" not in c.out
+
+
+def test_py_requires_override_method():
+    tc = TestClient()
+    pyreq = textwrap.dedent("""
+        from conan import ConanFile
+        class MyConanfileBase:
+            def get_toolchain(self):
+                return "mybasetoolchain"
+
+            def generate(self):
+                self.output.info("MyConanfileBase generate with value %s" % self.get_toolchain())
+
+        class MyConanfile(ConanFile):
+            name = "myconanfile"
+            version = "1.0"
+            package_type = "python-require"
+    """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class MyConanfile(ConanFile):
+            name = "app"
+            version = "1.0"
+            python_requires = "myconanfile/1.0"
+            python_requires_extend = "myconanfile.MyConanfileBase"
+            def get_toolchain(self):
+                return "mycustomtoolchain"
+    """)
+    tc.save({"myconanfile/conanfile.py": pyreq,
+             "conanfile.py": conanfile})
+    tc.run("create myconanfile")
+    tc.run("create .")
+    assert "MyConanfileBase generate with value mycustomtoolchain" in tc.out

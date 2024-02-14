@@ -19,10 +19,8 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
     def configs = []
     if (branchName =~ /(^PR-.*)/) {
         configs.add([node: "Linux", pyvers: ["PY36"]])
-        if (moduleName=="conans/test/functional") {
-            configs.add([node: "Windows", pyvers: ["PY36"]])
-            configs.add([node: "M2Macos", pyvers: ["PY36"]])
-        }
+        configs.add([node: "Windows", pyvers: ["PY36"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36"]])
     }
     else if (jobName == "ConanNightlyv2" || branchName =~ /^release.*/) {
         configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
@@ -30,9 +28,9 @@ List<Map> getConfigurations(String moduleName, String branchName, String jobName
         configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     else if (branchName == "develop2") {
-        configs.add([node: "Linux", pyvers: ["PY36"]])
-        configs.add([node: "Windows", pyvers: ["PY36"]])
-        configs.add([node: "M2Macos", pyvers: ["PY36"]])
+        configs.add([node: "Linux", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "Windows", pyvers: ["PY36", "PY38"]])
+        configs.add([node: "M2Macos", pyvers: ["PY36", "PY38"]])
     }
     return configs
 }

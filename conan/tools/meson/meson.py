@@ -2,7 +2,6 @@ import os
 
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
-from conan.errors import ConanException
 
 
 class Meson(object):

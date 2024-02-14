@@ -1,14 +1,11 @@
-import os
 from io import StringIO
-
 
 from conan import ConanFile
 from conan.internal.conan_app import ConanFileHelpers
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
-from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
 
 
 class LocalDBMock(object):
