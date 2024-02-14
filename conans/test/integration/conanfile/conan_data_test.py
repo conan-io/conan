@@ -6,6 +6,7 @@ import unittest
 
 import yaml
 
+from assets.genconanfile import GenConanfile
 from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import tgz_with_contents
@@ -323,3 +324,55 @@ def test_conandata_trim():
     assert "1.1" not in data2
     assert data1 == data2
     assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+
+
+def test_trim_conandata_as_hook():
+    c = TestClient()
+    c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent("""
+    from conan.tools.files import trim_conandata
+
+    def post_export(conanfile):
+        trim_conandata(conanfile)
+    """)})
+
+    conandata_yml = textwrap.dedent("""\
+            sources:
+              "1.0":
+                url: "url1"
+                sha256: "sha1"
+            patches:
+              "1.0":
+                - patch_file: "patches/some_patch"
+                  base_path: "source_subfolder"
+            something: else
+              """)
+    c.save({"conanfile.py": GenConanfile("pkg"),
+            "conandata.yml": conandata_yml})
+    c.run("export . --version=1.0")
+    layout = c.exported_layout()
+    data1 = load(os.path.join(layout.export(), "conandata.yml"))
+    assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+    conandata_yml2 = textwrap.dedent("""\
+            sources:
+             "1.0":
+               url: "url1"
+               sha256: "sha1"
+             "1.1":
+               url: "url2"
+               sha256: "sha2"
+            patches:
+             "1.1":
+               - patch_file: "patches/some_patch2"
+                 base_path: "source_subfolder"
+             "1.0":
+               - patch_file: "patches/some_patch"
+                 base_path: "source_subfolder"
+            something: else
+            """)
+    c.save({"conandata.yml": conandata_yml2})
+    c.run("export . --version=1.0")
+    layout = c.exported_layout()
+    data2 = load(os.path.join(layout.export(), "conandata.yml"))
+    assert "1.1" not in data2
+    assert data1 == data2
+    assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
