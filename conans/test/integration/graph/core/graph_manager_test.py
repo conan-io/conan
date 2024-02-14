@@ -1138,6 +1138,68 @@ class TestLinearFiveLevelsHeaders(GraphManagerTest):
                                 (libb, True, False, False, False),
                                 (liba, True, True, False, False)])
 
+    def test_visible_transitivity(self):
+        # app -> libd/0.1 -> libc/0.1 -(visible=False)-> libb0.1  -> liba0.1
+        self.recipe_conanfile("liba/0.1", GenConanfile())
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("libb/0.1",
+                                                                          visible=False))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_requirement("libc/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        libc = libd.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libd, True, True, False, False),
+                                (libc, True, True, False, False)])
+        _check_transitive(libd, [(libc, True, True, False, False)])
+        _check_transitive(libc, [(libb, True, True, False, False),
+                                 (liba, True, True, False, False)])
+
+    def test_visible_build_transitivity(self):
+        # app -> libd/0.1 -> libc/0.1 -(visible=True, build=True)-> libb0.1  -> liba0.1
+        self.recipe_conanfile("liba/0.1", GenConanfile())
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1"))
+        self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("libb/0.1", build=True))
+        self.recipe_conanfile("libd/0.1", GenConanfile().with_requirement("libc/0.1"))
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        libc = libd.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libd, True, True, False, False),
+                                (libc, True, True, False, False),
+                                (libb, False, False, True, False)])
+        _check_transitive(libd, [(libc, True, True, False, False),
+                                 (libb, False, False, True, False)])
+        _check_transitive(libc, [(libb, True, True, True, False)])
+
 
 class TestLinearFiveLevelsLibraries(GraphManagerTest):
     def test_all_static(self):
@@ -1532,6 +1594,40 @@ class TestDiamond(GraphManagerTest):
         _check_transitive(libb, [(liba, True, True, False, False)])
         _check_transitive(libc, [(libb, True, True, False, False),
                                  (liba, True, True, False, False)])
+
+    def test_private_transitive_headers_no_conflict(self):
+        # https://github.com/conan-io/conan/issues/15559
+        # app -->liba/0.1 -(private)-> spdlog/0.1(header-only) -> fmt/0.1 (header-only)
+        #   \ --------------------------------------------------> fmt/0.2
+        self.recipe_conanfile("fmt/0.1",
+                              GenConanfile("fmt", "0.1").with_package_type("header-library"))
+        self.recipe_conanfile("fmt/0.2", GenConanfile("fmt", "0.2"))
+        self.recipe_conanfile("spdlog/0.1",
+                              GenConanfile("spdlog", "0.1").with_package_type("header-library")
+                                                           .with_requires("fmt/0.1"))
+        self.recipe_conanfile("liba/0.1",
+                              GenConanfile("liba", "0.2").with_requirement("spdlog/0.1",
+                                                                           visible=False))
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                           .with_requires("liba/0.1", "fmt/0.2"))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        liba = app.dependencies[0].dst
+        spdlog = liba.dependencies[0].dst
+        fmt01 = spdlog.dependencies[0].dst
+        fmt02 = app.dependencies[1].dst
+
+        self._check_node(app, "app/0.1", deps=[liba, fmt02])
+        self._check_node(liba, "liba/0.1#123", deps=[spdlog], dependents=[app])
+        self._check_node(spdlog, "spdlog/0.1#123", deps=[fmt01], dependents=[liba])
+        self._check_node(fmt01, "fmt/0.1#123", deps=[], dependents=[spdlog])
+        self._check_node(fmt02, "fmt/0.2#123", dependents=[app])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(liba, True, True, False, False),
+                                (fmt02, True, True, False, False)])
 
 
 class TestDiamondMultiple(GraphManagerTest):

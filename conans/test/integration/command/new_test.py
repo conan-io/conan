@@ -88,6 +88,12 @@ class TestNewCommandUserTemplate:
         conanfile = client.load("conanfile.py")
         assert 'name = "hello"' in conanfile
 
+    def test_user_template_filenames(self):
+        client = TestClient()
+        save(os.path.join(client.cache_folder, "templates/command/new/mytemplate/{{name}}"), "Hi!")
+        client.run(f"new mytemplate -d name=pkg.txt")
+        assert "Hi!" == client.load("pkg.txt")
+
     def test_skip_files(self):
         client = TestClient()
         template1 = textwrap.dedent("""

@@ -55,7 +55,10 @@ class {{package_name}}Recipe(ConanFile):
              os.path.join(self.package_folder, "include"), keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["{{name}}"]
+        if self.options.shared and self.settings.os != "Linux":
+            self.cpp_info.libs = ["{{name}}_shared"]
+        else:
+            self.cpp_info.libs = ["{{name}}"]
 """
 
 
@@ -111,7 +114,7 @@ cc_library(
 _bazel_build_shared = """
 cc_shared_library(
     name = "{{name}}_shared",
-    shared_lib_name = "lib{{name}}.%s",
+    shared_lib_name = "lib{{name}}_shared.%s",
     deps = [":{{name}}"],
 )
 """

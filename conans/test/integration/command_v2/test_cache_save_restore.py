@@ -155,3 +155,14 @@ def test_cache_save_restore_graph():
     c2.run("list *:*#*")
     assert "pkg/0.1" in c2.out
     assert "dep/0.1" in c2.out
+
+
+def test_cache_save_subfolder():
+    """ It is possible to save package list in subfolder that doesn't exist
+    https://github.com/conan-io/conan/issues/15362
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "0.1")})
+    c.run("export .")
+    c.run("cache save * --file=subfolder/cache.tgz")
+    assert os.path.exists(os.path.join(c.current_folder, "subfolder", "cache.tgz"))

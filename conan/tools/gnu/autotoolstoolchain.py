@@ -6,7 +6,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path
+from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 
@@ -49,6 +49,7 @@ class AutotoolsToolchain:
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
+        self.msvc_extra_flags = self._msvc_extra_flags()
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
@@ -103,6 +104,15 @@ class AutotoolsToolchain:
             flag = "-{}".format(flag)
         return flag
 
+    def _msvc_extra_flags(self):
+        if is_msvc(self._conanfile) and check_min_vs(self._conanfile, "180", raise_invalid=False):
+            return ["-FS"]
+        return []
+
+    def _add_msvc_flags(self, flags):
+        # This is to avoid potential duplicate with users recipes -FS (alreday some in ConanCenter)
+        return [f for f in self.msvc_extra_flags if f not in flags]
+
     @staticmethod
     def _filter_list_empty_fields(v):
         return list(filter(bool, v))
@@ -114,7 +124,8 @@ class AutotoolsToolchain:
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + conf_flags
+        vs_flag = self._add_msvc_flags(self.extra_cxxflags)
+        ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + vs_flag + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -123,7 +134,8 @@ class AutotoolsToolchain:
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + conf_flags
+        vs_flag = self._add_msvc_flags(self.extra_cflags)
+        ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -134,7 +146,8 @@ class AutotoolsToolchain:
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                    check_type=list))
-        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[],
+                                                  check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
         return self._filter_list_empty_fields(ret)
@@ -147,7 +160,8 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
         if compilers_by_conf:
             compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
             for comp, env_var in compilers_mapping.items():

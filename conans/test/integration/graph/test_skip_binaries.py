@@ -178,3 +178,19 @@ def test_skipped_intermediate_header():
     # liba brings only libraries
     assert "set(liba_INCLUDE_DIRS_RELEASE )" in liba_data
     assert "set(liba_LIBS_RELEASE liba)" in liba_data
+
+
+def test_skip_visible_build():
+    # https://github.com/conan-io/conan/issues/15346
+    c = TestClient()
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1",
+                                                                              build=True),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1",
+                                                                              visible=False),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_requires("libc/0.1")})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("install app --format=json")
+    assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)

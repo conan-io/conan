@@ -44,6 +44,8 @@ def remove_if_dirty(item):
             else:
                 rmdir(item)
         clean_dirty(item)
+        return True
+    return False
 
 
 @contextmanager
@@ -294,9 +296,9 @@ def exception_message_safe(exc):
         return repr(exc)
 
 
-def merge_directories(src, dst, excluded=None):
+def merge_directories(src, dst):
     from conan.tools.files import copy
-    copy(None, pattern="*", src=src, dst=dst, excludes=excluded)
+    copy(None, pattern="*", src=src, dst=dst)
 
 
 def gather_files(folder):

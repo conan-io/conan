@@ -112,7 +112,7 @@ def test_client_retries():
     client = TestClient(servers=servers, inputs=["admin", "password"],
                         requester_class=DownloadFilesBrokenRequesterTimesOne)
     client.run("install --requires=lib/1.0@lasote/stable")
-    assert "ERROR: Error downloading file" in client.out
+    assert "WARN: network: Error downloading file" in client.out
     assert 'Fake connection error exception' in client.out
     assert 1 == str(client.out).count("Waiting 0 seconds to retry...")
 

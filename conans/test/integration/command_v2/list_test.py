@@ -100,7 +100,7 @@ class TestListRefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -293,7 +293,7 @@ class TestListPrefs:
         expected_output = f"{r_msg}\n" + expected
         expected_output = re.sub(r"\(.*\)", "", expected_output)
         output = re.sub(r"\(.*\)", "", str(client.out))
-        assert expected_output == output
+        assert expected_output in output
 
     @staticmethod
     def check_json(client, pattern, remote, expected):
@@ -778,14 +778,16 @@ class TestListCompact:
         c.run("create pkg -s os=Windows -s arch=x86")
         c.run("create other")
         c.run("list *:* --format=compact")
-        expected_output = re.sub(r"\(.*\)", "(timestamp)", c.stdout)
+        expected_output = re.sub(r"%.* ", "%timestamp ",
+                                 re.sub(r"\(.*\)", "(timestamp)", c.stdout))
+
         expected = textwrap.dedent("""\
             Local Cache
               other/1.0
-                other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd (timestamp)
+                other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd%timestamp (timestamp)
                   other/1.0#d3c8cc5e6d23ca8c6f0eaa6285c04cbd:da39a3ee5e6b4b0d3255bfef95601890afd80709
               pkg/1.0
-                pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e (timestamp)
+                pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e%timestamp (timestamp)
                   pkg/1.0#d24b74828b7681f08d8f5ba0e7fd791e:c11e463c49652ba9c5adc62573ee49f966bd8417
                     settings: Windows, x86
             """)

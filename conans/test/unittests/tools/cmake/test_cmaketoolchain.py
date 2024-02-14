@@ -1,19 +1,16 @@
-import os
 import types
 
 import pytest
 from mock import Mock
 
-from conan.tools.cmake import CMakeToolchain
 from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture
@@ -230,6 +227,12 @@ def test_toolset_x64(conanfile_msvc):
     assert 'set(CMAKE_GENERATOR_TOOLSET "v143,host=x64" CACHE STRING "" FORCE)' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+def test_toolset_cuda(conanfile_msvc):
+    conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_cuda", "C:/Path/To/CUDA")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,cuda=C:/Path/To/CUDA" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_older_msvc_toolset():

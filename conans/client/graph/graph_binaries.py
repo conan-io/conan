@@ -9,7 +9,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
 from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter
+    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError
 
 
 class GraphBinariesAnalyzer(object):
@@ -29,7 +29,8 @@ class GraphBinariesAnalyzer(object):
         with_deps_to_build = False
         # check dependencies, if they are being built, "cascade" will try to build this one too
         if build_mode.cascade:
-            with_deps_to_build = any(dep.dst.binary == BINARY_BUILD for dep in node.dependencies)
+            with_deps_to_build = any(dep.dst.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD)
+                                     for dep in node.dependencies)
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
             conanfile.output.info('Forced build from source')
@@ -63,7 +64,10 @@ class GraphBinariesAnalyzer(object):
                     break
             except NotFoundException:
                 pass
-
+            except ConanConnectionError:
+                ConanOutput().error(f"Failed checking for binary '{pref}' in remote '{r.name}': "
+                                    "remote not available")
+                raise
         if not remotes and update:
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
@@ -206,12 +210,11 @@ class GraphBinariesAnalyzer(object):
                 break
 
         if node.conanfile.upload_policy == "skip":
+            # Download/update shouldn't be checked in the servers if this is "skip-upload"
+            # The binary can only be in cache or missing.
             if cache_latest_prev:
                 node.binary = BINARY_CACHE
                 node.prev = cache_latest_prev.revision
-            elif build_mode.allowed(node.conanfile):
-                node.should_build = True
-                node.binary = BINARY_BUILD
             else:
                 node.binary = BINARY_MISSING
         elif cache_latest_prev is None:  # This binary does NOT exist in the cache
@@ -383,7 +386,11 @@ class GraphBinariesAnalyzer(object):
             new_root_nodes = set()
             for node in root_nodes:
                 # The nodes that are directly required by this one to build correctly
-                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
+                is_consumer = not (node.recipe != RECIPE_CONSUMER and
+                                   node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
+                                                       BINARY_EDITABLE))
+                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files
+                                    or (d.require.direct and is_consumer))
 
                 # second pass, transitive affected. Packages that have some dependency that is required
                 # cannot be skipped either. In theory the binary could be skipped, but build system

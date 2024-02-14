@@ -95,7 +95,7 @@ def write_generators(conanfile, app):
                     continue
                 except Exception as e:
                     # When a generator fails, it is very useful to have the whole stacktrace
-                    conanfile.output.error(traceback.format_exc())
+                    conanfile.output.error(traceback.format_exc(), error_type="exception")
                     raise ConanException(f"Error in generator '{generator_name}': {str(e)}") from e
     finally:
         # restore the generators attribute, so it can raise
@@ -198,14 +198,21 @@ def _generate_aggregated_env(conanfile):
 
 
 def relativize_generated_file(content, conanfile, placeholder):
+    abs_base_path, new_path = relativize_paths(conanfile, placeholder)
+    if abs_base_path is None:
+        return content
+    content = content.replace(abs_base_path, new_path)
+    content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
+    return content
+
+
+def relativize_paths(conanfile, placeholder):
     abs_base_path = conanfile.folders._base_generators
     if not abs_base_path or not os.path.isabs(abs_base_path):
-        return content
+        return None, None
     abs_base_path = os.path.join(abs_base_path, "")  # For the trailing / to dissambiguate matches
     generators_folder = conanfile.generators_folder
     rel_path = os.path.relpath(abs_base_path, generators_folder)
     new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
     new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
-    content = content.replace(abs_base_path, new_path)
-    content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
-    return content
+    return abs_base_path, new_path

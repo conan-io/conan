@@ -29,7 +29,9 @@ from conan.errors import ConanException
 
 def cppstd_compat(conanfile):
     # It will try to find packages with all the cppstd versions
-
+    extension_properties = getattr(conanfile, "extension_properties", {})
+    if extension_properties.get("compatibility_cppstd") is False:
+        return []
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = conanfile.settings.get_safe("compiler.version")
     cppstd = conanfile.settings.get_safe("compiler.cppstd")

@@ -4,7 +4,6 @@ import shutil
 import pytest
 
 from conans.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 class TestEncodings:

@@ -406,17 +406,9 @@ class TestBuildTrackHost:
         if no host requirement is defined, it will be an error
         """
         c = TestClient()
-        pkg = textwrap.dedent("""
-            from conan import ConanFile
-            class ProtoBuf(ConanFile):
-                name = "protobuf"
-                def build_requirements(self):
-                    self.tool_requires("protobuf/<host_version>")
-            """)
-
-        c.save({"pkg/conanfile.py": pkg})
-        c.run("install pkg", assert_error=True)
-        assert "ERROR: protobuf/None require 'protobuf/<host_version>': " \
+        c.save({"conanfile.py": GenConanfile().with_build_requirement("protobuf/<host_version>")})
+        c.run("install .", assert_error=True)
+        assert "ERROR:  require 'protobuf/<host_version>': " \
                "didn't find a matching host dependency" in c.out
 
     def test_track_host_errors_trait(self):
@@ -489,12 +481,14 @@ class TestBuildTrackHost:
 
     def test_overriden_host_version_transitive_deps(self):
         """
-        Make the tool_requires follow the regular require with the expression "<host_version>" for a transitive_deps
+        Make the tool_requires follow the regular require with the expression "<host_version>"
+        for a transitive_deps
         """
         c = TestClient()
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requirement("protobuf/[>=1.0]"),
-                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1").with_tool_requirement("protobuf/<host_version>")})
+                "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")
+                                                  .with_tool_requirement("protobuf/<host_version>")})
         c.run("create protobuf --version=1.0")
         c.run("create protobuf --version=1.1")
         c.run("create pkg")
@@ -516,8 +510,8 @@ class TestBuildTrackHost:
         ("libgettext>", False, "gettext/0.2#d9f9eaeac9b6e403b271f04e04149df2"),
         # Error cases, just checking that we fail gracefully - no tracebacks
         ("libgettext", True, "Package 'gettext/<host_version:libgettext' not resolved"),
-        (":>", True, "app/1.0 require ':/1.0': didn't find a matching host dependency"),
-        (">", True, "app/1.0 require '/1.0': didn't find a matching host dependency"),
+        (":>", True, "app/1.0 require ':/<host_version::>': didn't find a matching host dependency"),
+        (">", True, "app/1.0 require '/<host_version:>': didn't find a matching host dependency"),
         (":", True, " Package 'gettext/<host_version::' not resolved"),
         ("", True, "Package 'gettext/<host_version:' not resolved: No remote defined")
     ])
@@ -533,6 +527,42 @@ class TestBuildTrackHost:
 
         tc.run("create app", assert_error=assert_error)
         assert assert_msg in tc.out
+
+    @pytest.mark.parametrize("requires_tag,tool_requires_tag,fails", [
+        ("user/channel", "user/channel", False),
+        ("", "user/channel", True),
+        ("auser/achannel", "anotheruser/anotherchannel", True),
+    ])
+    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag, fails):
+        """
+        Make the tool_requires follow the regular require with the expression "<host_version>"
+        """
+        c = TestClient()
+        pkg = textwrap.dedent(f"""
+            from conan import ConanFile
+            class ProtoBuf(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("protobuf/1.0@{requires_tag}")
+                def build_requirements(self):
+                    self.tool_requires("protobuf/<host_version>@{tool_requires_tag}")
+            """)
+        c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
+                "pkg/conanfile.py": pkg})
+        if "/" in requires_tag:
+            user, channel = requires_tag.split("/", 1)
+            user_channel = f"--user={user} --channel={channel}"
+        else:
+            user_channel = ""
+        c.run(f"create protobuf --version=1.0 {user_channel}")
+
+        c.run("create pkg", assert_error=fails)
+        if fails:
+            assert f"pkg/0.1 require 'protobuf/<host_version>@{tool_requires_tag}': didn't find a " \
+                   "matching host dependency" in c.out
+        else:
+            assert "pkg/0.1: Package '39f6a091994d2d080081ea888d75ef65c1d04c8d' created" in c.out
 
 
 def test_build_missing_build_requires():

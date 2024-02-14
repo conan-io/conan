@@ -5,6 +5,7 @@ import re
 import sys
 import types
 import uuid
+from threading import Lock
 
 import yaml
 
@@ -52,8 +53,11 @@ class ConanFileLoader:
             return conanfile, cached[1]
 
         try:
-            module, conanfile = parse_conanfile(conanfile_path)
-            if tested_python_requires:
+            module, conanfile = _parse_conanfile(conanfile_path)
+            if isinstance(tested_python_requires, RecipeReference):
+                if getattr(conanfile, "python_requires", None) == "tested_reference_str":
+                    conanfile.python_requires = tested_python_requires.repr_notime()
+            elif tested_python_requires:
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
@@ -288,16 +292,28 @@ def _parse_module(conanfile_module, module_id):
     return result
 
 
-def parse_conanfile(conanfile_path):
-    module, filename = load_python_file(conanfile_path)
+_load_python_lock = Lock()  # Loading our Python files is not thread-safe (modifies sys)
+
+
+def _parse_conanfile(conanfile_path):
+    with _load_python_lock:
+        module, module_id = _load_python_file(conanfile_path)
     try:
-        conanfile = _parse_module(module, filename)
+        conanfile = _parse_module(module, module_id)
         return module, conanfile
     except Exception as e:  # re-raise with file name
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
 def load_python_file(conan_file_path):
+    """ From a given path, obtain the in memory python import module
+    """
+    with _load_python_lock:
+        module, module_id = _load_python_file(conan_file_path)
+    return module, module_id
+
+
+def _load_python_file(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
 

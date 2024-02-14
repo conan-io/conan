@@ -711,6 +711,10 @@ class GenericSystemBlock(Block):
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
             toolset = toolset_arch if toolset is None else "{},{}".format(toolset, toolset_arch)
+        toolset_cuda = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_cuda")
+        if toolset_cuda is not None:
+            toolset_cuda = f"cuda={toolset_cuda}"
+            toolset = toolset_cuda if toolset is None else f"{toolset},{toolset_cuda}"
         return toolset
 
     @staticmethod
@@ -826,7 +830,7 @@ class GenericSystemBlock(Block):
         cmake_sysroot = self._conanfile.conf.get("tools.build:sysroot")
         cmake_sysroot = cmake_sysroot.replace("\\", "/") if cmake_sysroot is not None else None
 
-        result = self._get_winsdk_version(system_version, generator)
+        result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
 
         return {"toolset": toolset,
