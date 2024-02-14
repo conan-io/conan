@@ -1,7 +1,7 @@
 import pytest
 
 from conan.internal.api.detect_api import detect_cppstd
-from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd, default_cppstd
+from conan.tools.build import supported_cppstd, check_min_cppstd, valid_min_cppstd
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.version import Version
 from conans.test.utils.mocks import MockSettings, ConanFileMock

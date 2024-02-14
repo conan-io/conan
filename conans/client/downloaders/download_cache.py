@@ -5,7 +5,7 @@ from threading import Lock
 
 from conans.errors import ConanException
 from conans.util.dates import timestamp_now
-from conans.util.files import load, save
+from conans.util.files import load, save, remove_if_dirty
 from conans.util.locks import SimpleLock
 from conans.util.sha import sha256 as compute_sha256
 
@@ -73,22 +73,33 @@ class DownloadCache:
                 if ref.get("upload") or any(should_upload_sources(p) for p in packages):
                     all_refs.add(str(k))
 
+        path_backups_contents = []
+
+        dirty_ext = ".dirty"
+        for path in os.listdir(path_backups):
+            if remove_if_dirty(os.path.join(path_backups, path)):
+                continue
+            if path.endswith(dirty_ext):
+                # TODO: Clear the dirty file marker if it does not have a matching downloaded file
+                continue
+            if not path.endswith(".json"):
+                path_backups_contents.append(path)
+
         files_to_upload = []
 
-        for path in os.listdir(path_backups):
-            if not path.endswith(".json"):
-                blob_path = os.path.join(path_backups, path)
-                metadata_path = os.path.join(blob_path + ".json")
-                if not os.path.exists(metadata_path):
-                    raise ConanException(f"Missing metadata file for backup source {blob_path}")
-                metadata = json.loads(load(metadata_path))
-                refs = metadata["references"]
-                # unknown entries are not uploaded at this moment unless no package_list is passed
-                for ref, urls in refs.items():
-                    if not has_excluded_urls(urls) and (package_list is None or ref in all_refs):
-                        files_to_upload.append(metadata_path)
-                        files_to_upload.append(blob_path)
-                        break
+        for path in path_backups_contents:
+            blob_path = os.path.join(path_backups, path)
+            metadata_path = os.path.join(blob_path + ".json")
+            if not os.path.exists(metadata_path):
+                raise ConanException(f"Missing metadata file for backup source {blob_path}")
+            metadata = json.loads(load(metadata_path))
+            refs = metadata["references"]
+            # unknown entries are not uploaded at this moment unless no package_list is passed
+            for ref, urls in refs.items():
+                if not has_excluded_urls(urls) and (package_list is None or ref in all_refs):
+                    files_to_upload.append(metadata_path)
+                    files_to_upload.append(blob_path)
+                    break
         return files_to_upload
 
     @staticmethod

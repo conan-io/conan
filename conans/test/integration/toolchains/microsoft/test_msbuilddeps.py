@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 from xml.dom import minidom
 
@@ -68,6 +69,7 @@ def test_msbuilddeps_format_names():
     assert counter == 8
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 class TestMSBuildDepsSkips:
     # https://github.com/conan-io/conan/issues/15624
     def test_msbuilddeps_skipped_deps(self):
