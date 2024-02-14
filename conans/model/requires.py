@@ -299,10 +299,12 @@ class Requirement:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
             downstream_require = require.copy_requirement()
-            if pkg_type in (PackageType.SHARED, PackageType.STATIC, PackageType.APP):
-                downstream_require.headers = False
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
+            # This is faster than pkg_type in (pkg.shared, pkg.static, ....)
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 downstream_require.libs = False
+                downstream_require.headers = False
+            elif pkg_type is PackageType.STATIC:
+                downstream_require.headers = False
 
         assert require.visible, "at this point require should be visible"
 
@@ -365,7 +367,7 @@ class Requirement:
         non_embed_mode = getattr(dep_conanfile, "package_id_non_embed_mode", non_embed_mode)
         unknown_mode = getattr(dep_conanfile, "package_id_unknown_mode", unknown_mode)
         if self.headers or self.libs:  # only if linked
-            if pkg_type in (PackageType.SHARED, PackageType.APP):
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.APP:
                 if dep_pkg_type is PackageType.SHARED:
                     self.package_id_mode = non_embed_mode
                 else:
