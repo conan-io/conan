@@ -34,7 +34,7 @@ class Cli:
         assert isinstance(conan_api, ConanAPI), \
             "Expected 'Conan' type, got '{}'".format(type(conan_api))
         self._conan_api = conan_api
-        self._conan_api.cli.cli = self
+        self._conan_api.command.cli = self
         self._groups = defaultdict(list)
         self._commands = {}
 

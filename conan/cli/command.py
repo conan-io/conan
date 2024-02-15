@@ -138,7 +138,21 @@ class ConanCommand(BaseConanCommand):
                                      formatter_class=SmartFormatter)
         self._init_log_levels(parser)
         self._init_formatters(parser)
-        return self._method(conan_api, parser, *args)
+        info = self._method(conan_api, parser, *args)
+        if not self._subcommands:
+            return info
+
+        subcommand_parser = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subcommand_parser.required = True
+
+        subcmd = args[0]
+        try:
+            sub = self._subcommands[subcmd]
+        except (KeyError, IndexError):  # display help
+            raise ConanException(f"Sub command {subcmd} does not exist")
+        else:
+            sub.set_parser(subcommand_parser, conan_api)
+            return sub.run_cli(conan_api, parser, [*args])
 
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
@@ -175,6 +189,9 @@ class ConanSubCommand(BaseConanCommand):
         super().__init__(method, formatters=formatters)
         self._parser = None
         self._subcommand_name = method.__name__.replace('_', '-')
+
+    def run_cli(self, conan_api, parent_parser, *args):
+        return self._method(conan_api, parent_parser, self._parser, *args)
 
     def run(self, conan_api, parent_parser, *args):
         info = self._method(conan_api, parent_parser, self._parser, *args)

@@ -2,6 +2,7 @@ import json
 import os
 import textwrap
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.env import environment_update
@@ -299,7 +300,7 @@ class TestCustomCommands:
                 \"""
                 mycommand help
                 \"""
-                result = conan_api.cli.list("*", "-c")
+                result = conan_api.command.run("list", "*", "-c")
                 cli_out_write(json.dumps(result["results"], indent=2))
             """)
 
@@ -309,3 +310,32 @@ class TestCustomCommands:
         c.save({f"{command_file_path}": mycommand})
         c.run("mycommand", redirect_stdout="file.json")
         assert json.loads(c.load("file.json")) == {"Local Cache": {}}
+
+    def test_subcommand_reuse_interface(self):
+        mycommand = textwrap.dedent("""
+            import json
+            from conan.cli.command import conan_command
+            from conan.api.output import cli_out_write
+
+            @conan_command(group="custom commands")
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \"""
+                mycommand help
+                \"""
+                parser.add_argument("remote", help="remote")
+                parser.add_argument("url", help="url")
+                args = parser.parse_args(*args)
+                conan_api.command.run("remote", "add", args.remote, args.url)
+                result = conan_api.command.run("remote", "list")
+                result = {r.name: r.url for r in result}
+                cli_out_write(json.dumps(result, indent=2))
+            """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand})
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        c.run("mycommand myremote myurl")
+        assert json.loads(c.stdout) == {"myremote": "myurl"}
