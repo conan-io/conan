@@ -74,7 +74,10 @@ class InstallAPI:
 
         final_generators = []
         # Don't use set for uniqueness because order matters
-        for gen in conanfile.generators + list(generators or []):
+        for gen in conanfile.generators:
+            if gen not in final_generators:
+                final_generators.append(gen)
+        for gen in (generators or []):
             if gen not in final_generators:
                 final_generators.append(gen)
         conanfile.generators = final_generators
