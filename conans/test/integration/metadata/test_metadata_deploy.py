@@ -4,11 +4,9 @@ from conans.test.utils.tools import TestClient
 
 
 class TestMetadataDeploy:
-    """ prove we can gather metadata too with a deployer
-    """
+    """ prove we can gather metadata too with a deployer"""
 
     def test_deploy(self):
-        # FIXME: It only supports package metadata deployment, because missing internal interface
         conanfile = textwrap.dedent("""
             import os
             from conan import ConanFile
@@ -19,7 +17,7 @@ class TestMetadataDeploy:
 
                 def source(self):
                     save(self, os.path.join(self.recipe_metadata_folder, "logs", "src.log"),
-                         f"srclog {self.name}!!")
+                         f"srclog {self.name}!!!")
 
                 def build(self):
                     save(self, "mylogs.txt", f"some logs {self.name}!!!")
@@ -35,8 +33,8 @@ class TestMetadataDeploy:
                     shutil.copytree(d.package_metadata_folder, os.path.join(output_folder, "pkgs",
                                                                             d.ref.name))
                     # FIXME: Missing
-                    #shutil.copytree(d.recipe_metadata_folder, os.path.join(output_folder, "pkgs",
-                    #                                                         d.ref.name))
+                    shutil.copytree(d.recipe_metadata_folder, os.path.join(output_folder, "recipes",
+                                                                             d.ref.name))
            """)
 
         c = TestClient()
@@ -48,5 +46,5 @@ class TestMetadataDeploy:
         assert "some logs pkg1!!!" in c.load("pkgs/pkg1/logs/mylogs.txt")
         assert "some logs pkg2!!!" in c.load("pkgs/pkg2/logs/mylogs.txt")
         # TODO: This must pass
-        # assert "srclog pkg1!!!" in c.load("recipes/pkg1/logs/src.log")
-        # assert "srclog pkg2!!!" in c.load("recipes/pkg2/logs/src.log")
+        assert "srclog pkg1!!!" in c.load("recipes/pkg1/logs/src.log")
+        assert "srclog pkg2!!!" in c.load("recipes/pkg2/logs/src.log")
