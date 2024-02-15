@@ -311,6 +311,36 @@ class TestCustomCommands:
         c.run("mycommand", redirect_stdout="file.json")
         assert json.loads(c.load("file.json")) == {"Local Cache": {}}
 
+    def test_command_reuse_interface_create(self):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class mylib(ConanFile):
+                name = "mylib"
+            """)
+        mycommand = textwrap.dedent("""
+            import json
+            from conan.cli.command import conan_command
+            from conan.cli.formatters.graph import format_graph_json
+
+            @conan_command(group="custom commands", formatters={"json": format_graph_json})
+            def mycommand(conan_api, parser, *args, **kwargs):
+                \"""
+                mycommand help
+                \"""
+                result = conan_api.command.run("create", ".", "--version=1.0.0")
+                return result
+            """)
+
+        c = TestClient()
+        command_file_path = os.path.join(c.cache_folder, 'extensions',
+                                         'commands', 'cmd_mycommand.py')
+        c.save({f"{command_file_path}": mycommand,
+                "conanfile.py": conanfile})
+        c.run("mycommand --format=json", redirect_stdout="file.json")
+        create_output = json.loads(c.load("file.json"))
+        assert create_output['graph']['nodes']['1']['label'] == "mylib/1.0.0"
+
     def test_subcommand_reuse_interface(self):
         mycommand = textwrap.dedent("""
             import json
