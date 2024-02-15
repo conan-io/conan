@@ -145,14 +145,14 @@ class ConanCommand(BaseConanCommand):
         subcommand_parser = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subcommand_parser.required = True
 
-        subcmd = args[0]
+        subcmd = args[0][0]
         try:
             sub = self._subcommands[subcmd]
         except (KeyError, IndexError):  # display help
             raise ConanException(f"Sub command {subcmd} does not exist")
         else:
             sub.set_parser(subcommand_parser, conan_api)
-            return sub.run_cli(conan_api, parser, [*args])
+            return sub.run_cli(conan_api, parser, *args)
 
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,

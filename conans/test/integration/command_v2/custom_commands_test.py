@@ -2,6 +2,8 @@ import json
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -289,8 +291,12 @@ class TestCustomCommands:
         client.run("hello")
         assert "Hello world!" in client.out
 
-    def test_command_reuse_interface(self):
-        mycommand = textwrap.dedent("""
+
+class TestCommandAPI:
+    @pytest.mark.parametrize("argument", ['["list", "pkg*", "-c"]',
+                                          '"list pkg* -c"'])
+    def test_command_reuse_interface(self, argument):
+        mycommand = textwrap.dedent(f"""
             import json
             from conan.cli.command import conan_command
             from conan.api.output import cli_out_write
@@ -300,7 +306,7 @@ class TestCustomCommands:
                 \"""
                 mycommand help
                 \"""
-                result = conan_api.command.run("list", "*", "-c")
+                result = conan_api.command.run({argument})
                 cli_out_write(json.dumps(result["results"], indent=2))
             """)
 
@@ -312,12 +318,6 @@ class TestCustomCommands:
         assert json.loads(c.load("file.json")) == {"Local Cache": {}}
 
     def test_command_reuse_interface_create(self):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-
-            class mylib(ConanFile):
-                name = "mylib"
-            """)
         mycommand = textwrap.dedent("""
             import json
             from conan.cli.command import conan_command
@@ -328,7 +328,7 @@ class TestCustomCommands:
                 \"""
                 mycommand help
                 \"""
-                result = conan_api.command.run("create", ".", "--version=1.0.0")
+                result = conan_api.command.run(["create", ".", "--version=1.0.0"])
                 return result
             """)
 
@@ -336,7 +336,7 @@ class TestCustomCommands:
         command_file_path = os.path.join(c.cache_folder, 'extensions',
                                          'commands', 'cmd_mycommand.py')
         c.save({f"{command_file_path}": mycommand,
-                "conanfile.py": conanfile})
+                "conanfile.py": GenConanfile("mylib")})
         c.run("mycommand --format=json", redirect_stdout="file.json")
         create_output = json.loads(c.load("file.json"))
         assert create_output['graph']['nodes']['1']['label'] == "mylib/1.0.0"
@@ -355,8 +355,8 @@ class TestCustomCommands:
                 parser.add_argument("remote", help="remote")
                 parser.add_argument("url", help="url")
                 args = parser.parse_args(*args)
-                conan_api.command.run("remote", "add", args.remote, args.url)
-                result = conan_api.command.run("remote", "list")
+                conan_api.command.run(["remote", "add", args.remote, args.url])
+                result = conan_api.command.run(["remote", "list"])
                 result = {r.name: r.url for r in result}
                 cli_out_write(json.dumps(result, indent=2))
             """)
