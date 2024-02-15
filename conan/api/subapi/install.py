@@ -72,6 +72,11 @@ class InstallAPI:
             base_folder = deploy_folder or conanfile.folders.base_build
             do_deploys(self.conan_api, deps_graph, deploy, deploy_package, base_folder)
 
-        conanfile.generators = list(set(conanfile.generators).union(generators or []))
+        final_generators = []
+        # Don't use set for uniqueness because order matters
+        for gen in conanfile.generators + list(generators or []):
+            if gen not in final_generators:
+                final_generators.append(gen)
+        conanfile.generators = final_generators
         app = ConanApp(self.conan_api)
         write_generators(conanfile, app)
