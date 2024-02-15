@@ -47,10 +47,8 @@ def add_common_install_arguments(parser):
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
 
-    update_help = ("For a given reference, or all in case no argument is supplied, "
-                   "and in case a newer version and/or revision of "
-                   "the matching dependencies exists in the remotes, "
-                   "it will install those newer version and/or revisions in the local cache. "
+    update_help = ("Will install newer versions and/or revisions in the local cache "
+                   "for the given reference, or all in case no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. Also, if using revisions, it will update to the "
                    "latest revision for the resolved version range.")
