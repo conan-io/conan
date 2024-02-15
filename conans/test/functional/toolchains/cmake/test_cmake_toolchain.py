@@ -1429,6 +1429,51 @@ def test_inject_user_toolchain_profile():
     assert "-- MYVAR1 MYVALUE1!!" in client.out
 
 
+def test_no_build_type():
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
+
+        class AppConan(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "arch"
+            exports_sources = "CMakeLists.txt"
+
+            def layout(self):
+                self.folders.build = "build"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                if not tc.is_multi_configuration:
+                    tc.cache_variables["CMAKE_BUILD_TYPE"] = "Release"
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                build_type = "Release" if cmake.is_multi_configuration else None
+                cmake.build(build_type=build_type)
+
+            def package(self):
+                cmake = CMake(self)
+                build_type = "Release" if cmake.is_multi_configuration else None
+                cmake.install(build_type=build_type)
+        """)
+
+    cmake = """
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg LANGUAGES NONE)
+    """
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmake})
+    client.run("create .")
+    assert "Don't specify 'build_type' at build time" not in client.out
+
+
 @pytest.mark.tool("cmake", "3.19")
 def test_redirect_stdout():
     client = TestClient()
