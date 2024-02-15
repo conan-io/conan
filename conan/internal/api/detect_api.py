@@ -122,6 +122,47 @@ def _get_e2k_architecture():
     }.get(platform.processor())
 
 
+def detect_gnu_libc(ldd="/usr/bin/ldd"):
+    if platform.system() != "Linux":
+        ConanOutput(scope="detect_api").warning("detect_gnu_libc() only works on Linux")
+        return None
+    try:
+        first_line = check_output_runner(f"{ldd} --version").partition("\n")[0]
+        if any(glibc_indicator in first_line for glibc_indicator in ["GNU libc", "GLIBC"]):
+            return first_line.split()[-1].strip()
+        else:
+            ConanOutput(scope="detect_api").warning(
+                f"detect_gnu_libc() did not detect glibc in the first line of output from '{ldd} --version': '{first_line}'"
+            )
+            return None
+    except Exception as e:
+        ConanOutput(scope="detect_api").warning(
+            f"Couldn't get the glibc version from the '{ldd} --version' command {e}"
+        )
+        return None
+
+
+def detect_musl_libc(ldd="/usr/bin/ldd"):
+    if platform.system() != "Linux":
+        ConanOutput(scope="detect_api").warning(
+            "detect_musl_libc() only works on Linux"
+        )
+        return None
+    try:
+        lines = check_output_runner(f"{ldd} --version").partition("\n")
+        if "musl libc" not in lines[0]:
+            ConanOutput(scope="detect_api").warning(
+                f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd} --version': '{lines[0]}'"
+            )
+            return None
+        return lines[1].split()[-1].strip()
+    except Exception as e:
+        ConanOutput(scope="detect_api").warning(
+            f"Couldn't get the musl libc version from the '{ldd} --version' command {e}"
+        )
+        return None
+
+
 def detect_libcxx(compiler, version, compiler_exe=None):
     assert isinstance(version, Version)
 
@@ -186,7 +227,7 @@ def detect_libcxx(compiler, version, compiler_exe=None):
     elif compiler == "mcst-lcc":
         return "libstdc++"
     elif compiler == "intel-cc":
-        return "libstdc++11"    
+        return "libstdc++11"
 
 
 def default_msvc_runtime(compiler):
