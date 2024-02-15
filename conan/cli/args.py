@@ -47,13 +47,13 @@ def add_common_install_arguments(parser):
     group.add_argument("-nr", "--no-remote", action="store_true",
                        help='Do not use remote, resolve exclusively in the cache')
 
-    update_help = ("Will check the remote and in case a newer version and/or revision of "
-                   "the dependencies exists there, it will install those in the local cache. "
+    update_help = ("Will install newer versions and/or revisions in the local cache "
+                   "for the given reference, or all in case no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. Also, if using revisions, it will update to the "
                    "latest revision for the resolved version range.")
-    parser.add_argument("-u", "--update", action='store_true', default=False,
-                        help=update_help)
+
+    parser.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)
 
 

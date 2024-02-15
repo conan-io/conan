@@ -79,7 +79,10 @@ def write_generators(conanfile, app):
     # generators check that they are not present in the generators field,
     # to avoid duplicates between the generators attribute and the generate() method
     # They would raise an exception here if we don't invalidate the field while we call them
-    old_generators = set(conanfile.generators)
+    old_generators = []
+    for gen in conanfile.generators:
+        if gen not in old_generators:
+            old_generators.append(gen)
     conanfile.generators = []
     try:
         for generator_name in old_generators:
