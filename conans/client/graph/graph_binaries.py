@@ -8,6 +8,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
+from conans.client.graph.proxy import should_update_reference
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError
 
@@ -60,7 +61,7 @@ class GraphBinariesAnalyzer(object):
                 info = node.conanfile.info
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
-                if len(results) > 0 and not update:
+                if len(results) > 0 and not should_update_reference(node.ref, update):
                     break
             except NotFoundException:
                 pass
@@ -68,7 +69,7 @@ class GraphBinariesAnalyzer(object):
                 ConanOutput().error(f"Failed checking for binary '{pref}' in remote '{r.name}': "
                                     "remote not available")
                 raise
-        if not remotes and update:
+        if not remotes and should_update_reference(node.ref, update):
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
@@ -130,7 +131,7 @@ class GraphBinariesAnalyzer(object):
 
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
-            if update:
+            if should_update_reference(node.ref, update):
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
@@ -253,7 +254,7 @@ class GraphBinariesAnalyzer(object):
         if cache_latest_prev is not None:
             # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node, remotes, update)
-        elif update:
+        elif should_update_reference(node.ref, update):
             self._evaluate_download(node, remotes, update)
 
     def _process_locked_node(self, node, build_mode, locked_prev):
@@ -292,7 +293,7 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_in_cache(self, cache_latest_prev, node, remotes, update):
         assert cache_latest_prev.revision
-        if update:
+        if should_update_reference(node.ref, update):
             output = node.conanfile.output
             try:
                 self._get_package_from_remotes(node, remotes, update)
@@ -386,7 +387,11 @@ class GraphBinariesAnalyzer(object):
             new_root_nodes = set()
             for node in root_nodes:
                 # The nodes that are directly required by this one to build correctly
-                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files)
+                is_consumer = not (node.recipe != RECIPE_CONSUMER and
+                                   node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
+                                                       BINARY_EDITABLE))
+                deps_required = set(d.node for d in node.transitive_deps.values() if d.require.files
+                                    or (d.require.direct and is_consumer))
 
                 # second pass, transitive affected. Packages that have some dependency that is required
                 # cannot be skipped either. In theory the binary could be skipped, but build system

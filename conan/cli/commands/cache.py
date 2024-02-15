@@ -1,3 +1,5 @@
+import json
+
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write, ConanOutput
@@ -9,6 +11,10 @@ from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
 
+def json_export(data):
+    cli_out_write(json.dumps({"cache_path": data}))
+
+
 @conan_command(group="Consumer")
 def cache(conan_api: ConanAPI, parser, *args):
     """
@@ -17,7 +23,7 @@ def cache(conan_api: ConanAPI, parser, *args):
     pass
 
 
-@conan_subcommand(formatters={"text": cli_out_write})
+@conan_subcommand(formatters={"text": cli_out_write, "json": json_export})
 def cache_path(conan_api: ConanAPI, parser, subparser, *args):
     """
     Show the path to the Conan cache for a given reference.

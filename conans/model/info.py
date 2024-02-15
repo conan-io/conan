@@ -168,7 +168,7 @@ class RequirementsInfo(UserRequirementsDict):
         return RequirementsInfo(data)
 
     def serialize(self):
-        return [str(r) for r in sorted(self._data.values())]
+        return [r.dumps() for r in self._data.values()]
 
     def __bool__(self):
         return bool(self._data)
@@ -245,6 +245,9 @@ class PythonRequiresInfo:
         # For build_id() implementation
         refs = {r._ref: r.package_id_mode for r in self._refs} if self._refs else None
         return PythonRequiresInfo(refs, self._default_package_id_mode)
+
+    def serialize(self):
+        return [r.dumps() for r in self._refs or []]
 
     def __bool__(self):
         return bool(self._refs)
@@ -328,6 +331,32 @@ class ConanInfo:
         result.python_requires = self.python_requires.copy()
         result.conf = self.conf.copy()
         result.settings_target = self.settings_target.copy() if self.settings_target else None
+        return result
+
+    def serialize(self):
+        result = {}
+        settings_dumps = self.settings.serialize()
+        if settings_dumps:
+            result["settings"] = settings_dumps
+        if self.settings_target is not None:
+            settings_target_dumps = self.settings_target.serialize()
+            if settings_target_dumps:
+                result["settings_target"] = settings_target_dumps
+        options_dumps = self.options.serialize()
+        if options_dumps:
+            result["options"] = options_dumps
+        requires_dumps = self.requires.serialize()
+        if requires_dumps:
+            result["requires"] = requires_dumps
+        python_requires_dumps = self.python_requires.serialize()
+        if python_requires_dumps:
+            result["python_requires"] = python_requires_dumps
+        build_requires_dumps = self.build_requires.serialize()
+        if build_requires_dumps:
+            result["build_requires"] = build_requires_dumps
+        conf_dumps = self.conf.serialize()
+        if conf_dumps:
+            result["conf"] = conf_dumps
         return result
 
     def dumps(self):

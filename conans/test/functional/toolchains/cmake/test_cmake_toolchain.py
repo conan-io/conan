@@ -338,6 +338,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                 tc.preprocessor_definitions["spaces2"] = "me you"
                 tc.preprocessor_definitions["foobar2"] = "bazbuz"
                 tc.preprocessor_definitions["answer2"] = 42
+                tc.preprocessor_definitions["NOVALUE_DEF"] = None
                 tc.preprocessor_definitions.release["escape_release"] = "release partially \"escaped\""
                 tc.preprocessor_definitions.release["spaces_release"] = "release me you"
                 tc.preprocessor_definitions.release["foobar_release"] = "release bazbuz"
@@ -382,6 +383,9 @@ def test_cmake_toolchain_definitions_complex_strings():
             SHOW_DEFINE(foobar_debug);
             SHOW_DEFINE(answer_debug);
             #endif
+            #ifdef NOVALUE_DEF
+            printf("NO VALUE!!!!");
+            #endif
             return 0;
         }
         """)
@@ -411,6 +415,7 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'spaces_release=release me you' in client.out
     assert 'foobar_release=release bazbuz' in client.out
     assert 'answer_release=42' in client.out
+    assert "NO VALUE!!!!" in client.out
 
     client.run("install . -pr=./profile -s build_type=Debug")
     client.run("build . -pr=./profile -s build_type=Debug")
@@ -1424,6 +1429,51 @@ def test_inject_user_toolchain_profile():
     assert "-- MYVAR1 MYVALUE1!!" in client.out
 
 
+def test_no_build_type():
+    client = TestClient()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
+
+        class AppConan(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "arch"
+            exports_sources = "CMakeLists.txt"
+
+            def layout(self):
+                self.folders.build = "build"
+
+            def generate(self):
+                tc = CMakeToolchain(self)
+                if not tc.is_multi_configuration:
+                    tc.cache_variables["CMAKE_BUILD_TYPE"] = "Release"
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                build_type = "Release" if cmake.is_multi_configuration else None
+                cmake.build(build_type=build_type)
+
+            def package(self):
+                cmake = CMake(self)
+                build_type = "Release" if cmake.is_multi_configuration else None
+                cmake.install(build_type=build_type)
+        """)
+
+    cmake = """
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg LANGUAGES NONE)
+    """
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmake})
+    client.run("create .")
+    assert "Don't specify 'build_type' at build time" not in client.out
+
+
 @pytest.mark.tool("cmake", "3.19")
 def test_redirect_stdout():
     client = TestClient()
@@ -1681,3 +1731,87 @@ class TestEnvironmentInPresets:
 
         c.run_command(f"ctest --preset conan-release")
         assert "tests passed" in c.out
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Windows", reason="neeed multi-config")
+def test_cmake_toolchain_cxxflags_multi_config():
+    c = TestClient()
+    profile_release = textwrap.dedent(r"""
+        include(default)
+        [conf]
+        tools.build:defines=["answer=42"]
+        tools.build:cxxflags=["/Zc:__cplusplus"]
+        """)
+    profile_debug = textwrap.dedent(r"""
+        include(default)
+        [settings]
+        build_type=Debug
+        [conf]
+        tools.build:defines=["answer=123"]
+        tools.build:cxxflags=["/W4"]
+        """)
+
+    conanfile = textwrap.dedent(r'''
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class Test(ConanFile):
+            exports_sources = "CMakeLists.txt", "src/*"
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        ''')
+
+    main = textwrap.dedent(r"""
+        #include <iostream>
+        #include <stdio.h>
+
+        #define STR(x)   #x
+        #define SHOW_DEFINE(x) printf("%s=%s\n", #x, STR(x))
+
+        int main() {
+            SHOW_DEFINE(answer);
+            char a = 123L;  // to trigger warnings
+
+            #if __cplusplus
+            std::cout << "CPLUSPLUS: __cplusplus" << __cplusplus<< "\n";
+            #endif
+        }
+        """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        add_executable(example src/main.cpp)
+        """)
+
+    c.save({"conanfile.py": conanfile,
+            "profile_release": profile_release,
+            "profile_debug": profile_debug,
+            "src/main.cpp": main,
+            "CMakeLists.txt": cmakelists}, clean_first=True)
+    c.run("install . -pr=./profile_release")
+    c.run("install . -pr=./profile_debug")
+
+    with c.chdir("build"):
+        c.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake")
+        c.run_command("cmake --build . --config Release")
+        assert "warning C4189" not in c.out
+        c.run_command("cmake --build . --config Debug")
+        assert "warning C4189" in c.out
+
+    c.run_command(r"build\Release\example.exe")
+    assert 'answer=42' in c.out
+    assert "CPLUSPLUS: __cplusplus20" in c.out
+
+    c.run_command(r"build\Debug\example.exe")
+    assert 'answer=123' in c.out
+    assert "CPLUSPLUS: __cplusplus19" in c.out

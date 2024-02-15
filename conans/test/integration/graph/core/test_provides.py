@@ -257,3 +257,27 @@ def test_conditional():
     t.run("install app.py --name=app --version=version")
     t.run("install app.py --name=app --version=version -o app/*:conflict=True", assert_error=True)
     assert "ERROR: Provide Conflict: Both 'app/version' and 'req/v1' provide 'libjpeg'" in t.out
+
+
+def test_self_build_require():
+    c = TestClient()
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.build import cross_building
+
+        class Pkg(ConanFile):
+            name = "grpc"
+            version = "0.1"
+            settings = "os"
+            provides = "grpc-impl"
+            def build_requirements(self):
+                if cross_building(self):
+                    self.tool_requires("grpc/0.1")
+        """)
+    c.save({'conanfile.py': conanfile})
+    c.run("create . -s os=Windows -s:b os=Windows")
+    c.assert_listed_binary({"grpc/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Build")})
+    c.run("create . -s os=Linux -s:b os=Windows --build=missing")
+    c.assert_listed_binary({"grpc/0.1": ("9a4eb3c8701508aa9458b1a73d0633783ecc2270", "Build")})
+    c.assert_listed_binary({"grpc/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715", "Cache")},
+                           build=True)

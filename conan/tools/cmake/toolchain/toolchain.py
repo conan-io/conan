@@ -13,6 +13,7 @@ from conan.tools.cmake.toolchain.blocks import ToolchainBlocks, UserToolchain, G
     AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
     CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
     SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars
@@ -112,7 +113,11 @@ class CMakeToolchain(object):
 
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() %}
+        {% if value is none %}
+        add_compile_definitions("{{ it }}")
+        {% else %}
         add_compile_definitions("{{ it }}={{ value }}")
+        {% endif %}
         {% endfor %}
         # Preprocessor definitions per configuration
         {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
@@ -185,6 +190,10 @@ class CMakeToolchain(object):
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
         content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
+
+    @property
+    def is_multi_configuration(self):
+        return is_multi_configuration(self.generator)
 
     def _find_cmake_exe(self):
         for req in self._conanfile.dependencies.direct_build.values():

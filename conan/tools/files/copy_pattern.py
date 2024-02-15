@@ -112,7 +112,10 @@ def _copy_files(files, src, dst, keep_path):
         abs_src_name = os.path.join(src, filename)
         filename = filename if keep_path else os.path.basename(filename)
         abs_dst_name = os.path.normpath(os.path.join(dst, filename))
-        os.makedirs(os.path.dirname(abs_dst_name), exist_ok=True)
+        parent_folder = os.path.dirname(abs_dst_name)
+        if parent_folder:  # There are cases where this folder will be empty for relative paths
+            os.makedirs(parent_folder, exist_ok=True)
+
         if os.path.islink(abs_src_name):
             linkto = os.readlink(abs_src_name)  # @UndefinedVariable
             try:

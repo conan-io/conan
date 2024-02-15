@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import stat
@@ -534,3 +535,15 @@ def test_upload_list_only_recipe():
     c.run("list --graph=graph.json --format=json", redirect_stdout="installed.json")
     c.run("upload --list=installed.json --only-recipe -r=default -c")
     assert "conan_package.tgz" not in c.out
+
+
+def test_upload_json_output():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
+                                                       .with_shared_option(False)})
+    c.run("create . -s os=Linux")
+    c.run("upload * -r=default -c --format=json")
+    list_pkgs = json.loads(c.stdout)
+    revs = list_pkgs["default"]["liba/0.1"]["revisions"]["a565bd5defd3a99e157698fcc6e23b25"]
+    pkg = revs["packages"]["9e0f8140f0fe6b967392f8d5da9881e232e05ff8"]
+    assert pkg["info"] == {"settings": {"os": "Linux"}, "options": {"shared": "False"}}

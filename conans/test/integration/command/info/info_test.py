@@ -202,6 +202,8 @@ class TestAdvancedCliOutput:
         info = json.loads(client.stdout)
         pyrequires = info["graph"]["nodes"]["0"]["python_requires"]
         tool = pyrequires["tool/0.1#4d670581ccb765839f2239cc8dff8fbd"]
+        info = info["graph"]["nodes"]["0"]["info"]
+        assert info["python_requires"] == ["tool/0.1.Z"]
         # lets make sure the path exists
         assert tool["recipe"] == "Cache"
         assert tool["remote"] is None
