@@ -44,6 +44,36 @@ class TestProfileDetectAPI:
         assert expected in client.out
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+    def test_profile_detect_gnu_libc(self):
+
+        client = TestClient()
+        tpl1 = textwrap.dedent("""
+            {% set libc_version = detect_api.detect_gnu_libc() %}
+            [settings]
+            os=Linux
+            [conf]
+            user.confvar:libc_version={{libc_version}}
+            """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1")
+
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+    def test_profile_detect_musl_libc(self):
+
+        client = TestClient()
+        tpl1 = textwrap.dedent("""
+            {% set libc_version = detect_api.detect_musl_libc() %}
+            [settings]
+            os=Linux
+            [conf]
+            user.confvar:libc_version={{libc_version}}
+            """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1")
+
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_profile_detect_libc(self):
 
         client = TestClient()
@@ -58,14 +88,15 @@ class TestProfileDetectAPI:
 
         client.save({"profile1": tpl1})
         client.run("profile show -pr=profile1")
-        libc_version = detect_api.detect_gnu_libc()
+        libc_name, libc_version = detect_api.detect_libc()
+        assert libc_name is not None
         assert libc_version is not None
         expected = textwrap.dedent(f"""\
             Host profile:
             [settings]
             os=Linux
             [conf]
-            user.confvar:libc=gnu
+            user.confvar:libc={libc_name}
             user.confvar:libc_version={libc_version}
             """)
         assert expected in client.out
