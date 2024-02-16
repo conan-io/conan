@@ -619,33 +619,58 @@ class TestConfigInstall:
 
 
 class TestConfigInstallPkg:
-    def test_config_install_from_pkg(self):
-        c = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.files import copy
-            class Conf(ConanFile):
-                name = "myconf"
-                version = "0.1"
-                package_type = "configuration"
-                def package(self):
-                    copy(self, "*", src=self.build_folder, dst=self.package_folder)
-                """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Conf(ConanFile):
+            name = "myconf"
+            version = "0.1"
+            package_type = "configuration"
+            def package(self):
+                copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
+            """)
 
-        c.save({"conanfile.py": conanfile,
+    @pytest.fixture()
+    def client(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": self.conanfile,
                 "global.conf": "user.myteam:myconf=myvalue"})
         c.run("export-pkg .")
         c.run("upload * -r=default -c")
         c.run("remove * -c")
+        return c
 
+    def test_config_install_from_pkg(self, client):
         # Now install it
+        c = client
         c.run("config install myconf/[*] --type=pkg")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
+
         # Just to make sure it doesn't crash in the update
         c.run("config install myconf/[*] --type=pkg")
+        # Conan will not re-download fromthe server the same revision
+        assert "myconf/0.1: Downloaded package revision" not in c.out
+        # FIXME: It shouldn't re-install if there was no update of origin config version
+        assert "Copying file global.conf" not in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
+
+    def test_update_flow(self, client):
+        # Now try the update flow
+        c = client
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+        c2.save({"conanfile.py": self.conanfile,
+                 "global.conf": "user.myteam:myconf=othervalue"})
+        c2.run("export-pkg .")
+        c2.run("upload * -r=default -c")
+
+        c.run("config install myconf/[*] --type=pkg")
+        assert "myconf/0.1: Downloaded package revision" in c.out
+        c.run("config show *")
+        assert "user.myteam:myconf: othervalue" in c.out
 
     def test_cant_use_as_dependency(self):
         c = TestClient()

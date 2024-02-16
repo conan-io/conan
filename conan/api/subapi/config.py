@@ -49,8 +49,9 @@ class ConfigAPI:
         consumer_definer(conanfile, profile_build, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         remotes = remotes or []
+        update = ["*"]
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   True, True, self.conan_api.config.global_conf,
+                                   update, update, self.conan_api.config.global_conf,
                                    no_conf=False)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         deps_graph.report_graph_error()
@@ -60,14 +61,23 @@ class ConfigAPI:
         if pkg.dependencies:
             raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
-        conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=True, lockfile=lockfile)
+        conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
-        uri = pkg.conanfile.package_folder  # layout.export()
+        config_pref = pkg.pref.repr_notime()
+        config_version_file = os.path.join(conan_api.home_folder, "conan_config_version")
+        if os.path.exists(config_version_file):
+            version = load(config_version_file)
+            if version == config_pref:
+                return
+
+        uri = pkg.conanfile.package_folder
         config_type = "dir"
         from conans.client.conf.config_installer import configuration_install
         app = ConanApp(self.conan_api)
-        configuration_install(app, uri, verify_ssl=False, config_type=config_type)
+        configuration_install(app, uri, verify_ssl=False, config_type=config_type,
+                              ignore=["conaninfo.txt", "conanmanifest.txt"])
+        save(config_version_file, config_pref)
 
     def get(self, name, default=None, check_type=None):
         return self.global_conf.get(name, default=default, check_type=check_type)
