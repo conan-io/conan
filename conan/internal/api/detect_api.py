@@ -129,7 +129,7 @@ def _parse_gnu_libc(ldd_output):
     return None
 
 
-def detect_gnu_libc(ldd="/usr/bin/ldd"):
+def _detect_gnu_libc(ldd="/usr/bin/ldd"):
     if platform.system() != "Linux":
         ConanOutput(scope="detect_api").warning("detect_gnu_libc() only works on Linux")
         return None
@@ -157,7 +157,7 @@ def _parse_musl_libc(ldd_output):
     return lines[1].split()[-1].strip()
 
 
-def detect_musl_libc(ldd="/usr/bin/ldd"):
+def _detect_musl_libc(ldd="/usr/bin/ldd"):
     if platform.system() != "Linux":
         ConanOutput(scope="detect_api").warning(
             "detect_musl_libc() only works on Linux"
@@ -197,10 +197,10 @@ def detect_libc(ldd="/usr/bin/ldd"):
             f"detect_libc() is only supported on Linux currently"
         )
         return None
-    version = detect_gnu_libc(ldd)
+    version = _detect_gnu_libc(ldd)
     if version is not None:
         return "gnu", version
-    version = detect_musl_libc(ldd)
+    version = _detect_musl_libc(ldd)
     if version is not None:
         return "musl", version
     ConanOutput(scope="detect_api").warning(
