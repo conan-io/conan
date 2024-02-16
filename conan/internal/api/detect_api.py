@@ -6,7 +6,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.model.version import Version
-from conans.util.files import save
+from conans.util.files import load, save
 from conans.util.runners import check_output_runner, detect_runner
 
 
@@ -135,22 +135,23 @@ def detect_gnu_libc(ldd="/usr/bin/ldd"):
         return None
     try:
         ldd_output = check_output_runner(f"{ldd} --version")
-        version = _parse_gnu_libc()
+        version = _parse_gnu_libc(ldd_output)
         if version is None:
+            first_line = ldd_output.partition("\n")[0]
             ConanOutput(scope="detect_api").warning(
-                f"detect_gnu_libc() did not detect glibc in the first line of output from '{ldd} --version': '{ldd_output.partition("\n")[0]}'"
+                f"detect_gnu_libc() did not detect glibc in the first line of output from '{ldd} --version': '{first_line}'"
             )
             return None
         return version
     except Exception as e:
-        ConanOutput(scope="detect_api").warning(
+        ConanOutput(scope="detect_api").debug(
             f"Couldn't determine the glibc version from the output of the '{ldd} --version' command {e}"
         )
     return None
 
 
 def _parse_musl_libc(ldd_output):
-    lines = ldd_output.partition("\n")
+    lines = ldd_output.splitlines()
     if "musl libc" not in lines[0]:
         return None
     return lines[1].split()[-1].strip()
@@ -162,19 +163,31 @@ def detect_musl_libc(ldd="/usr/bin/ldd"):
             "detect_musl_libc() only works on Linux"
         )
         return None
+
+    d = tempfile.mkdtemp()
+    tmp_file = os.path.join(d, "err")
     try:
-        ldd_output = check_output_runner(f"{ldd} --version")
+        ldd_output = None
+        with open(tmp_file, 'w') as stderr:
+            check_output_runner(f"{ldd}", stderr=stderr, ignore_error=True)
+        ldd_output = load(tmp_file)
         version = _parse_musl_libc(ldd_output)
         if ldd_output is None:
+            first_line = ldd_output.partition("\n")[0]
             ConanOutput(scope="detect_api").warning(
-                f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd} --version': '{ldd_output.partition("\n")[0]}'"
+                f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd}': '{first_line}'"
             )
             return None
         return version
     except Exception as e:
-        ConanOutput(scope="detect_api").warning(
-            f"Couldn't determine the musl libc version from the output of the '{ldd} --version' command {e}"
+        ConanOutput(scope="detect_api").debug(
+            f"Couldn't determine the musl libc version from the output of the '{ldd}' command {e}"
         )
+    finally:
+        try:
+            os.unlink(tmp_file)
+        except OSError:
+            pass
     return None
 
 
