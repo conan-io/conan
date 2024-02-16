@@ -122,24 +122,38 @@ def _get_e2k_architecture():
     }.get(platform.processor())
 
 
+def _parse_gnu_libc(ldd_output):
+    first_line = ldd_output.partition("\n")[0]
+    if any(glibc_indicator in first_line for glibc_indicator in ["GNU libc", "GLIBC"]):
+        return first_line.split()[-1].strip()
+    return None
+
+
 def detect_gnu_libc(ldd="/usr/bin/ldd"):
     if platform.system() != "Linux":
         ConanOutput(scope="detect_api").warning("detect_gnu_libc() only works on Linux")
         return None
     try:
-        first_line = check_output_runner(f"{ldd} --version").partition("\n")[0]
-        if any(glibc_indicator in first_line for glibc_indicator in ["GNU libc", "GLIBC"]):
-            return first_line.split()[-1].strip()
-        else:
+        ldd_output = check_output_runner(f"{ldd} --version")
+        version = _parse_gnu_libc()
+        if version is None:
             ConanOutput(scope="detect_api").warning(
-                f"detect_gnu_libc() did not detect glibc in the first line of output from '{ldd} --version': '{first_line}'"
+                f"detect_gnu_libc() did not detect glibc in the first line of output from '{ldd} --version': '{ldd_output.partition("\n")[0]}'"
             )
             return None
+        return version
     except Exception as e:
         ConanOutput(scope="detect_api").warning(
-            f"Couldn't get the glibc version from the '{ldd} --version' command {e}"
+            f"Couldn't determine the glibc version from the output of the '{ldd} --version' command {e}"
         )
+    return None
+
+
+def _parse_musl_libc(ldd_output):
+    lines = ldd_output.partition("\n")
+    if "musl libc" not in lines[0]:
         return None
+    return lines[1].split()[-1].strip()
 
 
 def detect_musl_libc(ldd="/usr/bin/ldd"):
@@ -149,18 +163,37 @@ def detect_musl_libc(ldd="/usr/bin/ldd"):
         )
         return None
     try:
-        lines = check_output_runner(f"{ldd} --version").partition("\n")
-        if "musl libc" not in lines[0]:
+        ldd_output = check_output_runner(f"{ldd} --version")
+        version = _parse_musl_libc(ldd_output)
+        if ldd_output is None:
             ConanOutput(scope="detect_api").warning(
-                f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd} --version': '{lines[0]}'"
+                f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd} --version': '{ldd_output.partition("\n")[0]}'"
             )
             return None
-        return lines[1].split()[-1].strip()
+        return version
     except Exception as e:
         ConanOutput(scope="detect_api").warning(
-            f"Couldn't get the musl libc version from the '{ldd} --version' command {e}"
+            f"Couldn't determine the musl libc version from the output of the '{ldd} --version' command {e}"
+        )
+    return None
+
+
+def detect_libc(ldd="/usr/bin/ldd"):
+    if platform.system() != "Linux":
+        ConanOutput(scope="detect_api").warning(
+            f"detect_libc() is only supported on Linux currently"
         )
         return None
+    version = detect_gnu_libc(ldd)
+    if version is not None:
+        return "gnu", version
+    version = detect_musl_libc(ldd)
+    if version is not None:
+        return "musl", version
+    ConanOutput(scope="detect_api").warning(
+        f"Couldn't detect the libc provider and version"
+    )
+    return None
 
 
 def detect_libcxx(compiler, version, compiler_exe=None):
