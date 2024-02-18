@@ -9,7 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conans.util.files import mkdir, load
+from conans.util.files import mkdir
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -105,7 +105,7 @@ def create(conan_api, parser, *args):
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
         run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
-                 update=False, build_modes=args.build, build_modes_test=args.build_test,
+                 update=None, build_modes=args.build, build_modes_test=args.build_test,
                  tested_python_requires=tested_python_requires, tested_graph=deps_graph)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)

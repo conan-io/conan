@@ -1,8 +1,6 @@
 import os.path
 import re
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient

@@ -1,3 +1,5 @@
+import json
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -16,3 +18,19 @@ def test_build_cmd_deploy_generators():
     current_folder = c.current_folder.replace("\\", "/")
     path = f'{current_folder}/myfolder/full_deploy/host/dep/1.0'
     assert f'set(dep_PACKAGE_FOLDER_RELEASE "{path}")' in cmake
+
+
+def test_build_output_json():
+    """
+    The build command should have the --format=json option.
+    """
+    _OUTPUT_FILE = "output.json"
+
+    client = TestClient()
+    conanfile = GenConanfile()
+    client.save({"conanfile.py": conanfile})
+    client.run("build . --format=json", redirect_stdout=_OUTPUT_FILE)
+    output = json.loads(client.load(_OUTPUT_FILE))
+
+    assert "graph" in output
+    assert "nodes" in output["graph"]

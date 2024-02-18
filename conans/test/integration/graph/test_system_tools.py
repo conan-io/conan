@@ -136,6 +136,26 @@ class TestToolRequires:
         client.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Package 'tool/1.1' not resolved" in client.out
 
+    def test_require_build_context(self):
+        """ https://github.com/conan-io/conan/issues/15659
+        app -> libcurl --(tool-require)--> libtool -> automake -> autoconf
+                                             \\--(br)-> automake -> autoconf
+        """
+        c = TestClient()
+        c.save({"autoconf/conanfile.py": GenConanfile("autoconf", "0.1"),
+                "automake/conanfile.py": GenConanfile("automake", "0.1").with_requires("autoconf/0.1"),
+                "libtool/conanfile.py": GenConanfile("libtool", "0.1").with_requires("automake/0.1")
+                                                                      .with_tool_requires("automake/0.1"),
+                "libcurl/conanfile.py": GenConanfile("libcurl", "0.1").with_tool_requires("libtool/0.1"),
+                "app/conanfile.py": GenConanfile().with_requires("libcurl/0.1"),
+                "profile_build": "[settings]\nos=Linux\n[platform_tool_requires]\nautomake/0.1"})
+        c.run("create autoconf")
+        c.run("create automake")
+        c.run("export libtool")
+        c.run("export libcurl")
+        c.run("install app -pr:b=profile_build --build=missing")
+        assert "Install finished successfully" in c.out
+
 
 class TestToolRequiresLock:
 

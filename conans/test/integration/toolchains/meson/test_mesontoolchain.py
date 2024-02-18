@@ -4,7 +4,6 @@ import textwrap
 import pytest
 
 from conan.tools.meson import MesonToolchain
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 

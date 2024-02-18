@@ -1,4 +1,3 @@
-import platform
 import pytest
 
 from conan.tools.cmake import CMake
