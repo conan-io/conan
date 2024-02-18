@@ -352,24 +352,25 @@ class GraphBinariesAnalyzer(object):
         def _evaluate_single(n):
             mode = main_mode if mainprefs is None or str(n.pref) in mainprefs else test_mode
             if lockfile:
-                locked_prev = lockfile.resolve_prev(n)
+                locked_prev = lockfile.resolve_prev(n)  # this is not public, should never happen
                 if locked_prev:
                     self._process_locked_node(n, mode, locked_prev)
                     return
             self._evaluate_node(n, mode, remotes, update)
 
         levels = deps_graph.by_levels()
-        for level in levels[:-1]:
+        for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
                 self._evaluate_package_id(node)
-            # group by pref to paralelize
+            # group by pref to paralelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
                 nodes.setdefault(node.pref, []).append(node)
-            # PARALLEL
+            # PARALLEL, this is the slow part that can query servers for packages, and compatibility
             for pref, pref_nodes in nodes.items():
                 _evaluate_single(pref_nodes[0])
             # END OF PARALLEL
+            # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
