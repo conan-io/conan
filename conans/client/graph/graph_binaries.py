@@ -334,7 +334,8 @@ class GraphBinariesAnalyzer(object):
         if config_mode is not None:
             config_version_file = HomePaths(self._cache.cache_folder).config_version_path
             if not os.path.exists(config_version_file):
-                raise ConanException("Missing config_version file")
+                raise ConanException("core.package_id:config_mode defined, but missing "
+                                     "config_version file in cache")
             config_ref = load(config_version_file)
             try:
                 config_ref = PkgReference.loads(config_ref)
