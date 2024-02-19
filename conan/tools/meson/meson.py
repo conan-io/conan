@@ -40,8 +40,7 @@ class Meson(object):
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         # Issue related: https://github.com/mesonbuild/meson/issues/12880
-        if platform.system() != "Windows":
-            cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
+        cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
