@@ -196,7 +196,7 @@ def detect_libc(ldd="/usr/bin/ldd"):
         ConanOutput(scope="detect_api").warning(
             f"detect_libc() is only supported on Linux currently"
         )
-        return None
+        return None, None
     version = _detect_gnu_libc(ldd)
     if version is not None:
         return "gnu", version
@@ -206,7 +206,7 @@ def detect_libc(ldd="/usr/bin/ldd"):
     ConanOutput(scope="detect_api").warning(
         f"Couldn't detect the libc provider and version"
     )
-    return None
+    return None, None
 
 
 def detect_libcxx(compiler, version, compiler_exe=None):
