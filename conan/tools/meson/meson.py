@@ -57,7 +57,7 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def install(self):
-        meson_build_folder = self._conanfile.build_folder
+        meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
         meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
         # TODO: Use --destdir [package_folder] param when requiring meson >= 0.57.
         if platform.system() == "Windows":
