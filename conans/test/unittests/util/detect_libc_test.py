@@ -1,11 +1,9 @@
-import unittest
-
 from parameterized import parameterized
 
 from conan.internal.api.detect_api import _parse_gnu_libc, _parse_musl_libc
 
 
-class DetectedLibcTest(unittest.TestCase):
+class TestDetectLibc:
     @parameterized.expand(
         [
             [
@@ -43,7 +41,7 @@ Usage: /lib/ld-musl-x86_64.so.1 [options] [--] pathname""",
     )
     def test_parse_gnu_libc(self, ldd_output, expected_glibc_version):
         parsed_glibc_version = _parse_gnu_libc(ldd_output)
-        self.assertEqual(expected_glibc_version, parsed_glibc_version, f"given '{parsed_glibc_version}' expected '{expected_glibc_version}'")
+        assert expected_glibc_version == parsed_glibc_version
 
     @parameterized.expand(
         [
@@ -81,4 +79,4 @@ Written by Roland McGrath and Ulrich Drepper.""",
     )
     def test_parse_musl_libc(self, ldd_output, expected_musl_libc_version):
         parsed_musl_libc_version = _parse_musl_libc(ldd_output)
-        self.assertEqual(expected_musl_libc_version, parsed_musl_libc_version, f"given '{parsed_musl_libc_version}' expected '{expected_musl_libc_version}'")
+        assert expected_musl_libc_version == parsed_musl_libc_version
