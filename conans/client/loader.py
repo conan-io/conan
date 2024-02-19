@@ -235,11 +235,7 @@ class ConanFileLoader:
             conanfile.layout = types.MethodType(layout, conanfile)
 
         conanfile.generators = parser.generators
-        try:
-            conanfile.options = Options.loads(parser.options)
-        except Exception:
-            raise ConanException("Error while parsing [options] in conanfile.txt\n"
-                                 "Options should be specified as 'pkg/*:option=value'")
+        conanfile.options = Options.loads(parser.options)
 
         return conanfile
 

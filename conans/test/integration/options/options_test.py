@@ -738,4 +738,4 @@ class TestImportantOptions:
         tc.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])})
         tc.run('create . -o="&:myoption"', assert_error=True)
         assert "ValueError" not in tc.out
-        assert "Error while parsing options" in tc.out
+        assert "Error while parsing option" in tc.out

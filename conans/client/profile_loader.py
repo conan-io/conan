@@ -234,11 +234,7 @@ class _ProfileValueParser(object):
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
-        try:
-            options = Options.loads(doc.options) if doc.options else None
-        except Exception:
-            raise ConanException("Error while parsing options. "
-                                 "Options should be specified as 'pkg/*:option=value'")
+        options = Options.loads(doc.options) if doc.options else None
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         doc_platform_requires = doc.platform_requires or ""
@@ -387,11 +383,7 @@ def _profile_parse_args(settings, options, conf):
     settings, package_settings = _get_simple_and_package_tuples(settings)
 
     result = Profile()
-    try:
-        result.options = Options.loads("\n".join(options or []))
-    except Exception:
-        raise ConanException("Error while parsing options. "
-                             "Options should be specified as 'pkg/*:option=value'")
+    result.options = Options.loads("\n".join(options or []))
     result.settings = OrderedDict(settings)
     if conf:
         result.conf = ConfDefinition()
