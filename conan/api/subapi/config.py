@@ -64,12 +64,13 @@ class ConfigAPI:
         conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
+        # We check if this specific version is already installed
         config_pref = pkg.pref.repr_notime()
-        config_version_file = os.path.join(conan_api.home_folder, "conan_config_version")
+        config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
             version = load(config_version_file)
             if version == config_pref:
-                return
+                return  # Already installed, we can skip repeating the install
 
         uri = pkg.conanfile.package_folder
         config_type = "dir"

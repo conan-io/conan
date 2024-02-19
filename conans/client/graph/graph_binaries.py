@@ -1,3 +1,5 @@
+import os
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.build_mode import BuildMode
@@ -10,7 +12,11 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_PLATFORM)
 from conans.client.graph.proxy import should_update_reference
 from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError
+    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError, ConanException
+from conans.model.info import RequirementInfo
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
+from conans.util.files import load
 
 
 class GraphBinariesAnalyzer(object):
@@ -322,7 +328,23 @@ class GraphBinariesAnalyzer(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
 
     def _evaluate_package_id(self, node):
-        compute_package_id(node, self._global_conf)
+        # TODO: Extract and reuse for every package as much as possible
+        config_version = None
+        config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
+        if config_mode is not None:
+            config_version_file = HomePaths(self._cache.cache_folder).config_version_path
+            if not os.path.exists(config_version_file):
+                raise ConanException("Missing config_version file")
+            config_ref = load(config_version_file)
+            try:
+                config_ref = PkgReference.loads(config_ref)
+                req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
+            except ConanException:
+                config_ref = RecipeReference.loads(config_ref)
+                req_info = RequirementInfo(config_ref, None, config_mode)
+            config_version = req_info.dumps()
+
+        compute_package_id(node, self._global_conf, config_version=config_version)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for

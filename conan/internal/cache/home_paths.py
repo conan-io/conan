@@ -74,3 +74,7 @@ class HomePaths:
     @property
     def settings_path_user(self):
         return os.path.join(self._home, "settings_user.yml")
+
+    @property
+    def config_version_path(self):
+        return os.path.join(self._home, "config_version")
