@@ -695,3 +695,36 @@ class TestConfigInstallPkg:
     def test_lockfile(self):
         """ it should be able to install the config using a lockfile
         """
+        # TODO
+
+    def test_auto_update_config(self):
+        c = TestClient(default_server_user=True)
+        global_conf = textwrap.dedent("""\
+            core:config_require=myconf/[*]
+            user.myteam:myconf=myvalue
+            """)
+        c.save({"conanfile.py": self.conanfile,
+                "global.conf": global_conf})
+        c.run("export-pkg .")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+
+        c.run("config install myconf/[*] --type=pkg")
+        c.run("config show *")
+        assert "core:config_require: myconf/[*]" in c.out
+        assert "user.myteam:myconf: myvalue" in c.out
+
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+        global_conf = textwrap.dedent("""\
+            core:config_require=myconf/[*]
+            user.myteam:myconf=othervalue
+            """)
+        c2.save({"conanfile.py": self.conanfile,
+                 "global.conf": global_conf})
+        c2.run("export-pkg .")
+        c2.run("upload * -r=default -c")
+
+        print("CONFIG SHOW!!!!")
+        c.run("config show *")
+        print(c.out)
+        assert "user.myteam:myconf: othervalue" in c.out

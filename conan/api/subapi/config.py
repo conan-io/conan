@@ -105,6 +105,7 @@ class ConfigAPI:
         new_config = ConfDefinition()
         if os.path.exists(global_conf_path):
             text = load(global_conf_path)
+            print("LOADED TEXT ", text)
             distro = None
             if platform.system() in ["Linux", "FreeBSD"]:
                 import distro
