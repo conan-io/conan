@@ -212,6 +212,8 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
+    parser.add_argument('-pr', '--profile', action="append",
+                        help="Profiles that match the binaries. Use with '<ref>:*'")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
@@ -245,8 +247,9 @@ def list(conan_api: ConanAPI, parser, *args):
         pkglist = MultiPackagesList()
         if args.cache or not args.remote:
             try:
+                profile = conan_api.profiles.get_profile(args.profile) if args.profile else None
                 cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
-                                                   lru=args.lru)
+                                                   lru=args.lru, profile=profile)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:
