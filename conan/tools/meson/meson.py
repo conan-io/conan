@@ -1,4 +1,5 @@
 import os
+import platform
 
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
@@ -10,6 +11,9 @@ class Meson(object):
         self._conanfile = conanfile
 
     def configure(self, reconfigure=False):
+        if reconfigure:
+            self._conanfile.output.warning("reconfigure param has been deprecated."
+                                           " Removing in Conan 2.x.")
         source_folder = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
         cmd = "meson setup"
@@ -35,10 +39,9 @@ class Meson(object):
 
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
-        if self._conanfile.package_folder:
-            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
-        if reconfigure:
-            cmd += ' --reconfigure'
+        # Issue related: https://github.com/mesonbuild/meson/issues/12880
+        if platform.system() != "Windows":
+            cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -54,9 +57,13 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def install(self):
-        self.configure(reconfigure=True)  # To re-do the destination package-folder
         meson_build_folder = self._conanfile.build_folder
-        cmd = 'meson install -C "{}"'.format(meson_build_folder)
+        meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
+        # TODO: Use --destdir [package_folder] param when requiring meson >= 0.57.
+        if platform.system() == "Windows":
+            cmd = f'set "DESTDIR={meson_package_folder}" && meson install -C "{meson_build_folder}"'
+        else:
+            cmd = f'DESTDIR="{meson_package_folder}" meson install -C "{meson_build_folder}"'
         self._conanfile.run(cmd)
 
     def test(self):
