@@ -9,7 +9,7 @@ from conans.errors import ConanException
 
 def from_timestamp_to_iso8601(timestamp):
     # Used exclusively by conan_server to return the date in iso format (same as artifactory)
-    return "%sZ" % datetime.datetime.utcfromtimestamp(int(timestamp)).isoformat()
+    return "%sZ" % datetime.datetime.utcfromtimestamp(timestamp).isoformat()
 
 
 def _from_iso8601_to_datetime(iso_str):
@@ -28,7 +28,9 @@ def timestamp_now():
 
 
 def revision_timestamp_now():
-    return time.time()
+    r  = time.time()
+    print("REVISION TIMESAMP ", r)
+    return r
 
 
 def timestamp_to_str(timestamp):

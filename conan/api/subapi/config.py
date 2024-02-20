@@ -70,6 +70,7 @@ class ConfigAPI:
         if os.path.exists(config_version_file):
             version = load(config_version_file)
             if version == config_pref:
+                print("EQUAL TO THE PREVIOUS ONE ", repr(config_pref))
                 return  # Already installed, we can skip repeating the install
 
         uri = pkg.conanfile.package_folder
@@ -105,7 +106,6 @@ class ConfigAPI:
         new_config = ConfDefinition()
         if os.path.exists(global_conf_path):
             text = load(global_conf_path)
-            print("LOADED TEXT ", text)
             distro = None
             if platform.system() in ["Linux", "FreeBSD"]:
                 import distro

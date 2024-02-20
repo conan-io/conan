@@ -110,7 +110,6 @@ def _process_file(directory, filename, config, cache, folder):
             remove(target_folder)
 
         mkdir(target_folder)
-        print("OCESSING FILE ", filename, load(os.path.join(directory, filename)))
         output.info("Copying file %s to %s" % (filename, target_folder))
         _filecopy(directory, filename, target_folder)
 
