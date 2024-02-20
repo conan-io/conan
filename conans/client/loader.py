@@ -240,7 +240,6 @@ class ConanFileLoader:
         except Exception:
             raise ConanException("Error while parsing [options] in conanfile.txt\n"
                                  "Options should be specified as 'pkg/*:option=value'")
-
         return conanfile
 
     def load_virtual(self, requires=None, tool_requires=None, python_requires=None, graph_lock=None,

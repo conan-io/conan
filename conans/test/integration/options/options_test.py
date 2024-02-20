@@ -732,3 +732,10 @@ class TestImportantOptions:
 
         c.run("graph info app -o *:myoption!=4")
         assert "liba/0.1: MYOPTION: 4" in c.out
+
+    def test_wrong_option_syntax_no_trace(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])})
+        tc.run('create . -o="&:myoption"', assert_error=True)
+        assert "ValueError" not in tc.out
+        assert "Error while parsing option" in tc.out
