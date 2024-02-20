@@ -165,7 +165,7 @@ def build_type_flags(settings):
     return []
 
 
-def cppstd_flag(conanfile: "ConanFile") -> str:
+def cppstd_flag(conanfile) -> str:
     """ Returns flags specific to the C++ standard based on the compiler, its version and cppstd.
 
     :param conanfile: ConanFile instance
