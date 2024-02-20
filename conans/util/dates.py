@@ -28,9 +28,7 @@ def timestamp_now():
 
 
 def revision_timestamp_now():
-    r  = time.time()
-    print("REVISION TIMESAMP ", r)
-    return r
+    return time.time()
 
 
 def timestamp_to_str(timestamp):

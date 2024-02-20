@@ -328,24 +328,25 @@ class GraphBinariesAnalyzer(object):
             node.pref_timestamp = cache_latest_prev.timestamp
             assert node.prev, "PREV for %s is None" % str(node.pref)
 
-    def _evaluate_package_id(self, node):
-        # TODO: Extract and reuse for every package as much as possible
-        config_version = None
+    def _config_version(self):
         config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
-        if config_mode is not None:
-            config_version_file = HomePaths(self._cache.cache_folder).config_version_path
-            if not os.path.exists(config_version_file):
-                raise ConanException("core.package_id:config_mode defined, but missing "
-                                     "config_version file in cache")
-            config_ref = load(config_version_file)
-            try:
-                config_ref = PkgReference.loads(config_ref)
-                req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
-            except ConanException:
-                config_ref = RecipeReference.loads(config_ref)
-                req_info = RequirementInfo(config_ref, None, config_mode)
-            config_version = req_info.dumps()
+        if config_mode is None:
+            return
+        config_version_file = HomePaths(self._cache.cache_folder).config_version_path
+        if not os.path.exists(config_version_file):
+            raise ConanException("core.package_id:config_mode defined, but missing "
+                                 "config_version file in cache")
+        config_ref = load(config_version_file)
+        try:
+            config_ref = PkgReference.loads(config_ref)
+            req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
+        except ConanException:
+            config_ref = RecipeReference.loads(config_ref)
+            req_info = RequirementInfo(config_ref, None, config_mode)
+        return req_info.dumps()
 
+    def _evaluate_package_id(self, node, config_version):
+        # TODO: Extract and reuse for every package as much as possible
         compute_package_id(node, self._global_conf, config_version=config_version)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
@@ -383,9 +384,10 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_node(n, mode, remotes, update)
 
         levels = deps_graph.by_levels()
+        config_version = self._config_version()
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
-                self._evaluate_package_id(node)
+                self._evaluate_package_id(node, config_version)
             # group by pref to paralelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
@@ -406,7 +408,7 @@ class GraphBinariesAnalyzer(object):
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._global_conf)
+                compute_package_id(node, self._global_conf, config_version=config_version)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):

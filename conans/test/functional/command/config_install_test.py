@@ -2,13 +2,11 @@ import os
 import shutil
 import stat
 import textwrap
-import time
 import unittest
 
 import pytest
 from mock import patch
 
-import conans
 from conan.api.model import Remote
 from conans.client.conf.config_installer import _hide_password
 from conans.client.downloaders.file_downloader import FileDownloader
@@ -17,7 +15,6 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.file_server import TestFileServer
 from conans.test.utils.test_files import scan_folder, temp_folder, tgz_with_contents
 from conans.test.utils.tools import TestClient, zipdir
-from conans.util.env import environment_update
 from conans.util.files import load, mkdir, save, save_files
 
 
@@ -700,18 +697,7 @@ class TestConfigInstallPkg:
         """
         # TODO
 
-    def test_auto_update_config(self, monkeypatch):
-        def mockreturn():
-            print("INCREMENT!!!!!!!!!!!!!")
-            from conans.util.dates import revision_timestamp_now
-            return revision_timestamp_now() + 10
-
-            # Application of the monkeypatch to replace Path.home
-            # with the behavior of mockreturn defined above.
-
-        #monkeypatch.setattr("conan.internal.cache.cache.revision_timestamp_now", mockreturn)
-        monkeypatch.setattr("conans.server.revision_list.revision_timestamp_now", mockreturn)
-
+    def test_auto_update_config(self):
         c = TestClient(default_server_user=True)
         global_conf = textwrap.dedent("""\
             core:config_require=myconf/[*]
@@ -721,29 +707,22 @@ class TestConfigInstallPkg:
                 "global.conf": global_conf})
         c.run("export-pkg .")
         c.run("upload * -r=default -c")
-        c.run("remove * -c")
-
-        c.run("config install myconf/[*] --type=pkg")
-        c.run("config show *")
-        assert "core:config_require: myconf/[*]" in c.out
-        assert "user.myteam:myconf: myvalue" in c.out
 
         c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
+        c2.run("config install myconf/[*] --type=pkg")
+        c2.run("config show *")
+        assert "core:config_require: myconf/[*]" in c2.out
+        assert "user.myteam:myconf: myvalue" in c2.out
+
+        # Update the conf
         global_conf = textwrap.dedent("""\
             core:config_require=myconf/[*]
             user.myteam:myconf=othervalue
             """)
-        c2.save({"conanfile.py": self.conanfile,
-                 "global.conf": global_conf})
-        c2.run("export-pkg .")
-        print(c2.out)
+        c.save({"global.conf": global_conf})
+        c.run("export-pkg .")
+        c.run("upload * -r=default -c")
 
-        c2.run("upload * -r=default -c")
+        c2.run("config show *")
         print(c2.out)
-
-        print("CONFIG SHOW!!!!")
-        c.run("config show *")
-        assert "user.myteam:myconf: othervalue" in c.out
-        c.run("config show *")
-        print(c.out)
         assert "user.myteam:myconf: othervalue" in c.out
