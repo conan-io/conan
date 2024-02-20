@@ -205,7 +205,8 @@ class ConanFileLoader:
         conanfile._conan_is_consumer = True
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, display_name):
+    @staticmethod
+    def _parse_conan_txt(contents, path, display_name):
         conanfile = ConanFile(display_name)
 
         try:
@@ -240,7 +241,6 @@ class ConanFileLoader:
         except Exception:
             raise ConanException("Error while parsing [options] in conanfile.txt\n"
                                  "Options should be specified as 'pkg/*:option=value'")
-
         return conanfile
 
     def load_virtual(self, requires=None, tool_requires=None, python_requires=None, graph_lock=None,
@@ -320,6 +320,9 @@ def _load_python_file(conan_file_path):
     if not os.path.exists(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
 
+    def new_print(*args, **kwargs):  # Make sure that all user python files print() goes to stderr
+        print(*args, **kwargs, file=sys.stderr)
+
     module_id = str(uuid.uuid1())
     current_dir = os.path.dirname(conan_file_path)
     sys.path.insert(0, current_dir)
@@ -362,6 +365,7 @@ def _load_python_file(conan_file_path):
                 else:
                     if folder.startswith(current_dir):
                         module = sys.modules.pop(added)
+                        module.print = new_print
                         sys.modules["%s.%s" % (module_id, added)] = module
     except ConanException:
         raise
@@ -373,6 +377,7 @@ def _load_python_file(conan_file_path):
     finally:
         sys.path.pop(0)
 
+    loaded.print = new_print
     return loaded, module_id
 
 
