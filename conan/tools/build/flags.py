@@ -165,10 +165,15 @@ def build_type_flags(settings):
     return []
 
 
-def cppstd_flag(settings):
-    compiler = settings.get_safe("compiler")
-    compiler_version = settings.get_safe("compiler.version")
-    cppstd = settings.get_safe("compiler.cppstd")
+def cppstd_flag(conanfile: "ConanFile") -> str:
+    """ Returns flags specific to the C++ standard based on the compiler, its version and cppstd.
+
+    :param conanfile: ConanFile instance
+    :return: string with the flag (-std=c++11, -std=gnu++11, etc.)
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    cppstd = conanfile.settings.get_safe("compiler.cppstd")
 
     if not compiler or not compiler_version or not cppstd:
         return ""
