@@ -117,7 +117,8 @@ OpenCV2/*:other_option=Cosa
         save(file_path, conanfile_txt)
         loader = ConanFileLoader(None, None)
         with self.assertRaisesRegex(ConanException,
-                                   r"Error while parsing"):
+                                    r"Error while parsing \[options\] in conanfile.txt\n"
+                                    r"Options should be specified as 'pkg/\*:option=value'"):
             loader.load_conanfile_txt(file_path)
 
     def test_layout_not_predefined(self):
