@@ -21,8 +21,7 @@ from conans.model.requires import Requirement
 
 class DepsGraphBuilder(object):
 
-    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf,
-                 no_conf=True):
+    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
@@ -31,7 +30,6 @@ class DepsGraphBuilder(object):
         self._update = update
         self._check_update = check_update
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
-        self._no_conf = no_conf
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -358,7 +356,7 @@ class DepsGraphBuilder(object):
                 down_options = Options(options_values=node.conanfile.default_build_options)
 
         self._prepare_node(new_node, profile_host, profile_build, down_options)
-        if self._no_conf and dep_conanfile.package_type is PackageType.CONF:
+        if dep_conanfile.package_type is PackageType.CONF and node.recipe != RECIPE_VIRTUAL:
             raise ConanException(f"Configuration package {dep_conanfile} cannot be used as "
                                  f"requirement, but {node.ref} is requiring it")
         require.process_package_type(node, new_node)

@@ -678,8 +678,6 @@ class TestConfigInstallPkg:
         c.save({"myconf/conanfile.py": conanfile,
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("myconf/0.1")})
         c.run("create myconf")
-        c.run("install --requires=myconf/0.1", assert_error=True)
-        assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement" in c.out
         c.run("install pkg", assert_error=True)
         assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement, " \
                "but pkg/0.1 is requiring it" in c.out
@@ -724,5 +722,30 @@ class TestConfigInstallPkg:
         c.run("upload * -r=default -c")
 
         c2.run("config show *")
-        print(c2.out)
-        assert "user.myteam:myconf: othervalue" in c.out
+        # TODO: We need to silence the output, still too noisy
+        assert "user.myteam:myconf: othervalue" in c2.out
+
+    def test_create_also(self):
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy
+           class Conf(ConanFile):
+               name = "myconf"
+               version = "0.1"
+               package_type = "configuration"
+               exports_sources = "*.conf"
+               def package(self):
+                   copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
+               """)
+
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": conanfile,
+                "global.conf": "user.myteam:myconf=myvalue"})
+        c.run("create .")
+        print(c.out)
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+
+        c.run("config install myconf/[*] --type=pkg")
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out

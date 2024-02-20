@@ -51,8 +51,7 @@ class ConfigAPI:
         remotes = remotes or []
         update = ["*"]
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, update, self.conan_api.config.global_conf,
-                                   no_conf=False)
+                                   update, update, self.conan_api.config.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         deps_graph.report_graph_error()
         pkg = deps_graph.root.dependencies[0].dst

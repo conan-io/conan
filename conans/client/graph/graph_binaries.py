@@ -346,7 +346,6 @@ class GraphBinariesAnalyzer(object):
         return req_info.dumps()
 
     def _evaluate_package_id(self, node, config_version):
-        # TODO: Extract and reuse for every package as much as possible
         compute_package_id(node, self._global_conf, config_version=config_version)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
