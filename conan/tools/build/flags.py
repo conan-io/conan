@@ -166,14 +166,18 @@ def build_type_flags(settings):
 
 
 def cppstd_flag(conanfile) -> str:
-    """ Returns flags specific to the C++ standard based on the compiler, its version and cppstd.
-        It considers when using GNU extension in cppstd, reflecting it in the flag.
-        Currently, it supports GCC, Clang, AppleClang, MSVC, Intel, MCST-LCC.
+    """
+    Returns flags specific to the C++ standard based on the ``conanfile.settings.compiler``,
+    ``conanfile.settings.compiler.version`` and ``conanfile.settings.compiler.cppstd``.
 
-        In case there is no compiler or cppstd in the profile, the result will be an empty string.
+    It also considers when using GNU extension in ``settings.compiler.cppstd``, reflecting it in the
+    compiler flag. Currently, it supports GCC, Clang, AppleClang, MSVC, Intel, MCST-LCC.
+
+    In case there is no ``settings.compiler`` or ``settings.cppstd`` in the profile, the result will
+    be an **empty string**.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :return: The standard C++ flag used by the compiler. e.g. -std=c++11, /std:c++latest
+    :return: ``str`` with the standard C++ flag used by the compiler. e.g. "-std=c++11", "/std:c++latest"
     """
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = conanfile.settings.get_safe("compiler.version")
