@@ -1,4 +1,3 @@
-from conan.tools.apple.apple import _to_apple_arch
 from conans.model.version import Version
 
 
@@ -7,6 +6,7 @@ def architecture_flag(settings):
     returns flags specific to the target architecture and compiler
     Used by CMakeToolchain and AutotoolsToolchain
     """
+    from conan.tools.apple.apple import _to_apple_arch
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
