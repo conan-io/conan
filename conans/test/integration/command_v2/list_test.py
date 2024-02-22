@@ -795,8 +795,8 @@ class TestListCompact:
         assert expected == expected_output
 
 
-class TestListProfile:
-    def test_list_profile(self):
+class TestListBinaryFilter:
+    def test_list_filter(self):
         c = TestClient()
         c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0").with_settings("os", "arch")
                                                               .with_shared_option(False),
@@ -809,7 +809,7 @@ class TestListProfile:
         c.run("create pkg -s os=Macos -s arch=armv8 -o shared=True")
         c.run("create header")
 
-        c.run("list *:* -pr=profile_linux --format=json")
+        c.run("list *:* -fp=profile_linux --format=json")
         result = json.loads(c.stdout)
         header = result["Local Cache"]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
         assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
@@ -818,7 +818,15 @@ class TestListProfile:
         settings = pkg["packages"]["2d46abc802bbffdf2af11591e3e452bc6149ea2b"]["info"]["settings"]
         assert settings == {"arch": "armv8", "os": "Linux"}
 
-        c.run("list *:* -pr=profile_armv8 --format=json")
+        # for linux + x86 only the header-only is a match
+        c.run("list *:* -fp=profile_linux -fs=arch=x86 --format=json")
+        result = json.loads(c.stdout)
+        header = result["Local Cache"]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result["Local Cache"]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert pkg["packages"] == {}
+
+        c.run("list *:* -fp=profile_armv8 --format=json")
         result = json.loads(c.stdout)
         header = result["Local Cache"]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
         assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
@@ -829,7 +837,7 @@ class TestListProfile:
         settings = pkg["packages"]["2a67a51fbf36a4ee345b2125dd2642be60ffd3ec"]["info"]["settings"]
         assert settings == {"arch": "armv8", "os": "Macos"}
 
-        c.run("list *:* -pr=profile_shared --format=json")
+        c.run("list *:* -fp=profile_shared --format=json")
         result = json.loads(c.stdout)
         header = result["Local Cache"]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
         assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
@@ -837,3 +845,12 @@ class TestListProfile:
         assert len(pkg["packages"]) == 1
         settings = pkg["packages"]["2a67a51fbf36a4ee345b2125dd2642be60ffd3ec"]["info"]["settings"]
         assert settings == {"arch": "armv8", "os": "Macos"}
+
+        c.run("list *:* -fs os=Windows -fo *:shared=False --format=json")
+        result = json.loads(c.stdout)
+        header = result["Local Cache"]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
+        assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
+        pkg = result["Local Cache"]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
+        assert len(pkg["packages"]) == 1
+        settings = pkg["packages"]["d2e97769569ac0a583d72c10a37d5ca26de7c9fa"]["info"]["settings"]
+        assert settings == {"arch": "x86", "os": "Windows"}
