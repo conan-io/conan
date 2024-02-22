@@ -93,20 +93,16 @@ def test_profile_template_profile_dir():
     assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
 
 
-def test_profile_dir_subdir():
+def test_profile_conf_backslash():
+    # https://github.com/conan-io/conan/issues/15726
     c = TestClient()
-    myprofile = textwrap.dedent("""
-        include(fragment/os/windows)
-        """)
-    profilewin = textwrap.dedent("""
+    profile = textwrap.dedent(r"""
         [conf]
-        user.team:myconf = "{{profile_dir}}"
+        user.team:myconf = "hello\test"
         """)
-    c.save({"profiles/myprofile": myprofile,
-            "profiles/fragment/os/windows": profilewin})
-    c.run("profile show -pr=profiles/myprofile")
-    print(c.out)
-    assert r"\profiles\fragment\os" in c.out
+    c.save({"profile": profile})
+    c.run("profile show -pr=profile")
+    assert r"hello\test" in c.out
 
 
 def test_profile_version():
