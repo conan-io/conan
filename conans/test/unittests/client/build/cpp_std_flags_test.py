@@ -1,8 +1,10 @@
 import unittest
 
 from conans.client.build.cppstd_flags import cppstd_default
-from conans.test.utils.mocks import MockSettings
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.tools import cppstd_flag
+
+from conan.tools.build import cppstd_flag as cppstd_flag_conanfile
 
 
 def _make_cppstd_flag(compiler, compiler_version, cppstd=None, compiler_base=None):
@@ -399,3 +401,12 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual(_make_cppstd_flag("mcst-lcc", "1.25", "14", "gcc"), "-std=c++14")
         self.assertEqual(_make_cppstd_flag("mcst-lcc", "1.25", "17", "gcc"), "-std=c++17")
         self.assertEqual(_make_cppstd_flag("mcst-lcc", "1.25", "20", "gcc"), "-std=c++2a")
+
+    def test_cppstd_flag_conanfile(self):
+        """The conan.tools.build.cppstd_flag should work when passing a ConanFile instance
+        """
+        conanfile = ConanFileMock()
+        conanfile.settings = MockSettings({"compiler": "gcc",
+                                          "compiler.version": "9",
+                                          "compiler.cppstd": "17"})
+        self.assertEqual(cppstd_flag_conanfile(conanfile), "-std=c++17")
