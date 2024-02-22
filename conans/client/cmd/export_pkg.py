@@ -10,7 +10,7 @@ from conans.model.ref import PackageReference
 
 
 def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
-               graph_info, force, remotes, source_conanfile_path):
+               graph_info, force, remotes, source_conanfile_path, output_folder):
     ref = full_ref.copy_clear_rev()
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
     graph_manager = app.graph_manager
@@ -59,7 +59,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     conanfile.develop = True
     if hasattr(conanfile, "layout"):
         conanfile_folder = os.path.dirname(source_conanfile_path)
-        conanfile.folders.set_base_folders(conanfile_folder, output_folder=None)
+        conanfile.folders.set_base_folders(conanfile_folder, output_folder=output_folder)
         conanfile.folders.set_base_package(dest_package_folder)
     else:
         conanfile.folders.set_base_build(build_folder)

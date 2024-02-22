@@ -407,7 +407,7 @@ class ConanAPIV1(object):
                    package_folder=None, install_folder=None, profile_names=None, settings=None,
                    options=None, env=None, force=False, user=None, version=None, cwd=None,
                    lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
-                   conf=None):
+                   conf=None, output_folder=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         remotes = self.app.load_remotes()
@@ -423,6 +423,7 @@ class ConanAPIV1(object):
                                          "and source folders")
                 package_folder = _make_abs_path(package_folder, cwd)
 
+            output_folder = _make_abs_path(output_folder, cwd) if output_folder else None
             build_folder = _make_abs_path(build_folder, cwd)
             if install_folder:
                 install_folder = _make_abs_path(install_folder, cwd)
@@ -453,7 +454,8 @@ class ConanAPIV1(object):
             export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
                        install_folder=install_folder, graph_info=graph_info, force=force,
-                       remotes=remotes, source_conanfile_path=conanfile_path)
+                       remotes=remotes, source_conanfile_path=conanfile_path,
+                       output_folder=output_folder)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
