@@ -453,16 +453,68 @@ def test_local_folders_without_layout():
     assert "conanfile.py (test/1.2.3): generate bf: {}".format(client.current_folder) in client.out
 
 
-def test_local_flow_layout():
-    c = TestClient()
-    c.run("new hello/0.1 -m=cmake_lib")
-    c.run("install . -of=build -if=build")
-    c.run("build . -bf=build -if=build")
-    c.run("export-pkg . -bf=build -of=build")
-    package_id = re.search(r"hello/0.1: Package '(\S+)' created", str(c.out)).group(1)
-    ref = ConanFileReference.loads("hello/0.1@")
-    pref = PackageReference(ref, package_id)
-    pf = c.cache.package_layout(ref).package(pref)
-    assert os.path.exists(os.path.join(pf, "include", "hello.h"))
-    ext = ".lib" if platform.system() == "Windows" else ".a"
-    assert os.path.exists(os.path.join(pf, "lib", f"hello{ext}"))
+class TestLocalFlowExportPkg:
+    def test_local_flow_layout(self):
+        c = TestClient()
+        c.run("new hello/0.1 -m=cmake_lib")
+
+        c.run("install . -of=build -if=build")
+        c.run("build . -bf=build -if=build")
+        c.run("export-pkg . -bf=build -of=build")
+        package_id = re.search(r"hello/0.1: Package '(\S+)' created", str(c.out)).group(1)
+        ref = ConanFileReference.loads("hello/0.1@")
+        pref = PackageReference(ref, package_id)
+        pf = c.cache.package_layout(ref).package(pref)
+        assert os.path.exists(os.path.join(pf, "include", "hello.h"))
+        ext = ".lib" if platform.system() == "Windows" else ".a"
+        assert os.path.exists(os.path.join(pf, "lib", f"hello{ext}"))
+
+    def test_local_flow_nolayout(self):
+        c = TestClient()
+        c.run("new hello/0.1 -m=cmake_lib")
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+
+            class HelloConan(ConanFile):
+                name = "hello"
+                version = "0.1"
+
+                settings = "os", "compiler", "build_type", "arch"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+
+                # Sources are located in the same place as this recipe, copy them to the recipe
+                exports_sources = "CMakeLists.txt", "src/*", "include/*"
+
+                def config_options(self):
+                    if self.settings.os == "Windows":
+                        del self.options.fPIC
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+
+                def package_info(self):
+                    self.cpp_info.libs = ["hello"]
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("install . -of=build -if=build")
+        c.run("build . -bf=build -if=build")
+        c.run("export-pkg . -bf=build -of=build")
+        package_id = re.search(r"hello/0.1: Package '(\S+)' created", str(c.out)).group(1)
+        ref = ConanFileReference.loads("hello/0.1@")
+        pref = PackageReference(ref, package_id)
+        pf = c.cache.package_layout(ref).package(pref)
+        assert os.path.exists(os.path.join(pf, "include", "hello.h"))
+        ext = ".lib" if platform.system() == "Windows" else ".a"
+        assert os.path.exists(os.path.join(pf, "lib", f"hello{ext}"))
