@@ -147,5 +147,8 @@ class ConanProxy:
 def should_update_reference(reference, update):
     if update is None:
         return False
+    # Old API usages only ever passed a bool
+    if isinstance(update, bool):
+        return update
     # Legacy syntax had --update without pattern, it manifests as a "*" pattern
     return any(name == "*" or reference.name == name for name in update)

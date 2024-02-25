@@ -1,8 +1,7 @@
 graph_info_html = """
 <html lang="en">
     <head>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.js"></script>
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.18.1/vis.min.css" rel="stylesheet" type="text/css"/>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.js"></script>
     </head>
 
     <body>
@@ -93,7 +92,7 @@ graph_info_html = """
                 })
 
                 {% if error["context"].node.id is not none %}
-                    // Add edge from node that introduces the conflict to the new error node
+                    // Add edge from node that introduces the conflict to the new error node ({{graph.node_map[error["context"].node].short_label}})
                     edges.push({from: {{ graph.node_map[error["context"].node].id }},
                                 to: "{{ error["type"] }}",
                                 color: "red",
@@ -105,7 +104,7 @@ graph_info_html = """
                 {% endif %}
 
                 {% if error["context"].prev_node is none and error["context"].base_previous.id is not none %}
-                    // Add edge from base node to the new error node
+                    // Add edge from base node to the new error node ({{graph.node_map[error["context"].base_previous].short_label}})
                     edges.push({from: {{ graph.node_map[error["context"].base_previous].id }},
                                 to: "{{ error["type"] }}",
                                 color: "red",
@@ -117,7 +116,7 @@ graph_info_html = """
                 {% endif %}
 
                 {% if error["context"].prev_node is not none and error["context"].prev_node.id is not none %}
-                    // Add edge from previous node that already had conflicting dependency
+                    // Add edge from previous node that already had conflicting dependency ({{graph.node_map[error["context"].prev_node].short_label}})
                     edges.push({from: {{ graph.node_map[error["context"].prev_node].id }},
                                 to: "{{ error["type"] }}",
                                 color: "red",
