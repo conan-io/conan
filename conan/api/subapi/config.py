@@ -5,6 +5,7 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 from conan import conan_version
+from conan.api.output import ConanOutput
 from conans.client.conf import default_settings_yml
 from conan.internal.api import detect_api
 from conan.internal.cache.home_paths import HomePaths
@@ -37,10 +38,9 @@ class ConfigAPI:
         configuration_install(app, path_or_url, verify_ssl, config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
 
-    def install_pkg(self, ref):
+    def install_pkg(self, ref, lockfile):
         conan_api = self.conan_api
         remotes = conan_api.remotes.list()  # ready to use remotes arguments
-        lockfile = None  # Ready to pass a lockfile if we want and use it
         # Ready to use profiles as inputs
         profile_host = profile_build = conan_api.profiles.get_profile([])
 
@@ -55,6 +55,7 @@ class ConfigAPI:
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         deps_graph.report_graph_error()
         pkg = deps_graph.root.dependencies[0].dst
+        ConanOutput().info(f"Configuration from package: {pkg}")
         if pkg.conanfile.package_type is not PackageType.CONF:
             raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
         if pkg.dependencies:
@@ -69,7 +70,8 @@ class ConfigAPI:
         if os.path.exists(config_version_file):
             version = load(config_version_file)
             if version == config_pref:
-                print("EQUAL TO THE PREVIOUS ONE ", repr(config_pref))
+                ConanOutput().info(f"Package '{pkg}' already configured, "
+                                   "skipping configuration install")
                 return  # Already installed, we can skip repeating the install
 
         uri = pkg.conanfile.package_folder

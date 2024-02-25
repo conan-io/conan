@@ -1,5 +1,5 @@
 from conan.api.output import cli_out_write
-from conan.cli.command import conan_command, conan_subcommand
+from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.formatters import default_json_formatter
 from conans.util.config_parser import get_bool_from_text
 
@@ -37,10 +37,15 @@ def config_install(conan_api, parser, subparser, *args):
                                 'specified origin')
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
+    subparser.add_argument("-l", "--lockfile", action=OnceArgument,
+                           help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                                "existing 'conan.lock' file")
     args = parser.parse_args(*args)
-    verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) else get_bool_from_text(args.verify_ssl)
+    verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) \
+        else get_bool_from_text(args.verify_ssl)
     if args.type == "pkg":
-        conan_api.config.install_pkg(args.item)
+        lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile)
+        conan_api.config.install_pkg(args.item, lockfile=lockfile)
         return
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
                              source_folder=args.source_folder,

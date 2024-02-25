@@ -543,6 +543,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
 
     def setUp(self):
         self.folder = temp_folder(path_with_spaces=False)
+        # FIXME: This is broken, this config no longer exist, but it doesn't raise, fix it
         save_files(self.folder, {"global.conf": "core:config_install_interval=5m"})
         self.client = TestClient()
         self.client.save({"conanfile.txt": ""})
@@ -653,6 +654,7 @@ class TestConfigInstallPkg:
         c.run("config install myconf/[*] --type=pkg")
         # Conan will not re-download fromthe server the same revision
         assert "myconf/0.1: Downloaded package revision" not in c.out
+        print(c.out)
         # FIXME: It shouldn't re-install if there was no update of origin config version
         assert "Copying file global.conf" not in c.out
         c.run("config show *")
@@ -690,40 +692,23 @@ class TestConfigInstallPkg:
         c.run("config install myconf/[*] --type=pkg", assert_error=True)
         assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
 
-    def test_lockfile(self):
+    def test_lockfile(self, client):
         """ it should be able to install the config using a lockfile
         """
-        # TODO
-
-    def test_auto_update_config(self):
-        c = TestClient(default_server_user=True)
-        global_conf = textwrap.dedent("""\
-            core:config_require=myconf/[*]
-            user.myteam:myconf=myvalue
-            """)
-        c.save({"conanfile.py": self.conanfile,
-                "global.conf": global_conf})
-        c.run("export-pkg .")
-        c.run("upload * -r=default -c")
+        c = client
+        c.run("lock create --requires=myconf/[*] --lockfile-out=config.lock")
 
         c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
-        c2.run("config install myconf/[*] --type=pkg")
-        c2.run("config show *")
-        assert "core:config_require: myconf/[*]" in c2.out
-        assert "user.myteam:myconf: myvalue" in c2.out
+        # Make sure we bump the version, otherwise only a package revision will be created
+        c2.save({"conanfile.py": self.conanfile.replace("0.1", "0.2"),
+                 "global.conf": "user.myteam:myconf=othervalue"})
+        c2.run("export-pkg .")
+        c2.run("upload * -r=default -c")
 
-        # Update the conf
-        global_conf = textwrap.dedent("""\
-            core:config_require=myconf/[*]
-            user.myteam:myconf=othervalue
-            """)
-        c.save({"global.conf": global_conf})
-        c.run("export-pkg .")
-        c.run("upload * -r=default -c")
-
-        c2.run("config show *")
-        # TODO: We need to silence the output, still too noisy
-        assert "user.myteam:myconf: othervalue" in c2.out
+        c.run("config install myconf/[*] --type=pkg --lockfile=config.lock")
+        print(c.out)
+        c.run("config show *")
+        assert "user.myteam:myconf: myvalue" in c.out
 
     def test_create_also(self):
         conanfile = textwrap.dedent("""

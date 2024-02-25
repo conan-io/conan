@@ -60,8 +60,3 @@ class ConanAPI(object):
         self.local = LocalAPI(self)
 
         check_required_conan_version(self.config.global_conf)
-
-        config_require = self.config.global_conf.get("core:config_require")
-        if config_require:
-            self.config.install_pkg(config_require)
-            self.config._new_config = None  # Invalidate the cache
