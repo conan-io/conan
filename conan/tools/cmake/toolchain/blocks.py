@@ -635,7 +635,7 @@ class ExtraFlagsBlock(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        foreach(config ${CMAKE_CONFIGURATION_TYPES})
+        foreach(config IN LISTS CMAKE_CONFIGURATION_TYPES)
             string(TOUPPER ${config} config)
             if(DEFINED CONAN_CXX_FLAGS_${config})
               string(APPEND CMAKE_CXX_FLAGS_${config}_INIT " ${CONAN_CXX_FLAGS_${config}}")

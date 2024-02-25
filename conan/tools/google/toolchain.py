@@ -76,7 +76,7 @@ class BazelToolchain:
         #: String used to add --dynamic_mode=["fully"|"off"]. Depends on self.options.shared value.
         self.dynamic_mode = "fully" if shared else "off"
         #: String used to add --cppstd=[FLAG]. Depends on your settings.
-        self.cppstd = cppstd_flag(self._conanfile.settings)
+        self.cppstd = cppstd_flag(self._conanfile)
         #: List of flags used to add --copt=flag1 ... --copt=flagN
         self.copt = []
         #: List of flags used to add --conlyopt=flag1 ... --conlyopt=flagN
