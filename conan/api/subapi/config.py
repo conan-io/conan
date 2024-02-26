@@ -41,18 +41,21 @@ class ConfigAPI:
     def install_pkg(self, ref, lockfile):
         conan_api = self.conan_api
         remotes = conan_api.remotes.list()  # ready to use remotes arguments
-        # Ready to use profiles as inputs
+        # Ready to use profiles as inputs, but NOT using profiles yet, empty ones
         profile_host = profile_build = conan_api.profiles.get_profile([])
 
         app = ConanApp(self.conan_api)
+
+        # Computation of a very simple graph that requires "ref"
         conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
         consumer_definer(conanfile, profile_build, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        remotes = remotes or []
         update = ["*"]
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
                                    update, update, self.conan_api.config.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
+
+        # Basic checks of the package: correct package_type and no-dependencies
         deps_graph.report_graph_error()
         pkg = deps_graph.root.dependencies[0].dst
         ConanOutput().info(f"Configuration from package: {pkg}")
@@ -61,6 +64,8 @@ class ConfigAPI:
         if pkg.dependencies:
             raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
+        # The computation of the "package_id" and the download of the package is done as usual
+        # By default we allow all remotes, and build_mode=None, always updating
         conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
         conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
@@ -74,12 +79,11 @@ class ConfigAPI:
                                    "skipping configuration install")
                 return  # Already installed, we can skip repeating the install
 
-        uri = pkg.conanfile.package_folder
-        config_type = "dir"
         from conans.client.conf.config_installer import configuration_install
-        app = ConanApp(self.conan_api)
-        configuration_install(app, uri, verify_ssl=False, config_type=config_type,
-                              ignore=["conaninfo.txt", "conanmanifest.txt"])
+        configuration_install(app, uri=pkg.conanfile.package_folder, verify_ssl=False,
+                              config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
+        # We save the current package full reference in the file for future
+        # And for ``package_id`` computation
         save(config_version_file, config_pref)
 
     def get(self, name, default=None, check_type=None):
