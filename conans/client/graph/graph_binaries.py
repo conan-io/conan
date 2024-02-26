@@ -319,7 +319,7 @@ class GraphBinariesAnalyzer(object):
                     node.binary_remote = None
                     node.prev = cache_latest_prev.revision
                     node.pref_timestamp = cache_time
-                    output.info(f"Current package revision is newer than the remote one")
+                    output.info("Current package revision is newer than the remote one")
         if not node.binary:
             node.binary = BINARY_CACHE
             node.binary_remote = None
