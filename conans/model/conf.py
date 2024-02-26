@@ -645,7 +645,7 @@ class ConfDefinition:
             if pattern is None:
                 result.update(conf.serialize())
             else:
-                for k, v in conf.serialize():
+                for k, v in conf.serialize().items():
                     result[f"{pattern}:{k}"] = v
         return result
 
