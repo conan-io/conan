@@ -654,7 +654,6 @@ class TestConfigInstallPkg:
         c.run("config install myconf/[*] --type=pkg")
         # Conan will not re-download fromthe server the same revision
         assert "myconf/0.1: Downloaded package revision" not in c.out
-        print(c.out)
         # FIXME: It shouldn't re-install if there was no update of origin config version
         assert "Copying file global.conf" not in c.out
         c.run("config show *")
