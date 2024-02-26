@@ -38,7 +38,7 @@ def config_install(conan_api, parser, subparser, *args):
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
     subparser.add_argument("-l", "--lockfile", action=OnceArgument,
-                           help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                           help="Path to a lockfile. Use --lockfile=\"\" to avoid automatically using the "
                                 "existing 'conan.lock' file")
     args = parser.parse_args(*args)
     verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) \
