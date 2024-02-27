@@ -1,8 +1,8 @@
 import os
 
 from conan.tools.build import build_jobs
-from conan.tools.meson.toolchain import MesonToolchain
 from conan.tools.meson.mesondeps import MesonDeps
+from conan.tools.meson.toolchain import MesonToolchain
 
 
 class Meson(object):
@@ -10,6 +10,9 @@ class Meson(object):
         self._conanfile = conanfile
 
     def configure(self, reconfigure=False):
+        if reconfigure:
+            self._conanfile.output.warning("reconfigure param has been deprecated."
+                                           " Removing in Conan 2.x.")
         source_folder = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
         cmd = "meson setup"
@@ -35,10 +38,8 @@ class Meson(object):
 
         cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
-        if self._conanfile.package_folder:
-            cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
-        if reconfigure:
-            cmd += ' --reconfigure'
+        # Issue related: https://github.com/mesonbuild/meson/issues/12880
+        cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -54,9 +55,10 @@ class Meson(object):
         self._conanfile.run(cmd)
 
     def install(self):
-        self.configure(reconfigure=True)  # To re-do the destination package-folder
-        meson_build_folder = self._conanfile.build_folder
-        cmd = 'meson install -C "{}"'.format(meson_build_folder)
+        meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
+        meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
+        # Assuming meson >= 0.57.0
+        cmd = f'meson install -C "{meson_build_folder}" --destdir "{meson_package_folder}"'
         self._conanfile.run(cmd)
 
     def test(self):
