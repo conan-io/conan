@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_archs
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
@@ -300,7 +300,7 @@ class AndroidSystemBlock(Block):
 class AppleSystemBlock(Block):
     template = textwrap.dedent("""
         # Set the architectures for which to build.
-        set(CMAKE_OSX_ARCHITECTURES {{ cmake_osx_architectures }} CACHE STRING "" FORCE)
+        set(CMAKE_OSX_ARCHITECTURES "{{ cmake_osx_architectures }}" CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
         set(CMAKE_OSX_SYSROOT {{ cmake_osx_sysroot }} CACHE STRING "" FORCE)
@@ -358,7 +358,7 @@ class AppleSystemBlock(Block):
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        host_architecture = to_apple_arch(self._conanfile)
+        host_architectures = _to_apple_archs(self._conanfile)
 
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
@@ -380,8 +380,8 @@ class AppleSystemBlock(Block):
         if host_sdk_name:
             ctxt_toolchain["cmake_osx_sysroot"] = host_sdk_name
         # this is used to initialize the OSX_ARCHITECTURES property on each target as it is created
-        if host_architecture:
-            ctxt_toolchain["cmake_osx_architectures"] = host_architecture
+        if host_architectures:
+            ctxt_toolchain["cmake_osx_architectures"] = host_architectures
 
         if host_os_version:
             # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
@@ -814,7 +814,14 @@ class GenericSystemBlock(Block):
                     (arch_build == "ppc64") and (arch_host == "ppc32")):
                 return cmake_system_name_map.get(os_host, os_host)
 
+    def _is_apple_universal(self):
+        return "-" in self._conanfile.settings.get_safe("arch")
+
     def _is_apple_cross_building(self):
+
+        if self._is_apple_universal():
+            return False
+
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
@@ -829,7 +836,7 @@ class GenericSystemBlock(Block):
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        if not user_toolchain:  # try to detect automatically
+        if not user_toolchain and not self._is_apple_universal():  # try to detect automatically
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
             if arch_host == "armv8":

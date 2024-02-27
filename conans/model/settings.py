@@ -96,9 +96,19 @@ class SettingsItem(object):
         child_setting = self._get_child(self._value)
         delattr(child_setting, item)
 
+    def is_composed(self, value, valid_definitions):
+        parts = value.split('-')
+        for part in parts:
+            if part not in valid_definitions:
+                return False
+        return True
+
     def _validate(self, value):
         value = str(value) if value is not None else None
-        if "ANY" not in self._definition and value not in self._definition:
+        # FIXME: limit this to only architecture values in Macos that are valid for
+        #  universal binaries, maybe move to another better place
+        is_composed = self.is_composed(value, self._definition)
+        if "ANY" not in self._definition and value not in self._definition and not is_composed:
             raise ConanException(bad_value_msg(self._name, value, self._definition))
         return value
 

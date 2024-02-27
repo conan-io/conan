@@ -30,6 +30,12 @@ def to_apple_arch(conanfile, default=None):
     return _to_apple_arch(arch_, default)
 
 
+def _to_apple_archs(conanfile, default=None):
+    """converts conan-style architectures into Apple-style archs
+    with support for Universal binaries"""
+    arch_ = conanfile.settings.get_safe("arch")
+    return ";".join([_to_apple_arch(arch, default) for arch in arch_.split("-")])
+
 def apple_sdk_path(conanfile):
     sdk_path = conanfile.conf.get("tools.apple:sdk_path")
     if not sdk_path:
