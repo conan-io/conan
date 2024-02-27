@@ -451,3 +451,25 @@ def test_local_folders_without_layout():
     client.run("install .")
     assert "conanfile.py (test/1.2.3): generate sf: {}".format(client.current_folder) in client.out
     assert "conanfile.py (test/1.2.3): generate bf: {}".format(client.current_folder) in client.out
+
+
+class TestLocalFlowExportPkg:
+    @pytest.mark.parametrize("with_layout", [True, False])
+    def test_local_flow_layout(self, with_layout):
+        c = TestClient()
+        c.run("new hello/0.1 -m=cmake_lib")
+        if not with_layout:
+            conanfile = c.load("conanfile.py")
+            conanfile = conanfile.replace("def layout(", "def layout2(")
+            c.save({"conanfile.py": conanfile})
+
+        c.run("install . -of=build -if=build")
+        c.run("build . -bf=build -if=build")
+        c.run("export-pkg . -bf=build -of=build")
+        package_id = re.search(r"hello/0.1: Package '(\S+)' created", str(c.out)).group(1)
+        ref = ConanFileReference.loads("hello/0.1@")
+        pref = PackageReference(ref, package_id)
+        pf = c.cache.package_layout(ref).package(pref)
+        assert os.path.exists(os.path.join(pf, "include", "hello.h"))
+        libname = "hello.lib" if platform.system() == "Windows" else "libhello.a"
+        assert os.path.exists(os.path.join(pf, "lib", libname))
