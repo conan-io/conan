@@ -346,7 +346,7 @@ class AppleSystemBlock(Block):
         if(CMAKE_GENERATOR MATCHES "Xcode")
           message(DEBUG "Not setting any manual command-line buildflags, since Xcode is selected as generator.")
         else()
-            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${FOBJC_ARC}")
+            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
             string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
         endif()
         """)
