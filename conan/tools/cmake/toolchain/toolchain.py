@@ -60,6 +60,7 @@ class CMakeToolchain(object):
 
     filename = CONAN_TOOLCHAIN_FILENAME
 
+    # TODO: Clean this macro, do it explicitly for variables
     _template = textwrap.dedent("""
         {% macro iterate_configs(var_config, action) %}
             {% for it, values in var_config.items() %}
@@ -74,12 +75,8 @@ class CMakeToolchain(object):
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
                 {% endfor %}
-                {% if action=='set' %}
                 set({{ it }} {{ genexpr.str }} CACHE STRING
                     "Variable {{ it }} conan-toolchain defined")
-                {% elif action=='add_compile_definitions' -%}
-                add_compile_definitions({{ it }}={{ genexpr.str }})
-                {% endif %}
             {% endfor %}
         {% endmacro %}
 
@@ -120,7 +117,21 @@ class CMakeToolchain(object):
         {% endif %}
         {% endfor %}
         # Preprocessor definitions per configuration
-        {{ iterate_configs(preprocessor_definitions_config, action='add_compile_definitions') }}
+        {% for name, values in preprocessor_definitions_config.items() %}
+        {%- for (conf, value) in values %}
+        {% if value is none %}
+        set(CONAN_DEF_{{conf}}_{{name}} "{{name}}")
+        {% else %}
+        set(CONAN_DEF_{{conf}}_{{name}} "{{name}}={{value}}")
+        {% endif %}
+        {% endfor %}
+        add_compile_definitions(
+        {%- for (conf, value) in values %}
+        $<$<CONFIG:{{conf}}>:${CONAN_DEF_{{conf}}_{{name}}}>
+        {%- endfor -%})
+        {% endfor %}
+
+
 
         if(CMAKE_POLICY_DEFAULT_CMP0091)  # Avoid unused and not-initialized warnings
         endif()
