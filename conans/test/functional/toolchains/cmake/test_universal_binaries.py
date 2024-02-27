@@ -13,22 +13,15 @@ def test_create_universal_binary():
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+        from conan.tools.cmake import CMake, cmake_layout
 
 
         class mylibraryRecipe(ConanFile):
             name = "mylibrary"
             version = "1.0"
             package_type = "library"
+            generators = "CMakeToolchain"
 
-            # Optional metadata
-            license = "<Put the package license here>"
-            author = "<Put your name here> <And your email here>"
-            url = "<Package recipe repository url here, for issues about the package>"
-            description = "<Description of mylibrary package here>"
-            topics = ("<Put some tag here>", "<here>", "<and here>")
-
-            # Binary configuration
             settings = "os", "compiler", "build_type", "arch"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
@@ -36,22 +29,8 @@ def test_create_universal_binary():
             # Sources are located in the same place as this recipe, copy them to the recipe
             exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
-            def config_options(self):
-                if self.settings.os == "Windows":
-                    self.options.rm_safe("fPIC")
-
-            def configure(self):
-                if self.options.shared:
-                    self.options.rm_safe("fPIC")
-
             def layout(self):
                 cmake_layout(self)
-
-            def generate(self):
-                deps = CMakeDeps(self)
-                deps.generate()
-                tc = CMakeToolchain(self)
-                tc.generate()
 
             def build(self):
                 cmake = CMake(self)
@@ -101,12 +80,12 @@ def test_create_universal_binary():
     client.run("new cmake_lib -d name=mylibrary -d version=1.0")
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
 
-    client.run('create . -s="arch=x86_64-armv8" --build=missing -tf=""')
+    client.run('create . -s="arch=x86_64-armv8-armv8.3" --build=missing -tf=""')
 
-    assert "libmylibrary.a are: x86_64 arm64" in client.out
+    assert "libmylibrary.a are: x86_64 arm64 arm64e" in client.out
 
-    client.run('test test_package mylibrary/1.0 -s="arch=x86_64-armv8" '
+    client.run('test test_package mylibrary/1.0 -s="arch=x86_64-armv8-armv8.3" '
                '-c tools.build.cross_building:can_run=True')
 
-    assert "example are: x86_64 arm64" in client.out
+    assert "example are: x86_64 arm64 arm64e" in client.out
 
