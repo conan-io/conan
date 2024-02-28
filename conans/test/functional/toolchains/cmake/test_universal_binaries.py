@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.23")
 def test_create_universal_binary():
     client = TestClient()
 
