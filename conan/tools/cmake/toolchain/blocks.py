@@ -300,7 +300,7 @@ class AndroidSystemBlock(Block):
 class AppleSystemBlock(Block):
     template = textwrap.dedent("""
         # Set the architectures for which to build.
-        set(CMAKE_OSX_ARCHITECTURES "{{ cmake_osx_architectures }}" CACHE STRING "" FORCE)
+        set(CMAKE_OSX_ARCHITECTURES {{ cmake_osx_architectures }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
         set(CMAKE_OSX_SYSROOT {{ cmake_osx_sysroot }} CACHE STRING "" FORCE)
