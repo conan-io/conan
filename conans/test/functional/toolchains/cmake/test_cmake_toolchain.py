@@ -271,8 +271,8 @@ def test_cmaketoolchain_no_warnings():
     client.run("create dep")
     client.run("install .")
     build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake {}"
-                       "-Werror=dev --warn-uninitialized".format(build_type))
+    client.run_command("cmake -Werror=dev --warn-uninitialized . {}"
+                       " -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake".format(build_type))
     assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully
 
@@ -343,6 +343,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                 tc.preprocessor_definitions.release["spaces_release"] = "release me you"
                 tc.preprocessor_definitions.release["foobar_release"] = "release bazbuz"
                 tc.preprocessor_definitions.release["answer_release"] = 42
+                tc.preprocessor_definitions.release["NOVALUE_DEF_RELEASE"] = None
 
                 tc.preprocessor_definitions.debug["escape_debug"] = "debug partially \"escaped\""
                 tc.preprocessor_definitions.debug["spaces_debug"] = "debug me you"
@@ -386,6 +387,9 @@ def test_cmake_toolchain_definitions_complex_strings():
             #ifdef NOVALUE_DEF
             printf("NO VALUE!!!!");
             #endif
+            #ifdef NOVALUE_DEF_RELEASE
+            printf("NO VALUE RELEASE!!!!");
+            #endif
             return 0;
         }
         """)
@@ -416,6 +420,7 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'foobar_release=release bazbuz' in client.out
     assert 'answer_release=42' in client.out
     assert "NO VALUE!!!!" in client.out
+    assert "NO VALUE RELEASE!!!!" in client.out
 
     client.run("install . -pr=./profile -s build_type=Debug")
     client.run("build . -pr=./profile -s build_type=Debug")

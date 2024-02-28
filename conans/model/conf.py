@@ -645,7 +645,7 @@ class ConfDefinition:
             if pattern is None:
                 result.update(conf.serialize())
             else:
-                for k, v in conf.serialize():
+                for k, v in conf.serialize().items():
                     result[f"{pattern}:{k}"] = v
         return result
 
@@ -656,10 +656,10 @@ class ConfDefinition:
         """
         try:
             # Isolated eval
-            parsed_value = eval(__v)
+            parsed_value = eval(__v)  # This destroys Windows path strings with backslash
             if isinstance(parsed_value, str):  # xxx:xxx = "my string"
-                # Let's respect the quotes introduced by any user
-                parsed_value = '"{}"'.format(parsed_value)
+                # If it is quoted string we respect it as-is
+                parsed_value = __v.strip()
         except:
             # It means eval() failed because of a string without quotes
             parsed_value = __v.strip()
