@@ -157,7 +157,7 @@ class CMakeToolchain(object):
         self.extra_sharedlinkflags = []
         self.extra_exelinkflags = []
 
-        self._template_env = Environment(trim_blocks=True, lstrip_blocks=True)
+        self._template_env = Environment(trim_blocks=True, lstrip_blocks=True, keep_trailing_newline=True)
         self._template_env.filters["cmake_value"] = _cmake_value
 
         self.blocks = ToolchainBlocks(self._conanfile, self._template_env, self,
