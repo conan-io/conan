@@ -30,8 +30,12 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    if conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-        build_folder = conanfile.conf.get("tools.cmake.cmake_layout:build_folder") or build_folder
+    try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"
+        if conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
+            build_folder = conanfile.conf.get("tools.cmake.cmake_layout:build_folder") or build_folder
+    except AttributeError:
+        pass
+
     build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
     config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile)
     if config_build_folder:
