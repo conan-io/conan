@@ -38,13 +38,14 @@ def _to_apple_archs(conanfile, default=None):
 
 
 def _is_universal_arch(settings_value, valid_definitions):
-    valid_macos_values = [val for val in valid_definitions
-                          if "arm" in val or "x86" in val and "-" not in val]
+    if settings_value is None:
+        return False
+
+    valid_macos_values = [val for val in valid_definitions if
+                          ("arm" in val or "x86" in val) and "-" not in val]
+
     parts = settings_value.split('-')
-    for part in parts:
-        if part not in valid_macos_values:
-            return False
-    return True
+    return all(part in valid_macos_values for part in parts)
 
 
 def apple_sdk_path(conanfile):
