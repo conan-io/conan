@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.errors import ConanException
@@ -32,7 +33,10 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
 
     try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"
         if conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-            build_folder = conanfile.conf.get("tools.cmake.cmake_layout:build_folder") or build_folder
+            folder = "test_folder" if conanfile.tested_reference_str else "build_folder"
+            build_folder = conanfile.conf.get(f"tools.cmake.cmake_layout:{folder}") or build_folder
+            if build_folder == "$TMP" and folder == "test_folder":
+                build_folder = tempfile.mkdtemp()
     except AttributeError:
         pass
 

@@ -123,7 +123,6 @@ class ProfileLoader:
         file_path = os.path.basename(profile_path)
         context = {"platform": platform,
                    "os": os,
-                   "tempfile": tempfile,
                    "profile_dir": base_path,
                    "profile_name": file_path,
                    "conan_version": conan_version,

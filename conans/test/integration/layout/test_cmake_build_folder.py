@@ -77,7 +77,7 @@ def test_cmake_layout_build_folder_relative(cmd):
 
 
 def test_test_cmake_layout_build_folder_test_package():
-    """ it also works to relocate the test_package temporary build folders to elsewhere
+    """ relocate the test_package temporary build folders to elsewhere
     """
     c = TestClient()
     abs_build = temp_folder()
@@ -101,7 +101,7 @@ def test_test_cmake_layout_build_folder_test_package():
 
     c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
             "test_package/conanfile.py": test_conanfile})
-    c.run(f'create . -c tools.cmake.cmake_layout:build_folder="{abs_build}" '
+    c.run(f'create . -c tools.cmake.cmake_layout:test_folder="{abs_build}" '
           '-c tools.cmake.cmake_layout:build_folder_vars=[]')
     # Even if build_folder_vars=[] the "Release" folder is added always
     assert os.path.exists(os.path.join(abs_build, "Release", "generators", "conan_toolchain.cmake"))
@@ -137,13 +137,18 @@ def test_test_cmake_layout_build_folder_test_package_temp():
     profile = textwrap.dedent("""
         include(default)
         [conf]
-        tools.cmake.cmake_layout:build_folder={{tempfile.mkdtemp()}}
+        tools.cmake.cmake_layout:test_folder=$TMP
         tools.cmake.cmake_layout:build_folder_vars=[]
         """)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
             "test_package/conanfile.py": test_conanfile,
             "profile": profile})
     c.run(f'create . -pr=profile')
+    build_folder = re.search(r"Test package build folder: (\S+)", str(c.out)).group(1)
+    assert os.path.exists(os.path.join(build_folder, "generators", "conan_toolchain.cmake"))
+    assert not os.path.exists(os.path.join(c.current_folder, "test_package", "build"))
+
+    c.run(f'test test_package pkg/0.1 -pr=profile')
     build_folder = re.search(r"Test package build folder: (\S+)", str(c.out)).group(1)
     assert os.path.exists(os.path.join(build_folder, "generators", "conan_toolchain.cmake"))
     assert not os.path.exists(os.path.join(c.current_folder, "test_package", "build"))
