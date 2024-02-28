@@ -230,7 +230,8 @@ class _ProfileValueParser(object):
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
-                                                         "replace_requires", "replace_tool_requires"])
+                                                         "replace_requires", "replace_tool_requires",
+                                                         "remote"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
@@ -302,7 +303,20 @@ class _ProfileValueParser(object):
             base_profile.buildenv.update_profile_env(buildenv)
         if runenv is not None:
             base_profile.runenv.update_profile_env(runenv)
+
+
+        remote_info = _ProfileValueParser._parse_key_value(doc.remote) if doc.remote else {}
+        base_profile.remote.update(remote_info)
         return base_profile
+
+    @staticmethod
+    def _parse_key_value(raw_info):
+        result = OrderedDict()
+        for br_line in raw_info.splitlines():
+            tokens = br_line.split("=", 1)
+            pattern, req_list = tokens
+            result[pattern] = req_list
+        return result
 
     @staticmethod
     def _parse_tool_requires(doc):

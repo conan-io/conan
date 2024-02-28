@@ -1,5 +1,7 @@
 import os
 import shutil
+import json
+from io import BytesIO
 
 from conan.api.output import ConanOutput
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
@@ -10,6 +12,8 @@ from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conans.util.files import mkdir
+from conan.api.model import ListPattern
+from conan.api.conan_api import ConfigAPI
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -29,6 +33,7 @@ def create(conan_api, parser, *args):
     parser.add_argument("-bt", "--build-test", action="append",
                         help="Same as '--build' but only for the test_package requires. By default"
                              " if not specified it will take the '--build' value if specified")
+    raw_args = args[0]
     args = parser.parse_args(*args)
 
     cwd = os.getcwd()
@@ -56,6 +61,10 @@ def create(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
+    if not os.environ.get("CONAN_REMOTE_ENVIRONMNET") and (profile_host.remote and profile_host.remote.get('remote') == 'docker'):
+        return _docker_runner(conan_api, profile_host, args, raw_args)
+
+
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
 
@@ -164,3 +173,84 @@ def _get_test_conanfile_path(tf, conanfile_path):
         return test_conanfile_path
     elif tf:
         raise ConanException(f"test folder '{tf}' not available, or it doesn't have a conanfile.py")
+
+
+def _docker_runner(conan_api, profile, args, raw_args):
+    """
+    run conan inside a Docker continer
+    """
+    # import docker only if needed
+    import docker
+    docker_client = docker.from_env()
+    docker_api = docker.APIClient()
+    dockerfile = str(profile.remote.get('dockerfile', ''))
+    image = str(profile.remote.get('image', 'conanremote'))
+
+    remote_home = os.path.join(args.path, '.conanremote')
+    tgz_path = os.path.join(remote_home, 'conan_cache_save.tgz')
+    volumes = {
+        args.path: {'bind': args.path, 'mode': 'rw'}
+    }
+
+    environment = {
+        'CONAN_REMOTE_WS': args.path,
+        'CONAN_REMOTE_COMMAND': ' '.join(['conan create'] + raw_args),
+        'CONAN_REMOTE_ENVIRONMNET': '1'
+    }
+    # https://docker-py.readthedocs.io/en/stable/api.html#module-docker.api.build
+
+    ConanOutput().info(msg=f'\nBuilding the Docker image: {image}')
+    docker_build_logs = None
+    if dockerfile:
+        docker_build_logs = docker_api.build(path=dockerfile, tag=image)
+    else:
+        dockerfile = '''
+FROM ubuntu
+RUN apt update && apt upgrade -y
+RUN apt install -y build-essential
+RUN apt install -y python3-pip cmake git
+RUN cd /root && git clone https://github.com/davidsanfal/conan.git conan-io
+RUN cd /root/conan-io && pip install -e .
+'''
+        docker_build_logs = docker_api.build(fileobj=BytesIO(dockerfile.encode('utf-8')), tag=image)
+    for chunk in docker_build_logs:
+        for line in chunk.decode("utf-8").split('\r\n'):
+            if line:
+                stream = json.loads(line).get('stream')
+                if stream:
+                    ConanOutput().info(stream.strip())
+
+    shutil.rmtree(remote_home, ignore_errors=True)
+    os.mkdir(remote_home)
+    conan_api.cache.save(conan_api.list.select(ListPattern("*")), tgz_path)
+    shutil.copytree(os.path.join(ConfigAPI(conan_api).home(), 'profiles'), os.path.join(remote_home, 'profiles'))
+    with open(os.path.join(remote_home, 'conan-remote-init.sh'), 'w+') as f:
+        f.writelines("""#!/bin/bash
+
+conan cache restore ${CONAN_REMOTE_WS}/.conanremote/conan_cache_save.tgz
+mkdir ${HOME}/.conan2/profiles
+cp -r ${CONAN_REMOTE_WS}/.conanremote/profiles/. -r ${HOME}/.conan2/profiles/.
+
+echo "Running: ${CONAN_REMOTE_COMMAND}"
+eval "${CONAN_REMOTE_COMMAND}"
+
+conan cache save "*" --file ${CONAN_REMOTE_WS}/.conanremote/conan_cache_docker.tgz""")
+
+    # Init docker python api
+    ConanOutput().info(msg=f'\Running the Docker container\n')
+    container = docker_client.containers.run(image,
+                                             f'/bin/bash {os.path.join(remote_home, "conan-remote-init.sh")}',
+                                             volumes=volumes,
+                                             environment=environment,
+                                             detach=True)
+    for line in container.attach(stdout=True, stream=True, logs=True):
+        ConanOutput().info(line.decode('utf-8', errors='ignore').strip())
+    container.wait()
+    container.stop()
+    container.remove()
+
+    tgz_path = os.path.join(remote_home, 'conan_cache_docker.tgz')
+    ConanOutput().info(f'New cache path: {tgz_path}')
+    package_list = conan_api.cache.restore(tgz_path)
+    return {"graph": {},
+            "conan_api": conan_api}

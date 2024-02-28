@@ -24,6 +24,7 @@ class Profile(object):
         self.conf = ConfDefinition()
         self.buildenv = ProfileEnvironment()
         self.runenv = ProfileEnvironment()
+        self.remote = {}
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -124,6 +125,7 @@ class Profile(object):
 
         self.replace_requires.update(other.replace_requires)
         self.replace_tool_requires.update(other.replace_tool_requires)
+        self.remote.update(other.remote)
 
         current_platform_tool_requires = {r.name: r for r in self.platform_tool_requires}
         current_platform_tool_requires.update({r.name: r for r in other.platform_tool_requires})
