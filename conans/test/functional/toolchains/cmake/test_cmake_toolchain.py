@@ -11,6 +11,7 @@ from conans.model.recipe_ref import RecipeReference
 from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load, rmdir
 
@@ -906,6 +907,32 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("cmake --build --preset conan-static-17-release")
     client.run_command("ctest --preset conan-static-17-release")
     client.run_command("build\\static-17\\Release\\hello")
+    assert "Hello World Release!" in client.out
+    assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+# Test both with a local folder and an absolute folder
+@pytest.mark.parametrize("build", ["mybuild", temp_folder()])
+def test_cmake_presets_build_folder(build):
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+
+    settings_layout = f' -c tools.cmake.cmake_layout:build_folder="{build}" '\
+                      '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
+    # But If we change, for example, the cppstd and the compiler version, the toolchain
+    # and presets will be different, but it will be appended to the UserPresets.json
+    settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
+               "-s compiler.cppstd=17"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, build, "static-17", "generators"))
+
+    client.run_command("cmake . --preset conan-static-17")
+    client.run_command("cmake --build --preset conan-static-17-release")
+    client.run_command("ctest --preset conan-static-17-release")
+    client.run_command(f"{build}\\static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
 
