@@ -7,26 +7,19 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake")
+#@pytest.mark.tool("cmake")
 def test_create_universal_binary():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
-
-
         class mylibraryRecipe(ConanFile):
-            name = "mylibrary"
-            version = "1.0"
             package_type = "library"
             generators = "CMakeToolchain"
-
             settings = "os", "compiler", "build_type", "arch"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
-
-            # Sources are located in the same place as this recipe, copy them to the recipe
             exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
             def layout(self):
@@ -48,11 +41,9 @@ def test_create_universal_binary():
 
     test_conanfile = textwrap.dedent("""
         import os
-
         from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
         from conan.tools.build import can_run
-
 
         class mylibraryTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
@@ -80,7 +71,8 @@ def test_create_universal_binary():
     client.run("new cmake_lib -d name=mylibrary -d version=1.0")
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
 
-    client.run('create . -s="arch=x86_64-armv8-armv8.3" --build=missing -tf=""')
+    client.run('create . --name=mylibrary --version=1.0 '
+               '-s="arch=x86_64-armv8-armv8.3" --build=missing -tf=""')
 
     assert "libmylibrary.a are: x86_64 arm64 arm64e" in client.out
 
