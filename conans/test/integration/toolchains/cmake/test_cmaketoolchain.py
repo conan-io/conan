@@ -1170,6 +1170,52 @@ def test_recipe_build_folders_vars():
     assert "conan-windows-shared-debug" in presets
 
 
+def test_build_folder_vars_self_name_version():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.build_folder_vars = ["settings.os", "self.name", "self.version"]
+                cmake_layout(self)
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s os=Windows -s build_type=Debug")
+    presets = client.load("build/windows-pkg-0.1/Debug/generators/CMakePresets.json")
+    assert "conan-windows-pkg-0.1-debug" in presets
+    client.run("install . -s os=Linux -s build_type=Release")
+    presets = client.load("build/linux-pkg-0.1/Release/generators/CMakePresets.json")
+    assert "linux-pkg-0.1-release" in presets
+
+    # CLI override has priority
+    client.run("install . -s os=Linux  -s build_type=Release "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"self.name\"]'")
+    presets = client.load("build/pkg/Release/generators/CMakePresets.json")
+    assert "conan-pkg-release" in presets
+
+    # Now we do the build in the cache, the recipe folders are still used
+    client.run("create . -s os=Windows -s build_type=Debug")
+    build_folder = client.created_layout().build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-pkg-0.1-debug" in presets
+
+    # If we change the conf ``build_folder_vars``, it doesn't affect the cache build
+    client.run("create . -s os=Windows -s build_type=Debug "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    build_folder = client.created_layout().build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-pkg-0.1-debug" in presets
+
+
 def test_extra_flags():
     client = TestClient()
     conanfile = textwrap.dedent("""
