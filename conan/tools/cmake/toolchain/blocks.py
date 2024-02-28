@@ -21,8 +21,9 @@ from conans.util.files import load
 
 
 class Block(object):
-    def __init__(self, conanfile, toolchain):
+    def __init__(self, conanfile, template_env, toolchain):
         self._conanfile = conanfile
+        self._template_env = template_env
         self._toolchain = toolchain
         self._context_values = None
 
@@ -40,16 +41,7 @@ class Block(object):
         context = self.values
         if context is None:
             return
-
-        def cmake_value(value):
-            if isinstance(value, bool):
-                return "ON" if value else "OFF"
-            else:
-                return '"{}"'.format(value)
-
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True)
-        template.environment.filters["cmake_value"] = cmake_value
-        return template.render(**context)
+        return self._template_env.from_string(self.template).render(**context)
 
     def context(self):
         return {}
@@ -948,13 +940,13 @@ class OutputDirsBlock(Block):
 
 
 class ToolchainBlocks:
-    def __init__(self, conanfile, toolchain, items=None):
+    def __init__(self, conanfile, template_env, toolchain, items=None):
         self._blocks = OrderedDict()
         self._conanfile = conanfile
         self._toolchain = toolchain
         if items:
             for name, block in items:
-                self._blocks[name] = block(conanfile, toolchain)
+                self._blocks[name] = block(conanfile, template_env, toolchain)
 
     def keys(self):
         return self._blocks.keys()

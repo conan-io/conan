@@ -2,7 +2,7 @@ import os
 import textwrap
 from collections import OrderedDict
 
-from jinja2 import Template
+from jinja2 import Environment
 
 from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
@@ -54,6 +54,13 @@ class Variables(OrderedDict):
             for key, var in data.items():
                 if isinstance(var, str):
                     data[key] = str(var).replace('"', '\\"')
+
+
+def _cmake_value(value):
+    if isinstance(value, bool):
+        return "ON" if value else "OFF"
+    else:
+        return '"{}"'.format(value)
 
 
 class CMakeToolchain(object):
@@ -150,7 +157,10 @@ class CMakeToolchain(object):
         self.extra_sharedlinkflags = []
         self.extra_exelinkflags = []
 
-        self.blocks = ToolchainBlocks(self._conanfile, self,
+        self._template_env = Environment(trim_blocks=True, lstrip_blocks=True)
+        self._template_env.filters["cmake_value"] = _cmake_value
+
+        self.blocks = ToolchainBlocks(self._conanfile, self._template_env, self,
                                       [("user_toolchain", UserToolchain),
                                        ("generic_system", GenericSystemBlock),
                                        ("compilers", CompilersBlock),
@@ -198,7 +208,7 @@ class CMakeToolchain(object):
     @property
     def content(self):
         context = self._context()
-        content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
+        content = self._template_env.from_string(self._template).render(**context)
         content = relativize_generated_file(content, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
         return content
 
