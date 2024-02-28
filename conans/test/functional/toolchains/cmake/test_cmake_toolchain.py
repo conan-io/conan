@@ -914,11 +914,12 @@ def test_cmake_presets_multiple_settings_multi_config():
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 # Test both with a local folder and an absolute folder
-@pytest.mark.parametrize("build", ["mybuild", temp_folder()])
+@pytest.mark.parametrize("build", ["mybuild", "temp"])
 def test_cmake_presets_build_folder(build):
     client = TestClient(path_with_spaces=False)
     client.run("new cmake_exe -d name=hello -d version=0.1")
 
+    build = temp_folder() if build == "temp" else build
     settings_layout = f' -c tools.cmake.cmake_layout:build_folder="{build}" '\
                       '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
