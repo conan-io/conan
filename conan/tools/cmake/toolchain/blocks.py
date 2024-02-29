@@ -757,11 +757,10 @@ class GenericSystemBlock(Block):
             if toolset is None:
                 compiler_version = str(settings.compiler.version)
                 compiler_update = str(settings.compiler.update)
+                toolset = msvc_version_to_toolset_version(compiler_version)
                 if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
                     # The equivalent of compiler 19.26 is toolset 14.26
-                    toolset = "version=14.{}{}".format(compiler_version[-1], compiler_update)
-                else:
-                    toolset = msvc_version_to_toolset_version(compiler_version)
+                    toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
