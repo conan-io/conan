@@ -75,9 +75,6 @@ def test_get_dylib_install_name():
             assert "/absolute/path/lib/libwebp.7.dylib" == install_name
 
 
-valid_definitions = ["arm64", "x86_64", "armv7", "x86"]
-
-
 @pytest.mark.parametrize("settings_value,result", [
     ("arm64|x86_64", True),
     ("x86_64|arm64", None),
@@ -90,6 +87,7 @@ valid_definitions = ["arm64", "x86_64", "armv7", "x86"]
 ])
 # None is for the exception case
 def test_is_universal_arch(settings_value, result):
+    valid_definitions = ["arm64", "x86_64", "armv7", "x86"]
     if result is None:
         with pytest.raises(ConanException):
             _is_universal_arch(settings_value, valid_definitions)
