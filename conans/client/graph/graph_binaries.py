@@ -1,3 +1,4 @@
+import json
 import os
 
 from conan.api.output import ConanOutput
@@ -335,14 +336,17 @@ class GraphBinariesAnalyzer(object):
         if not os.path.exists(config_version_file):
             raise ConanException("core.package_id:config_mode defined, but missing "
                                  "config_version file in cache")
-        config_ref = load(config_version_file)
-        try:
-            config_ref = PkgReference.loads(config_ref)
-            req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
-        except ConanException:
-            config_ref = RecipeReference.loads(config_ref)
-            req_info = RequirementInfo(config_ref, None, config_mode)
-        return req_info.dumps()
+        config_refs = json.loads(load(config_version_file))["config_versions"]
+        result = []
+        for r in config_refs:
+            try:
+                config_ref = PkgReference.loads(config_ref)
+                req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
+            except ConanException:
+                config_ref = RecipeReference.loads(config_ref)
+                req_info = RequirementInfo(config_ref, None, config_mode)
+            result.append(req_info.dumps())
+        return result
 
     def _evaluate_package_id(self, node, config_version):
         compute_package_id(node, self._global_conf, config_version=config_version)

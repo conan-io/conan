@@ -28,7 +28,7 @@ def config_install(conan_api, parser, subparser, *args):
                               help="Allow insecure server connections when using SSL. "
                                    "Equivalent to --verify-ssl=False",
                               dest="verify_ssl")
-    subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url", "pkg"],
+    subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
                            help='Type of remote config')
     subparser.add_argument("-a", "--args",
                            help='String with extra arguments for "git clone"')
@@ -37,19 +37,35 @@ def config_install(conan_api, parser, subparser, *args):
                                 'specified origin')
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
-    subparser.add_argument("-l", "--lockfile", action=OnceArgument,
-                           help="Path to a lockfile. Use --lockfile=\"\" to avoid automatically using the "
-                                "existing 'conan.lock' file")
+
     args = parser.parse_args(*args)
     verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) \
         else get_bool_from_text(args.verify_ssl)
-    if args.type == "pkg":
-        lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile)
-        conan_api.config.install_pkg(args.item, lockfile=lockfile)
-        return
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
                              source_folder=args.source_folder,
                              target_folder=args.target_folder)
+
+
+@conan_subcommand()
+def config_install_pkg(conan_api, parser, subparser, *args):
+    """
+    (Experimental) Install the configuration (remotes, profiles, conf), from a Conan package
+    """
+    subparser.add_argument("item", help="Conan require")
+    subparser.add_argument("-l", "--lockfile", action=OnceArgument,
+                           help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                                "existing 'conan.lock' file")
+    subparser.add_argument("--lockfile-partial", action="store_true",
+                           help="Do not raise an error if some dependency is not found in lockfile")
+    subparser.add_argument("--lockfile-out", action=OnceArgument,
+                           help="Filename of the updated lockfile")
+    args = parser.parse_args(*args)
+
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               partial=args.lockfile_partial)
+    config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile)
+    lockfile = conan_api.lockfile.add_lockfile(lockfile, conf_requires=[config_pref.ref])
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 
 def list_text_formatter(confs):

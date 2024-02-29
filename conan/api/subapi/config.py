@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -50,6 +51,7 @@ class ConfigAPI:
         conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
         consumer_definer(conanfile, profile_build, profile_host)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        root_node.is_conf = True
         update = ["*"]
         builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
                                    update, update, self.conan_api.config.global_conf)
@@ -71,20 +73,25 @@ class ConfigAPI:
 
         # We check if this specific version is already installed
         config_pref = pkg.pref.repr_notime()
+        config_versions = []
         config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
-            version = load(config_version_file)
-            if version == config_pref:
+            config_versions = json.loads(load(config_version_file))
+            config_versions = config_versions["config_versions"]
+            if config_pref in config_versions:
                 ConanOutput().info(f"Package '{pkg}' already configured, "
                                    "skipping configuration install")
-                return  # Already installed, we can skip repeating the install
+                return pkg.pref  # Already installed, we can skip repeating the install
 
         from conans.client.conf.config_installer import configuration_install
         configuration_install(app, uri=pkg.conanfile.package_folder, verify_ssl=False,
                               config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
         # We save the current package full reference in the file for future
         # And for ``package_id`` computation
-        save(config_version_file, config_pref)
+        config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
+        config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
+        save(config_version_file, json.dumps({"config_versions": list(config_versions.values())}))
+        return pkg.pref
 
     def get(self, name, default=None, check_type=None):
         return self.global_conf.get(name, default=default, check_type=check_type)

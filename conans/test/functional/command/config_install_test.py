@@ -644,14 +644,14 @@ class TestConfigInstallPkg:
     def test_config_install_from_pkg(self, client):
         # Now install it
         c = client
-        c.run("config install myconf/[*] --type=pkg")
+        c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
 
         # Just to make sure it doesn't crash in the update
-        c.run("config install myconf/[*] --type=pkg")
+        c.run("config install-pkg myconf/[*]")
         # Conan will not re-download fromthe server the same revision
         assert "myconf/0.1: Downloaded package revision" not in c.out
         # FIXME: It shouldn't re-install if there was no update of origin config version
@@ -668,7 +668,7 @@ class TestConfigInstallPkg:
         c2.run("export-pkg .")
         c2.run("upload * -r=default -c")
 
-        c.run("config install myconf/[*] --type=pkg")
+        c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: othervalue" in c.out
@@ -688,14 +688,14 @@ class TestConfigInstallPkg:
         conanfile = GenConanfile("myconf", "0.1")
         c.save({"myconf/conanfile.py": conanfile})
         c.run("create myconf")
-        c.run("config install myconf/[*] --type=pkg", assert_error=True)
+        c.run("config install-pkg myconf/[*]", assert_error=True)
         assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
 
     def test_lockfile(self, client):
         """ it should be able to install the config using a lockfile
         """
         c = client
-        c.run("lock create --requires=myconf/[*] --lockfile-out=config.lock")
+        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
 
         c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
         # Make sure we bump the version, otherwise only a package revision will be created
@@ -704,8 +704,7 @@ class TestConfigInstallPkg:
         c2.run("export-pkg .")
         c2.run("upload * -r=default -c")
 
-        c.run("config install myconf/[*] --type=pkg --lockfile=config.lock")
-        print(c.out)
+        c.run("config install-pkg myconf/[*] --lockfile=config.lock")
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
 
@@ -726,10 +725,9 @@ class TestConfigInstallPkg:
         c.save({"conanfile.py": conanfile,
                 "global.conf": "user.myteam:myconf=myvalue"})
         c.run("create .")
-        print(c.out)
         c.run("upload * -r=default -c")
         c.run("remove * -c")
 
-        c.run("config install myconf/[*] --type=pkg")
+        c.run("config install-pkg myconf/[*]")
         c.run("config show *")
         assert "user.myteam:myconf: myvalue" in c.out
