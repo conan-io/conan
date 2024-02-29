@@ -396,3 +396,21 @@ def test_conf_should_be_immutable():
     assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
     # The pkg/0.1 output should be non-modified
     assert "pkg/0.1: user.myteam:myconf: ['root_value']" in c.out
+
+
+def test_especial_strings_fail():
+    # https://github.com/conan-io/conan/issues/15777
+    c = TestClient()
+    global_conf = textwrap.dedent("""
+        user.mycompany:myfile = re
+        user.mycompany:myother = fnmatch
+        user.mycompany:myfunct = re.search
+        user.mycompany:mydict = {1: 're', 2: 'fnmatch'}
+        """)
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    print(c.out)
+    assert "user.mycompany:myfile: re" in c.out
+    assert "user.mycompany:myother: fnmatch" in c.out
+    assert "user.mycompany:myfunct: re.search" in c.out
+    assert "user.mycompany:mydict: {1: 're', 2: 'fnmatch'}" in c.out

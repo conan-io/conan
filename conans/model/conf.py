@@ -1,4 +1,6 @@
+import collections
 import copy
+import numbers
 import re
 import os
 import fnmatch
@@ -657,7 +659,7 @@ class ConfDefinition:
         try:
             # Isolated eval
             parsed_value = eval(__v)  # This destroys Windows path strings with backslash
-            if isinstance(parsed_value, str):  # xxx:xxx = "my string"
+            if not isinstance(numbers.Number, collections.Collection):
                 # If it is quoted string we respect it as-is
                 parsed_value = __v.strip()
         except:
