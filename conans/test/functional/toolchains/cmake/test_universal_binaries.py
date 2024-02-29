@@ -61,23 +61,19 @@ def test_create_universal_binary():
                 cmake_layout(self)
 
             def test(self):
-                # leaving can_run here to test the real case
-                if can_run(self):
-                    exe = os.path.join(self.cpp.build.bindir, "example")
-                    self.run(exe, env="conanrun")
-                    self.run(f"lipo {exe} -info", env="conanrun")
+                exe = os.path.join(self.cpp.build.bindir, "example")
+                self.run(f"lipo {exe} -info", env="conanrun")
             """)
 
     client.run("new cmake_lib -d name=mylibrary -d version=1.0")
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
 
     client.run('create . --name=mylibrary --version=1.0 '
-               '-s="arch=x86_64-armv8-armv8.3" --build=missing -tf=""')
+               '-s="arch=armv8|armv8.3|x86_64" --build=missing -tf=""')
 
     assert "libmylibrary.a are: x86_64 arm64 arm64e" in client.out
 
-    client.run('test test_package mylibrary/1.0 -s="arch=x86_64-armv8-armv8.3" '
-               '-c tools.build.cross_building:can_run=True')
+    client.run('test test_package mylibrary/1.0 -s="arch=armv8|armv8.3|x86_64"')
 
     assert "example are: x86_64 arm64 arm64e" in client.out
 

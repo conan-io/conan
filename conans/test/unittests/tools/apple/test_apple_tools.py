@@ -2,10 +2,12 @@ import mock
 import pytest
 import textwrap
 
+from conans.errors import ConanException
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
 from conans.test.utils.test_files import temp_folder
 from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun
-from conan.tools.apple.apple import _get_dylib_install_name # testing private function
+from conan.tools.apple.apple import _get_dylib_install_name, _is_universal_arch
+
 
 def test_tools_apple_is_apple_os():
     conanfile = ConanFileMock()
@@ -51,6 +53,7 @@ def test_xcrun_public_settings():
 
     assert settings.os == "watchOS"
 
+
 def test_get_dylib_install_name():
     # https://github.com/conan-io/conan/issues/13014
     single_arch = textwrap.dedent("""
@@ -70,3 +73,25 @@ def test_get_dylib_install_name():
             mock_output_runner.return_value = mock_output
             install_name = _get_dylib_install_name("otool", "/path/to/libwebp.7.dylib")
             assert "/absolute/path/lib/libwebp.7.dylib" == install_name
+
+
+valid_definitions = ["arm64", "x86_64", "armv7", "x86"]
+
+
+@pytest.mark.parametrize("settings_value,result", [
+    ("arm64|x86_64", True),
+    ("x86_64|arm64", None),
+    ("armv7|x86", True),
+    ("x86|armv7", None),
+    (None, False),
+    ("arm64|armv7|x86_64", True),
+    ("x86|arm64", None),
+    ("arm64|ppc32", False),
+])
+# None is for the exception case
+def test_is_universal_arch(settings_value, result):
+    if result is None:
+        with pytest.raises(ConanException):
+            _is_universal_arch(settings_value, valid_definitions)
+    else:
+        assert _is_universal_arch(settings_value, valid_definitions) == result
