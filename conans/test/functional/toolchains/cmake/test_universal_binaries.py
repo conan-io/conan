@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -77,3 +78,23 @@ def test_create_universal_binary():
 
     assert "example are: x86_64 arm64 arm64e" in client.out
 
+    client.run('new cmake_exe -d name=foo -d version=1.0 -d requires=mylibrary/1.0 --force')
+
+    client.run('install . -s="arch=armv8|armv8.3|x86_64"')
+
+    client.run_command("cmake --preset conan-release")
+    client.run_command("cmake --build --preset conan-release")
+    client.run_command("lipo -info ./build/Release/foo")
+
+    assert "foo are: x86_64 arm64 arm64e" in client.out
+
+    client.run('install . -s="arch=armv8|armv8.3|x86_64" '
+               '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.arch"]\'')
+
+    client.run_command("cmake --preset conan-release")
+    client.run_command("cmake --build --preset conan-release")
+    client.run_command("lipo -info ./build/Release/foo")
+
+    assert "foo are: x86_64 arm64 arm64e" in client.out
+
+    assert os.path.exists(os.path.join(client.current_folder, "build", "armv8|armv8.3|x86_64"))
