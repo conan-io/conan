@@ -5,10 +5,11 @@ import textwrap
 import pytest
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake", "3.23")
+#@pytest.mark.tool("cmake", "3.23")
 def test_create_universal_binary():
     client = TestClient()
 
@@ -88,13 +89,13 @@ def test_create_universal_binary():
 
     assert "foo are: x86_64 arm64 arm64e" in client.out
 
+    rmdir(os.path.join(client.current_folder, "build"))
+
     client.run('install . -s="arch=armv8|armv8.3|x86_64" '
                '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.arch"]\'')
 
-    client.run_command("cmake --preset conan-release")
-    client.run_command("cmake --build --preset conan-release")
-    client.run_command("lipo -info ./build/Release/foo")
+    client.run_command("cmake --preset \"conan-armv8|armv8.3|x86_64-release\" ")
+    client.run_command("cmake --build --preset \"conan-armv8|armv8.3|x86_64-release\" ")
+    client.run_command("lipo -info './build/armv8|armv8.3|x86_64/Release/foo'")
 
     assert "foo are: x86_64 arm64 arm64e" in client.out
-
-    assert os.path.exists(os.path.join(client.current_folder, "build", "armv8|armv8.3|x86_64"))
