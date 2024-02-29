@@ -409,7 +409,6 @@ def test_especial_strings_fail():
         """)
     save(c.cache.new_config_path, global_conf)
     c.run("config show *")
-    print(c.out)
     assert "user.mycompany:myfile: re" in c.out
     assert "user.mycompany:myother: fnmatch" in c.out
     assert "user.mycompany:myfunct: re.search" in c.out

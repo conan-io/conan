@@ -1,4 +1,3 @@
-import collections
 import copy
 import numbers
 import re
@@ -652,20 +651,20 @@ class ConfDefinition:
         return result
 
     @staticmethod
-    def _get_evaluated_value(__v):
+    def _get_evaluated_value(_v):
         """
         Function to avoid eval() catching local variables
         """
         try:
-            # Isolated eval
-            parsed_value = eval(__v)  # This destroys Windows path strings with backslash
-            if not isinstance(numbers.Number, collections.Collection):
+            value = eval(_v)  # This destroys Windows path strings with backslash
+        except:  # It means eval() failed because of a string without quotes
+            value = _v.strip()
+        else:
+            if not isinstance(value, (numbers.Number, bool, dict, list, set, tuple)) \
+                    and value is not None:
                 # If it is quoted string we respect it as-is
-                parsed_value = __v.strip()
-        except:
-            # It means eval() failed because of a string without quotes
-            parsed_value = __v.strip()
-        return parsed_value
+                value = _v.strip()
+        return value
 
     def loads(self, text, profile=False):
         self._pattern_confs = {}
