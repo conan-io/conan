@@ -161,7 +161,9 @@ class ConanFileLoader:
                                     remotes, update, check_update,
                                     tested_python_requires=tested_python_requires)
 
-        ref = RecipeReference(conanfile.name, conanfile.version, user, channel)
+        if conanfile.channel and not conanfile.user:
+            raise ConanException(f"{conanfile_path}: Can't specify channel without user")
+        ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
