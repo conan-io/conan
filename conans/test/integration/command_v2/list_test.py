@@ -40,6 +40,9 @@ class TestParamErrors:
         c.run("list * --graph-recipes=x", assert_error=True)
         assert "ERROR: --graph-recipes and --graph-binaries require a --graph input" in c.out
 
+        c.run("list * -p os=Linux", assert_error=True)
+        assert "--package-query and --filter-xxx can only be done for binaries" in c.out
+
 
 @pytest.fixture(scope="module")
 def client():
