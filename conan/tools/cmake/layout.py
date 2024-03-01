@@ -92,6 +92,8 @@ def get_build_folder_custom_vars(conanfile):
                     tmp = "shared" if value else "static"
                 else:
                     tmp = "{}_{}".format(var, value)
+        elif group == "self":
+            tmp = getattr(conanfile, var, None)
         else:
             raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
                                  " to start with 'settings.' or 'options.': {}".format(s))

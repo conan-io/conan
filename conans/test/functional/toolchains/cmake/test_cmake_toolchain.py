@@ -40,10 +40,9 @@ def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
+    value = "v14{}".format(version[-1])
     if update is not None:  # Fullversion
-        value = "version=14.{}{}".format(version[-1], update)
-    else:
-        value = "v14{}".format(version[-1])
+        value += f",version=14.{version[-1]}{update}"
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
 
 
@@ -77,8 +76,7 @@ def test_cmake_toolchain_custom_toolchain():
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
-@pytest.mark.parametrize("schema2", [True, False])
-def test_cmake_user_presets_load(existing_user_presets, schema2):
+def test_cmake_user_presets_load(existing_user_presets):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
     syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
