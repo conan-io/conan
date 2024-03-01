@@ -808,6 +808,103 @@ def test_error_missing_pc_build_context():
     c.assert_listed_require({"example/1.0": "Cache"}, build=True)
 
 
+class TestPCGenerationBuildContext:
+    """
+    https://github.com/conan-io/conan/issues/14920
+    """
+    def test_pc_generate(self):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_suffix = {"wayland": "_BUILD", "dep": "_BUILD"}
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland_BUILD.pc")
+                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("dep_BUILD.pc")
+                """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": GenConanfile("wayland", "1.0").with_requires("dep/1.0"),
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    def test_pc_generate_components(self):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_suffix = {"wayland": "_BUILD", "dep": "_BUILD"}
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland-client.pc")
+                    assert os.path.exists("wayland-server.pc")
+                    assert os.path.exists("wayland_BUILD.pc")
+                    assert os.path.exists("wayland_BUILD-client.pc")
+                    assert os.path.exists("wayland_BUILD-server.pc")
+                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("dep_BUILD.pc")
+                """)
+        wayland = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "wayland"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.components["client"].libs = []
+                    self.cpp_info.components["server"].libs = []
+            """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+
 def test_pkg_config_deps_and_private_deps():
     """
     Testing that no errors are raised when the dependency tree has a private one in the middle
