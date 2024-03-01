@@ -1325,3 +1325,12 @@ def test_add_cmakeexe_to_presets():
 
     presets = json.loads(c.load(presets_path))
     assert presets["configurePresets"][0].get("cmakeExecutable") is None
+
+
+def test_toolchain_ends_newline():
+    # https://github.com/conan-io/conan/issues/15785
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert toolchain[-1] == "\n"

@@ -41,14 +41,7 @@ class Block(object):
         if context is None:
             return
 
-        def cmake_value(value):
-            if isinstance(value, bool):
-                return "ON" if value else "OFF"
-            else:
-                return '"{}"'.format(value)
-
         template = Template(self.template, trim_blocks=True, lstrip_blocks=True)
-        template.environment.filters["cmake_value"] = cmake_value
         return template.render(**context)
 
     def context(self):
