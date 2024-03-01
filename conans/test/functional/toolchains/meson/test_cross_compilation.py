@@ -207,13 +207,11 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
         assert "architecture: %s" % expected_arch in client.out
 
 
-@pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64'),
-                                                 ('armv7', 'arm'),
-                                                 ('x86', 'i386'),
-                                                 ('x86_64', 'x86_64')])
+@pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64')])
 @pytest.mark.tool("meson")
 @pytest.mark.tool("android_ndk")
-def test_android_meson_toolchain_cross_compiling_multi_platform(arch, expected_arch):
+@pytest.mark.skipif(platform.system() != "Windows", reason="Android NDK only tested on Windows for now")
+def test_android_meson_toolchain_cross_compiling_windows(arch, expected_arch):
     android_abi_prefix = {
         "armv8": "aarch64",
         "armv7": "armv7a",
