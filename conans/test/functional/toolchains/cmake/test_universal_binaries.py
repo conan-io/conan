@@ -9,7 +9,7 @@ from conans.util.files import rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-#@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "3.23")
 def test_create_universal_binary():
     client = TestClient()
 
