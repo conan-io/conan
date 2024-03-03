@@ -155,3 +155,117 @@ def test_test_cmake_layout_build_folder_test_package_temp():
 
     c.run(f'create . -c tools.cmake.cmake_layout:build_folder_vars=[]')
     assert os.path.exists(os.path.join(c.current_folder, "test_package", "build"))
+
+
+def test_cmake_layout_build_folder_editable():
+    """ testing how it works with editables. Layout
+    code
+      pkga  # editable add .
+      pkgb  # editable add .
+      app   # install -c build_folder="../../mybuild -c build_folder_vars="['self.name']"
+        pkga-release-data.cmake
+           pkga_PACKAGE_FOLDER_RELEASE = /abs/path/to/code/pkga
+           pkga_INCLUDE_DIRS_RELEASE   = ${pkga_PACKAGE_FOLDER_RELEASE}/include
+           pkga_LIB_DIRS_RELEASE =       /abs/path/to/mybuild/pkga/Release
+    mybuild
+      pkga/Release/
+      pkgb/Release/
+    """
+    c = TestClient()
+    base_folder = temp_folder()
+    c.current_folder = os.path.join(base_folder, "code").replace("\\", "/")
+    project_build_folder = os.path.join(base_folder, "mybuild").replace("\\", "/")
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Pkg(ConanFile):
+            name = "{name}"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+            def layout(self):
+                cmake_layout(self, generator="Ninja")  # Ninja so same in all OSs, single-config
+        """)
+
+    c.save({"pkga/conanfile.py": conanfile.format(name="pkga"),
+            "pkgb/conanfile.py": conanfile.format(name="pkgb"),
+            "app/conanfile.py": GenConanfile().with_requires("pkga/0.1", "pkgb/0.1")
+                                              .with_settings("build_type")
+                                              .with_generator("CMakeDeps")})
+
+    c.run("editable add pkga")
+    c.run("editable add pkgb")
+    conf = f'-c tools.cmake.cmake_layout:build_folder="../../mybuild" ' \
+           '-c tools.cmake.cmake_layout:build_folder_vars="[\'self.name\']"'
+    c.run(f'install app {conf} --build=editable')
+
+    data = c.load("app/pkga-release-data.cmake")
+
+    # The package is the ``code/pkga`` folder
+    assert f'pkga_PACKAGE_FOLDER_RELEASE "{c.current_folder}/pkga"' in data
+    # This is an absolute path, not relative, as it is not inside the package
+    assert f'set(pkga_LIB_DIRS_RELEASE "{project_build_folder}/pkga/Release' in data
+    data = c.load("app/pkgb-release-data.cmake")
+    assert f'set(pkgb_LIB_DIRS_RELEASE "{project_build_folder}/pkgb/Release' in data
+
+    assert os.path.exists(os.path.join(project_build_folder, "pkga", "Release", "generators",
+                                       "conan_toolchain.cmake"))
+    assert os.path.exists(os.path.join(project_build_folder, "pkgb", "Release", "generators",
+                                       "conan_toolchain.cmake"))
+
+
+def test_cmake_layout_editable_output_folder():
+    """ testing how it works with editables, but --output-folder
+    code
+      pkga  # editable add . --output-folder = ../mybuild
+      pkgb  # editable add . --output-folder = ../mybuild
+      app   # install  -c build_folder_vars="['self.name']"
+        pkga-release-data.cmake
+           pkga_PACKAGE_FOLDER_RELEASE = /abs/path/to/mybuild
+           pkga_INCLUDE_DIRS_RELEASE   = /abs/path/to/code/pkga/include
+           pkga_LIB_DIRS_RELEASE =       pkga_PACKAGE_FOLDER_RELEASE/build/pkga/Release
+    mybuild
+      build
+        pkga/Release/
+        pkgb/Release/
+    """
+    c = TestClient()
+    base_folder = temp_folder()
+    c.current_folder = os.path.join(base_folder, "code")
+    project_build_folder = os.path.join(base_folder, "mybuild").replace("\\", "/")
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Pkg(ConanFile):
+            name = "{name}"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+            def layout(self):
+                cmake_layout(self, generator="Ninja")  # Ninja so same in all OSs, single-config
+        """)
+
+    c.save({"pkga/conanfile.py": conanfile.format(name="pkga"),
+            "pkgb/conanfile.py": conanfile.format(name="pkgb"),
+            "app/conanfile.py": GenConanfile().with_requires("pkga/0.1", "pkgb/0.1")
+           .with_settings("build_type")
+           .with_generator("CMakeDeps")})
+
+    c.run(f'editable add pkga --output-folder="../mybuild"')
+    c.run(f'editable add pkgb --output-folder="../mybuild"')
+    conf = f'-c tools.cmake.cmake_layout:build_folder_vars="[\'self.name\']"'
+    c.run(f'install app {conf} --build=editable')
+
+    data = c.load("app/pkga-release-data.cmake")
+    assert f'set(pkga_PACKAGE_FOLDER_RELEASE "{project_build_folder}")' in data
+    # Thse folders are relative to the package
+    assert 'pkga_LIB_DIRS_RELEASE "${pkga_PACKAGE_FOLDER_RELEASE}/build/pkga/Release' in data
+    data = c.load("app/pkgb-release-data.cmake")
+    assert 'pkgb_LIB_DIRS_RELEASE "${pkgb_PACKAGE_FOLDER_RELEASE}/build/pkgb/Release' in data
+
+    assert os.path.exists(os.path.join(project_build_folder, "build", "pkga", "Release",
+                                       "generators", "conan_toolchain.cmake"))
+    assert os.path.exists(os.path.join(project_build_folder, "build", "pkgb", "Release",
+                                       "generators", "conan_toolchain.cmake"))
