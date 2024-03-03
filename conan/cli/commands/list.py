@@ -250,6 +250,10 @@ def list(conan_api: ConanAPI, parser, *args):
         pkglist = MultiPackagesList.load_graph(graphfile, args.graph_recipes, args.graph_binaries)
     else:
         ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
+        if not ref_pattern.package_id and (args.package_query or args.filter_profile or
+                                           args.filter_settings or args.filter_options):
+            raise ConanException("--package-query and --filter-xxx can only be done for binaries, "
+                                 "a 'pkgname/version:*' pattern is necessary")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
         if args.cache or not args.remote:

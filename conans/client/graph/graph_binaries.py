@@ -1,5 +1,6 @@
 import json
 import os
+from collections import OrderedDict
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -14,7 +15,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
 from conans.client.graph.proxy import should_update_reference
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError, ConanException
-from conans.model.info import RequirementInfo
+from conans.model.info import RequirementInfo, RequirementsInfo
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -337,16 +338,16 @@ class GraphBinariesAnalyzer(object):
             raise ConanException("core.package_id:config_mode defined, but missing "
                                  "config_version file in cache")
         config_refs = json.loads(load(config_version_file))["config_versions"]
-        result = []
+        result = OrderedDict()
         for r in config_refs:
             try:
-                config_ref = PkgReference.loads(config_ref)
+                config_ref = PkgReference.loads(r)
                 req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
             except ConanException:
-                config_ref = RecipeReference.loads(config_ref)
+                config_ref = RecipeReference.loads(r)
                 req_info = RequirementInfo(config_ref, None, config_mode)
-            result.append(req_info.dumps())
-        return result
+            result[config_ref] = req_info
+        return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):
         compute_package_id(node, self._global_conf, config_version=config_version)

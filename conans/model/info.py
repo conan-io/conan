@@ -359,8 +359,9 @@ class ConanInfo:
         conf_dumps = self.conf.serialize()
         if conf_dumps:
             result["conf"] = conf_dumps
-        if self.config_version:
-            result["config_version"] = self.config_version
+        config_version_dumps = self.config_version.serialize() if self.config_version else None
+        if config_version_dumps:
+            result["config_version"] = config_version_dumps
         return result
 
     def dumps(self):
@@ -402,9 +403,10 @@ class ConanInfo:
             # TODO: Think about the serialization of Conf, not 100% sure if dumps() is the best
             result.append("[conf]")
             result.append(self.conf.dumps())
-        if self.config_version:
+        config_version_dumps = self.config_version.dumps() if self.config_version else None
+        if config_version_dumps:
             result.append("[config_version]")
-            result.append(self.config_version)
+            result.append(config_version_dumps)
         result.append("")  # Append endline so file ends with LF
         return '\n'.join(result)
 
