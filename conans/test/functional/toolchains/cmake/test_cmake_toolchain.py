@@ -39,10 +39,9 @@ def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
     client.save({"conanfile.py": conanfile})
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
+    value = "v14{}".format(version[-1])
     if update is not None:  # Fullversion
-        value = "version=14.{}{}".format(version[-1], update)
-    else:
-        value = "v14{}".format(version[-1])
+        value += f",version=14.{version[-1]}{update}"
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
 
 
@@ -76,8 +75,7 @@ def test_cmake_toolchain_custom_toolchain():
                     reason="Single config test, Linux CI still without 3.23")
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.parametrize("existing_user_presets", [None, "user_provided", "conan_generated"])
-@pytest.mark.parametrize("schema2", [True, False])
-def test_cmake_user_presets_load(existing_user_presets, schema2):
+def test_cmake_user_presets_load(existing_user_presets):
     """
     Test if the CMakeUserPresets.cmake is generated and use CMake to use it to verify the right
     syntax of generated CMakeUserPresets.cmake and CMakePresets.cmake. If the user already provided
@@ -271,8 +269,8 @@ def test_cmaketoolchain_no_warnings():
     client.run("create dep")
     client.run("install .")
     build_type = "-DCMAKE_BUILD_TYPE=Release" if platform.system() != "Windows" else ""
-    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake {}"
-                       "-Werror=dev --warn-uninitialized".format(build_type))
+    client.run_command("cmake -Werror=dev --warn-uninitialized . {}"
+                       " -DCMAKE_TOOLCHAIN_FILE=./conan_toolchain.cmake".format(build_type))
     assert "Using Conan toolchain" in client.out
     # The real test is that there are no errors, it returns successfully
 
@@ -343,6 +341,7 @@ def test_cmake_toolchain_definitions_complex_strings():
                 tc.preprocessor_definitions.release["spaces_release"] = "release me you"
                 tc.preprocessor_definitions.release["foobar_release"] = "release bazbuz"
                 tc.preprocessor_definitions.release["answer_release"] = 42
+                tc.preprocessor_definitions.release["NOVALUE_DEF_RELEASE"] = None
 
                 tc.preprocessor_definitions.debug["escape_debug"] = "debug partially \"escaped\""
                 tc.preprocessor_definitions.debug["spaces_debug"] = "debug me you"
@@ -386,6 +385,9 @@ def test_cmake_toolchain_definitions_complex_strings():
             #ifdef NOVALUE_DEF
             printf("NO VALUE!!!!");
             #endif
+            #ifdef NOVALUE_DEF_RELEASE
+            printf("NO VALUE RELEASE!!!!");
+            #endif
             return 0;
         }
         """)
@@ -416,6 +418,7 @@ def test_cmake_toolchain_definitions_complex_strings():
     assert 'foobar_release=release bazbuz' in client.out
     assert 'answer_release=42' in client.out
     assert "NO VALUE!!!!" in client.out
+    assert "NO VALUE RELEASE!!!!" in client.out
 
     client.run("install . -pr=./profile -s build_type=Debug")
     client.run("build . -pr=./profile -s build_type=Debug")
