@@ -44,7 +44,7 @@ class AutotoolsToolchain:
         self.build_type_flags = build_type_flags(self._conanfile.settings)
         self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
-        self.cppstd = cppstd_flag(self._conanfile.settings)
+        self.cppstd = cppstd_flag(self._conanfile)
         self.arch_flag = architecture_flag(self._conanfile.settings)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")

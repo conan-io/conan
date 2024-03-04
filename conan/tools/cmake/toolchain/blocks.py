@@ -41,14 +41,7 @@ class Block(object):
         if context is None:
             return
 
-        def cmake_value(value):
-            if isinstance(value, bool):
-                return "ON" if value else "OFF"
-            else:
-                return '"{}"'.format(value)
-
         template = Template(self.template, trim_blocks=True, lstrip_blocks=True)
-        template.environment.filters["cmake_value"] = cmake_value
         return template.render(**context)
 
     def context(self):
@@ -346,7 +339,7 @@ class AppleSystemBlock(Block):
         if(CMAKE_GENERATOR MATCHES "Xcode")
           message(DEBUG "Not setting any manual command-line buildflags, since Xcode is selected as generator.")
         else()
-            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${FOBJC_ARC}")
+            string(APPEND CONAN_C_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
             string(APPEND CONAN_CXX_FLAGS " ${BITCODE} ${VISIBILITY} ${FOBJC_ARC}")
         endif()
         """)
@@ -635,7 +628,7 @@ class ExtraFlagsBlock(Block):
 
 class CMakeFlagsInitBlock(Block):
     template = textwrap.dedent("""
-        foreach(config ${CMAKE_CONFIGURATION_TYPES})
+        foreach(config IN LISTS CMAKE_CONFIGURATION_TYPES)
             string(TOUPPER ${config} config)
             if(DEFINED CONAN_CXX_FLAGS_${config})
               string(APPEND CMAKE_CXX_FLAGS_${config}_INIT " ${CONAN_CXX_FLAGS_${config}}")
@@ -757,11 +750,10 @@ class GenericSystemBlock(Block):
             if toolset is None:
                 compiler_version = str(settings.compiler.version)
                 compiler_update = str(settings.compiler.update)
+                toolset = msvc_version_to_toolset_version(compiler_version)
                 if compiler_update != "None":  # It is full one(19.28), not generic 19.2X
                     # The equivalent of compiler 19.26 is toolset 14.26
-                    toolset = "version=14.{}{}".format(compiler_version[-1], compiler_update)
-                else:
-                    toolset = msvc_version_to_toolset_version(compiler_version)
+                    toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
         elif compiler == "clang":
             if generator and "Visual" in generator:
                 if "Visual Studio 16" in generator or "Visual Studio 17" in generator:

@@ -397,3 +397,19 @@ def test_remote_allowed_packages_new():
     tc.run("remote add foo https://foo -ap='liba/*'")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
     assert remotes["remotes"][0]["allowed_packages"] == ["liba/*"]
+
+
+def test_remote_allowed_negation():
+    tc = TestClient(light=True, default_server_user=True)
+    tc.save({"conanfile.py": GenConanfile()})
+    tc.run("create . --name=config --version=1.0")
+    tc.run("create . --name=lib --version=1.0")
+    tc.run("upload * -c -r=default")
+    tc.run("remove * -c")
+
+    tc.run('remote update default --allowed-packages="!config/*"')
+    tc.run("install --requires=lib/1.0 -r=default")
+    assert "lib/1.0: Downloaded recipe revision" in tc.out
+
+    tc.run("install --requires=config/1.0 -r=default", assert_error=True)
+    assert "ERROR: Package 'config/1.0' not resolved: Unable to find 'config/1.0' in remotes" in tc.out
