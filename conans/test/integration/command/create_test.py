@@ -811,15 +811,3 @@ def test_python_requires_with_test_package():
     c.run("create .")
     # Ensure that creating a deps graph does not break the testing
     assert "pyreq/1.0 (test package): 42!!!" in c.out
-
-
-def test_create_is_build_require():
-    """
-    validate that the is_build_require=True attribute forces a ``conan create`` to create it
-    in the build context always
-    """
-    c = TestClient()
-    conanfile = GenConanfile("pkg", "0.1").with_class_attribute("is_build_require=True")
-    c.save({"conanfile.py": conanfile})
-    c.run("create . --lockfile-out=conan.lock")
-    c.assert_listed_require({"pkg/0.1": "Cache"}, build=True)

@@ -50,8 +50,7 @@ def create(conan_api, parser, *args):
                                              remotes=remotes)
 
     # FIXME: Dirty: package type still raw, not processed yet
-    is_build = args.build_require or conanfile.package_type == "build-scripts" or \
-        getattr(conanfile, "is_build_require", None)
+    is_build = args.build_require or conanfile.package_type == "build-scripts"
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
