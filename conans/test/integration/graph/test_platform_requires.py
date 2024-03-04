@@ -161,7 +161,7 @@ class TestPlatformRequires:
                                                                 options={"dep/1.0:myoption": True})
         client.save({"conanfile.py": conanfile,
                      "profile": "[platform_requires]\ndep/1.0"})
-        client.run("create . -pr=profile")
+        client.run("create . -pr=profile")  # This crashed before for non-existing options
         assert "dep/1.0 - Platform" in client.out
 
 
