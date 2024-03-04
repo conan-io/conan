@@ -76,19 +76,20 @@ def test_get_dylib_install_name():
             assert "/absolute/path/lib/libwebp.7.dylib" == install_name
 
 
-@pytest.mark.parametrize("settings_value,result", [
-    ("arm64|x86_64", True),
-    ("x86_64|arm64", None),
-    ("armv7|x86", True),
-    ("x86|armv7", None),
-    (None, False),
-    ("arm64|armv7|x86_64", True),
-    ("x86|arm64", None),
-    ("arm64|ppc32", False),
+@pytest.mark.parametrize("settings_value,valid_definitions,result", [
+    ("arm64|x86_64", ["arm64", "x86_64", "armv7", "x86"], True),
+    ("x86_64|arm64", ["arm64", "x86_64", "armv7", "x86"], None),
+    ("armv7|x86", ["arm64", "x86_64", "armv7", "x86"], True),
+    ("x86|armv7", ["arm64", "x86_64", "armv7", "x86"], None),
+    (None, ["arm64", "x86_64", "armv7", "x86"], False),
+    ("arm64|armv7|x86_64", ["arm64", "x86_64", "armv7", "x86"], True),
+    ("x86|arm64", ["arm64", "x86_64", "armv7", "x86"], None),
+    ("arm64|ppc32", None, False),
+    (None, None, False),
+    ("armv7|x86", None, False),
 ])
 # None is for the exception case
-def test_is_universal_arch(settings_value, result):
-    valid_definitions = ["arm64", "x86_64", "armv7", "x86"]
+def test_is_universal_arch(settings_value, valid_definitions, result):
     if result is None:
         with pytest.raises(ConanException):
             is_universal_arch(settings_value, valid_definitions)
