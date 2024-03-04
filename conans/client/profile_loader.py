@@ -1,6 +1,5 @@
 import os
 import platform
-import tempfile
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
