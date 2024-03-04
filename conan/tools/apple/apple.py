@@ -6,9 +6,6 @@ from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
 
 
-_universal_arch_separator = '|'
-
-
 def is_apple_os(conanfile):
     """returns True if OS is Apple one (Macos, iOS, watchOS, tvOS or visionOS)"""
     os_ = conanfile.settings.get_safe("os")
@@ -31,30 +28,6 @@ def to_apple_arch(conanfile, default=None):
     """converts conan-style architecture into Apple-style arch"""
     arch_ = conanfile.settings.get_safe("arch")
     return _to_apple_arch(arch_, default)
-
-
-def _to_apple_archs(conanfile, default=None):
-    f"""converts conan-style architectures into Apple-style archs
-    also supports multiple architectures separated by '{_universal_arch_separator}'"""
-    arch_ = conanfile.settings.get_safe("arch")
-    if arch_ is not None:
-        return ";".join([_to_apple_arch(arch, default) for arch in arch_.split(_universal_arch_separator)])
-
-
-def _is_universal_arch(settings_value, valid_definitions):
-    if settings_value is None:
-        return False
-
-    parts = settings_value.split(_universal_arch_separator)
-
-    if parts != sorted(parts):
-        raise ConanException(f"Architectures must be in alphabetical order separated by "
-                             f"{_universal_arch_separator}")
-
-    valid_macos_values = [val for val in valid_definitions if
-                          ("arm" in val or "x86" in val)]
-
-    return all(part in valid_macos_values for part in parts)
 
 
 def apple_sdk_path(conanfile):

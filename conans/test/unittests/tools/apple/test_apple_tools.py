@@ -2,11 +2,12 @@ import mock
 import pytest
 import textwrap
 
+from conan.internal.internal_tools import is_universal_arch
 from conans.errors import ConanException
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
 from conans.test.utils.test_files import temp_folder
 from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun
-from conan.tools.apple.apple import _get_dylib_install_name, _is_universal_arch
+from conan.tools.apple.apple import _get_dylib_install_name
 
 
 def test_tools_apple_is_apple_os():
@@ -90,6 +91,6 @@ def test_is_universal_arch(settings_value, result):
     valid_definitions = ["arm64", "x86_64", "armv7", "x86"]
     if result is None:
         with pytest.raises(ConanException):
-            _is_universal_arch(settings_value, valid_definitions)
+            is_universal_arch(settings_value, valid_definitions)
     else:
-        assert _is_universal_arch(settings_value, valid_definitions) == result
+        assert is_universal_arch(settings_value, valid_definitions) == result
