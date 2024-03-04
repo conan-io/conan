@@ -77,4 +77,4 @@ class HomePaths:
 
     @property
     def config_version_path(self):
-        return os.path.join(self._home, "config_version")
+        return os.path.join(self._home, "config_version.json")

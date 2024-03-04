@@ -334,19 +334,21 @@ class GraphBinariesAnalyzer(object):
         if config_mode is None:
             return
         config_version_file = HomePaths(self._cache.cache_folder).config_version_path
-        if not os.path.exists(config_version_file):
-            raise ConanException("core.package_id:config_mode defined, but missing "
-                                 "config_version file in cache")
-        config_refs = json.loads(load(config_version_file))["config_versions"]
-        result = OrderedDict()
-        for r in config_refs:
-            try:
-                config_ref = PkgReference.loads(r)
-                req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
-            except ConanException:
-                config_ref = RecipeReference.loads(r)
-                req_info = RequirementInfo(config_ref, None, config_mode)
-            result[config_ref] = req_info
+        try:
+            config_refs = json.loads(load(config_version_file))["config_version"]
+            result = OrderedDict()
+            for r in config_refs:
+                try:
+                    config_ref = PkgReference.loads(r)
+                    req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
+                except ConanException:
+                    config_ref = RecipeReference.loads(r)
+                    req_info = RequirementInfo(config_ref, None, config_mode)
+                result[config_ref] = req_info
+        except Exception as e:
+            raise ConanException(f"core.package_id:config_mode defined, but error while loading "
+                                 f"'{os.path.basename(config_version_file)}'"
+                                 f" file in cache: {self._cache.cache_folder}: {e}")
         return RequirementsInfo(result)
 
     def _evaluate_package_id(self, node, config_version):

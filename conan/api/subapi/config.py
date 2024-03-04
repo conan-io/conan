@@ -77,7 +77,7 @@ class ConfigAPI:
         config_version_file = HomePaths(conan_api.home_folder).config_version_path
         if os.path.exists(config_version_file):
             config_versions = json.loads(load(config_version_file))
-            config_versions = config_versions["config_versions"]
+            config_versions = config_versions["config_version"]
             if config_pref in config_versions:
                 ConanOutput().info(f"Package '{pkg}' already configured, "
                                    "skipping configuration install")
@@ -90,7 +90,7 @@ class ConfigAPI:
         # And for ``package_id`` computation
         config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
         config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
-        save(config_version_file, json.dumps({"config_versions": list(config_versions.values())}))
+        save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))
         return pkg.pref
 
     def get(self, name, default=None, check_type=None):

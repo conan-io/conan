@@ -14,7 +14,7 @@ from conans.util.files import save
     ("myconfig/1.2.3", "minor_mode", "myconfig/1.2.Z")])
 def test_config_package_id(config_version, mode, result):
     c = TestClient()
-    config_version = json.dumps({"config_versions": [config_version]})
+    config_version = json.dumps({"config_version": [config_version]})
     save(c.cache.config_version_path, config_version)
     save(c.cache.global_conf_path, f"core.package_id:config_mode={mode}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -35,4 +35,5 @@ def test_error_config_package_id():
     save(c.cache.global_conf_path, f"core.package_id:config_mode=minor_mode")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .", assert_error=True)
-    assert "ERROR: core.package_id:config_mode defined, but missing config_version file" in c.out
+    assert "ERROR: core.package_id:config_mode defined, " \
+           "but error while loading 'config_version.json'" in c.out

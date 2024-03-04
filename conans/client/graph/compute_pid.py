@@ -52,7 +52,7 @@ def compute_package_id(node, new_config, config_version):
                                build_requires_info=build_requires_info,
                                python_requires=python_requires,
                                conf=conanfile.conf.copy_conaninfo_conf(),
-                               config_version=config_version)
+                               config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
 
     if hasattr(conanfile, "validate_build"):

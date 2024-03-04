@@ -332,7 +332,7 @@ class ConanInfo:
         result.python_requires = self.python_requires.copy()
         result.conf = self.conf.copy()
         result.settings_target = self.settings_target.copy() if self.settings_target else None
-        result.config_version = self.config_version
+        result.config_version = self.config_version.copy() if self.config_version else None
         return result
 
     def serialize(self):
@@ -436,6 +436,7 @@ class ConanInfo:
         self.conf.clear()
         self.build_requires.clear()
         self.python_requires.clear()
+        self.config_version.clear()
 
     def validate(self):
         # If the options are not fully defined, this is also an invalid case
