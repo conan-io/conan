@@ -39,7 +39,7 @@ class ConfigAPI:
         configuration_install(app, path_or_url, verify_ssl, config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
 
-    def install_pkg(self, ref, lockfile):
+    def install_pkg(self, ref, lockfile=None, force=False):
         conan_api = self.conan_api
         remotes = conan_api.remotes.list()  # ready to use remotes arguments
         # Ready to use profiles as inputs, but NOT using profiles yet, empty ones
@@ -79,9 +79,13 @@ class ConfigAPI:
             config_versions = json.loads(load(config_version_file))
             config_versions = config_versions["config_version"]
             if config_pref in config_versions:
-                ConanOutput().info(f"Package '{pkg}' already configured, "
-                                   "skipping configuration install")
-                return pkg.pref  # Already installed, we can skip repeating the install
+                if force:
+                    ConanOutput().info(f"Package '{pkg}' already configured, "
+                                       "but re-installation forced")
+                else:
+                    ConanOutput().info(f"Package '{pkg}' already configured, "
+                                       "skipping configuration install")
+                    return pkg.pref  # Already installed, we can skip repeating the install
 
         from conans.client.conf.config_installer import configuration_install
         configuration_install(app, uri=pkg.conanfile.package_folder, verify_ssl=False,

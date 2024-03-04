@@ -59,11 +59,13 @@ def config_install_pkg(conan_api, parser, subparser, *args):
                            help="Do not raise an error if some dependency is not found in lockfile")
     subparser.add_argument("--lockfile-out", action=OnceArgument,
                            help="Filename of the updated lockfile")
+    subparser.add_argument("-f", "--force", action='store_true',
+                           help="Force the re-installation of configuration")
     args = parser.parse_args(*args)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)
-    config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile)
+    config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile, force=args.force)
     lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[config_pref.ref])
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 

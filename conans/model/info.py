@@ -436,7 +436,8 @@ class ConanInfo:
         self.conf.clear()
         self.build_requires.clear()
         self.python_requires.clear()
-        self.config_version.clear()
+        if self.config_version is not None:
+            self.config_version.clear()
 
     def validate(self):
         # If the options are not fully defined, this is also an invalid case
