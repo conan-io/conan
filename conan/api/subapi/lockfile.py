@@ -80,19 +80,20 @@ class LockfileAPI:
 
     @staticmethod
     def add_lockfile(lockfile=None, requires=None, build_requires=None, python_requires=None,
-                     conf_requires=None):
+                     config_requires=None):
         if lockfile is None:
             lockfile = Lockfile()  # create a new lockfile
             lockfile.partial = True
 
         lockfile.add(requires=requires, build_requires=build_requires,
-                     python_requires=python_requires, conf_requires=conf_requires)
+                     python_requires=python_requires, config_requires=config_requires)
         return lockfile
 
     @staticmethod
-    def remove_lockfile(lockfile, requires=None, build_requires=None, python_requires=None):
+    def remove_lockfile(lockfile, requires=None, build_requires=None, python_requires=None,
+                        config_requires=None):
         lockfile.remove(requires=requires, build_requires=build_requires,
-                        python_requires=python_requires)
+                        python_requires=python_requires, config_requires=config_requires)
         return lockfile
 
     @staticmethod

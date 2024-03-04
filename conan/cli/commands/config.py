@@ -64,7 +64,7 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)
     config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile)
-    lockfile = conan_api.lockfile.add_lockfile(lockfile, conf_requires=[config_pref.ref])
+    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[config_pref.ref])
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 

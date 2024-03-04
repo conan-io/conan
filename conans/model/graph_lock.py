@@ -174,7 +174,7 @@ class Lockfile(object):
         self._alias.update(other._alias)
         self._overrides.update(other._overrides)
 
-    def add(self, requires=None, build_requires=None, python_requires=None, conf_requires=None):
+    def add(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
         """ adding new things manually will trigger the sort() of the locked list, so lockfiles
         alwasys keep the ordered lists. This means that for some especial edge cases it might
         be necessary to allow removing from a lockfile, for example to test an older version
@@ -192,12 +192,12 @@ class Lockfile(object):
             for r in python_requires:
                 self._python_requires.add(r)
             self._python_requires.sort()
-        if conf_requires:
-            for r in conf_requires:
+        if config_requires:
+            for r in config_requires:
                 self._conf_requires.add(r)
             self._conf_requires.sort()
 
-    def remove(self, requires=None, build_requires=None, python_requires=None):
+    def remove(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
         def _remove(reqs, self_reqs, name):
             if reqs:
                 removed = []
@@ -209,6 +209,7 @@ class Lockfile(object):
         _remove(requires, self._requires, "require")
         _remove(build_requires, self._build_requires, "build_require")
         _remove(python_requires, self._python_requires, "python_require")
+        _remove(config_requires, self._conf_requires, "config_requires")
 
     @staticmethod
     def deserialize(data):
@@ -230,8 +231,8 @@ class Lockfile(object):
                                  for k, v in data["alias"].items()}
         if "overrides" in data:
             graph_lock._overrides = Overrides.deserialize(data["overrides"])
-        if "conf_requires" in data:
-            graph_lock._conf_requires = _LockRequires.deserialize(data["conf_requires"])
+        if "config_requires" in data:
+            graph_lock._conf_requires = _LockRequires.deserialize(data["config_requires"])
         return graph_lock
 
     def serialize(self):
@@ -250,7 +251,7 @@ class Lockfile(object):
         if self._overrides:
             result["overrides"] = self._overrides.serialize()
         if self._conf_requires:
-            result["conf_requires"] = self._conf_requires.serialize()
+            result["config_requires"] = self._conf_requires.serialize()
         return result
 
     def resolve_locked(self, node, require, resolve_prereleases):
