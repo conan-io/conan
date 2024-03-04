@@ -87,6 +87,7 @@ def test_get_dylib_install_name():
     ("arm64|ppc32", None, False),
     (None, None, False),
     ("armv7|x86", None, False),
+    ("arm64", ["arm64", "x86_64"], False),
 ])
 # None is for the exception case
 def test_is_universal_arch(settings_value, valid_definitions, result):
