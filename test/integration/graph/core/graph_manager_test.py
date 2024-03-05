@@ -3,7 +3,7 @@ from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conans.errors import ConanException
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from integration.graph.core import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
 

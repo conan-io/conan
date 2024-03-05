@@ -242,7 +242,7 @@ def test_changing_build_type():
     client.run("install . -s pkg*:build_type=Debug -s build_type=Release")
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Debug")
     client.run_command("cmake --build . --config Debug")
-    cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
+    cmd = os.path.join("", "Debug", "app") if platform.system() == "Windows" else "./app"
     client.run_command(cmd)
     assert "main: Debug!" in client.out
     assert "BUILD_TYPE=Release!!" in client.out

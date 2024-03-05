@@ -110,7 +110,7 @@ def test_complete_round_trip_external_link():
 
     def checker(folder):
         with chdir(folder):
-            assert "target.txt" not in os.listdir(".")
+            assert "target.txt" not in os.listdir("")
             assert not os.path.exists("target.txt")
             assert os.readlink("link.txt") == "midlink.txt"
             assert os.readlink("midlink.txt") == target

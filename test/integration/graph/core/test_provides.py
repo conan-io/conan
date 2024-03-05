@@ -3,8 +3,8 @@ import textwrap
 from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphProvidesError
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.integration.graph.core.graph_manager_test import _check_transitive
+from integration.graph.core import GraphManagerTest
+from integration.graph.core import _check_transitive
 from conans.test.utils.tools import GenConanfile, TestClient
 
 
