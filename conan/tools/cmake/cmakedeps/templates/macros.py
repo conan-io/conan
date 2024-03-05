@@ -29,10 +29,13 @@ class MacrosTemplate(CMakeDepsFileTemplate):
        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS FRAMEWORKS_DIRS)
            if(APPLE)
                foreach(_FRAMEWORK ${FRAMEWORKS})
+                   unset(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND CACHE)
+
                    # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                   find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} CMAKE_FIND_ROOT_PATH_BOTH)
+                   # FIXME: system Frameworks shouldn't be passed. Change CMAKE_FIND_ROOT_PATH_BOTH by NO_CMAKE_FIND_ROOT_PATH when it doesn't happen anymore
+                   find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAMES ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} NO_CMAKE_PATH CMAKE_FIND_ROOT_PATH_BOTH)
                    if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
-                       list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
+                    list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                        message(VERBOSE "Framework found! ${FRAMEWORKS_FOUND}")
                    else()
                        message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
