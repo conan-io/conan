@@ -5,7 +5,8 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
+from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
@@ -348,10 +349,19 @@ class AppleSystemBlock(Block):
         if not is_apple_os(self._conanfile):
             return None
 
+        def to_apple_archs(conanfile, default=None):
+            f"""converts conan-style architectures into Apple-style archs
+            to be used by CMake also supports multiple architectures
+            separated by '{universal_arch_separator}'"""
+            arch_ = conanfile.settings.get_safe("arch") if conanfile else None
+            if arch_ is not None:
+                return ";".join([_to_apple_arch(arch, default) for arch in
+                                 arch_.split(universal_arch_separator)])
+
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        host_architecture = to_apple_arch(self._conanfile)
+        host_architecture = to_apple_archs(self._conanfile)
 
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
@@ -807,6 +817,11 @@ class GenericSystemBlock(Block):
                 return cmake_system_name_map.get(os_host, os_host)
 
     def _is_apple_cross_building(self):
+
+        if is_universal_arch(self._conanfile.settings.get_safe("arch"),
+                             self._conanfile.settings.possible_values().get("arch")):
+            return False
+
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
@@ -821,7 +836,9 @@ class GenericSystemBlock(Block):
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        if not user_toolchain:  # try to detect automatically
+        # try to detect automatically
+        if not user_toolchain and not is_universal_arch(self._conanfile.settings.get_safe("arch"),
+                                                        self._conanfile.settings.possible_values().get("arch")):
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
             if arch_host == "armv8":
