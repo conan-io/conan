@@ -1,5 +1,6 @@
 import yaml
 
+from conan.internal.internal_tools import is_universal_arch
 from conans.errors import ConanException
 
 
@@ -98,7 +99,8 @@ class SettingsItem(object):
 
     def _validate(self, value):
         value = str(value) if value is not None else None
-        if "ANY" not in self._definition and value not in self._definition:
+        is_universal = is_universal_arch(value, self._definition) if self._name == "settings.arch" else False
+        if "ANY" not in self._definition and value not in self._definition and not is_universal:
             raise ConanException(bad_value_msg(self._name, value, self._definition))
         return value
 
