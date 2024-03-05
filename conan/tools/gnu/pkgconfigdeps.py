@@ -137,14 +137,16 @@ class _PCContentGenerator:
 
 class _PCGenerator:
 
-    def __init__(self, conanfile, require, dep, build_context_suffix=None):
-        self._conanfile = conanfile
+    def __init__(self, pkgconfigdeps, require, dep):
+        self._conanfile = pkgconfigdeps._conanfile  # noqa
         self._require = require
         self._dep = dep
         self._content_generator = _PCContentGenerator(self._conanfile, self._dep)
         self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
-        self._suffix = "" if not build_context_suffix or not require.build else \
-            build_context_suffix.get(require.ref.name, "")
+        self._is_build_context = require.build
+        self._build_context_folder = pkgconfigdeps.build_context_folder
+        self._suffix = pkgconfigdeps.build_context_suffix.get(require.ref.name, "") \
+            if self._is_build_context else ""
 
     def _get_cpp_info_requires_names(self, cpp_info):
         """
@@ -249,11 +251,22 @@ class _PCGenerator:
 
         * Apart from those PC files, if there are any aliases declared, they will be created too.
         """
+        def _fill_pc_files(pc_info):
+            content = self._content_generator.content(pc_info)
+            # If no suffix is defined, we can save the *.pc file in the build_context_folder
+            if self._is_build_context and self._build_context_folder and not self._suffix:
+                # Issue: https://github.com/conan-io/conan/issues/12342
+                # Issue: https://github.com/conan-io/conan/issues/14935
+                pc_files[f"{self._build_context_folder}/{pc_info.name}.pc"] = content
+            else:
+                # Saving also the suffixed names as usual
+                pc_files[f"{pc_info.name}.pc"] = content
+
         def _update_pc_files(info):
-            pc_files[f"{info.name}.pc"] = self._content_generator.content(info)
+            _fill_pc_files(info)
             for alias in info.aliases:
                 alias_info = _PCInfo(alias, [info.name], f"Alias {alias} for {info.name}", None, [])
-                pc_files[f"{alias}.pc"] = self._content_generator.content(alias_info)
+                _fill_pc_files(alias_info)
 
         pc_files = {}
         # If the package has no components, then we have to calculate only the root pc file
@@ -277,13 +290,7 @@ class _PCGenerator:
         if f"{pkg_name}.pc" not in pc_files:
             package_info = _PCInfo(pkg_name, pkg_requires, f"Conan package: {pkg_name}",
                                    self._dep.cpp_info, self._get_package_aliases(self._dep))
-            # It'll be enough creating a shortened PC file. This file will be like an alias
-            pc_files[f"{package_info.name}.pc"] = self._content_generator.content(package_info)
-            for alias in package_info.aliases:
-                alias_info = _PCInfo(alias, [package_info.name],
-                                     f"Alias {alias} for {package_info.name}", None, [])
-                pc_files[f"{alias}.pc"] = self._content_generator.content(alias_info)
-
+            _update_pc_files(package_info)
         return pc_files
 
     @staticmethod
@@ -333,7 +340,15 @@ class PkgConfigDeps:
         self.build_context_activated = []
         # If specified, the files/requires/names for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
+        # DEPRECATED: consumers should use build_context_folder instead
         self.build_context_suffix = {}
+        # By default, the "[generators_folder]/build" folder will save all the *.pc files activated
+        # in the build_context_activated list.
+        # Notice that if the `build_context_suffix` attr is defined, the `build_context_folder` one
+        # will have no effect.
+        # Issue: https://github.com/conan-io/conan/issues/12342
+        # Issue: https://github.com/conan-io/conan/issues/14935
+        self.build_context_folder = "build"
 
     def _validate_build_requires(self, host_req, build_req):
         """
@@ -347,7 +362,7 @@ class PkgConfigDeps:
                         if r.ref.name in self.build_context_activated}
         common_names = {r.ref.name for r in host_req.values()}.intersection(activated_br)
         without_suffixes = [common_name for common_name in common_names
-                            if self.build_context_suffix.get(common_name) is None]
+                            if not self.build_context_suffix.get(common_name)]
         if without_suffixes:
             raise ConanException(f"The packages {without_suffixes} exist both as 'require' and as"
                                  f" 'build require'. You need to specify a suffix using the "
@@ -363,20 +378,20 @@ class PkgConfigDeps:
         host_req = self._conanfile.dependencies.host
         build_req = self._conanfile.dependencies.build  # tool_requires
         test_req = self._conanfile.dependencies.test
-
-        # Check if it exists both as require and as build require without a suffix
-        self._validate_build_requires(host_req, build_req)
+        # If self.build_context_suffix is not defined, the build requires will be saved
+        # in the self.build_context_folder
+        if self.build_context_suffix:
+            self._conanfile.output.warning("build_context_suffix attribute has been deprecated. Use the"
+                                           " build_context_folder one instead.")
+            # Check if it exists both as require and as build require without a suffix
+            self._validate_build_requires(host_req, build_req)
 
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
-            # Require is not used at the moment, but its information could be used,
-            # and will be used in Conan 2.0
             # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
             if require.build and dep.ref.name not in self.build_context_activated:
                 continue
-
-            pc_generator = _PCGenerator(self._conanfile, require, dep,
-                                        build_context_suffix=self.build_context_suffix)
-            pc_files.update(pc_generator.pc_files)
+            # Save all the *.pc files and their contents
+            pc_files.update(_PCGenerator(self, require, dep).pc_files)
         return pc_files
 
     def generate(self):

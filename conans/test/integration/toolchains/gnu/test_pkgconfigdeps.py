@@ -2,6 +2,8 @@ import glob
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -756,6 +758,7 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
             def generate(self):
                 tc = PkgConfigDeps(self)
                 tc.build_context_activated = ["tool"]
+                tc.build_context_suffix = {"tool": ""}  # No suffix defined
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
@@ -878,7 +881,76 @@ class TestPCGenerationBuildContext:
                     assert os.path.exists("wayland_BUILD-server.pc")
                     assert os.path.exists("dep.pc")
                     assert os.path.exists("dep_BUILD.pc")
+
+                    # Issue: https://github.com/conan-io/conan/issues/12342
+                    # Issue: https://github.com/conan-io/conan/issues/14935
+                    assert not os.path.exists("build/wayland.pc")
+                    assert not os.path.exists("build/wayland-client.pc")
+                    assert not os.path.exists("build/wayland-server.pc")
+                    assert not os.path.exists("build/dep.pc")
                 """)
+        wayland = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "wayland"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.components["client"].libs = []
+                    self.cpp_info.components["server"].libs = []
+            """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    @pytest.mark.parametrize("build_folder_name", ["DEFAULT", "my_build", ""])
+    def test_pc_generate_components_in_build_context_folder(self, build_folder_name):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    # if "DEFAULT" using the default deps.build_context_folder == "build"
+                    if "{build_folder_name}" != "DEFAULT":
+                        deps.build_context_folder = "{build_folder_name}"
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland-client.pc")
+                    assert os.path.exists("wayland-server.pc")
+                    assert os.path.exists("dep.pc")
+
+                    # Issue: https://github.com/conan-io/conan/issues/12342
+                    # Issue: https://github.com/conan-io/conan/issues/14935
+                    folder = "build" if "{build_folder_name}" == "DEFAULT" else "{build_folder_name}"
+                    if folder:
+                        assert os.path.exists(folder + "/wayland.pc")
+                        assert os.path.exists(folder + "/wayland-client.pc")
+                        assert os.path.exists(folder + "/wayland-server.pc")
+                        assert os.path.exists(folder + "/dep.pc")
+                """.format(build_folder_name=build_folder_name))
         wayland = textwrap.dedent("""
             from conan import ConanFile
 
