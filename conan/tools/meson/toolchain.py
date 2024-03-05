@@ -149,8 +149,7 @@ class MesonToolchain(object):
         #: Defines the Meson ``build.pkg_config_path`` variable (build context)
         # Issue: https://github.com/conan-io/conan/issues/12342
         # Issue: https://github.com/conan-io/conan/issues/14935
-        self.build_pkg_config_path = os.path.join(self._conanfile.generators_folder, "build")
-
+        self.build_pkg_config_path = None
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
 
         #: Dict-like object with the build, host, and target as the Meson machine context
@@ -180,6 +179,9 @@ class MesonToolchain(object):
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+            # If not cross-building, setting build_pkg_config_path to "build" by default
+            self.build_pkg_config_path = os.path.join(self._conanfile.generators_folder, "build")
+
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
             default_comp_cpp = "cl"
