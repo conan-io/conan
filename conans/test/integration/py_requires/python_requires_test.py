@@ -362,6 +362,30 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My system_requirements pkg being called!", client.out)
 
+    def test_reuse_requirements(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                   from conan import ConanFile
+                   class MyConanfileBase(ConanFile):
+                       def requirements(self):
+                           self.output.info("My requirements %s being called!" % self.name)
+                           self.requires("foo/1.0")
+                   """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
+        client.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        client.run("create .")
+        reuse = textwrap.dedent("""
+                    from conan import ConanFile
+                    class PkgTest(ConanFile):
+                        python_requires = "base/1.1@user/testing"
+                        python_requires_extend = "base.MyConanfileBase"
+                    """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.assertIn("pkg/0.1@user/testing: My requirements pkg being called!", client.out)
+        client.assert_listed_require({"foo/1.0#f5288356d9cc303f25cb05bccbad8fbb": "Cache"})
+
     def test_overwrite_class_members(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
