@@ -298,3 +298,49 @@ def graph_explain(conan_api, parser,  subparser, *args):
 
     ConanOutput().title("Closest binaries")
     return {"closest_binaries": pkglist.serialize()}
+
+
+
+@conan_subcommand(formatters={})
+def graph_outdated(conan_api, parser, subparser, *args):
+    """
+    List the dependencies in the graph and it's newer versions in the remote
+    """
+    common_graph_args(subparser)
+    subparser.add_argument("--check-updates", default=False, action="store_true",
+                           help="Check if there are recipe updates")
+    subparser.add_argument("--build-require", action='store_true', default=False,
+                           help='Whether the provided reference is a build-require')
+    args = parser.parse_args(*args)
+    # parameter validation
+    validate_common_graph_args(args)
+    cwd = os.getcwd()
+    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
+
+    # Basic collaborators, remotes, lockfile, profiles
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               conanfile_path=path,
+                                               cwd=cwd,
+                                               partial=args.lockfile_partial,
+                                               overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+
+    #metemos un argumento de outdated aqui y que cambie las cosas que hace en el load graph?
+    if path:
+        deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
+                                                         args.user, args.channel,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update,
+                                                         check_updates=args.check_updates,
+                                                         is_build_require=args.build_require)
+    else:
+        deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
+                                                         profile_host, profile_build, lockfile,
+                                                         remotes, args.update,
+                                                         check_updates=args.check_updates)
+    print_graph_basic(deps_graph)
+    dependencies = deps_graph.nodes[1:]
+    resolved_ranges = deps_graph.resolved_ranges
+    print()
