@@ -290,6 +290,22 @@ def test_check_pkg_config_paths():
     t.save({"conanfile.txt": "[generators]\nMesonToolchain"})
     t.run("install .")
     content = t.load(MesonToolchain.native_filename)
+    assert f"pkg_config_path = '{t.current_folder}'" in content
+    assert f"build.pkg_config_path = " not in content
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.build_pkg_config_path = os.path.join(self.generators_folder, "build")
+            tc.generate()
+    """)
+    t.save({"conanfile.py": conanfile}, clean_first=True)
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
     base_folder = t.current_folder
     assert f"pkg_config_path = '{base_folder}'" in content
     assert f"build.pkg_config_path = '{os.path.join(base_folder, 'build')}'" in content
