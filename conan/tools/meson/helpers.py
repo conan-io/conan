@@ -35,6 +35,7 @@ _meson_cpu_family_map = {
     'armv8': ('aarch64', 'armv8', 'little'),
     'armv8_32': ('aarch64', 'armv8_32', 'little'),
     'armv8.3': ('aarch64', 'armv8.3', 'little'),
+    'arm64ec': ('aarch64', 'arm64ec', 'little'),
     'avr': ('avr', 'avr', 'little'),
     'mips': ('mips', 'mips', 'big'),
     'mips64': ('mips64', 'mips64', 'big'),
