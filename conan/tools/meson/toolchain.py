@@ -179,8 +179,6 @@ class MesonToolchain(object):
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
-            # If not cross-building, setting build_pkg_config_path to "build" by default
-            self.build_pkg_config_path = os.path.join(self._conanfile.generators_folder, "build")
 
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
