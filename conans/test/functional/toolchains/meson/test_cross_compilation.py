@@ -207,98 +207,98 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
         assert "architecture: %s" % expected_arch in client.out
 
 
-# @pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64')])
-# @pytest.mark.tool("meson")
-# @pytest.mark.tool("android_ndk")
-# # @pytest.mark.skipif(platform.system() != "Windows", reason="Android NDK only tested on Windows for now")
-# def test_android_meson_toolchain_cross_compiling_windows(arch, expected_arch):
-#     android_abi_prefix = {
-#         "armv8": "aarch64",
-#         "armv7": "armv7a",
-#         "x86": "i686",
-#         "x86_64": "x86_64"
-#     }
-#
-#     android_abi_postfix = "" if arch != "armv7" else "eabi"
-#
-#     api_level = 21
-#     ndk_path = os.getenv("TEST_CONAN_ANDROID_NDK")
-#     profile_host = textwrap.dedent("""
-#     include(default)
-#
-#     [settings]
-#     os = Android
-#     os.api_level = {api_level}
-#     arch = {arch}
-#
-#     [conf]
-#     tools.android:ndk_path={ndk_path}
-#     """)
-#     hello_h = gen_function_h(name="hello")
-#     hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
-#     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-#     profile_host = profile_host.format(
-#         api_level=api_level,
-#         arch=arch,
-#         ndk_path=ndk_path
-#     )
-#
-#     clang_path_template = "{ndk_path}/toolchains/llvm/prebuilt/{platform}-x86_64/bin/{android_prefix}-linux-android{android_abi_postfix}{api_level}-{compiler}{extension}"
-#     expected_c_clang_path = pathlib.PurePath(
-#         clang_path_template.format(
-#             ndk_path=ndk_path,
-#             platform=platform.system().lower(),
-#             android_prefix=android_abi_prefix[arch],
-#             android_abi_postfix=android_abi_postfix,
-#             api_level=api_level,
-#             compiler="clang",
-#             extension=".cmd" if platform.system() == "Windows" else ""
-#         ))
-#     expected_cpp_clang_path = pathlib.PurePath(
-#         clang_path_template.format(
-#             ndk_path=ndk_path,
-#             platform=platform.system().lower(),
-#             android_prefix=android_abi_prefix[arch],
-#             android_abi_postfix=android_abi_postfix,
-#             api_level=api_level,
-#             compiler="clang++",
-#             extension=".cmd" if platform.system() == "Windows" else ""
-#         )
-#     )
-#
-#     client = TestClient()
-#     client.save({"conanfile.py": _conanfile_py,
-#                  "meson.build": _meson_build,
-#                  "meson_options.txt": _meson_options_txt,
-#                  "hello.h": hello_h,
-#                  "hello.cpp": hello_cpp,
-#                  "main.cpp": app,
-#                  "profile_host": profile_host})
-#
-#     client.run("build . --profile:build=default --profile:host=profile_host")
-#     content = client.load(os.path.join("conan_meson_cross.ini"))
-#
-#     meson_c_path_match = re.search("^c = '(.*)'", content, re.MULTILINE)
-#     meson_cpp_path_match = re.search("^cpp = '(.*)'", content, re.MULTILINE)
-#     assert meson_c_path_match is not None
-#     assert meson_cpp_path_match is not None
-#
-#     meson_c_path = pathlib.PurePath(meson_c_path_match.groups(1)[0])
-#     meson_cpp_path = pathlib.PurePath(meson_cpp_path_match.groups(1)[0])
-#
-#     assert "needs_exe_wrapper = true" in content
-#     assert meson_c_path == expected_c_clang_path
-#     assert meson_cpp_path == expected_cpp_clang_path
-#     assert "Target machine cpu family: {}".format(
-#         expected_arch if expected_arch != "i386" else "x86") in client.out
-#     assert "Target machine cpu: {}".format(arch) in client.out
-#     libhello_name = pathlib.PurePath("libhello.a")
-#     libhello = pathlib.PurePath(os.path.join(client.current_folder, "build", libhello_name))
-#     demo = pathlib.PurePath(os.path.join(client.current_folder, "build", "demo"))
-#     assert os.path.isfile(libhello)
-#     assert os.path.isfile(demo)
-#
-#     # Check binaries architecture
-#     if platform.system() == "Darwin" or platform.system() == "Linux":
-#         client.run_command('objdump -f "%s"' % libhello)
-#         assert "architecture: %s" % expected_arch in client.out
+@pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64')])
+@pytest.mark.tool("meson")
+@pytest.mark.tool("android_ndk")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Android NDK only tested on MacOS for now")
+def test_android_meson_toolchain_cross_compiling_windows(arch, expected_arch):
+    android_abi_prefix = {
+        "armv8": "aarch64",
+        "armv7": "armv7a",
+        "x86": "i686",
+        "x86_64": "x86_64"
+    }
+
+    android_abi_postfix = "" if arch != "armv7" else "eabi"
+
+    api_level = 21
+    ndk_path = os.getenv("TEST_CONAN_ANDROID_NDK")
+    profile_host = textwrap.dedent("""
+    include(default)
+
+    [settings]
+    os = Android
+    os.api_level = {api_level}
+    arch = {arch}
+
+    [conf]
+    tools.android:ndk_path={ndk_path}
+    """)
+    hello_h = gen_function_h(name="hello")
+    hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
+    app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    profile_host = profile_host.format(
+        api_level=api_level,
+        arch=arch,
+        ndk_path=ndk_path
+    )
+
+    clang_path_template = "{ndk_path}/toolchains/llvm/prebuilt/{platform}-x86_64/bin/{android_prefix}-linux-android{android_abi_postfix}{api_level}-{compiler}{extension}"
+    expected_c_clang_path = pathlib.PurePath(
+        clang_path_template.format(
+            ndk_path=ndk_path,
+            platform=platform.system().lower(),
+            android_prefix=android_abi_prefix[arch],
+            android_abi_postfix=android_abi_postfix,
+            api_level=api_level,
+            compiler="clang",
+            extension=".cmd" if platform.system() == "Windows" else ""
+        ))
+    expected_cpp_clang_path = pathlib.PurePath(
+        clang_path_template.format(
+            ndk_path=ndk_path,
+            platform=platform.system().lower(),
+            android_prefix=android_abi_prefix[arch],
+            android_abi_postfix=android_abi_postfix,
+            api_level=api_level,
+            compiler="clang++",
+            extension=".cmd" if platform.system() == "Windows" else ""
+        )
+    )
+
+    client = TestClient()
+    client.save({"conanfile.py": _conanfile_py,
+                 "meson.build": _meson_build,
+                 "meson_options.txt": _meson_options_txt,
+                 "hello.h": hello_h,
+                 "hello.cpp": hello_cpp,
+                 "main.cpp": app,
+                 "profile_host": profile_host})
+
+    client.run("build . --profile:build=default --profile:host=profile_host")
+    content = client.load(os.path.join("conan_meson_cross.ini"))
+
+    meson_c_path_match = re.search("^c = '(.*)'", content, re.MULTILINE)
+    meson_cpp_path_match = re.search("^cpp = '(.*)'", content, re.MULTILINE)
+    assert meson_c_path_match is not None
+    assert meson_cpp_path_match is not None
+
+    meson_c_path = pathlib.PurePath(meson_c_path_match.groups(1)[0])
+    meson_cpp_path = pathlib.PurePath(meson_cpp_path_match.groups(1)[0])
+
+    assert "needs_exe_wrapper = true" in content
+    assert meson_c_path == expected_c_clang_path
+    assert meson_cpp_path == expected_cpp_clang_path
+    assert "Target machine cpu family: {}".format(
+        expected_arch if expected_arch != "i386" else "x86") in client.out
+    assert "Target machine cpu: {}".format(arch) in client.out
+    libhello_name = pathlib.PurePath("libhello.a")
+    libhello = pathlib.PurePath(os.path.join(client.current_folder, "build", libhello_name))
+    demo = pathlib.PurePath(os.path.join(client.current_folder, "build", "demo"))
+    assert os.path.isfile(libhello)
+    assert os.path.isfile(demo)
+
+    # Check binaries architecture
+    if platform.system() == "Darwin" or platform.system() == "Linux":
+        client.run_command('objdump -f "%s"' % libhello)
+        assert "architecture: %s" % expected_arch in client.out
