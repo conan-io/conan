@@ -5,8 +5,8 @@ import pytest
 
 from conan.tools.cmake.cmakedeps.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_MODULE, \
     FIND_MODE_BOTH, FIND_MODE_NONE
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 
 
 @pytest.mark.parametrize("cmake_find_mode", [FIND_MODE_CONFIG, FIND_MODE_MODULE,

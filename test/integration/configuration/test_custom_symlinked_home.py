@@ -3,9 +3,9 @@ import platform
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from test.assets.genconanfile import GenConanfile
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Uses symlinks")

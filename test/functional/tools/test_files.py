@@ -4,9 +4,9 @@ import textwrap
 import patch_ng
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.file_server import TestFileServer
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.file_server import TestFileServer
+from test.utils.tools import TestClient
 from conans.util.files import save
 
 

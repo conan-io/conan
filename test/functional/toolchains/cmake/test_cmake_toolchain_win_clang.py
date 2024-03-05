@@ -5,10 +5,10 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.sources import gen_function_cpp, gen_function_c
-from conans.test.functional.utils import check_vs_runtime, check_exe_run
-from conans.test.utils.tools import TestClient
+from test.assets.cmake import gen_cmakelists
+from test.assets.sources import gen_function_cpp, gen_function_c
+from test.functional.utils import check_vs_runtime, check_exe_run
+from test.utils.tools import TestClient
 from conans.util.env import environment_update
 
 

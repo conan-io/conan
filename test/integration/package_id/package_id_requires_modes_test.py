@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from test.utils.tools import TestClient, GenConanfile
 
 
 class TestPackageIDRequirementsModes:

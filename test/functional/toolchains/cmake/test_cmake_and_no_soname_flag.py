@@ -6,9 +6,9 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conan.tools.files import replace_in_file
-from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import TestClient
+from test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
+from test.utils.mocks import ConanFileMock
+from test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")

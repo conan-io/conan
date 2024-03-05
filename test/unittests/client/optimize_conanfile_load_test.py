@@ -1,6 +1,6 @@
 import unittest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 class OptimizeConanFileLoadTest(unittest.TestCase):

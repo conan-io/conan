@@ -12,8 +12,8 @@ from conans.server.service.v2.search import SearchService
 from conans.server.service.v2.service_v2 import ConanServiceV2
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
+from test.assets.genconanfile import GenConanfile
+from test.utils.test_files import temp_folder
 from conans.util.files import save, save_files
 
 

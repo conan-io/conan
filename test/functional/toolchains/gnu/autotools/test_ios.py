@@ -4,9 +4,9 @@ import textwrap
 import pytest
 
 from conan.tools.build import load_toolchain_args
-from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
+from test.assets.autotools import gen_makefile_am, gen_configure_ac
+from test.assets.sources import gen_function_cpp
+from test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")

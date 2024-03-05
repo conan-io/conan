@@ -2,7 +2,7 @@ import pytest
 
 from conan.tools.apple import XcodeBuild
 from conans.model.conf import ConfDefinition
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from test.utils.mocks import ConanFileMock, MockSettings
 
 
 @pytest.mark.parametrize("mode", ["quiet", None, "verbose"])

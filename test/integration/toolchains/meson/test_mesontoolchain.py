@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conan.tools.meson import MesonToolchain
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 def test_apple_meson_keep_user_custom_flags():

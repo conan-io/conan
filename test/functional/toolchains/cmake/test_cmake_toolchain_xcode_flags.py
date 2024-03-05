@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 def _add_message_status_flags(client):

@@ -5,8 +5,8 @@ from mock import patch
 
 from conans.client.remote_manager import RemoteManager
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, TestServer
 
 
 class TestVersionRangesCache:

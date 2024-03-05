@@ -2,8 +2,8 @@ import os
 import tarfile
 
 from conan.tools.files import unzip
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from test.utils.mocks import ConanFileMock
+from test.utils.test_files import temp_folder
 from conans.util.files import load, save
 
 

@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 from ._utils import create_library
 
 

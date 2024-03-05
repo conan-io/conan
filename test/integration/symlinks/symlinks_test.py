@@ -6,9 +6,9 @@ import pytest
 
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import PACKAGE_TGZ_NAME
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestServer, TurboTestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient, TestServer, TurboTestClient
 from conans.util.files import load, rmdir, chdir, save
 
 links_conanfile = textwrap.dedent("""
@@ -110,7 +110,7 @@ def test_complete_round_trip_external_link():
 
     def checker(folder):
         with chdir(folder):
-            assert "target.txt" not in os.listdir("")
+            assert "target.txt" not in os.listdir(".")
             assert not os.path.exists("target.txt")
             assert os.readlink("link.txt") == "midlink.txt"
             assert os.readlink("midlink.txt") == target

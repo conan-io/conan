@@ -217,7 +217,7 @@ default_profiles = {
 }
 
 try:
-    from conans.test.conftest_user import tools_locations as user_tool_locations
+    from test.conftest_user import tools_locations as user_tool_locations
 
     def update(d, u):
         for k, v in u.items():
@@ -233,7 +233,7 @@ except ImportError as e:
 
 
 try:
-    from conans.test.conftest_user import default_profiles as user_default_profiles
+    from test.conftest_user import default_profiles as user_default_profiles
     default_profiles.update(user_default_profiles)
 except ImportError as e:
     user_default_profiles = None

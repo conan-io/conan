@@ -4,7 +4,7 @@ import unittest
 import os
 
 from conans.client.conf.config_installer import tmp_config_install_folder
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 class InstallFolderTests(unittest.TestCase):

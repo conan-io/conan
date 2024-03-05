@@ -1,7 +1,7 @@
 import textwrap
 import pytest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 consumer = textwrap.dedent("""
 from conan import ConanFile

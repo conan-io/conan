@@ -3,9 +3,9 @@ import platform
 
 import pytest
 
-from conans.test.utils.scm import create_local_git_repo
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from test.utils.scm import create_local_git_repo
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient
 from conans.util.files import save
 
 

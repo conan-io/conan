@@ -4,10 +4,10 @@ import tempfile
 import pytest
 import textwrap
 
-from conans.test.assets.autotools import gen_makefile
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_exe_run, check_vs_runtime
-from conans.test.utils.tools import TestClient
+from test.assets.autotools import gen_makefile
+from test.assets.sources import gen_function_cpp
+from test.functional.utils import check_exe_run, check_vs_runtime
+from test.utils.tools import TestClient
 from conans.util.env import environment_update
 
 

@@ -4,7 +4,7 @@ import textwrap
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, GenConanfile
+from test.utils.tools import TestClient, GenConanfile
 
 
 tool_conanfile = """

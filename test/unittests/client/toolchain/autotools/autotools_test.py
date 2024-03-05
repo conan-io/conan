@@ -4,9 +4,9 @@ from conan.tools.build import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conan import ConanFile
 from conans.model.conf import Conf
-from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.mocks import MockSettings
-from conans.test.utils.test_files import temp_folder
+from test.unittests.util.tools_test import RunnerMock
+from test.utils.mocks import MockSettings
+from test.utils.test_files import temp_folder
 
 
 def test_configure_arguments():

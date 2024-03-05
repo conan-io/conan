@@ -4,8 +4,8 @@
 import os
 
 from conan.tools.files import replace_in_file, save, load
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from test.utils.mocks import ConanFileMock
+from test.utils.test_files import temp_folder
 
 
 def test_save_and_load_encoding():

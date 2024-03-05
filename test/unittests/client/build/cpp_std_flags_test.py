@@ -3,7 +3,7 @@ import unittest
 from conan.internal.api.detect_api import default_cppstd
 from conan.tools.build import cppstd_flag
 from conans.model.version import Version
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from test.utils.mocks import MockSettings, ConanFileMock
 
 
 def _make_cppstd_flag(compiler, compiler_version, cppstd=None):

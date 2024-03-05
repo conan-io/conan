@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 from conans.util.files import load
 
 

@@ -2,7 +2,7 @@ import textwrap
 
 from conan.tools.meson import Meson
 from conans.model.conf import ConfDefinition
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from test.utils.mocks import ConanFileMock, MockSettings
 
 
 def test_meson_build():

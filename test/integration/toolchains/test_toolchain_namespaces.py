@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conan.tools.build import load_toolchain_args, CONAN_TOOLCHAIN_ARGS_FILE
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 def test_autotools_namespace():

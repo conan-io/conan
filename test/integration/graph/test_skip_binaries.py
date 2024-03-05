@@ -1,7 +1,7 @@
 import re
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 def test_private_skip():

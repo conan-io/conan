@@ -1,7 +1,7 @@
-from conans.test.assets.genconanfile import GenConanfile
-from integration.graph.core import GraphManagerTest
-from integration.graph.core import _check_transitive
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from integration.graph.core.graph_manager_base import GraphManagerTest
+from integration.graph.core.graph_manager_test import _check_transitive
+from test.utils.tools import TestClient
 
 
 class TestAlias(GraphManagerTest):

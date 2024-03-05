@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 # TODO: This test does not make sense for Conan v2. Please, remove/skip it in that case.

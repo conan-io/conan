@@ -2,8 +2,8 @@ import mock
 import pytest
 import textwrap
 
-from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
-from conans.test.utils.test_files import temp_folder
+from test.utils.mocks import ConanFileMock, MockSettings, MockOptions
+from test.utils.test_files import temp_folder
 from conan.tools.apple import is_apple_os, to_apple_arch, fix_apple_shared_install_name, XCRun
 from conan.tools.apple.apple import _get_dylib_install_name # testing private function
 

@@ -7,7 +7,7 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.utils.tools import TestClient, GenConanfile
+from test.utils.tools import TestClient, GenConanfile
 
 
 @pytest.fixture()

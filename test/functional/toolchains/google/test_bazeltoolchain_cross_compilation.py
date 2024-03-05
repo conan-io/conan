@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient
+from test.assets.sources import gen_function_cpp, gen_function_h
+from test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Darwin")

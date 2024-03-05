@@ -1,17 +1,18 @@
 import cProfile
-import json
+from test.utils.test_files import temp_folder
 import pstats
 import time
 from pstats import SortKey
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 
 
 def test_large_graph():
-    c = TestClient(cache_folder="T:/mycache")
-    num_test = 40
-    num_pkgs = 40
+    tmp = temp_folder()
+    c = TestClient(cache_folder=tmp)
+    num_test = 4
+    num_pkgs = 4
 
     """for i in range(num_test):
         conanfile = GenConanfile(f"test{i}", "0.1")

@@ -4,8 +4,8 @@ import sys
 
 import pytest
 
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient
 
 import textwrap
 

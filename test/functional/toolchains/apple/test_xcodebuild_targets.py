@@ -3,7 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 xcode_project = textwrap.dedent("""
     name: HelloLibrary

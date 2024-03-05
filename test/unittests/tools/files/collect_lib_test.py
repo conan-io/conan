@@ -5,9 +5,9 @@ import pytest
 
 from conan.tools.files import collect_libs
 from conans.model.build_info import CppInfo
-from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from test.utils.test_files import temp_folder
+from test.utils.tools import redirect_output
 from conans.util.files import save
 
 

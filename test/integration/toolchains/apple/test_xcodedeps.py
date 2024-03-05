@@ -5,9 +5,9 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.integration.toolchains.apple.test_xcodetoolchain import _get_filename
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from integration.toolchains.apple.test_xcodetoolchain import _get_filename
+from test.utils.tools import TestClient
 
 _expected_dep_xconfig = [
     "SYSTEM_HEADER_SEARCH_PATHS = $(inherited) $(SYSTEM_HEADER_SEARCH_PATHS_{name}_{name})",

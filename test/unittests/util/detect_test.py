@@ -5,8 +5,8 @@ from parameterized import parameterized
 
 from conans.client.conf.detect import detect_defaults_settings
 from conans.model.version import Version
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.tools import redirect_output
 from conans.util.env import environment_update
 
 

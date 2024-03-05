@@ -6,8 +6,8 @@ from requests import Response
 
 from requests.exceptions import ConnectionError
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestRequester, TestServer
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
 
 

@@ -6,9 +6,9 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_h, gen_function_cpp
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.assets.sources import gen_function_h, gen_function_cpp
+from test.utils.tools import TestClient
 
 
 @pytest.mark.slow

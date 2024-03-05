@@ -10,7 +10,7 @@ from conans.util.env import environment_update
 from conans.errors import RecipeNotFoundException
 from conans.model.recipe_ref import RecipeReference
 from conans.server.revision_list import RevisionList
-from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
+from test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.files import load
 
 

@@ -3,8 +3,8 @@ import os
 import pytest
 
 from conan.tools.scm import Git
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import TestClient
+from test.utils.mocks import ConanFileMock
+from test.utils.tools import TestClient
 from conans.util.files import chdir
 from conans.util.runners import conan_run
 

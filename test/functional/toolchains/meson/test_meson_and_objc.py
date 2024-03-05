@@ -6,8 +6,8 @@ import textwrap
 import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import TestClient
+from test.utils.mocks import ConanFileMock
+from test.utils.tools import TestClient
 from conans.util.runners import conan_run
 
 _conanfile_py = textwrap.dedent("""

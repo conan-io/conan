@@ -2,7 +2,7 @@ import unittest
 
 from requests import Response
 
-from conans.test.utils.tools import TestClient, TestServer, TestRequester
+from test.utils.tools import TestClient, TestServer, TestRequester
 
 myconan1 = """
 from conan import ConanFile

@@ -6,7 +6,7 @@ from conan.tools.cmake.presets import write_cmake_presets
 from conans.model.conan_file import ConanFile
 from conans.model.conf import Conf
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")

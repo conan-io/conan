@@ -4,9 +4,9 @@ import platform
 
 import pytest
 
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
+from test.assets.cmake import gen_cmakelists
+from test.assets.sources import gen_function_cpp
+from test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

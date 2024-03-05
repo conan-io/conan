@@ -4,7 +4,7 @@ import pytest
 
 from conan.tools.microsoft import unix_path, unix_path_package_info_legacy
 from conans.model.conf import ConfDefinition
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from test.utils.mocks import MockSettings, ConanFileMock
 
 expected_results = [
     ("msys2", '/c/path/to/stuff'),

@@ -1,8 +1,8 @@
 from conan.api.conan_api import ConanAPI
 from conan.cli.cli import Cli
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.test_files import temp_folder
+from test.utils.tools import redirect_output
 
 
 def test_cli():

@@ -1,9 +1,9 @@
 import os
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import uncompress_packaged_files
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.test_files import uncompress_packaged_files
+from test.utils.tools import TestClient
 
 
 def test_reuse_uploaded_tgz():

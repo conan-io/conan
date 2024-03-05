@@ -6,9 +6,9 @@ from requests.exceptions import HTTPError
 
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.test_files import temp_folder
+from test.utils.tools import redirect_output
 from conans.util.files import save
 
 

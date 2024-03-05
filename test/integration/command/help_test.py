@@ -1,5 +1,5 @@
 from conans import __version__
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 class TestHelp:
@@ -38,3 +38,16 @@ class TestHelp:
         assert "Perform file operations in the local cache (of recipes and/or packages)" in c.out
         c.run("cache path -h")
         assert "Show the path to the Conan cache for a given reference" in c.out
+
+
+def test_help_command():
+    client = TestClient()
+
+    client.run("--help")
+    assert "Consumer commands" in client.out
+
+    client.run("search --help")
+    assert "Recipe reference to search for." in client.out
+
+    client.run("list --help")
+    assert "List existing recipes, revisions, or packages in the cache (by default) or the remotes." in client.out

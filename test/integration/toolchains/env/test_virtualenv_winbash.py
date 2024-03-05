@@ -4,9 +4,9 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.conftest import tools_locations
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.conftest import tools_locations
+from test.utils.tools import TestClient
 from conans.util.files import save
 
 """

@@ -11,7 +11,7 @@ from parameterized import parameterized
 from conans.model.manifest import FileTreeManifest
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.test.utils.tools import TestClient, GenConanfile
+from test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 
 

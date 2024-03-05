@@ -3,7 +3,7 @@ import platform
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
+from test.assets.genconanfile import GenConanfile
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")

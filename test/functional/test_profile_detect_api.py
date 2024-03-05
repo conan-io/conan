@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conan.internal.api import detect_api
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 class TestProfileDetectAPI:

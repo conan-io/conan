@@ -9,9 +9,9 @@ import pytest
 from conan.tools.cmake.presets import load_cmake_presets
 from conans.model.recipe_ref import RecipeReference
 from conan.tools.microsoft.visual import vcvars_command
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TurboTestClient
+from test.assets.cmake import gen_cmakelists
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load, rmdir
 
 

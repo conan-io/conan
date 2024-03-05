@@ -12,7 +12,7 @@ from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 from conans.util.files import save
 
 

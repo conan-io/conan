@@ -7,7 +7,7 @@ from mock import Mock, MagicMock
 from conans import __version__
 from conans.client.rest.conan_requester import ConanRequester
 from conans.model.conf import ConfDefinition
-from conans.test.utils.tools import temp_folder
+from test.utils.tools import temp_folder
 from conans.util.files import save
 
 

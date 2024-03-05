@@ -2,7 +2,7 @@ import platform
 import pytest
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() not in  ["Darwin", "Linux"], reason="Autotools on Linux or macOS")
 def test_crossbuild_triplet_from_conf():

@@ -2,8 +2,8 @@ import unittest
 
 from conan.api.output import ConanOutput
 from conans.model.manifest import FileTreeManifest
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.tools import redirect_output
 
 
 class ReportCopiedFilesTestCase(unittest.TestCase):

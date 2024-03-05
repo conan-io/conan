@@ -16,11 +16,11 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import LocalDBMock
-from conans.test.utils.server_launcher import TestServerLauncher
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import get_free_port
+from test.assets.genconanfile import GenConanfile
+from test.utils.mocks import LocalDBMock
+from test.utils.server_launcher import TestServerLauncher
+from test.utils.test_files import temp_folder
+from test.utils.tools import get_free_port
 from conans.util.files import md5, save
 
 

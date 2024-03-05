@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake")

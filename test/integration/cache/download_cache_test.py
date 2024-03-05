@@ -1,10 +1,10 @@
 import os
 import textwrap
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.file_server import TestFileServer
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.file_server import TestFileServer
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient
 from conans.util.files import save, set_dirty
 
 

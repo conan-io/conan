@@ -4,8 +4,8 @@ import unittest
 
 from requests import Response
 
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestRequester
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient, TestRequester
 from conans.util.files import save
 
 

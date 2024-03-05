@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
-from conans.test.functional.toolchains.meson._base import TestMesonBase
-from conans.test.utils.tools import TestClient
+from test.functional.toolchains.meson._base import TestMesonBase
+from test.utils.tools import TestClient
 
 
 class TestMesonToolchainAndGnuFlags(TestMesonBase):

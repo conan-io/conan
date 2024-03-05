@@ -5,9 +5,9 @@ import pytest
 
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from test.assets.genconanfile import GenConanfile
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture

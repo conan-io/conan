@@ -1,15 +1,15 @@
 import os
 import platform
 import textwrap
-from conans.test.utils.mocks import ConanFileMock
+from test.utils.mocks import ConanFileMock
 
 import pytest
 
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.pkg_cmake import pkg_cmake
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from test.assets.cmake import gen_cmakelists
+from test.assets.genconanfile import GenConanfile
+from test.assets.pkg_cmake import pkg_cmake
+from test.assets.sources import gen_function_cpp, gen_function_h
+from test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conan.tools.files import replace_in_file
 
 

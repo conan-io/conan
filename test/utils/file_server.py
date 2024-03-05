@@ -4,7 +4,7 @@ import uuid
 import bottle
 from webtest import TestApp
 
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 
 

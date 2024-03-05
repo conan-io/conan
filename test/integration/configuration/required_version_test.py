@@ -4,8 +4,8 @@ import mock
 
 from conans import __version__
 from conans.errors import ConanException
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient
 from conans.util.files import save
 
 

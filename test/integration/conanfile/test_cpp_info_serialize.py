@@ -1,7 +1,7 @@
 import json
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 def test_cpp_info_serialize_round_trip():

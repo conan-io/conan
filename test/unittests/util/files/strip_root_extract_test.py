@@ -6,10 +6,10 @@ import zipfile
 from conan.tools.files.files import untargz, unzip
 from conans.errors import ConanException
 from conans.model.manifest import gather_files
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import ConanFileMock
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.test_files import temp_folder
+from test.utils.tools import redirect_output
 from conans.util.files import chdir, save
 from conans.util.files import gzopen_without_timestamps, rmdir
 

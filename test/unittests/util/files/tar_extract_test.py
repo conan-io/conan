@@ -7,7 +7,7 @@ import unittest
 
 import pytest
 
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 from conans.util.files import tar_extract, gzopen_without_timestamps, save, gather_files, chdir
 
 

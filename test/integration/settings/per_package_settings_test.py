@@ -2,7 +2,7 @@ import json
 import textwrap
 import unittest
 
-from conans.test.utils.tools import TestClient, GenConanfile
+from test.utils.tools import TestClient, GenConanfile
 
 
 class PerPackageSettingTest(unittest.TestCase):

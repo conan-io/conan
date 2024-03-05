@@ -1,5 +1,5 @@
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 
 
 def test_version_range_conf_nonexplicit_expression():

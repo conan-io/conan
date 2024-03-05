@@ -1,6 +1,6 @@
 import os
 
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 from conans.util.files import save_files, chdir
 from conans.util.runners import check_output_runner
 

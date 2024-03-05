@@ -3,9 +3,9 @@ import pytest
 
 from conan.api.model import Remote
 from conans.client.graph.graph_error import GraphConflictError, GraphMissingError
-from conans.test.assets.genconanfile import GenConanfile
-from integration.graph.core import GraphManagerTest
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from test.assets.genconanfile import GenConanfile
+from integration.graph.core.graph_manager_base import GraphManagerTest
+from test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestVersionRanges(GraphManagerTest):

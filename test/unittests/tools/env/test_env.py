@@ -9,8 +9,8 @@ from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.subsystems import WINDOWS
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import ConanFileMock, MockSettings
-from conans.test.utils.test_files import temp_folder
+from test.utils.mocks import ConanFileMock, MockSettings
+from test.utils.test_files import temp_folder
 from conans.util.env import environment_update
 from conans.util.files import save, chdir
 

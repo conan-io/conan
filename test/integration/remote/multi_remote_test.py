@@ -4,8 +4,8 @@ from time import sleep
 
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, TestServer
 
 
 class ExportsSourcesMissingTest(unittest.TestCase):

@@ -5,8 +5,8 @@ from xml.dom import minidom
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 
 
 @pytest.mark.parametrize(

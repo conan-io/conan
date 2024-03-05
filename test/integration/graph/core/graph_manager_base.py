@@ -14,8 +14,8 @@ from conans.model.options import Options
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import GenConanfile
+from test.utils.test_files import temp_folder
+from test.utils.tools import GenConanfile
 from conans.util.dates import revision_timestamp_now
 from conans.util.files import save
 

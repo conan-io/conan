@@ -3,8 +3,8 @@ import pytest
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.mocks import ConanFileMock, RedirectedTestOutput
-from conans.test.utils.tools import redirect_output
+from test.utils.mocks import ConanFileMock, RedirectedTestOutput
+from test.utils.tools import redirect_output
 
 
 @pytest.fixture

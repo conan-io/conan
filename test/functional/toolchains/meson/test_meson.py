@@ -7,9 +7,9 @@ import textwrap
 import pytest
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.functional.toolchains.meson._base import TestMesonBase
-from conans.test.utils.tools import TestClient
+from test.assets.sources import gen_function_cpp, gen_function_h
+from test.functional.toolchains.meson._base import TestMesonBase
+from test.utils.tools import TestClient
 
 
 class MesonToolchainTest(TestMesonBase):

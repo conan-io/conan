@@ -3,8 +3,8 @@ from parameterized import parameterized
 
 from conans.client.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conans.errors import ConanException
-from integration.graph.core import GraphManagerTest
-from conans.test.utils.tools import GenConanfile
+from integration.graph.core.graph_manager_base import GraphManagerTest
+from test.utils.tools import GenConanfile
 
 
 def _check_transitive(node, transitive_deps):

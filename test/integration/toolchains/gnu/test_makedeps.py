@@ -4,8 +4,8 @@ import os
 import textwrap
 import pathlib
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 from conan.tools.gnu.makedeps import CONAN_MAKEFILE_FILENAME
 
 

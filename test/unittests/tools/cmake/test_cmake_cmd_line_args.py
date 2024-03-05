@@ -4,7 +4,7 @@ import pytest
 
 from conan.tools.cmake.cmake import _cmake_cmd_line_args
 from conans.model.conf import ConfDefinition
-from conans.test.utils.mocks import ConanFileMock
+from test.utils.mocks import ConanFileMock
 
 
 @pytest.fixture

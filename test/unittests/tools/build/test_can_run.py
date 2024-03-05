@@ -1,6 +1,6 @@
 import pytest
 
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from test.utils.mocks import MockSettings, ConanFileMock
 from conan.tools.build import can_run
 
 

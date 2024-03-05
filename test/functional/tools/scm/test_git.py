@@ -5,11 +5,11 @@ import textwrap
 
 import pytest
 
-from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
+from test.assets.cmake import gen_cmakelists
+from test.assets.sources import gen_function_cpp
+from test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient
 from conans.util.files import rmdir, save_files, save
 
 

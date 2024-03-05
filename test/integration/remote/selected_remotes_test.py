@@ -2,8 +2,8 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, TestServer
 
 
 class TestSelectedRemotesInstall:

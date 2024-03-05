@@ -2,8 +2,8 @@ import os
 import shutil
 import textwrap
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 from conans.util.files import save
 
 

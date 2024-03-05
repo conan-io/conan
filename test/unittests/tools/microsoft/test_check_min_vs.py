@@ -2,7 +2,7 @@ import pytest
 
 from conan.tools.microsoft import check_min_vs
 from conans.errors import ConanInvalidConfiguration
-from conans.test.utils.mocks import ConanFileMock, MockSettings
+from test.utils.mocks import ConanFileMock, MockSettings
 
 
 class TestCheckMinVS:

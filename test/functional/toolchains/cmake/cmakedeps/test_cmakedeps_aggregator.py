@@ -1,6 +1,6 @@
 import textwrap
 
-from conans.test.assets.sources import gen_function_cpp
+from test.assets.sources import gen_function_cpp
 
 
 def test_aggregator(transitive_libraries):

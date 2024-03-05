@@ -2,7 +2,7 @@ import unittest
 from parameterized.parameterized import parameterized
 
 from conan.tools.build.flags import architecture_flag, build_type_flags
-from conans.test.utils.mocks import MockSettings
+from test.utils.mocks import MockSettings
 
 
 class CompilerFlagsTest(unittest.TestCase):

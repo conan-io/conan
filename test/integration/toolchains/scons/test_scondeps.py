@@ -1,7 +1,7 @@
 import re
 import textwrap
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 def test_sconsdeps():

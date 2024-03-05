@@ -3,8 +3,8 @@ import platform
 import pytest
 
 from conan.tools.files import rename
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.tools import temp_folder, save_files
+from test.utils.mocks import ConanFileMock
+from test.utils.tools import temp_folder, save_files
 
 
 def test_rename_file():

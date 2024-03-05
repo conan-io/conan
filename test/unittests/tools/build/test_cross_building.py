@@ -1,7 +1,7 @@
 import pytest
 
 from conan.tools.build import cross_building
-from conans.test.utils.mocks import ConanFileMock
+from test.utils.mocks import ConanFileMock
 
 
 @pytest.mark.parametrize("cross_build", (True, False))

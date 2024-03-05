@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
+from test.utils.tools import GenConanfile, TestClient, NO_SETTINGS_PACKAGE_ID
 
 PKG_ID_NO_CONF = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
 PKG_ID_1 = "89d32f25195a77f4ae2e77414b870781853bdbc1"

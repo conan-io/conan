@@ -7,8 +7,8 @@ from conan.tools.build import load_toolchain_args
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
-from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
-from conans.test.utils.test_files import temp_folder
+from test.utils.mocks import ConanFileMock, MockSettings, MockOptions
+from test.utils.test_files import temp_folder
 
 
 def test_modify_environment():

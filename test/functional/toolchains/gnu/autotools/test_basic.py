@@ -8,11 +8,11 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.model.recipe_ref import RecipeReference
-from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_exe_run, check_vs_runtime
-from conans.test.utils.tools import TestClient, TurboTestClient
+from test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
+from test.assets.genconanfile import GenConanfile
+from test.assets.sources import gen_function_cpp
+from test.functional.utils import check_exe_run, check_vs_runtime
+from test.utils.tools import TestClient, TurboTestClient
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")

@@ -8,11 +8,11 @@ from requests.models import Response
 from conans.errors import AuthenticationException
 from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
-from conans.test.utils.tools import TestRequester
-from conans.test.utils.tools import TestServer
+from test.assets.genconanfile import GenConanfile
+from test.utils.test_files import temp_folder
+from test.utils.tools import TestClient
+from test.utils.tools import TestRequester
+from test.utils.tools import TestServer
 from conans.util.env import environment_update
 from conans.util.files import save
 

@@ -1,7 +1,7 @@
 from requests import ConnectionError
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestRequester
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient, TestRequester
 
 
 def test_upload_parallel_error():

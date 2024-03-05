@@ -2,7 +2,7 @@ import os
 
 # Check it is importable from tools
 from conan.tools.files import rm, chdir
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 from conans.util.files import save_files
 
 

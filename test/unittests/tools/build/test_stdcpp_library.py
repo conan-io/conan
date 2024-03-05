@@ -1,6 +1,6 @@
 import pytest
 from conan.tools.build import stdcpp_library
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from test.utils.mocks import MockSettings, ConanFileMock
 
 
 @pytest.mark.parametrize("libcxx,expected_library", [

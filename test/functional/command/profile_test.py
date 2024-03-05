@@ -7,8 +7,8 @@ import unittest
 import pytest
 
 from conans.client.conf.detect import detect_defaults_settings
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.tools import TestClient, redirect_output
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.tools import TestClient, redirect_output
 from conans.util.env import environment_update
 from conans.util.files import save
 from conans.util.runners import check_output_runner
@@ -128,7 +128,7 @@ class DetectCompilersTest(unittest.TestCase):
         assert "MyProfile2' already exists" in c.out
 
         c.run("profile detect --name=./MyProfile2 --force")  # will not raise error
-    
+
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows and msvc")
     def test_profile_new_msvc_vcvars(self):
         c = TestClient()
@@ -140,8 +140,8 @@ class DetectCompilersTest(unittest.TestCase):
         cl_executable = c.out.splitlines()[-1]
         assert os.path.isfile(cl_executable)
         cl_location = os.path.dirname(cl_executable)
-        
-        # Try different variations, including full path and full path with quotes 
+
+        # Try different variations, including full path and full path with quotes
         for var in ["cl", "cl.exe", cl_executable, f'"{cl_executable}"']:
             output = RedirectedTestOutput()
             with redirect_output(output):

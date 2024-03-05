@@ -3,7 +3,7 @@ import platform
 from pathlib import Path
 
 from conans.paths import get_conan_user_home, DEFAULT_CONAN_HOME
-from conans.test.utils.test_files import temp_folder
+from test.utils.test_files import temp_folder
 from conans.util.files import chdir
 
 if platform.system() == "Windows":

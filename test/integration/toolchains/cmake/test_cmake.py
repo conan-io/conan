@@ -3,7 +3,7 @@ from string import Template
 
 import pytest
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 def test_configure_args():

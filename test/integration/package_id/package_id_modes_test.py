@@ -1,6 +1,6 @@
 import textwrap
 
-from conans.test.utils.tools import GenConanfile, TestClient
+from test.utils.tools import GenConanfile, TestClient
 
 
 def test_basic_default_modes_unknown():

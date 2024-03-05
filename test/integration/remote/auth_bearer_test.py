@@ -2,7 +2,7 @@ import unittest
 
 from bottle import request
 
-from conans.test.utils.tools import TestClient, TestServer
+from test.utils.tools import TestClient, TestServer
 
 
 conanfile = """

@@ -24,32 +24,32 @@ from mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.api.conan_api import ConanAPI
+from conan.api.model import Remote
+from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conan.cli.exit_codes import SUCCESS, ERROR_GENERAL
 from conan.internal.cache.cache import PackageLayout, RecipeLayout
 from conan.internal.cache.home_paths import HomePaths
 from conans import REVISIONS
-from conan.api.conan_api import ConanAPI
-from conan.api.model import Remote
-from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conans.client.cache.cache import ClientCache
-from conans.util.env import environment_update
 from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_ref import PkgReference
 from conans.model.profile import Profile
 from conans.model.recipe_ref import RecipeReference
 from conans.model.settings import Settings
-from conans.test.assets import copy_assets
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.conftest import default_profiles
-from conans.test.utils.artifactory import ArtifactoryServer
-from conans.test.utils.mocks import RedirectedInputStream
-from conans.test.utils.mocks import RedirectedTestOutput
-from conans.test.utils.scm import create_local_git_repo
-from conans.test.utils.server_launcher import (TestServerLauncher)
-from conans.test.utils.test_files import temp_folder
+from conans.util.env import environment_update
 from conans.util.env import get_env
 from conans.util.files import mkdir, save_files, save, load
+from test.assets import copy_assets
+from test.assets.genconanfile import GenConanfile
+from test.conftest import default_profiles
+from test.utils.artifactory import ArtifactoryServer
+from test.utils.mocks import RedirectedInputStream
+from test.utils.mocks import RedirectedTestOutput
+from test.utils.scm import create_local_git_repo
+from test.utils.server_launcher import (TestServerLauncher)
+from test.utils.test_files import temp_folder
 
 NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
@@ -547,7 +547,7 @@ class TestClient(object):
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        from conans.test.utils.mocks import RedirectedTestOutput
+        from test.utils.mocks import RedirectedTestOutput
         with environment_update({"NO_COLOR": "1"}):  # Not initialize colorama in testing
             self.user_inputs = RedirectedInputStream(inputs or self.inputs)
             self.stdout = RedirectedTestOutput()  # Initialize each command
@@ -578,7 +578,7 @@ class TestClient(object):
                         save(os.path.join(self.current_folder, redirect_stderr), self.stderr)
 
     def run_command(self, command, cwd=None, assert_error=False):
-        from conans.test.utils.mocks import RedirectedTestOutput
+        from test.utils.mocks import RedirectedTestOutput
         self.stdout = RedirectedTestOutput()  # Initialize each command
         self.stderr = RedirectedTestOutput()
         try:

@@ -5,8 +5,8 @@ import textwrap
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
-from conans.test.functional.toolchains.android._utils import create_library
-from conans.test.utils.tools import TestClient
+from test.functional.toolchains.android._utils import create_library
+from test.utils.tools import TestClient
 
 
 @pytest.fixture

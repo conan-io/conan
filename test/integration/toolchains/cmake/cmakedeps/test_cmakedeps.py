@@ -2,8 +2,8 @@ import os
 import platform
 import textwrap
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import TestClient
 
 
 def test_package_from_system():

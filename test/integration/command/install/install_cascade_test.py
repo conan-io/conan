@@ -2,7 +2,7 @@ import unittest
 from collections import OrderedDict
 
 from conans.model.recipe_ref import RecipeReference
-from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
+from test.utils.tools import TestServer, TurboTestClient, GenConanfile
 
 
 class InstallCascadeTest(unittest.TestCase):

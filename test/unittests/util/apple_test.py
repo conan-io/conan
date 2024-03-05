@@ -9,7 +9,7 @@ import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
     is_apple_os, XCRun
-from conans.test.utils.mocks import MockSettings, ConanFileMock
+from test.utils.mocks import MockSettings, ConanFileMock
 from conans.util.runners import conan_run
 
 

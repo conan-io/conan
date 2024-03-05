@@ -3,8 +3,8 @@ from mock import patch
 
 from conan.tools.build import save_toolchain_args
 from conan.tools.gnu import Autotools
-from conans.test.utils.mocks import ConanFileMock
-from conans.test.utils.test_files import temp_folder
+from test.utils.mocks import ConanFileMock
+from test.utils.test_files import temp_folder
 
 
 @patch('conan.tools.gnu.autotools.chdir')

@@ -1,8 +1,8 @@
 import unittest
 from collections import OrderedDict
 
-from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
+from test.assets.genconanfile import GenConanfile
+from test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
 class RemoteChecksTest(unittest.TestCase):

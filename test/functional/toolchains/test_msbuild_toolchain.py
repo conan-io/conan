@@ -4,7 +4,7 @@ import textwrap
 import pytest
 from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
+from test.utils.tools import TestClient
 
 
 @parameterized.expand([("msvc", "190", "dynamic"),
