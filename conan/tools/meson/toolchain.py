@@ -173,7 +173,6 @@ class MesonToolchain(object):
             if is_apple_os(self._conanfile):  # default cross-compiler in Apple is common
                 default_comp = "clang"
                 default_comp_cpp = "clang++"
-
         else:
             if "clang" in compiler:
                 default_comp = "clang"

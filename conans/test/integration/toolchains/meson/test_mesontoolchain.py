@@ -286,19 +286,9 @@ def test_check_c_cpp_ld_list_formats():
 def test_check_pkg_config_paths():
     # Issue: https://github.com/conan-io/conan/issues/12342
     # Issue: https://github.com/conan-io/conan/issues/14935
-    default = textwrap.dedent("""
-    [settings]
-    os=Macos
-    arch=x86_64
-    compiler=apple-clang
-    compiler.version=12.0
-    compiler.libcxx=libc++
-    build_type=Release
-    """)
     t = TestClient()
-    t.save({"conanfile.txt": "[generators]\nMesonToolchain",
-            "profile": default})
-    t.run("install . -pr:h=profile -pr:b=profile")
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain"})
+    t.run("install .")
     content = t.load(MesonToolchain.native_filename)
     base_folder = t.current_folder
     assert f"pkg_config_path = '{base_folder}'" in content
