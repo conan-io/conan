@@ -65,7 +65,7 @@ def create(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
-    if profile_build.runner and not os.environ.get("CONAN_REMOTE_ENVIRONMNET"):
+    if profile_build.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
         return {
             'docker': DockerRunner,
             'ssh': SSHRunner
