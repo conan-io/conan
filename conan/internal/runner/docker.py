@@ -21,7 +21,7 @@ class DockerRunner:
         self.conan_api = conan_api
         self.abs_host_path = make_abs_path(args.path)
         self.abs_runner_home_path = os.path.join(self.abs_host_path, '.conanrunner')
-        self.abs_docker_path = os.path.join('/root/conanrunner', os.path.basename(self.abs_host_path))
+        self.abs_docker_path = os.path.join('/root/conanrunner', os.path.basename(self.abs_host_path)).replace("\\","/")
         self.docker_client = docker.from_env()
         self.docker_api = docker.APIClient()
         raw_args[raw_args.index(args.path)] = self.abs_docker_path
