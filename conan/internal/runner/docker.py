@@ -16,6 +16,15 @@ def docker_info(msg):
     ConanOutput().highlight('└'+'─'*(2+len(msg))+'┘\n')
 
 
+def list_patterns(cache_info):
+    _pattern = []
+    for reference, info in cache_info.items():
+        for revisions in info.get('revisions', {}).values():
+            for package in revisions.get('packages').keys():
+                _pattern.append(f'{reference}:{package}')
+    return _pattern
+
+
 class DockerRunner:
     def __init__(self, conan_api, command, profile, args, raw_args):
         import docker
@@ -58,8 +67,8 @@ class DockerRunner:
                 self.init_container()
             self.run_command(self.command)
             self.update_local_cache()
-        except:
-            pass
+        except Exception as e:
+            print(e)
         finally:
             if self.container:
                 self.container.stop()
@@ -90,16 +99,21 @@ class DockerRunner:
                     if stream:
                         ConanOutput().info(stream.strip())
 
-    def run_command(self, command, log=True):
-        try:
-            docker_info(f'Running inside container: "{command}"')
-            exec_stream = self.container.exec_run(f'/bin/bash -c \'{command}\'', stream=True, tty=True)
-            while True:
-                output = next(exec_stream.output)
-                if log:
-                    ConanOutput().info(output.decode('utf-8', errors='ignore').strip())
-        except StopIteration:
-            pass
+    def run_command(self, command, log=True, stdout=True, stderr=True, stream=True, tty=True):
+
+        if log:
+            docker_info(f'Running in container: "{command}"')
+        exec_run = self.container.exec_run(f'/bin/bash -c \'{command}\'', stdout=stdout, stderr=stderr, stream=stream, tty=tty)
+        if stream:
+            try:
+                while True:
+                    chunk = next(exec_run.output).decode('utf-8', errors='ignore').strip()
+                    if log:
+                        ConanOutput().info(chunk)
+            except StopIteration:
+                pass
+        else:
+            return exec_run.output.decode('utf-8', errors='ignore').strip()
 
     def create_runner_environment(self):
         volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
@@ -126,7 +140,12 @@ class DockerRunner:
 
     def update_local_cache(self):
         if self.cache != 'shared':
-            self.run_command('conan cache save "*:*" --file '+self.abs_docker_path+'/.conanrunner/conan_cache_docker.tgz')
-            tgz_path = os.path.join(self.abs_runner_home_path, 'conan_cache_docker.tgz')
-            docker_info(f'Restore host cache from: {tgz_path}')
-            package_list = self.conan_api.cache.restore(tgz_path)
+            package_list = self.run_command('conan list "*:*" --format=json 2>/dev/null', log=False, stream=False)
+            docker_cache_list = json.loads(package_list).get('Local Cache')
+            local_cache_list = self.conan_api.list.select(ListPattern('*:*', rrev=None, prev=None), None, remote=None, lru=None, profile=None)
+            diff_pattern = list(set(list_patterns(docker_cache_list)).difference(list_patterns(local_cache_list.recipes)))
+            for pattern in diff_pattern:
+                self.run_command(f'conan cache save "{pattern}" --file '+self.abs_docker_path+f'/.conanrunner/{pattern}.tgz', log=False, stream=False)
+                tgz_path = os.path.join(self.abs_runner_home_path, f'{pattern}.tgz')
+                docker_info(f'Restore host cache from: {tgz_path}')
+                package_list = self.conan_api.cache.restore(tgz_path)
