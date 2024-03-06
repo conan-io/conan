@@ -3,30 +3,35 @@ import json
 from io import BytesIO
 import textwrap
 import shutil
-import docker
-
 from conan.api.model import ListPattern
 from conan.api.output import ConanOutput
 from conan.api.conan_api import ConfigAPI
+from conan.cli import make_abs_path
+
+
+def docker_info(msg):
+    ConanOutput().highlight('\n'+'-'*(2+len(msg)))
+    ConanOutput().highlight(f' {msg} ')
+    ConanOutput().highlight('-'*(2+len(msg))+'\n')
 
 
 class DockerRunner:
-
     def __init__(self, conan_api, command, profile, args, raw_args):
+        import docker
         self.conan_api = conan_api
-        self.args = args
-        self.raw_args = raw_args
+        self.abs_host_path = make_abs_path(args.path)
+        self.abs_runner_home_path = os.path.join(self.abs_host_path, '.conanrunner')
+        self.abs_docker_path = os.path.join('/root/conanrunner', os.path.basename(self.abs_host_path))
         self.docker_client = docker.from_env()
         self.docker_api = docker.APIClient()
-        self.command = command
+        raw_args[raw_args.index(args.path)] = self.abs_docker_path
+        self.command = ' '.join([f'conan {command}'] + raw_args)
         self.dockerfile = str(profile.runner.get('dockerfile', ''))
         self.image = str(profile.runner.get('image', 'conanrunner'))
         self.name = f'conan-runner-{profile.runner.get("suffix", "docker")}'
         self.remove = int(profile.runner.get('remove', 1))
         self.cache = str(profile.runner.get('cache', 'clean'))
-        self.runner_home = os.path.join(args.path, '.conanrunner')
         self.container = None
-
     def run(self):
         """
         run conan inside a Docker continer
@@ -47,7 +52,7 @@ class DockerRunner:
                                                                    detach=True,
                                                                    auto_remove=False)
                 self.init_container()
-            self.run_command(' '.join([f'conan {self.command}'] + self.raw_args))
+            self.run_command(self.command)
             self.update_local_cache()
         except:
             pass
@@ -83,6 +88,7 @@ class DockerRunner:
 
     def run_command(self, command, log=True):
         try:
+            docker_info(f'Running inside container: "{command}"')
             exec_stream = self.container.exec_run(f'/bin/bash -c \'{command}\'', stream=True, tty=True)
             while True:
                 output = next(exec_stream.output)
@@ -92,29 +98,31 @@ class DockerRunner:
             pass
 
     def create_runner_environment(self):
-        volumes = {self.args.path: {'bind': self.args.path, 'mode': 'rw'}}
+        volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
         environment = {'CONAN_RUNNER_ENVIRONMENT': '1'}
         if self.cache == 'shared':
             volumes[ConfigAPI(self.conan_api).home()] = {'bind': '/root/.conan2', 'mode': 'rw'}
         if self.cache in ['clean', 'copy']:
-            shutil.rmtree(self.runner_home, ignore_errors=True)
-            os.mkdir(self.runner_home)
-            shutil.copytree(os.path.join(ConfigAPI(self.conan_api).home(), 'profiles'), os.path.join(self.runner_home, 'profiles'))
+            shutil.rmtree(self.abs_runner_home_path, ignore_errors=True)
+            os.mkdir(self.abs_runner_home_path)
+            shutil.copytree(os.path.join(ConfigAPI(self.conan_api).home(), 'profiles'),
+                            os.path.join(self.abs_runner_home_path, 'profiles'))
             if self.cache == 'copy':
-                tgz_path = os.path.join(self.runner_home, 'conan_cache_save.tgz')
+                tgz_path = os.path.join(self.abs_runner_home_path, 'conan_cache_save.tgz')
+                docker_info(f'Save host cache in: {tgz_path}')
                 self.conan_api.cache.save(self.conan_api.list.select(ListPattern("*:*")), tgz_path)
         return volumes, environment
 
     def init_container(self):
         if self.cache != 'shared':
             self.run_command('mkdir -p ${HOME}/.conan2/profiles', log=False)
-            self.run_command('cp -r '+self.args.path+'/.conanrunner/profiles/. ${HOME}/.conan2/profiles/.', log=False)
+            self.run_command('cp -r '+self.abs_docker_path+'/.conanrunner/profiles/. ${HOME}/.conan2/profiles/.', log=False)
             if self.cache in ['copy', 'clean']:
-                self.run_command('conan cache restore '+self.args.path+'/.conanrunner/conan_cache_save.tgz')
+                self.run_command('conan cache restore '+self.abs_docker_path+'/.conanrunner/conan_cache_save.tgz')
 
     def update_local_cache(self):
         if self.cache != 'shared':
-            self.run_command('conan cache save "*:*" --file '+self.args.path+'/.conanrunner/conan_cache_docker.tgz')
-            tgz_path = os.path.join(self.runner_home, 'conan_cache_docker.tgz')
-            ConanOutput().subtitle(msg=f'Copy conan cache from runner')
+            self.run_command('conan cache save "*:*" --file '+self.abs_docker_path+'/.conanrunner/conan_cache_docker.tgz')
+            tgz_path = os.path.join(self.abs_runner_home_path, 'conan_cache_docker.tgz')
+            docker_info(f'Restore host cache from: {tgz_path}')
             package_list = self.conan_api.cache.restore(tgz_path)
