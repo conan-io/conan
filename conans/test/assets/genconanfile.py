@@ -170,9 +170,11 @@ class GenConanfile(object):
         self._settings.extend(settings)
         return self
 
-    def with_option(self, option_name, values):
+    def with_option(self, option_name, values, default=None):
         self._options = self._options or {}
         self._options[option_name] = values
+        if default is not None:
+            self.with_default_option(option_name, default)
         return self
 
     def with_default_option(self, option_name, value):
