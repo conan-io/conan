@@ -341,6 +341,7 @@ class PkgConfigDeps:
         # If specified, the files/requires/names for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         # DEPRECATED: consumers should use build_context_folder instead
+        # FIXME: Conan 3.x: Remove build_context_suffix attribute
         self.build_context_suffix = {}
         # By default, the "[generators_folder]/build" folder will save all the *.pc files activated
         # in the build_context_activated list.
@@ -348,7 +349,7 @@ class PkgConfigDeps:
         # will have no effect.
         # Issue: https://github.com/conan-io/conan/issues/12342
         # Issue: https://github.com/conan-io/conan/issues/14935
-        # FIXME: Conan 3.x: build_context_folder = "build" by default
+        # FIXME: Conan 3.x: build_context_folder should be "build" by default
         self.build_context_folder = None  # Keeping backward-compatibility
 
     def _validate_build_requires(self, host_req, build_req):
@@ -381,13 +382,17 @@ class PkgConfigDeps:
         test_req = self._conanfile.dependencies.test
         # If self.build_context_suffix is not defined, the build requires will be saved
         # in the self.build_context_folder
-        if self.build_context_folder is None:
+        # FIXME: Conan 3.x: Remove build_context_suffix attribute and the validation function
+        if self.build_context_folder is None:  # Legacy flow
             if self.build_context_suffix:
                 # deprecation warning
-                self._conanfile.output.warning("build_context_suffix attribute has been deprecated. Use the"
-                                               " build_context_folder one instead.")
+                self._conanfile.output.warning("PkgConfigDeps.build_context_suffix attribute has been "
+                                               "deprecated. Use PkgConfigDeps.build_context_folder instead.")
             # Check if it exists both as require and as build require without a suffix
             self._validate_build_requires(host_req, build_req)
+        elif self.build_context_folder is not None and self.build_context_suffix:
+            raise ConanException("It's not allowed to define both PkgConfigDeps.build_context_folder "
+                                 "and PkgConfigDeps.build_context_suffix (deprecated).")
 
         for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Filter the build_requires not activated with PkgConfigDeps.build_context_activated
