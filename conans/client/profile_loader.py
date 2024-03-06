@@ -315,7 +315,7 @@ class _ProfileValueParser(object):
         for br_line in raw_info.splitlines():
             tokens = br_line.split("=", 1)
             pattern, req_list = tokens
-            result[pattern] = req_list
+            result[pattern.strip()] = req_list.strip()
         return result
 
     @staticmethod
