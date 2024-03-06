@@ -7,23 +7,27 @@ from conan.api.model import ListPattern
 from conan.api.output import ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
+from conans.errors import ConanException
 
 
 def docker_info(msg):
-    ConanOutput().highlight('\n'+'-'*(2+len(msg)))
-    ConanOutput().highlight(f' {msg} ')
-    ConanOutput().highlight('-'*(2+len(msg))+'\n')
+    ConanOutput().highlight('\n┌'+'─'*(2+len(msg))+'┐')
+    ConanOutput().highlight(f'| {msg} |')
+    ConanOutput().highlight('└'+'─'*(2+len(msg))+'┘\n')
 
 
 class DockerRunner:
     def __init__(self, conan_api, command, profile, args, raw_args):
         import docker
+        try:
+            self.docker_client = docker.from_env()
+            self.docker_api = docker.APIClient()
+        except:
+            raise ConanException("Docker Client failed to initialize. Check if it is installed and running")
         self.conan_api = conan_api
         self.abs_host_path = make_abs_path(args.path)
         self.abs_runner_home_path = os.path.join(self.abs_host_path, '.conanrunner')
         self.abs_docker_path = os.path.join('/root/conanrunner', os.path.basename(self.abs_host_path)).replace("\\","/")
-        self.docker_client = docker.from_env()
-        self.docker_api = docker.APIClient()
         raw_args[raw_args.index(args.path)] = self.abs_docker_path
         self.command = ' '.join([f'conan {command}'] + raw_args)
         self.dockerfile = str(profile.runner.get('dockerfile', ''))
@@ -36,7 +40,7 @@ class DockerRunner:
         """
         run conan inside a Docker continer
         """
-        ConanOutput().title(msg=f'Building the Docker image: {self.image}')
+        docker_info(f'Building the Docker image: {self.image}')
         self.build_image()
         volumes, environment = self.create_runner_environment()
         try:
