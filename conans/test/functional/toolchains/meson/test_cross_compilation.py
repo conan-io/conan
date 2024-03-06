@@ -1,8 +1,7 @@
 import os
 import platform
+import tempfile
 import textwrap
-import pathlib
-import re
 import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
@@ -209,98 +208,41 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
         assert "architecture: %s" % expected_arch in client.out
 
 
-@pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64')])
-@pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("pkg_config")
+@pytest.mark.tool("meson")  # so it easily works in Windows too
 @pytest.mark.tool("android_ndk")
-@pytest.mark.skipif(platform.system() == "Windows", reason="Android NDK only tested on MacOS for now")
-def test_android_meson_toolchain_cross_compiling_windows(arch, expected_arch):
-    android_abi_prefix = {
-        "armv8": "aarch64",
-        "armv7": "armv7a",
-        "x86": "i686",
-        "x86_64": "x86_64"
-    }
+@pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
+def test_use_meson_toolchain():
+    # TODO: Very similar to test in test_use_cmake_toolchain, refactor/restructure tests
+    # Overriding the default folders, so they are in the same unit drive in Windows
+    # otherwise AndroidNDK FAILS to build, it needs using the same unit drive
+    c = TestClient(cache_folder=tempfile.mkdtemp(),
+                   current_folder=tempfile.mkdtemp())
+    c.run("new meson_lib -d name=hello -d version=0.1")
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
+    pkgconf = tools_locations["pkg_config"]
+    pkgconf_path = pkgconf[pkgconf["default"]]["path"].get(platform.system())
+    windows_pkg_config = f"PKG_CONFIG={pkgconf_path}/pkg-config.exe" if pkgconf_path else ""
+    android = textwrap.dedent(f"""
+       [settings]
+       os=Android
+       os.api_level=23
+       arch=x86_64
+       compiler=clang
+       compiler.version=12
+       compiler.libcxx=c++_shared
+       build_type=Release
+       [conf]
+       tools.android:ndk_path={ndk_path}
+       tools.cmake.cmaketoolchain:generator=Ninja
+       [buildenv]
+       {windows_pkg_config}
+       """)
+    c.save({"android": android})
+    c.run('create . --profile:host=android')
+    assert "hello/0.1 (test package): Running test()" in c.out
 
-    android_abi_postfix = "" if arch != "armv7" else "eabi"
-
-    api_level = 21
-    ndk_path = os.getenv("TEST_CONAN_ANDROID_NDK")
-    profile_host = textwrap.dedent("""
-    include(default)
-
-    [settings]
-    os = Android
-    os.api_level = {api_level}
-    arch = {arch}
-
-    [conf]
-    tools.android:ndk_path={ndk_path}
-    """)
-    hello_h = gen_function_h(name="hello")
-    hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
-    app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-    profile_host = profile_host.format(
-        api_level=api_level,
-        arch=arch,
-        ndk_path=ndk_path
-    )
-
-    clang_path_template = "{ndk_path}/toolchains/llvm/prebuilt/{platform}-x86_64/bin/{android_prefix}-linux-android{android_abi_postfix}{api_level}-{compiler}{extension}"
-    expected_c_clang_path = pathlib.PurePath(
-        clang_path_template.format(
-            ndk_path=ndk_path,
-            platform=platform.system().lower(),
-            android_prefix=android_abi_prefix[arch],
-            android_abi_postfix=android_abi_postfix,
-            api_level=api_level,
-            compiler="clang",
-            extension=".cmd" if platform.system() == "Windows" else ""
-        ))
-    expected_cpp_clang_path = pathlib.PurePath(
-        clang_path_template.format(
-            ndk_path=ndk_path,
-            platform=platform.system().lower(),
-            android_prefix=android_abi_prefix[arch],
-            android_abi_postfix=android_abi_postfix,
-            api_level=api_level,
-            compiler="clang++",
-            extension=".cmd" if platform.system() == "Windows" else ""
-        )
-    )
-
-    client = TestClient()
-    client.save({"conanfile.py": _conanfile_py,
-                 "meson.build": _meson_build,
-                 "meson_options.txt": _meson_options_txt,
-                 "hello.h": hello_h,
-                 "hello.cpp": hello_cpp,
-                 "main.cpp": app,
-                 "profile_host": profile_host})
-
-    client.run("build . --profile:build=default --profile:host=profile_host")
-    content = client.load(os.path.join("conan_meson_cross.ini"))
-
-    meson_c_path_match = re.search("^c = '(.*)'", content, re.MULTILINE)
-    meson_cpp_path_match = re.search("^cpp = '(.*)'", content, re.MULTILINE)
-    assert meson_c_path_match is not None
-    assert meson_cpp_path_match is not None
-
-    meson_c_path = pathlib.PurePath(meson_c_path_match.groups(1)[0])
-    meson_cpp_path = pathlib.PurePath(meson_cpp_path_match.groups(1)[0])
-
-    assert "needs_exe_wrapper = true" in content
-    assert meson_c_path == expected_c_clang_path
-    assert meson_cpp_path == expected_cpp_clang_path
-    assert "Target machine cpu family: {}".format(
-        expected_arch if expected_arch != "i386" else "x86") in client.out
-    assert "Target machine cpu: {}".format(arch) in client.out
-    libhello_name = pathlib.PurePath("libhello.a")
-    libhello = pathlib.PurePath(os.path.join(client.current_folder, "build", libhello_name))
-    demo = pathlib.PurePath(os.path.join(client.current_folder, "build", "demo"))
-    assert os.path.isfile(libhello)
-    assert os.path.isfile(demo)
-
-    # Check binaries architecture
-    if platform.system() == "Darwin" or platform.system() == "Linux":
-        client.run_command('objdump -f "%s"' % libhello)
-        assert "architecture: %s" % expected_arch in client.out
+    # Build locally
+    c.run('build . --profile:host=android')
+    assert "conanfile.py (hello/0.1): Calling build()" in c.out
