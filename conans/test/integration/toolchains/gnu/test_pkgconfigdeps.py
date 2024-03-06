@@ -914,7 +914,7 @@ class TestPCGenerationBuildContext:
         c.run("install app -s:h build_type=Debug --build=missing")
         assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
 
-    @pytest.mark.parametrize("build_folder_name", ["DEFAULT", "my_build", ""])
+    @pytest.mark.parametrize("build_folder_name", ["build", ""])
     def test_pc_generate_components_in_build_context_folder(self, build_folder_name):
         c = TestClient()
         tool = textwrap.dedent("""
@@ -931,9 +931,7 @@ class TestPCGenerationBuildContext:
                 def generate(self):
                     deps = PkgConfigDeps(self)
                     deps.build_context_activated = ["wayland", "dep"]
-                    # if "DEFAULT" using the default deps.build_context_folder == "build"
-                    if "{build_folder_name}" != "DEFAULT":
-                        deps.build_context_folder = "{build_folder_name}"
+                    deps.build_context_folder = "{build_folder_name}"
                     deps.generate()
 
                 def build(self):
@@ -944,12 +942,11 @@ class TestPCGenerationBuildContext:
 
                     # Issue: https://github.com/conan-io/conan/issues/12342
                     # Issue: https://github.com/conan-io/conan/issues/14935
-                    folder = "build" if "{build_folder_name}" == "DEFAULT" else "{build_folder_name}"
-                    if folder:
-                        assert os.path.exists(folder + "/wayland.pc")
-                        assert os.path.exists(folder + "/wayland-client.pc")
-                        assert os.path.exists(folder + "/wayland-server.pc")
-                        assert os.path.exists(folder + "/dep.pc")
+                    if "{build_folder_name}":
+                        assert os.path.exists("{build_folder_name}/wayland.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-client.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-server.pc")
+                        assert os.path.exists("{build_folder_name}/dep.pc")
                 """.format(build_folder_name=build_folder_name))
         wayland = textwrap.dedent("""
             from conan import ConanFile

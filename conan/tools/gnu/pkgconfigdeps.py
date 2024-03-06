@@ -348,7 +348,8 @@ class PkgConfigDeps:
         # will have no effect.
         # Issue: https://github.com/conan-io/conan/issues/12342
         # Issue: https://github.com/conan-io/conan/issues/14935
-        self.build_context_folder = "build"
+        # FIXME: Conan 3.x: build_context_folder = "build" by default
+        self.build_context_folder = None  # Keeping backward-compatibility
 
     def _validate_build_requires(self, host_req, build_req):
         """
