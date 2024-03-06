@@ -381,9 +381,11 @@ class PkgConfigDeps:
         test_req = self._conanfile.dependencies.test
         # If self.build_context_suffix is not defined, the build requires will be saved
         # in the self.build_context_folder
-        if self.build_context_suffix:
-            self._conanfile.output.warning("build_context_suffix attribute has been deprecated. Use the"
-                                           " build_context_folder one instead.")
+        if self.build_context_folder is None:
+            if self.build_context_suffix:
+                # deprecation warning
+                self._conanfile.output.warning("build_context_suffix attribute has been deprecated. Use the"
+                                               " build_context_folder one instead.")
             # Check if it exists both as require and as build require without a suffix
             self._validate_build_requires(host_req, build_req)
 

@@ -758,7 +758,6 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
             def generate(self):
                 tc = PkgConfigDeps(self)
                 tc.build_context_activated = ["tool"]
-                tc.build_context_suffix = {"tool": ""}  # No suffix defined
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
