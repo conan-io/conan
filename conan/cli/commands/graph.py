@@ -22,6 +22,11 @@ def explain_formatter_text(data):
         # we need to wrap this in a MultiPackagesList
         pkglist = data["closest_binaries"]
         prepare_pkglist_compact(pkglist)
+        # Now we make sure that if there are no binaries we will print something that makes sense
+        for ref, ref_info in pkglist.items():
+            for rrev, rrev_info in ref_info.items():
+                if not rrev_info:
+                    rrev_info["ERROR"] = "No package binaries exist"
         print_serial(pkglist)
 
 
