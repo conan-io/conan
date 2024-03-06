@@ -6,6 +6,7 @@ import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, XCRun
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.conftest import tools_locations
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.runners import conan_run
@@ -175,9 +176,10 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
     hello_h = gen_function_h(name="hello")
     hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
     profile_host = profile_host.format(
         arch=arch,
-        ndk_path=os.getenv("TEST_CONAN_ANDROID_NDK")
+        ndk_path=ndk_path
     )
 
     client = TestClient()
