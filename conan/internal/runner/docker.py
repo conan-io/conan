@@ -1,7 +1,5 @@
 import os
 import json
-from io import BytesIO
-import textwrap
 import shutil
 from conan.api.model import ListPattern
 from conan.api.output import ConanOutput
@@ -29,9 +27,11 @@ def list_patterns(cache_info):
 class DockerRunner:
     def __init__(self, conan_api, command, profile, args, raw_args):
         import docker
+        import docker.api.build
         try:
             self.docker_client = docker.from_env()
             self.docker_api = docker.APIClient()
+            docker.api.build.process_dockerfile = lambda dockerfile, path: ('Dockerfile', dockerfile)
         except:
             raise ConanException("Docker Client failed to initialize. Check if it is installed and running")
         self.conan_api = conan_api
@@ -44,12 +44,13 @@ class DockerRunner:
         raw_args[raw_args.index(args.path)] = f'"{self.abs_docker_path}"'
         self.command = ' '.join([f'conan {command}'] + raw_args + ['-f json > create.json'])
         self.dockerfile = profile.runner.get('dockerfile')
+        self.docker_build_path = profile.runner.get('docker_build_path')
         self.image = profile.runner.get('image')
         if not (self.dockerfile or self.image):
-            raise ConanException("dockerfile path or docker image name is needed")
+            raise ConanException("'dockerfile' or docker image name is needed")
         self.image = self.image or 'conan-runner-default'
         self.name = f'conan-runner-{profile.runner.get("suffix", "docker")}'
-        self.remove = int(profile.runner.get('remove', 1))
+        self.remove = str(profile.runner.get('remove')).lower() == 'true'
         self.cache = str(profile.runner.get('cache', 'clean'))
         self.container = None
 
@@ -58,23 +59,24 @@ class DockerRunner:
         run conan inside a Docker continer
         """
         docker_info(f'Building the Docker image: {self.image}')
-        self.build_image()
+        if self.dockerfile:
+            self.build_image()
         volumes, environment = self.create_runner_environment()
         docker_info('Creating the docker container')
+        if self.docker_client.containers.list(all=True, filters={'name': self.name}):
+            self.container = self.docker_client.containers.get(self.name)
+            self.container.start()
+        else:
+            self.container = self.docker_client.containers.run(
+                self.image,
+                "/bin/bash -c 'while true; do sleep 30; done;'",
+                name=self.name,
+                volumes=volumes,
+                environment=environment,
+                detach=True,
+                auto_remove=False)
         try:
-            if self.docker_client.containers.list(all=True, filters={'name': self.name}):
-                self.container = self.docker_client.containers.get(self.name)
-                self.container.start()
-            else:
-                self.container = self.docker_client.containers.run(
-                    self.image,
-                    "/bin/bash -c 'while true; do sleep 30; done;'",
-                    name=self.name,
-                    volumes=volumes,
-                    environment=environment,
-                    detach=True,
-                    auto_remove=False)
-                self.init_container()
+            self.init_container()
             self.run_command(self.command)
             self.update_local_cache()
         except:
@@ -88,29 +90,32 @@ class DockerRunner:
                     self.container.remove()
 
     def build_image(self):
-        if self.dockerfile:
-            docker_build_logs = self.docker_api.build(path=self.dockerfile, tag=self.image)
-            for chunk in docker_build_logs:
+        dockerfile_file_path = self.dockerfile
+        if os.path.isdir(self.dockerfile):
+            dockerfile_file_path = os.path.join(self.dockerfile, 'Dockerfile')    
+        with open(dockerfile_file_path) as f:
+            build_path = self.docker_build_path or os.path.dirname(dockerfile_file_path)
+            ConanOutput().highlight(f"Dockerfile path: '{dockerfile_file_path}'")
+            ConanOutput().highlight(f"Docker build context: '{build_path}'\n")
+            docker_build_logs = self.docker_api.build(path=build_path, dockerfile=f.read(), tag=self.image)
+        for chunk in docker_build_logs:
                 for line in chunk.decode("utf-8").split('\r\n'):
                     if line:
                         stream = json.loads(line).get('stream')
                         if stream:
                             ConanOutput().info(stream.strip())
 
-    def run_command(self, command, log=True, stream=True, tty=True):
+    def run_command(self, command, log=True):
         if log:
             docker_info(f'Running in container: "{command}"')
-        exec_run = self.container.exec_run(f"/bin/bash -c '{command}'", stream=stream, tty=tty)
-        if stream:
-            try:
-                while True:
-                    chunk = next(exec_run.output).decode('utf-8', errors='ignore').strip()
-                    if log:
-                        ConanOutput().info(chunk)
-            except StopIteration:
-                pass
-        else:
-            return exec_run.output.decode('utf-8', errors='ignore').strip()
+        exec_run = self.container.exec_run(f"/bin/bash -c '{command}'", stream=True, tty=True)
+        try:
+            while True:
+                chunk = next(exec_run.output).decode('utf-8', errors='ignore').strip()
+                if log:
+                    ConanOutput().info(chunk)
+        except StopIteration:
+            pass
 
     def create_runner_environment(self):
         volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
@@ -145,7 +150,7 @@ class DockerRunner:
 
     def update_local_cache(self):
         if self.cache != 'shared':
-            self.run_command('conan list --graph=create.json --graph-binaries=build --format=json > pkglist.json')
+            self.run_command('conan list --graph=create.json --graph-binaries=build --format=json > pkglist.json', log=False)
             self.run_command('conan cache save --list=pkglist.json --file "'+self.abs_docker_path+'"/.conanrunner/docker_cache_save.tgz')
             tgz_path = os.path.join(self.abs_runner_home_path, 'docker_cache_save.tgz')
             docker_info(f'Restore host cache from: {tgz_path}')
