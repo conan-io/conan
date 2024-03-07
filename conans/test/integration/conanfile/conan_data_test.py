@@ -4,6 +4,7 @@ import sys
 import textwrap
 import unittest
 
+import pytest
 import yaml
 
 from conans.model.recipe_ref import RecipeReference
@@ -375,3 +376,22 @@ def test_trim_conandata_as_hook():
     assert "1.1" not in data2
     assert data1 == data2
     assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+
+
+@pytest.mark.parametrize("raise_if_missing", [True, False])
+def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
+    c = TestClient()
+    c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent(f"""
+    from conan.tools.files import trim_conandata
+
+    def post_export(conanfile):
+        trim_conandata(conanfile, raise_if_missing={raise_if_missing})
+    """)})
+
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    if raise_if_missing:
+        with pytest.raises(Exception, match="conandata.yml file doesn't exist") as exception:
+            c.run("export . --version=1.0")
+    else:
+        c.run("export . --version=1.0")
+        assert c.exported_recipe_revision() == "a9ec2e5fbb166568d4670a9cd1ef4b26"
