@@ -324,7 +324,7 @@ def test_conandata_trim():
     assert data1 == data2
     assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
     # If I now try to create version 1.2 which has no patches, and then change a patch
-    # its revision should change either
+    # its revision should not change either
     conandata_yml3 = textwrap.dedent("""\
     sources:
       "1.0":
