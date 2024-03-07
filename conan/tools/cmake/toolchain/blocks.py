@@ -116,7 +116,12 @@ class VSDebuggerEnvironment(Block):
     template = textwrap.dedent("""
         # Definition of CMAKE_VS_DEBUGGER_ENVIRONMENT
         {% if vs_debugger_path %}
-        set(CMAKE_VS_DEBUGGER_ENVIRONMENT "{{ vs_debugger_path }}" )                      
+        {% set genexpr = namespace(str='') %}
+        {% for config, value in vs_debugger_path.items() %}
+        {% set genexpr.str = genexpr.str +
+                                '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
+        {% endfor %}
+        set(CMAKE_VS_DEBUGGER_ENVIRONMENT "PATH={{ genexpr.str }};%PATH%")                      
         {% endif %}
         """)
     
@@ -125,8 +130,21 @@ class VSDebuggerEnvironment(Block):
         build_type = self._conanfile.settings.get_safe("build_type")
 
         if (os_ and not "Windows" in os_) or not build_type:
-            #TODO: probably check tools.cmake.cmaketoolchain:generator instead
             return None
+        
+        generator = self._conanfile.conf.get("tools.cmake.cmaketoolchain:generator", default="Visual Studio")
+        if not "Visual Studio" in generator:
+            return None
+        
+        config_dict = {}
+        if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_include = load(CONAN_TOOLCHAIN_FILENAME)
+            vs_debugger_environment = re.search(r"set\(CMAKE_VS_DEBUGGER_ENVIRONMENT \"PATH=([^)]*)>;%PATH%\"\)",
+                                           existing_include)
+            if vs_debugger_environment:
+                capture = vs_debugger_environment.group(1)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:(.*)", capture)
+                config_dict = dict(matches)
         
         host_deps = self._conanfile.dependencies.host.values()
         test_deps = self._conanfile.dependencies.test.values()
@@ -135,8 +153,11 @@ class VSDebuggerEnvironment(Block):
         bin_dirs.extend(test_bin_dirs)
 
         bin_dirs = ";".join(bin_dirs)
-        vs_debugger_path = f"PATH=$<$<CONFIG:{build_type}>:{bin_dirs}>;%PATH%"
-        return {"vs_debugger_path": vs_debugger_path}
+        config_dict[build_type] = bin_dirs
+        if all(value is '' for value in config_dict.values()):
+            return None
+        
+        return {"vs_debugger_path": config_dict}
     
 
 class FPicBlock(Block):
