@@ -222,8 +222,7 @@ def test_use_meson_toolchain():
     c.run("new meson_lib -d name=hello -d version=0.1")
     ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
     pkgconf = tools_locations["pkg_config"]
-    pkgconf_path = pkgconf[pkgconf["default"]]["path"].get(platform.system())
-    windows_pkg_config = f"PKG_CONFIG={pkgconf_path}/pkg-config.exe" if pkgconf_path else ""
+    pkgconf_path = pkgconf[pkgconf["default"]]["path"].get(platform.system()) + f'/pkg-config'
     android = textwrap.dedent(f"""
        [settings]
        os=Android
@@ -236,8 +235,7 @@ def test_use_meson_toolchain():
        [conf]
        tools.android:ndk_path={ndk_path}
        tools.cmake.cmaketoolchain:generator=Ninja
-       [buildenv]
-       {windows_pkg_config}
+       tools.gnu:pkg_config={pkgconf_path}
        """)
     c.save({"android": android})
     c.run('create . --profile:host=android')
