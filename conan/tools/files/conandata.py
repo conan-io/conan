@@ -53,7 +53,8 @@ def trim_conandata(conanfile, raise_if_missing=True):
         if raise_if_missing:
             raise ConanException("conandata.yml file doesn't exist")
         else:
-            return None
+            conanfile.output.warning("conandata.yml file doesn't exist")
+            return
 
     conandata = load(path)
     conandata = yaml.safe_load(conandata)
