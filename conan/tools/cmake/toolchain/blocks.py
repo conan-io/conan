@@ -112,6 +112,32 @@ class VSRuntimeBlock(Block):
 
         return {"vs_runtimes": config_dict}
 
+class VSDebuggerEnvironment(Block):
+    template = textwrap.dedent("""
+        # Definition of CMAKE_VS_DEBUGGER_ENVIRONMENT
+        {% if vs_debugger_path %}
+        set(CMAKE_VS_DEBUGGER_ENVIRONMENT "{{ vs_debugger_path }}" )                      
+        {% endif %}
+        """)
+    
+    def context(self):
+        os_ = self._conanfile.settings.get_safe("os")
+        build_type = self._conanfile.settings.get_safe("build_type")
+
+        if (os_ and not "Windows" in os_) or not build_type:
+            #TODO: probably check tools.cmake.cmaketoolchain:generator instead
+            return None
+        
+        host_deps = self._conanfile.dependencies.host.values()
+        test_deps = self._conanfile.dependencies.test.values()
+        bin_dirs = [p.replace('\\','/') for dep in host_deps for p in dep.cpp_info.aggregated_components().bindirs]
+        test_bin_dirs = [p.replace('\\','/') for dep in test_deps for p in dep.cpp_info.aggregated_components().bindirs]
+        bin_dirs.extend(test_bin_dirs)
+
+        bin_dirs = ";".join(bin_dirs)
+        vs_debugger_path = f"PATH=$<$<CONFIG:{build_type}>:{bin_dirs}>;%PATH%"
+        return {"vs_debugger_path": vs_debugger_path}
+    
 
 class FPicBlock(Block):
     template = textwrap.dedent("""
