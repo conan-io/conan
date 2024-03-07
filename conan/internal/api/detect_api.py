@@ -397,12 +397,13 @@ def detect_default_compiler():
         clang, clang_version, compiler_exe = _clang_compiler()  # prioritize clang
         if clang:
             return clang, clang_version, compiler_exe
-        return
+        return None, None, None
     else:
         gcc, gcc_version, compiler_exe = _gcc_compiler()
         if gcc:
             return gcc, gcc_version, compiler_exe
         return _clang_compiler()
+    return None, None, None
 
 
 def default_msvc_ide_version(version):
