@@ -172,7 +172,7 @@ def _detect_musl_libc(ldd="/usr/bin/ldd"):
             check_output_runner(f"{ldd}", stderr=stderr, ignore_error=True)
         ldd_output = load(tmp_file)
         version = _parse_musl_libc(ldd_output)
-        if ldd_output is None:
+        if version is None:
             first_line = ldd_output.partition("\n")[0]
             ConanOutput(scope="detect_api").warning(
                 f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd}': '{first_line}'"
