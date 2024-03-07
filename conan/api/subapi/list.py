@@ -223,7 +223,6 @@ class ListAPI:
                 ConanOutput().info(f"Finding binaries in remote {remote.name}")
                 pkg_configurations = self.packages_configurations(ref, remote=remote)
             except Exception as e:
-                pass
                 ConanOutput(f"ERROR IN REMOTE {remote.name}: {e}")
             else:
                 candidates.extend(_BinaryDistance(pref, data, conaninfo, remote)
@@ -232,8 +231,7 @@ class ListAPI:
         candidates.sort()
         pkglist = PackagesList()
         pkglist.add_refs([ref])
-        # If there are exact matches, only return the matches
-        # else, limit to the number specified
+        # Return the closest matches, stop adding when distance is increased
         candidate_distance = None
         for candidate in candidates:
             if candidate_distance and candidate.distance != candidate_distance:

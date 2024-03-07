@@ -65,6 +65,7 @@ class MesonToolchain(object):
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
+    {% if build_pkg_config_path %}build.pkg_config_path = '{{build_pkg_config_path}}'{% endif %}
     # C/C++ arguments
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
@@ -145,7 +146,10 @@ class MesonToolchain(object):
 
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
-
+        #: Defines the Meson ``build.pkg_config_path`` variable (build context)
+        # Issue: https://github.com/conan-io/conan/issues/12342
+        # Issue: https://github.com/conan-io/conan/issues/14935
+        self.build_pkg_config_path = None
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
 
         #: Dict-like object with the build, host, and target as the Meson machine context
@@ -175,6 +179,7 @@ class MesonToolchain(object):
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
             default_comp_cpp = "cl"
@@ -424,6 +429,7 @@ class MesonToolchain(object):
             "objcpp_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_args)),
             "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
+            "build_pkg_config_path": self.build_pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build,
             "is_apple_system": self._is_apple_system
