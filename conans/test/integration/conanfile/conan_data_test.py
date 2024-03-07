@@ -323,6 +323,53 @@ def test_conandata_trim():
     assert "1.1" not in data2
     assert data1 == data2
     assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    # If I now try to create version 1.2 which has no patches, and then change a patch
+    # its revision should change either
+    conandata_yml3 = textwrap.dedent("""\
+    sources:
+      "1.0":
+        url: "url1"
+        sha256: "sha1"
+      "1.1":
+        url: "url2"
+        sha256: "sha2"
+      "1.3":
+        url: "url3"
+        sha256: "sha3"
+    patches:
+      "1.1":
+        - patch_file: "patches/some_patch2"
+          base_path: "source_subfolder"
+      "1.0":
+        - patch_file: "patches/some_patch"
+          base_path: "source_subfolder"
+    something: else""")
+    c.save({"conandata.yml": conandata_yml3})
+    c.run("export . --version=1.3")
+    initial_v13_rev = c.exported_recipe_revision()
+    conandata_yml4 = textwrap.dedent("""\
+        sources:
+          "1.0":
+            url: "url1"
+            sha256: "sha1"
+          "1.1":
+            url: "url2"
+            sha256: "sha2"
+          "1.3":
+            url: "url3"
+            sha256: "sha3"
+        patches:
+          "1.1":
+            - patch_file: "patches/some_patch2-v2"
+              base_path: "source_subfolder"
+          "1.0":
+            - patch_file: "patches/some_patch"
+              base_path: "source_subfolder"
+        something: else""")
+    c.save({"conandata.yml": conandata_yml4})
+    c.run("export . --version=1.3")
+    second_v13_rev = c.exported_recipe_revision()
+    assert initial_v13_rev == second_v13_rev
 
 
 def test_trim_conandata_as_hook():
