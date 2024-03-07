@@ -220,7 +220,8 @@ class MesonToolchain(object):
         self.windres = build_env.get("WINDRES")
         #: Defines the Meson ``pkgconfig`` variable. Defaulted to ``PKG_CONFIG``
         #: build environment value
-        self.pkgconfig = build_env.get("PKG_CONFIG")
+        self.pkgconfig = (self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str) or
+                          build_env.get("PKG_CONFIG"))
         #: Defines the Meson ``c_args`` variable. Defaulted to ``CFLAGS`` build environment value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
         #: Defines the Meson ``c_link_args`` variable. Defaulted to ``LDFLAGS`` build
@@ -334,8 +335,10 @@ class MesonToolchain(object):
                           'armv8': 'aarch64-linux-android',
                           'x86': 'i686-linux-android',
                           'x86_64': 'x86_64-linux-android'}.get(arch)
-        self.c = os.path.join(ndk_bin, "{}{}-clang".format(android_target, android_api_level))
-        self.cpp = os.path.join(ndk_bin, "{}{}-clang++".format(android_target, android_api_level))
+        os_build = self._conanfile.settings_build.get_safe('os')
+        compiler_extension = ".cmd" if os_build == "Windows" else ""
+        self.c = os.path.join(ndk_bin, "{}{}-clang{}".format(android_target, android_api_level, compiler_extension))
+        self.cpp = os.path.join(ndk_bin, "{}{}-clang++{}".format(android_target, android_api_level, compiler_extension))
         self.ar = os.path.join(ndk_bin, "llvm-ar")
 
     def _get_extra_flags(self):
