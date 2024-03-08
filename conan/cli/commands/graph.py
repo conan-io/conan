@@ -16,6 +16,7 @@ from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
 from conans.model.recipe_ref import ref_matches, RecipeReference
+from conans.model.version_range import VersionRange
 
 
 def explain_formatter_text(data):
@@ -307,9 +308,9 @@ def outdated_text_formatter(result):
 
     for key, value in result.items():
         cli_out_write(value["current"].name, fg=Color.BRIGHT_YELLOW)
-        cli_out_write(f'\tCurrent: {value["current"].ref.repr_humantime()}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tCurrent: {value["current"].ref}', fg=Color.BRIGHT_CYAN)
         cli_out_write(f'\tWanted:  {value["wanted"]}', fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tLatest:  {value["latest"]["version"].repr_humantime()} - {value["latest"]["remote"].name}',
+        cli_out_write(f'\tLatest:  {value["latest"]["version"]} - {value["latest"]["remote"].name}',
                       fg=Color.BRIGHT_CYAN)
 
 
@@ -353,12 +354,27 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                          check_updates=args.check_updates)
     print_graph_basic(deps_graph)
     dependencies = deps_graph.nodes[1:]
-    resolved_ranges = []
+    resolved_ranges = list(deps_graph.resolved_ranges.keys())
+    #get dict with {name: range}
+    # for range in resolved_ranges:
+    #     for node in dependencies:
+    #         if node.name == range.name:
+    #             node.version_range = VersionRange(str(range.version))
+
     latest_recipe = []
 
+    cli_out_write("======== Checking remotes ========", fg=Color.BRIGHT_MAGENTA)
+
     for node in dependencies:
+        node.version_range = None
+        for v_range in resolved_ranges:
+            if node.name == v_range.name:
+                node.version_range = VersionRange(str(v_range.version)[1:-1])
+        if node.version_range is None:
+            node.version_range = VersionRange(str(node.ref.version))
+
         ref_pattern = ListPattern(node.ref.name, rrev="latest", prev=None)
-        final_version, final_remote = None, None
+        final_version, final_remote, final_resolved = None, None, None
         for remote in remotes:
             # a = conan_api.list.latest_recipe_revision(node.ref, remote)
             cache_list = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
@@ -374,10 +390,15 @@ def graph_outdated(conan_api, parser, subparser, *args):
             if final_version is None or final_version < recipe_ref and node.ref < recipe_ref:
                 final_version = recipe_ref
                 final_remote = remote
-        latest_recipe.append((node, final_version, final_remote))
+                if node.version_range is not None and node.version_range.contains(recipe_ref.version, None):
+                    final_resolved = recipe_ref
+        if final_version != node.ref:
+            if final_resolved is None:
+                final_resolved = node
+            latest_recipe.append((node, final_version, final_remote, final_resolved))
 
     return {node.name: {"current": node,
-                        "wanted": "WIP",
+                        "wanted": final_resolved,
                         "latest": {"version": final_version,
                                    "remote": final_remote}}
-            for node, final_version, final_remote in latest_recipe}
+            for node, final_version, final_remote, final_resolved in latest_recipe}
