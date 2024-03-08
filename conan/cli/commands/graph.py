@@ -1,11 +1,13 @@
 import json
 import os
 
+from conan.api.model import ListPattern
 from conan.api.output import ConanOutput, cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
+from conan.cli.formatters import default_json_formatter
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
@@ -13,7 +15,7 @@ from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
-from conans.model.recipe_ref import ref_matches
+from conans.model.recipe_ref import ref_matches, RecipeReference
 
 
 def explain_formatter_text(data):
@@ -300,8 +302,18 @@ def graph_explain(conan_api, parser,  subparser, *args):
     return {"closest_binaries": pkglist.serialize()}
 
 
+def outdated_text_formatter(result):
+    cli_out_write("======== Outdated dependencies ========", fg=Color.BRIGHT_MAGENTA)
 
-@conan_subcommand(formatters={})
+    for key, value in result.items():
+        cli_out_write(value["current"].name, fg=Color.BRIGHT_YELLOW)
+        cli_out_write(f'\tCurrent: {value["current"].ref.repr_humantime()}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tWanted:  {value["wanted"]}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tLatest:  {value["latest"]["version"].repr_humantime()} - {value["latest"]["remote"].name}',
+                      fg=Color.BRIGHT_CYAN)
+
+
+@conan_subcommand(formatters={"text": outdated_text_formatter, "json": default_json_formatter})
 def graph_outdated(conan_api, parser, subparser, *args):
     """
     List the dependencies in the graph and it's newer versions in the remote
@@ -327,7 +339,6 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
-    #metemos un argumento de outdated aqui y que cambie las cosas que hace en el load graph?
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                          args.user, args.channel,
@@ -342,5 +353,31 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                          check_updates=args.check_updates)
     print_graph_basic(deps_graph)
     dependencies = deps_graph.nodes[1:]
-    resolved_ranges = deps_graph.resolved_ranges
-    print()
+    resolved_ranges = []
+    latest_recipe = []
+
+    for node in dependencies:
+        ref_pattern = ListPattern(node.ref.name, rrev="latest", prev=None)
+        final_version, final_remote = None, None
+        for remote in remotes:
+            # a = conan_api.list.latest_recipe_revision(node.ref, remote)
+            cache_list = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
+            # si ahy varios remotos no pegar las versiones que ya han salido
+            if len(cache_list.recipes) == 0:
+                continue
+            ref = list(cache_list.recipes.keys())[-1]
+            ref_rev = list(cache_list.recipes.values())[-1]["revisions"]
+            revisions = list(ref_rev.keys())[0]
+            timestamp = ref_rev[revisions]["timestamp"]
+
+            recipe_ref = RecipeReference.loads(f"{ref}#{revisions}%{timestamp}")
+            if final_version is None or final_version < recipe_ref and node.ref < recipe_ref:
+                final_version = recipe_ref
+                final_remote = remote
+        latest_recipe.append((node, final_version, final_remote))
+
+    return {node.name: {"current": node,
+                        "wanted": "WIP",
+                        "latest": {"version": final_version,
+                                   "remote": final_remote}}
+            for node, final_version, final_remote in latest_recipe}
