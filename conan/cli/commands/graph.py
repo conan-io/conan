@@ -308,9 +308,9 @@ def outdated_text_formatter(result):
 
     for key, value in result.items():
         cli_out_write(value["current"].name, fg=Color.BRIGHT_YELLOW)
-        cli_out_write(f'\tCurrent: {value["current"].ref}', fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tWanted:  {value["wanted"]}', fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tLatest:  {value["latest"]["version"]} - {value["latest"]["remote"].name}',
+        cli_out_write(f'\tCurrent: {value["current"].ref.repr_notime()}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tLatest in range:  {value["latest_ref"].repr_notime()}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tLatest in remote(s):  {value["latest"]["ref"].repr_notime()} - {value["latest"]["remote"].name}',
                       fg=Color.BRIGHT_CYAN)
 
 
@@ -377,14 +377,19 @@ def graph_outdated(conan_api, parser, subparser, *args):
         final_version, final_remote, final_resolved = None, None, None
         for remote in remotes:
             # a = conan_api.list.latest_recipe_revision(node.ref, remote)
-            cache_list = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
-            # si ahy varios remotos no pegar las versiones que ya han salido
-            if len(cache_list.recipes) == 0:
-                continue
-            ref = list(cache_list.recipes.keys())[-1]
-            ref_rev = list(cache_list.recipes.values())[-1]["revisions"]
-            revisions = list(ref_rev.keys())[0]
-            timestamp = ref_rev[revisions]["timestamp"]
+            try:
+                remote_ref_list = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
+                if len(remote_ref_list.recipes) == 0:
+                    continue
+                ref = list(remote_ref_list.recipes.keys())[-1]
+                ref_rev = list(remote_ref_list.recipes.values())[-1]["revisions"]
+                revisions = list(ref_rev.keys())[0]
+                timestamp = ref_rev[revisions]["timestamp"]
+            except Exception:
+                cli_out_write(f"{node.ref.name} not found in remotes")
+                ref = node.ref
+                revisions = node.ref.revision
+                timestamp = node.ref.timestamp
 
             recipe_ref = RecipeReference.loads(f"{ref}#{revisions}%{timestamp}")
             if final_version is None or final_version < recipe_ref and node.ref < recipe_ref:
@@ -392,13 +397,13 @@ def graph_outdated(conan_api, parser, subparser, *args):
                 final_remote = remote
                 if node.version_range is not None and node.version_range.contains(recipe_ref.version, None):
                     final_resolved = recipe_ref
-        if final_version != node.ref:
+        if final_version > node.ref:
             if final_resolved is None:
-                final_resolved = node
+                final_resolved = node.ref
             latest_recipe.append((node, final_version, final_remote, final_resolved))
 
     return {node.name: {"current": node,
-                        "wanted": final_resolved,
-                        "latest": {"version": final_version,
+                        "latest_ref": final_resolved,
+                        "latest": {"ref": final_version,
                                    "remote": final_remote}}
             for node, final_version, final_remote, final_resolved in latest_recipe}
