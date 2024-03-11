@@ -162,5 +162,5 @@ def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
     Upload all the source backups present in the cache
     """
-    files = conan_api.upload.get_backup_sources()
+    files = conan_api.cache.get_backup_sources()
     conan_api.upload.upload_backup_sources(files)

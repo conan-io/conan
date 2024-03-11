@@ -46,10 +46,14 @@ class DownloadCache:
                 thread_lock.release()
 
     def get_backup_sources_files(self, excluded_urls, package_list=None, only_upload=True):
-        """ from a package_list of packages to upload, collect from the backup-sources cache
-        the matching references to upload those backups too.
-        If no package_list is passed, it gets all
-        """
+        """Get list of backup source files currently present in the cache,
+        either all of them if no package_list is give, or filtered by those belonging to the references in the package_list
+
+        Will exclude the sources that come from URLs present in excluded_urls
+
+        @param excluded_urls: a list of URLs to exclude backup sources files if they come from any of these URLs
+        @param package_list: a PackagesList object to filter backup files from (The files should have been downloaded form any of the references in the package_list)
+        @param only_upload: if True, only return the files for packages that are set to be uploaded"""
         path_backups = os.path.join(self._path, self._SOURCE_BACKUP)
 
         if not os.path.exists(path_backups):

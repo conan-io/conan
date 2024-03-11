@@ -6,9 +6,11 @@ from io import BytesIO
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.integrity_check import IntegrityChecker
 from conans.client.cache.cache import ClientCache
+from conans.client.downloaders.download_cache import DownloadCache
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
@@ -96,7 +98,7 @@ class CacheAPI:
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
         if backup_sources:
-            backup_files = self.conan_api.upload.get_backup_sources(package_list, exclude=False, only_upload=False)
+            backup_files = self.conan_api.cache.get_backup_sources(package_list, exclude=False, only_upload=False)
             for f in backup_files:
                 remove(f)
 
@@ -188,6 +190,22 @@ class CacheAPI:
                                 pkg_layout.metadata())
 
         return package_list
+
+    def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):
+        """Get list of backup source files currently present in the cache,
+        either all of them if no argument, or filtered by those belonging to the references in the package_list
+
+        @param package_list: a PackagesList object to filter backup files from (The files should have been downloaded form any of the references in the package_list)
+        @param exclude: if True, exclude the sources that come from URLs present the core.sources:exclude_urls global conf
+        @param only_upload: if True, only return the files for packages that are set to be uploaded
+        """
+        config = self.conan_api.config.global_conf
+        download_cache_path = config.get("core.sources:download_cache")
+        download_cache_path = download_cache_path or HomePaths(
+            self.conan_api.cache_folder).default_sources_backup_folder
+        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[]) if exclude else []
+        download_cache = DownloadCache(download_cache_path)
+        return download_cache.get_backup_sources_files(excluded_urls, package_list, only_upload)
 
 
 def _resolve_latest_ref(app, ref):
