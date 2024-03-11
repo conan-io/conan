@@ -101,16 +101,16 @@ class UploadAPI:
         elapsed = time.time() - t
         ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
 
-    def get_backup_sources(self, package_list=None):
+    def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):
         """Get list of backup source files currently present in the cache,
         either all of them if no argument, else filter by those belonging to the references in the package_list"""
         config = self.conan_api.config.global_conf
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
             self.conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
+        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[]) if exclude else []
         download_cache = DownloadCache(download_cache_path)
-        return download_cache.get_backup_sources_files_to_upload(excluded_urls, package_list)
+        return download_cache.get_backup_sources_files(excluded_urls, package_list, only_upload)
 
     def upload_backup_sources(self, files):
         config = self.conan_api.config.global_conf

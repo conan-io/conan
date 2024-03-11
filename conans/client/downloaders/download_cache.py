@@ -45,7 +45,7 @@ class DownloadCache:
             finally:
                 thread_lock.release()
 
-    def get_backup_sources_files_to_upload(self, excluded_urls, package_list=None):
+    def get_backup_sources_files(self, excluded_urls, package_list=None, only_upload=True):
         """ from a package_list of packages to upload, collect from the backup-sources cache
         the matching references to upload those backups too.
         If no package_list is passed, it gets all
@@ -64,13 +64,13 @@ class DownloadCache:
                        for url in backup_urls)
 
         def should_upload_sources(package):
-            return any(prev["upload"] for prev in package["revisions"].values())
+            return any(prev.get("upload") for prev in package["revisions"].values())
 
         all_refs = set()
         if package_list is not None:
             for k, ref in package_list.refs().items():
                 packages = ref.get("packages", {}).values()
-                if ref.get("upload") or any(should_upload_sources(p) for p in packages):
+                if not only_upload or ref.get("upload") or any(should_upload_sources(p) for p in packages):
                     all_refs.add(str(k))
 
         path_backups_contents = []

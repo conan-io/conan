@@ -13,7 +13,7 @@ from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.dates import revision_timestamp_now
-from conans.util.files import rmdir, gzopen_without_timestamps, mkdir
+from conans.util.files import rmdir, gzopen_without_timestamps, mkdir, remove
 
 
 class CacheAPI:
@@ -69,15 +69,17 @@ class CacheAPI:
         checker = IntegrityChecker(app)
         checker.check(package_list)
 
-    def clean(self, package_list, source=True, build=True, download=True, temp=True):
+    def clean(self, package_list, source=True, build=True, download=True, temp=True,
+              backup_sources=False):
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
         :param package_list: the package lists that should be cleaned
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
-        :param download: boolen, remove the "download (.tgz)" folder if True
+        :param download: boolean, remove the "download (.tgz)" folder if True
         :param temp: boolean, remove the temporary folders
+        :param backup_sources: boolean, remove the "source" folder if True
         :return:
         """
 
@@ -93,6 +95,10 @@ class CacheAPI:
                     info = os.path.join(folder, "p", "conaninfo.txt")
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
+        if backup_sources:
+            backup_files = self.conan_api.upload.get_backup_sources(package_list, exclude=False, only_upload=False)
+            for f in backup_files:
+                remove(f)
 
         for ref, ref_bundle in package_list.refs().items():
             ref_layout = app.cache.recipe_layout(ref)

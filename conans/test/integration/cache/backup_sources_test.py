@@ -615,6 +615,9 @@ class TestDownloadCacheBackupSources:
         self.client.run("create .")
         self.client.run("upload * -c -r=default")
         assert sha256 in os.listdir(http_server_base_folder_backup)
+        self.client.run("cache clean * -bs")
+        backups = os.listdir(os.path.join(self.download_cache_folder, "s"))
+        assert len(backups) == 0
 
     def test_export_then_upload_recipe_only_workflow(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
