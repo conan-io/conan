@@ -1,10 +1,12 @@
 import os
 import json
+import platform
 import shutil
 from conan.api.model import ListPattern
 from conan.api.output import ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
+from conan.internal.runner import RunnerExection
 from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
 
@@ -33,7 +35,9 @@ class DockerRunner:
             self.docker_api = docker.APIClient()
             docker.api.build.process_dockerfile = lambda dockerfile, path: ('Dockerfile', dockerfile)
         except:
-            raise ConanException("Docker Client failed to initialize. Check if it is installed and running")
+            raise ConanException("Docker Client failed to initialize."
+                                 "\n - Check if docker is installed and running"
+                                 "\n - Run 'pip install docker>=5.0.0, <=5.0.3'")
         self.conan_api = conan_api
         self.args = args
         self.abs_host_path = make_abs_path(args.path)
@@ -58,29 +62,35 @@ class DockerRunner:
         """
         run conan inside a Docker continer
         """
-        docker_info(f'Building the Docker image: {self.image}')
         if self.dockerfile:
+            docker_info(f'Building the Docker image: {self.image}')
             self.build_image()
         volumes, environment = self.create_runner_environment()
-        docker_info('Creating the docker container')
-        if self.docker_client.containers.list(all=True, filters={'name': self.name}):
-            self.container = self.docker_client.containers.get(self.name)
-            self.container.start()
-        else:
-            self.container = self.docker_client.containers.run(
-                self.image,
-                "/bin/bash -c 'while true; do sleep 30; done;'",
-                name=self.name,
-                volumes=volumes,
-                environment=environment,
-                detach=True,
-                auto_remove=False)
+        try:
+            if self.docker_client.containers.list(all=True, filters={'name': self.name}):
+                docker_info('Starting the docker container')
+                self.container = self.docker_client.containers.get(self.name)
+                self.container.start()
+            else:
+                docker_info('Creating the docker container')
+                self.container = self.docker_client.containers.run(
+                    self.image,
+                    "/bin/bash -c 'while true; do sleep 30; done;'",
+                    name=self.name,
+                    volumes=volumes,
+                    environment=environment,
+                    detach=True,
+                    auto_remove=False)
+        except Exception as e:
+            raise ConanException(f'Imposible to run the container "{self.name}" with image "{self.image}"'
+                                 f'\n\n{str(e)}')
         try:
             self.init_container()
             self.run_command(self.command)
             self.update_local_cache()
-        except:
-            ConanOutput().error(f'Something went wrong running "{self.command}" inside the container')
+        except RunnerExection as e:
+            raise ConanException(f'"{e.command}" inside docker fail'
+                                 f'\n\nLast command output: {str(e.stdout_log)}')
         finally:
             if self.container:
                 docker_info('Stopping container')
@@ -108,14 +118,29 @@ class DockerRunner:
     def run_command(self, command, log=True):
         if log:
             docker_info(f'Running in container: "{command}"')
-        exec_run = self.container.exec_run(f"/bin/bash -c '{command}'", stream=True, tty=True)
+        exec_instance = self.docker_api.exec_create(self.container.id, f"/bin/bash -c '{command}'", tty=True)
+        exec_output = self.docker_api.exec_start(exec_instance['Id'], tty=True, stream=True, demux=True,)
+        stderr_log, stdout_log = '', ''
         try:
-            while True:
-                chunk = next(exec_run.output).decode('utf-8', errors='ignore').strip()
-                if log:
-                    ConanOutput().info(chunk)
-        except StopIteration:
-            pass
+            for (stdout_out, stderr_out) in exec_output:
+                if stdout_out is not None:
+                    stdout_log += stdout_out.decode('utf-8', errors='ignore').strip()
+                    if log:
+                        ConanOutput().info(stdout_out.decode('utf-8', errors='ignore').strip())
+                if stderr_out is not None:
+                    stderr_log += stderr_out.decode('utf-8', errors='ignore').strip()
+                    if log:
+                        ConanOutput().info(stderr_out.decode('utf-8', errors='ignore').strip())
+        except Exception as e:
+            if platform.system() == 'Windows':
+                import pywintypes
+                if isinstance(e, pywintypes.error):
+                    pass
+            else:
+                raise e
+        exit_metadata = self.docker_api.exec_inspect(exec_instance['Id'])
+        if exit_metadata['Running'] or exit_metadata['ExitCode'] > 0:
+            raise RunnerExection(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
 
     def create_runner_environment(self):
         volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}

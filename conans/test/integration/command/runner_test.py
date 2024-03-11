@@ -50,13 +50,6 @@ def test_create_docker_runner_dockerfile_folder_path():
     compiler.libcxx=libstdc++11
     compiler.version=11
     os=Linux
-    [runner]
-    type=docker
-    dockerfile={dockerfile_path()}
-    docker_build_path={conan_base_path()}
-    image=conan-runner-default-test
-    cache=copy
-    remove=True
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
@@ -117,13 +110,6 @@ def test_create_docker_runner_dockerfile_file_path():
     compiler.libcxx=libstdc++11
     compiler.version=11
     os=Linux
-    [runner]
-    type=docker
-    dockerfile={dockerfile_path("Dockerfile_test")}
-    docker_build_path={conan_base_path()}
-    image=conan-runner-default-test
-    cache=copy
-    remove=True
     """)
     profile_host = textwrap.dedent(f"""\
     [settings]
