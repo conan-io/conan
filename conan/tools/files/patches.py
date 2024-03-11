@@ -89,7 +89,7 @@ def apply_conandata_patches(conanfile):
         assert conanfile.version, "Can only be applied if conanfile.version is already defined"
         entries = patches.get(str(conanfile.version), [])
         if entries is None:
-            conanfile.output.info("apply_conandata_patches(): No patches defined for version in conandata")
+            conanfile.output.warning(f"apply_conandata_patches(): No patches defined for version {conanfile.version} in conandata.yml")
             return
     elif isinstance(patches, list):
         entries = patches
