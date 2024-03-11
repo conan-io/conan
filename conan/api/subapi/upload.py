@@ -3,11 +3,9 @@ import time
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.upload_metadata import gather_metadata
 from conans.client.cmd.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
-from conans.client.downloaders.download_cache import DownloadCache
 from conans.client.pkg_sign import PkgSignaturesPlugin
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import ConanException, AuthenticationException, ForbiddenException
@@ -83,7 +81,7 @@ class UploadAPI:
             if not dry_run:
                 subtitle("Uploading artifacts")
                 self.upload(pkglist, remote)
-                backup_files = self.get_backup_sources(pkglist)
+                backup_files = self.conan_api.cache.get_backup_sources(pkglist)
                 self.upload_backup_sources(backup_files)
 
         t = time.time()
@@ -100,17 +98,6 @@ class UploadAPI:
             thread_pool.join()
         elapsed = time.time() - t
         ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
-
-    def get_backup_sources(self, package_list=None):
-        """Get list of backup source files currently present in the cache,
-        either all of them if no argument, else filter by those belonging to the references in the package_list"""
-        config = self.conan_api.config.global_conf
-        download_cache_path = config.get("core.sources:download_cache")
-        download_cache_path = download_cache_path or HomePaths(
-            self.conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[])
-        download_cache = DownloadCache(download_cache_path)
-        return download_cache.get_backup_sources_files_to_upload(excluded_urls, package_list)
 
     def upload_backup_sources(self, files):
         config = self.conan_api.config.global_conf
