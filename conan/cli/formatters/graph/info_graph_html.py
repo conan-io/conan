@@ -31,8 +31,15 @@ graph_info_html = """
             }
         </style>
 
+        <script type="application/json" id="graph_data">
+            {{ deps_graph }}
+        </script>
+
         <div style="width: 100%;">
             <div id="mynetwork" style="float:left; width: 75%;"></div>
+                <button onclick="javascript:switchBuild()" class="button noPrint">
+                    Show / hide build-requires
+                </button>
                 <div style="float:right;width:25%;">
                 <div id="details"  style="padding:10;" class="noPrint">Package info: no package selected</div>
                 <button onclick="javascript:showhideclass('controls')" class="button noPrint">
@@ -44,94 +51,25 @@ graph_info_html = """
         <div style="clear:both"></div>
 
         <script type="text/javascript">
-            var nodes = [
-                {%- for node in graph.nodes %}
-                    {% set highlight_node = error is not none and error["should_highlight_node"](node) %}
-                    {
-                        id: {{ node.id }},
-                        label: '{{ node.short_label }}',
-                        shape: '{% if highlight_node %}circle{% else %}{% if node.is_build_requires %}ellipse{% else %}box{% endif %}{% endif %}',
-                        color: { background: '{% if highlight_node %}red{% else %}{{ graph.binary_color(node) }}{% endif %}'},
-                        font: { color: "{% if highlight_node %}white{% else %}black{% endif %}" },
-                        fulllabel: '<h3>{{ node.label }}</h3>' +
-                                   '<ul>' +
-                                   '    <li><b>package id</b>: {{ node.package_id }}</li>' +
-                                   {%- for key, value in node.data().items() %}
-                                   {%- if value %}
-                                        {%- if key in ['url', 'homepage'] %}
-                                   '    <li><b>{{ key }}</b>: <a href="{{ value }}">{{ value }}</a></li>' +
-                                        {%- elif key in ['topics'] %}
-                                   '    <li><b>{{ key }}</b>: {{ value|join(", ") }}</li>' +
-                                        {%- else %}
-                                   '    <li><b>{{ key }}</b>: {{ value }}</li>' +
-                                        {%-  endif %}
-                                   {%- endif %}
-                                   {%- endfor %}
-                                   '</ul>'
-                    }{%- if not loop.last %},{% endif %}
-                {%- endfor %}
-            ]
-            var edges = [
-                {%- for src, dst in graph.edges %}
-                    { from: {{ src.id }}, to: {{ dst.id }} }{%- if not loop.last %},{% endif %}
-                {%- endfor %}
-            ]
-
-            {% if error is not none and error["type"] == "conflict" %}
-                // Add error conflict node
+            var graph_data = JSON.parse(document.getElementById('graph_data').innerHTML);
+            var hide_build = false;
+            var nodes = [];
+            var edges = [];
+            for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
+                const shape = node.context == "build" ? "ellipse" : node.test ? "hexagon" : "box";
                 nodes.push({
-                    id: "{{ error["type"] }}",
-                    label: {{ error["context"].require.ref|string|tojson }},
-                    shape: "circle",
-                    font: { color: "white" },
-                    color: "red",
-                    fulllabel: '<h3>' +
-                               {{ error["context"].require.ref|string|tojson }} +
-                               '</h3><p>This node creates a conflict in the dependency graph</p>',
-                    shapeProperties: { borderDashes: [5, 5] }
-                })
-
-                {% if error["context"].node.id is not none %}
-                    // Add edge from node that introduces the conflict to the new error node ({{graph.node_map[error["context"].node].short_label}})
-                    edges.push({from: {{ graph.node_map[error["context"].node].id }},
-                                to: "{{ error["type"] }}",
-                                color: "red",
-                                dashes: false,
-                                title: "Conflict",
-                                physics: false,
-                                color: "red",
-                                arrows: "to"})
-                {% endif %}
-
-                {% if error["context"].prev_node is none and error["context"].base_previous.id is not none %}
-                    // Add edge from base node to the new error node ({{graph.node_map[error["context"].base_previous].short_label}})
-                    edges.push({from: {{ graph.node_map[error["context"].base_previous].id }},
-                                to: "{{ error["type"] }}",
-                                color: "red",
-                                dashes: false,
-                                title: "Conflict",
-                                physics: false,
-                                color: "red",
-                                arrows: "to;from"})
-                {% endif %}
-
-                {% if error["context"].prev_node is not none and error["context"].prev_node.id is not none %}
-                    // Add edge from previous node that already had conflicting dependency ({{graph.node_map[error["context"].prev_node].short_label}})
-                    edges.push({from: {{ graph.node_map[error["context"].prev_node].id }},
-                                to: "{{ error["type"] }}",
-                                color: "red",
-                                dashes: true,
-                                title: "Conflict",
-                                physics: false,
-                                color: "gray",
-                                arrows: "to;from"})
-                {% endif %}
-
-            {% endif %}
+                    id: node_id,
+                    label: node["name"],
+                    shape: shape
+                });
+                for (const [dep_id, dep] of Object.entries(node["dependencies"])) {
+                    if (dep.direct)
+                        edges.push({from: node_id, to: dep_id});
+                }
+            }
 
             var nodes = new vis.DataSet(nodes);
             var edges = new vis.DataSet(edges);
-
             var container = document.getElementById('mynetwork');
             var controls = document.getElementById('controls');
             var data = {
@@ -166,17 +104,42 @@ graph_info_html = """
                     container: controls
                 }
             };
+            function switchBuild() {
+                hide_build = !hide_build;
+                nodes_update = [];
+                for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
+                    if (node.context == "build")
+                        nodes_update.push({id: node_id, hidden: hide_build})
+                }
+                nodes.update(nodes_update);
+                draw();
+            }
             var network = new vis.Network(container, data, options);
             network.on('click', function (properties) {
                 var ids = properties.nodes;
-                var clickedNodes = nodes.get(ids);
                 var control = document.getElementById("details");
-                if(clickedNodes[0]) {
-                    control.innerHTML = clickedNodes[0].fulllabel;
+                while (control.firstChild) {
+                    control.removeChild(control.firstChild);
+                }
+                if(ids[0]) {
+                    selected_node = graph_data["nodes"][ids[0]]
+                    let ul = document.createElement('ul');
+                    for (const [key, value] of Object.entries(selected_node)) {
+                        let li = document.createElement('li');
+                        li.innerHTML = "<b>"+ key +"</b>: " + value;
+                        ul.appendChild(li);
+                    }
+                    control.appendChild(ul);
                 }
                 else {
                     control.innerHTML = "<b>Package info</b>: No package selected";
                 }
+            });
+            function draw() {
+                network.redraw();
+            }
+            window.addEventListener("load", () => {
+              draw();
             });
         </script>
     </body>
