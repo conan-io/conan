@@ -7,7 +7,6 @@ from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import prepare_pkglist_compact, print_serial
-from conan.cli.formatters import default_json_formatter
 from conan.cli.formatters.graph import format_graph_html, format_graph_json, format_graph_dot
 from conan.cli.formatters.graph.graph_info_text import format_graph_info
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
@@ -306,15 +305,22 @@ def graph_explain(conan_api, parser,  subparser, *args):
 def outdated_text_formatter(result):
     cli_out_write("======== Outdated dependencies ========", fg=Color.BRIGHT_MAGENTA)
 
-    for key, value in result.items():
+    for value in result.values():
         cli_out_write(value["current"].name, fg=Color.BRIGHT_YELLOW)
-        cli_out_write(f'\tCurrent: {value["current"].ref.repr_notime()}', fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tLatest in range:  {value["latest_ref"].repr_notime()}', fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tLatest in remote(s):  {value["latest"]["ref"].repr_notime()} - {value["latest"]["remote"].name}',
+        cli_out_write(f'\tCurrent: {value["current"].repr_notime()}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tLatest in range:  {value["latest_range"].repr_notime()}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tLatest in remote(s):  {value["latest_remote"]["ref"].repr_notime()} - {value["latest_remote"]["remote"].name}',
                       fg=Color.BRIGHT_CYAN)
 
+def outdated_json_formatter(result):
+    output = {key: {"current": value["current"].repr_notime(),
+                 "latest_range": value["latest_range"].repr_notime(),
+                 "latest_remote": {"ref": value["latest_remote"]["ref"].repr_notime(),
+                                   "remote": value["latest_remote"]["remote"]}}
+            for key, value in result.items()}
+    cli_out_write(output)
 
-@conan_subcommand(formatters={"text": outdated_text_formatter, "json": default_json_formatter})
+@conan_subcommand(formatters={"text": outdated_text_formatter, "json": outdated_json_formatter})
 def graph_outdated(conan_api, parser, subparser, *args):
     """
     List the dependencies in the graph and it's newer versions in the remote
@@ -355,15 +361,10 @@ def graph_outdated(conan_api, parser, subparser, *args):
     print_graph_basic(deps_graph)
     dependencies = deps_graph.nodes[1:]
     resolved_ranges = list(deps_graph.resolved_ranges.keys())
-    #get dict with {name: range}
-    # for range in resolved_ranges:
-    #     for node in dependencies:
-    #         if node.name == range.name:
-    #             node.version_range = VersionRange(str(range.version))
 
     latest_recipe = []
 
-    cli_out_write("======== Checking remotes ========", fg=Color.BRIGHT_MAGENTA)
+    ConanOutput().title("Checking remotes")
 
     for node in dependencies:
         node.version_range = None
@@ -374,36 +375,34 @@ def graph_outdated(conan_api, parser, subparser, *args):
             node.version_range = VersionRange(str(node.ref.version))
 
         ref_pattern = ListPattern(node.ref.name, rrev="latest", prev=None)
-        final_version, final_remote, final_resolved = None, None, None
+        latest_remote_ref, latest_in_range_ref, found_remote = None, None, None
         for remote in remotes:
-            # a = conan_api.list.latest_recipe_revision(node.ref, remote)
             try:
                 remote_ref_list = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
-                if len(remote_ref_list.recipes) == 0:
-                    continue
+                if not remote_ref_list.recipes: continue
                 ref = list(remote_ref_list.recipes.keys())[-1]
                 ref_rev = list(remote_ref_list.recipes.values())[-1]["revisions"]
-                revisions = list(ref_rev.keys())[0]
-                timestamp = ref_rev[revisions]["timestamp"]
+                revision = list(ref_rev.keys())[0]
+                timestamp = ref_rev[revision]["timestamp"]
             except Exception:
-                cli_out_write(f"{node.ref.name} not found in remotes")
+                ConanOutput(f"{node.ref.name} not found in remotes")
                 ref = node.ref
-                revisions = node.ref.revision
+                revision = node.ref.revision
                 timestamp = node.ref.timestamp
 
-            recipe_ref = RecipeReference.loads(f"{ref}#{revisions}%{timestamp}")
-            if final_version is None or final_version < recipe_ref and node.ref < recipe_ref:
-                final_version = recipe_ref
-                final_remote = remote
+            recipe_ref = RecipeReference.loads(f"{ref}#{revision}%{timestamp}")
+            if latest_remote_ref is None or latest_remote_ref < recipe_ref and node.ref < recipe_ref:
+                latest_remote_ref = recipe_ref
+                found_remote = remote
                 if node.version_range is not None and node.version_range.contains(recipe_ref.version, None):
-                    final_resolved = recipe_ref
-        if final_version > node.ref:
-            if final_resolved is None:
-                final_resolved = node.ref
-            latest_recipe.append((node, final_version, final_remote, final_resolved))
+                    latest_in_range_ref = recipe_ref
+        if latest_remote_ref > node.ref:
+            if latest_in_range_ref is None:
+                latest_in_range_ref = node.ref
+            latest_recipe.append((node, latest_remote_ref, found_remote, latest_in_range_ref))
 
-    return {node.name: {"current": node,
-                        "latest_ref": final_resolved,
-                        "latest": {"ref": final_version,
-                                   "remote": final_remote}}
-            for node, final_version, final_remote, final_resolved in latest_recipe}
+    return {node.name: {"current": node.ref,
+                        "latest_range": latest_in_range_ref,
+                        "latest_remote": {"ref": latest_remote_ref,
+                                   "remote": found_remote}}
+            for node, latest_remote_ref, found_remote, latest_in_range_ref in latest_recipe}
