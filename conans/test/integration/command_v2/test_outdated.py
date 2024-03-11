@@ -33,12 +33,14 @@ def test_outdated_command():
     assert "zlib" in output
     assert "foo" in output
     assert "libcurl" not in output
-    assert output["zlib"]["current"] == "zlib/1.0"
-    assert output["zlib"]["latest_range"] == "zlib/1.0"
-    assert output["zlib"]["latest_remote"] == {"ref": "zlib/2.0","remote": "default"}
-    assert output["foo"]["current"] == "foo/1.0"
-    assert output["foo"]["latest_range"] == "foo/2.0"
-    assert output["foo"]["latest_remote"] == {"ref": "foo/2.0","remote": "default"}
+    assert output["zlib"]["current"].startswith("zlib/1.0")
+    assert output["zlib"]["latest_range"].startswith("zlib/1.0")
+    assert output["zlib"]["latest_remote"]["ref"].startswith("zlib/2.0")
+    assert output["zlib"]["latest_remote"]["remote"].startswith("default")
+    assert output["foo"]["current"].startswith("foo/1.0")
+    assert output["foo"]["latest_range"].startswith("foo/2.0")
+    assert output["foo"]["latest_remote"]["ref"].startswith("foo/2.0")
+    assert output["foo"]["latest_remote"]["remote"].startswith("default")
 
 
 def test_recipe_with_lockfile():
@@ -70,13 +72,13 @@ def test_recipe_with_lockfile():
     assert "zlib" in output
     assert "foo" in output
     assert "libcurl" not in output
-    assert output["foo"]["latest_range"] == "foo/2.0"
+    assert output["foo"]["latest_range"].startswith("foo/2.0")
 
     # Creating the lockfile sets foo/1.0 as only valid version for the recipe
     tc.run("lock create .")
     tc.run("graph outdated . --format=json")
     output = json.loads(tc.stdout)
-    assert output["foo"]["latest_range"] == "foo/1.0"
+    assert output["foo"]["latest_range"].startswith("foo/1.0")
 
     # Adding foo/2.0 to the lockfile forces the download so foo is no longer outdated
     tc.run("lock add --requires=foo/2.0")
@@ -188,7 +190,8 @@ def test_two_remotes():
     assert "zlib" in output
     assert "libcurl" in output
     assert "foo" not in output
-    assert output["zlib"]["latest_remote"] == {"ref": "zlib/2.0", "remote": "remote2"}
-    assert output["libcurl"]["latest_remote"] == {"ref": "libcurl/2.0", "remote": "remote1"}
-
+    assert output["libcurl"]["latest_remote"]["ref"].startswith("libcurl/2.0")
+    assert output["libcurl"]["latest_remote"]["remote"].startswith("remote1")
+    assert output["zlib"]["latest_remote"]["ref"].startswith("zlib/2.0")
+    assert output["zlib"]["latest_remote"]["remote"].startswith("remote2")
     #test donde version del remoto esta por encima de un rango
