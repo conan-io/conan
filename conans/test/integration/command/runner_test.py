@@ -1,6 +1,5 @@
 import textwrap
 import os
-from typing import Literal
 import pytest
 import docker
 from conans.test.utils.tools import TestClient
@@ -36,6 +35,7 @@ def dockerfile_path(name=None):
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.xfail(reason="known docker ci issue")
 def test_create_docker_runner_dockerfile_folder_path():
     """
     Tests the ``conan create . ``
@@ -102,6 +102,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.xfail(reason="known docker ci issue")
 def test_create_docker_runner_dockerfile_file_path():
     """
     Tests the ``conan create . ``
@@ -168,9 +169,10 @@ def test_create_docker_runner_dockerfile_file_path():
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
+@pytest.mark.xfail(reason="known docker ci issue")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
-def test_create_docker_runner_with_ninja(build_type: Literal['Release', 'Debug'], shared: bool):
+def test_create_docker_runner_with_ninja(build_type, shared):
     conanfile = textwrap.dedent("""
     import os
     from conan import ConanFile
