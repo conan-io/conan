@@ -371,45 +371,38 @@ def graph_outdated(conan_api, parser, subparser, *args):
 
     ConanOutput().title("Checking remotes")
 
+    # Data structure for solve the repeated dependencies in graph
+    dict_nodes = {}
     for node in dependencies:
-        node.version_range = None
-        for v_range in resolved_ranges:
-            if node.name == v_range.name:
-                node.version_range = VersionRange(str(v_range.version)[1:-1])
-        if node.version_range is None:
-            node.version_range = VersionRange(str(node.ref.version))
-
-        ref_pattern = ListPattern(node.ref.name, rrev="latest", prev=None)
-        latest_remote_ref, latest_in_range_ref, found_remote = None, None, None
+        if node.name in dict_nodes:
+            dict_nodes[node.name].append(node)
+        else:
+            dict_nodes[node.name] = [node]
+    print("--")
+    for node_name, node_list in dict_nodes.items():
+        ref_pattern = ListPattern(node_name, rrev=None, prev=None)
+        latest_remote_ref, found_remote = None, None
         for remote in remotes:
             try:
                 remote_ref_list = conan_api.list.select(ref_pattern, package_query=None,
                                                         remote=remote)
-                if not remote_ref_list.recipes: continue
-                ref = list(remote_ref_list.recipes.keys())[-1]
-                ref_rev = list(remote_ref_list.recipes.values())[-1]["revisions"]
-                revision = list(ref_rev.keys())[0]
-                timestamp = ref_rev[revision]["timestamp"]
+                if not remote_ref_list.recipes:
+                    continue
             except Exception:
-                ConanOutput(f"{node.ref.name} not found in remotes")
-                ref = node.ref
-                revision = node.ref.revision
-                timestamp = node.ref.timestamp
-
-            recipe_ref = RecipeReference.loads(f"{ref}#{revision}%{timestamp}")
-            if latest_remote_ref is None or latest_remote_ref < recipe_ref and node.ref < recipe_ref:
+                ConanOutput(f"{node_name} not found in remote {remote.name}")
+                continue
+            str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
+            recipe_ref = RecipeReference.loads(f"{str_latest_ref}")
+            if latest_remote_ref is None or latest_remote_ref < recipe_ref: # TODO: check local librarie doesn't have newer version
                 latest_remote_ref = recipe_ref
                 found_remote = remote
-                if node.version_range is not None and node.version_range.contains(recipe_ref.version,
-                                                                                  None):
-                    latest_in_range_ref = recipe_ref
-        if latest_remote_ref > node.ref:
-            if latest_in_range_ref is None:
-                latest_in_range_ref = node.ref
-            latest_recipe.append((node, latest_remote_ref, found_remote, latest_in_range_ref))
+        latest_node = max(node_list, key=lambda x: x.ref)
+        latest_recipe.append((latest_node, node_list,  latest_remote_ref, found_remote))
 
     return {node.name: {"current": node.ref,
+                        "current_vesions": node_list,
                         "latest_range": latest_in_range_ref,
-                        "latest_remote": {"ref": latest_remote_ref,
-                                          "remote": found_remote}}
-            for node, latest_remote_ref, found_remote, latest_in_range_ref in latest_recipe}
+                        "latest_remote": {"ref": "latest_remote_ref",
+                                          "remote": found_remote},
+                        "resolved_ranges": [r for r in resolved_ranges if r.name == node.name]}
+            for node, node_list, found_remote, latest_in_range_ref in latest_recipe}

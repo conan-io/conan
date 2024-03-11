@@ -151,7 +151,6 @@ def test_cache_ref_newer_than_latest_in_remote():
     assert "foo" not in output
 
 
-
 def test_two_remotes():
     servers = OrderedDict()
     for i in [1, 2]:
@@ -195,3 +194,28 @@ def test_two_remotes():
     assert output["zlib"]["latest_remote"]["ref"].startswith("zlib/2.0")
     assert output["zlib"]["latest_remote"]["remote"].startswith("remote2")
     #test donde version del remoto esta por encima de un rango
+
+
+def test_multiple_call_to_single_reference():
+    tc = TestClient(default_server_user=True)
+    # Create libraries needed to generate the dependency graph
+    tc.save({"conanfile.py": GenConanfile()})
+    tc.run("create . --name=cmake --version=1.0")
+    tc.run("create . --name=cmake --version=2.0")
+    tc.run("create . --name=cmake --version=3.0")
+    tc.save({"conanfile.py": GenConanfile().with_tool_requires("cmake/1.0")})
+    tc.run("create . --name=foo --version=1.0")
+    tc.save({"conanfile.py": GenConanfile().with_tool_requires("cmake/2.0")})
+    tc.run("create . --name=bar --version=1.0")
+
+    # Upload the created libraries to remote
+    tc.run("upload * -c -r=default")
+
+    tc.run("remove cmake/2.0 -c")
+    tc.run("remove cmake/3.0 -c")
+
+    tc.save(
+        {"conanfile.py": GenConanfile("app", "1.0").with_requires("foo/1.0", "bar/1.0", "cmake/[>=1.0]")})
+    # tc.run("graph info . --update")
+    tc.run("graph outdated . --format=json")
+    print()
