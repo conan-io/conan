@@ -6,6 +6,7 @@ from conans.test.utils.tools import TestClient
 def test_conditional_build_type():
     # https://github.com/conan-io/conan/issues/15851
     c = TestClient()
+    # A header-only library can't be used for testing, it doesn't fail
     c.run("new cmake_lib -d name=pkga -d version=0.1")
     c.run("create . -s build_type=Debug -tf=")
 
@@ -97,5 +98,4 @@ def test_conditional_build_type():
     c.run("build . -s build_type=Debug")
     c.run("build . -s build_type=Release")
     # This used to crash because "pkga::pkga"
-    print(c.out)
-    print(c.current_folder)
+    assert "conanfile.py (pkgc/0.1): Running CMake.build()" in c.out
