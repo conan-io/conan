@@ -6,9 +6,10 @@ from conan.api.model import ListPattern
 from conan.api.output import ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
-from conan.internal.runner import RunnerExection
+from conan.internal.runner import RunnerException
 from conans.client.profile_loader import ProfileLoader
 from conans.errors import ConanException
+from conans.model.version import Version
 
 
 def docker_info(msg):
@@ -88,7 +89,9 @@ class DockerRunner:
             self.init_container()
             self.run_command(self.command)
             self.update_local_cache()
-        except RunnerExection as e:
+        except ConanException as e:
+            raise e
+        except RunnerException as e:
             raise ConanException(f'"{e.command}" inside docker fail'
                                  f'\n\nLast command output: {str(e.stdout_log)}')
         finally:
@@ -140,7 +143,8 @@ class DockerRunner:
                 raise e
         exit_metadata = self.docker_api.exec_inspect(exec_instance['Id'])
         if exit_metadata['Running'] or exit_metadata['ExitCode'] > 0:
-            raise RunnerExection(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
+            raise RunnerException(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
+        return stdout_log, stderr_log
 
     def create_runner_environment(self):
         volumes = {self.abs_host_path: {'bind': self.abs_docker_path, 'mode': 'rw'}}
@@ -164,6 +168,11 @@ class DockerRunner:
         return volumes, environment
 
     def init_container(self):
+        min_conan_version = '2.1'
+        stdout, _ = self.run_command('conan --version', log=False)
+        docker_conan_version = str(stdout.replace('Conan version ', '').replace('\n', '').replace('\r', '')) # Remove all characters and color
+        if Version(docker_conan_version) <= Version(min_conan_version):
+            raise ConanException( f'conan version inside the container must be greater than {min_conan_version}')
         if self.cache != 'shared':
             self.run_command('mkdir -p ${HOME}/.conan2/profiles', log=False)
             self.run_command('cp -r "'+self.abs_docker_path+'/.conanrunner/profiles/." ${HOME}/.conan2/profiles/.', log=False)
