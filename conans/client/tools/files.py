@@ -1,6 +1,7 @@
 import gzip
 import logging
 import os
+import pathlib
 import platform
 import stat
 import subprocess
@@ -19,6 +20,8 @@ from conans.util.files import (_generic_algorithm_sum, load, save)
 UNIT_SIZE = 1000.0
 # Library extensions supported by collect_libs
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
+# Library extensions supported by fetch_libraries
+EXTENDED_VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc", ".dll")
 
 
 @contextmanager
@@ -376,6 +379,90 @@ def collect_libs(conanfile, folder=None):
             result.append(name)
     result.sort()
     return result
+
+
+def fetch_libraries(conanfile, cpp_info=None, extra_folders=None, raise_error=True) -> list[tuple[str, str, str]]:
+    """
+    Get the static/shared library paths. Analyze if DLLs are present and raise an exception if
+
+
+    :param conanfile: normally a <ConanFileInterface obj>
+    :param cpp_info: <CppInfo obj> of the component.
+    :param extra_folders: list of relative (to `package_folder`) folders to search more libraries.
+    :param raise_error: if raise_error == True, it'll raise an exception if DLL lib does not have
+                        an associated *.lib interface library.
+    :return: list of tuples per static/shared library ->
+             [(lib_name, is_shared, library_path, interface_library_path)]
+             Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
+                    Windows would have:
+                        * shared: library_path as DLL, and interface_library_path as LIB
+                        * static: library_path as LIB, and interface_library_path as None
+    """
+    def _save_lib_path(lib_, lib_path_):
+        """Add each lib with its full library path"""
+        formatted_path = lib_path_.replace("\\", "/")
+        # In case of symlinks, only keep the shortest file name in the same "group"
+        if os.path.islink(lib_path_):
+            # If libmylib.dylib -> lib/libmylib.1.dylib, this gets libmylib.1.dylib
+            real_lib = os.path.basename(os.path.realpath(lib_path_))
+            if real_lib not in symlink_paths or len(lib_) < len(symlink_paths[lib_]):
+                symlink_paths[lib_] = real_lib
+
+        _, ext_ = os.path.splitext(formatted_path)
+        if ext_ == ".lib":  # Possibly Windows interface library, putting it apart from the rest
+            interface_lib_paths[lib_] = formatted_path
+        else:
+            lib_paths[lib_] = formatted_path
+
+    cpp_info = cpp_info or conanfile.cpp_info
+    libdirs = cpp_info.libdirs
+    bindirs = cpp_info.bindirs # just want to get shared libraries (likely DLLs)
+    libs = cpp_info.libs[:]  # copying the values if they are already declared
+    lib_paths = {}
+    interface_lib_paths = {}
+    symlink_paths = {}
+    # Composing absolute folders if extra folders were passed
+    extra_paths = [os.path.join(conanfile.package_folder, path) for path in extra_folders or []]
+    for libdir in set(libdirs + bindirs + (extra_paths or [])):
+        if not os.path.exists(libdir):
+            continue
+        files = os.listdir(libdir)
+        for f in files:
+            full_path = os.path.join(libdir, f)
+            if not os.path.isfile(full_path):  # Make sure that directories are excluded
+                continue
+
+            name, ext = os.path.splitext(f)
+            # Users may not name their libraries in a conventional way. For example, directly
+            # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
+            # Issue related: https://github.com/conan-io/conan/issues/11331
+            if ext and f in libs:  # let's ensure that it has any extension
+                _save_lib_path(f, full_path)
+                continue
+            if name not in libs and name.startswith("lib"):
+                name = name[3:]  # libpkg -> pkg
+            if ext in EXTENDED_VALID_LIB_EXTENSIONS:
+                if not libs:  # we want to save all the libs
+                    _save_lib_path(name, full_path)
+                else:
+                    # Alternative name: in some cases the name could be pkg.if instead of pkg
+                    alternative_name = name.split(".", maxsplit=1)[0]
+                    if name in libs or alternative_name in libs:
+                        _save_lib_path(name, full_path)
+
+    libraries = []
+    for lib, lib_path in lib_paths.items():
+        interface_lib_path = ""
+        if lib_path.endswith(".dll"):
+            if lib not in interface_lib_paths and raise_error:
+                raise ConanException(f"Windows needs a .lib for link-time and .dll for runtime."
+                                     f" Only found {lib_path}")
+            interface_lib_path = interface_lib_paths.pop(lib)
+        libraries.append((lib, lib_path, interface_lib_path))
+    if interface_lib_paths:  # Rest of static .lib Windows libraries
+        libraries.extend([(lib_name, lib_path, "") for lib_name, lib_path in interface_lib_paths.items()])
+    libraries.sort()
+    return libraries
 
 
 def which(filename):
