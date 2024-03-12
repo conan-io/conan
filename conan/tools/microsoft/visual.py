@@ -297,7 +297,8 @@ def _vcvars_arch(conanfile):
         arch = {'x86': "amd64_x86",
                 'x86_64': 'amd64',
                 'armv7': 'amd64_arm',
-                'armv8': 'amd64_arm64'}.get(arch_host)
+                'armv8': 'amd64_arm64',
+                'arm64ec':'amd64_arm64'}.get(arch_host)
     elif arch_build == 'x86':
         arch = {'x86': 'x86',
                 'x86_64': 'x86_amd64',
