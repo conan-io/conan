@@ -306,19 +306,19 @@ def outdated_text_formatter(result):
     cli_out_write("======== Outdated dependencies ========", fg=Color.BRIGHT_MAGENTA)
 
     for value in result.values():
-        cli_out_write(value["current"].name, fg=Color.BRIGHT_YELLOW)
-        cli_out_write(f'\tCurrent: {value["current"].repr_humantime()}', fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tLatest in range:  {value["latest_range"].repr_humantime()}',
-                      fg=Color.BRIGHT_CYAN)
+        current_versions_set = list({str(v.ref) for v in value["current_versions"]})
+        cli_out_write(value["current_versions"][0].name, fg=Color.BRIGHT_YELLOW)
+        cli_out_write(f'\tCurrent versions:  {", ".join(current_versions_set) if value["current_versions"] else "No current versions"}')
         cli_out_write(
-            f'\tLatest in remote(s):  {value["latest_remote"]["ref"].repr_humantime()} - {value["latest_remote"]["remote"].name}',
+            f'\tLatest in remote(s):  {value["latest_remote"]["ref"]} - {value["latest_remote"]["remote"].name}',
             fg=Color.BRIGHT_CYAN)
+        cli_out_write(f'\tVersion ranges:  {str(value["version_ranges"])[1:-1] if value["version_ranges"] else "No ranges"}')
 
 
 def outdated_json_formatter(result):
-    output = {key: {"current": value["current"].repr_humantime(),
-                    "latest_range": value["latest_range"].repr_humantime(),
-                    "latest_remote": {"ref": value["latest_remote"]["ref"].repr_humantime(),
+    output = {key: {"current_versions": list({str(v.ref) for v in value["current_versions"]}),
+                    "version_ranges": [str(r) for r in value["version_ranges"]],
+                    "latest_remote": {"ref": str(value["latest_remote"]["ref"]),
                                       "remote": str(value["latest_remote"]["remote"])}}
               for key, value in result.items()}
     cli_out_write(json.dumps(output))
@@ -371,17 +371,17 @@ def graph_outdated(conan_api, parser, subparser, *args):
 
     ConanOutput().title("Checking remotes")
 
-    # Data structure for solve the repeated dependencies in graph
+    # Data structure to solve the repeated dependencies in graph
     dict_nodes = {}
     for node in dependencies:
         if node.name in dict_nodes:
             dict_nodes[node.name].append(node)
         else:
             dict_nodes[node.name] = [node]
-    print("--")
+
     for node_name, node_list in dict_nodes.items():
         ref_pattern = ListPattern(node_name, rrev=None, prev=None)
-        latest_remote_ref, found_remote = None, None
+        latest_remote_ref, found_remote, recipe_ref = None, None, None
         for remote in remotes:
             try:
                 remote_ref_list = conan_api.list.select(ref_pattern, package_query=None,
@@ -393,16 +393,17 @@ def graph_outdated(conan_api, parser, subparser, *args):
                 continue
             str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
             recipe_ref = RecipeReference.loads(f"{str_latest_ref}")
-            if latest_remote_ref is None or latest_remote_ref < recipe_ref: # TODO: check local librarie doesn't have newer version
+            if latest_remote_ref is None or latest_remote_ref < recipe_ref:
                 latest_remote_ref = recipe_ref
                 found_remote = remote
-        latest_node = max(node_list, key=lambda x: x.ref)
-        latest_recipe.append((latest_node, node_list,  latest_remote_ref, found_remote))
+        latest_cache_ref = max(node_list, key=lambda x: x.ref)
+        if recipe_ref is None:
+            continue
+        if len(node_list) != 1 or latest_cache_ref.ref < latest_remote_ref:
+            latest_recipe.append((latest_cache_ref, node_list, latest_remote_ref, found_remote))
 
-    return {node.name: {"current": node.ref,
-                        "current_vesions": node_list,
-                        "latest_range": latest_in_range_ref,
-                        "latest_remote": {"ref": "latest_remote_ref",
+    return {node.name: {"current_versions": node_list,
+                        "latest_remote": {"ref": latest_remote_ref,
                                           "remote": found_remote},
-                        "resolved_ranges": [r for r in resolved_ranges if r.name == node.name]}
-            for node, node_list, found_remote, latest_in_range_ref in latest_recipe}
+                        "version_ranges": [r for r in resolved_ranges if r.name == node.name]}
+            for node, node_list, latest_remote_ref, found_remote in latest_recipe}
