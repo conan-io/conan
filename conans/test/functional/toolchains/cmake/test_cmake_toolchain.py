@@ -189,44 +189,44 @@ def test_cmake_toolchain_without_build_type():
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
 
-@pytest.mark.skipif(platform.system() != "Windows",
-                    reason="Only on Windows with msvc")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only on Windows with msvc")
 @pytest.mark.tool("cmake")
 def test_cmake_toolchain_cmake_vs_debugger_environment():
     client = TestClient()
-    client.run("new -d name=mylib -d version=1.0 -f cmake_lib")
-    client.run("create . -s:h build_type=Release -o:h  mylib/*:shared=True -tf=''")
-    client.run("create . -s:h build_type=Debug -o:h mylib/*:shared=True -tf=''")
-    client.run("create . -s:h build_type=MinSizeRel -o:h mylib/*:shared=True -tf=''")
-    
-    client.run("install --require=mylib/1.0 -o:h  mylib/*:shared=True -s:h build_type=Debug -g CMakeToolchain" \
-               " --format=json", redirect_stdout="debug.json")
-    client.run("install --require=mylib/1.0 -o:h  mylib/*:shared=True -s:h build_type=Release -g CMakeToolchain" \
-               " --format=json", redirect_stdout="release.json")
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+    client.run("create . -s build_type=MinSizeRel")
 
-    debug_graph = json.loads(client.load('debug.json'))
-    debug_bindir = debug_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0].replace('\\', '/')
+    client.run("install --require=pkg/1.0 -s build_type=Debug -g CMakeToolchain --format=json")
+    debug_graph = json.loads(client.stdout)
+    debug_bindir = debug_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    debug_bindir = debug_bindir.replace('\\', '/')
 
     toolchain = client.load("conan_toolchain.cmake")
     debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>;%PATH%"
     assert debugger_environment in toolchain
 
-    client.run("install --require=mylib/1.0 -o:h  mylib/*:shared=True -s:h build_type=Release -g CMakeToolchain" \
-               " --format=json", redirect_stdout="release.json")
-    release_graph = json.loads(client.load('release.json'))
-    release_bindir = release_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0].replace('\\', '/')
-    
+    client.run("install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain --format=json")
+    release_graph = json.loads(client.stdout)
+    release_bindir = release_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    release_bindir = release_bindir.replace('\\', '/')
+
     toolchain = client.load("conan_toolchain.cmake")
-    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>$<$<CONFIG:Release>:{release_bindir}>;%PATH%"
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>;%PATH%"
     assert debugger_environment in toolchain
 
-    client.run("install --require=mylib/1.0 -o:h  mylib/*:shared=True -s:h build_type=MinSizeRel -g CMakeToolchain" \
-               " --format=json", redirect_stdout="minsizerel.json")
-    minsizerel_graph = json.loads(client.load('minsizerel.json'))
-    minsizerel_bindir = minsizerel_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0].replace('\\', '/')
+    client.run("install --require=pkg/1.0 -s build_type=MinSizeRel -g CMakeToolchain --format=json")
+    minsizerel_graph = json.loads(client.stdout)
+    minsizerel_bindir = minsizerel_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    minsizerel_bindir = minsizerel_bindir.replace('\\', '/')
 
     toolchain = client.load("conan_toolchain.cmake")
-    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>$<$<CONFIG:Release>:{release_bindir}>$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>" \
+                           f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
     assert debugger_environment in toolchain
 
 
