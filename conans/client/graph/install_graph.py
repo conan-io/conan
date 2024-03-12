@@ -436,7 +436,7 @@ class InstallGraph:
         msg = "\n".join(msg)
         instructions = "This graph is ill-formed, and cannot be installed\n" \
                        "Most common cause is having dependencies both in build and host contexts\n"\
-                       "forming a cycle, because tool_requires having transitive requires.\n"\
+                       "forming a cycle, due to tool_requires having transitive requires.\n"\
                        "Check your profile [tool_requires] and recipe tool and regular requires\n"\
                        "You might inspect the dependency graph with:\n"\
                        "  $ conan graph info . --format=html > graph.html"
