@@ -148,16 +148,17 @@ class VSDebuggerEnvironment(Block):
         bin_dirs.extend(test_bindirs)
         bin_dirs = [p.replace("\\", "/") for p in bin_dirs]
 
-        bin_dirs = ";".join(bin_dirs)
-        config_dict[build_type] = bin_dirs
-        if all(value is '' for value in config_dict.values()):
-            return None
+        bin_dirs = ";".join(bin_dirs) if bin_dirs else None
+        if bin_dirs:
+            config_dict[build_type] = bin_dirs
 
+        if not config_dict:
+            return None
+        
         vs_debugger_path = ""
         for config, value in config_dict.items():
             vs_debugger_path += f"$<$<CONFIG:{config}>:{value}>"
         vs_debugger_path = f"PATH={vs_debugger_path};%PATH%"
-
         return {"vs_debugger_path": vs_debugger_path}
 
 
