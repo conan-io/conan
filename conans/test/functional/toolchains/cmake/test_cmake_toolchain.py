@@ -228,6 +228,18 @@ def test_cmake_toolchain_cmake_vs_debugger_environment():
                            f"$<$<CONFIG:Release>:{release_bindir}>" \
                            f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
     assert debugger_environment in toolchain
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+
+    cmake_generator = "" if platform.system() != "Windows" else "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
+
 
 
 @pytest.mark.tool("cmake")
