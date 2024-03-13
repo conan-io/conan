@@ -378,10 +378,11 @@ class LinuxTest(Base):
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "_GLIBCXX_USE_CXX11_ABI=0;" if libcxx == "libstdc++" else ""
-        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
-                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
-                  '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
-                  '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
+        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;' \
+                  '$<$<CONFIG:debug>:MYDEFINE_CONFIG="MYDEF_DEBUG">' \
+                  '$<$<CONFIG:release>:MYDEFINE_CONFIG="MYDEF_RELEASE">;' \
+                  '$<$<CONFIG:debug>:MYDEFINEINT_CONFIG=421>' \
+                  '$<$<CONFIG:release>:MYDEFINEINT_CONFIG=422>' % cxx11_abi_str
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,

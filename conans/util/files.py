@@ -44,6 +44,8 @@ def remove_if_dirty(item):
             else:
                 rmdir(item)
         clean_dirty(item)
+        return True
+    return False
 
 
 @contextmanager

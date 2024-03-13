@@ -8,6 +8,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP,
                                        BINARY_INVALID, BINARY_EDITABLE_BUILD, RECIPE_PLATFORM,
                                        BINARY_PLATFORM)
+from conans.client.graph.proxy import should_update_reference
 from conans.errors import NoRemoteAvailable, NotFoundException, \
     PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError
 
@@ -60,7 +61,7 @@ class GraphBinariesAnalyzer(object):
                 info = node.conanfile.info
                 latest_pref = self._remote_manager.get_latest_package_reference(pref, r, info)
                 results.append({'pref': latest_pref, 'remote': r})
-                if len(results) > 0 and not update:
+                if len(results) > 0 and not should_update_reference(node.ref, update):
                     break
             except NotFoundException:
                 pass
@@ -68,7 +69,7 @@ class GraphBinariesAnalyzer(object):
                 ConanOutput().error(f"Failed checking for binary '{pref}' in remote '{r.name}': "
                                     "remote not available")
                 raise
-        if not remotes and update:
+        if not remotes and should_update_reference(node.ref, update):
             node.conanfile.output.warning("Can't update, there are no remotes defined")
 
         if len(results) > 0:
@@ -130,7 +131,7 @@ class GraphBinariesAnalyzer(object):
 
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         for package_id, compatible_package in compatibles.items():
-            if update:
+            if should_update_reference(node.ref, update):
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
             node._package_id = package_id  # Modifying package id under the hood, FIXME
@@ -253,7 +254,7 @@ class GraphBinariesAnalyzer(object):
         if cache_latest_prev is not None:
             # This binary already exists in the cache, maybe can be updated
             self._evaluate_in_cache(cache_latest_prev, node, remotes, update)
-        elif update:
+        elif should_update_reference(node.ref, update):
             self._evaluate_download(node, remotes, update)
 
     def _process_locked_node(self, node, build_mode, locked_prev):
@@ -292,7 +293,7 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_in_cache(self, cache_latest_prev, node, remotes, update):
         assert cache_latest_prev.revision
-        if update:
+        if should_update_reference(node.ref, update):
             output = node.conanfile.output
             try:
                 self._get_package_from_remotes(node, remotes, update)
@@ -347,27 +348,45 @@ class GraphBinariesAnalyzer(object):
             ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
                                   "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
                                   "more efficient re-builds")
-        for node in deps_graph.ordered_iterate():
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                if node.path is not None and node.path.endswith(".py"):
-                    # For .py we keep evaluating the package_id, validate(), etc
-                    self._evaluate_package_id(node)
-                elif node.path is not None and node.path.endswith(".txt"):
-                    # To support the ``[layout]`` in conanfile.txt
-                    # TODO: Refactorize this a bit, the call to ``layout()``
-                    if hasattr(node.conanfile, "layout"):
-                        with conanfile_exception_formatter(node.conanfile, "layout"):
-                            node.conanfile.layout()
-            else:
+
+        def _evaluate_single(n):
+            mode = main_mode if mainprefs is None or str(n.pref) in mainprefs else test_mode
+            if lockfile:
+                locked_prev = lockfile.resolve_prev(n)  # this is not public, should never happen
+                if locked_prev:
+                    self._process_locked_node(n, mode, locked_prev)
+                    return
+            self._evaluate_node(n, mode, remotes, update)
+
+        levels = deps_graph.by_levels()
+        for level in levels[:-1]:  # all levels but the last one, which is the single consumer
+            for node in level:
                 self._evaluate_package_id(node)
-                build_mode = main_mode if mainprefs is None or str(node.pref) in mainprefs \
-                    else test_mode
-                if lockfile:
-                    locked_prev = lockfile.resolve_prev(node)
-                    if locked_prev:
-                        self._process_locked_node(node, build_mode, locked_prev)
-                        continue
-                self._evaluate_node(node, build_mode, remotes, update)
+            # group by pref to paralelize, so evaluation is done only 1 per pref
+            nodes = {}
+            for node in level:
+                nodes.setdefault(node.pref, []).append(node)
+            # PARALLEL, this is the slow part that can query servers for packages, and compatibility
+            for pref, pref_nodes in nodes.items():
+                _evaluate_single(pref_nodes[0])
+            # END OF PARALLEL
+            # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
+            for pref, pref_nodes in nodes.items():
+                for n in pref_nodes[1:]:
+                    _evaluate_single(n)
+
+        # Last level is always necessarily a consumer or a virtual
+        assert len(levels[-1]) == 1
+        node = levels[-1][0]
+        assert node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL)
+        if node.path is not None:
+            if node.path.endswith(".py"):
+                # For .py we keep evaluating the package_id, validate(), etc
+                compute_package_id(node, self._global_conf)
+            # To support the ``[layout]`` in conanfile.txt
+            if hasattr(node.conanfile, "layout"):
+                with conanfile_exception_formatter(node.conanfile, "layout"):
+                    node.conanfile.layout()
 
         self._skip_binaries(deps_graph)
 

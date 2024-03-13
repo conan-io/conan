@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -39,5 +40,33 @@ class TestProfileDetectAPI:
             compiler.version=193
             [conf]
             tools.microsoft.msbuild:vs_version=17
+            """)
+        assert expected in client.out
+
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+    def test_profile_detect_libc(self):
+
+        client = TestClient()
+        tpl1 = textwrap.dedent("""
+            {% set libc, libc_version = detect_api.detect_libc() %}
+            [settings]
+            os=Linux
+            [conf]
+            user.confvar:libc={{libc}}
+            user.confvar:libc_version={{libc_version}}
+            """)
+
+        client.save({"profile1": tpl1})
+        client.run("profile show -pr=profile1")
+        libc_name, libc_version = detect_api.detect_libc()
+        assert libc_name is not None
+        assert libc_version is not None
+        expected = textwrap.dedent(f"""\
+            Host profile:
+            [settings]
+            os=Linux
+            [conf]
+            user.confvar:libc={libc_name}
+            user.confvar:libc_version={libc_version}
             """)
         assert expected in client.out

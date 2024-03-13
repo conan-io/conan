@@ -49,7 +49,7 @@ class ConanProxy:
 
         # TODO: cache2.0: check with new --update flows
         # TODO: If the revision is given, then we don't need to check for updates?
-        if not (check_update or update):
+        if not (check_update or should_update_reference(reference, update)):
             status = RECIPE_INCACHE
             return recipe_layout, status, None
 
@@ -71,7 +71,7 @@ class ConanProxy:
         if remote_ref.revision != ref.revision:
             if cache_time < remote_ref.timestamp:
                 # the remote one is newer
-                if update:
+                if should_update_reference(remote_ref, update):
                     output.info("Retrieving from remote '%s'..." % remote.name)
                     new_recipe_layout = self._download(remote_ref, remote)
                     status = RECIPE_UPDATED
@@ -107,7 +107,7 @@ class ConanProxy:
                     ref = self._remote_manager.get_latest_recipe_reference(reference, remote)
                 else:
                     ref = self._remote_manager.get_recipe_revision_reference(reference, remote)
-                if not update and not check_update:
+                if not should_update_reference(reference, update) and not check_update:
                     return remote, ref
                 results.append({'remote': remote, 'ref': ref})
             except NotFoundException:
@@ -142,3 +142,13 @@ class ConanProxy:
         output = ConanOutput(scope=str(ref))
         output.info("Downloaded recipe revision %s" % ref.revision)
         return recipe_layout
+
+
+def should_update_reference(reference, update):
+    if update is None:
+        return False
+    # Old API usages only ever passed a bool
+    if isinstance(update, bool):
+        return update
+    # Legacy syntax had --update without pattern, it manifests as a "*" pattern
+    return any(name == "*" or reference.name == name for name in update)

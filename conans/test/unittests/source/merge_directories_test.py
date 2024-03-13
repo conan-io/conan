@@ -5,6 +5,7 @@ from os.path import join
 
 import pytest
 
+from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir, save, merge_directories, load
 
@@ -73,7 +74,7 @@ class MergeDirectoriesTest(unittest.TestCase):
 
     def test_same_directory(self):
         # Same directory cannot be merged, this should never happen
-        with pytest.raises(AssertionError):
+        with pytest.raises(ConanException):
             merge_directories(self.source, self.source)
 
     def test_parent_directory(self):

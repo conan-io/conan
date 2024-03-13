@@ -100,8 +100,11 @@ class VCVars:
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
+
         os_ = conanfile.settings.get_safe("os")
-        if os_ != "Windows":
+        build_os_ = conanfile.settings_build.get_safe("os")
+
+        if os_ != "Windows" or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
@@ -294,7 +297,8 @@ def _vcvars_arch(conanfile):
         arch = {'x86': "amd64_x86",
                 'x86_64': 'amd64',
                 'armv7': 'amd64_arm',
-                'armv8': 'amd64_arm64'}.get(arch_host)
+                'armv8': 'amd64_arm64',
+                'arm64ec':'amd64_arm64'}.get(arch_host)
     elif arch_build == 'x86':
         arch = {'x86': 'x86',
                 'x86_64': 'x86_amd64',

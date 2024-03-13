@@ -79,7 +79,10 @@ def write_generators(conanfile, app):
     # generators check that they are not present in the generators field,
     # to avoid duplicates between the generators attribute and the generate() method
     # They would raise an exception here if we don't invalidate the field while we call them
-    old_generators = set(conanfile.generators)
+    old_generators = []
+    for gen in conanfile.generators:
+        if gen not in old_generators:
+            old_generators.append(gen)
     conanfile.generators = []
     try:
         for generator_name in old_generators:
@@ -198,14 +201,24 @@ def _generate_aggregated_env(conanfile):
 
 
 def relativize_generated_file(content, conanfile, placeholder):
-    abs_base_path = conanfile.folders._base_generators
-    if not abs_base_path or not os.path.isabs(abs_base_path):
+    abs_base_path, new_path = relativize_paths(conanfile, placeholder)
+    if abs_base_path is None:
         return content
-    abs_base_path = os.path.join(abs_base_path, "")  # For the trailing / to dissambiguate matches
-    generators_folder = conanfile.generators_folder
-    rel_path = os.path.relpath(abs_base_path, generators_folder)
-    new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
-    new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
     content = content.replace(abs_base_path, new_path)
     content = content.replace(abs_base_path.replace("\\", "/"), new_path.replace("\\", "/"))
     return content
+
+
+def relativize_paths(conanfile, placeholder):
+    abs_base_path = conanfile.folders._base_generators
+    if not abs_base_path or not os.path.isabs(abs_base_path):
+        return None, None
+    abs_base_path = os.path.join(abs_base_path, "")  # For the trailing / to dissambiguate matches
+    generators_folder = conanfile.generators_folder
+    try:
+        rel_path = os.path.relpath(abs_base_path, generators_folder)
+    except ValueError:  # In case the unit in Windows is different, path cannot be made relative
+        return None, None
+    new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
+    new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
+    return abs_base_path, new_path

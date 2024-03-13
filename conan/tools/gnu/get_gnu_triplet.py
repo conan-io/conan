@@ -15,7 +15,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
                              "needed for os=Windows")
 
     # Calculate the arch
-    machine = {"x86": "i686" if os_ != "Linux" else "x86",
+    machine = {"x86": "i686",
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32

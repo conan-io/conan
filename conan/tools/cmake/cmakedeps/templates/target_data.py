@@ -93,12 +93,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               {% else %}
               set({{ pkg_name }}_COMPONENT_NAMES "")
               {% endif %}
-              {% if dependency_filenames %}
-              list(APPEND {{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
-              list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
-              {% else %}
-              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES "")
-              {% endif %}
+              if(DEFINED {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+                list(APPEND {{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
+                list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+              else()
+                set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ dependency_filenames }})
+              endif()
               {% for dep_name, mode in dependency_find_modes.items() %}
               set({{ dep_name }}_FIND_MODE "{{ mode }}")
               {% endfor %}

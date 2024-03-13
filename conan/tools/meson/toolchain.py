@@ -65,6 +65,7 @@ class MesonToolchain(object):
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
+    {% if build_pkg_config_path %}build.pkg_config_path = '{{build_pkg_config_path}}'{% endif %}
     # C/C++ arguments
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
@@ -145,7 +146,10 @@ class MesonToolchain(object):
 
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
-
+        #: Defines the Meson ``build.pkg_config_path`` variable (build context)
+        # Issue: https://github.com/conan-io/conan/issues/12342
+        # Issue: https://github.com/conan-io/conan/issues/14935
+        self.build_pkg_config_path = None
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
 
         #: Dict-like object with the build, host, and target as the Meson machine context
@@ -175,6 +179,7 @@ class MesonToolchain(object):
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
             default_comp_cpp = "cl"
@@ -215,7 +220,8 @@ class MesonToolchain(object):
         self.windres = build_env.get("WINDRES")
         #: Defines the Meson ``pkgconfig`` variable. Defaulted to ``PKG_CONFIG``
         #: build environment value
-        self.pkgconfig = build_env.get("PKG_CONFIG")
+        self.pkgconfig = (self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str) or
+                          build_env.get("PKG_CONFIG"))
         #: Defines the Meson ``c_args`` variable. Defaulted to ``CFLAGS`` build environment value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
         #: Defines the Meson ``c_link_args`` variable. Defaulted to ``LDFLAGS`` build
@@ -329,8 +335,10 @@ class MesonToolchain(object):
                           'armv8': 'aarch64-linux-android',
                           'x86': 'i686-linux-android',
                           'x86_64': 'x86_64-linux-android'}.get(arch)
-        self.c = os.path.join(ndk_bin, "{}{}-clang".format(android_target, android_api_level))
-        self.cpp = os.path.join(ndk_bin, "{}{}-clang++".format(android_target, android_api_level))
+        os_build = self._conanfile.settings_build.get_safe('os')
+        compiler_extension = ".cmd" if os_build == "Windows" else ""
+        self.c = os.path.join(ndk_bin, "{}{}-clang{}".format(android_target, android_api_level, compiler_extension))
+        self.cpp = os.path.join(ndk_bin, "{}{}-clang++{}".format(android_target, android_api_level, compiler_extension))
         self.ar = os.path.join(ndk_bin, "llvm-ar")
 
     def _get_extra_flags(self):
@@ -422,6 +430,7 @@ class MesonToolchain(object):
             "objcpp_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_args)),
             "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
+            "build_pkg_config_path": self.build_pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build,
             "is_apple_system": self._is_apple_system

@@ -22,6 +22,11 @@ def explain_formatter_text(data):
         # we need to wrap this in a MultiPackagesList
         pkglist = data["closest_binaries"]
         prepare_pkglist_compact(pkglist)
+        # Now we make sure that if there are no binaries we will print something that makes sense
+        for ref, ref_info in pkglist.items():
+            for rrev, rrev_info in ref_info.items():
+                if not rrev_info:
+                    rrev_info["ERROR"] = "No package binaries exist"
         print_serial(pkglist)
 
 
@@ -39,6 +44,7 @@ def graph(conan_api, parser, *args):
 
 def cli_build_order(build_order):
     # TODO: Very simple cli output, probably needs to be improved
+    build_order = build_order["order"] if isinstance(build_order, dict) else build_order
     for level in build_order:
         for item in level:
             # If this is a configuration order, it has no packages entry, each item is a package
@@ -60,14 +66,19 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--order", choices=['recipe', 'configuration'], default="recipe",
+    subparser.add_argument("--order-by", choices=['recipe', 'configuration'],
                            help='Select how to order the output, "recipe" by default if not set.')
+    subparser.add_argument("--reduce", action='store_true', default=False,
+                           help='Reduce the build order, output only those to build. Use this '
+                                'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
 
     # parameter validation
     if args.requires and (args.name or args.version or args.user or args.channel):
         raise ConanException("Can't use --name, --version, --user or --channel arguments with "
                              "--requires")
+    if args.order_by is None:
+        ConanOutput().warning("Please specify --order-by argument", warn_tag="deprecated")
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -99,8 +110,15 @@ def graph_build_order(conan_api, parser, subparser, *args):
 
     out = ConanOutput()
     out.title("Computing the build order")
-    install_graph = InstallGraph(deps_graph, order=args.order)
+
+    install_graph = InstallGraph(deps_graph, order_by=args.order_by)
+    if args.reduce:
+        if args.order_by is None:
+            raise ConanException("--reduce needs --order-by argument defined")
+        install_graph.reduce()
     install_order_serialized = install_graph.install_build_order()
+    if args.order_by is None:  # legacy
+        install_order_serialized = install_order_serialized["order"]
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
@@ -115,16 +133,27 @@ def graph_build_order_merge(conan_api, parser, subparser, *args):
     Merge more than 1 build-order file.
     """
     subparser.add_argument("--file", nargs="?", action="append", help="Files to be merged")
+    subparser.add_argument("--reduce", action='store_true', default=False,
+                           help='Reduce the build order, output only those to build. Use this '
+                                'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
     if not args.file or len(args.file) < 2:
         raise ConanException("At least 2 files are needed to be merged")
 
     result = InstallGraph.load(make_abs_path(args.file[0]))
+    if result.reduced:
+        raise ConanException(f"Reduced build-order file cannot be merged: {args.file[0]}")
     for f in args.file[1:]:
         install_graph = InstallGraph.load(make_abs_path(f))
+        if install_graph.reduced:
+            raise ConanException(f"Reduced build-order file cannot be merged: {f}")
         result.merge(install_graph)
 
+    if args.reduce:
+        result.reduce()
     install_order_serialized = result.install_build_order()
+    if getattr(result, "legacy"):
+        install_order_serialized = install_order_serialized["order"]
     return install_order_serialized
 
 
