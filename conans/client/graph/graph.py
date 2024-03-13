@@ -66,6 +66,7 @@ class Node(object):
         self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.should_build = False  # If the --build or policy wants to build this binary
         self.build_allowed = False
+        self.is_conf = False
 
     def __lt__(self, other):
         """

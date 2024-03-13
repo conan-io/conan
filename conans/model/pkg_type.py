@@ -11,6 +11,7 @@ class PackageType(Enum):
     BUILD_SCRIPTS = "build-scripts"
     APP = "application"
     PYTHON = "python-require"
+    CONF = "configuration"
     UNKNOWN = "unknown"
 
     def __str__(self):
