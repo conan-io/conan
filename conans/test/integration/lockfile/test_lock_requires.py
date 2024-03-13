@@ -628,3 +628,19 @@ def test_error_test_explicit():
                  "test_package/conanfile.py": test})
     client.run("lock create conanfile.py --lockfile-out=my.lock")
     client.run("create . --lockfile=my.lock")
+
+
+def test_lock_error_create():
+    # https://github.com/conan-io/conan/issues/15801
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_type("build-scripts")})
+    c.run("lock create . -u --lockfile-out=none.lock")
+    lock = json.loads(c.load("none.lock"))
+    assert lock["requires"] == []
+    assert lock["build_requires"] == []
+    c.run("create . --lockfile=none.lock --lockfile-out=none_updated.lock")
+    # It doesn't crash, it used to
+    lock = json.loads(c.load("none_updated.lock"))
+    assert lock["requires"] == []
+    assert len(lock["build_requires"]) == 1
+    assert "pkg/0.1#4e9dba5c3041ba4c87724486afdb7eb4" in lock["build_requires"][0]

@@ -1,19 +1,16 @@
-import os
 import types
 
 import pytest
 from mock import Mock
 
-from conan.tools.cmake import CMakeToolchain
 from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture
@@ -232,6 +229,12 @@ def test_toolset_x64(conanfile_msvc):
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
 
 
+def test_toolset_cuda(conanfile_msvc):
+    conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_cuda", "C:/Path/To/CUDA")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,cuda=C:/Path/To/CUDA" CACHE STRING "" FORCE)' in toolchain.content
+
+
 def test_older_msvc_toolset():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],
@@ -256,6 +259,32 @@ def test_older_msvc_toolset():
     assert 'CMAKE_GENERATOR_TOOLSET "v110"' in content
     # As by the CMake docs, this has no effect for VS < 2015
     assert 'CMAKE_CXX_STANDARD 98' in content
+
+
+def test_older_msvc_toolset_update():
+    # https://github.com/conan-io/conan/issues/15787
+    c = ConanFile(None)
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["192"], "update": [8, 9],
+                                                 "cppstd": ["14"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]})
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "192"
+    c.settings.compiler.update = 9
+    c.settings.compiler.cppstd = "14"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'CMAKE_GENERATOR_TOOLSET "v142,version=14.29"' in content
 
 
 def test_msvc_xp_toolsets():

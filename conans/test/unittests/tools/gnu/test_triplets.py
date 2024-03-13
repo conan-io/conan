@@ -5,7 +5,7 @@ from conans.errors import ConanException
 
 
 @pytest.mark.parametrize("os_, arch, compiler, expected_triplet", [
-    ["Linux", "x86", None, "x86-linux-gnu"],
+    ["Linux", "x86", None, "i686-linux-gnu"],
     ["Linux", "x86_64", None, "x86_64-linux-gnu"],
     ["Linux", "armv6", None, "arm-linux-gnueabi"],
     ["Linux", "sparc", None, "sparc-linux-gnu"],
