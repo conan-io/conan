@@ -189,6 +189,59 @@ def test_cmake_toolchain_without_build_type():
     assert "CMAKE_BUILD_TYPE" not in toolchain
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only on Windows with msvc")
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+    client.run("create . -s build_type=MinSizeRel")
+
+    client.run("install --require=pkg/1.0 -s build_type=Debug -g CMakeToolchain --format=json")
+    debug_graph = json.loads(client.stdout)
+    debug_bindir = debug_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    debug_bindir = debug_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain --format=json")
+    release_graph = json.loads(client.stdout)
+    release_bindir = release_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    release_bindir = release_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=MinSizeRel -g CMakeToolchain --format=json")
+    minsizerel_graph = json.loads(client.stdout)
+    minsizerel_bindir = minsizerel_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    minsizerel_bindir = minsizerel_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>" \
+                           f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+
+    cmake_generator = "" if platform.system() != "Windows" else "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
+
+
+
 @pytest.mark.tool("cmake")
 def test_cmake_toolchain_multiple_user_toolchain():
     """ A consumer consuming two packages that declare:
