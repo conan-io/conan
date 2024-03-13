@@ -3,7 +3,7 @@ import json
 import platform
 import shutil
 from conan.api.model import ListPattern
-from conan.api.output import ConanOutput
+from conan.api.output import Color, ConanOutput
 from conan.api.conan_api import ConfigAPI
 from conan.cli import make_abs_path
 from conan.internal.runner import RunnerException
@@ -12,10 +12,13 @@ from conans.errors import ConanException
 from conans.model.version import Version
 
 
-def docker_info(msg):
-    ConanOutput().highlight('\n┌'+'─'*(2+len(msg))+'┐')
-    ConanOutput().highlight(f'| {msg} |')
-    ConanOutput().highlight('└'+'─'*(2+len(msg))+'┘\n')
+def docker_info(msg, error=False):
+    fg=Color.BRIGHT_MAGENTA
+    if error:
+        fg=Color.BRIGHT_RED
+    ConanOutput().status('\n┌'+'─'*(2+len(msg))+'┐', fg=fg)
+    ConanOutput().status(f'| {msg} |', fg=fg)
+    ConanOutput().status('└'+'─'*(2+len(msg))+'┘\n', fg=fg)
 
 
 def list_patterns(cache_info):
@@ -67,6 +70,7 @@ class DockerRunner:
             docker_info(f'Building the Docker image: {self.image}')
             self.build_image()
         volumes, environment = self.create_runner_environment()
+        error = False
         try:
             if self.docker_client.containers.list(all=True, filters={'name': self.name}):
                 docker_info('Starting the docker container')
@@ -82,6 +86,7 @@ class DockerRunner:
                     environment=environment,
                     detach=True,
                     auto_remove=False)
+            docker_info(f'Container {self.name} running')
         except Exception as e:
             raise ConanException(f'Imposible to run the container "{self.name}" with image "{self.image}"'
                                  f'\n\n{str(e)}')
@@ -90,16 +95,19 @@ class DockerRunner:
             self.run_command(self.command)
             self.update_local_cache()
         except ConanException as e:
+            error = True
             raise e
         except RunnerException as e:
+            error = True
             raise ConanException(f'"{e.command}" inside docker fail'
                                  f'\n\nLast command output: {str(e.stdout_log)}')
         finally:
             if self.container:
-                docker_info('Stopping container')
+                error_prefix = 'ERROR: ' if error else ''
+                docker_info(f'{error_prefix}Stopping container', error)
                 self.container.stop()
                 if self.remove:
-                    docker_info('Removing container')
+                    docker_info(f'{error_prefix}Removing container', error)
                     self.container.remove()
 
     def build_image(self):
@@ -116,7 +124,7 @@ class DockerRunner:
                     if line:
                         stream = json.loads(line).get('stream')
                         if stream:
-                            ConanOutput().info(stream.strip())
+                            ConanOutput().status(stream.strip())
 
     def run_command(self, command, log=True):
         if log:
@@ -129,11 +137,11 @@ class DockerRunner:
                 if stdout_out is not None:
                     stdout_log += stdout_out.decode('utf-8', errors='ignore').strip()
                     if log:
-                        ConanOutput().info(stdout_out.decode('utf-8', errors='ignore').strip())
+                        ConanOutput().status(stdout_out.decode('utf-8', errors='ignore').strip())
                 if stderr_out is not None:
                     stderr_log += stderr_out.decode('utf-8', errors='ignore').strip()
                     if log:
-                        ConanOutput().info(stderr_out.decode('utf-8', errors='ignore').strip())
+                        ConanOutput().status(stderr_out.decode('utf-8', errors='ignore').strip())
         except Exception as e:
             if platform.system() == 'Windows':
                 import pywintypes
@@ -169,9 +177,10 @@ class DockerRunner:
 
     def init_container(self):
         min_conan_version = '2.1'
-        stdout, _ = self.run_command('conan --version', log=False)
+        stdout, _ = self.run_command('conan --version', log=True)
         docker_conan_version = str(stdout.replace('Conan version ', '').replace('\n', '').replace('\r', '')) # Remove all characters and color
         if Version(docker_conan_version) <= Version(min_conan_version):
+            ConanOutput().status(f'ERROR: conan version inside the container must be greater than {min_conan_version}', fg=Color.BRIGHT_RED)
             raise ConanException( f'conan version inside the container must be greater than {min_conan_version}')
         if self.cache != 'shared':
             self.run_command('mkdir -p ${HOME}/.conan2/profiles', log=False)
