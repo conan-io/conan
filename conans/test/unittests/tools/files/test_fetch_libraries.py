@@ -4,8 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from conan.tools.files import save
-from conans.client.tools import fetch_libraries
+from conan.tools.files import save, fetch_libraries
 from conans.model.build_info import CppInfo
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
@@ -45,47 +44,57 @@ def cpp_info():
 
 @pytest.mark.parametrize("libs, expected", [
     # expected == (lib_name, is_shared, library_path, interface_library_path)
-    (["mylibwinst"], [('mylibwinst', '{base_folder}/lib/mylibwinst.lib', "")]),
+    (["mylibwinst"], [('mylibwinst', '{base_folder}/lib/mylibwinst.lib', "", "")]),
     # Win + shared
-    (["mylibwinsh"], [('mylibwinsh', '{base_folder}/bin/mylibwinsh.dll', '{base_folder}/lib/mylibwinsh.lib')]),
+    (["mylibwinsh"], [('mylibwinsh', '{base_folder}/bin/mylibwinsh.dll', '{base_folder}/lib/mylibwinsh.lib', "")]),
     # Win + shared (interface with another ext)
     (["mylibwin2"],
-     [('mylibwin2', '{base_folder}/bin/mylibwin2.dll', '{base_folder}/lib/mylibwin2.if.lib')]),
+     [('mylibwin2', '{base_folder}/bin/mylibwin2.dll', '{base_folder}/lib/mylibwin2.if.lib', "")]),
     # Win + Mac + shared
-    (["mylibwinsh", "mylibmacsh"], [('mylibmacsh', '{base_folder}/bin/mylibmacsh.dylib', ""),
-                                  ('mylibwinsh', '{base_folder}/bin/mylibwinsh.dll', '{base_folder}/lib/mylibwinsh.lib')]),
+    (["mylibwinsh", "mylibmacsh"], [('mylibmacsh', '{base_folder}/bin/mylibmacsh.dylib', "", ""),
+                                  ('mylibwinsh', '{base_folder}/bin/mylibwinsh.dll', '{base_folder}/lib/mylibwinsh.lib', "")]),
     # Linux + Mac + static
-    (["myliblin", "mylibmacst"], [('mylibmacst', '{base_folder}/lib/mylibmacst.a', ""),
-                                  ('myliblin', '{base_folder}/lib/myliblin.a', "")]),
+    (["myliblin", "mylibmacst"], [('mylibmacst', '{base_folder}/lib/mylibmacst.a', "", ""),
+                                  ('myliblin', '{base_folder}/lib/myliblin.a', "", "")]),
     # mylib + shared (saved as libmylib.so) -> removing the leading "lib" if it matches
-    (["mylibsh"], [('mylibsh', '{base_folder}/lib/libmylibsh.so', "")]),
+    (["mylibsh"], [('mylibsh', '{base_folder}/lib/libmylibsh.so', "", "")]),
     # mylib + static (saved in a subfolder subfolder/libmylib.a) -> non-recursive at this moment
     (["mylib"], []),
     # no lib matching
     (["noexist"], []),
     # no lib matching + Win + static
-    (["noexist", "mylibwinst"], [('mylibwinst', '{base_folder}/lib/mylibwinst.lib', "")]),
+    (["noexist", "mylibwinst"], [('mylibwinst', '{base_folder}/lib/mylibwinst.lib', "", "")]),
     # protobuf (Issue related https://github.com/conan-io/conan/issues/15390)
     (["protoc"], []),
     # non-conventional library name (Issue related https://github.com/conan-io/conan/pull/11343)
-    (["libmylibsh.so"], [('libmylibsh.so', '{base_folder}/lib/libmylibsh.so', "")]),
+    (["libmylibsh.so"], [('libmylibsh.so', '{base_folder}/lib/libmylibsh.so', "", "")]),
 ])
 def test_fetch_libraries(cpp_info, libs, expected):
     cpp_info.libs = libs
     ret = []
-    for (lib, lib_path, interface_lib_path) in expected:
+    for (lib, lib_path, interface_lib_path, symlink_path) in expected:
         if lib_path:
             lib_path = lib_path.format(base_folder=cpp_info._base_folder)
         if interface_lib_path:
             interface_lib_path = interface_lib_path.format(base_folder=cpp_info._base_folder)
-        ret.append((lib, lib_path, interface_lib_path))
+        ret.append((lib, lib_path, interface_lib_path, symlink_path))
     found_libs = fetch_libraries(ConanFileMock(), cpp_info)
     ret.sort()
     assert found_libs == ret
 
-
+@pytest.mark.parametrize("cpp_info_libs, expected", [
+    # Only mylib associated
+    (["mylib"], [('mylib', '{base_folder}/lib/libmylib.2.dylib', '', '{base_folder}/lib/libmylib.1.0.0.dylib')]),
+    # All the existing ones
+    ([], [
+        ('mylib', '{base_folder}/lib/libmylib.dylib', '', '{base_folder}/lib/libmylib.1.0.0.dylib'),
+        ('mylib.1', '{base_folder}/lib/libmylib.1.dylib', '', '{base_folder}/lib/libmylib.1.0.0.dylib'),
+        ('mylib.1.0.0', '{base_folder}/lib/libmylib.1.0.0.dylib', '', ''),
+        ('mylib.2', '{base_folder}/lib/libmylib.2.dylib', '', ''),
+        ('mylib.3', '{base_folder}/custom_folder/libmylib.3.dylib', '', '')]),
+])
 @pytest.mark.skipif(platform.system() == "Windows", reason="Needs symlinks support")
-def test_fetch_libraries_symlinks():
+def test_fetch_libraries_symlinks(cpp_info_libs, expected):
     """
     Tests how fetch_libraries function saves the shortest path (symlink) defined
 
@@ -118,8 +127,8 @@ def test_fetch_libraries_symlinks():
     save(conanfile, lib_mylib2_path, "")
     save(conanfile, lib_mylib3_path, "")
     conanfile.cpp_info.libdirs = [lib_folder, custom_folder]
-    result = fetch_libraries(conanfile)
-    assert ["mylib", "mylib.2", "mylib.3"] == result
+    result = fetch_libraries(conanfile, cpp_info_libs=cpp_info_libs)
+    assert expected == result
 
 
 def test_basic_fetch_libraries():
