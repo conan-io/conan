@@ -69,7 +69,7 @@ def cpp_info():
     # non-conventional library name (Issue related https://github.com/conan-io/conan/pull/11343)
     (["libmylibsh.so"], [('libmylibsh.so', '{base_folder}/lib/libmylibsh.so', "", "")]),
 ])
-def test_fetch_libraries(cpp_info, libs, expected):
+def test_fetch_libraries(libs, expected, cpp_info):
     cpp_info.libs = libs
     ret = []
     for (lib, lib_path, interface_lib_path, symlink_path) in expected:
@@ -78,16 +78,17 @@ def test_fetch_libraries(cpp_info, libs, expected):
         if interface_lib_path:
             interface_lib_path = interface_lib_path.format(base_folder=cpp_info._base_folder)
         ret.append((lib, lib_path, interface_lib_path, symlink_path))
+
     found_libs = fetch_libraries(ConanFileMock(), cpp_info)
     ret.sort()
     assert found_libs == ret
 
 @pytest.mark.parametrize("cpp_info_libs, expected", [
     # Only mylib associated
-    (["mylib"], [('mylib', '{base_folder}/lib/libmylib.2.dylib', '', '{base_folder}/lib/libmylib.1.0.0.dylib')]),
+    (["mylib"], [('mylib', '{base_folder}/lib/libmylib.dylib', '', '{base_folder}/lib/libmylib.1.dylib')]),
     # All the existing ones
     ([], [
-        ('mylib', '{base_folder}/lib/libmylib.dylib', '', '{base_folder}/lib/libmylib.1.0.0.dylib'),
+        ('mylib', '{base_folder}/lib/libmylib.dylib', '', '{base_folder}/lib/libmylib.1.dylib'),
         ('mylib.1', '{base_folder}/lib/libmylib.1.dylib', '', '{base_folder}/lib/libmylib.1.0.0.dylib'),
         ('mylib.1.0.0', '{base_folder}/lib/libmylib.1.0.0.dylib', '', ''),
         ('mylib.2', '{base_folder}/lib/libmylib.2.dylib', '', ''),
@@ -110,8 +111,9 @@ def test_fetch_libraries_symlinks(cpp_info_libs, expected):
             └── libmylib.dylib -> lib/libmylib.1.dylib
     """
     # Keep only the shortest lib name per group of symlinks
+    base_folder = temp_folder()
     conanfile = ConanFileMock(options_values={"shared": True})
-    conanfile.folders.set_base_package(temp_folder())
+    conanfile.folders.set_base_package(base_folder)
     conanfile.cpp_info = CppInfo(conanfile.name, "")
     # Lib dirs and libraries
     lib_folder = os.path.join(conanfile.package_folder, "lib")
@@ -122,13 +124,20 @@ def test_fetch_libraries_symlinks(cpp_info_libs, expected):
     lib_mylib2_path = os.path.join(lib_folder, "libmylib.2.dylib")
     lib_mylib3_path = os.path.join(custom_folder, "libmylib.3.dylib")
     save(conanfile, version_mylib_path, "")
-    os.symlink(version_mylib_path, soversion_mylib_path)  # libmylib.1.dylib
-    os.symlink(soversion_mylib_path, lib_mylib_path)  # libmylib.dylib
+    os.symlink(version_mylib_path, soversion_mylib_path)  # libmylib.1.dylib -> lib/libmylib.1.0.0.dylib
+    os.symlink(soversion_mylib_path, lib_mylib_path)  # libmylib.dylib -> lib/libmylib.1.dylib
     save(conanfile, lib_mylib2_path, "")
     save(conanfile, lib_mylib3_path, "")
     conanfile.cpp_info.libdirs = [lib_folder, custom_folder]
+    ret = []
+    for (lib, lib_path, _, symlink_path) in expected:
+        if lib_path:
+            lib_path = lib_path.format(base_folder=base_folder)
+        if symlink_path:
+            symlink_path = symlink_path.format(base_folder=base_folder)
+        ret.append((lib, lib_path, _, symlink_path))
     result = fetch_libraries(conanfile, cpp_info_libs=cpp_info_libs)
-    assert expected == result
+    assert ret == result
 
 
 def test_basic_fetch_libraries():
@@ -143,7 +152,7 @@ def test_basic_fetch_libraries():
     mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
     save(conanfile, mylib_path, "")
 
-    result = fetch_libraries(conanfile)
+    result = fetch_libraries(conanfile, cpp_info_libs=[])
     assert ["mylib"] == result
 
     # Custom folder

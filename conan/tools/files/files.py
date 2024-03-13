@@ -566,26 +566,24 @@ def fetch_libraries(conanfile, cpp_info=None, cpp_info_libs=None,
                         * shared: library_path as DLL, and interface_library_path as LIB
                         * static: library_path as LIB, and interface_library_path as ""
     """
-    def _save_lib_path(lib_, lib_path_):
+    def _save_lib_path(lib_name, lib_path_):
         """Add each lib with its full library path"""
-        if lib_ in lib_paths:
-            conanfile.output.warn(f"{lib_} name is duplicated, but it could have a different path: "
-                                  f"{lib_path_} or even be a symlink. If any doubt, call the "
-                                  f"fetch_libraries function with cpp_info_libs=[] to gather all the"
-                                  f" existing ones and compare both results.")
         formatted_path = lib_path_.replace("\\", "/")
+        _, ext_ = os.path.splitext(formatted_path)
         # In case of symlinks, let's save where they point to (all of them)
         if os.path.islink(formatted_path):
-            # If libmylib.dylib -> /path/to/lib/libmylib.1.dylib
-            symlink_paths[lib_] = os.path.realpath(formatted_path)
-            lib_paths[lib_] = formatted_path
+            # Important! os.path.realpath returns the final path of the symlink even if it points
+            # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
+            # then os.path.realpath("libmylib.dylib") == "libmylib.1.0.0.dylib"
+            # Better to use os.readlink as it returns the path which the symbolic link points to.
+            symlink_paths[lib_name] = os.readlink(formatted_path)
+            lib_paths[lib_name] = formatted_path
             return
-        _, ext_ = os.path.splitext(formatted_path)
         # Likely Windows interface library (or static one), putting it apart from the rest
         if ext_ == ".lib":
-            interface_lib_paths[lib_] = formatted_path
+            interface_lib_paths[lib_name] = formatted_path
         else:
-            lib_paths[lib_] = formatted_path
+            lib_paths[lib_name] = formatted_path
 
     cpp_info = cpp_info or conanfile.cpp_info
     libdirs = cpp_info.libdirs
@@ -600,7 +598,7 @@ def fetch_libraries(conanfile, cpp_info=None, cpp_info_libs=None,
     lib_paths = {}
     interface_lib_paths = {}
     symlink_paths = {}
-    for libdir in folders:
+    for libdir in sorted(folders):  # deterministic
         if not os.path.exists(libdir):
             continue
         files = os.listdir(libdir)
@@ -623,7 +621,7 @@ def fetch_libraries(conanfile, cpp_info=None, cpp_info_libs=None,
                     # Alternative name: in some cases the name could be pkg.if instead of pkg
                     base_name = name.split(".", maxsplit=1)[0]
                     if base_name in associated_libs:
-                        _save_lib_path(base_name, full_path)  # passing pkg instead of pkg.if
+                        _save_lib_path(name, full_path)  # passing pkg instead of pkg.if
                 else:  # we want to save all the libs
                     _save_lib_path(name, full_path)
 
@@ -638,7 +636,7 @@ def fetch_libraries(conanfile, cpp_info=None, cpp_info_libs=None,
                     raise ConanException(msg)
                 else:
                     conanfile.output.warn(msg)
-            interface_lib_path = interface_lib_paths.pop(lib)
+            interface_lib_path = interface_lib_paths.pop(lib, "")
         libraries.append((lib, lib_path, interface_lib_path, symlink_path))
     if interface_lib_paths:  # Rest of static .lib Windows libraries
         libraries.extend([(lib_name, lib_path, "", "")
