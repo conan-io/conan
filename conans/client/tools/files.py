@@ -385,14 +385,13 @@ def fetch_libraries(conanfile, cpp_info=None, extra_folders=None, raise_error=Tr
     """
     Get the static/shared library paths. Analyze if DLLs are present and raise an exception if
 
-
     :param conanfile: normally a <ConanFileInterface obj>
     :param cpp_info: <CppInfo obj> of the component.
     :param extra_folders: list of relative (to `package_folder`) folders to search more libraries.
     :param raise_error: if raise_error == True, it'll raise an exception if DLL lib does not have
                         an associated *.lib interface library.
     :return: list of tuples per static/shared library ->
-             [(lib_name, is_shared, library_path, interface_library_path)]
+             [(lib_name, library_path, interface_library_path)]
              Note: ``library_path`` could be both static and shared ones in case of UNIX systems.
                     Windows would have:
                         * shared: library_path as DLL, and interface_library_path as LIB
