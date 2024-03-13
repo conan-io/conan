@@ -9,7 +9,6 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
-from types import NoneType
 from urllib.parse import urlparse
 from urllib.request import url2pathname
 
