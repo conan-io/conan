@@ -566,40 +566,26 @@ def fetch_libraries(conanfile, cpp_info=None, cpp_info_libs=None,
                         * shared: library_path as DLL, and interface_library_path as LIB
                         * static: library_path as LIB, and interface_library_path as ""
     """
-    def _save_lib_path(lib_name, lib_path_, base_lib_name=""):
+    def _save_lib_path(lib_name, lib_path_):
         """Add each lib with its full library path"""
-        if base_lib_name and base_lib_name != lib_name:
-            lib_name = base_lib_name
-
         formatted_path = lib_path_.replace("\\", "/")
         _, ext_ = os.path.splitext(formatted_path)
         # In case of symlinks, let's save where they point to (all of them)
-        if os.path.islink(formatted_path):
+        if os.path.islink(formatted_path) and lib_name not in symlink_paths:
             # Important! os.path.realpath returns the final path of the symlink even if it points
             # to another symlink, i.e., libmylib.dylib -> libmylib.1.dylib -> libmylib.1.0.0.dylib
             # then os.path.realpath("libmylib.dylib") == "libmylib.1.0.0.dylib"
             # Better to use os.readlink as it returns the path which the symbolic link points to.
             symlink_paths[lib_name] = os.readlink(formatted_path)
+            lib_paths[lib_name] = formatted_path
+            return
         # Likely Windows interface library (or static one)
-        elif ext_ == ".lib":
+        elif ext_ == ".lib" and lib_name not in interface_lib_paths:
             interface_lib_paths[lib_name] = formatted_path
             return  # putting it apart from the rest
-        # Save the library
-        lib_paths[lib_name] = formatted_path
-
-    def _filter_if_associated_libraries(libraries_):
-        if not associated_libs:
-            return libraries_
-        ret = {}
-        for lib_ in associated_libs:
-            if lib_ in libraries_:  # perfect match, it has prio
-                ret[lib_] = libraries_[lib_]
-            else:
-                for k, v in libraries_.items():
-                    if k.split(".", maxsplit=1)[0] == lib_:
-                        ret[lib_] = v
-                        break
-        return ret
+        if lib_name not in lib_paths:
+            # Save the library
+            lib_paths[lib_name] = formatted_path
 
     cpp_info = cpp_info or conanfile.cpp_info
     libdirs = cpp_info.libdirs
@@ -637,7 +623,7 @@ def fetch_libraries(conanfile, cpp_info=None, cpp_info_libs=None,
                     # Alternative name: in some cases the name could be pkg.if instead of pkg
                     base_name = name.split(".", maxsplit=1)[0]
                     if base_name in associated_libs:
-                        _save_lib_path(name, full_path, base_lib_name=base_name)  # passing pkg instead of pkg.if
+                        _save_lib_path(base_name, full_path)  # passing pkg instead of pkg.if
                 else:  # we want to save all the libs
                     _save_lib_path(name, full_path)
 
