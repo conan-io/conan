@@ -128,6 +128,7 @@ class ConfigAPI:
             if platform.system() in ["Linux", "FreeBSD"]:
                 import distro
             template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+            home_folder = home_folder.replace("\\", "/")
             content = template.render({"platform": platform, "os": os, "distro": distro,
                                        "conan_version": conan_version,
                                        "conan_home_folder": home_folder,

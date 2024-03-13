@@ -1476,7 +1476,7 @@ def test_cmaketoolchain_conf_from_tool_require():
     assert "set(CMAKE_SYSTEM_PROCESSOR ARM-POTATO)" in toolchain
 
 
-def test_inject_user_toolchain_profile():
+def test_inject_user_toolchain():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
@@ -1509,8 +1509,17 @@ def test_inject_user_toolchain_profile():
     save(os.path.join(client.cache.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
-    client.run("create . -pr=myprofile")
+    client.run("build . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+    # Now test with the global.conf
+    global_conf = 'tools.cmake.cmaketoolchain:user_toolchain=' \
+                  '["{{conan_home_folder}}/my.cmake"]'
+    save(client.cache.new_config_path, global_conf)
+    save(os.path.join(client.cache_folder, "my.cmake"), 'message(STATUS "IT WORKS!!!!")')
+    client.run("build .")
+    # The toolchain is found and can be used
+    assert "IT WORKS!!!!" in client.out
 
 
 def test_no_build_type():
