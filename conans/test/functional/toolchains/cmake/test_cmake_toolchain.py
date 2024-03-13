@@ -11,6 +11,7 @@ from conans.model.recipe_ref import RecipeReference
 from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load, rmdir
 
@@ -187,6 +188,59 @@ def test_cmake_toolchain_without_build_type():
     toolchain = client.load("conan_toolchain.cmake")
     assert "CMAKE_MSVC_RUNTIME_LIBRARY" not in toolchain
     assert "CMAKE_BUILD_TYPE" not in toolchain
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only on Windows with msvc")
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+    client.run("create . -s build_type=MinSizeRel")
+
+    client.run("install --require=pkg/1.0 -s build_type=Debug -g CMakeToolchain --format=json")
+    debug_graph = json.loads(client.stdout)
+    debug_bindir = debug_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    debug_bindir = debug_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain --format=json")
+    release_graph = json.loads(client.stdout)
+    release_bindir = release_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    release_bindir = release_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=MinSizeRel -g CMakeToolchain --format=json")
+    minsizerel_graph = json.loads(client.stdout)
+    minsizerel_bindir = minsizerel_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    minsizerel_bindir = minsizerel_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>" \
+                           f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+
+    cmake_generator = "" if platform.system() != "Windows" else "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
+
 
 
 @pytest.mark.tool("cmake")
@@ -904,6 +958,33 @@ def test_cmake_presets_multiple_settings_multi_config():
     client.run_command("cmake --build --preset conan-static-17-release")
     client.run_command("ctest --preset conan-static-17-release")
     client.run_command("build\\static-17\\Release\\hello")
+    assert "Hello World Release!" in client.out
+    assert "MSVC_LANG2017" in client.out
+
+
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+# Test both with a local folder and an absolute folder
+@pytest.mark.parametrize("build", ["mybuild", "temp"])
+def test_cmake_presets_build_folder(build):
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+
+    build = temp_folder() if build == "temp" else build
+    settings_layout = f' -c tools.cmake.cmake_layout:build_folder="{build}" '\
+                      '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
+    # But If we change, for example, the cppstd and the compiler version, the toolchain
+    # and presets will be different, but it will be appended to the UserPresets.json
+    settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
+               "-s compiler.cppstd=17"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, build, "static-17", "generators"))
+
+    client.run_command("cmake . --preset conan-static-17")
+    client.run_command("cmake --build --preset conan-static-17-release")
+    client.run_command("ctest --preset conan-static-17-release")
+    client.run_command(f"{build}\\static-17\\Release\\hello")
     assert "Hello World Release!" in client.out
     assert "MSVC_LANG2017" in client.out
 

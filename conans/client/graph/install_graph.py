@@ -111,6 +111,9 @@ class _InstallRecipeReference:
         self.packages = {}  # {package_id: _InstallPackageReference}
         self.depends = []  # Other REFs, defines the graph topology and operation ordering
 
+    def __str__(self):
+        return f"{self.ref} ({self._node.binary}) -> {[str(d) for d in self.depends]}"
+
     @property
     def need_build(self):
         for package in self.packages.values():
@@ -218,6 +221,9 @@ class _InstallConfiguration:
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
+
+    def __str__(self):
+        return f"{self.ref}:{self.package_id} ({self.binary}) -> {[str(d) for d in self.depends]}"
 
     @property
     def need_build(self):
@@ -412,11 +418,30 @@ class InstallGraph:
 
             if current_level:
                 levels.append(current_level)
+            else:
+                self._raise_loop_detected(opened)
+
             # now initialize new level
             opened = {k: v for k, v in opened.items() if v not in closed}
         if flat:
             return [r for level in levels for r in level]
         return levels
+
+    @staticmethod
+    def _raise_loop_detected(nodes):
+        """
+        We can exclude the nodes that have already been processed they do not content loops
+        """
+        msg = [f"{n}" for n in nodes.values()]
+        msg = "\n".join(msg)
+        instructions = "This graph is ill-formed, and cannot be installed\n" \
+                       "Most common cause is having dependencies both in build and host contexts\n"\
+                       "forming a cycle, due to tool_requires having transitive requires.\n"\
+                       "Check your profile [tool_requires] and recipe tool and regular requires\n"\
+                       "You might inspect the dependency graph with:\n"\
+                       "  $ conan graph info . --format=html > graph.html"
+        raise ConanException("There is a loop in the graph (some packages already ommitted):\n"
+                             f"{msg}\n\n{instructions}")
 
     def install_build_order(self):
         # TODO: Rename to serialize()?

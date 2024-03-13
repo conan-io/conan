@@ -79,6 +79,8 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                            help="Clean download and metadata folders")
     subparser.add_argument("-t", "--temp", action='store_true', default=False,
                            help="Clean temporary folders")
+    subparser.add_argument("-bs", "--backup-sources", action='store_true', default=False,
+                           help="Clean backup sources")
     subparser.add_argument('-p', '--package-query', action=OnceArgument,
                            help="Remove only the packages matching a specific query, e.g., "
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
@@ -86,9 +88,10 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
 
     ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
     package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    if args.build or args.source or args.download or args.temp:
+    if args.build or args.source or args.download or args.temp or args.backup_sources:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
-                              download=args.download, temp=args.temp)
+                              download=args.download, temp=args.temp,
+                              backup_sources=args.backup_sources)
     else:
         conan_api.cache.clean(package_list)
 
@@ -159,5 +162,5 @@ def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
     Upload all the source backups present in the cache
     """
-    files = conan_api.upload.get_backup_sources()
+    files = conan_api.cache.get_backup_sources()
     conan_api.upload.upload_backup_sources(files)

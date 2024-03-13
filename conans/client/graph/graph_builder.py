@@ -355,10 +355,12 @@ class DepsGraphBuilder(object):
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
 
-        self._prepare_node(new_node, profile_host, profile_build, down_options)
+        if recipe_status != RECIPE_PLATFORM:
+            self._prepare_node(new_node, profile_host, profile_build, down_options)
         if dep_conanfile.package_type is PackageType.CONF and node.recipe != RECIPE_VIRTUAL:
             raise ConanException(f"Configuration package {dep_conanfile} cannot be used as "
                                  f"requirement, but {node.ref} is requiring it")
+
         require.process_package_type(node, new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)

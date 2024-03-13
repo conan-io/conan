@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -280,3 +281,31 @@ def test_check_c_cpp_ld_list_formats():
     assert "c = ['aarch64-poky-linux-gcc', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
     assert "cpp = ['aarch64-poky-linux-g++', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
     assert "ld = ['aarch64-poky-linux-ld', '--sysroot=/opt/sysroots/cortexa53-crypto-poky-linux']" in content
+
+
+def test_check_pkg_config_paths():
+    # Issue: https://github.com/conan-io/conan/issues/12342
+    # Issue: https://github.com/conan-io/conan/issues/14935
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain"})
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    assert f"pkg_config_path = '{t.current_folder}'" in content
+    assert f"build.pkg_config_path = " not in content
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.build_pkg_config_path = os.path.join(self.generators_folder, "build")
+            tc.generate()
+    """)
+    t.save({"conanfile.py": conanfile}, clean_first=True)
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    base_folder = t.current_folder
+    assert f"pkg_config_path = '{base_folder}'" in content
+    assert f"build.pkg_config_path = '{os.path.join(base_folder, 'build')}'" in content

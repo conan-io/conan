@@ -147,9 +147,9 @@ def test_shared_requires_static_build_all(transitive_libraries):
     c.run("install . -o engine*:shared=True")
     assert not os.path.exists(os.path.join(c.current_folder, f"matrix-release-{arch}-data.cmake"))
     cmake = c.load(f"engine-release-{arch}-data.cmake")
-    assert 'set(engine_FIND_DEPENDENCY_NAMES "")' in cmake
+    assert 'list(APPEND engine_FIND_DEPENDENCY_NAMES )' in cmake
 
     c.run("install . -o engine*:shared=True --build=engine*")
     assert not os.path.exists(os.path.join(c.current_folder, f"matrix-release-{arch}-data.cmake"))
     cmake = c.load(f"engine-release-{arch}-data.cmake")
-    assert 'set(engine_FIND_DEPENDENCY_NAMES "")' in cmake
+    assert 'list(APPEND engine_FIND_DEPENDENCY_NAMES )' in cmake

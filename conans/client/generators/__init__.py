@@ -215,7 +215,10 @@ def relativize_paths(conanfile, placeholder):
         return None, None
     abs_base_path = os.path.join(abs_base_path, "")  # For the trailing / to dissambiguate matches
     generators_folder = conanfile.generators_folder
-    rel_path = os.path.relpath(abs_base_path, generators_folder)
+    try:
+        rel_path = os.path.relpath(abs_base_path, generators_folder)
+    except ValueError:  # In case the unit in Windows is different, path cannot be made relative
+        return None, None
     new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
     new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
     return abs_base_path, new_path

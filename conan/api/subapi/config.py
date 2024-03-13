@@ -40,6 +40,8 @@ class ConfigAPI:
                               source_folder=source_folder, target_folder=target_folder)
 
     def install_pkg(self, ref, lockfile=None, force=False):
+        ConanOutput().warning("The 'conan config install-pkg' is experimental",
+                              warn_tag="experimental")
         conan_api = self.conan_api
         remotes = conan_api.remotes.list()  # ready to use remotes arguments
         # Ready to use profiles as inputs, but NOT using profiles yet, empty ones
