@@ -592,31 +592,25 @@ def test_xcodedeps_custom_link_prefix():
         include(default)
 
         [conf]
-        tools.build:linkprefix="-Wl,-hidden-l"
+        tools.build:linkprefix=-Wl,-hidden-l
         """)
 
     conanfile_py = textwrap.dedent("""
         from conan import ConanFile
         class LibConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            {package_info}
-            {requirements}
+            def package_info(self):
+                self.cpp_info.components["comp"].libs = ["comp_lib"]
         """)
 
-    package_info = """
-    def package_info(self):
-        self.cpp_info.components["comp"].libs = ["comp_lib"]
-        """
-
-    client.save({"mylib.py": conanfile_py.format(requirements="", package_info=package_info),
-                 "profile": profile})
+    client.save({"mylib.py": conanfile_py, "profile": profile})
 
     client.run("create mylib.py --name=mylib --version=1.0")
-    client.run("install mylib.py -g XcodeDeps --profile:build=profile --profile:host=profile")
+    client.run("install --requires mylib/1.0 -g XcodeDeps --profile:build=profile --profile:host=profile")
 
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
 
-    comp_info = client.load(f"conan_lib_a_cmp1_release_{arch}.xcconfig")
-
-    assert "-Wl,-hidden-lmylib" in comp1_info
+    comp_info = client.load(f"conan_mylib_comp_release_{arch}.xcconfig")
+    print(comp_info)
+    assert "-Wl,-hidden-lcomp_lib" in comp_info
