@@ -1054,17 +1054,11 @@ def test_pkg_config_deps_and_private_deps():
 def test_pkgconfigdeps_with_custom_link_prefix():
     # https://github.com/conan-io/conan/issues/15860
     profile = textwrap.dedent("""
-        [settings]
-        os=%s
-        compiler=gcc
-        compiler.version=6
-        compiler.libcxx=libstdc++11
-        arch=armv8
-        build_type=Release
+        include(default)
 
         [conf]
-        tools.build:linkprefix=["-Wl,-hidden-l"]
-        """ % os_)
+        tools.build:linkprefix="-Wl,-hidden-l"
+        """)
 
     conanfile = textwrap.dedent("""
         import os
