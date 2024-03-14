@@ -305,21 +305,23 @@ def graph_explain(conan_api, parser,  subparser, *args):
 def outdated_text_formatter(result):
     cli_out_write("======== Outdated dependencies ========", fg=Color.BRIGHT_MAGENTA)
 
-    for value in result.values():
-        current_versions_set = list({str(v.ref) for v in value["current_versions"]})
-        cli_out_write(value["current_versions"][0].name, fg=Color.BRIGHT_YELLOW)
-        cli_out_write(f'\tCurrent versions:  {", ".join(current_versions_set) if value["current_versions"] else "No current versions"}')
+    for key, value in result.items():
+        current_versions_set = list({str(v) for v in value["cache_refs"]})
+        cli_out_write(key, fg=Color.BRIGHT_YELLOW)
         cli_out_write(
-            f'\tLatest in remote(s):  {value["latest_remote"]["ref"]} - {value["latest_remote"]["remote"].name}',
+            f'    Current versions:  {", ".join(current_versions_set) if value["cache_refs"] else "No version found in cache"}', fg=Color.BRIGHT_CYAN)
+        cli_out_write(
+            f'    Latest in remote(s):  {value["latest_remote"]["ref"]} - {value["latest_remote"]["remote"]}',
             fg=Color.BRIGHT_CYAN)
-        cli_out_write(f'\tVersion ranges:  {str(value["version_ranges"])[1:-1] if value["version_ranges"] else "No ranges"}')
-
+        if value["version_ranges"]:
+            cli_out_write(f'    Version ranges: ' + str(value["version_ranges"])[1:-1], fg=Color.BRIGHT_CYAN)
 
 def outdated_json_formatter(result):
-    output = {key: {"current_versions": list({str(v.ref) for v in value["current_versions"]}),
+    output = {key: {"current_versions": list({str(v) for v in value["cache_refs"]}),
                     "version_ranges": [str(r) for r in value["version_ranges"]],
-                    "latest_remote": {"ref": str(value["latest_remote"]["ref"]),
-                                      "remote": str(value["latest_remote"]["remote"])}}
+                    "latest_remote": [] if value["latest_remote"] is None
+                                        else {"ref": str(value["latest_remote"]["ref"]),
+                                              "remote": str(value["latest_remote"]["remote"])}}
               for key, value in result.items()}
     cli_out_write(json.dumps(output))
 
@@ -363,47 +365,53 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                          remotes, args.update,
                                                          check_updates=args.check_updates)
     print_graph_basic(deps_graph)
-
-    dependencies = deps_graph.nodes[1:]
-    resolved_ranges = list(deps_graph.resolved_ranges.keys())
-
-    latest_recipe = []
-
     ConanOutput().title("Checking remotes")
 
-    # Data structure to solve the repeated dependencies in graph
+    # Data structure to store info per library
     dict_nodes = {}
+    dependencies = deps_graph.nodes[1:]
     for node in dependencies:
-        if node.name in dict_nodes:
-            dict_nodes[node.name].append(node)
-        else:
-            dict_nodes[node.name] = [node]
+        dict_nodes.setdefault(node.name, {"cache_refs": set(), "version_ranges": [],
+                                          "latest_remote": None})["cache_refs"].add(node.ref)
 
-    for node_name, node_list in dict_nodes.items():
+    resolved_ranges = list(deps_graph.resolved_ranges.keys())
+    for version_range in resolved_ranges:
+        if version_range.name in dict_nodes:
+            dict_nodes[version_range.name]["version_ranges"].append(version_range)
+
+    # find in remotes
+    _find_in_remotes(conan_api, dict_nodes, remotes)
+
+    _remove_not_outdated_libs(dict_nodes)
+
+    return dict_nodes
+
+
+def _remove_not_outdated_libs(dict_nodes):
+    not_outdated = []
+    for node_name, node in dict_nodes.items():
+        if node['latest_remote'] is None or (len(node['cache_refs']) == 1
+                and list(node['cache_refs'])[0] >= node['latest_remote']['ref']):
+            not_outdated.append(node_name)
+    for node_name in not_outdated:
+        del dict_nodes[node_name]
+
+
+def _find_in_remotes(conan_api, dict_nodes, remotes):
+    for node_name in dict_nodes.keys():
         ref_pattern = ListPattern(node_name, rrev=None, prev=None)
-        latest_remote_ref, found_remote, recipe_ref = None, None, None
         for remote in remotes:
             try:
                 remote_ref_list = conan_api.list.select(ref_pattern, package_query=None,
                                                         remote=remote)
                 if not remote_ref_list.recipes:
                     continue
-            except Exception:
-                ConanOutput(f"{node_name} not found in remote {remote.name}")
+            except ConanException as message:
+                ConanOutput().warning(f"{message} in remote {remote.name}")
                 continue
             str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
             recipe_ref = RecipeReference.loads(f"{str_latest_ref}")
-            if latest_remote_ref is None or latest_remote_ref < recipe_ref:
-                latest_remote_ref = recipe_ref
-                found_remote = remote
-        latest_cache_ref = max(node_list, key=lambda x: x.ref)
-        if recipe_ref is None:
-            continue
-        if len(node_list) != 1 or latest_cache_ref.ref < latest_remote_ref:
-            latest_recipe.append((latest_cache_ref, node_list, latest_remote_ref, found_remote))
-
-    return {node.name: {"current_versions": node_list,
-                        "latest_remote": {"ref": latest_remote_ref,
-                                          "remote": found_remote},
-                        "version_ranges": [r for r in resolved_ranges if r.name == node.name]}
-            for node, node_list, latest_remote_ref, found_remote in latest_recipe}
+            if (dict_nodes[node_name]["latest_remote"] is None
+                or dict_nodes[node_name]["latest_remote"]["ref"] < recipe_ref):
+                dict_nodes[node_name]["latest_remote"] = {"ref": recipe_ref,
+                                                          "remote": remote.name}

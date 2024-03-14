@@ -116,12 +116,12 @@ def test_recipe_with_no_remote_ref():
 
     tc.save({"conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0",
                                                                       "libcurl/[>=1.0]")})
-    tc.run("graph outdated . --format=json")
-    output = json.loads(tc.stdout)
+    tc.run("graph outdated .")
     # Check that libcurl doesn't appear as there is no version in the remotes
-    assert "zlib" in output
-    assert "foo" in output
-    assert "libcurl" not in output
+    assert "Recipe 'libcurl' not found in remote default" in tc.stderr
+    assert "zlib" in tc.stdout
+    assert "foo" in tc.stdout
+    assert "libcurl" not in tc.stdout
 
 
 def test_cache_ref_newer_than_latest_in_remote():
