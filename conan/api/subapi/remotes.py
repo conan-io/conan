@@ -3,11 +3,12 @@ import json
 import os
 from urllib.parse import urlparse
 
-from conan.api.model import Remote
+from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
-
+from conans.client.rest_client_local_recipe_index import add_local_recipes_index_remote, \
+    remove_local_recipes_index_remote
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -99,13 +100,16 @@ class RemotesAPI:
         """
         Add a new ``Remote`` object to the existing ones
 
+
         :param remote: a ``Remote`` object to be added
         :param force: do not fail if the remote already exist (but default it failes)
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
           the remote in that position instead of the last one
         """
+        add_local_recipes_index_remote(self.conan_api, remote)
         remotes = _load(self._remotes_file)
-        _validate_url(remote.url)
+        if remote.remote_type != LOCAL_RECIPES_INDEX:
+            _validate_url(remote.url)
         current = {r.name: r for r in remotes}.get(remote.name)
         if current:  # same name remote existing!
             if not force:
@@ -139,6 +143,7 @@ class RemotesAPI:
         _save(self._remotes_file, remotes)
         app = ConanApp(self.conan_api)
         for remote in removed:
+            remove_local_recipes_index_remote(self.conan_api, remote)
             app.cache.localdb.clean(remote_url=remote.url)
         return removed
 
@@ -160,7 +165,8 @@ class RemotesAPI:
         except KeyError:
             raise ConanException(f"Remote '{remote_name}' doesn't exist")
         if url is not None:
-            _validate_url(url)
+            if remote.remote_type != LOCAL_RECIPES_INDEX:
+                _validate_url(url)
             _check_urls(remotes, url, force=False, current=remote)
             remote.url = url
         if secure is not None:
@@ -255,7 +261,7 @@ def _load(remotes_file):
     result = []
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
-                        r.get("allowed_packages"))
+                        r.get("allowed_packages"), r.get("remote_type"))
         result.append(remote)
     return result
 
@@ -268,6 +274,8 @@ def _save(remotes_file, remotes):
             remote["disabled"] = True
         if r.allowed_packages:
             remote["allowed_packages"] = r.allowed_packages
+        if r.remote_type:
+            remote["remote_type"] = r.remote_type
         remote_list.append(remote)
     save(remotes_file, json.dumps({"remotes": remote_list}, indent=True))
 
