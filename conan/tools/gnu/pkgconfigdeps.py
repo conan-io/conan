@@ -92,7 +92,8 @@ class _PCContentGenerator:
     def _get_lib_flags(self, libdirvars, cpp_info):
         gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
         libdirsflags = ['-L"${%s}"' % d for d in libdirvars]
-        system_libs = ["-l%s" % l for l in (cpp_info.libs + cpp_info.system_libs)]
+        link_prefix = self._conanfile.conf.get("tools.build:linkprefix", default="-l")
+        system_libs = ["%s%s" % (link_prefix, l) for l in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         framework_flags = gnudeps_flags.frameworks + gnudeps_flags.framework_paths
         return " ".join(libdirsflags + system_libs + shared_flags + framework_flags)

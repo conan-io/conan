@@ -1049,3 +1049,51 @@ def test_pkg_config_deps_and_private_deps():
     # Now, it passes and creates the pc files correctly (the skipped one is not created)
     client.run("install .")
     assert "Requires:" not in client.load("pkg.pc")
+
+
+def test_pkgconfigdeps_with_custom_link_prefix():
+    # https://github.com/conan-io/conan/issues/15860
+    profile = textwrap.dedent("""
+        [settings]
+        os=%s
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        arch=armv8
+        build_type=Release
+
+        [conf]
+        tools.build:linkprefix=["-Wl,-hidden-l"]
+        """ % os_)
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            name = "mylib"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.frameworkdirs = []
+                self.cpp_info.filter_empty = False
+                libname = "mylib"
+                fake_dir = os.path.join("/", "my_absoulte_path", "fake")
+                include_dir = os.path.join(fake_dir, libname, "include")
+                lib_dir = os.path.join(fake_dir, libname, "lib")
+                lib_dir1 = os.path.join(self.package_folder, "lib2")
+                self.cpp_info.includedirs = [include_dir]
+                self.cpp_info.libdirs = [lib_dir, lib_dir1]
+                self.cpp_info.bindirs = ["mybin"]
+        """)
+    client = TestClient()
+
+    client.save({"conanfile.py": conanfile,
+                "profile": profile})
+    client.run("create .")
+    client.run("install . --profile:build=profile --profile:host=profile")
+
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
+    assert os.path.exists(pc_path) is True
+    pc_content = load(pc_path)
+    assert '-Wl,-hidden-l-llmylib' in pc
