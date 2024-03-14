@@ -1057,7 +1057,7 @@ def test_pkgconfigdeps_with_custom_link_prefix():
         include(default)
 
         [conf]
-        tools.build:linkprefix="-Wl,-hidden-l"
+        tools.build:linkprefix=-Wl,-hidden-l
         """)
 
     conanfile = textwrap.dedent("""
@@ -1069,25 +1069,18 @@ def test_pkgconfigdeps_with_custom_link_prefix():
             version = "0.1"
 
             def package_info(self):
-                self.cpp_info.frameworkdirs = []
-                self.cpp_info.filter_empty = False
                 libname = "mylib"
-                fake_dir = os.path.join("/", "my_absoulte_path", "fake")
-                include_dir = os.path.join(fake_dir, libname, "include")
-                lib_dir = os.path.join(fake_dir, libname, "lib")
-                lib_dir1 = os.path.join(self.package_folder, "lib2")
-                self.cpp_info.includedirs = [include_dir]
-                self.cpp_info.libdirs = [lib_dir, lib_dir1]
-                self.cpp_info.bindirs = ["mybin"]
+                self.cpp_info.libs = [ libname ]
         """)
     client = TestClient()
 
     client.save({"conanfile.py": conanfile,
                 "profile": profile})
     client.run("create .")
-    client.run("install . --profile:build=profile --profile:host=profile")
+    client.run("install --requires=mylib/0.1@ --profile:build=profile --profile:host=profile -g PkgConfigDeps")
 
     pc_path = os.path.join(client.current_folder, "mylib.pc")
+    print(pc_path)
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
-    assert '-Wl,-hidden-l-llmylib' in pc
+    assert '-Wl,-hidden-lmylib' in pc_content
