@@ -5,9 +5,6 @@ graph_info_html = """
     </head>
 
     <body>
-        <script type="text/javascript">
-
-        </script>
         <style>
             @media print {
                 .noPrint {
@@ -48,7 +45,6 @@ graph_info_html = """
         <div style="clear:both"></div>
 
         <script type="text/javascript">
-
             const graph_data = {{ deps_graph }};
             var hide_build = false;
             var collapse_build = false;
@@ -108,7 +104,8 @@ graph_info_html = """
                         "direction": "DU",
                         nodeSpacing: 170,
                         blockShifting: true,
-                        edgeMinimization: true
+                        edgeMinimization: true,
+                        shakeTowards: "roots",
                     }
                 },
                 physics: {
