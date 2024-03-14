@@ -26,6 +26,7 @@ graph_info_html = """
         <div style="width: 100%;">
             <div id="mynetwork" style="float:left; width: 75%;"></div>
             <div style="float:right;width:25%;">
+                <div id="mylegend" style="float:left; width: 50%"></div>
                 <div>
                     <input type="checkbox" onchange="switchBuild()" id="show_build_requires" checked />
                     <label for="show_build_requires">Show build-requires</label>
@@ -83,9 +84,52 @@ graph_info_html = """
                 var data = {nodes: nodes, edges: edges};
                 return data;
             };
+            function define_legend() {
+                var x = 0;
+                var y = 0;
+                var step = 70;
+                var legend_nodes = [];
+                legend_nodes.push({
+                    id: 1000,
+                    x: x,
+                    y: y,
+                    label: "Internet",
+                    group: "internet",
+                    value: 1,
+                    fixed: true,
+                    physics: false,
+                });
+                legend_nodes.push({
+                    id: 1001,
+                    x: x,
+                    y: y + step,
+                    label: "Switch",
+                    group: "switch",
+                    value: 1,
+                    fixed: true,
+                    physics: false,
+                });
+                legend_nodes.push({
+                    id: 1002,
+                    x: x,
+                    y: y + 2 * step,
+                    label: "Server",
+                    group: "server",
+                    value: 1,
+                    fixed: true,
+                    physics: false,
+                });
+                var nodes = new vis.DataSet(legend_nodes);
+                var edges = new vis.DataSet([]);
+                var data = {nodes: nodes, edges: edges};
+                return data;
+            }
 
             var container = document.getElementById('mynetwork');
             var controls = document.getElementById('controls');
+            var legend_container = document.getElementById('mylegend');
+            var legend_data = define_legend();
+            var legend = new vis.Network(legend_container, legend_data);
 
             var options = {
                 autoResize: true,
