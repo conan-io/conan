@@ -40,7 +40,7 @@ values = [
     ['>=1.0.0+2', [[['>=', '1.0.0+2']]], ["1.0.0+2", "1.0.0+3"], ["1.0.0+1"]],
     ['>=1.0.0', [[['>=', '1.0.0-']]], ["1.0.0+2", "1.0.0+3"], []],
     # Build metadata and pre-releases
-    ['>=1.0.0-pre.1+2', [[['>=', '1.0.0-pre.1+2']]], ["1.0.0+1", "1.0.0+2"], ["1.0.0-pre.1+3"]],
+    ['>=1.0.0-pre.1+2', [[['>=', '1.0.0-pre.1+2']]], ["1.0.0+1", "1.0.0+2"], ["1.0.0-pre.1+3"]], # excluded 1+3 because is a pre-release!
     ['>=1.0.0-pre.1+2, include_prerelease=True', [[['>=', '1.0.0-pre.1+2']]], ["1.0.0+1", "1.0.0+2", "1.0.0-pre.1+3"], ["1.0.0-pre.1+1"]],
     ['<1.0.1-pre.1+2', [[['<', '1.0.1-pre.1+2']]], ["1.0.0+1", "1.0.0+2"], ["1.0.0-pre.1+2"]],
     ['<1.0.1-pre.1+2, include_prerelease=True', [[['<', '1.0.1-pre.1+2']]], ["1.0.0+1", "1.0.0+2", "1.0.1-pre.1+1"], ["1.0.1-pre.1+2"]],
@@ -64,6 +64,10 @@ def test_range(version_range, conditions, versions_in, versions_out):
 
     for v in versions_out:
         assert not r.contains(Version(v), None), f"[{r}] must not contain {v}"
+
+
+def test_my():
+    assert VersionRange('>=1.0.0-pre.1+2').contains(Version("1.0.0-pre.1+3"), None)
 
 
 @pytest.mark.parametrize("version_range, resolve_prereleases, versions_in, versions_out", [
