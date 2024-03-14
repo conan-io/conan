@@ -321,6 +321,7 @@ class DepsGraph(object):
         self.aliased = {}
         self.resolved_ranges = {}
         self.replaced_requires = {}
+        self.options_conflicts = {}
         self.error = False
 
     def overrides(self):

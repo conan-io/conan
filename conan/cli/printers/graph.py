@@ -80,6 +80,17 @@ def print_graph_basic(graph):
             reason = f": {reason}" if reason else ""
             output.info("    {}{}".format(d, reason), Color.BRIGHT_CYAN)
 
+    if graph.options_conflicts:
+        output.info("Options conflicts", Color.BRIGHT_YELLOW)
+        for ref, ref_conflicts in graph.options_conflicts.items():
+            for option, conflict_info in ref_conflicts.items():
+                prev_value = conflict_info['value']
+                output.info(f"    {ref}:{option}={prev_value} (current value)", Color.BRIGHT_CYAN)
+                for src_ref, conflict_value in conflict_info["conflicts"]:
+                    output.info(f"        {src_ref}->{option}={conflict_value}", Color.BRIGHT_CYAN)
+        output.info("    It is recommended to define options values in profiles, not in recipes",
+                    Color.BRIGHT_CYAN)
+
 
 def print_graph_packages(graph):
     # I am excluding the "download"-"cache" or remote information, that is not
