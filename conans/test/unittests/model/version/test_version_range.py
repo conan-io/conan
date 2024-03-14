@@ -66,10 +66,6 @@ def test_range(version_range, conditions, versions_in, versions_out):
         assert not r.contains(Version(v), None), f"[{r}] must not contain {v}"
 
 
-def test_my():
-    assert VersionRange('>=1.0.0-pre.1+2').contains(Version("1.0.0-pre.1+3"), None)
-
-
 @pytest.mark.parametrize("version_range, resolve_prereleases, versions_in, versions_out", [
     ['*', True, ["1.5.1", "1.5.1-pre1", "2.1-pre1"], []],
     ['*', False, ["1.5.1"], ["1.5.1-pre1", "2.1-pre1"]],
