@@ -39,6 +39,7 @@ BUILT_IN_CONFS = {
     "core.package_id:default_embed_mode": "By default, 'full_mode'",
     "core.package_id:default_python_mode": "By default, 'minor_mode'",
     "core.package_id:default_build_mode": "By default, 'None'",
+    "core.package_id:config_mode": "How the 'config_version' affects binaries. By default 'None'",
     # General HTTP(python-requests) configuration
     "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
     "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
