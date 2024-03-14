@@ -481,7 +481,8 @@ class ConfigInstallTest(unittest.TestCase):
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
         with self.client.chdir(folder):
-            self.client.run_command('git init . -b master')
+            self.client.run_command('git init .')
+            self.client.run_command('git checkout -b master')
             self.client.run_command('git add .')
             self.client.run_command('git config user.name myname')
             self.client.run_command('git config user.email myname@mycompany.com')
