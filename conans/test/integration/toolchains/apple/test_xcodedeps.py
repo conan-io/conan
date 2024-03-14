@@ -582,3 +582,41 @@ def test_correctly_handle_transitive_components():
     conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
     assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
     assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_xcodedeps_custom_link_prefix():
+    client = TestClient()
+
+    profile = textwrap.dedent("""
+        include(default)
+
+        [conf]
+        tools.build:linkprefix="-Wl,-hidden-l"
+        """)
+
+    conanfile_py = textwrap.dedent("""
+        from conan import ConanFile
+        class LibConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            {package_info}
+            {requirements}
+        """)
+
+    package_info = """
+    def package_info(self):
+        self.cpp_info.components["comp"].libs = ["comp_lib"]
+        """
+
+    client.save({"mylib.py": conanfile_py.format(requirements="", package_info=package_info),
+                 "profile": profile})
+
+    client.run("create mylib.py --name=mylib --version=1.0")
+    client.run("install mylib.py -g XcodeDeps --profile:build=profile --profile:host=profile")
+
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    comp_info = client.load(f"conan_lib_a_cmp1_release_{arch}.xcconfig")
+
+    assert "-Wl,-hidden-lmylib" in comp1_info
