@@ -1,14 +1,16 @@
 import json
+import os
 from collections import OrderedDict
 
-from conan.api.output import cli_out_write, Color
 from conan.api.conan_api import ConanAPI
-from conan.api.model import Remote
+from conan.api.model import Remote, LOCAL_RECIPES_INDEX
+from conan.api.output import cli_out_write, Color
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import remote_color, error_color, recipe_color, \
     reference_color
-from conans.client.rest.remote_credentials import RemoteCredentials
 from conan.errors import ConanException
+from conans.client.rest.remote_credentials import RemoteCredentials
 
 
 def formatter_remote_list_json(remotes):
@@ -74,10 +76,19 @@ def remote_add(conan_api, parser, subparser, *args):
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the definition of the remote even if duplicated")
     subparser.add_argument("-ap", "--allowed-packages", action="append", default=None,
-                           help="Add recipe reference pattern to the list of allowed packages for this remote")
+                           help="Add recipe reference pattern to list of allowed packages for "
+                                "this remote")
+    subparser.add_argument("-t", "--type", choices=[LOCAL_RECIPES_INDEX],
+                           help="Define the remote type")
+
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
-    r = Remote(args.name, args.url, args.secure, disabled=False, allowed_packages=args.allowed_packages)
+
+    url_folder = make_abs_path(args.url)
+    remote_type = args.type or (LOCAL_RECIPES_INDEX if os.path.isdir(url_folder) else None)
+    url = url_folder if remote_type == LOCAL_RECIPES_INDEX else args.url
+    r = Remote(args.name, url, args.secure, disabled=False, remote_type=remote_type,
+               allowed_packages=args.allowed_packages)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 

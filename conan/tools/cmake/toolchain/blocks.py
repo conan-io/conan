@@ -113,6 +113,55 @@ class VSRuntimeBlock(Block):
         return {"vs_runtimes": config_dict}
 
 
+class VSDebuggerEnvironment(Block):
+    template = textwrap.dedent("""
+        {% if vs_debugger_path %}
+        # Definition of CMAKE_VS_DEBUGGER_ENVIRONMENT
+        set(CMAKE_VS_DEBUGGER_ENVIRONMENT "{{ vs_debugger_path }}")
+        {% endif %}
+        """)
+
+    def context(self):
+        os_ = self._conanfile.settings.get_safe("os")
+        build_type = self._conanfile.settings.get_safe("build_type")
+
+        if (os_ and "Windows" not in os_) or not build_type:
+            return None
+
+        if "Visual" not in self._toolchain.generator:
+            return None
+
+        config_dict = {}
+        if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_include = load(CONAN_TOOLCHAIN_FILENAME)
+            pattern = r"set\(CMAKE_VS_DEBUGGER_ENVIRONMENT \"PATH=([^)]*);%PATH%\"\)"
+            vs_debugger_environment = re.search(pattern, existing_include)
+            if vs_debugger_environment:
+                capture = vs_debugger_environment.group(1)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>", capture)
+                config_dict = dict(matches)
+
+        host_deps = self._conanfile.dependencies.host.values()
+        test_deps = self._conanfile.dependencies.test.values()
+        bin_dirs = [p for dep in host_deps for p in dep.cpp_info.aggregated_components().bindirs]
+        test_bindirs = [p for dep in test_deps for p in dep.cpp_info.aggregated_components().bindirs]
+        bin_dirs.extend(test_bindirs)
+        bin_dirs = [p.replace("\\", "/") for p in bin_dirs]
+
+        bin_dirs = ";".join(bin_dirs) if bin_dirs else None
+        if bin_dirs:
+            config_dict[build_type] = bin_dirs
+
+        if not config_dict:
+            return None
+        
+        vs_debugger_path = ""
+        for config, value in config_dict.items():
+            vs_debugger_path += f"$<$<CONFIG:{config}>:{value}>"
+        vs_debugger_path = f"PATH={vs_debugger_path};%PATH%"
+        return {"vs_debugger_path": vs_debugger_path}
+
+
 class FPicBlock(Block):
     template = textwrap.dedent("""
         {% if fpic %}

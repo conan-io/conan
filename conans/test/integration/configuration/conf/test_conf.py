@@ -223,7 +223,8 @@ def test_jinja_global_conf_paths():
     global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
     save(c.cache.new_config_path, global_conf)
     c.run("config show *")
-    assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
+    cache_folder = c.cache_folder.replace("\\", "/")
+    assert f"user.mycompany:myfile: {os.path.join(cache_folder, 'myfile')}" in c.out
 
 
 def test_profile_detect_os_arch():
