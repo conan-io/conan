@@ -374,31 +374,24 @@ def graph_outdated(conan_api, parser, subparser, *args):
         dict_nodes.setdefault(node.name, {"cache_refs": set(), "version_ranges": [],
                                           "latest_remote": None})["cache_refs"].add(node.ref)
 
-    resolved_ranges = list(deps_graph.resolved_ranges.keys())
-    for version_range in resolved_ranges:
-        if version_range.name in dict_nodes:
-            dict_nodes[version_range.name]["version_ranges"].append(version_range)
+    for version_range in deps_graph.resolved_ranges.keys():
+        dict_nodes[version_range.name]["version_ranges"].append(version_range)
 
     # find in remotes
     _find_in_remotes(conan_api, dict_nodes, remotes)
 
-    _remove_not_outdated_libs(dict_nodes)
-
-    return dict_nodes
-
-
-def _remove_not_outdated_libs(dict_nodes):
-    not_outdated = []
+    #Filter nodes with no outdated versions
+    filtered_nodes = {}
     for node_name, node in dict_nodes.items():
-        if node['latest_remote'] is None or (len(node['cache_refs']) == 1
-                and list(node['cache_refs'])[0] >= node['latest_remote']['ref']):
-            not_outdated.append(node_name)
-    for node_name in not_outdated:
-        del dict_nodes[node_name]
+        if node['latest_remote'] is not None and sorted(list(node['cache_refs']))[0] < \
+            node['latest_remote']['ref']:
+            filtered_nodes[node_name] = node
+
+    return filtered_nodes
 
 
 def _find_in_remotes(conan_api, dict_nodes, remotes):
-    for node_name in dict_nodes.keys():
+    for node_name, node_info in dict_nodes.items():
         ref_pattern = ListPattern(node_name, rrev=None, prev=None)
         for remote in remotes:
             try:
@@ -411,7 +404,6 @@ def _find_in_remotes(conan_api, dict_nodes, remotes):
                 continue
             str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
             recipe_ref = RecipeReference.loads(f"{str_latest_ref}")
-            if (dict_nodes[node_name]["latest_remote"] is None
-                or dict_nodes[node_name]["latest_remote"]["ref"] < recipe_ref):
-                dict_nodes[node_name]["latest_remote"] = {"ref": recipe_ref,
-                                                          "remote": remote.name}
+            if (node_info["latest_remote"] is None
+                    or node_info["latest_remote"]["ref"] < recipe_ref):
+                node_info["latest_remote"] = {"ref": recipe_ref, "remote": remote.name}
