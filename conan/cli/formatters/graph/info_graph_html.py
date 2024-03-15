@@ -23,59 +23,89 @@ graph_info_html = """
             }
         </style>
 
-        <div style="width: 100%;">
-            <div id="mynetwork" style="float:left; width: 75%;"></div>
-            <div style="float:right;width:25%;">
-                <div id="mylegend" style="float:left; width: 50%"></div>
+        <div style="display: grid; grid-template-columns: 75% 25%; grid-template-rows: 30px auto; height: 100vh;">
+            <div id="mylegend" style="background-color: lightgrey; grid-column-end: span 2;"></div>
+            <div id="mynetwork"></div>
+            <div style="background-color: lightgrey;min-height:100%;height:0;overflow-y: auto;">
                 <div>
                     <input type="checkbox" onchange="switchBuild()" id="show_build_requires" checked />
                     <label for="show_build_requires">Show build-requires</label>
                 </div>
                 <div>
+                    <input type="checkbox" onchange="switchTest()" id="show_test_requires" checked />
+                    <label for="show_test_requires">Show test-requires</label>
+                </div>
+                <div>
                     <input type="checkbox" onchange="collapseBuild()" id="group_build_requires"/>
                     <label for="group_build_requires">Group build-requires</label>
                 </div>
-
-                <div id="details"  style="padding:10;" class="noPrint">Package info: no package selected</div>
-                <button onclick="javascript:showhideclass('controls')" class="button noPrint">
-                    Show / hide graph controls
-                </button>
+                 <div>
+                    <input type="search" placeholder="Search package..." oninput="searchPackage(this)">
+                </div>
+                <div>
+                    <input type="checkbox" onchange="showhideclass('controls')" id="show_controls"/>
+                    <label for="show_controls">Show graph controls</label>
+                </div>
                 <div id="controls" class="controls" style="padding:5; display:none"></div>
+                <div id="details"  style="padding:10;" class="noPrint">Package info: Click on one package to show information</div>
             </div>
         </div>
-        <div style="clear:both"></div>
 
         <script type="text/javascript">
             const graph_data = {{ deps_graph }};
             var hide_build = false;
+            var hide_test = false;
+            var search_pkg = null;
             var collapse_build = false;
-
+            var color_map = {Cache: "SkyBlue",
+                             Download: "LightGreen",
+                             Build: "Yellow",
+                             Missing: "Orange",
+                             Update: "SeaGreen",
+                             Skip: "White",
+                             Editable: "LightCyan",
+                             EditableBuild: "Cyan",
+                             Invalid: "Red",
+                             Platform: "Violet"};
             function define_data(){
                 var nodes = [];
                 var edges = [];
                 var collapsed_build = {};
                 var targets = {};
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
+                    if (node.context == "build" && hide_build) continue;
+                    if (node.test && hide_test) continue;
                     const shape = node.context == "build" ? "ellipse" : node.test ? "hexagon" : "box";
                     var label =  node["name"] + "/" + node["version"];
+                    var color = color_map[node.binary]
                     if (collapse_build) {
                         var existing = collapsed_build[label];
                         targets[node_id] = existing;
                         if (existing) continue;
                         collapsed_build[label] = node_id;
                     }
+                    if (node["name"] == search_pkg){
+                        borderWidth = 3;
+                        borderColor = "Red"
+                    }
+                    else {
+                        borderWidth = 1;
+                        borderColor = "SkyBlue";
+                    }
                     nodes.push({
                         id: node_id,
                         label: label,
-                        shape: shape
+                        shape: shape,
+                        borderWidth: borderWidth,
+                        color: {border: borderColor, background: color,
+                                highlight: {background: color, border: borderColor}},
                     });
-
                 }
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     for (const [dep_id, dep] of Object.entries(node["dependencies"])) {
                         if (dep.direct){
                             var target_id = targets[dep_id] || dep_id;
-                            edges.push({from: node_id, to: target_id});
+                            edges.push({from: node_id, to: target_id, color: "SkyBlue"});
                         }
                     }
                 }
@@ -85,51 +115,34 @@ graph_info_html = """
                 return data;
             };
             function define_legend() {
-                var x = 0;
-                var y = 0;
-                var step = 70;
+                var x = -300;
+                var y = -200;
+                var step = 250;
                 var legend_nodes = [];
-                legend_nodes.push({
-                    id: 1000,
-                    x: x,
-                    y: y,
-                    label: "Internet",
-                    group: "internet",
-                    value: 1,
-                    fixed: true,
-                    physics: false,
+                legend_nodes.push({id: 0, x: x, y: y, shape: "box", font: {size: 35},
+                    label: "require",
                 });
-                legend_nodes.push({
-                    id: 1001,
-                    x: x,
-                    y: y + step,
-                    label: "Switch",
-                    group: "switch",
-                    value: 1,
-                    fixed: true,
-                    physics: false,
+                legend_nodes.push({id: 1, x: x + step, y: y, font: {size: 35}, shape: "ellipse",
+                    label: "tool-require",
                 });
-                legend_nodes.push({
-                    id: 1002,
-                    x: x,
-                    y: y + 2 * step,
-                    label: "Server",
-                    group: "server",
-                    value: 1,
-                    fixed: true,
-                    physics: false,
-                });
-                var nodes = new vis.DataSet(legend_nodes);
-                var edges = new vis.DataSet([]);
-                var data = {nodes: nodes, edges: edges};
-                return data;
+                legend_nodes.push({id: 2, x: x + 2* step, y: y, font: {size: 35, background: "grey"},
+                    shape: "ellipse", shapeProperties: {borderDashes: true},
+                    label: "test-require",
+                })
+                var counter = 3;
+                for (const [status, color] of Object.entries(color_map)) {
+                    legend_nodes.push({x: x + counter*step, y: y, shape: "box", font: {size: 35},
+                        label: status,
+                        color: {border: "SkyBlue", background: color}
+                    });
+                    counter++;
+                }
+                return {nodes: new vis.DataSet(legend_nodes)};
             }
 
             var container = document.getElementById('mynetwork');
             var controls = document.getElementById('controls');
             var legend_container = document.getElementById('mylegend');
-            var legend_data = define_legend();
-            var legend = new vis.Network(legend_container, legend_data);
 
             var options = {
                 autoResize: true,
@@ -157,7 +170,7 @@ graph_info_html = """
                 },
                 configure: {
                     enabled: true,
-                    filter: 'layout',
+                    filter: 'layout physics',
                     showButton: false,
                     container: controls
                 }
@@ -165,6 +178,11 @@ graph_info_html = """
 
             var data = define_data();
             var network = new vis.Network(container, data, options);
+            var legend_data = define_legend();
+            var options_legend = {interaction: {selectable: false, dragView: false, dragNodes: false,
+                                                zoomView: false}, physics: {enabled: false}};
+            var legend = new vis.Network(legend_container, legend_data, options_legend);
+
             network.on('click', function (properties) {
                 var ids = properties.nodes;
                 var control = document.getElementById("details");
@@ -192,17 +210,25 @@ graph_info_html = """
             }
             function switchBuild() {
                 hide_build = !hide_build;
-                nodes_update = [];
-                for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
-                    if (node.context == "build")
-                        nodes_update.push({id: node_id, hidden: hide_build})
-                }
-                data.nodes.update(nodes_update);
+                data = define_data();
+                network.setData(data);
+                draw();
+            }
+            function switchTest() {
+                hide_test = !hide_test;
+                data = define_data();
+                network.setData(data);
                 draw();
             }
             function collapseBuild() {
                 collapse_build = !collapse_build;
                 console.log("collapsing build");
+                data = define_data();
+                network.setData(data);
+                draw();
+            }
+            function searchPackage(e) {
+                search_pkg = e.value;
                 data = define_data();
                 network.setData(data);
                 draw();
