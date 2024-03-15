@@ -1,7 +1,12 @@
-FROM ubuntu
-RUN apt update && apt upgrade -y
-RUN apt install -y build-essential
-RUN apt install -y python3-pip cmake git build-essential
+FROM ubuntu:22.04
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        python3 \
+        python3-pip \
+        python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install docker
 COPY . /root/conan-io
 RUN cd /root/conan-io && pip install -e .

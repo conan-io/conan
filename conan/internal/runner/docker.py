@@ -52,7 +52,7 @@ class DockerRunner:
         raw_args[raw_args.index(args.path)] = f'"{self.abs_docker_path}"'
         self.command = ' '.join([f'conan {command}'] + raw_args + ['-f json > create.json'])
         self.dockerfile = profile.runner.get('dockerfile')
-        self.docker_build_path = profile.runner.get('docker_build_path')
+        self.docker_build_context = profile.runner.get('docker_build_context')
         self.image = profile.runner.get('image')
         if not (self.dockerfile or self.image):
             raise ConanException("'dockerfile' or docker image name is needed")
@@ -115,7 +115,7 @@ class DockerRunner:
         if os.path.isdir(self.dockerfile):
             dockerfile_file_path = os.path.join(self.dockerfile, 'Dockerfile')    
         with open(dockerfile_file_path) as f:
-            build_path = self.docker_build_path or os.path.dirname(dockerfile_file_path)
+            build_path = self.docker_build_context or os.path.dirname(dockerfile_file_path)
             ConanOutput().highlight(f"Dockerfile path: '{dockerfile_file_path}'")
             ConanOutput().highlight(f"Docker build context: '{build_path}'\n")
             docker_build_logs = self.docker_api.build(path=build_path, dockerfile=f.read(), tag=self.image)
