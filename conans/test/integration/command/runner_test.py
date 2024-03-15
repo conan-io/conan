@@ -35,7 +35,7 @@ def dockerfile_path(name=None):
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-@pytest.mark.xfail(reason="known docker ci issue")
+@pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_dockerfile_folder_path():
     """
     Tests the ``conan create . ``
@@ -63,7 +63,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     [runner]
     type=docker
     dockerfile={dockerfile_path()}
-    docker_build_path={conan_base_path()}
+    docker_build_context={conan_base_path()}
     image=conan-runner-default-test
     cache=copy
     remove=True
@@ -95,7 +95,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-@pytest.mark.xfail(reason="known docker ci issue")
+@pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_dockerfile_file_path():
     """
     Tests the ``conan create . ``
@@ -123,7 +123,7 @@ def test_create_docker_runner_dockerfile_file_path():
     [runner]
     type=docker
     dockerfile={dockerfile_path("Dockerfile_test")}
-    docker_build_path={conan_base_path()}
+    docker_build_context={conan_base_path()}
     image=conan-runner-default-test
     cache=copy
     remove=True
@@ -155,7 +155,7 @@ def test_create_docker_runner_dockerfile_file_path():
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-@pytest.mark.xfail(reason="known docker ci issue")
+@pytest.mark.xfail(reason="conan inside docker optional test")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
 def test_create_docker_runner_with_ninja(build_type, shared):
@@ -209,7 +209,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     type=docker
     image=conan-runner-ninja-test
     dockerfile={dockerfile_path("Dockerfile_ninja")}
-    docker_build_path={conan_base_path()}
+    docker_build_context={conan_base_path()}
     cache=copy
     remove=True
     """)
