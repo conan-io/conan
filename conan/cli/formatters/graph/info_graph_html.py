@@ -1,4 +1,4 @@
-graph_info_html = """
+graph_info_html = r"""
 <html lang="en">
     <head>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.js"></script>
@@ -40,6 +40,10 @@ graph_info_html = """
                     <label for="group_build_requires">Group build-requires</label>
                 </div>
                  <div>
+                    <input type="checkbox" onchange="showPackageType()" id="show_package_type"/>
+                    <label for="show_package_type">Show package type</label>
+                </div>
+                 <div>
                     <input type="search" placeholder="Search package..." oninput="searchPackage(this)">
                 </div>
                 <div>
@@ -57,6 +61,7 @@ graph_info_html = """
             var hide_test = false;
             var search_pkg = null;
             var collapse_build = false;
+            var show_package_type = false;
             var color_map = {Cache: "SkyBlue",
                              Download: "LightGreen",
                              Build: "Yellow",
@@ -67,16 +72,23 @@ graph_info_html = """
                              EditableBuild: "Cyan",
                              Invalid: "Red",
                              Platform: "Violet"};
+            var global_edges = {};
             function define_data(){
                 var nodes = [];
                 var edges = [];
                 var collapsed_build = {};
                 var targets = {};
+                global_edges = {};
+                var edge_counter = 0;
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
-                    const shape = node.context == "build" ? "ellipse" : node.test ? "hexagon" : "box";
-                    var label =  node["name"] + "/" + node["version"];
+                    const shape = node.context == "build" || node.test ? "ellipse" : "box";
+                    if (node["name"])
+                        var label =  node["name"] + "/" + node["version"];
+                    else
+                        var label = node.recipe == "Consumer"? "conanfile": "CLI";
+
                     var color = color_map[node.binary]
                     if (collapse_build) {
                         var existing = collapsed_build[label];
@@ -84,28 +96,43 @@ graph_info_html = """
                         if (existing) continue;
                         collapsed_build[label] = node_id;
                     }
-                    if (node["name"] == search_pkg){
+                    if (node["name"] && search_pkg && node["name"].match(search_pkg)){
                         borderWidth = 3;
-                        borderColor = "Red"
+                        borderColor = "Magenta"
                     }
                     else {
                         borderWidth = 1;
                         borderColor = "SkyBlue";
                     }
+                    if (node.test) {
+                        font = {size: 35, background: "grey"};
+                        shapeProperties = {borderDashes: true};
+                    }
+                    else {
+                        shapeProperties = {};
+                    }
+                    if (show_package_type) {
+                         label = "<b>" + label + "\n" + "<i>" + node.package_type + "</i>";
+                    }
                     nodes.push({
                         id: node_id,
+                        font: {multi: 'html'},
                         label: label,
                         shape: shape,
+                        shapeProperties: shapeProperties,
                         borderWidth: borderWidth,
                         color: {border: borderColor, background: color,
-                                highlight: {background: color, border: borderColor}},
+                                highlight: {background: color, border: "Blue"}},
                     });
                 }
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     for (const [dep_id, dep] of Object.entries(node["dependencies"])) {
                         if (dep.direct){
                             var target_id = targets[dep_id] || dep_id;
-                            edges.push({from: node_id, to: target_id, color: "SkyBlue"});
+                            edges.push({id: edge_counter, from: node_id, to: target_id,
+                                        color: {color: "SkyBlue", highlight: "Blue"}});
+                            global_edges[edge_counter] = dep;
+                            edge_counter++;
                         }
                     }
                 }
@@ -115,8 +142,8 @@ graph_info_html = """
                 return data;
             };
             function define_legend() {
-                var x = -300;
-                var y = -200;
+                var x = 0;
+                var y = 0;
                 var step = 250;
                 var legend_nodes = [];
                 legend_nodes.push({id: 0, x: x, y: y, shape: "box", font: {size: 35},
@@ -156,18 +183,16 @@ graph_info_html = """
                 },
                 layout: {
                     "hierarchical": {
-                        "enabled": true,
-                        "sortMethod": "directed",
-                        "direction": "DU",
+                        enabled: true,
+                        sortMethod: "directed",
+                        direction: "DU",
                         nodeSpacing: 170,
                         blockShifting: true,
                         edgeMinimization: true,
                         shakeTowards: "roots",
                     }
                 },
-                physics: {
-                    enabled: false,
-                },
+                physics: { enabled: false},
                 configure: {
                     enabled: true,
                     filter: 'layout physics',
@@ -185,52 +210,48 @@ graph_info_html = """
 
             network.on('click', function (properties) {
                 var ids = properties.nodes;
+                var ids_edges = properties.edges;
                 var control = document.getElementById("details");
                 while (control.firstChild) {
                     control.removeChild(control.firstChild);
                 }
-                if(ids[0]) {
-                    selected_node = graph_data["nodes"][ids[0]]
-                    let ul = document.createElement('ul');
-                    for (const [key, value] of Object.entries(selected_node)) {
-                        if (value) {
-                            let li = document.createElement('li');
-                            li.innerHTML = "<b>"+ key +"</b>: " + value;
-                            ul.appendChild(li);
-                        }
-                    }
-                    control.appendChild(ul);
+                if(ids[0] || ids_edges[0]) {
+                    selected = graph_data["nodes"][ids[0]] || global_edges[ids_edges[0]];
+                    let div = document.createElement('div');
+                    let f = Object.fromEntries(Object.entries(selected).filter(([_, v]) => v != null));
+                    div.innerHTML = "<pre>" + JSON.stringify(f, undefined, 2) + "</pre>";
+                    control.appendChild(div);
                 }
                 else {
-                    control.innerHTML = "<b>Package info</b>: No package selected";
+                    control.innerHTML = "<b>Info</b>: Click on a package or edge for more info";
                 }
             });
             function draw() {
+                var scale = network.getScale();
+                var viewPos = network.getViewPosition();
+                data = define_data();
+                network.setData(data);
                 network.redraw();
+                network.moveTo({position: viewPos, scale: scale});
             }
             function switchBuild() {
                 hide_build = !hide_build;
-                data = define_data();
-                network.setData(data);
                 draw();
             }
             function switchTest() {
                 hide_test = !hide_test;
-                data = define_data();
-                network.setData(data);
                 draw();
             }
             function collapseBuild() {
                 collapse_build = !collapse_build;
-                console.log("collapsing build");
-                data = define_data();
-                network.setData(data);
                 draw();
             }
             function searchPackage(e) {
                 search_pkg = e.value;
-                data = define_data();
-                network.setData(data);
+                draw();
+            }
+            function showPackageType(e) {
+                show_package_type = !show_package_type;
                 draw();
             }
             function showhideclass(id) {
@@ -244,14 +265,5 @@ graph_info_html = """
             });
         </script>
     </body>
-    <footer>
-        <div class="container-fluid">
-            <div class="info">
-                <p>
-                      Conan <b>v{{ version  }}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>
-                </p>
-            </div>
-        </div>
-    </footer>
 </html>
 """
