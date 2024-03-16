@@ -98,7 +98,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
 
            # Add the dependencies target for all the imported libraries
            foreach(_T ${_out_libraries_target})
-               set_property(TARGET ${_T} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target} APPEND)
+               set_property(TARGET ${_T} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${deps_target})
            endforeach()
 
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
