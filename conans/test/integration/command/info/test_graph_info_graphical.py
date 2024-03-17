@@ -99,6 +99,7 @@ class InfoTest(unittest.TestCase):
         # arbitrary case - file will be named according to argument
         self.client.run("graph info . --format=html")
         html = self.client.stdout
+        # Just make sure it doesn't crash
         self.assertIn("<body>", html)
 
 
@@ -130,4 +131,5 @@ def test_graph_info_html_error_reporting_output():
 
     tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True,
            redirect_stdout="graph.html")
-    print(tc.current_folder)
+    # check that it doesn't crash
+    # analyze manually the html
