@@ -52,6 +52,7 @@ graph_info_html = r"""
                 </div>
                 <div id="controls" class="controls" style="padding:5; display:none"></div>
                 <div id="details"  style="padding:10;" class="noPrint">Package info: Click on one package to show information</div>
+                <div id="error" style="padding:10;" class="noPrint"></div>
             </div>
         </div>
 
@@ -79,44 +80,53 @@ graph_info_html = r"""
                 var collapsed_build = {};
                 var targets = {};
                 global_edges = {};
+                global_nodes = {};
                 var edge_counter = 0;
+                if (graph_data["error"]){
+                    if (graph_data["error"]["type"] == "conflict"){
+                        var conflict = graph_data["error"]["conflict"]; // id and ref
+                        var branch1 = graph_data["error"]["branch1"]; // id and ref
+                        var branch2 = graph_data["error"]["branch2"]; // id and ref
+                    }
+                }
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
-                    const shape = node.context == "build" || node.test ? "ellipse" : "box";
-                    if (node["name"])
-                        var label =  node["name"] + "/" + node["version"];
-                    else
-                        var label = node.recipe == "Consumer"? "conanfile": "CLI";
-
-                    var color = color_map[node.binary]
                     if (collapse_build) {
                         var existing = collapsed_build[label];
                         targets[node_id] = existing;
                         if (existing) continue;
                         collapsed_build[label] = node_id;
                     }
+                    const shape = node.context == "build" || node.test ? "ellipse" : "box";
+                    if (node["name"])
+                        var label =  node["name"] + "/" + node["version"];
+                    else
+                        var label = node.recipe == "Consumer"? "conanfile": "CLI";
+                    if (show_package_type) {
+                         label = "<b>" + label + "\n" + "<i>" + node.package_type + "</i>";
+                    }
+
+                    borderWidth = 1;
+                    borderColor = "SkyBlue";
+                    font = {multi: 'html'};
+                    shapeProperties = {};
+                    var color = color_map[node.binary]
+                    if (conflict && conflict.id == node_id){
+                        font.color = "white";
+                        color = "Black";
+                    }
                     if (node["name"] && search_pkg && node["name"].match(search_pkg)){
                         borderWidth = 3;
                         borderColor = "Magenta"
                     }
-                    else {
-                        borderWidth = 1;
-                        borderColor = "SkyBlue";
-                    }
                     if (node.test) {
-                        font = {size: 35, background: "grey"};
+                        font.background = "lightgrey";
                         shapeProperties = {borderDashes: true};
-                    }
-                    else {
-                        shapeProperties = {};
-                    }
-                    if (show_package_type) {
-                         label = "<b>" + label + "\n" + "<i>" + node.package_type + "</i>";
                     }
                     nodes.push({
                         id: node_id,
-                        font: {multi: 'html'},
+                        font: font,
                         label: label,
                         shape: shape,
                         shapeProperties: shapeProperties,
@@ -136,6 +146,30 @@ graph_info_html = r"""
                         }
                     }
                 }
+                if (conflict && branch2) {
+                    nodes.push({
+                        id: "conflict",
+                        font: {color: "white"},
+                        label: conflict.ref,
+                        shape: "circle",
+                        color: {background: "black",
+                                highlight: {background: "black", border: "Blue"}},
+                    });
+                    nodes.push({
+                        id: "branch2",
+                        font: {color: "white"},
+                        label: branch2.ref,
+                        shape: "box",
+                        color: {background: "black",
+                                highlight: {background: "black", border: "Blue"}},
+                    });
+                    edges.push({from: branch2.id, to: "branch2",
+                                color: {color: "SkyBlue", highlight: "Blue"}});
+                    edges.push({from: "branch2", to: "conflict",
+                                color: {color: "Red", highlight: "Red"}});
+                    edges.push({from: conflict.id, to: "conflict",
+                                color: {color: "Red", highlight: "Red"}});
+                }
                 var nodes = new vis.DataSet(nodes);
                 var edges = new vis.DataSet(edges);
                 var data = {nodes: nodes, edges: edges};
@@ -152,7 +186,7 @@ graph_info_html = r"""
                 legend_nodes.push({id: 1, x: x + step, y: y, font: {size: 35}, shape: "ellipse",
                     label: "tool-require",
                 });
-                legend_nodes.push({id: 2, x: x + 2* step, y: y, font: {size: 35, background: "grey"},
+                legend_nodes.push({id: 2, x: x + 2* step, y: y, font: {size: 35, background: "lightgrey"},
                     shape: "ellipse", shapeProperties: {borderDashes: true},
                     label: "test-require",
                 })
@@ -164,9 +198,20 @@ graph_info_html = r"""
                     });
                     counter++;
                 }
+                legend_nodes.push({x: x + counter*step, y: y, shape: "box",
+                    label: "conflict",
+                    font: {size: 35, color: "white"},
+                    color: {border: "SkyBlue", background: "Black"}
+                });
+
                 return {nodes: new vis.DataSet(legend_nodes)};
             }
-
+            var error = document.getElementById("error");
+            if (graph_data["error"]){
+                 let div = document.createElement('div');
+                 div.innerHTML = "<pre>Error in the graph: " + JSON.stringify(graph_data["error"], undefined, 2) + "</pre>";
+                 error.appendChild(div);
+            }
             var container = document.getElementById('mynetwork');
             var controls = document.getElementById('controls');
             var legend_container = document.getElementById('mylegend');
@@ -178,9 +223,7 @@ graph_info_html = r"""
                     arrows: { to: {enabled: true} },
                     smooth: { enabled: false}
                 },
-                nodes: {
-                    font: {'face': 'monospace', 'align': 'left'}
-                },
+                nodes: {font: {'face': 'monospace', 'align': 'left'}},
                 layout: {
                     "hierarchical": {
                         enabled: true,

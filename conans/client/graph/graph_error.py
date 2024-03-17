@@ -2,7 +2,8 @@ from conans.errors import ConanException
 
 
 class GraphError(ConanException):
-    pass
+    def serialize(self):
+        return
 
 
 class GraphConflictError(GraphError):
@@ -13,6 +14,12 @@ class GraphConflictError(GraphError):
         self.prev_node = prev_node
         self.prev_require = prev_require
         self.base_previous = base_previous
+
+    def serialize(self):
+        return {"type": "conflict",
+                "conflict": {"id": self.prev_node.id, "ref": str(self.prev_node.ref)},
+                "branch1": {"id": self.base_previous.id, "ref": str(self.base_previous.ref)},
+                "branch2": {"id": self.node.id, "ref": str(self.require.ref)}}
 
     def __str__(self):
         if self.node.ref is not None and self.base_previous.ref is not None:

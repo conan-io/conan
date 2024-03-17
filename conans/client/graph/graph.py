@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph_error import GraphError
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -394,4 +395,5 @@ class DepsGraph(object):
         result["overrides"] = self.overrides().serialize()
         result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
         result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
+        result["error"] = self.error.serialize() if isinstance(self.error, GraphError) else None
         return result
