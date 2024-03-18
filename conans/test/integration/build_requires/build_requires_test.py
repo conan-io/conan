@@ -581,3 +581,17 @@ def test_build_missing_build_requires():
     c.run("install app --build=missing")
     assert "- Build" not in c.out
     assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+
+
+def test_requirement_in_wrong_method():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            def configure(self):
+                self.requires("foo/1.0")
+        """)})
+    tc.run('create . -cc="core:warnings_as_errors=[\'*\']"', assert_error=True)
+    assert "ERROR: deprecated: Requirements should only be added in the requirements()/build_requirements() methods, not configure()/config_options(), which might raise errors in the future." in tc.out
