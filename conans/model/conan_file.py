@@ -94,7 +94,7 @@ class ConanFile:
             self.generators = [self.generators]
         if isinstance(self.settings, str):
             self.settings = [self.settings]
-        self.requires = Requirements(self, self.requires, self.build_requires, self.test_requires,
+        self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
                                      self.tool_requires)
 
         self.options = Options(self.options or {}, self.default_options)
