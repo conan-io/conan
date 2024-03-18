@@ -101,6 +101,8 @@ graph_info_html = r"""
                     const shape = node.context == "build" || node.test ? "ellipse" : "box";
                     if (node["name"])
                         var label =  node["name"] + "/" + node["version"];
+                    else if (node["ref"])
+                        var label = node["ref"];
                     else
                         var label = node.recipe == "Consumer"? "conanfile": "CLI";
                     if (show_package_type) {
@@ -123,6 +125,9 @@ graph_info_html = r"""
                     if (node.test) {
                         font.background = "lightgrey";
                         shapeProperties = {borderDashes: true};
+                    }
+                    if (node.recipe == "Platform") {
+                        font.background = "Violet";
                     }
                     nodes.push({
                         id: node_id,
@@ -191,6 +196,11 @@ graph_info_html = r"""
                     label: "test-require",
                 })
                 var counter = 3;
+                legend_nodes.push({x: x + counter*step, y: y, shape: "ellipse",
+                    label: "platform",
+                    font: {size: 35, background: "Violet"},
+                });
+                counter++;
                 for (const [status, color] of Object.entries(color_map)) {
                     legend_nodes.push({x: x + counter*step, y: y, shape: "box", font: {size: 35},
                         label: status,
@@ -203,7 +213,6 @@ graph_info_html = r"""
                     font: {size: 35, color: "white"},
                     color: {border: "SkyBlue", background: "Black"}
                 });
-
                 return {nodes: new vis.DataSet(legend_nodes)};
             }
             var error = document.getElementById("error");
