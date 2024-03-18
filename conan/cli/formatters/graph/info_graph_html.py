@@ -92,12 +92,6 @@ graph_info_html = r"""
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
-                    if (collapse_build) {
-                        var existing = collapsed_build[label];
-                        targets[node_id] = existing;
-                        if (existing) continue;
-                        collapsed_build[label] = node_id;
-                    }
                     const shape = node.context == "build" || node.test ? "ellipse" : "box";
                     if (node["name"])
                         var label =  node["name"] + "/" + node["version"];
@@ -105,10 +99,15 @@ graph_info_html = r"""
                         var label = node["ref"];
                     else
                         var label = node.recipe == "Consumer"? "conanfile": "CLI";
+                    if (collapse_build) {
+                        var existing = collapsed_build[label];
+                        targets[node_id] = existing;
+                        if (existing) continue;
+                        collapsed_build[label] = node_id;
+                    }
                     if (show_package_type) {
                          label = "<b>" + label + "\n" + "<i>" + node.package_type + "</i>";
                     }
-
                     borderWidth = 1;
                     borderColor = "SkyBlue";
                     font = {multi: 'html'};
