@@ -33,9 +33,11 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
 
     PackageType.compute_package_type(conanfile)
 
-    conanfile.build_requires = BuildRequirements(conanfile.requires)
-    conanfile.test_requires = TestRequirements(conanfile.requires)
-    conanfile.tool_requires = ToolRequirements(conanfile.requires)
+    conanfile._conan_add_requirement_allowed = True
+
+    conanfile.build_requires = BuildRequirements(conanfile)
+    conanfile.test_requires = TestRequirements(conanfile)
+    conanfile.tool_requires = ToolRequirements(conanfile)
 
     if hasattr(conanfile, "requirements"):
         with conanfile_exception_formatter(conanfile, "requirements"):
@@ -44,3 +46,5 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "build_requirements"):
         with conanfile_exception_formatter(conanfile, "build_requirements"):
             conanfile.build_requirements()
+
+    delattr(conanfile, "_conan_add_requirement_allowed")

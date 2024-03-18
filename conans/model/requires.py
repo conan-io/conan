@@ -387,42 +387,52 @@ class Requirement:
 
 class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
-    def __init__(self, requires):
-        self._requires = requires
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+        self._requires = conanfile.requires
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
                  override=None):
         # TODO: Check which arguments could be user-defined
+        if not getattr(self._conanfile, "_conan_add_requirement_allowed", False):
+            self._conanfile.output.warning("build_requires() should only be declared in requirements()/build_requirements()", warn_tag="misplaced_requirement")
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
                                      options=options, override=override)
 
 
 class ToolRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
-    def __init__(self, requires):
-        self._requires = requires
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+        self._requires = conanfile.requires
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None,
                  override=None):
         # TODO: Check which arguments could be user-defined
+        if not getattr(self._conanfile, "_conan_add_requirement_allowed", False):
+            self._conanfile.output.warning("tool_requires() should only be declared in requirements()/build_requirements()", warn_tag="misplaced_requirement")
         self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
                                     options=options, override=override)
 
 
 class TestRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
-    def __init__(self, requires):
-        self._requires = requires
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+        self._requires = conanfile.requires
 
     def __call__(self, ref, run=None, options=None, force=None):
+        if not getattr(self._conanfile, "_conan_add_requirement_allowed", False):
+            self._conanfile.output.warning("test_requires() should only be declared in requirements()/build_requirements()", warn_tag="misplaced_requirement")
         self._requires.test_require(ref, run=run, options=options, force=force)
 
 
 class Requirements:
     """ User definitions of all requires in a conanfile
     """
-    def __init__(self, declared=None, declared_build=None, declared_test=None,
+    def __init__(self, conanfile, declared=None, declared_build=None, declared_test=None,
                  declared_build_tool=None):
+        self._conanfile = conanfile
         self._requires = OrderedDict()
         # Construct from the class definitions
         if declared is not None:
@@ -486,6 +496,8 @@ class Requirements:
 
     # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
+        if not getattr(self._conanfile, "_conan_add_requirement_allowed", False):
+            self._conanfile.output.warning("requires() should only be declared in requirements()/build_requirements()", warn_tag="misplaced_requirement")
         if str_ref is None:
             return
         assert isinstance(str_ref, str)
