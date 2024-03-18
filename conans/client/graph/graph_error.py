@@ -16,10 +16,13 @@ class GraphConflictError(GraphError):
         self.base_previous = base_previous
 
     def serialize(self):
+        dst_id = self.prev_node.id if self.prev_node else None
         return {"type": "conflict",
-                "conflict": {"id": self.prev_node.id, "ref": str(self.prev_node.ref)},
-                "branch1": {"id": self.base_previous.id, "ref": str(self.base_previous.ref)},
-                "branch2": {"id": self.node.id, "ref": str(self.require.ref)}}
+                "name": self.require.ref.name,
+                "branch1": {"src_id": self.base_previous.id, "src_ref": str(self.base_previous.ref),
+                            "dst_id": dst_id, "require": self.prev_require.serialize()},
+                "branch2": {"src_id": self.node.id, "src_ref": str(self.node.ref),
+                            "require": self.require.serialize()}}
 
     def __str__(self):
         if self.node.ref is not None and self.base_previous.ref is not None:

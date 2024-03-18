@@ -131,5 +131,16 @@ def test_graph_info_html_error_reporting_output():
 
     tc.run("graph info --requires=math/1.0 --requires=ui/1.0 --format=html", assert_error=True,
            redirect_stdout="graph.html")
-    # check that it doesn't crash
-    # analyze manually the html
+    assert "ERROR: Version conflict:" in tc.out # check that it doesn't crash
+
+    # change order,  just in case
+    tc.run("graph info --requires=ui/1.0 --requires=math/1.0 --format=html", assert_error=True,
+           redirect_stdout="graph.html")
+    assert "ERROR: Version conflict:" in tc.out  # check that it doesn't crash
+
+    # direct conflict also doesn't crash
+    tc.run("graph info --requires=ui/1.0 --requires=lib/2.0 --format=html", assert_error=True,
+           redirect_stdout="graph.html")
+    assert "ERROR: Version conflict:" in tc.out  # check that it doesn't crash
+    # Check manually
+    # tc.run_command(f"{tc.current_folder}/graph.html")

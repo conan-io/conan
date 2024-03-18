@@ -1,7 +1,7 @@
 graph_info_html = r"""
 <html lang="en">
     <head>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js" integrity="sha512-iTgTmIgxyA2YehKNVbzLJx4j9SnuC5ihtRrtxVkXH/9nF3vXBN5YeNQp+6wufBWKD3u+roHVNOvWBMufQnBbug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     </head>
 
     <body>
@@ -58,12 +58,12 @@ graph_info_html = r"""
 
         <script type="text/javascript">
             const graph_data = {{ deps_graph }};
-            var hide_build = false;
-            var hide_test = false;
-            var search_pkg = null;
-            var collapse_build = false;
-            var show_package_type = false;
-            var color_map = {Cache: "SkyBlue",
+            let hide_build = false;
+            let hide_test = false;
+            let search_pkg = null;
+            let collapse_build = false;
+            let show_package_type = false;
+            let color_map = {Cache: "SkyBlue",
                              Download: "LightGreen",
                              Build: "Yellow",
                              Missing: "Orange",
@@ -73,34 +73,31 @@ graph_info_html = r"""
                              EditableBuild: "Cyan",
                              Invalid: "Red",
                              Platform: "Violet"};
-            var global_edges = {};
+            let global_edges = {};
             function define_data(){
-                var nodes = [];
-                var edges = [];
-                var collapsed_build = {};
-                var targets = {};
+                let nodes = [];
+                let edges = [];
+                let collapsed_build = {};
+                let targets = {};
                 global_edges = {};
                 global_nodes = {};
-                var edge_counter = 0;
-                if (graph_data["error"]){
-                    if (graph_data["error"]["type"] == "conflict"){
-                        var conflict = graph_data["error"]["conflict"]; // id and ref
-                        var branch1 = graph_data["error"]["branch1"]; // id and ref
-                        var branch2 = graph_data["error"]["branch2"]; // id and ref
-                    }
-                }
+                let edge_counter = 0;
+                let conflict=null;
+                if (graph_data["error"] && graph_data["error"]["type"] == "conflict")
+                    conflict = graph_data["error"];
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
-                    const shape = node.context == "build" || node.test ? "ellipse" : "box";
+                    let shape = node.context == "build" || node.test ? "ellipse" : "box";
+                    let label = null;
                     if (node["name"])
-                        var label =  node["name"] + "/" + node["version"];
+                        label =  node["name"] + "/" + node["version"];
                     else if (node["ref"])
-                        var label = node["ref"];
+                        label = node["ref"];
                     else
-                        var label = node.recipe == "Consumer"? "conanfile": "CLI";
+                        label = node.recipe == "Consumer"? "conanfile": "CLI";
                     if (collapse_build) {
-                        var existing = collapsed_build[label];
+                        let existing = collapsed_build[label];
                         targets[node_id] = existing;
                         if (existing) continue;
                         collapsed_build[label] = node_id;
@@ -112,10 +109,11 @@ graph_info_html = r"""
                     borderColor = "SkyBlue";
                     font = {multi: 'html'};
                     shapeProperties = {};
-                    var color = color_map[node.binary]
-                    if (conflict && conflict.id == node_id){
+                    let color = color_map[node.binary]
+                    if (conflict && conflict.branch1.dst_id == node_id){
                         font.color = "white";
                         color = "Black";
+                        shape = "circle";
                     }
                     if (search_pkg && label.match(search_pkg)) {
                         borderWidth = 3;
@@ -142,48 +140,45 @@ graph_info_html = r"""
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     for (const [dep_id, dep] of Object.entries(node["dependencies"])) {
                         if (dep.direct){
-                            var target_id = targets[dep_id] || dep_id;
+                            let target_id = targets[dep_id] || dep_id;
                             edges.push({id: edge_counter, from: node_id, to: target_id,
                                         color: {color: "SkyBlue", highlight: "Blue"}});
-                            global_edges[edge_counter] = dep;
-                            edge_counter++;
+                            global_edges[edge_counter++] = dep;
                         }
                     }
                 }
-                if (conflict && branch2) {
-                    nodes.push({
-                        id: "conflict",
-                        font: {color: "white"},
-                        label: conflict.ref,
-                        shape: "circle",
-                        color: {background: "black",
-                                highlight: {background: "black", border: "Blue"}},
-                    });
-                    nodes.push({
-                        id: "branch2",
-                        font: {color: "white"},
-                        label: branch2.ref,
-                        shape: "box",
-                        color: {background: "black",
-                                highlight: {background: "black", border: "Blue"}},
-                    });
-                    edges.push({from: branch2.id, to: "branch2",
-                                color: {color: "SkyBlue", highlight: "Blue"}});
-                    edges.push({from: "branch2", to: "conflict",
-                                color: {color: "Red", highlight: "Red"}});
-                    edges.push({from: conflict.id, to: "conflict",
-                                color: {color: "Red", highlight: "Red"}});
+                if (conflict) {
+                    let conflict_id = null;
+                    if (conflict.branch1.dst_id) { // already created conflict node
+                        conflict_id = conflict.branch1.dst_id;
+                    }
+                    else {
+                        conflict_id = "conflict_id";
+                        nodes.push({
+                            id: conflict_id,
+                            font: {color: "white"},
+                            label: conflict.name,
+                            shape: "circle",
+                            color: {background: "black",
+                                    highlight: {background: "black", border: "Blue"}},
+                        });
+                        edges.push({id: edge_counter, from: conflict.branch1.src_id, to: conflict_id,
+                                    color: {color: "Red", highlight: "Red"},
+                                    label: conflict.branch1.require.ref});
+                        global_edges[edge_counter++] = conflict.branch1.require;
+                    }
+                    edges.push({id: edge_counter, from: conflict.branch2.src_id, to: conflict_id,
+                                color: {color: "Red", highlight: "Red"},
+                                label: conflict.branch2.require.ref});
+                    global_edges[edge_counter++] = conflict.branch2.require;
                 }
-                var nodes = new vis.DataSet(nodes);
-                var edges = new vis.DataSet(edges);
-                var data = {nodes: nodes, edges: edges};
-                return data;
+                return {nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges)};
             };
             function define_legend() {
-                var x = 0;
-                var y = 0;
-                var step = 250;
-                var legend_nodes = [];
+                let x = 0;
+                let y = 0;
+                let step = 250;
+                let legend_nodes = [];
                 legend_nodes.push({id: 0, x: x, y: y, shape: "box", font: {size: 35},
                     label: "require",
                 });
@@ -194,7 +189,7 @@ graph_info_html = r"""
                     shape: "ellipse", shapeProperties: {borderDashes: true},
                     label: "test-require",
                 })
-                var counter = 3;
+                let counter = 3;
                 legend_nodes.push({x: x + counter*step, y: y, shape: "ellipse",
                     label: "platform",
                     font: {size: 35, background: "Violet"},
@@ -214,17 +209,17 @@ graph_info_html = r"""
                 });
                 return {nodes: new vis.DataSet(legend_nodes)};
             }
-            var error = document.getElementById("error");
+            let error = document.getElementById("error");
             if (graph_data["error"]){
                  let div = document.createElement('div');
                  div.innerHTML = "<pre>Error in the graph: " + JSON.stringify(graph_data["error"], undefined, 2) + "</pre>";
                  error.appendChild(div);
             }
-            var container = document.getElementById('mynetwork');
-            var controls = document.getElementById('controls');
-            var legend_container = document.getElementById('mylegend');
+            let container = document.getElementById('mynetwork');
+            let controls = document.getElementById('controls');
+            let legend_container = document.getElementById('mylegend');
 
-            var options = {
+            let options = {
                 autoResize: true,
                 locale: 'en',
                 edges: {
@@ -252,21 +247,23 @@ graph_info_html = r"""
                 }
             };
 
-            var data = define_data();
-            var network = new vis.Network(container, data, options);
-            var legend_data = define_legend();
-            var options_legend = {interaction: {selectable: false, dragView: false, dragNodes: false,
+            let data = define_data();
+            let network = new vis.Network(container, data, options);
+            let legend_data = define_legend();
+            let options_legend = {interaction: {selectable: false, dragView: false, dragNodes: false,
                                                 zoomView: false}, physics: {enabled: false}};
-            var legend = new vis.Network(legend_container, legend_data, options_legend);
+            let legend = new vis.Network(legend_container, legend_data, options_legend);
 
             network.on('click', function (properties) {
-                var ids = properties.nodes;
-                var ids_edges = properties.edges;
-                var control = document.getElementById("details");
+                let ids = properties.nodes;
+                let ids_edges = properties.edges;
+                let control = document.getElementById("details");
                 while (control.firstChild) {
                     control.removeChild(control.firstChild);
                 }
                 if(ids[0] || ids_edges[0]) {
+                    console.log("Selected ", ids_edges[0]);
+                    console.log("   slecetd", global_edges[ids_edges[0]]);
                     selected = graph_data["nodes"][ids[0]] || global_edges[ids_edges[0]];
                     let div = document.createElement('div');
                     let f = Object.fromEntries(Object.entries(selected).filter(([_, v]) => v != null));
@@ -278,8 +275,8 @@ graph_info_html = r"""
                 }
             });
             function draw() {
-                var scale = network.getScale();
-                var viewPos = network.getViewPosition();
+                let scale = network.getScale();
+                let viewPos = network.getViewPosition();
                 data = define_data();
                 network.setData(data);
                 network.redraw();
@@ -306,8 +303,8 @@ graph_info_html = r"""
                 draw();
             }
             function showhideclass(id) {
-                var elements = document.getElementsByClassName(id)
-                for (var i = 0; i < elements.length; i++) {
+                let elements = document.getElementsByClassName(id)
+                for (let i = 0; i < elements.length; i++) {
                     elements[i].style.display = (elements[i].style.display != 'none') ? 'none' : 'block';
                 }
             }
