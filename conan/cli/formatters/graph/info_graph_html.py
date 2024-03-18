@@ -36,8 +36,8 @@ graph_info_html = r"""
                     <label for="show_test_requires">Show test-requires</label>
                 </div>
                 <div>
-                    <input type="checkbox" onchange="collapseBuild()" id="group_build_requires"/>
-                    <label for="group_build_requires">Group build-requires</label>
+                    <input type="checkbox" onchange="collapsePackages()" id="collapse_packages"/>
+                    <label for="collapse_packages">Group packages</label>
                 </div>
                  <div>
                     <input type="checkbox" onchange="showPackageType()" id="show_package_type"/>
@@ -61,7 +61,7 @@ graph_info_html = r"""
             let hide_build = false;
             let hide_test = false;
             let search_pkg = null;
-            let collapse_build = false;
+            let collapse_packages = false;
             let show_package_type = false;
             let color_map = {Cache: "SkyBlue",
                              Download: "LightGreen",
@@ -77,10 +77,9 @@ graph_info_html = r"""
             function define_data(){
                 let nodes = [];
                 let edges = [];
-                let collapsed_build = {};
+                let collapsed_packages = {};
                 let targets = {};
                 global_edges = {};
-                global_nodes = {};
                 let edge_counter = 0;
                 let conflict=null;
                 if (graph_data["error"] && graph_data["error"]["type"] == "conflict")
@@ -96,11 +95,11 @@ graph_info_html = r"""
                         label = node["ref"];
                     else
                         label = node.recipe == "Consumer"? "conanfile": "CLI";
-                    if (collapse_build) {
-                        let existing = collapsed_build[label];
+                    if (collapse_packages) {
+                        let existing = collapsed_packages[label];
                         targets[node_id] = existing;
                         if (existing) continue;
-                        collapsed_build[label] = node_id;
+                        collapsed_packages[label] = node_id;
                     }
                     if (show_package_type) {
                          label = "<b>" + label + "\n" + "<i>" + node.package_type + "</i>";
@@ -262,8 +261,8 @@ graph_info_html = r"""
                     control.removeChild(control.firstChild);
                 }
                 if(ids[0] || ids_edges[0]) {
-                    console.log("Selected ", ids_edges[0]);
-                    console.log("   slecetd", global_edges[ids_edges[0]]);
+                    console.log("Selected ", ids_edges[0], global_edges.length);
+                    console.log("   selected", global_edges[ids_edges[0]]);
                     selected = graph_data["nodes"][ids[0]] || global_edges[ids_edges[0]];
                     let div = document.createElement('div');
                     let f = Object.fromEntries(Object.entries(selected).filter(([_, v]) => v != null));
@@ -290,8 +289,8 @@ graph_info_html = r"""
                 hide_test = !hide_test;
                 draw();
             }
-            function collapseBuild() {
-                collapse_build = !collapse_build;
+            function collapsePackages() {
+                collapse_packages = !collapse_packages;
                 draw();
             }
             function searchPackage(e) {
