@@ -118,9 +118,9 @@ graph_info_html = r"""
                         font.color = "white";
                         color = "Black";
                     }
-                    if (node["name"] && search_pkg && node["name"].match(search_pkg)){
+                    if (search_pkg && label.match(search_pkg)) {
                         borderWidth = 3;
-                        borderColor = "Magenta"
+                        borderColor = "Magenta";
                     }
                     if (node.test) {
                         font.background = "lightgrey";
