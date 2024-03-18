@@ -104,6 +104,8 @@ class GraphBinariesAnalyzer(object):
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
             node.pref_timestamp = previous_node.pref_timestamp
+            node.should_build = previous_node.should_build
+            node.build_allowed = previous_node.build_allowed
 
             # this line fixed the compatible_packages with private case.
             # https://github.com/conan-io/conan/issues/9880
