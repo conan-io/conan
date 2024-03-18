@@ -14,6 +14,7 @@ from conan.errors import ConanException
 from conan.internal.deploy import do_deploys
 from conans.client.graph.graph import BINARY_MISSING
 from conans.client.graph.install_graph import InstallGraph
+from conans.errors import ConanConnectionError
 from conans.model.recipe_ref import ref_matches, RecipeReference
 from conans.model.version_range import VersionRange
 
@@ -397,13 +398,14 @@ def _find_in_remotes(conan_api, dict_nodes, remotes):
             try:
                 remote_ref_list = conan_api.list.select(ref_pattern, package_query=None,
                                                         remote=remote)
-                if not remote_ref_list.recipes:
-                    continue
-            except ConanException as message:
-                ConanOutput().warning(f"{message} in remote {remote.name}")
+            except ConanConnectionError as error:
+                raise error
+            except ConanException:
+                continue
+            if not remote_ref_list.recipes:
                 continue
             str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
-            recipe_ref = RecipeReference.loads(f"{str_latest_ref}")
+            recipe_ref = RecipeReference.loads(str_latest_ref)
             if (node_info["latest_remote"] is None
                     or node_info["latest_remote"]["ref"] < recipe_ref):
                 node_info["latest_remote"] = {"ref": recipe_ref, "remote": remote.name}
