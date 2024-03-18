@@ -141,7 +141,7 @@ def test_complete(client):
 
 
 def test_dependents_new_buildenv():
-    client = TestClient(light=True)
+    client = TestClient()
     boost = textwrap.dedent("""
         from conan import ConanFile
         class Boost(ConanFile):
