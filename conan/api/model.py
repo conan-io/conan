@@ -3,7 +3,7 @@ import json
 
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
@@ -285,7 +285,7 @@ class ListPattern:
 
     def check_refs(self, refs):
         if not refs and self.ref and "*" not in self.ref:
-            raise ConanException(f"Recipe '{self.ref}' not found")
+            raise NotFoundException(f"Recipe '{self.ref}' not found")
 
     def filter_rrevs(self, rrevs):
         if self._only_latest(self.rrev):
