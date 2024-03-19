@@ -173,3 +173,15 @@ def test_duplicated_tool_requires():
     assert sorted(output["cmake"]["current_versions"]) == ["cmake/1.0", "cmake/2.0", "cmake/3.0"]
     assert sorted(output["cmake"]["version_ranges"]) == ["cmake/[<=2.0]", "cmake/[>=1.0]"]
     assert output["cmake"]["latest_remote"]["ref"] == "cmake/3.0"
+
+
+def test_no_outdated_dependencies():
+    tc = TestClient(default_server_user=True)
+
+    tc.save({"conanfile.py": GenConanfile()})
+    tc.run("create . --name=foo --version=1.0")
+    tc.run("upload * -c -r=default")
+
+    tc.run("graph outdated .")
+
+    assert "No outdated dependencies in graph" in tc.stdout

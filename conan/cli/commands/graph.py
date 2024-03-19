@@ -306,6 +306,9 @@ def graph_explain(conan_api, parser,  subparser, *args):
 def outdated_text_formatter(result):
     cli_out_write("======== Outdated dependencies ========", fg=Color.BRIGHT_MAGENTA)
 
+    if len(result) == 0:
+        cli_out_write("No outdated dependencies in graph", fg=Color.BRIGHT_YELLOW)
+
     for key, value in result.items():
         current_versions_set = list({str(v) for v in value["cache_refs"]})
         cli_out_write(key, fg=Color.BRIGHT_YELLOW)
@@ -316,6 +319,7 @@ def outdated_text_formatter(result):
             fg=Color.BRIGHT_CYAN)
         if value["version_ranges"]:
             cli_out_write(f'    Version ranges: ' + str(value["version_ranges"])[1:-1], fg=Color.BRIGHT_CYAN)
+
 
 def outdated_json_formatter(result):
     output = {key: {"current_versions": list({str(v) for v in value["cache_refs"]}),
@@ -366,11 +370,17 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                          remotes, args.update,
                                                          check_updates=args.check_updates)
     print_graph_basic(deps_graph)
-    ConanOutput().title("Checking remotes")
 
     # Data structure to store info per library
-    dict_nodes = {}
     dependencies = deps_graph.nodes[1:]
+    dict_nodes = {}
+
+    # When there are no dependencies command should stop
+    if len(dependencies) == 0:
+        return dict_nodes
+
+    ConanOutput().title("Checking remotes")
+
     for node in dependencies:
         dict_nodes.setdefault(node.name, {"cache_refs": set(), "version_ranges": [],
                                           "latest_remote": None})["cache_refs"].add(node.ref)
@@ -381,7 +391,7 @@ def graph_outdated(conan_api, parser, subparser, *args):
     # find in remotes
     _find_in_remotes(conan_api, dict_nodes, remotes)
 
-    #Filter nodes with no outdated versions
+    # Filter nodes with no outdated versions
     filtered_nodes = {}
     for node_name, node in dict_nodes.items():
         if node['latest_remote'] is not None and sorted(list(node['cache_refs']))[0] < \
