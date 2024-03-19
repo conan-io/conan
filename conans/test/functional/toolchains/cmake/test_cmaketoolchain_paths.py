@@ -75,8 +75,10 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
             def package(self):
                 self.copy(pattern="*")
             def package_info(self):
-                self.cpp_info.builddirs.append("cmake")
-        """)
+                if "{find_package}" == "module":
+                    # only module paths must be explicitly specified
+                    self.cpp_info.builddirs.append("cmake")
+        """.format(find_package=find_package))
     find = textwrap.dedent("""
         SET({package}_FOUND 1)
         MESSAGE("HELLO FROM THE {package} FIND PACKAGE!")
