@@ -58,7 +58,7 @@ class DockerRunner:
             raise ConanException("'dockerfile' or docker image name is needed")
         self.image = self.image or 'conan-runner-default'
         self.name = f'conan-runner-{profile.runner.get("suffix", "docker")}'
-        self.remove = str(profile.runner.get('remove')).lower() == 'true'
+        self.remove = str(profile.runner.get('remove', 'false')).lower() == 'true'
         self.cache = str(profile.runner.get('cache', 'clean'))
         self.container = None
 
@@ -182,13 +182,13 @@ class DockerRunner:
         if Version(docker_conan_version) <= Version(min_conan_version):
             ConanOutput().status(f'ERROR: conan version inside the container must be greater than {min_conan_version}', fg=Color.BRIGHT_RED)
             raise ConanException( f'conan version inside the container must be greater than {min_conan_version}')
-        if self.cache != 'shared':
+        if self.cache == 'shared':
             self.run_command('mkdir -p ${HOME}/.conan2/profiles', log=False)
             self.run_command('cp -r "'+self.abs_docker_path+'/.conanrunner/profiles/." ${HOME}/.conan2/profiles/.', log=False)
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
                 if os.path.exists( os.path.join(self.abs_runner_home_path, file_name)):
                     self.run_command('cp "'+self.abs_docker_path+'/.conanrunner/'+file_name+'" ${HOME}/.conan2/'+file_name, log=False)
-            if self.cache in ['copy', 'clean']:
+            if self.cache in ['copy']:
                 self.run_command('conan cache restore "'+self.abs_docker_path+'/.conanrunner/local_cache_save.tgz"')
 
     def update_local_cache(self):
