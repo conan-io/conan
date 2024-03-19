@@ -141,6 +141,38 @@ class ExportsMethodTest(unittest.TestCase):
         client.run("export . pkg/0.1@", assert_error=True)
         self.assertIn("ERROR: conanfile 'exports' shouldn't be a method, use 'export()' instead",
                       client.out)
+    
+    def test_exports_method_manipulate_conanfile(self):
+        client = TestClient()
+        
+        myfile = textwrap.dedent("""
+            mynumber = 1
+        """) 
+        
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.client.tools.files import rename, replace_in_file
+            import os
+            
+            import myfile
+            
+            class MethodConan(ConanFile):
+                exports = "myfile.py"
+                
+                def export(self):
+                    rename( os.path.join(self.export_folder, "myfile.py"), 
+                            os.path.join(self.export_folder, "mynewfile.py"))
+                    replace_in_file(os.path.join(self.export_folder, "conanfile.py"),
+                                    "myfile", 
+                                    "mynewfile")
+
+                def build(self):
+                    self.output.info("myfile.mynumber: %s" % myfile.mynumber)
+            """)
+        client.save({"myfile.py":myfile,
+                     "conanfile.py": conanfile})
+        client.run("create . pkg/0.1@")
+        self.assertIn("pkg/0.1: mynewfile.mynumber: 1", client.out)
 
 
 class ExportsSourcesMethodTest(unittest.TestCase):

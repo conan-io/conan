@@ -129,10 +129,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         export_src_folder = package_layout.export_sources()
         mkdir(export_folder)
         mkdir(export_src_folder)
+        shutil.copy2(conanfile_path, package_layout.conanfile())
         origin_folder = os.path.dirname(conanfile_path)
         export_recipe(conanfile, origin_folder, export_folder)
         export_source(conanfile, origin_folder, export_src_folder)
-        shutil.copy2(conanfile_path, package_layout.conanfile())
 
         # Calculate the "auto" values and replace in conanfile.py
         scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
