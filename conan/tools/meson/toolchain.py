@@ -5,6 +5,7 @@ from jinja2 import Template
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
+from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
     apple_sdk_path, get_apple_sdk_fullname
 from conan.tools.build.cross_building import cross_building
@@ -93,6 +94,7 @@ class MesonToolchain(object):
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
         """
+        raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
         self._is_apple_system = is_apple_os(self._conanfile)
