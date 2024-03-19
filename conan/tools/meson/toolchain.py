@@ -39,7 +39,7 @@ class MesonToolchain(object):
     {{it}} = {{value}}
     {% endfor %}
 
-    {% for subproject, listkeypair in subproject_lists -%}
+    {% for subproject, listkeypair in subproject_options -%}
     [{{subproject}}:project options]
     {% for keypair in listkeypair -%}
     {% for it, value in keypair.items() -%}
@@ -155,7 +155,7 @@ class MesonToolchain(object):
         # Add all the default dirs
         self.project_options.update(self._get_default_dirs())
 
-        self.subproject_lists = {}
+        self.subproject_options = {}
 
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
@@ -404,19 +404,19 @@ class MesonToolchain(object):
         if self.gcc_cxx11_abi:
             self.cpp_args.append("-D{}".format(self.gcc_cxx11_abi))
 
-        subproject_lists = {}
-        for subproject, listkeypair in self.subproject_lists.items():
+        subproject_options = {}
+        for subproject, listkeypair in self.subproject_options.items():
             if listkeypair is not None and listkeypair is not []:
-                subproject_lists[subproject] = []
+                subproject_options[subproject] = []
                 for keypair in listkeypair:
-                    subproject_lists[subproject].append({k: to_meson_value(v) for k, v in keypair.items()})
+                    subproject_options[subproject].append({k: to_meson_value(v) for k, v in keypair.items()})
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties
             "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
-            "subproject_lists": subproject_lists.items(),
+            "subproject_options": subproject_options.items(),
             # https://mesonbuild.com/Builtin-options.html#directories
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
