@@ -1,4 +1,5 @@
 from conan.internal import check_duplicated_generator
+from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, apple_sdk_path
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
@@ -24,6 +25,8 @@ class AutotoolsToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
+        raise_on_universal_arch(conanfile)
+
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from io import StringIO
 
 from conan import ConanFile
@@ -61,6 +62,9 @@ class MockSettings(object):
 
     def rm_safe(self, name):
         self.values.pop(name, None)
+
+    def possible_values(self):
+        return defaultdict(lambda: [])
 
 
 class MockCppInfo(object):
