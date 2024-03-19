@@ -195,3 +195,61 @@ def test_unknown_compiler():
     # this used to crash, because of build_type_flags in AutotoolsToolchain returning empty string
     client.run("install . -s compiler=xlc")
     assert "conanfile.py: Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
+
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how CMakeToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf)
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"asm": "clang", "c": "clang", "cpp": "clang++"}
+    """)
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import replace_in_file
+    class helloRecipe(ConanFile):
+        name = "hello"
+        version = "1.0.0"
+        package_type = "application"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "AutotoolsToolchain"
+
+        def build(self):
+            path = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            assert os.path.exists(path)  # sanity check
+            # This should not raise anything!! Notice the strict=True
+            replace_in_file(self, path, 'export CC="clang"', "#Hey", strict=True)
+            replace_in_file(self, path, 'export CXX="clang++', "#Hey", strict=True)
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "conanfile.py": conanfile
+    })
+    client.run("build . -pr:h host -pr:b build")
