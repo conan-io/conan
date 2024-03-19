@@ -12,4 +12,4 @@ def test_create_universal_binary(toolchain):
 
     client.run('create . --name=foo --version=1.0 -s="arch=armv8|armv8.3|x86_64"',
                assert_error=True)
-    assert "Universal binaries not supported by toolchain." in client.out
+    assert f"Error in generator '{toolchain}': Universal binaries not supported by toolchain." in client.out
