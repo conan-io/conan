@@ -1,33 +1,39 @@
 import json
 from collections import OrderedDict
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
-def test_outdated_command():
+@pytest.fixture
+def create_libs():
     tc = TestClient(default_server_user=True)
-    # Create libraries needed to generate the dependency graph
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=zlib --version=1.0")
-
+    tc.run("create . --name=zlib --version=2.0")
     tc.run("create . --name=foo --version=1.0")
+    tc.run("create . --name=foo --version=2.0")
+
     tc.save({"conanfile.py": GenConanfile().with_requires("foo/[>=1.0]")})
     tc.run("create . --name=libcurl --version=1.0")
 
-    # Upload the created libraries to remote
+    # Upload all created libs to the remote
     tc.run("upload * -c -r=default")
 
-    # Create new version of libraries in remote and remove them from cache
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=foo --version=2.0")
-    tc.run("create . --name=zlib --version=2.0")
-    tc.run("upload * -c -r=default")
+    tc.save({"conanfile.py": GenConanfile("app", "1.0")
+            .with_requires("zlib/1.0", "libcurl/[>=1.0]")})
+    return tc
+
+
+def test_outdated_command(create_libs):
+    tc = create_libs
+
+    # Remove versions from cache so they are found as outdated
     tc.run("remove foo/2.0 -c")
     tc.run("remove zlib/2.0 -c")
 
-    tc.save({"conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0", "libcurl/[>=1.0]")})
-    # tc.run("graph info . --update")
     tc.run("graph outdated . --format=json")
     output = json.loads(tc.stdout)
     assert "zlib" in output
@@ -43,38 +49,12 @@ def test_outdated_command():
     assert output["foo"]["latest_remote"]["remote"].startswith("default")
 
 
-def test_recipe_with_lockfile():
-    tc = TestClient(default_server_user=True)
-    # Create libraries needed to generate the dependency graph
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=zlib --version=1.0")
-    tc.run("create . --name=foo --version=1.0")
+def test_recipe_with_lockfile(create_libs):
+    tc = create_libs
 
-    tc.save({"conanfile.py": GenConanfile().with_requires("foo/[>=1.0]")})
-    tc.run("create . --name=libcurl --version=1.0")
-
-    # Upload the created libraries to remote
-    tc.run("upload * -c -r=default")
-
-    # Create new version of libraries in remote and remove them from cache
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=foo --version=2.0")
-    tc.run("create . --name=zlib --version=2.0")
-    tc.run("upload * -c -r=default")
+    # Remove versions from cache so they are found as outdated
     tc.run("remove foo/2.0 -c")
     tc.run("remove zlib/2.0 -c")
-
-    tc.save({"conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0",
-                                                                      "libcurl/[>=1.0]")})
-
-    tc.run("graph outdated . --format=json")
-    output = json.loads(tc.stdout)
-    assert "zlib" in output
-    assert "foo" in output
-    assert "libcurl" not in output
-    assert output["foo"]["current_versions"] == ["foo/1.0"]
-    assert output["foo"]["version_ranges"] == ["foo/[>=1.0]"]
-    assert output["foo"]["latest_remote"]["ref"] == "foo/2.0"
 
     # Creating the lockfile sets foo/1.0 as only valid version for the recipe
     tc.run("lock create .")
@@ -92,30 +72,14 @@ def test_recipe_with_lockfile():
     assert "foo" not in output
 
 
-def test_recipe_with_no_remote_ref():
-    tc = TestClient(default_server_user=True)
-    # Create libraries needed to generate the dependency graph
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=zlib --version=1.0")
-    tc.run("create . --name=foo --version=1.0")
+def test_recipe_with_no_remote_ref(create_libs):
+    tc = create_libs
 
-    tc.save({"conanfile.py": GenConanfile().with_requires("foo/[>=1.0]")})
-    tc.run("upload * -c -r=default")
-
-    # libcurl recipe only exists in local
-    tc.run("create . --name=libcurl --version=1.0")
-
-    # Create new version of libraries in remote and remove them from cache
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=foo --version=2.0")
-    tc.run("create . --name=zlib --version=2.0")
-    tc.run("upload foo/* -c -r=default")
-    tc.run("upload zlib/* -c -r=default")
+    # Remove versions from cache so they are found as outdated
     tc.run("remove foo/2.0 -c")
     tc.run("remove zlib/2.0 -c")
+    tc.run("remove libcurl -c")
 
-    tc.save({"conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0",
-                                                                      "libcurl/[>=1.0]")})
     tc.run("graph outdated . --format=json")
     output = json.loads(tc.stdout)
     # Check that libcurl doesn't appear as there is no version in the remotes
@@ -124,30 +88,10 @@ def test_recipe_with_no_remote_ref():
     assert "libcurl" not in output
 
 
-def test_cache_ref_newer_than_latest_in_remote():
-    tc = TestClient(default_server_user=True)
-    # Create libraries needed to generate the dependency graph
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=zlib --version=1.0")
-    tc.run("create . --name=foo --version=1.0")
+def test_cache_ref_newer_than_latest_in_remote(create_libs):
+    tc = create_libs
 
-    tc.save({"conanfile.py": GenConanfile().with_requires("foo/[>=1.0]")})
-    tc.run("create . --name=libcurl --version=1.0")
-
-    # Upload the created libraries to remote
-    tc.run("upload * -c -r=default")
-
-    # Create new version of libraries in remote and remove them from cache
-    tc.save({"conanfile.py": GenConanfile()})
-    tc.run("create . --name=zlib --version=2.0")
-    tc.run("upload * -c -r=default")
-    tc.run("create . --name=foo --version=2.0")
-
-    tc.save({"conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0",
-                                                                      "libcurl/[>=1.0]")})
-
-    tc.run("list foo")
-    tc.run("list foo -r default")
+    tc.run("remove foo/2.0 -c -r=default")
 
     tc.run("graph outdated . --format=json")
     output = json.loads(tc.stdout)
@@ -159,6 +103,9 @@ def test_cache_ref_newer_than_latest_in_remote():
 
 
 def test_two_remotes():
+    # remote1: zlib/1.0, libcurl/2.0, foo/1.0
+    # remote2: zlib/[1.0, 2.0], libcurl/1.0, foo/1.0
+    # local cache: zlib/1.0, libcurl/1.0, foo/1.0
     servers = OrderedDict()
     for i in [1, 2]:
         test_server = TestServer()
@@ -188,8 +135,8 @@ def test_two_remotes():
     tc.run("remove libcurl/2.0 -c")
     tc.run("remove zlib/2.0 -c")
 
-    tc.save({"conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0",
-                                                                      "libcurl/[>=1.0]")})
+    tc.save({"conanfile.py": GenConanfile("app", "1.0")
+            .with_requires("zlib/1.0", "libcurl/[>=1.0]")})
 
     tc.run("graph outdated . --format=json")
     output = json.loads(tc.stdout)
@@ -217,9 +164,9 @@ def test_duplicated_tool_requires():
     # Upload the created libraries to remote
     tc.run("upload * -c -r=default")
 
-    tc.save(
-        {"conanfile.py": GenConanfile("app", "1.0")
+    tc.save({"conanfile.py": GenConanfile("app", "1.0")
             .with_requires("foo/1.0", "bar/1.0").with_tool_requires("cmake/[<=2.0]")})
+
     tc.run("graph outdated . --format=json")
     output = json.loads(tc.stdout)
 
