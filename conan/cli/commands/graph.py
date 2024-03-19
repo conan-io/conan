@@ -410,8 +410,6 @@ def _find_in_remotes(conan_api, dict_nodes, remotes):
                                                         remote=remote)
             except NotFoundException:
                 continue
-            except ConanException as error:
-                raise error
             if not remote_ref_list.recipes:
                 continue
             str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
