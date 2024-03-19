@@ -35,7 +35,7 @@ def dockerfile_path(name=None):
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-@pytest.mark.xfail(reason="conan inside docker optional test")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_dockerfile_folder_path():
     """
     Tests the ``conan create . ``
@@ -51,7 +51,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     compiler.version=11
     os=Linux
     """)
-    profile_host = textwrap.dedent(f"""\
+    profile_host_copy = textwrap.dedent(f"""\
     [settings]
     arch=x86_64
     build_type=Release
@@ -68,6 +68,25 @@ def test_create_docker_runner_dockerfile_folder_path():
     cache=copy
     remove=True
     """)
+
+    profile_host_clean = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path()}
+    docker_build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=clean
+    remove=True
+    """)
+
     conanfile = textwrap.dedent("""
         from conan import ConanFile
 
@@ -85,8 +104,15 @@ def test_create_docker_runner_dockerfile_folder_path():
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
         """)
-    client.save({"conanfile.py": conanfile, "host": profile_host, "build": profile_build})
-    client.run("create . -pr:h host -pr:b build")
+    client.save({"conanfile.py": conanfile, "host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
+    client.run("create . -pr:h host_copy -pr:b build")
+
+    assert "Restore: pkg/0.2" in client.out
+    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
+    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Removing container" in client.out
+
+    client.run("create . -pr:h host_clean -pr:b build")
 
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
@@ -95,7 +121,7 @@ def test_create_docker_runner_dockerfile_folder_path():
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-@pytest.mark.xfail(reason="conan inside docker optional test")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
 def test_create_docker_runner_dockerfile_file_path():
     """
     Tests the ``conan create . ``
@@ -155,7 +181,7 @@ def test_create_docker_runner_dockerfile_file_path():
 
 
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-@pytest.mark.xfail(reason="conan inside docker optional test")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
 def test_create_docker_runner_with_ninja(build_type, shared):
