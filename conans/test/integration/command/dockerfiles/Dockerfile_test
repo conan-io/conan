@@ -7,6 +7,5 @@ RUN apt-get update \
         python3-pip \
         python3-venv \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install docker
 COPY . /root/conan-io
 RUN cd /root/conan-io && pip install -e .
