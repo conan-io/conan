@@ -260,7 +260,7 @@ def vs_installation_path(version, preference=None):
     return result_vs_installation_path
 
 
-def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
+def vswhere(all_=False, prerelease=True, products=None, requires=None, version="", latest=False,
             legacy=False, property_="", nologo=True):
 
     # 'version' option only works if Visual Studio 2017 is installed:
