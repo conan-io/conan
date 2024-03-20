@@ -7,6 +7,7 @@ import pytest
 from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
+from conan.tools.files import load
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import rmdir, load
@@ -1334,3 +1335,85 @@ def test_toolchain_ends_newline():
     client.run("install . -g CMakeToolchain")
     toolchain = client.load("conan_toolchain.cmake")
     assert toolchain[-1] == "\n"
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how CMakeToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf)
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Macos
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Macos
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.cmake import CMake
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_toolchain.cmake")
+            content = load(self, toolchain)
+            assert 'set(CMAKE_C_COMPILER "clang")' in content
+            assert 'set(CMAKE_CXX_COMPILER "clang++")' in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+    from conan.tools.cmake import CMake
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_toolchain.cmake")
+            content = load(self, toolchain)
+            assert 'set(CMAKE_C_COMPILER "gcc")' in content
+            assert 'set(CMAKE_CXX_COMPILER "g++")' in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")
