@@ -256,12 +256,12 @@ def list(conan_api: ConanAPI, parser, *args):
                                  "a 'pkgname/version:*' pattern is necessary")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
+        profile = conan_api.profiles.get_profile(args.filter_profile or [],
+                                                 args.filter_settings,
+                                                 args.filter_options) \
+            if args.filter_profile or args.filter_settings or args.filter_options else None
         if args.cache or not args.remote:
             try:
-                profile = conan_api.profiles.get_profile(args.filter_profile or [],
-                                                         args.filter_settings,
-                                                         args.filter_options) \
-                    if args.filter_profile or args.filter_settings or args.filter_options else None
                 cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
                                                    lru=args.lru, profile=profile)
             except Exception as e:
@@ -272,7 +272,8 @@ def list(conan_api: ConanAPI, parser, *args):
             remotes = conan_api.remotes.list(args.remote)
             for remote in remotes:
                 try:
-                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote,
+                                                        profile=profile)
                 except Exception as e:
                     pkglist.add_error(remote.name, str(e))
                 else:
