@@ -63,7 +63,7 @@ def create(conan_api, parser, *args):
         return {
             'docker': DockerRunner,
             'ssh': SSHRunner
-        }[profile_host.runner.get('type')](conan_api, 'create', profile_host, args, raw_args).run()
+        }[profile_host.runner.get('type')](conan_api, 'create', profile_host, profile_build, args, raw_args).run()
 
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
