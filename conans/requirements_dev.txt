@@ -7,3 +7,4 @@ bottle
 PyJWT
 pluginbase
 docker
+paramiko
