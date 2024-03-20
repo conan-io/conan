@@ -212,14 +212,14 @@ def test_toolchain_and_compilers_build_context():
     compiler.cppstd=gnu17
     compiler.libcxx=libstdc++11
     compiler.version=11
-    os=Macos
+    os=Linux
 
     [conf]
     tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
     """)
     build = textwrap.dedent("""
     [settings]
-    os=Macos
+    os=Linux
     arch=x86_64
     compiler=clang
     compiler.version=12
