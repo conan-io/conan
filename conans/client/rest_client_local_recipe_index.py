@@ -1,7 +1,6 @@
 import os
 import sys
 import textwrap
-from distutils.dir_util import copy_tree
 from fnmatch import fnmatch
 from io import StringIO
 
@@ -14,7 +13,7 @@ from conans.client.cmd.export import cmd_export
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.conf import ConfDefinition
 from conans.model.recipe_ref import RecipeReference
-from conans.util.files import load, save, rmdir
+from conans.util.files import load, save, rmdir, copytree_compat
 
 
 def add_local_recipes_index_remote(conan_api, remote):
@@ -160,7 +159,7 @@ class RestApiClientLocalRecipesIndex:
     def _copy_files(source_folder, dest_folder):
         if not os.path.exists(source_folder):
             return {}
-        copy_tree(source_folder, dest_folder)
+        copytree_compat(source_folder, dest_folder)
         ret = {}
         for root, _, _files in os.walk(dest_folder):
             for _f in _files:
