@@ -197,10 +197,9 @@ def test_unknown_compiler():
     assert "conanfile.py: Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
 
 
-
 def test_toolchain_and_compilers_build_context():
     """
-    Tests how CMakeToolchain manages the build context profile if the build profile is
+    Tests how AutotoolsToolchain manages the build context profile if the build profile is
     specifying another compiler path (using conf)
 
     Issue related: https://github.com/conan-io/conan/issues/15878
@@ -213,11 +212,14 @@ def test_toolchain_and_compilers_build_context():
     compiler.cppstd=gnu17
     compiler.libcxx=libstdc++11
     compiler.version=11
-    os=Linux
+    os=Macos
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
     """)
     build = textwrap.dedent("""
     [settings]
-    os=Linux
+    os=Macos
     arch=x86_64
     compiler=clang
     compiler.version=12
@@ -225,31 +227,51 @@ def test_toolchain_and_compilers_build_context():
     compiler.cppstd=11
 
     [conf]
-    tools.build:compiler_executables={"asm": "clang", "c": "clang", "cpp": "clang++"}
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
     """)
-    conanfile = textwrap.dedent("""
+    tool = textwrap.dedent("""
     import os
     from conan import ConanFile
-    from conan.tools.files import replace_in_file
-    class helloRecipe(ConanFile):
-        name = "hello"
-        version = "1.0.0"
-        package_type = "application"
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
         # Binary configuration
         settings = "os", "compiler", "build_type", "arch"
         generators = "AutotoolsToolchain"
 
         def build(self):
-            path = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
-            assert os.path.exists(path)  # sanity check
-            # This should not raise anything!! Notice the strict=True
-            replace_in_file(self, path, 'export CC="clang"', "#Hey", strict=True)
-            replace_in_file(self, path, 'export CXX="clang++', "#Hey", strict=True)
+            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            content = load(self, toolchain)
+            assert 'export CC="clang"' in content
+            assert 'export CXX="clang++"' in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "AutotoolsToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
+            content = load(self, toolchain)
+            assert 'export CC="gcc"' in content
+            assert 'export CXX="g++"' in content
     """)
     client = TestClient()
     client.save({
         "host": host,
         "build": build,
-        "conanfile.py": conanfile
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
     })
-    client.run("build . -pr:h host -pr:b build")
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")
