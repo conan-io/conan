@@ -1,5 +1,6 @@
 from pathlib import Path
 import pathlib
+import tempfile
 from conan.api.conan_api import ConfigAPI
 from conan.api.output import Color, ConanOutput
 from conans.errors import ConanException
@@ -59,7 +60,10 @@ class SSHRunner:
         raw_args = self.raw_args
         raw_args[raw_args.index(self.args.path)] = self.remote_create_dir
         raw_args = " ".join(raw_args)
-        command = f"{self.remote_conan} create {raw_args}"
+
+        _Path = pathlib.PureWindowsPath if self.remote_is_windows else pathlib.PurePath
+        remote_json_output = _Path(self.remote_create_dir).joinpath("conan_create.json").as_posix()
+        command = f"{self.remote_conan} create {raw_args} --format json > {remote_json_output}"
 
         ssh_info(f"Remote command: {command}")
     
@@ -75,8 +79,10 @@ class SSHRunner:
             sys.stdout.buffer.flush()
             first_line = False
 
-        self.client.close()
+        if stdout.channel.recv_exit_status() == 0:
+            self.update_local_cache(remote_json_output)
 
+        # self.client.close()
     def ensure_runner_environment(self):
         has_python3_command = False
         python_is_python3 = False
@@ -245,3 +251,23 @@ class SSHRunner:
         stderr = channel.makefile("r")
         return stdout, stderr
         
+    def update_local_cache(self, json_result):
+        # ('conan list --graph=create.json --graph-binaries=build --format=json > pkglist.json'
+        _Path = pathlib.PureWindowsPath if self.remote_is_windows else pathlib.PurePath
+        pkg_list_json = _Path(self.remote_create_dir).joinpath("pkg_list.json").as_posix()
+        pkg_list_command = f"{self.remote_conan} list --graph={json_result} --graph-binaries=build --format=json > {pkg_list_json}"
+        _, stdout, _ = self.client.exec_command(pkg_list_command)
+        if stdout.channel.recv_exit_status() != 0:
+            raise ConanException("Unable to generate remote package list")
+        
+        conan_cache_tgz = _Path(self.remote_create_dir).joinpath("cache.tgz").as_posix()
+        cache_save_command = f"{self.remote_conan} cache save --list {pkg_list_json} --file {conan_cache_tgz}"
+        _, stdout, _ = self.client.exec_command(cache_save_command)
+        if stdout.channel.recv_exit_status() != 0:
+            raise ConanException("Unable to save remote conan cache state")
+        
+        sftp = self.client.open_sftp()
+        with tempfile.TemporaryDirectory() as tmp:
+            local_cache_tgz = os.path.join(tmp, 'cache.tgz')
+            sftp.get(conan_cache_tgz, local_cache_tgz)
+            package_list = self.conan_api.cache.restore(local_cache_tgz)
