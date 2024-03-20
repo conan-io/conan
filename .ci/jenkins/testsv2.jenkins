@@ -92,6 +92,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 if (nodeName=="Linux") {
                     try {
                         def dockerImage = getDockerImage(module)
+                        docker.image(dockerImage).pull()
                         docker.image(dockerImage).inside("--entrypoint=") {
 
                             // we only test scons in Linux
