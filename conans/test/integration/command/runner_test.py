@@ -242,7 +242,65 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     client.save({"profile": profile})
     settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type, shared)
     # create should also work
-    client.run("create . --name=hello --version=1.0 {} -pr:h profile -pr:b profile".format(settings))
-    print(client.out)
+    client.run("create . --name=hello --version=1.0 {} -pr:h=profile -pr:b=profile".format(settings))
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
+
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
+def test_create_docker_runner_profile_abs_path():
+    """
+    Tests the ``conan create . ``
+    """
+    client = TestClient()
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path("Dockerfile_test")}
+    docker_build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+            settings = "build_type", "compiler"
+            author = "John Doe"
+            license = "MIT"
+            url = "https://foo.bar.baz"
+            homepage = "https://foo.bar.site"
+            topics = "foo", "bar", "qux"
+            provides = "libjpeg", "libjpg"
+            deprecated = "other-pkg"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+        """)
+    client.save({"conanfile.py": conanfile, "host": profile_host, "build": profile_build})
+    client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
+
+    assert "Restore: pkg/0.2" in client.out
+    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
+    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Removing container" in client.out
