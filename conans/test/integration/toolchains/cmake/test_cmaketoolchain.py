@@ -7,10 +7,9 @@ import pytest
 from mock import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
-from conan.tools.files import load
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conans.util.files import rmdir, load
 
 
 def test_cross_build():
