@@ -7,8 +7,8 @@ import textwrap
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
-from conans.model.recipe_ref import RecipeReference
 from conan.tools.microsoft.visual import vcvars_command
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
