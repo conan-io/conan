@@ -17,6 +17,9 @@ String getTempFolder(String nodeName) {
 List<Map> getConfigurations(String moduleName, String branchName, String jobName) {
     // TODO: handle revision cases
     def configs = []
+    if (moduleName=="conans/test/unittests" || moduleName=="conans/test/integration") {
+        configs.add([node: "Linux", pyvers: ["PY312"]])
+    }
     if (branchName =~ /(^PR-.*)/) {
         configs.add([node: "Linux", pyvers: ["PY36"]])
         configs.add([node: "Windows", pyvers: ["PY36"]])
