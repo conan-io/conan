@@ -1372,7 +1372,6 @@ def test_toolchain_and_compilers_build_context():
     tool = textwrap.dedent("""
     import os
     from conan import ConanFile
-    from conan.tools.cmake import CMake
     from conan.tools.files import load
 
     class toolRecipe(ConanFile):
@@ -1392,7 +1391,6 @@ def test_toolchain_and_compilers_build_context():
     import os
     from conan import ConanFile
     from conan.tools.files import load
-    from conan.tools.cmake import CMake
 
     class consumerRecipe(ConanFile):
         name = "consumer"

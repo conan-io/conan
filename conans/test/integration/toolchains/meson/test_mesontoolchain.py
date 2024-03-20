@@ -373,3 +373,85 @@ def test_toolchain_and_compilers_build_context():
         "conanfile.py": conanfile
     })
     client.run("build . -pr:h host -pr:b build")
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how MesonToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf).
+
+    It should create both native and cross files.
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Macos
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Macos
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "MesonToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_meson_native.ini")
+            content = load(self, toolchain)
+            assert "c = 'clang'" in content
+            assert "cpp = 'clang++'" in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "MesonToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_meson_cross.ini")
+            content = load(self, toolchain)
+            assert "c = 'gcc'" in content
+            assert "cpp = 'g++'" in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")
