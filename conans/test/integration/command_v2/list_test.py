@@ -136,6 +136,21 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     @pytest.mark.parametrize("remote", [True, False])
+    def test_list_recipes_only_user_channel(self, client, remote):
+        pattern = "*@user/channel"
+        expected = textwrap.dedent(f"""\
+              zlib
+                zlib/1.0.0@user/channel
+                zlib/2.0.0@user/channel
+            """)
+        self.check(client, pattern, remote, expected)
+        expected_json = {
+            "zlib/1.0.0@user/channel": {},
+            "zlib/2.0.0@user/channel": {},
+        }
+        self.check_json(client, pattern, remote, expected_json)
+
+    @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipes_without_user_channel(self, client, remote):
         pattern = "z*@"
         expected = textwrap.dedent(f"""\
