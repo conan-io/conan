@@ -57,7 +57,11 @@ graph_info_html = r"""
         </div>
 
         <script type="text/javascript">
-            const graph_data = {{ deps_graph }};
+            const replaceEscapedCharacters =
+                    (inputString) => inputString.replace(/&#(\d+);/g,
+                    (m, g) => String.fromCharCode(parseInt(g, 10)));
+            const graph_data_raw = "{{ deps_graph }}";
+            const graph_data = JSON.parse(replaceEscapedCharacters(graph_data_raw));
             let hide_build = false;
             let hide_test = false;
             let search_pkg = null;
