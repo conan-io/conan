@@ -480,6 +480,9 @@ class FindFiles(Block):
         {% if cmake_include_path %}
         list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
+        {% if lib_dirs %}
+        list(PREPEND CONAN_RUNTIME_LIB_DIRS {{ lib_dirs }})
+        {% endif %}
 
         {% if cross_building %}
         if(NOT DEFINED CMAKE_FIND_ROOT_PATH_MODE_PACKAGE OR CMAKE_FIND_ROOT_PATH_MODE_PACKAGE STREQUAL "ONLY")
@@ -518,12 +521,14 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         is_apple_ = is_apple_os(self._conanfile)
+        is_win = self._conanfile.settings.get_safe("os") == "Windows"
 
         # Read information from host context
         # TODO: Add here in 2.0 the "skip": False trait
         host_req = self._conanfile.dependencies.filter({"build": False}).values()
         build_paths = []
         host_lib_paths = []
+        host_lib_dirs = []
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
@@ -533,6 +538,10 @@ class FindFiles(Block):
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
             host_include_paths.extend(cppinfo.includedirs)
+            if is_win:
+                host_lib_dirs.extend(cppinfo.bindirs)
+            else:
+                host_lib_dirs.extend(cppinfo.libdirs)
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
@@ -552,6 +561,7 @@ class FindFiles(Block):
             "cmake_include_path": self._join_paths(host_include_paths),
             "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
+            "lib_dirs": self._join_paths(host_lib_dirs)
         }
 
 
