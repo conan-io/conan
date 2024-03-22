@@ -62,6 +62,7 @@ def test_msys2():
     ('altlinux', "apt-get"),
     ("astra", 'apt-get'),
     ('elbrus', 'apt-get'),
+    ('pop', "apt-get"),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_manager_distro(distro, tool):
