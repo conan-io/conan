@@ -1,8 +1,0 @@
-include(default)
-
-[settings]
-compiler=clang
-compiler.version=12
-
-[conf]
-tools.build:compiler_executables={"asm": "clang", "c": "clang", "cpp": "clang++"}
