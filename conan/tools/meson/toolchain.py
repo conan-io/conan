@@ -24,7 +24,7 @@ class MesonToolchain(object):
     native_filename = "conan_meson_native.ini"
     cross_filename = "conan_meson_cross.ini"
 
-    _meson_file_template = textwrap.dedent("""
+    _meson_file_template = textwrap.dedent("""\
     [properties]
     {% for it, value in properties.items() -%}
     {{it}} = {{value}}
@@ -40,32 +40,76 @@ class MesonToolchain(object):
     {% endfor %}
 
     [binaries]
-    {% if c %}c = {{c}}{% endif %}
-    {% if cpp %}cpp = {{cpp}}{% endif %}
-    {% if ld %}ld = {{ld}}{% endif %}
-    {% if is_apple_system %}
-    {% if objc %}objc = '{{objc}}'{% endif %}
-    {% if objcpp %}objcpp = '{{objcpp}}'{% endif %}
+    {% if c %}
+    c = {{c}}
     {% endif %}
-    {% if c_ld %}c_ld = '{{c_ld}}'{% endif %}
-    {% if cpp_ld %}cpp_ld = '{{cpp_ld}}'{% endif %}
-    {% if ar %}ar = '{{ar}}'{% endif %}
-    {% if strip %}strip = '{{strip}}'{% endif %}
-    {% if as %}as = '{{as}}'{% endif %}
-    {% if windres %}windres = '{{windres}}'{% endif %}
-    {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
-    {% if pkgconfig %}pkg-config = '{{pkgconfig}}'{% endif %}
+    {% if cpp %}
+    cpp = {{cpp}}
+    {% endif %}
+    {% if ld %}
+    ld = {{ld}}
+    {% endif %}
+    {% if is_apple_system %}
+    {% if objc %}
+    objc = '{{objc}}'
+    {% endif %}
+    {% if objcpp %}
+    objcpp = '{{objcpp}}'
+    {% endif %}
+    {% endif %}
+    {% if c_ld %}
+    c_ld = '{{c_ld}}'
+    {% endif %}
+    {% if cpp_ld %}
+    cpp_ld = '{{cpp_ld}}'
+    {% endif %}
+    {% if ar %}
+    ar = '{{ar}}'
+    {% endif %}
+    {% if strip %}
+    strip = '{{strip}}'
+    {% endif %}
+    {% if as %}
+    as = '{{as}}'
+    {% endif %}
+    {% if windres %}
+    windres = '{{windres}}'
+    {% endif %}
+    {% if pkgconfig %}
+    pkgconfig = '{{pkgconfig}}'
+    {% endif %}
+    {% if pkgconfig %}
+    pkg-config = '{{pkgconfig}}'
+    {% endif %}
 
     [built-in options]
-    {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
-    {% if default_library %}default_library = '{{default_library}}'{% endif %}
-    {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
-    {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
-    {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
-    {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
-    {% if backend %}backend = '{{backend}}' {% endif %}
-    {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
-    {% if build_pkg_config_path %}build.pkg_config_path = '{{build_pkg_config_path}}'{% endif %}
+    {% if buildtype %}
+    buildtype = '{{buildtype}}'
+    {% endif %}
+    {% if default_library %}
+    default_library = '{{default_library}}'
+    {% endif %}
+    {% if b_vscrt %}
+    b_vscrt = '{{b_vscrt}}'
+    {% endif %}
+    {% if b_ndebug %}
+    b_ndebug = {{b_ndebug}}
+    {% endif %}
+    {% if b_staticpic %}
+    b_staticpic = {{b_staticpic}}
+    {% endif %}
+    {% if cpp_std %}
+    cpp_std = '{{cpp_std}}'
+    {% endif %}
+    {% if backend %}
+    backend = '{{backend}}'
+    {% endif %}
+    {% if pkg_config_path %}
+    pkg_config_path = '{{pkg_config_path}}'
+    {% endif %}
+    {% if build_pkg_config_path %}
+    build.pkg_config_path = '{{build_pkg_config_path}}'
+    {% endif %}
     # C/C++ arguments
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
