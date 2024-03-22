@@ -613,10 +613,9 @@ class ExtraFlagsBlock(Block):
         {% endif %}
         {% if defines %}
         {% if config %}
-        add_compile_definitions(
-        {%- for define in defines %}
-        "$<$<CONFIG:{{config}}>:{{define}}>"
-        {%- endfor -%})
+        {% for define in defines %}
+        add_compile_definitions($<$<CONFIG:{{config}}>:{{ define }}>)
+        {% endfor %}
         {% else %}
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}
