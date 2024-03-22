@@ -383,11 +383,12 @@ def detect_default_compiler():
         return None, None, None
 
     if platform.system() == "Windows":
-        version = _detect_vs_ide_version()
-        update = detect_msvc_update(version)
-        version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
-        if version == "193" and update and int(update) >= 10:
-            version = "194"
+        ide_version = _detect_vs_ide_version()
+        version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
+        if ide_version == "17":
+            update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
+            if update and int(update) >= 10:
+                version = "194"
         if version:
             return 'msvc', Version(version), None
 
