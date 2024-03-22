@@ -57,7 +57,7 @@ graph_info_html = r"""
         </div>
 
         <script type="text/javascript">
-            const graph_data = {{ deps_graph }};
+            const graph_data = {{ json.dumps(deps_graph) }};
             let hide_build = false;
             let hide_test = false;
             let search_pkg = null;
