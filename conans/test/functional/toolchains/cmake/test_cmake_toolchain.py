@@ -1833,7 +1833,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
     profile_release = textwrap.dedent(r"""
         include(default)
         [conf]
-        tools.build:defines=["answer=42"]
+        tools.build:defines=["answer=42", "other=24"]
         tools.build:cxxflags=["/Zc:__cplusplus"]
         """)
     profile_debug = textwrap.dedent(r"""
@@ -1872,6 +1872,9 @@ def test_cmake_toolchain_cxxflags_multi_config():
 
         int main() {
             SHOW_DEFINE(answer);
+            # ifdef other
+            SHOW_DEFINE(other);
+            # endif
             char a = 123L;  // to trigger warnings
 
             #if __cplusplus
@@ -1903,8 +1906,10 @@ def test_cmake_toolchain_cxxflags_multi_config():
 
     c.run_command(r"build\Release\example.exe")
     assert 'answer=42' in c.out
+    assert 'other=24' in c.out
     assert "CPLUSPLUS: __cplusplus20" in c.out
 
     c.run_command(r"build\Debug\example.exe")
     assert 'answer=123' in c.out
+    assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
