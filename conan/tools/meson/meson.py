@@ -33,21 +33,19 @@ class Meson(object):
         generators_folder = self._conanfile.generators_folder
         cross = os.path.join(generators_folder, MesonToolchain.cross_filename)
         native = os.path.join(generators_folder, MesonToolchain.native_filename)
-        meson_filenames = []
+        cmd_param = ""
         if os.path.exists(cross):
-            cmd_param = " --cross-file"
-            meson_filenames.append(cross)
-        else:
-            cmd_param = " --native-file"
-            meson_filenames.append(native)
+            cmd_param += f' --cross-file "{cross}"'
+        if os.path.exists(native):
+            cmd_param += f' --native-file "{native}"'
 
         machine_files = self._conanfile.conf.get("tools.meson.mesontoolchain:extra_machine_files",
                                                  default=[], check_type=list)
         if machine_files:
-            meson_filenames.extend(machine_files)
-
-        cmd += "".join([f'{cmd_param} "{meson_option}"' for meson_option in meson_filenames])
-        cmd += ' "{}" "{}"'.format(build_folder, source_folder)
+            extra_files_param = " ".join([meson_file for meson_file in machine_files
+                                          if "--cross-file" in meson_file or "--native-file" in meson_file])
+            cmd_param += f" {extra_files_param}"
+        cmd += f'{cmd_param} "{build_folder}" "{source_folder}"'
         # Issue related: https://github.com/mesonbuild/meson/issues/12880
         cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
