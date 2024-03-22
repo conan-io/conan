@@ -13,6 +13,7 @@ from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.meson.helpers import *
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
+from conans.model.conan_file import use_build_context
 from conans.util.files import save
 
 
@@ -20,7 +21,6 @@ class MesonToolchain(object):
     """
     MesonToolchain generator
     """
-
     native_filename = "conan_meson_native.ini"
     cross_filename = "conan_meson_cross.ini"
 
@@ -89,20 +89,19 @@ class MesonToolchain(object):
     {% endfor %}
     """)
 
-    def __init__(self, conanfile, backend=None):
+    def __init__(self, conanfile, backend=None, native=False):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
         """
         raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
-        self._os = self._conanfile.settings.get_safe("os")
         self._is_apple_system = is_apple_os(self._conanfile)
 
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
-        self._backend = conanfile.conf.get("tools.meson.mesontoolchain:backend",
+        self._backend = self._conanfile.conf.get("tools.meson.mesontoolchain:backend",
                                            default=backend or 'ninja')
         build_type = self._conanfile.settings.get_safe("build_type")
         self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
@@ -158,16 +157,16 @@ class MesonToolchain(object):
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
-        if cross_building(conanfile, skip_x64_x86=True):
-            os_host = conanfile.settings.get_safe("os")
-            arch_host = conanfile.settings.get_safe("arch")
-            os_build = conanfile.settings_build.get_safe('os')
-            arch_build = conanfile.settings_build.get_safe('arch')
+        if not native and cross_building(self._conanfile, skip_x64_x86=True):
+            os_host = self._conanfile.settings.get_safe("os")
+            arch_host = self._conanfile.settings.get_safe("arch")
+            os_build = self._conanfile.settings_build.get_safe('os')
+            arch_build = self._conanfile.settings_build.get_safe('arch')
             self.cross_build["build"] = to_meson_machine(os_build, arch_build)
             self.cross_build["host"] = to_meson_machine(os_host, arch_host)
             self.properties["needs_exe_wrapper"] = True
-            if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
-                settings_target = conanfile.settings_target
+            if hasattr(self._conanfile, 'settings_target') and self._conanfile.settings_target:
+                settings_target = self._conanfile.settings_target
                 os_target = settings_target.get_safe("os")
                 arch_target = settings_target.get_safe("arch")
                 self.cross_build["target"] = to_meson_machine(os_target, arch_target)
@@ -242,9 +241,9 @@ class MesonToolchain(object):
         self.apple_isysroot_flag = []
         #: Apple minimum binary version flag as a list, e.g., ``["-mios-version-min", "10.8"]``
         self.apple_min_version_flag = []
-        #: Defines the Meson ``objc`` variable. Defaulted to ``None``, if if any Apple OS ``clang``
+        #: Defines the Meson ``objc`` variable. Defaulted to ``None``, if any Apple OS ``clang``
         self.objc = None
-        #: Defines the Meson ``objcpp`` variable. Defaulted to ``None``, if if any Apple OS ``clang++``
+        #: Defines the Meson ``objcpp`` variable. Defaulted to ``None``, if any Apple OS ``clang++``
         self.objcpp = None
         #: Defines the Meson ``objc_args`` variable. Defaulted to ``OBJCFLAGS`` build environment value
         self.objc_args = []
@@ -256,7 +255,8 @@ class MesonToolchain(object):
         self.objcpp_link_args = []
 
         self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
-        self._resolve_android_cross_compilation()
+        if not native:
+            self._resolve_android_cross_compilation()
 
     def _get_default_dirs(self):
         """
@@ -456,7 +456,14 @@ class MesonToolchain(object):
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
         check_duplicated_generator(self, self._conanfile)
-        filename = self.native_filename if not self.cross_build else self.cross_filename
-        save(filename, self._content)
+        # FIXME: Do we always want to use both files for cross-compiling?
+        if self.cross_build:
+            save(self.cross_filename, self._content)
+            with use_build_context(self._conanfile) as conanfile_build:
+                save(self.native_filename, MesonToolchain(conanfile_build, backend=self._backend, native=True)._content)
+        elif self.cross_build:
+            save(self.cross_filename, self._content)
+        else:
+            save(self.native_filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()

@@ -5,7 +5,7 @@ from conans.model.recipe_ref import ref_matches
 
 def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_context,
                                  is_build_require, ref=None, parent=None):
-    """ this function fills conanfile information with the profile informaiton
+    """ this function fills conanfile information with the profile information
     It is called for:
         - computing the root_node
            - GraphManager.load_consumer_conanfile, for "conan source" command
@@ -28,6 +28,7 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
         _initialize_conanfile(conanfile, profile_build, settings_build.copy(), ref)
     else:
         _initialize_conanfile(conanfile, profile_host, settings_host, ref)
+    conanfile.profile_build = profile_build
     conanfile.settings_build = settings_build
     conanfile.settings_target = None
 
