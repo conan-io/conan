@@ -208,6 +208,46 @@ def test_android_meson_toolchain_cross_compiling(arch, expected_arch):
         assert "architecture: %s" % expected_arch in client.out
 
 
+@pytest.mark.tool("meson")
+@pytest.mark.tool("android_ndk")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Android NDK only tested in MacOS for now")
+def test_darwin_android_cross_compiling_and_native_context():
+    ndk_path = tools_locations["android_ndk"]["system"]["path"][platform.system()]
+    profile_host = textwrap.dedent(f"""
+    include(default)
+
+    [settings]
+    os = Android
+    os.api_level = 21
+    arch = armv8
+
+    [conf]
+    tools.android:ndk_path={ndk_path}
+
+    # Using build and host context in MesonToolchain (generates both *.ini files)
+    tools.build.cross_building:native=True
+    """)
+    hello_h = gen_function_h(name="hello")
+    hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
+    app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    client = TestClient()
+    client.save({"conanfile.py": _conanfile_py,
+                 # add executable to be built in the native context
+                 "meson.build": _meson_build + "\nnative_exe = executable('mygen', 'mygen.cpp', native : true)",
+                 "meson_options.txt": _meson_options_txt,
+                 "hello.h": hello_h,
+                 "hello.cpp": hello_cpp,
+                 "mygen.cpp": '#include <iostream>\nint main(){std::cout << "Hello native!";return 0;}',
+                 "main.cpp": app,
+                 "profile_host": profile_host})
+
+    client.run("build . --profile:build=default --profile:host=profile_host")
+    client.run_command('objdump -f "%s"' % os.path.join(client.current_folder, "build", "libhello.a"))
+    assert "architecture: aarch64" in client.out
+    client.run_command("'{}/mygen'".format(os.path.join(client.current_folder, "build")))
+    assert "Hello native!" in client.out
+
+
 @pytest.mark.tool("ninja")
 @pytest.mark.tool("pkg_config")
 @pytest.mark.tool("meson")  # so it easily works in Windows too

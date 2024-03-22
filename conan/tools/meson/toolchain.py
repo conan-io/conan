@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from jinja2 import Template
+from jinja2 import Template, StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
@@ -446,7 +446,8 @@ class MesonToolchain(object):
         :return: ``str`` whole Meson context content.
         """
         context = self._context()
-        content = Template(self._meson_file_template).render(context)
+        content = Template(self._meson_file_template, trim_blocks=True, lstrip_blocks=True,
+                            undefined=StrictUndefined).render(context)
         return content
 
     def generate(self):
@@ -456,8 +457,8 @@ class MesonToolchain(object):
         If Windows OS, it will be created a ``conanvcvars.bat`` as well.
         """
         check_duplicated_generator(self, self._conanfile)
-        # FIXME: Do we always want to use both files for cross-compiling?
-        if self.cross_build:
+        # FIXME: EXPERIMENTAL: Do we always want to use both files for cross-compiling for Meson?
+        if self.cross_build and self._conanfile.conf.get("tools.build.cross_building:native", check_type=bool):
             save(self.cross_filename, self._content)
             with use_build_context(self._conanfile) as conanfile_build:
                 save(self.native_filename, MesonToolchain(conanfile_build, backend=self._backend, native=True)._content)
