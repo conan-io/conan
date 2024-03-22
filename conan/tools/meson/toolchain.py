@@ -58,7 +58,6 @@ class MesonToolchain(object):
 
     [built-in options]
     {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
-    {% if debug %}debug = {{debug}}{% endif %}
     {% if default_library %}default_library = '{{default_library}}'{% endif %}
     {% if b_vscrt %}b_vscrt = '{{b_vscrt}}' {% endif %}
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
