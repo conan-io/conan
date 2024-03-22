@@ -57,7 +57,7 @@ graph_info_html = r"""
         </div>
 
         <script type="text/javascript">
-            const graph_data = {{ json.dumps(deps_graph) }};
+            const graph_data = {{ deps_graph | tojson }};
             let hide_build = false;
             let hide_test = false;
             let search_pkg = null;
@@ -261,13 +261,13 @@ graph_info_html = r"""
                     control.removeChild(control.firstChild);
                 }
                 if(ids[0] || ids_edges[0]) {
-                    console.log("Selected ", ids_edges[0], global_edges.length);
-                    console.log("   selected", global_edges[ids_edges[0]]);
                     selected = graph_data["nodes"][ids[0]] || global_edges[ids_edges[0]];
                     let div = document.createElement('div');
                     let f = Object.fromEntries(Object.entries(selected).filter(([_, v]) => v != null));
-                    div.innerHTML = "<pre>" + JSON.stringify(f, undefined, 2) + "</pre>";
-                    control.appendChild(div);
+                    div.innerText = JSON.stringify(f, undefined, 2);
+                    let div2 = document.createElement('div');
+                    div2.innerHTML = "<pre>" + div.innerHTML + "</pre>";
+                    control.appendChild(div2);
                 }
                 else {
                     control.innerHTML = "<b>Info</b>: Click on a package or edge for more info";
