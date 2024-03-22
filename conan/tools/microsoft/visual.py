@@ -137,7 +137,14 @@ class VCVars:
                           "v144": "14.4"}.get(toolset_version)
         else:
             vs_version = vs_ide_version(conanfile)
-            vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
+            if int(vs_version) <= 14:
+                vcvars_ver = None
+            else:
+                compiler_version = str(conanfile.settings.compiler.version)
+                compiler_update = conanfile.settings.get_safe("compiler.update", "")
+                # The equivalent of compiler 19.26 is toolset 14.26
+                vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
+
         vcvarsarch = _vcvars_arch(conanfile)
 
         winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
@@ -318,18 +325,6 @@ def _vcvars_arch(conanfile):
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
 
     return arch
-
-
-def _vcvars_vers(conanfile, compiler, vs_version):
-    if int(vs_version) <= 14:
-        return None
-
-    assert compiler == "msvc"
-    # Code similar to CMakeToolchain toolset one
-    compiler_version = str(conanfile.settings.compiler.version)
-    # The equivalent of compiler 192 is toolset 14.2
-    vcvars_ver = "14.{}".format(compiler_version[-1])
-    return vcvars_ver
 
 
 def is_msvc(conanfile, build_context=False):
