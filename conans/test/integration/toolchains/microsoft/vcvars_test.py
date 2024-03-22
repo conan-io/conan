@@ -51,6 +51,19 @@ def test_vcvars_generator_skip():
     client.run('install . -pr=profile')
     assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
+@pytest.mark.skipif(platform.system() not in ["Linux"], reason="Requires Linux")
+def test_vcvars_generator_skip_on_linux():
+    """
+    Skip creation of conanvcvars.bat on Linux build systems
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_generator("VCVars")
+                                               .with_settings("os", "compiler",
+                                                              "arch", "build_type")})
+
+    client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
+               '-s compiler.runtime=dynamic')
+    assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
 def test_vcvars_generator_string():

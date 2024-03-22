@@ -88,6 +88,9 @@ def apply_conandata_patches(conanfile):
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be applied if conanfile.version is already defined"
         entries = patches.get(str(conanfile.version), [])
+        if entries is None:
+            conanfile.output.warning(f"apply_conandata_patches(): No patches defined for version {conanfile.version} in conandata.yml")
+            return
     elif isinstance(patches, list):
         entries = patches
     else:
@@ -127,6 +130,9 @@ def export_conandata_patches(conanfile):
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be exported if conanfile.version is already defined"
         entries = patches.get(conanfile.version, [])
+        if entries is None:
+            conanfile.output.warning(f"export_conandata_patches(): No patches defined for version {conanfile.version} in conandata.yml")
+            return
     elif isinstance(patches, list):
         entries = patches
     else:

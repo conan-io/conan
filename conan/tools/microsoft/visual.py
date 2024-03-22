@@ -59,7 +59,8 @@ def msvc_version_to_vs_ide_version(version):
                 '190': '14',
                 '191': '15',
                 '192': '16',
-                '193': '17'}
+                '193': '17',
+                '194': '17'}  # Note both 193 and 194 belong to VS 17 2022
     return _visuals[str(version)]
 
 
@@ -75,7 +76,8 @@ def msvc_version_to_toolset_version(version):
                 '190': 'v140',
                 '191': 'v141',
                 '192': 'v142',
-                "193": 'v143'}
+                "193": 'v143',
+                "194": 'v144'}
     return toolsets.get(str(version))
 
 
@@ -100,8 +102,11 @@ class VCVars:
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
+
         os_ = conanfile.settings.get_safe("os")
-        if os_ != "Windows":
+        build_os_ = conanfile.settings_build.get_safe("os")
+
+        if os_ != "Windows" or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
@@ -121,13 +126,15 @@ class VCVars:
             vs_version = {"v140": "14",
                           "v141": "15",
                           "v142": "16",
-                          "v143": "17"}.get(toolset_version)
+                          "v143": "17",
+                          "v144": "17"}.get(toolset_version)
             if vs_version is None:
-                raise ConanException("Visual Studio Runtime version (v140-v143) not defined")
+                raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
             vcvars_ver = {"v140": "14.0",
                           "v141": "14.1",
                           "v142": "14.2",
-                          "v143": "14.3"}.get(toolset_version)
+                          "v143": "14.3",
+                          "v144": "14.4"}.get(toolset_version)
         else:
             vs_version = vs_ide_version(conanfile)
             vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
@@ -174,7 +181,6 @@ class VCVars:
             _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
 
 
-
 def _create_deactivate_vcvars_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
     message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
@@ -185,6 +191,7 @@ def _create_deactivate_vcvars_file(conanfile, filename):
         content = f"echo {message}"
     path = os.path.join(conanfile.generators_folder, deactivate_filename)
     save(path, content)
+
 
 def vs_ide_version(conanfile):
     """
@@ -294,7 +301,8 @@ def _vcvars_arch(conanfile):
         arch = {'x86': "amd64_x86",
                 'x86_64': 'amd64',
                 'armv7': 'amd64_arm',
-                'armv8': 'amd64_arm64'}.get(arch_host)
+                'armv8': 'amd64_arm64',
+                'arm64ec':'amd64_arm64'}.get(arch_host)
     elif arch_build == 'x86':
         arch = {'x86': 'x86',
                 'x86_64': 'x86_amd64',

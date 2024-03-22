@@ -15,6 +15,7 @@ def test_invalid_compiler():
 
 
 @pytest.mark.parametrize("compiler_version,expected_toolset", [
+    ("194", "v144"),
     ("193", "v143"),
     ("192", "v142"),
     ("191", "v141"),

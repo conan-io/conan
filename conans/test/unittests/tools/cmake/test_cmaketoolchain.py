@@ -1,19 +1,16 @@
-import os
 import types
 
 import pytest
 from mock import Mock
 
-from conan.tools.cmake import CMakeToolchain
 from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture
@@ -197,8 +194,8 @@ def test_osx_deployment_target(conanfile_apple):
 def conanfile_msvc():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],
-                           "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
-                                                 "update": ["ANY"]}},
+                           "compiler": {"msvc": {"version": ["193", "194"], "cppstd": ["20"],
+                                                 "update": [None, 8, 9]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]})
     c.settings.build_type = "Release"
@@ -226,14 +223,15 @@ def test_toolset(conanfile_msvc):
 def test_toolset_update_version(conanfile_msvc):
     conanfile_msvc.settings.compiler.update = "8"
     toolchain = CMakeToolchain(conanfile_msvc)
-    assert 'set(CMAKE_GENERATOR_TOOLSET "version=14.38" CACHE STRING "" FORCE)' in toolchain.content
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.38" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_toolset_update_version_overflow(conanfile_msvc):
     # https://github.com/conan-io/conan/issues/15583
-    conanfile_msvc.settings.compiler.update = "10"
+    conanfile_msvc.settings.compiler.version = "194"
+    conanfile_msvc.settings.compiler.update = "8"
     toolchain = CMakeToolchain(conanfile_msvc)
-    assert 'set(CMAKE_GENERATOR_TOOLSET "version=14.40" CACHE STRING "" FORCE)' in toolchain.content
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v144,version=14.48" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_toolset_x64(conanfile_msvc):
@@ -275,6 +273,32 @@ def test_older_msvc_toolset():
     assert 'CMAKE_GENERATOR_TOOLSET "v110"' in content
     # As by the CMake docs, this has no effect for VS < 2015
     assert 'CMAKE_CXX_STANDARD 98' in content
+
+
+def test_older_msvc_toolset_update():
+    # https://github.com/conan-io/conan/issues/15787
+    c = ConanFile(None)
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["192"], "update": [8, 9],
+                                                 "cppstd": ["14"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]})
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "192"
+    c.settings.compiler.update = 9
+    c.settings.compiler.cppstd = "14"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'CMAKE_GENERATOR_TOOLSET "v142,version=14.29"' in content
 
 
 def test_msvc_xp_toolsets():

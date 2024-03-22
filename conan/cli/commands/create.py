@@ -9,7 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conans.util.files import mkdir, load
+from conans.util.files import mkdir
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -49,10 +49,11 @@ def create(conan_api, parser, *args):
                                              lockfile=lockfile,
                                              remotes=remotes)
 
+    # FIXME: Dirty: package type still raw, not processed yet
+    is_build = args.build_require or conanfile.package_type == "build-scripts"
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
-    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
-                                                         args.build_require)
+    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
     if args.build is not None and args.build_test is None:
@@ -66,13 +67,8 @@ def create(conan_api, parser, *args):
                                                          remotes=remotes, update=args.update,
                                                          python_requires=[ref])
     else:
-        requires = [ref] if not args.build_require else None
-        tool_requires = [ref] if args.build_require else None
-        # FIXME: Dirty: package type still raw, not processed yet
-        # TODO: Why not for package_type = "application" like cmake to be used as build-require?
-        if conanfile.package_type == "build-scripts" and not args.build_require:
-            # swap them
-            requires, tool_requires = tool_requires, requires
+        requires = [ref] if not is_build else None
+        tool_requires = [ref] if is_build else None
         deps_graph = conan_api.graph.load_graph_requires(requires, tool_requires,
                                                          profile_host=profile_host,
                                                          profile_build=profile_build,
@@ -105,7 +101,7 @@ def create(conan_api, parser, *args):
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
         run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
-                 update=False, build_modes=args.build, build_modes_test=args.build_test,
+                 update=None, build_modes=args.build, build_modes_test=args.build_test,
                  tested_python_requires=tested_python_requires, tested_graph=deps_graph)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)

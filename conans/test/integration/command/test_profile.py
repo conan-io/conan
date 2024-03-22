@@ -133,9 +133,13 @@ def test_shorthand_syntax():
 
 def test_profile_show_json():
     c = TestClient()
-    c.save({"myprofilewin": "[settings]\nos=Windows\n[tool_requires]\nmytool/*:mytool/1.0",
+    c.save({"myprofilewin": "[settings]\nos=Windows\n"
+                            "[tool_requires]\nmytool/*:mytool/1.0\n"
+                            "[conf]\nuser.conf:value=42\nlibiconv/*:tools.env.virtualenv:powershell=False\n"
+                            "[options]\n*:myoption=True",
             "myprofilelinux": "[settings]\nos=Linux"})
     c.run("profile show -pr:b=myprofilewin -pr:h=myprofilelinux --format=json")
+
     profile = json.loads(c.stdout)
     assert profile["host"]["settings"] == {"os": "Linux"}
 

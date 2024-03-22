@@ -1,4 +1,5 @@
 import copy
+import numbers
 import re
 import os
 import fnmatch
@@ -38,6 +39,7 @@ BUILT_IN_CONFS = {
     "core.package_id:default_embed_mode": "By default, 'full_mode'",
     "core.package_id:default_python_mode": "By default, 'minor_mode'",
     "core.package_id:default_build_mode": "By default, 'None'",
+    "core.package_id:config_mode": "How the 'config_version' affects binaries. By default 'None'",
     # General HTTP(python-requests) configuration
     "core.net.http:max_retries": "Maximum number of connection retries (requests library)",
     "core.net.http:timeout": "Number of seconds without response to timeout (requests library)",
@@ -57,8 +59,8 @@ BUILT_IN_CONFS = {
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
-    "tools.build.cross_building:can_run": "Bool value that indicates whether is possible to run a non-native "
-                                          "app on the same architecture. It's used by 'can_run' tool",
+    "tools.build.cross_building:can_run": "(boolean) Indicates whether is possible to run a non-native app on the same architecture. It's used by 'can_run' tool",
+    "tools.build.cross_building:cross_build": "(boolean) Decides whether cross-building or not regardless of arch/OS settings. Used by 'cross_building' tool",
     "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
     "tools.compilation:verbosity": "Verbosity of compilation tools if set. Possible values are 'quiet' and 'verbose'",
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
@@ -72,6 +74,8 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:toolset_cuda": "(Experimental) Path to a CUDA toolset to use, or version if installed at the system level",
     "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
+    "tools.cmake.cmake_layout:build_folder": "(Experimental) Allow configuring the base folder of the build for local builds",
+    "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake:install_strip": "Add --strip to cmake.install()",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
@@ -645,25 +649,25 @@ class ConfDefinition:
             if pattern is None:
                 result.update(conf.serialize())
             else:
-                for k, v in conf.serialize():
+                for k, v in conf.serialize().items():
                     result[f"{pattern}:{k}"] = v
         return result
 
     @staticmethod
-    def _get_evaluated_value(__v):
+    def _get_evaluated_value(_v):
         """
         Function to avoid eval() catching local variables
         """
         try:
-            # Isolated eval
-            parsed_value = eval(__v)
-            if isinstance(parsed_value, str):  # xxx:xxx = "my string"
-                # Let's respect the quotes introduced by any user
-                parsed_value = '"{}"'.format(parsed_value)
-        except:
-            # It means eval() failed because of a string without quotes
-            parsed_value = __v.strip()
-        return parsed_value
+            value = eval(_v)  # This destroys Windows path strings with backslash
+        except:  # It means eval() failed because of a string without quotes
+            value = _v.strip()
+        else:
+            if not isinstance(value, (numbers.Number, bool, dict, list, set, tuple)) \
+                    and value is not None:
+                # If it is quoted string we respect it as-is
+                value = _v.strip()
+        return value
 
     def loads(self, text, profile=False):
         self._pattern_confs = {}

@@ -109,6 +109,16 @@ def test_user_python_overrides():
     assert "pytool/1.1" in new_lock
 
 
+def test_config_overrides():
+    """ Test that it is possible to lock also config-requires
+    """
+    c = TestClient()
+    c.run("lock add --config-requires=config/1.0")
+    assert json.loads(c.load("conan.lock"))["config_requires"] == ["config/1.0"]
+    c.run("lock remove --config-requires=config/1.0")
+    assert json.loads(c.load("conan.lock"))["config_requires"] == []
+
+
 def test_add_revisions():
     """ Is it possible to add revisions explicitly too
     """

@@ -1,14 +1,12 @@
-import os
+from collections import defaultdict
 from io import StringIO
-
 
 from conan import ConanFile
 from conan.internal.conan_app import ConanFileHelpers
+from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.layout import Folders, Infos
 from conans.model.options import Options
-from conans.errors import ConanException
-from conans.model.conf import ConfDefinition
 
 
 class LocalDBMock(object):
@@ -64,6 +62,9 @@ class MockSettings(object):
 
     def rm_safe(self, name):
         self.values.pop(name, None)
+
+    def possible_values(self):
+        return defaultdict(lambda: [])
 
 
 class MockCppInfo(object):

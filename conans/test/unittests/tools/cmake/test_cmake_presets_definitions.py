@@ -7,7 +7,6 @@ from conans.model.conan_file import ConanFile
 from conans.model.conf import Conf
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture(scope="module")

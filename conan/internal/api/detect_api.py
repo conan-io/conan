@@ -6,7 +6,7 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conans.model.version import Version
-from conans.util.files import save
+from conans.util.files import load, save
 from conans.util.runners import check_output_runner, detect_runner
 
 
@@ -122,6 +122,93 @@ def _get_e2k_architecture():
     }.get(platform.processor())
 
 
+def _parse_gnu_libc(ldd_output):
+    first_line = ldd_output.partition("\n")[0]
+    if any(glibc_indicator in first_line for glibc_indicator in ["GNU libc", "GLIBC"]):
+        return first_line.split()[-1].strip()
+    return None
+
+
+def _detect_gnu_libc(ldd="/usr/bin/ldd"):
+    if platform.system() != "Linux":
+        ConanOutput(scope="detect_api").warning("detect_gnu_libc() only works on Linux")
+        return None
+    try:
+        ldd_output = check_output_runner(f"{ldd} --version")
+        version = _parse_gnu_libc(ldd_output)
+        if version is None:
+            first_line = ldd_output.partition("\n")[0]
+            ConanOutput(scope="detect_api").warning(
+                f"detect_gnu_libc() did not detect glibc in the first line of output from '{ldd} --version': '{first_line}'"
+            )
+            return None
+        return version
+    except Exception as e:
+        ConanOutput(scope="detect_api").debug(
+            f"Couldn't determine the glibc version from the output of the '{ldd} --version' command {e}"
+        )
+    return None
+
+
+def _parse_musl_libc(ldd_output):
+    lines = ldd_output.splitlines()
+    if "musl libc" not in lines[0]:
+        return None
+    return lines[1].split()[-1].strip()
+
+
+def _detect_musl_libc(ldd="/usr/bin/ldd"):
+    if platform.system() != "Linux":
+        ConanOutput(scope="detect_api").warning(
+            "detect_musl_libc() only works on Linux"
+        )
+        return None
+
+    d = tempfile.mkdtemp()
+    tmp_file = os.path.join(d, "err")
+    try:
+        ldd_output = None
+        with open(tmp_file, 'w') as stderr:
+            check_output_runner(f"{ldd}", stderr=stderr, ignore_error=True)
+        ldd_output = load(tmp_file)
+        version = _parse_musl_libc(ldd_output)
+        if version is None:
+            first_line = ldd_output.partition("\n")[0]
+            ConanOutput(scope="detect_api").warning(
+                f"detect_musl_libc() did not detect musl libc in the first line of output from '{ldd}': '{first_line}'"
+            )
+            return None
+        return version
+    except Exception as e:
+        ConanOutput(scope="detect_api").debug(
+            f"Couldn't determine the musl libc version from the output of the '{ldd}' command {e}"
+        )
+    finally:
+        try:
+            os.unlink(tmp_file)
+        except OSError:
+            pass
+    return None
+
+
+def detect_libc(ldd="/usr/bin/ldd"):
+    if platform.system() != "Linux":
+        ConanOutput(scope="detect_api").warning(
+            f"detect_libc() is only supported on Linux currently"
+        )
+        return None, None
+    version = _detect_gnu_libc(ldd)
+    if version is not None:
+        return "gnu", version
+    version = _detect_musl_libc(ldd)
+    if version is not None:
+        return "musl", version
+    ConanOutput(scope="detect_api").warning(
+        f"Couldn't detect the libc provider and version"
+    )
+    return None, None
+
+
 def detect_libcxx(compiler, version, compiler_exe=None):
     assert isinstance(version, Version)
 
@@ -186,7 +273,7 @@ def detect_libcxx(compiler, version, compiler_exe=None):
     elif compiler == "mcst-lcc":
         return "libstdc++"
     elif compiler == "intel-cc":
-        return "libstdc++11"    
+        return "libstdc++11"
 
 
 def default_msvc_runtime(compiler):
@@ -276,7 +363,7 @@ def detect_default_compiler():
         command = cc or cxx
         if "clang" in command.lower():
             return _clang_compiler(command)
-        if "gcc" in command or "g++" in command or "c++" in command:
+        if "gnu-cc" in command or "gcc" in command or "g++" in command or "c++" in command:
             gcc, gcc_version, compiler_exe = _gcc_compiler(command)
             if platform.system() == "Darwin" and gcc is None:
                 output.error("%s detected as a frontend using apple-clang. "
@@ -297,7 +384,10 @@ def detect_default_compiler():
 
     if platform.system() == "Windows":
         version = _detect_vs_ide_version()
+        update = detect_msvc_update(version)
         version = {"17": "193", "16": "192", "15": "191"}.get(str(version))  # Map to compiler
+        if version == "193" and update and int(update) >= 10:
+            version = "194"
         if version:
             return 'msvc', Version(version), None
 
@@ -310,7 +400,7 @@ def detect_default_compiler():
         clang, clang_version, compiler_exe = _clang_compiler()  # prioritize clang
         if clang:
             return clang, clang_version, compiler_exe
-        return
+        return None, None, None
     else:
         gcc, gcc_version, compiler_exe = _gcc_compiler()
         if gcc:
@@ -319,7 +409,7 @@ def detect_default_compiler():
 
 
 def default_msvc_ide_version(version):
-    version = {"193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     if version:
         return Version(version)
 

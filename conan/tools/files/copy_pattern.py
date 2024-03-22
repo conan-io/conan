@@ -2,6 +2,7 @@ import fnmatch
 import os
 import shutil
 
+from conans.errors import ConanException
 from conans.util.files import mkdir
 
 
@@ -26,8 +27,12 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
            ``True``
     :return: list of copied files
     """
-    assert src != dst
-    assert not pattern.startswith("..")
+    if src == dst:
+        raise ConanException("copy() 'src' and 'dst' arguments must have different values")
+    if pattern.startswith(".."):
+        raise ConanException("copy() it is not possible to use relative patterns starting with '..'")
+    if src is None:
+        raise ConanException("copy() received 'src=None' argument")
 
     # This is necessary to add the trailing / so it is not reported as symlink
     src = os.path.join(src, "")
@@ -112,7 +117,10 @@ def _copy_files(files, src, dst, keep_path):
         abs_src_name = os.path.join(src, filename)
         filename = filename if keep_path else os.path.basename(filename)
         abs_dst_name = os.path.normpath(os.path.join(dst, filename))
-        os.makedirs(os.path.dirname(abs_dst_name), exist_ok=True)
+        parent_folder = os.path.dirname(abs_dst_name)
+        if parent_folder:  # There are cases where this folder will be empty for relative paths
+            os.makedirs(parent_folder, exist_ok=True)
+
         if os.path.islink(abs_src_name):
             linkto = os.readlink(abs_src_name)  # @UndefinedVariable
             try:

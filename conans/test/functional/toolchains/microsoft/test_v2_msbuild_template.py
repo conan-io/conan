@@ -45,14 +45,14 @@ def test_msbuild_lib_2022():
     client.run("create . -s compiler.version=191 -c tools.microsoft.msbuild:vs_version=17")
     assert "hello/0.1: Hello World Release!" in client.out
     # This is the default compiler.version=191 in conftest
-    assert "Visual Studio 2022" in client.out
+    assert "Activating environment Visual Studio 17" in client.out
     assert "hello/0.1: _MSC_VER191" in client.out
 
     # Create works
     client.run("create . -s compiler.version=193")
     assert "hello/0.1: Hello World Release!" in client.out
     # This is the default compiler.version=191 in conftest
-    assert "Visual Studio 2022" in client.out
+    assert "Activating environment Visual Studio 17" in client.out
     assert "hello/0.1: _MSC_VER193" in client.out
 
 
