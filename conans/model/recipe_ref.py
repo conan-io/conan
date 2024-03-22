@@ -149,7 +149,7 @@ class RecipeReference:
         if self.channel and validation_pattern.match(self.channel) is None:
             raise ConanException(f"Invalid package channel '{self.channel}'")
 
-        # Warn if they use .+- in the name/user/channel, as it can be problematic for generators
+         # Warn if they use .+ in the name/user/channel, as it can be problematic for generators
         pattern = re.compile(r'[.+]')
         if pattern.search(self.name):
             ConanOutput().warning(f"Name containing special chars is discouraged '{self.name}'")
