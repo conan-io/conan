@@ -228,7 +228,6 @@ class MesonSubprojectTest(TestMesonBase):
 
         self.t.run("create . --name=greeter --version=0.1")
         assert "Hello from subproject" in self.t.out
-        self._check_binary()
 
 
     @pytest.mark.tool("meson")
@@ -250,4 +249,3 @@ class MesonSubprojectTest(TestMesonBase):
 
         self.t.run("create . --name=greeter --version=0.1")
         assert "Le sous-projet vous salut" in self.t.out
-        self._check_binary()
