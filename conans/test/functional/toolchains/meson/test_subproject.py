@@ -31,7 +31,7 @@ _conanfile_py = textwrap.dedent("""
 
         def generate(self):
             tc = MesonToolchain(self)
-            tc.subproject_options["hello"] = [{'french': self.options.use_french}]
+            tc.subproject_options["hello"] = [{'french': str(self.options.use_french)}]
             tc.generate()
 
         def build(self):
