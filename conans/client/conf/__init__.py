@@ -100,7 +100,7 @@ compiler:
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
     msvc:
-        version: [170, 180, 190, 191, 192, 193]
+        version: [170, 180, 190, 191, 192, 193, 194]
         update: [null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
         runtime: [static, dynamic]
         runtime_type: [Debug, Release]
@@ -114,7 +114,7 @@ compiler:
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
-        runtime_version: [null, v140, v141, v142, v143]
+        runtime_version: [null, v140, v141, v142, v143, v144]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1",
                   "10.0", "11.0", "12.0", "13", "13.0", "13.1", "14", "14.0", "15", "15.0"]

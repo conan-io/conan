@@ -59,7 +59,8 @@ def msvc_version_to_vs_ide_version(version):
                 '190': '14',
                 '191': '15',
                 '192': '16',
-                '193': '17'}
+                '193': '17',
+                '194': '17'}  # Note both 193 and 194 belong to VS 17 2022
     return _visuals[str(version)]
 
 
@@ -75,7 +76,8 @@ def msvc_version_to_toolset_version(version):
                 '190': 'v140',
                 '191': 'v141',
                 '192': 'v142',
-                "193": 'v143'}
+                "193": 'v143',
+                "194": 'v144'}
     return toolsets.get(str(version))
 
 
@@ -124,16 +126,25 @@ class VCVars:
             vs_version = {"v140": "14",
                           "v141": "15",
                           "v142": "16",
-                          "v143": "17"}.get(toolset_version)
+                          "v143": "17",
+                          "v144": "17"}.get(toolset_version)
             if vs_version is None:
-                raise ConanException("Visual Studio Runtime version (v140-v143) not defined")
+                raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
             vcvars_ver = {"v140": "14.0",
                           "v141": "14.1",
                           "v142": "14.2",
-                          "v143": "14.3"}.get(toolset_version)
+                          "v143": "14.3",
+                          "v144": "14.4"}.get(toolset_version)
         else:
             vs_version = vs_ide_version(conanfile)
-            vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
+            if int(vs_version) <= 14:
+                vcvars_ver = None
+            else:
+                compiler_version = str(conanfile.settings.compiler.version)
+                compiler_update = conanfile.settings.get_safe("compiler.update", "")
+                # The equivalent of compiler 19.26 is toolset 14.26
+                vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
+
         vcvarsarch = _vcvars_arch(conanfile)
 
         winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
@@ -177,7 +188,6 @@ class VCVars:
             _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
 
 
-
 def _create_deactivate_vcvars_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
     message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
@@ -188,6 +198,7 @@ def _create_deactivate_vcvars_file(conanfile, filename):
         content = f"echo {message}"
     path = os.path.join(conanfile.generators_folder, deactivate_filename)
     save(path, content)
+
 
 def vs_ide_version(conanfile):
     """
@@ -314,18 +325,6 @@ def _vcvars_arch(conanfile):
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
 
     return arch
-
-
-def _vcvars_vers(conanfile, compiler, vs_version):
-    if int(vs_version) <= 14:
-        return None
-
-    assert compiler == "msvc"
-    # Code similar to CMakeToolchain toolset one
-    compiler_version = str(conanfile.settings.compiler.version)
-    # The equivalent of compiler 192 is toolset 14.2
-    vcvars_ver = "14.{}".format(compiler_version[-1])
-    return vcvars_ver
 
 
 def is_msvc(conanfile, build_context=False):
