@@ -35,12 +35,6 @@ Conan is a package manager for C and C++ developers:
 This is the **developer/maintainer** documentation. For user documentation, go to https://docs.conan.io
 
 
-| **develop2**            |
-|-------------------------|
-| [![Build Status Develop](https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop)](https://ci.conan.io/blue/organizations/jenkins/ConanTestSuitev2/activity)  |
-
-
-
 ## Setup
 
 You can run Conan from source in Windows, MacOS, and Linux:
@@ -79,9 +73,9 @@ You can run Conan from source in Windows, MacOS, and Linux:
 
 
 Feedback and contribution are always welcome in this project.
-Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md).
+Please read our [contributing guide](https://github.com/conan-io/conan/blob/develop2/.github/CONTRIBUTING.md).
 Also, if you plan to contribute, please add some testing for your changes. You can read the [Conan
-tests guidelines section](https://github.com/conan-io/conan/blob/develop/conans/test/README.md) for
+tests guidelines section](https://github.com/conan-io/conan/blob/develop2/conans/test/README.md) for
 some advice on how to write tests for Conan.
 
 ### Running the tests
