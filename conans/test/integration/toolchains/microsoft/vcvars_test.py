@@ -51,6 +51,7 @@ def test_vcvars_generator_skip():
     client.run('install . -pr=profile')
     assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
+
 @pytest.mark.skipif(platform.system() not in ["Linux"], reason="Requires Linux")
 def test_vcvars_generator_skip_on_linux():
     """
@@ -64,6 +65,7 @@ def test_vcvars_generator_skip_on_linux():
     client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
                '-s compiler.runtime=dynamic')
     assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
+
 
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
 def test_vcvars_generator_string():
@@ -140,6 +142,26 @@ def test_vcvars_winsdk_version():
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  amd64 8.1 -vcvars_ver=14.3' in vcvars
 
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_vcvars_compiler_update():
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class TestConan(ConanFile):
+            generators = "VCVars"
+            settings = "os", "compiler", "arch", "build_type"
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
+               '-s compiler.cppstd=14 -s compiler.runtime=static '
+               '-s compiler.update=3')
+
+    vcvars = client.load("conanvcvars.bat")
+    assert 'vcvarsall.bat"  amd64 -vcvars_ver=14.33' in vcvars
+
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_deactivate_vcvars_message():
     client = TestClient()
@@ -155,6 +177,7 @@ def test_deactivate_vcvars_message():
     assert "[vcvarsall.bat] Environment initialized" in client.out
     client.run_command(r'deactivate_conanvcvars.bat')
     assert "vcvars env cannot be deactivated" in client.out
+
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows Powershell")
 def test_deactivate_vcvars_with_powershell():
