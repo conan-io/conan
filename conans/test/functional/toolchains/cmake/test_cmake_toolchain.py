@@ -1833,7 +1833,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
     profile_release = textwrap.dedent(r"""
         include(default)
         [conf]
-        tools.build:defines=["answer=42"]
+        tools.build:defines=["conan_test_answer=42", "conan_test_other=24"]
         tools.build:cxxflags=["/Zc:__cplusplus"]
         """)
     profile_debug = textwrap.dedent(r"""
@@ -1841,7 +1841,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
         [settings]
         build_type=Debug
         [conf]
-        tools.build:defines=["answer=123"]
+        tools.build:defines=["conan_test_answer=123"]
         tools.build:cxxflags=["/W4"]
         """)
 
@@ -1868,10 +1868,13 @@ def test_cmake_toolchain_cxxflags_multi_config():
         #include <stdio.h>
 
         #define STR(x)   #x
-        #define SHOW_DEFINE(x) printf("%s=%s\n", #x, STR(x))
+        #define SHOW_DEFINE(x) printf("DEFINE %s=%s!\n", #x, STR(x))
 
         int main() {
-            SHOW_DEFINE(answer);
+            SHOW_DEFINE(conan_test_answer);
+            #ifdef conan_test_other
+            SHOW_DEFINE(conan_test_other);
+            #endif
             char a = 123L;  // to trigger warnings
 
             #if __cplusplus
@@ -1902,9 +1905,11 @@ def test_cmake_toolchain_cxxflags_multi_config():
         assert "warning C4189" in c.out
 
     c.run_command(r"build\Release\example.exe")
-    assert 'answer=42' in c.out
+    assert 'DEFINE conan_test_answer=42!' in c.out
+    assert 'DEFINE conan_test_other=24!' in c.out
     assert "CPLUSPLUS: __cplusplus20" in c.out
 
     c.run_command(r"build\Debug\example.exe")
-    assert 'answer=123' in c.out
+    assert 'DEFINE conan_test_answer=123' in c.out
+    assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
