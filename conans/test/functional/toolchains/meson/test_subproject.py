@@ -154,6 +154,7 @@ _test_package_cmake_lists = textwrap.dedent("""
     """)
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.tool("meson")
 def test_subproject():
     client = TestClient()
