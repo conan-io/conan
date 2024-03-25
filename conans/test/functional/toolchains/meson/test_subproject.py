@@ -167,7 +167,7 @@ def test_subproject():
                  os.path.join("subprojects", "hello", "include", "hello.h"): _hello_h,
                  os.path.join("subprojects", "hello", "hello.c"): _hello_c,
                  os.path.join("subprojects", "hello", "meson.build"): _meson_subproject_build,
-                 os.path.join("subprojects", "hello", "meson.options"): _meson_subproject_options,
+                 os.path.join("subprojects", "hello", "meson_options.txt"): _meson_subproject_options,
                  os.path.join("test_package", "conanfile.py"): _test_package_conanfile_py,
                  os.path.join("test_package", "CMakeLists.txt"): _test_package_cmake_lists,
                  os.path.join("test_package", "src", "test_package.c"): test_package_c})
