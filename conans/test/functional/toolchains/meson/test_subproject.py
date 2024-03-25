@@ -42,6 +42,12 @@ _conanfile_py = textwrap.dedent("""
         def package(self):
             meson = Meson(self)
             meson.install()
+            # https://mesonbuild.com/FAQ.html#why-does-building-my-project-with-msvc-output-static-libraries-called-libfooa
+            if self.settings.compiler == 'msvc' and not self.options.shared:
+                shutil.move(os.path.join(self.package_folder, "lib", "libhello.a"),
+                            os.path.join(self.package_folder, "lib", "hello.lib"))
+                shutil.move(os.path.join(self.package_folder, "lib", "libgreeter.a"),
+                            os.path.join(self.package_folder, "lib", "greeter.lib"))
 
         def package_info(self):
             self.cpp_info.components["hello"].libs = ['hello']
