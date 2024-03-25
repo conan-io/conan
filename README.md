@@ -127,7 +127,7 @@ OK
 To run specific tests, you can specify the test name too, something like:
 
 ```bash
-$ python -m pytest conans/test/unittests/client/cmd/export_test.py::ExportTest::test_export_warning -s
+$ python -m pytest conans/test/functional/command/export_test.py::TestRevisionModeSCM::test_revision_mode_scm -s
 ```
 
 The `-s` argument can be useful to see some output that otherwise is captured by *pytest*.
