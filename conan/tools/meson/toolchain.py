@@ -154,9 +154,8 @@ class MesonToolchain(object):
         self.preprocessor_definitions = {}
         # Add all the default dirs
         self.project_options.update(self._get_default_dirs())
-
+        #: Dict-like object that defines Meson ``subproject options``.
         self.subproject_options = {}
-
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
         #: Defines the Meson ``build.pkg_config_path`` variable (build context)
@@ -416,6 +415,7 @@ class MesonToolchain(object):
             "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
+            # https://mesonbuild.com/Subprojects.html#build-options-in-subproject
             "subproject_options": subproject_options.items(),
             # https://mesonbuild.com/Builtin-options.html#directories
             # https://mesonbuild.com/Machine-files.html#binaries
