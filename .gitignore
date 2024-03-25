@@ -105,6 +105,10 @@ Session.vim
 .sudo_as_admin_successful
 .noseids
 
+# Tools and data for tests
+/test/tools/
+T:/
+
 # add excluded
 !conans/client/build
 !conan/tools/build

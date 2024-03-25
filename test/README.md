@@ -84,7 +84,7 @@ Please, if you need to run several combinations of the same testing code use par
 
 ## Running tests locally
 
-If you want to run the Coman test suite locally, please check the [README on the front
+If you want to run the Conan test suite locally, please check the [README on the front
 page](https://github.com/conan-io/conan#running-the-tests).
 
 
@@ -99,10 +99,5 @@ To install mingw64 and mingw32 open a msys2 terminal and type:
 
 ```
 $ pacman -Syuu
-$ pacman -S mingw-w64-x86_64-toolchain
-$ pacman -S mingw-w64-i686-toolchain
-$ pacman -S base-devel gcc
-$ pacman -S autoconf-wrapper
-$ pacman -S automake
-
+$ pacman -S mingw-w64-x86_64-toolchain mingw-w64-i686-toolchain base-devel gcc autoconf-wrapper automake
 ```

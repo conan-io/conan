@@ -8,3 +8,7 @@ PyJWT
 pluginbase
 docker>=5.0.0, <6.0.0
 setuptools
+requests
+meson
+ninja==1.10.2
+scons

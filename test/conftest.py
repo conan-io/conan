@@ -1,12 +1,18 @@
 import os
 import pathlib
 import platform
+import re
+import shutil
+import tempfile
 import uuid
 from shutil import which
 
 import pytest
+import requests
 
 from conans.client.conf.detect_vs import vswhere
+from conans.model.version import Version
+from conan.tools.files import unzip
 
 """
 To override these locations with your own in your dev machine:
@@ -21,7 +27,7 @@ tools_locations = {
     'svn': {"disabled": True},
     'cmake': {
         "default": "3.19",
-        "3.15": {},
+        "3.15": {"download": True},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
         "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-win64-x64/bin"}},
@@ -45,6 +51,8 @@ tools_locations = {
 MacOS_arm = all([platform.system() == "Darwin", platform.machine() == "arm64"])
 homebrew_root = "/opt/homebrew" if MacOS_arm else "/usr/local"
 
+# Location for automatically downloaded tools
+tools_root = os.path.join(os.path.dirname(__file__), "tools")
 
 tools_locations = {
     "clang": {"disabled": True},
@@ -66,40 +74,16 @@ tools_locations = {
     'autotools': {"exe": "autoconf"},
     'cmake': {
         "default": "3.15",
-        "3.15": {
-            "path": {'Windows': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.15.7/bin',
-                     'Linux': '/usr/share/cmake-3.15.7/bin'}
-        },
-        "3.16": {
-            "path": {'Windows': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.16.9/bin',
-                     'Linux': '/usr/share/cmake-3.16.9/bin'}
-        },
-        "3.17": {
-            "path": {'Windows': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.17.5/bin',
-                     'Linux': '/usr/share/cmake-3.17.5/bin'}
-        },
-        "3.19": {
-            "path": {'Windows': 'C:/cmake/cmake-3.19.7-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.19.7/bin',
-                     'Linux': '/usr/share/cmake-3.19.7/bin'}
-        },
-        "3.23": {
-            "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
-                     'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
-                     'Linux': "/usr/share/cmake-3.23.5/bin"}
-        },
-        "3.28": {
-            "disabled": True  # TODO: Still not in CI
-        }
+        "3.15": {"download": True},
+        "3.16": {"download": True},
+        "3.17": {"download": True},
+        "3.19": {"download": True},
+        "3.23": {"download": True},
+        "3.28": {"download": True},
     },
     'ninja': {
         "default": "1.10.2",
-        "1.10.2": {
-            "path": {'Windows': 'C:/Tools/ninja/1.10.2'}
-        }
+        "1.10.2": {}  # Installed via pip
     },
     # This is the non-msys2 mingw, which is 32 bits x86 arch
     'mingw': {
@@ -156,19 +140,13 @@ tools_locations = {
     },
     'bazel': {
         "default": "6.3.2",
-        "6.3.2": {"path": {'Linux': '/usr/share/bazel-6.3.2/bin',
-                           'Windows': 'C:/bazel-6.3.2/bin',
-                           'Darwin': '/Users/jenkins/bazel-6.3.2/bin'}},
-        "7.1.2": {"path": {'Linux': '/usr/share/bazel-7.1.2/bin',
-                           'Windows': 'C:/bazel-7.1.2/bin',
-                           'Darwin': '/Users/jenkins/bazel-7.1.2/bin'}},
+        "6.3.2": {"download": True},
+        "7.1.2": {"download": True},
     },
     'premake': {
         "exe": "premake5",
-        "default": "5.0.0",
-        "5.0.0": {
-            "path": {'Linux': '/usr/local/bin/premake5'}
-        }
+        "default": "5.0.0-beta2",
+        "5.0.0-beta2": {"download": True}
     },
     'xcodegen': {"platform": "Darwin"},
     'apt_get': {"exe": "apt-get"},
@@ -181,7 +159,11 @@ tools_locations = {
             "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
         }
     },
-    "qbs": {"disabled": True},
+    "qbs": {
+        "disabled": True,
+        "default": "1.24.1",
+        "1.24.1": {"download": True},
+    },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",
@@ -252,29 +234,27 @@ def _get_individual_tool(name, version):
         if name == "visual_studio":
             if vswhere():  # TODO: Missing version detection
                 return None, None
-
-        tool_path = tool_version.get("path", {}).get(tool_platform)
-        tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
-        # To allow to skip for a platform, we can put the path to None
+        if tool_version.get("download"):
+            tool_path = _download_tool(name, version)
+        else:
+            tool_path = tool_version.get("path", {}).get(tool_platform)
+            tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
+        # To allow to skip for a platform, we can put the path to "skip-tests"
         # "cmake": { "3.23": {
         #               "path": {'Windows': 'C:/cmake/cmake-3.23.1-win64-x64/bin',
         #                        'Darwin': '/Users/jenkins/cmake/cmake-3.23.1/bin',
-        #                        'Linux': None}}
+        #                        'Linux': "skip-tests"}}
         #          }
         if tool_path == "skip-tests":
             return False
         elif tool_path is not None and not os.path.isdir(tool_path):
             return True
+    elif version is not None:  # if the version is specified, it should be in the conf
+        return True
     else:
-        if version is not None:  # if the version is specified, it should be in the conf
-            return True
         tool_path = None
 
-    try:
-        tool_env = tools_environments[name][tool_platform]
-    except KeyError:
-        tool_env = None
-
+    tool_env = tools_environments.get(name, {}).get(tool_platform)
     cached = tool_path, tool_env
 
     # Check this particular tool is installed
@@ -359,3 +339,165 @@ def pytest_runtest_setup(item):
         item.old_environ = dict(os.environ)
         tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
+
+
+def _download_tool(name, version):
+    if name == "bazel":
+        return _download_bazel(version)
+    elif name == "cmake":
+        return _download_cmake(version)
+    elif name == "premake":
+        return _download_premake(version)
+    elif name == "qbs":
+        return _download_qbs(version)
+    raise Exception(f"Automatic downloads are not supported for '{name}'")
+
+def _download_and_extract(url, output_dir):
+    r = requests.get(url, allow_redirects=True)
+    r.raise_for_status()
+    suffix = ".zip" if url.endswith(".zip") else ".tar.gz"
+    with tempfile.NamedTemporaryFile(suffix=suffix) as f:
+        f.write(r.content)
+        unzip(None, f.name, output_dir, strip_root=True)
+
+def _get_bazel_download_url(version):
+    file_os = platform.system().lower()
+    if file_os not in ["windows", "darwin", "linux"]:
+        raise Exception(f"Bazel is not available for {platform.system()}")
+    if platform.machine() in ["x86_64", "AMD64"]:
+        file_arch = "x86_64"
+    elif platform.machine().lower() in ["aarch64", "arm64"]:
+        file_arch = "aarch64"
+    else:
+        raise Exception(f"Bazel is not available for {platform.system()} {platform.machine()}")
+    file = f"bazel-{version}-{file_os}-{file_arch}"
+    if file_os == "windows":
+        file += ".exe"
+    return f"https://github.com/bazelbuild/bazel/releases/download/{version}/{file}"
+
+def _download_bazel(version):
+    """
+    Download Bazel to test/tools/bazel/<version> and return the path to the binary directory.
+    """
+    output_dir = os.path.join(tools_root, "bazel", version)
+    if os.path.exists(output_dir):
+        return output_dir
+    url = _get_bazel_download_url(version)
+    os.makedirs(output_dir, exist_ok=True)
+    r = requests.get(url, allow_redirects=True)
+    r.raise_for_status()
+    filename = "bazel.exe" if platform.system() == "Windows" else "bazel"
+    path = os.path.join(output_dir, filename)
+    with open(path, "wb") as f:
+        f.write(r.content)
+    if platform.system() != "Windows":
+        os.chmod(path, os.stat(path).st_mode | 0o111)
+    return output_dir
+
+def _get_cmake_download_url(version):
+    assert isinstance(version, str)
+    assert re.fullmatch(r"\d+\.\d+", version)
+    # Latest versions as of 2024-06
+    full_version = {
+        "3.15": "3.15.7",
+        "3.16": "3.16.9",
+        "3.17": "3.17.5",
+        "3.19": "3.19.8",
+        "3.23": "3.23.5",
+        "3.28": "3.28.6",
+    }[version]
+    version = Version(version)
+    file_os = None
+    file_arch = None
+    archive_format = "tar.gz"
+    if platform.system() == "Windows":
+        file_os = "win64" if version >= "3.19" else "windows"
+        archive_format = "zip"
+        if platform.machine() == "AMD64":
+            file_arch = "x64" if version >= "3.20" else "x64_x64"
+        elif platform.machine() == "ARM64" and version >= "3.24":
+            file_arch = "arm64"
+    elif platform.system() == "Darwin":
+        if version >= "3.19":
+            file_os = "macos"
+            file_arch = "universal"
+        elif platform.machine() == "x86_64":
+            file_os = "Darwin"
+            file_arch = "x86_64"
+    elif platform.system() == "Linux":
+        file_os = "linux" if version >= "3.20" else "Linux"
+        if platform.machine() in ["x86_64", "AMD64"]:
+            file_arch = "x86_64"
+        elif platform.machine().lower() in ["aarch64", "arm64"] and version >= "3.19":
+            file_arch = "aarch64"
+    if not file_os or not file_arch:
+        raise Exception(
+            f"CMake v{full_version} is not available for {platform.system()} {platform.machine()}"
+        )
+    file = f"cmake-{full_version}-{file_os}-{file_arch}.{archive_format}"
+    url = f"https://github.com/Kitware/CMake/releases/download/v{full_version}/{file}"
+    return url
+
+
+def _download_cmake(version):
+    """
+    Download CMake to test/tools/cmake/<version> and return the path to the binary directory.
+    """
+    output_dir = os.path.join(tools_root, "cmake", version)
+    if os.path.exists(output_dir):
+        return os.path.join(output_dir, "bin")
+    url = _get_cmake_download_url(version)
+    _download_and_extract(url, output_dir)
+    # Save some space
+    shutil.rmtree(os.path.join(output_dir, "doc"))
+    shutil.rmtree(os.path.join(output_dir, "man"))
+    return os.path.join(output_dir, "bin")
+
+def _get_premake_download_url(version):
+    if platform.system() == "Darwin":
+        file = f"premake-{version}-macosx.tar.gz"
+    elif platform.system() == "Linux" and platform.machine() == "x86_64":
+        file = f"premake-{version}-linux.tar.gz"
+    elif platform.system() == "Windows" and platform.machine() == "AMD64":
+        file = f"premake-{version}-windows.zip"
+    else:
+        raise Exception(
+            f"Premake v{version} is not available for {platform.system()} {platform.machine()}"
+        )
+    return f"https://github.com/premake/premake-core/releases/download/v{version}/{file}"
+
+def _download_premake(version):
+    """
+    Download Premake to test/tools/premake/<version> and return the path to the binary directory.
+    """
+    output_dir = os.path.join(tools_root, "premake", version)
+    if os.path.exists(output_dir):
+        return output_dir
+    url = _get_premake_download_url(version)
+    _download_and_extract(url, output_dir)
+    return output_dir
+
+def _get_qbs_download_url(version):
+    if platform.system() == "Linux" and platform.machine() == "x86_64":
+        file = f"qbs-linux-x86_64-{version}.tar.gz"
+    elif platform.system() == "Windows" and platform.machine() == "AMD64":
+        file = f"qbs-windows-x86_64-{version}.zip"
+    elif platform.system() == "Darwin":
+        raise Exception(f"Qbs v{version} must be installed via MacPorts or Homebrew on macOS")
+    else:
+        raise Exception(
+            f"Qbs v{version} is not available for {platform.system()} {platform.machine()}"
+        )
+    return f"https://download.qt.io/official_releases/qbs/{version}/{file}"
+
+
+def _download_qbs(version):
+    """
+    Download CMake to test/tools/qbs/<version> and return the path to the binary directory.
+    """
+    output_dir = os.path.join(tools_root, "qbs", version)
+    if os.path.exists(output_dir):
+        return os.path.join(output_dir, "bin")
+    url = _get_qbs_download_url(version)
+    _download_and_extract(url, output_dir)
+    return os.path.join(output_dir, "bin")
