@@ -134,13 +134,14 @@ class XcodeDeps(object):
             return list(OrderedDict.fromkeys(merged).keys())
 
         # TODO: Investigate if paths can be made relative to "root" folder
+        link_prefix = self._conanfile.conf.get("tools.build:linkprefix", default="-l")
         fields = {
             'pkg_name': pkg_name,
             'comp_name': comp_name,
             'root': package_folder,
             'include_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("includedirs")),
             'lib_dirs': " ".join('"{}"'.format(p) for p in _merged_vars("libdirs")),
-            'libs': " ".join("-l{}".format(lib) for lib in _merged_vars("libs")),
+            'libs': " ".join("{}{}".format(link_prefix, lib) for lib in _merged_vars("libs")),
             'system_libs': " ".join("-l{}".format(sys_lib) for sys_lib in _merged_vars("system_libs")),
             'frameworkdirs': " ".join('"{}"'.format(p) for p in _merged_vars("frameworkdirs")),
             'frameworks': " ".join("-framework {}".format(framework) for framework in _merged_vars("frameworks")),

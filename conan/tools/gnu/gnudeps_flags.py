@@ -77,13 +77,14 @@ class GnuDepsFlags(object):
         result = []
 
         is_visual = is_msvc(self._conanfile)
+        link_prefix = self._conanfile.conf.get("tools.build:linkprefix", default="-l")
         for library in libraries:
             if is_visual:
                 if not library.endswith(".lib"):
                     library += ".lib"
                 result.append(library)
             else:
-                result.append("-l%s" % library)
+                result.append("%s%s" % (link_prefix, library))
         return result
 
     def _adjust_path(self, path):
