@@ -76,3 +76,53 @@ def test_deploy_local():
     # I can exclude the current consumer, it won't fail
     c.run("install . --deployer-package=!& --deployer-package=*")
     assert "Install finished successfully" in c.out
+
+
+def test_deploy_method_tool_requires():
+    # Test to validate https://github.com/conan-io/docs/issues/3649
+    c = TestClient()
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            type = "application"
+
+            def package(self):
+               with chdir(self, self.package_folder):
+                   echo = "@echo off\necho MYTOOL RUNNING!!"
+                   save(self, "mytool.bat", echo)
+                   save(self, "mytool.sh", echo)
+                   os.chmod("mytool.sh", 0o777)
+
+            def package_info(self):
+               self.buildenv_info.prepend_path("PATH", self.package_folder)
+        """)
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            tool_requires = "tool/0.1"
+            settings = "os"
+
+            def deploy(self):
+                self.output.info(f"DEPLOY {os.getcwd()}")
+                venv = VirtualBuildEnv(self)
+                with venv.vars().apply():
+                    ext = "bat" if self.settings.os == "Windows" else "sh"
+                    self.run(f"mytool.{ext}")
+        """)
+    c.save({"tool/conanfile.py": tool,
+            "pkg/conanfile.py": conanfile})
+
+    c.run("create tool")
+    c.run("create pkg")
+
+    # install can deploy all
+    c.run("install --requires=pkg/0.1 -c:b tools.graph:skip_binaries=False --deployer-package=*")
+    assert "MYTOOL RUNNING!!" in c.out
