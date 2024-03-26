@@ -180,14 +180,22 @@ class CacheAPI:
                 pkg_layout = cache.get_or_create_pkg_layout(pref)
                 pkg_folder = pref_bundle["package_folder"]
                 out.info(f"Restore: {pref} in {pkg_folder}")
-                # We need to put the package in the final location in the cache
-                shutil.move(os.path.join(cache.cache_folder, pkg_folder), pkg_layout.package())
+                if pkg_layout.package() != os.path.join(cache.cache_folder, pkg_folder):
+                    # We need to put the package in the final location in the cache
+                    if os.path.exists(pkg_layout.package()):
+                        shutil.rmtree(pkg_layout.package())
+                    shutil.move(os.path.join(cache.cache_folder, pkg_folder), pkg_layout.package())
+                    pref_bundle["package_folder"] = os.path.relpath(pkg_layout.package(), cache.cache_folder)
                 metadata_folder = pref_bundle.get("metadata_folder")
                 if metadata_folder:
                     out.info(f"Restore: {pref} metadata in {metadata_folder}")
-                    # We need to put the package in the final location in the cache
-                    shutil.move(os.path.join(cache.cache_folder, metadata_folder),
-                                pkg_layout.metadata())
+                    if pkg_layout.metadata() != os.path.join(cache.cache_folder, metadata_folder):
+                        # We need to put the package in the final location in the cache
+                        if os.path.exists(pkg_layout.metadata()):
+                            shutil.rmtree(pkg_layout.metadata())
+                        shutil.move(os.path.join(cache.cache_folder, metadata_folder),
+                                    pkg_layout.metadata())
+                        pref_bundle["metadata_folder"] = os.path.relpath(pkg_layout.metadata(), cache.cache_folder)
 
         return package_list
 
