@@ -130,7 +130,7 @@ class DetectCompilersTest(unittest.TestCase):
         c.run("profile detect --name=./MyProfile2 --force")  # will not raise error
         assert "build_type=Release" in c.load("MyProfile2")
         c.save({"MyProfile2": "potato"})
-        c.run("profile detect --name=./MyProfile2 --nonexistent")  # wont raise, won't overwrite
+        c.run("profile detect --name=./MyProfile2 --exist-ok")  # wont raise, won't overwrite
         assert "Profile './MyProfile2' already exists, skipping detection" in c.out
         assert c.load("MyProfile2") == "potato"
 
