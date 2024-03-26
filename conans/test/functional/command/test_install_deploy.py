@@ -435,3 +435,28 @@ def test_not_deploy_absolute_paths():
 
     env = c.load("conanbuildenv-release-x86_64.sh")
     assert f'export MYPATH="{some_abs_path}/mypath"' in env
+
+
+class TestRuntimeDeployer:
+    def test_runtime_deploy(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy
+           class Pkg(ConanFile):
+               def package(self):
+                   copy(self, "*.so", src=self.build_folder, dst=self.package_folder)
+                   copy(self, "*.dll", src=self.build_folder, dst=self.package_folder)
+           """)
+        c.save({"pkga/conanfile.py": conanfile,
+                "pkga/lib/pkga.so": "",
+                "pkga/bin/pkga.dll": "",
+                "pkgb/conanfile.py": conanfile,
+                "pkgb/lib/pkgb.so": ""})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        c.run("export-pkg pkgb --name=pkgb --version=1.0")
+        c.run("install --requires=pkga/1.0 --requires=pkgb/1.0 --deployer=runtime_deploy "
+              "--deployer-folder=myruntime -vvv")
+
+        expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
