@@ -154,7 +154,7 @@ class VSDebuggerEnvironment(Block):
 
         if not config_dict:
             return None
-        
+
         vs_debugger_path = ""
         for config, value in config_dict.items():
             vs_debugger_path += f"$<$<CONFIG:{config}>:{value}>"
@@ -613,7 +613,9 @@ class ExtraFlagsBlock(Block):
         {% endif %}
         {% if defines %}
         {% if config %}
-        add_compile_definitions($<$<CONFIG:{{config}}>:{% for define in defines %}" {{ define }}"{% endfor %}>)
+        {% for define in defines %}
+        add_compile_definitions($<$<CONFIG:{{config}}>:"{{ define }}">)
+        {% endfor %}
         {% else %}
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}

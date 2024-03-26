@@ -455,3 +455,28 @@ def test_toolchain_and_compilers_build_context():
     })
     client.run("export tool")
     client.run("create consumer -pr:h host -pr:b build --build=missing")
+
+
+def test_subproject_options():
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.subproject_options["subproject1"] = [{"option1": "enabled"}, {"option2": "disabled"}]
+                tc.subproject_options["subproject2"] = [{"option3": "enabled"}]
+                tc.subproject_options["subproject2"].append({"option4": "disabled"})
+                tc.generate()
+        """)
+    t.save({"conanfile.py": conanfile})
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    assert "[subproject1:project options]" in content
+    assert "[subproject2:project options]" in content
+    assert "option1 = 'enabled'" in content
+    assert "option2 = 'disabled'" in content
+    assert "option3 = 'enabled'" in content
+    assert "option4 = 'disabled'" in content
