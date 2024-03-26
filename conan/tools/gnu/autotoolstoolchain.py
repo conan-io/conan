@@ -1,6 +1,7 @@
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, libcxx_flags
+from conan.tools.apple import is_apple_os
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.build.cross_building import cross_building, get_cross_building_settings
@@ -59,7 +60,7 @@ class AutotoolsToolchain:
             # Build triplet
             self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
-            if os_build == "Macos":
+            if os_build == "Macos" and is_apple_os(self._conanfile):
                 sdk_path = apple_sdk_path(conanfile)
                 apple_arch = to_apple_arch(self._conanfile)
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
