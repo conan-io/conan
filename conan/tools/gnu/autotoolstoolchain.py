@@ -56,7 +56,7 @@ class AutotoolsToolchain:
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
-        self._build = None
+        self._build = self._conanfile.conf.get("tools.gnu:build_triplet")
         self._target = None
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
@@ -78,7 +78,8 @@ class AutotoolsToolchain:
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             # Build triplet
-            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+            if not self._build:
+                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos" and is_apple_os(conanfile):
                 # SDK path is mandatory for cross-building
