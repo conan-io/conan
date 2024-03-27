@@ -166,7 +166,7 @@ class AutotoolsToolchain:
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         if compilers_by_conf:
-            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
+            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC", "rc": "RC"}
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
                     compiler = compilers_by_conf[comp]
