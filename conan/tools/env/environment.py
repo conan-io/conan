@@ -1,5 +1,6 @@
 import os
 import textwrap
+import re
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -81,19 +82,20 @@ class _EnvValue:
     def dumps(self):
         result = []
         path = "(path)" if self._path else ""
+        custom_sep = "" if self._sep == " " else "(sep={})".format(self._sep)
         if not self._values:  # Empty means unset
             result.append("{}=!".format(self._name))
         elif _EnvVarPlaceHolder in self._values:
             index = self._values.index(_EnvVarPlaceHolder)
             for v in self._values[:index]:
-                result.append("{}=+{}{}".format(self._name, path, v))
+                result.append("{}=+{}{}{}".format(self._name, custom_sep, path, v))
             for v in self._values[index+1:]:
-                result.append("{}+={}{}".format(self._name, path, v))
+                result.append("{}+={}{}{}".format(self._name, custom_sep, path, v))
         else:
             append = ""
             for v in self._values:
                 result.append("{}{}={}{}".format(self._name, append, path, v))
-                append = "+"
+                append = "+{}".format(custom_sep)
         return "\n".join(result)
 
     def copy(self):
@@ -604,16 +606,38 @@ class ProfileEnvironment:
     @staticmethod
     def loads(text):
         result = ProfileEnvironment()
+
+        operator_pattern_method_mapping = (
+            (r"\+=([\s]*)\(sep=([^\)]+)\)", "append"),
+            (r"=\+([\s]*)\(sep=([^\)]+)\)", "prepend"),
+            ("+=", "append"),
+            ("=+", "prepend"),
+            ("=!", "unset"),
+            ("=", "define"),
+        )
+
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            for op, method in (("+=", "append"), ("=+", "prepend"),
-                               ("=!", "unset"), ("=", "define")):
-                tokens = line.split(op, 1)
-                if len(tokens) != 2:
-                    continue
-                pattern_name, value = tokens
+            for (op, method) in operator_pattern_method_mapping:
+                if "sep=" in op:
+                    tokens = re.split(op, line)
+                    if len(tokens) != 4:
+                        continue
+                    pattern_name, _, separator, value = tokens
+                    keyword_args = {"separator": separator}
+                else:
+                    tokens = line.split(op, 1)
+                    if len(tokens) != 2:
+                        continue
+                    pattern_name, value = tokens
+                    keyword_args = {}
+                    if value.strip().startswith("(path)"):
+                         value = value.strip()
+                         value = value[6:]
+                         method = method + "_path"
+
                 pattern_name = pattern_name.split(":", 1)
                 if len(pattern_name) == 2:
                     pattern, name = pattern_name
@@ -629,11 +653,7 @@ class ProfileEnvironment:
                 if method == "unset":
                     env.unset(name)
                 else:
-                    if value.strip().startswith("(path)"):
-                        value = value.strip()
-                        value = value[6:]
-                        method = method + "_path"
-                    getattr(env, method)(name, value)
+                    getattr(env, method)(name, value, **keyword_args)
 
                 existing = result._environments.get(pattern)
                 if existing is None:

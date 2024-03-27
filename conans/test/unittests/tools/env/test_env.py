@@ -155,6 +155,11 @@ def test_profile():
         # unset
         MyPath4=!
 
+        # Custom append/prepend
+        MyCustomList=is;+something
+        MyCustomList=+(sep=;+)this
+        MyCustomList+=(sep=;+)weird
+
         # PER-PACKAGE
         mypkg*:MyVar2=MyValue2
         """)
@@ -171,6 +176,7 @@ def test_profile():
         assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
         assert env.get("MyVar4") == ""
         assert env.get("MyVar5") == ''
+        assert env.get("MyCustomList") == 'this;+is;+something;+weird'
 
         env = profile_env.get_profile_env(RecipeReference.loads("mypkg1/1.0"))
         env = env.vars(ConanFileMock())
@@ -356,29 +362,46 @@ class TestProfileEnvRoundTrip:
     def test_append(self):
         myprofile = textwrap.dedent("""
             # define
-            MyVar1+=MyValue1
-            MyPath1 +=(path)/my/path1
+            MyVar+=MyValue1
+            MyVar+=MyValue2
+            MyPath+=(path)/my/path1
+            MyPath += (path)/my/path2
+            MyList+=(sep=;)item1
+            MyList += (sep=;)item2
             """)
 
         env = ProfileEnvironment.loads(myprofile)
         text = env.dumps()
         assert text == textwrap.dedent("""\
-            MyVar1+=MyValue1
-            MyPath1+=(path)/my/path1
+            MyVar+=MyValue1
+            MyVar+=MyValue2
+            MyPath+=(path)/my/path1
+            MyPath+=(path)/my/path2
+            MyList+=(sep=;)item1
+            MyList+=(sep=;)item2
             """)
 
     def test_prepend(self):
         myprofile = textwrap.dedent("""
             # define
-            MyVar1=+MyValue1
-            MyPath1=+(path)/my/path1
+            MyVar=+MyValue1
+            MyVar=+MyValue2
+            MyPath =+ (path)/my/path1
+            MyPath=+(path)/my/path2
+            MyList =+ (sep=++)item1
+            MyList=+(sep=++)item2
             """)
 
         env = ProfileEnvironment.loads(myprofile)
         text = env.dumps()
+        # XXX: This seems wrong?
         assert text == textwrap.dedent("""\
-            MyVar1=+MyValue1
-            MyPath1=+(path)/my/path1
+            MyVar=+MyValue2
+            MyVar=+MyValue1
+            MyPath=+(path)/my/path2
+            MyPath=+(path)/my/path1
+            MyList=+(sep=++)item2
+            MyList=+(sep=++)item1
             """)
 
     def test_combined(self):
@@ -387,6 +410,8 @@ class TestProfileEnvRoundTrip:
             MyVar1+=MyValue12
             MyPath1=+(path)/my/path11
             MyPath1+=(path)/my/path12
+            MyList1=+(sep=;)item11
+            MyList1+=(sep=;)item12
             """)
 
         env = ProfileEnvironment.loads(myprofile)
@@ -396,6 +421,8 @@ class TestProfileEnvRoundTrip:
             MyVar1+=MyValue12
             MyPath1=+(path)/my/path11
             MyPath1+=(path)/my/path12
+            MyList1=+(sep=;)item11
+            MyList1+=(sep=;)item12
             """)
 
     def test_combined2(self):
@@ -404,6 +431,8 @@ class TestProfileEnvRoundTrip:
             MyVar1=+MyValue12
             MyPath1+=(path)/my/path11
             MyPath1=+(path)/my/path12
+            MyList1+=(sep=;)item11
+            MyList1=+(sep=;)item12
             """)
 
         env = ProfileEnvironment.loads(myprofile)
@@ -414,6 +443,8 @@ class TestProfileEnvRoundTrip:
             MyVar1+=MyValue11
             MyPath1=+(path)/my/path12
             MyPath1+=(path)/my/path11
+            MyList1=+(sep=;)item12
+            MyList1+=(sep=;)item11
             """)
 
 
