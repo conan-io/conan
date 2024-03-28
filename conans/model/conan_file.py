@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 from pathlib import Path
 
 from conan.api.output import ConanOutput, Color
@@ -9,7 +10,6 @@ from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.layout import Folders, Infos, Layouts
 from conans.model.options import Options
-
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 
@@ -351,3 +351,23 @@ class ConanFile:
         self.buildenv_info.deploy_base_folder(self.package_folder, deploy_folder)
         self.runenv_info.deploy_base_folder(self.package_folder, deploy_folder)
         self.folders.set_base_package(deploy_folder)
+
+
+@contextmanager
+def use_build_context(conanfile):
+    temp_attrs_copy = {
+        "settings": conanfile.settings.copy(),
+        "_conan_buildenv": conanfile.buildenv.copy(),
+        "_conan_runenv": conanfile.runenv.copy(),
+        "conf": conanfile.conf.copy()
+    }
+    try:
+        conanfile.settings = conanfile.settings_build.copy()
+        # conanfile.settings._frozen = True
+        conanfile._conan_buildenv = conanfile.profile_build.buildenv
+        conanfile._conan_runenv = conanfile.profile_build.runenv
+        conanfile.conf = conanfile.profile_build.conf.get_conanfile_conf(conanfile.ref, conanfile._conan_is_consumer)
+        yield conanfile
+    finally:
+        for attr, value in temp_attrs_copy.items():
+            setattr(conanfile, attr, value)

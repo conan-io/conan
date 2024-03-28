@@ -220,7 +220,7 @@ def test_meson_and_additional_machine_files_composition():
         build_type=Release
 
         [conf]
-        tools.meson.mesontoolchain:extra_machine_files=["myfilename.ini"]
+        tools.meson.mesontoolchain:extra_machine_files=['--native-file "myfilename.ini"']
    """)
     myfilename = textwrap.dedent("""
     [project options]
