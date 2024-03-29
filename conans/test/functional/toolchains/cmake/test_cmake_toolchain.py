@@ -239,12 +239,13 @@ def test_cmake_toolchain_multiple_user_toolchain():
     client.run("create . --name=pkg --version=0.1")
     assert "mytoolchain1.cmake !!!running!!!" in client.out
     assert "mytoolchain2.cmake !!!running!!!" in client.out
+    assert "CMake Warning" not in client.out
 
 
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_no_warnings():
-    """Make sure unitialized variables do not cause any warnings, passing -Werror=dev
-    and --wanr-unitialized, calling "cmake" with conan_toolchain.cmake used to fail
+    """Make sure uninitialized variables do not cause any warnings, passing -Werror=dev
+    and --warn-uninitialized, calling "cmake" with conan_toolchain.cmake used to fail
     """
     # Issue https://github.com/conan-io/conan/issues/10288
     client = TestClient()
@@ -552,6 +553,42 @@ def test_cmake_toolchain_runtime_types_cmake_older_than_3_15():
     dumpbind_cmd = '{} && dumpbin /directives "{}"'.format(vcvars, lib)
     client.run_command(dumpbind_cmd)
     assert "LIBCMTD" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+class TestWinSDKVersion:
+    def test_cmake_toolchain_winsdk_version(self):
+        # This test passes also with CMake 3.28, as long as cmake_minimum_required(VERSION 3.27)
+        # is not defined
+        client = TestClient(path_with_spaces=False)
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        cmake = client.load("CMakeLists.txt")
+        cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
+                 '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
+        client.save({"CMakeLists.txt": cmake})
+        client.run("create . -s arch=x86_64 -s compiler.version=193 "
+                   "-c tools.microsoft:winsdk_version=8.1")
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
+        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64" in client.out
+        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version" not in client.out
+
+    @pytest.mark.tool("cmake", "3.28")
+    @pytest.mark.tool("visual_studio", "17")
+    def test_cmake_toolchain_winsdk_version2(self):
+        # https://github.com/conan-io/conan/issues/15372
+        client = TestClient(path_with_spaces=False)
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        cmake = client.load("CMakeLists.txt")
+        cmake = cmake.replace("cmake_minimum_required(VERSION 3.15)",
+                              "cmake_minimum_required(VERSION 3.27)")
+        cmake += 'message(STATUS "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = ' \
+                 '${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")'
+        client.save({"CMakeLists.txt": cmake})
+        client.run("create . -s arch=x86_64 -s compiler.version=193 "
+                   "-c tools.microsoft:winsdk_version=8.1 "
+                   '-c tools.cmake.cmaketoolchain:generator="Visual Studio 17"')
+        assert "CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION = 8.1" in client.out
+        assert "Conan toolchain: CMAKE_GENERATOR_PLATFORM=x64,version=8.1" in client.out
 
 
 @pytest.mark.tool("cmake", "3.23")
@@ -937,6 +974,10 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("./build/Debug/foo")
     else:
         c.run_command("cmake --preset conan-default")
+        # this second called used to fail
+        # https://github.com/conan-io/conan/issues/13792, CMake ignoring toolchain architecture
+        # and toolset
+        c.run_command("cmake --preset conan-default")
         c.run_command("cmake --build --preset conan-debug")
         c.run_command("ctest --preset conan-debug")
         c.run_command("build\\Debug\\foo")
@@ -952,6 +993,35 @@ def test_cmake_presets_with_conanfile_txt():
         c.run_command("cmake --build --preset conan-release")
         c.run_command("ctest --preset conan-release")
         c.run_command("build\\Release\\foo")
+
+    assert "Hello World Release!" in c.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.23")
+def test_cmake_presets_with_conanfile_txt_ninja():
+    c = TestClient()
+
+    c.run("new cmake_exe -d name=foo -d version=1.0")
+    os.unlink(os.path.join(c.current_folder, "conanfile.py"))
+    c.save({"conanfile.txt": textwrap.dedent("""
+        [generators]
+        CMakeToolchain
+
+        [layout]
+        cmake_layout
+        """)})
+
+    conf = "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    c.run(f"install . {conf}")
+    c.run(f"install . -s build_type=Debug {conf}")
+
+    c.run_command("build\\Release\\generators\\conanbuild.bat && cmake --preset conan-release")
+    c.run_command("build\\Release\\generators\\conanbuild.bat && cmake --preset conan-release")
+    c.run_command("build\\Release\\generators\\conanbuild.bat && cmake --build --preset conan-release")
+    c.run_command("build\\Release\\generators\\conanbuild.bat && ctest --preset conan-release")
+    c.run_command("build\\Release\\foo")
 
     assert "Hello World Release!" in c.out
 
@@ -1352,3 +1422,188 @@ def test_inject_user_toolchain_profile():
                  "CMakeLists.txt": cmake})
     client.run("create . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+
+@pytest.mark.tool("cmake", "3.19")
+def test_redirect_stdout():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    import os
+    from io import StringIO
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, CMakeToolchain
+    from conan.tools.cmake import cmake_layout
+
+    class Pkg(ConanFile):
+        name = "foo"
+        version = "1.0"
+        settings = "os", "arch", "build_type", "compiler"
+        generators = "CMakeToolchain"
+        exports_sources = "CMakeLists.txt", "main.cpp"
+
+        def build(self):
+            cmake = CMake(self)
+
+            config_stdout, config_stderr = StringIO(), StringIO()
+            cmake.configure(stdout=config_stdout, stderr=config_stderr)
+            self.output.info(f"Configure stdout: '{config_stdout.getvalue()}'")
+            self.output.info(f"Configure stderr: '{config_stderr.getvalue()}'")
+
+            build_stdout, build_stderr = StringIO(), StringIO()
+            cmake.build(stdout=build_stdout, stderr=build_stderr)
+            self.output.info(f"Build stdout: '{build_stdout.getvalue()}'")
+            self.output.info(f"Build stderr: '{build_stderr.getvalue()}'")
+
+            test_stdout, test_stderr = StringIO(), StringIO()
+            cmake.test(stdout=test_stdout, stderr=test_stderr)
+            self.output.info(f"Test stdout: '{test_stdout.getvalue()}'")
+            self.output.info(f"Test stderr: '{test_stderr.getvalue()}'")
+
+        def package(self):
+            cmake = CMake(self)
+            install_stdout, install_stderr = StringIO(), StringIO()
+            cmake.install(stdout=install_stdout, stderr=install_stderr)
+            self.output.info(f"Install stdout: '{install_stdout.getvalue()}'")
+            self.output.info(f"Install stderr: '{install_stderr.getvalue()}'")
+
+
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": 'project(foo)\nadd_executable(mylib main.cpp)\ninclude(CTest)',
+                 "main.cpp": "int main() {return 0;}"})
+    client.run("create .")
+
+    # Ensure the output is not unexpectedly empty
+    assert re.search("Configure stdout: '[^']", client.out)
+    assert re.search("Configure stderr: '[^']", client.out)
+
+    assert re.search("Build stdout: '[^']", client.out)
+    assert re.search("Build stderr: ''", client.out)
+
+    assert re.search("Test stdout: '[^']", client.out)
+
+    # Empty on Windows
+    if platform.system() == "Windows":
+        assert re.search("Test stderr: ''", client.out)
+    else:
+        assert re.search("Test stderr: '[^']", client.out)
+
+    if platform.system() == "Windows":
+        assert re.search("Install stdout: ''", client.out)
+    else:
+        assert re.search("Install stdout: '[^']", client.out)
+    assert re.search("Install stderr: ''", client.out)
+
+
+@pytest.mark.tool("cmake", "3.23")
+def test_add_env_to_presets():
+    c = TestClient()
+
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import chdir, save
+        class Tool(ConanFile):
+            version = "0.1"
+            settings = "os", "compiler", "arch", "build_type"
+            def package(self):
+                with chdir(self, self.package_folder):
+                    save(self, f"bin/{{self.name}}.bat", f"@echo off\necho running: {{self.name}}/{{self.version}}")
+                    save(self, f"bin/{{self.name}}.sh", f"echo running: {{self.name}}/{{self.version}}")
+                    os.chmod(f"bin/{{self.name}}.sh", 0o777)
+            def package_info(self):
+                self.buildenv_info.define("MY_BUILD_VAR", "MY_BUILDVAR_VALUE")
+                {}
+        """)
+
+    consumer = textwrap.dedent("""
+        [tool_requires]
+        mytool/0.1
+        [test_requires]
+        mytesttool/0.1
+        [layout]
+        cmake_layout
+    """)
+
+    test_env = textwrap.dedent("""
+        #include <cstdlib>
+        int main() {
+            return std::getenv("MY_RUNVAR") ? 0 : 1;
+        }
+    """)
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(MyProject)
+        if(WIN32)
+            set(MYTOOL_SCRIPT "mytool.bat")
+        else()
+            set(MYTOOL_SCRIPT "mytool.sh")
+        endif()
+        add_custom_target(run_mytool COMMAND ${MYTOOL_SCRIPT})
+        # build var should be available at configure
+        set(MY_BUILD_VAR $ENV{MY_BUILD_VAR})
+        if (MY_BUILD_VAR)
+            message("MY_BUILD_VAR:${MY_BUILD_VAR}")
+        else()
+            message("MY_BUILD_VAR NOT FOUND")
+        endif()
+        # run var should not be available at configure, just when testing
+        set(MY_RUNVAR $ENV{MY_RUNVAR})
+        if (MY_RUNVAR)
+            message("MY_RUNVAR:${MY_RUNVAR}")
+        else()
+            message("MY_RUNVAR NOT FOUND")
+        endif()
+        enable_testing()
+        add_executable(test_env test_env.cpp)
+        add_test(NAME TestRunEnv COMMAND test_env)
+    """)
+
+    c.save({"tool.py": tool.format(""),
+            "test_tool.py": tool.format('self.runenv_info.define("MY_RUNVAR", "MY_RUNVAR_VALUE")'),
+            "conanfile.txt": consumer,
+            "CMakeLists.txt": cmakelists,
+            "test_env.cpp": test_env})
+
+    c.run("create tool.py --name=mytool")
+
+    c.run("create test_tool.py --name=mytesttool")
+    c.run("create test_tool.py --name=mytesttool -s build_type=Debug")
+
+    # do a first conan install with env disabled just to test that the conf works
+    c.run("install . -g CMakeToolchain -g CMakeDeps -c tools.cmake.cmaketoolchain:presets_environment=disabled")
+
+    presets_path = os.path.join("build", "Release", "generators", "CMakePresets.json") \
+        if platform.system() != "Windows" else os.path.join("build", "generators", "CMakePresets.json")
+    presets = json.loads(c.load(presets_path))
+
+    assert presets["configurePresets"][0].get("env") is None
+
+    c.run("install . -g CMakeToolchain -g CMakeDeps")
+    c.run("install . -g CMakeToolchain -g CMakeDeps -s:h build_type=Debug")
+
+    # test that the buildenv is correctly injected to configure and build steps
+    # that the runenv is not injected to configure, but it is when running tests
+
+    preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+
+    c.run_command(f"cmake --preset {preset}")
+    assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
+    assert "MY_RUNVAR NOT FOUND" in c.out
+    c.run_command("cmake --build --preset conan-release --target run_mytool --target test_env")
+    assert "running: mytool/0.1" in c.out
+
+    c.run_command("ctest --preset conan-release")
+    assert "tests passed" in c.out
+
+    if platform.system() != "Windows":
+        c.run_command("cmake --preset conan-debug")
+        assert "MY_BUILD_VAR:MY_BUILDVAR_VALUE" in c.out
+        assert "MY_RUNVAR NOT FOUND" in c.out
+
+    c.run_command("cmake --build --preset conan-debug --target run_mytool --target test_env")
+    assert "running: mytool/0.1" in c.out
+
+    c.run_command("ctest --preset conan-debug")
+    assert "tests passed" in c.out

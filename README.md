@@ -61,7 +61,7 @@ You can run Conan from source in Windows, MacOS, and Linux:
   $ cd conan-io && sudo pip install -e .
   ```
 
-  If you are in Windows, using ``sudo`` is not required.
+  If you are in Windows, using ``sudo`` is not required. Some Linux distros won't allow you to put Python packages in editable mode in the root Python installation, and creating a virtual environment ``venv`` first, is mandatory.
 
 - **You are ready, try to run Conan:**
 

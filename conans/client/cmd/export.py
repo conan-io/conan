@@ -11,7 +11,8 @@ from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, ch
 from conans.util.runners import check_output_runner
 
 
-def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=None, remotes=None):
+def cmd_export(app, global_conf, conanfile_path, name, version, user, channel, graph_lock=None,
+               remotes=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -21,8 +22,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                                    remotes=remotes)
 
     ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
-    ref.validate_ref(allow_uppercase=cache.new_config.get("core:allow_uppercase_pkg_names",
-                                                          check_type=bool))
+    ref.validate_ref(allow_uppercase=global_conf.get("core:allow_uppercase_pkg_names",
+                                                     check_type=bool))
 
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
@@ -77,7 +78,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, graph_lock=Non
                 clean_dirty(source_folder)
         except BaseException as e:
             scoped_output.error("Unable to delete source folder. Will be marked as corrupted "
-                                "for deletion")
+                                "for deletion", error_type="exception")
             scoped_output.warning(str(e))
             set_dirty(source_folder)
 

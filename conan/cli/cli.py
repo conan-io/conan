@@ -26,6 +26,7 @@ class Cli:
     parsing of parameters and delegates functionality to the conan python api. It can also show the
     help of the tool.
     """
+    _builtin_commands = None  # Caching the builtin commands, no need to load them over and over
 
     def __init__(self, conan_api):
         assert isinstance(conan_api, ConanAPI), \
@@ -35,39 +36,54 @@ class Cli:
         self._commands = {}
 
     def _add_commands(self):
-        conan_commands_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
-        for module in pkgutil.iter_modules([conan_commands_path]):
-            module_name = module[1]
-            self._add_command("conan.cli.commands.{}".format(module_name), module_name)
+        if Cli._builtin_commands is None:
+            conan_cmd_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commands")
+            for module in pkgutil.iter_modules([conan_cmd_path]):
+                module_name = module[1]
+                self._add_command("conan.cli.commands.{}".format(module_name), module_name)
+            Cli._builtin_commands = self._commands.copy()
+        else:
+            self._commands = Cli._builtin_commands.copy()
+            for k, v in self._commands.items():  # Fill groups data too
+                self._groups[v.group].append(k)
 
-        custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
-        if not os.path.isdir(custom_commands_path):
-            return
+        conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
+        # Important! This variable should be only used for testing/debugging purpose
+        developer_custom_commands_path = os.getenv("_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH")
+        # Notice that in case of having same custom commands file names, the developer one has
+        # preference over the Conan default location because of the sys.path.append(xxxx)
+        custom_commands_folders = [developer_custom_commands_path, conan_custom_commands_path] \
+            if developer_custom_commands_path else [conan_custom_commands_path]
 
-        sys.path.append(custom_commands_path)
-        for module in pkgutil.iter_modules([custom_commands_path]):
-            module_name = module[1]
-            if module_name.startswith("cmd_"):
-                try:
-                    self._add_command(module_name, module_name.replace("cmd_", ""))
-                except Exception as e:
-                    ConanOutput().error("Error loading custom command "
-                                        "'{}.py': {}".format(module_name, e))
-        # layers
-        for folder in os.listdir(custom_commands_path):
-            layer_folder = os.path.join(custom_commands_path, folder)
-            sys.path.append(layer_folder)
-            if not os.path.isdir(layer_folder):
-                continue
-            for module in pkgutil.iter_modules([layer_folder]):
+        for custom_commands_path in custom_commands_folders:
+            if not os.path.isdir(custom_commands_path):
+                return
+
+            sys.path.append(custom_commands_path)
+            for module in pkgutil.iter_modules([custom_commands_path]):
                 module_name = module[1]
                 if module_name.startswith("cmd_"):
-                    module_path = f"{folder}.{module_name}"
                     try:
-                        self._add_command(module_path, module_name.replace("cmd_", ""),
-                                          package=folder)
+                        self._add_command(module_name, module_name.replace("cmd_", ""))
                     except Exception as e:
-                        ConanOutput().error(f"Error loading custom command {module_path}: {e}")
+                        ConanOutput().error(f"Error loading custom command '{module_name}.py': {e}",
+                                            error_type="exception")
+            # layers
+            for folder in os.listdir(custom_commands_path):
+                layer_folder = os.path.join(custom_commands_path, folder)
+                sys.path.append(layer_folder)
+                if not os.path.isdir(layer_folder):
+                    continue
+                for module in pkgutil.iter_modules([layer_folder]):
+                    module_name = module[1]
+                    if module_name.startswith("cmd_"):
+                        module_path = f"{folder}.{module_name}"
+                        try:
+                            self._add_command(module_path, module_name.replace("cmd_", ""),
+                                              package=folder)
+                        except Exception as e:
+                            ConanOutput().error(f"Error loading custom command {module_path}: {e}",
+                                                error_type="exception")
 
     def _add_command(self, import_path, method_name, package=None):
         try:
@@ -76,7 +92,9 @@ class Cli:
             if command_wrapper.doc:
                 name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
                 self._commands[name] = command_wrapper
-                self._groups[command_wrapper.group].append(name)
+                # Avoiding duplicated command help messages
+                if name not in self._groups[command_wrapper.group]:
+                    self._groups[command_wrapper.group].append(name)
             for name, value in getmembers(imported_module):
                 if isinstance(value, ConanSubCommand):
                     if name.startswith("{}_".format(method_name)):
@@ -191,16 +209,6 @@ class Cli:
                     "If it is your recipe, check if it is updated to 2.0\n" \
                     "*********************************************************\n"
             ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
-        result = re.search(r"(.*): Error in build\(\) method, line", message)
-        if result:
-            pkg = result.group(1)
-            error = "*********************************************************\n" \
-                    f"Recipe '{pkg}' cannot build its binary\n" \
-                    f"It is possible that this recipe is not Conan 2.0 ready\n" \
-                    "If the recipe comes from ConanCenter, report it at https://github.com/conan-io/conan-center-index/issues\n" \
-                    "If it is your recipe, check if it is updated to 2.0\n" \
-                    "*********************************************************\n"
-            ConanOutput().writeln(error, fg=Color.BRIGHT_MAGENTA)
 
     @staticmethod
     def exception_exit_error(exception):
@@ -208,20 +216,20 @@ class Cli:
         if exception is None:
             return SUCCESS
         if isinstance(exception, ConanInvalidConfiguration):
-            output.error(exception)
+            output.error(exception, error_type="exception")
             return ERROR_INVALID_CONFIGURATION
         if isinstance(exception, ConanException):
-            output.error(exception)
+            output.error(exception, error_type="exception")
             return ERROR_GENERAL
         if isinstance(exception, SystemExit):
             if exception.code != 0:
-                output.error("Exiting with code: %d" % exception.code)
+                output.error("Exiting with code: %d" % exception.code, error_type="exception")
             return exception.code
 
         assert isinstance(exception, Exception)
-        output.error(traceback.format_exc())
+        output.error(traceback.format_exc(), error_type="exception")
         msg = exception_message_safe(exception)
-        output.error(msg)
+        output.error(msg, error_type="exception")
         return ERROR_UNEXPECTED
 
 

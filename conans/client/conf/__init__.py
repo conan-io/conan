@@ -77,6 +77,7 @@ arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64,
        sparc, sparcv9,
        mips, mips64, avr, s390, s390x, asm.js, wasm, sh4le,
        e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7,
+       riscv64, riscv32,
        xtensalx6, xtensalx106, xtensalx7]
 compiler:
     sun-cc:
