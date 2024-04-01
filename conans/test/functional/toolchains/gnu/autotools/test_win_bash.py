@@ -1,4 +1,3 @@
-import os
 import platform
 import textwrap
 
@@ -12,17 +11,17 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
 def test_autotools_bash_complete():
     client = TestClient(path_with_spaces=False)
-    bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
-    save(client.cache.new_config_path, textwrap.dedent("""
-            tools.microsoft.bash:subsystem=msys2
-            tools.microsoft.bash:path={}
-            tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
-            """.format(bash_path)))
+    profile_win = textwrap.dedent(f"""
+        include(default)
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+        tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
+        """)
 
     main = gen_function_cpp(name="main")
     # The autotools support for "cl" compiler (VS) is very limited, linking with deps doesn't
@@ -55,18 +54,14 @@ def test_autotools_bash_complete():
     client.save({"conanfile.py": conanfile,
                  "configure.ac": configure_ac,
                  "Makefile.am": makefile_am,
-                 "main.cpp": main})
-    client.run("install . -s:b os=Windows -s:h os=Windows")
-    client.run("build .")
+                 "main.cpp": main,
+                 "profile_win": profile_win})
+    client.run("build . -pr=profile_win")
     client.run_command("main.exe")
     check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
-
-    # To check that the ``autotools.install()`` has worked correctly
-    # FIXME IN CONAN 2.0 this will break, no local `package_folder`
-    assert os.path.exists(os.path.join(client.current_folder, "package", "bin", "main.exe"))
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")

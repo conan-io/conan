@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -357,6 +358,24 @@ class TestDefaultCompat:
         c.assert_listed_binary({"pkg/0.1": ("145f423d315bee340546093be5b333ef5238668e", "Build")})
         c.run(f"create . {settings} -s compiler.cppstd=17")
         c.assert_listed_binary({"pkg/0.1": ("00fcbc3b6ab76a68f15e7e750e8081d57a6f5812", "Build")})
+
+    def test_unnecessary_builds(self):
+        # https://github.com/conan-io/conan/issues/15657
+        c = TestClient()
+        c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1").with_tool_requires("tool/0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("dep/0.1")
+                                                              .with_tool_requires("tool/0.1"),})
+        c.run("create tool")
+        c.run("create dep ")
+        c.run("create app ")
+        c.run("remove tool:* -c")
+        c.run("install --requires=dep/0.1  --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        c.run("graph info --requires=app/0.1 --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        c.run("install --requires=app/0.1  --build=missing")
+        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
 
 
 class TestErrorsCompatibility:

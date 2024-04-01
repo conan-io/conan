@@ -661,6 +661,47 @@ class TestValidateCppstd:
                    assert_error=True)
         assert 'pkg/0.1: Invalid: I need at least cppstd=14 to be used' in client.out
 
+    @pytest.mark.parametrize("use_attribute", [True, False])
+    def test_exact_cppstd(self, use_attribute):
+        """ Using the default cppstd_compat sometimes is not desired, and a recipe can
+        explicitly opt-out this default cppstd_compat behavior, if it knows its binaries
+        won't be binary compatible among them for different cppstd values
+        """
+        client = TestClient()
+        if use_attribute:
+            conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    settings = "compiler"
+                    extension_properties = {"compatibility_cppstd": False}
+            """)
+        else:
+            conanfile = textwrap.dedent("""
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    settings = "compiler"
+                    def compatibility(self):
+                        self.extension_properties = {"compatibility_cppstd": False}
+            """)
+
+        client.save({"conanfile.py": conanfile})
+
+        settings = "-s compiler=gcc -s compiler.version=9 -s compiler.libcxx=libstdc++"
+        client.run(f"create . --name=pkg --version=0.1 {settings} -s compiler.cppstd=17")
+        client.assert_listed_binary({"pkg/0.1": ("91faf062eb94767a31ff62a46767d3d5b41d1eff",
+                                                 "Build")})
+
+        # Install with cppstd=14 can NOT fallback to the previous one
+        client.run(f"install --requires=pkg/0.1 {settings} -s compiler.cppstd=14", assert_error=True)
+        assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
+        assert "compiler.cppstd=14" in client.out
+        assert "compiler.cppstd=17" not in client.out
+        client.run(f"install --requires=pkg/0.1 {settings} -s compiler.cppstd=14 --build=missing")
+        client.assert_listed_binary({"pkg/0.1": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                                 "Build")})
+        assert "compiler.cppstd=14" in client.out
+        assert "compiler.cppstd=17" not in client.out
+
 
 class TestCompatibleSettingsTarget(unittest.TestCase):
     """ aims to be a very close to real use case of tool being used across different settings_target

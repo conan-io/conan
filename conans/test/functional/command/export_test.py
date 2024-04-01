@@ -5,6 +5,7 @@ import pytest
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.scm import git_add_changes_commit
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.tool("git")
@@ -60,3 +61,31 @@ class TestRevisionModeSCM:
         t.run("export .", assert_error=True)
         # It errors, because no commits yet
         assert "Cannot detect revision using 'scm' mode from repository" in t.out
+
+    @pytest.mark.parametrize("conf_excluded, recipe_excluded",
+                             [("", ["*.cpp", "*.txt", "src/*"]),
+                              (["*.cpp", "*.txt", "src/*"], ""),
+                              ('+["*.cpp", "*.txt"]', ["src/*"]),
+                              ('+["*.cpp"]', ["*.txt", "src/*"])])
+    def test_revision_mode_scm_excluded_files(self, conf_excluded, recipe_excluded):
+        t = TestClient()
+        recipe_excluded = f'revision_mode_excluded = {recipe_excluded}' if recipe_excluded else ""
+        conf_excluded = f'core.scm:excluded={conf_excluded}' if conf_excluded else ""
+        save(t.cache.global_conf_path, conf_excluded)
+        conanfile = GenConanfile("pkg", "0.1").with_class_attribute('revision_mode = "scm"') \
+                                              .with_class_attribute(recipe_excluded)
+        commit = t.init_git_repo({'conanfile.py': str(conanfile),
+                                  "test.cpp": "mytest"})
+
+        t.run(f"export .")
+        assert t.exported_recipe_revision() == commit
+
+        t.save({"test.cpp": "mytest2",
+                "new.txt": "new",
+                "src/potato": "hello"})
+        t.run(f"export . -vvv")
+        assert t.exported_recipe_revision() == commit
+
+        t.save({"test.py": ""})
+        t.run(f"export .", assert_error=True)
+        assert "ERROR: Can't have a dirty repository using revision_mode='scm'" in t.out

@@ -3,8 +3,6 @@ import os
 import unittest
 from collections import OrderedDict
 
-import pytest
-
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
@@ -238,7 +236,7 @@ class RemoteModificationTest(unittest.TestCase):
         self.assertEqual(data["remotes"][3]["disabled"], True)
 
         # check that they are still listed, as disabled
-        client.run("remote list *")
+        client.run("remote list")
         assert "my-remote0: http://someurl0 [Verify SSL: True, Enabled: False]" in client.out
         assert "my-remote3: http://someurl3 [Verify SSL: True, Enabled: False]" in client.out
 
@@ -340,6 +338,7 @@ def test_add_wrong_conancenter():
     c.run("remote add whatever https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center.conan.io" in c.out
+    c.run("remote add conancenter https://center.conan.io")
     c.run("remote update conancenter --url=https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center.conan.io" in c.out
@@ -398,3 +397,19 @@ def test_remote_allowed_packages_new():
     tc.run("remote add foo https://foo -ap='liba/*'")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
     assert remotes["remotes"][0]["allowed_packages"] == ["liba/*"]
+
+
+def test_remote_allowed_negation():
+    tc = TestClient(light=True, default_server_user=True)
+    tc.save({"conanfile.py": GenConanfile()})
+    tc.run("create . --name=config --version=1.0")
+    tc.run("create . --name=lib --version=1.0")
+    tc.run("upload * -c -r=default")
+    tc.run("remove * -c")
+
+    tc.run('remote update default --allowed-packages="!config/*"')
+    tc.run("install --requires=lib/1.0 -r=default")
+    assert "lib/1.0: Downloaded recipe revision" in tc.out
+
+    tc.run("install --requires=config/1.0 -r=default", assert_error=True)
+    assert "ERROR: Package 'config/1.0' not resolved: Unable to find 'config/1.0' in remotes" in tc.out

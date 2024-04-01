@@ -32,7 +32,6 @@ from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import RemoteRegistry
 from conans.util.env import environment_update
 from conans.errors import NotFoundException, ConanException
 from conans.model.manifest import FileTreeManifest
@@ -471,13 +470,12 @@ class TestClient(object):
             api.remotes.remove(r.name)
 
         for name, server in self.servers.items():
-            remotes_registry = RemoteRegistry(HomePaths(self.cache_folder).remotes_path)
             if isinstance(server, ArtifactoryServer):
-                remotes_registry.add(Remote(name, server.repo_api_url))
+                api.remotes.add(Remote(name, server.repo_api_url))
             elif isinstance(server, TestServer):
-                remotes_registry.add(Remote(name, server.fake_url))
+                api.remotes.add(Remote(name, server.fake_url))
             else:
-                remotes_registry.add(Remote(name, server))
+                api.remotes.add(Remote(name, server))
 
     @contextmanager
     def chdir(self, newdir):

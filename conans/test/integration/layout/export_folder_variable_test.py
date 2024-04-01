@@ -1,6 +1,5 @@
 import textwrap
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.tools import TestClient
 
 

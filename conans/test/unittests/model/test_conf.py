@@ -108,7 +108,7 @@ def test_parse_spaces():
     ("user.company.cpu:jobs=10", 10),
     ("user.company.build:ccflags=--m superflag", "--m superflag"),
     ("zlib:user.company.check:shared=True", True),
-    ("zlib:user.company.check:shared_str='True'", '"True"'),
+    ("zlib:user.company.check:shared_str='True'", "'True'"),
     ("user.company.list:objs=[1, 2, 3, 4, 'mystr', {'a': 1}]", [1, 2, 3, 4, 'mystr', {'a': 1}]),
     ("user.company.network:proxies={'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'}",
      {'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'})

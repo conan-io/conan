@@ -173,6 +173,10 @@ tools_locations = {
     'android_ndk': {
         "platform": "Darwin",
         "exe": "ndk-build",
+        "default": "system",
+        "system": {
+            "path": {'Darwin': f'{homebrew_root}/share/android-ndk'}
+        }
     },
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
@@ -243,15 +247,12 @@ try:
 except ImportError as e:
     user_default_profiles = None
 
-homebrew_root = "/opt/homebrew" if platform.machine() == "arm64" else "/usr/local"
-
 
 tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
     'ucrt64': {'Windows': {'MSYSTEM': 'UCRT64'}},
-    'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}},
-    'android_ndk': {'Darwin': {'TEST_CONAN_ANDROID_NDK': f'{homebrew_root}/share/android-ndk'}}
+    'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}}
 }
 
 

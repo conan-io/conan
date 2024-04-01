@@ -1,15 +1,3 @@
-import os
-import platform
-import textwrap
-
-import pytest
-from mock import patch
-
-from conan import conan_version
-from conans.errors import ConanException
-from conans.util.files import save, load
-from conans.test.utils.tools import TestClient
-
 from conans.model.conf import Conf
 
 

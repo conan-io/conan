@@ -4,6 +4,8 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -114,3 +116,41 @@ def test_virtualenv_test_package():
     assert "MYPS1!!!!" in client.out
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
+def test_vcvars():
+    client = TestClient()
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout, CMakeToolchain, CMakeDeps
+        from conan.tools.env import VirtualBuildEnv
+
+        class Conan(ConanFile):
+           settings = "os", "compiler", "build_type", "arch"
+
+           generators = 'CMakeDeps', 'CMakeToolchain'
+
+           def layout(self):
+              cmake_layout(self)
+
+           def build(self):
+              cmake = CMake(self)
+              cmake.configure()
+              cmake.build()
+    """)
+    hello_cpp = gen_function_cpp(name="main")
+    cmakelists = gen_cmakelists(appname="hello", appsources=["hello.cpp"])
+    client.save({"conanfile.py": conanfile, "hello.cpp": hello_cpp, "CMakeLists.txt": cmakelists})
+
+    client.run("build . -c tools.env.virtualenv:powershell=True -c tools.cmake.cmaketoolchain:generator=Ninja")
+    client.run_command(r'powershell.exe ".\build\Release\generators\conanbuild.ps1; dir env:"')
+    #check the conanbuid.ps1 activation message
+    assert "conanvcvars.ps1: Activated environment" in client.out
+    #check that the new env variables are set
+    assert "VSCMD_ARG_VCVARS_VER" in client.out
+    conanbuild = client.load(r".\build\Release\generators\conanbuild.ps1")
+    vcvars_ps1 = client.load(r".\build\Release\generators\conanvcvars.ps1")
+    #check that the conanvcvars.ps1 is being added to the conanbuild.ps1
+    assert "conanvcvars.ps1" in conanbuild
+    #check that the conanvcvars.ps1 is setting the environment
+    assert "conanvcvars.bat&set" in vcvars_ps1

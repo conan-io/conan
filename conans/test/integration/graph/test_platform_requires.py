@@ -58,6 +58,19 @@ class TestPlatformRequires:
         client.run("create . -pr=profile", assert_error=True)
         assert "ERROR: Package 'dep/1.0' not resolved: No remote defined" in client.out
 
+    def test_platform_requires_build_context(self):
+        """
+        platform_requires must work in the build context too
+        """
+        client = TestClient(light=True)
+        client.save({"tool/conanfile.py": GenConanfile("tool", "1.0").with_requires("dep/1.0"),
+                     "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
+                     "profile": "[settings]\nos=Linux\n[platform_requires]\ndep/1.0"})
+        client.run("create tool -pr:b=profile --build-require")
+        assert "dep/1.0 - Platform" in client.out
+        client.run("create pkg -pr:b=profile")
+        assert "dep/1.0 - Platform" in client.out
+
     def test_graph_info_platform_requires_range(self):
         """
         graph info doesn't crash
@@ -135,6 +148,31 @@ class TestPlatformRequires:
         client.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Package 'dep/1.1' not resolved" in client.out
 
+    def test_platform_requires_with_options(self):
+        """ https://github.com/conan-io/conan/issues/15685
+        """
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
+                     "profile": "[platform_requires]\ndep/1.0"})
+        client.run("create . -pr=profile -o *:myoption=True")
+        assert "dep/1.0 - Platform" in client.out
+
+        conanfile = GenConanfile("pkg", "1.0").with_requirement("dep/1.0",
+                                                                options={"dep/1.0:myoption": True})
+        client.save({"conanfile.py": conanfile,
+                     "profile": "[platform_requires]\ndep/1.0"})
+        client.run("create . -pr=profile")  # This crashed before for non-existing options
+        assert "dep/1.0 - Platform" in client.out
+
+
+class TestPlatformTestRequires:
+    def test_platform_requires(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_test_requires("dep/1.0"),
+                     "profile": "[platform_requires]\ndep/1.0"})
+        client.run("create . -pr=profile")
+        assert "dep/1.0 - Platform" in client.out
+
 
 class TestPlatformRequiresLock:
 
@@ -187,7 +225,7 @@ class TestPackageID:
         or package_id
         """
         client = TestClient()
-        save(client.cache.new_config_path, f"core.package_id:default_build_mode={package_id_mode}")
+        save(client.cache.new_config_path, f"core.package_id:default_unknown_mode={package_id_mode}")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
@@ -198,17 +236,36 @@ class TestPackageID:
         Changing the platform_requires revision affects consumers if package_revision_mode=recipe_revision
         """
         client = TestClient()
-        save(client.cache.new_config_path, "core.package_id:default_build_mode=recipe_revision_mode")
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=recipe_revision_mode")
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0#r1",
                      "profile2": "[platform_requires]\ndep/1.0#r2"})
         client.run("create . -pr=profile")
         assert "dep/1.0#r1 - Platform" in client.out
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
-               "abfcc78fa8242cabcd1e3d92896aa24808c789a3 - Build" in client.out
+               "d9d32dd13cfc9734becc01287570721cd048ba19 - Build" in client.out
 
         client.run("create . -pr=profile2")
         # pkg gets a new package_id because it is a different revision
         assert "dep/1.0#r2 - Platform" in client.out
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
-               "abfcc78fa8242cabcd1e3d92896aa24808c789a3 - Build" in client.out
+               "2f6bc9cf5015a7210181592d454f36687791a941 - Build" in client.out
+
+    def test_package_id_full_mode(self):
+        """
+        platform_requires do not have settings or package_id, so it is ignored
+        """
+        client = TestClient()
+        save(client.cache.new_config_path, "core.package_id:default_unknown_mode=full_package_mode")
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
+                     "profile": "[platform_requires]\ndep/1.0"})
+        client.run("create . -pr=profile -s os=Linux")
+        assert "dep/1.0 - Platform" in client.out
+        assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
+               "f2cfe57716d0a3320019f058edcd728d3379ab32 - Build" in client.out
+
+        client.run("create . -pr=profile -s os=Windows")
+        # pkg gets exactly same package_id, changing the settings, do not affect plaform package-id
+        assert "dep/1.0 - Platform" in client.out
+        assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
+               "f2cfe57716d0a3320019f058edcd728d3379ab32 - Build" in client.out
