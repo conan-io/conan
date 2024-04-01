@@ -68,11 +68,8 @@ class AutotoolsToolchain:
 
         self.sysroot_flag = None
 
-        self.configure_args = self._default_configure_shared_flags() + \
-                              self._default_configure_install_flags() + \
-                              self._get_triplets()
-
         self.cross_build = None
+        arch_host, arch_build = None, None
         if cross_building(self._conanfile):
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
@@ -97,13 +94,16 @@ class AutotoolsToolchain:
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
-            self.cross_build = {"host": _CustomCrossBuildUX(arch_host, True, self.configure_args),
-                                "build": _CustomCrossBuildUX(arch_build, False, self.configure_args)}
-
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
+        self.configure_args = self._default_configure_shared_flags() + \
+                              self._default_configure_install_flags() + \
+                              self._get_triplets()
+        if arch_host and arch_build:
+            self.cross_build = {"host": _CustomCrossBuildUX(arch_host, True, self.configure_args),
+                                "build": _CustomCrossBuildUX(arch_build, False, self.configure_args)}
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
 
