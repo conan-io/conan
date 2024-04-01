@@ -68,6 +68,11 @@ class AutotoolsToolchain:
 
         self.sysroot_flag = None
 
+        self.configure_args = self._default_configure_shared_flags() + \
+                              self._default_configure_install_flags() + \
+                              self._get_triplets()
+
+        self.cross_build = None
         if cross_building(self._conanfile):
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
@@ -92,13 +97,13 @@ class AutotoolsToolchain:
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
+            self.cross_build = {"host": _CustomCrossBuildUX(arch_host, True, self.configure_args),
+                                "build": _CustomCrossBuildUX(arch_build, False, self.configure_args)}
+
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
         self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
 
-        self.configure_args = self._default_configure_shared_flags() + \
-                              self._default_configure_install_flags() + \
-                              self._get_triplets()
         self.autoreconf_args = self._default_autoreconf_flags()
         self.make_args = []
 
@@ -291,3 +296,24 @@ class AutotoolsToolchain:
                 "make_args":  cmd_args_to_string(self.make_args),
                 "autoreconf_args": cmd_args_to_string(self.autoreconf_args)}
         save_toolchain_args(args, namespace=self._namespace)
+
+
+class _CustomCrossBuildUX:
+    def __init__(self, arch, is_host, configure_args):
+        self.arch = arch
+        self.is_host = is_host
+        self.configure_args = configure_args
+
+    def __getitem__(self, item):
+        if item == "arch":
+            return self.arch
+        elif item == "triplet":
+            return self.triplet
+
+    def __setitem__(self, key, value):
+        if key == "arch":
+            self.arch = value
+        elif key == "triplet":
+            flag = "host" if self.is_host else "build"
+            self.triplet = value
+            self.configure_args.extend([f"--{flag}={value}"])
