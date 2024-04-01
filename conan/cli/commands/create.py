@@ -9,6 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conans.client.graph.graph import BINARY_BUILD
 from conans.util.files import mkdir
 
 
@@ -33,7 +34,6 @@ def create(conan_api, parser, *args):
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
-    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
@@ -91,6 +91,13 @@ def create(conan_api, parser, *args):
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
 
+    test_folder = args.test_folder
+    if test_folder and test_folder.startswith("missing"):
+        test_folder = ""  # disable it
+        if deps_graph.root.dependencies[0].dst.binary == BINARY_BUILD:
+            test_folder = test_folder.split(":", 1)[1] if ":" in test_folder else "test_package"
+
+    test_conanfile_path = _get_test_conanfile_path(test_folder, path)
     if test_conanfile_path:
         # TODO: We need arguments for:
         #  - decide update policy "--test_package_update"
