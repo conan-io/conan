@@ -2192,12 +2192,9 @@ class Command(object):
             self._out.writeln("*"*width, front=Color.BRIGHT_RED)
 
     def _warn_conan_version(self):
-        width = 70
-        self._out.writeln("*"*70, front=Color.BRIGHT_YELLOW)
-        self._out.writeln(textwrap.fill("Conan 1 is legacy and on a deprecation path, "
-                                        "please upgrade to Conan 2", width),
-                          front=Color.BRIGHT_YELLOW)
-        self._out.writeln("*" * 70, front=Color.BRIGHT_YELLOW)
+        self._out.warning("*** Conan 1 is legacy and on a deprecation path ***")
+        self._out.warning("*** Please upgrade to Conan 2 ***")
+
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
