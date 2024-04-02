@@ -3,24 +3,25 @@ import json
 
 from conans.client.graph.graph import RECIPE_EDITABLE, RECIPE_CONSUMER, RECIPE_PLATFORM, \
     RECIPE_VIRTUAL, BINARY_SKIP, BINARY_MISSING, BINARY_INVALID
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 from conans.util.files import load
 from conans.model.version_range import VersionRange
 
+LOCAL_RECIPES_INDEX = "local-recipes-index"
+
 
 class Remote:
 
-    def __init__(self, name, url, verify_ssl=True, disabled=False):
-        self._name = name  # Read only, is the key
+    def __init__(self, name, url, verify_ssl=True, disabled=False, allowed_packages=None,
+                 remote_type=None):
+        self.name = name  # Read only, is the key
         self.url = url
         self.verify_ssl = verify_ssl
         self.disabled = disabled
-
-    @property
-    def name(self):
-        return self._name
+        self.allowed_packages = allowed_packages
+        self.remote_type = remote_type
 
     def __eq__(self, other):
         if other is None:
@@ -29,8 +30,14 @@ class Remote:
                 self.verify_ssl == other.verify_ssl and self.disabled == other.disabled)
 
     def __str__(self):
-        return "{}: {} [Verify SSL: {}, Enabled: {}]".format(self.name, self.url, self.verify_ssl,
-                                                             not self.disabled)
+        allowed_msg = ""
+        if self.allowed_packages:
+            allowed_msg = ", Allowed packages: {}".format(", ".join(self.allowed_packages))
+        if self.remote_type == LOCAL_RECIPES_INDEX:
+            return "{}: {} [{}, Enabled: {}{}]".format(self.name, self.url, LOCAL_RECIPES_INDEX,
+                                                       not self.disabled, allowed_msg)
+        return "{}: {} [Verify SSL: {}, Enabled: {}{}]".format(self.name, self.url, self.verify_ssl,
+                                                               not self.disabled, allowed_msg)
 
     def __repr__(self):
         return str(self)
@@ -128,6 +135,7 @@ class MultiPackagesList:
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_refs([ref])  # Binary listed forces recipe listed
                 cache_list.add_prefs(ref, [pref])
+                cache_list.add_configurations({pref: node["info"]})
         return pkglist
 
 
@@ -277,7 +285,7 @@ class ListPattern:
 
     def check_refs(self, refs):
         if not refs and self.ref and "*" not in self.ref:
-            raise ConanException(f"Recipe '{self.ref}' not found")
+            raise NotFoundException(f"Recipe '{self.ref}' not found")
 
     def filter_rrevs(self, rrevs):
         if self._only_latest(self.rrev):

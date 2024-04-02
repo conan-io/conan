@@ -362,6 +362,30 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         self.assertIn("pkg/0.1@user/testing: My system_requirements pkg being called!", client.out)
 
+    def test_reuse_requirements(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+                   from conan import ConanFile
+                   class MyConanfileBase(ConanFile):
+                       def requirements(self):
+                           self.output.info("My requirements %s being called!" % self.name)
+                           self.requires("foo/1.0")
+                   """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . --name=base --version=1.1 --user=user --channel=testing")
+        client.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        client.run("create .")
+        reuse = textwrap.dedent("""
+                    from conan import ConanFile
+                    class PkgTest(ConanFile):
+                        python_requires = "base/1.1@user/testing"
+                        python_requires_extend = "base.MyConanfileBase"
+                    """)
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
+        self.assertIn("pkg/0.1@user/testing: My requirements pkg being called!", client.out)
+        client.assert_listed_require({"foo/1.0#f5288356d9cc303f25cb05bccbad8fbb": "Cache"})
+
     def test_overwrite_class_members(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -1013,12 +1037,16 @@ class TestTestPackagePythonRequire:
             from conan import ConanFile
 
             class Tool(ConanFile):
+                python_requires = "tested_reference_str"
                 def test(self):
                     self.output.info("{}!!!".format(self.python_requires["common"].module.mycommon()))
             """)
         c.save({"conanfile.py": conanfile,
                 "test_package/conanfile.py": test})
         c.run("create .")
+        assert "common/0.1 (test package): 42!!!" in c.out
+
+        c.run("test test_package common/0.1")
         assert "common/0.1 (test package): 42!!!" in c.out
 
     def test_test_package_python_requires_configs(self):
@@ -1048,6 +1076,7 @@ class TestTestPackagePythonRequire:
                 "test_package/conanfile.py": test})
         c.run("create . ")
         assert "common/0.1 (test package): RELEASEOK!!!" in c.out
+        assert "WARN: deprecated: test_package/conanfile.py should declare 'python_requires" in c.out
         c.run("create . -s build_type=Debug")
         assert "common/0.1 (test package): DEBUGOK!!!" in c.out
 
@@ -1241,3 +1270,37 @@ def test_export_pkg():
     c.run("list *")
     assert "WARN: There are no matching recipe references" in c.out
     assert "pytool/0.1" not in c.out
+
+
+def test_py_requires_override_method():
+    tc = TestClient()
+    pyreq = textwrap.dedent("""
+        from conan import ConanFile
+        class MyConanfileBase:
+            def get_toolchain(self):
+                return "mybasetoolchain"
+
+            def generate(self):
+                self.output.info("MyConanfileBase generate with value %s" % self.get_toolchain())
+
+        class MyConanfile(ConanFile):
+            name = "myconanfile"
+            version = "1.0"
+            package_type = "python-require"
+    """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class MyConanfile(ConanFile):
+            name = "app"
+            version = "1.0"
+            python_requires = "myconanfile/1.0"
+            python_requires_extend = "myconanfile.MyConanfileBase"
+            def get_toolchain(self):
+                return "mycustomtoolchain"
+    """)
+    tc.save({"myconanfile/conanfile.py": pyreq,
+             "conanfile.py": conanfile})
+    tc.run("create myconanfile")
+    tc.run("create .")
+    assert "MyConanfileBase generate with value mycustomtoolchain" in tc.out

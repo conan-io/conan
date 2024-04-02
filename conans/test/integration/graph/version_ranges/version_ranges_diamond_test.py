@@ -56,7 +56,7 @@ class TestVersionRangesUpdatingTest:
         client.run("remove pkg/1.3* -c")
 
         # removes remote
-        client.run("remove pkg* -r=default --c")
+        client.run("remove pkg* -r=default -c")
         # Resolves to local package
         client.run("install app")
         assert "pkg/1.1" not in client.out

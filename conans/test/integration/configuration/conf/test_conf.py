@@ -8,6 +8,7 @@ from mock import patch
 from conan import conan_version
 from conan.internal.api import detect_api
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
@@ -222,7 +223,8 @@ def test_jinja_global_conf_paths():
     global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
     save(c.cache.new_config_path, global_conf)
     c.run("config show *")
-    assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
+    cache_folder = c.cache_folder.replace("\\", "/")
+    assert f"user.mycompany:myfile: {os.path.join(cache_folder, 'myfile')}" in c.out
 
 
 def test_profile_detect_os_arch():
@@ -307,6 +309,28 @@ def test_global_conf_auto_created():
     assert "# core:non_interactive = True" in global_conf
 
 
+def test_command_line_core_conf():
+    c = TestClient()
+    c.run("config show * -cc core:default_profile=potato")
+    assert "core:default_profile: potato" in c.out
+    c.run("config show * -cc core:default_profile=potato -cc core:default_build_profile=orange")
+    assert "core:default_profile: potato" in c.out
+    assert "core:default_build_profile: orange" in c.out
+
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+
+    tfolder = temp_folder()
+    c.run(f'list * -cc core.cache:storage_path="{tfolder}"')
+    assert "WARN: There are no matching recipe references" in c.out
+    c.run(f'list *')
+    assert "WARN: There are no matching recipe references" not in c.out
+    assert "pkg/0.1" in c.out
+
+    c.run("list * -cc user.xxx:yyy=zzz", assert_error=True)
+    assert "ERROR: Only core. values are allowed in --core-conf. Got user.xxx:yyy=zzz" in c.out
+
+
 def test_build_test_consumer_only():
     c = TestClient()
     dep = textwrap.dedent("""
@@ -373,3 +397,20 @@ def test_conf_should_be_immutable():
     assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
     # The pkg/0.1 output should be non-modified
     assert "pkg/0.1: user.myteam:myconf: ['root_value']" in c.out
+
+
+def test_especial_strings_fail():
+    # https://github.com/conan-io/conan/issues/15777
+    c = TestClient()
+    global_conf = textwrap.dedent("""
+        user.mycompany:myfile = re
+        user.mycompany:myother = fnmatch
+        user.mycompany:myfunct = re.search
+        user.mycompany:mydict = {1: 're', 2: 'fnmatch'}
+        """)
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    assert "user.mycompany:myfile: re" in c.out
+    assert "user.mycompany:myother: fnmatch" in c.out
+    assert "user.mycompany:myfunct: re.search" in c.out
+    assert "user.mycompany:mydict: {1: 're', 2: 'fnmatch'}" in c.out

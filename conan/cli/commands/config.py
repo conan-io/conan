@@ -1,5 +1,5 @@
 from conan.api.output import cli_out_write
-from conan.cli.command import conan_command, conan_subcommand
+from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.formatters import default_json_formatter
 from conans.util.config_parser import get_bool_from_text
 
@@ -37,11 +37,37 @@ def config_install(conan_api, parser, subparser, *args):
                                 'specified origin')
     subparser.add_argument("-tf", "--target-folder",
                            help='Install to that path in the conan cache')
+
     args = parser.parse_args(*args)
-    verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) else get_bool_from_text(args.verify_ssl)
+    verify_ssl = args.verify_ssl if isinstance(args.verify_ssl, bool) \
+        else get_bool_from_text(args.verify_ssl)
     conan_api.config.install(args.item, verify_ssl, args.type, args.args,
                              source_folder=args.source_folder,
                              target_folder=args.target_folder)
+
+
+@conan_subcommand()
+def config_install_pkg(conan_api, parser, subparser, *args):
+    """
+    (Experimental) Install the configuration (remotes, profiles, conf), from a Conan package
+    """
+    subparser.add_argument("item", help="Conan require")
+    subparser.add_argument("-l", "--lockfile", action=OnceArgument,
+                           help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                                "existing 'conan.lock' file")
+    subparser.add_argument("--lockfile-partial", action="store_true",
+                           help="Do not raise an error if some dependency is not found in lockfile")
+    subparser.add_argument("--lockfile-out", action=OnceArgument,
+                           help="Filename of the updated lockfile")
+    subparser.add_argument("-f", "--force", action='store_true',
+                           help="Force the re-installation of configuration")
+    args = parser.parse_args(*args)
+
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
+                                               partial=args.lockfile_partial)
+    config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile, force=args.force)
+    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[config_pref.ref])
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 
 def list_text_formatter(confs):

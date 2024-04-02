@@ -6,8 +6,9 @@ from conans.client.conf.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
+from conans.util.files import save
 
-CONAN_VCVARS_FILE = "conanvcvars.bat"
+CONAN_VCVARS = "conanvcvars"
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -99,8 +100,11 @@ class VCVars:
         """
         check_duplicated_generator(self, self._conanfile)
         conanfile = self._conanfile
+
         os_ = conanfile.settings.get_safe("os")
-        if os_ != "Windows":
+        build_os_ = conanfile.settings_build.get_safe("os")
+
+        if os_ != "Windows" or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
@@ -129,7 +133,13 @@ class VCVars:
                           "v143": "14.3"}.get(toolset_version)
         else:
             vs_version = vs_ide_version(conanfile)
-            vcvars_ver = _vcvars_vers(conanfile, compiler, vs_version)
+            if int(vs_version) <= 14:
+                vcvars_ver = None
+            else:
+                compiler_version = str(conanfile.settings.compiler.version)
+                compiler_update = conanfile.settings.get_safe("compiler.update", "")
+                # The equivalent of compiler 19.26 is toolset 14.26
+                vcvars_ver = "14.{}{}".format(compiler_version[-1], compiler_update)
         vcvarsarch = _vcvars_arch(conanfile)
 
         winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
@@ -142,15 +152,47 @@ class VCVars:
                                 winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
                                 vs_install_path=vs_install_path)
 
-        content = textwrap.dedent("""\
+        content = textwrap.dedent(f"""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
-            echo conanvcvars.bat: Activating environment Visual Studio {} - {} - winsdk_version={} - vcvars_ver={}
-            {}
-            """.format(vs_version, vcvarsarch, winsdk_version, vcvars_ver, vcvars))
+            echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
+            {vcvars}
+            """)
         from conan.tools.env.environment import create_env_script
-        create_env_script(conanfile, content, CONAN_VCVARS_FILE, scope)
+        conan_vcvars_bat = f"{CONAN_VCVARS}.bat"
+        create_env_script(conanfile, content, conan_vcvars_bat, scope)
+        _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
+
+        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        if is_ps1:
+            content_ps1 = textwrap.dedent(rf"""\
+            if (-not $env:VSCMD_ARG_VCVARS_VER){{
+                Push-Location "$PSScriptRoot"
+                cmd /c "conanvcvars.bat&set" |
+                foreach {{
+                  if ($_ -match "=") {{
+                    $v = $_.split("=", 2); set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+                  }}
+                }}
+                Pop-Location
+                write-host conanvcvars.ps1: Activated environment}}
+            """)
+            conan_vcvars_ps1 = f"{CONAN_VCVARS}.ps1"
+            create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
+            _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
+
+
+def _create_deactivate_vcvars_file(conanfile, filename):
+    deactivate_filename = f"deactivate_{filename}"
+    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    is_ps1 = filename.endswith(".ps1")
+    if is_ps1:
+        content = f"Write-Host {message}"
+    else:
+        content = f"echo {message}"
+    path = os.path.join(conanfile.generators_folder, deactivate_filename)
+    save(path, content)
 
 
 def vs_ide_version(conanfile):
@@ -261,7 +303,8 @@ def _vcvars_arch(conanfile):
         arch = {'x86': "amd64_x86",
                 'x86_64': 'amd64',
                 'armv7': 'amd64_arm',
-                'armv8': 'amd64_arm64'}.get(arch_host)
+                'armv8': 'amd64_arm64',
+                'arm64ec': 'amd64_arm64'}.get(arch_host)
     elif arch_build == 'x86':
         arch = {'x86': 'x86',
                 'x86_64': 'x86_amd64',
@@ -277,18 +320,6 @@ def _vcvars_arch(conanfile):
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
 
     return arch
-
-
-def _vcvars_vers(conanfile, compiler, vs_version):
-    if int(vs_version) <= 14:
-        return None
-
-    assert compiler == "msvc"
-    # Code similar to CMakeToolchain toolset one
-    compiler_version = str(conanfile.settings.compiler.version)
-    # The equivalent of compiler 192 is toolset 14.2
-    vcvars_ver = "14.{}".format(compiler_version[-1])
-    return vcvars_ver
 
 
 def is_msvc(conanfile, build_context=False):

@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph_error import GraphError
 from conans.model.package_ref import PkgReference
 from conans.model.recipe_ref import RecipeReference
 
@@ -66,6 +67,7 @@ class Node(object):
         self.cant_build = False  # It will set to a str with a reason if the validate_build() fails
         self.should_build = False  # If the --build or policy wants to build this binary
         self.build_allowed = False
+        self.is_conf = False
 
     def __lt__(self, other):
         """
@@ -320,6 +322,7 @@ class DepsGraph(object):
         self.aliased = {}
         self.resolved_ranges = {}
         self.replaced_requires = {}
+        self.options_conflicts = {}
         self.error = False
 
     def overrides(self):
@@ -393,4 +396,5 @@ class DepsGraph(object):
         result["overrides"] = self.overrides().serialize()
         result["resolved_ranges"] = {repr(r): s.repr_notime() for r, s in self.resolved_ranges.items()}
         result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
+        result["error"] = self.error.serialize() if isinstance(self.error, GraphError) else None
         return result

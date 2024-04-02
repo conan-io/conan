@@ -58,12 +58,18 @@ def profile_detect(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("--name", help="Profile name, 'default' if not specified")
     subparser.add_argument("-f", "--force", action='store_true', help="Overwrite if exists")
+    subparser.add_argument("-e", "--exist-ok", action='store_true',
+                           help="If the profile already exist, do not detect a new one")
     args = parser.parse_args(*args)
 
     profile_name = args.name or "default"
     profile_pathname = conan_api.profiles.get_path(profile_name, os.getcwd(), exists=False)
-    if not args.force and os.path.exists(profile_pathname):
-        raise ConanException(f"Profile '{profile_pathname}' already exists")
+    if os.path.exists(profile_pathname):
+        if args.exist_ok:
+            ConanOutput().info(f"Profile '{profile_name}' already exists, skipping detection")
+            return
+        if not args.force:
+            raise ConanException(f"Profile '{profile_pathname}' already exists")
 
     detected_profile = conan_api.profiles.detect()
     ConanOutput().success("\nDetected profile:")

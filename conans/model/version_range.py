@@ -12,7 +12,7 @@ class _Condition:
         self.display_version = version
 
         value = str(version)
-        if (operator == ">=" or operator == "<") and "-" not in value:
+        if (operator == ">=" or operator == "<") and "-" not in value and version.build is None:
             value += "-"
         self.version = Version(value)
 

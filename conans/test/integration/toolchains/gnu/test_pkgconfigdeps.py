@@ -2,6 +2,8 @@ import glob
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -723,7 +725,7 @@ def test_tool_requires_not_created_if_no_activated():
     assert pc_files == []
 
 
-def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
+def test_tool_requires_error_if_no_build_suffix():
     """
     Testing if same dependency exists in both require and build require (without suffix)
     """
@@ -806,6 +808,210 @@ def test_error_missing_pc_build_context():
 
     c.assert_listed_require({"example/1.0": "Cache"})
     c.assert_listed_require({"example/1.0": "Cache"}, build=True)
+
+
+class TestPCGenerationBuildContext:
+    """
+    https://github.com/conan-io/conan/issues/14920
+    """
+    def test_pc_generate(self):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_suffix = {"wayland": "_BUILD", "dep": "_BUILD"}
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland_BUILD.pc")
+                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("dep_BUILD.pc")
+                """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": GenConanfile("wayland", "1.0").with_requires("dep/1.0"),
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Deprecation warning!
+        assert "PkgConfigDeps.build_context_suffix attribute has been deprecated" in c.out
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    def test_pc_generate_components(self):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_suffix = {"wayland": "_BUILD", "dep": "_BUILD"}
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland-client.pc")
+                    assert os.path.exists("wayland-server.pc")
+                    assert os.path.exists("wayland_BUILD.pc")
+                    assert os.path.exists("wayland_BUILD-client.pc")
+                    assert os.path.exists("wayland_BUILD-server.pc")
+                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("dep_BUILD.pc")
+
+                    # Issue: https://github.com/conan-io/conan/issues/12342
+                    # Issue: https://github.com/conan-io/conan/issues/14935
+                    assert not os.path.exists("build/wayland.pc")
+                    assert not os.path.exists("build/wayland-client.pc")
+                    assert not os.path.exists("build/wayland-server.pc")
+                    assert not os.path.exists("build/dep.pc")
+                """)
+        wayland = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "wayland"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.components["client"].libs = []
+                    self.cpp_info.components["server"].libs = []
+            """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    @pytest.mark.parametrize("build_folder_name", ["build", ""])
+    def test_pc_generate_components_in_build_context_folder(self, build_folder_name):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_folder = "{build_folder_name}"
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland-client.pc")
+                    assert os.path.exists("wayland-server.pc")
+                    assert os.path.exists("dep.pc")
+
+                    # Issue: https://github.com/conan-io/conan/issues/12342
+                    # Issue: https://github.com/conan-io/conan/issues/14935
+                    if "{build_folder_name}":
+                        assert os.path.exists("{build_folder_name}/wayland.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-client.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-server.pc")
+                        assert os.path.exists("{build_folder_name}/dep.pc")
+                """.format(build_folder_name=build_folder_name))
+        wayland = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "wayland"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.components["client"].libs = []
+                    self.cpp_info.components["server"].libs = []
+            """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    def test_tool_requires_error_if_folder_and_suffix(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PkgConfigConan(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.libs = ["libtool"]
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name tool --version 1.0")
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class PkgConfigConan(ConanFile):
+                name = "demo"
+                version = "1.0"
+
+                def requirements(self):
+                    self.requires("tool/1.0")
+
+                def build_requirements(self):
+                    self.build_requires("tool/1.0")
+
+                def generate(self):
+                    tc = PkgConfigDeps(self)
+                    tc.build_context_activated = ["tool"]
+                    tc.build_context_folder = "build"
+                    tc.build_context_suffix = {"tool": "_bt"}
+                    tc.generate()
+            """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("install . -pr:h default -pr:b default", assert_error=True)
+        assert ("It's not allowed to define both PkgConfigDeps.build_context_folder "
+                "and PkgConfigDeps.build_context_suffix (deprecated).") in client.out
 
 
 def test_pkg_config_deps_and_private_deps():

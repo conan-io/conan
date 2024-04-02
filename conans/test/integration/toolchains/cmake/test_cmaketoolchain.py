@@ -1170,6 +1170,52 @@ def test_recipe_build_folders_vars():
     assert "conan-windows-shared-debug" in presets
 
 
+def test_build_folder_vars_self_name_version():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class Conan(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "build_type"
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                self.folders.build_folder_vars = ["settings.os", "self.name", "self.version"]
+                cmake_layout(self)
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s os=Windows -s build_type=Debug")
+    presets = client.load("build/windows-pkg-0.1/Debug/generators/CMakePresets.json")
+    assert "conan-windows-pkg-0.1-debug" in presets
+    client.run("install . -s os=Linux -s build_type=Release")
+    presets = client.load("build/linux-pkg-0.1/Release/generators/CMakePresets.json")
+    assert "linux-pkg-0.1-release" in presets
+
+    # CLI override has priority
+    client.run("install . -s os=Linux  -s build_type=Release "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"self.name\"]'")
+    presets = client.load("build/pkg/Release/generators/CMakePresets.json")
+    assert "conan-pkg-release" in presets
+
+    # Now we do the build in the cache, the recipe folders are still used
+    client.run("create . -s os=Windows -s build_type=Debug")
+    build_folder = client.created_layout().build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-pkg-0.1-debug" in presets
+
+    # If we change the conf ``build_folder_vars``, it doesn't affect the cache build
+    client.run("create . -s os=Windows -s build_type=Debug "
+               "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.os\"]'")
+    build_folder = client.created_layout().build()
+    presets = load(os.path.join(build_folder,
+                                "build/windows-pkg-0.1/Debug/generators/CMakePresets.json"))
+    assert "conan-windows-pkg-0.1-debug" in presets
+
+
 def test_extra_flags():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -1222,3 +1268,149 @@ def test_presets_njobs():
     c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
+
+
+def test_add_cmakeexe_to_presets():
+    c = TestClient()
+
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import chdir, save
+        class Tool(ConanFile):
+            name = "cmake"
+            version = "3.27"
+            settings = "os", "compiler", "arch", "build_type"
+            def package(self):
+                with chdir(self, self.package_folder):
+                    save(self, "bin/{}", "")
+        """)
+
+    profile = textwrap.dedent("""
+        include(default)
+        [platform_tool_requires]
+        cmake/3.27
+    """)
+
+    consumer = textwrap.dedent("""
+        [tool_requires]
+        cmake/3.27
+        [layout]
+        cmake_layout
+    """)
+
+    cmake_exe = "cmake.exe" if platform.system() == "Windows" else "cmake"
+
+    c.save({"tool.py": tool.format(cmake_exe),
+            "conanfile.txt": consumer,
+            "myprofile": profile})
+    c.run("create tool.py")
+    c.run("install . -g CMakeToolchain -g CMakeDeps")
+
+    presets_path = os.path.join("build", "Release", "generators", "CMakePresets.json") \
+        if platform.system() != "Windows" else os.path.join("build", "generators", "CMakePresets.json")
+    presets = json.loads(c.load(presets_path))
+
+    assert cmake_exe == os.path.basename(presets["configurePresets"][0].get("cmakeExecutable"))
+
+    # if we set "tools.cmake:cmake_program" that will have preference
+    c.run("install . -g CMakeToolchain -g CMakeDeps -c tools.cmake:cmake_program='/other/path/cmake'")
+    presets = json.loads(c.load(presets_path))
+
+    assert '/other/path/cmake' == presets["configurePresets"][0].get("cmakeExecutable")
+
+    # if we have a platform_tool_requires it will not be set because  it is filtered before
+    # so it will not be in direct_build dependencies
+    c.run("install . -g CMakeToolchain -g CMakeDeps -pr:h=./myprofile")
+
+    presets = json.loads(c.load(presets_path))
+    assert presets["configurePresets"][0].get("cmakeExecutable") is None
+
+
+def test_toolchain_ends_newline():
+    # https://github.com/conan-io/conan/issues/15785
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("install . -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert toolchain[-1] == "\n"
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how CMakeToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf)
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_toolchain.cmake")
+            content = load(self, toolchain)
+            assert 'set(CMAKE_C_COMPILER "clang")' in content
+            assert 'set(CMAKE_CXX_COMPILER "clang++")' in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_toolchain.cmake")
+            content = load(self, toolchain)
+            assert 'set(CMAKE_C_COMPILER "gcc")' in content
+            assert 'set(CMAKE_CXX_COMPILER "g++")' in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")

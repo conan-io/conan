@@ -7,6 +7,8 @@ from conans.client.conanfile.implementations import auto_shared_fpic_config_opti
 def run_configure_method(conanfile, down_options, profile_options, ref):
     """ Run all the config-related functions for the given conanfile object """
 
+    initial_requires_count = len(conanfile.requires)
+
     if hasattr(conanfile, "config_options"):
         with conanfile_exception_formatter(conanfile, "config_options"):
             conanfile.config_options()
@@ -22,6 +24,9 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
             conanfile.configure()
     elif "auto_shared_fpic" in conanfile.implements:
         auto_shared_fpic_configure(conanfile)
+
+    if initial_requires_count != len(conanfile.requires):
+        conanfile.output.warning("Requirements should only be added in the requirements()/build_requirements() methods, not configure()/config_options(), which might raise errors in the future.", warn_tag="deprecated")
 
     result = conanfile.options.get_upstream_options(down_options, ref, is_consumer)
     self_options, up_options, private_up_options = result
