@@ -93,31 +93,30 @@ def runtime_deploy(graph, output_folder):
     Deploy all the shared libraries and the executables of the dependencies in a flat directory.
     """
     conanfile = graph.root.conanfile
-    conanfile.output.info(f"Deploying the runtime...")
+    output = ConanOutput(scope="runtime_deploy")
+    output.info(f"Deploying dependencies runtime to folder: {output_folder}")
+    output.warning("This deployer is experimental and subject to change. "
+                   "Please give feedback at https://github.com/conan-io/conan/issues")
     mkdir(output_folder)
-    for _, dep in conanfile.dependencies.items():
-        conanfile.output.verbose(f"Searching for shared libraries and executables in {dep.ref}...")
+    for _, dep in conanfile.dependencies.host.items():
         if dep.package_folder is None:
-            conanfile.output.verbose(f"{dep.ref} does not have any package folder")
+            output.warning(f"{dep.ref} does not have any package folder, skipping binary")
             continue
-        if not dep.cpp_info.bindirs and not dep.cpp_info.libdirs:
-            conanfile.output.verbose(f"{dep.ref} does not have any bin or lib directory")
-            continue
-
+        count = 0
         for bindir in dep.cpp_info.bindirs:
             if not os.path.isdir(bindir):
-                conanfile.output.warning(f"{bindir} does not exist")
+                output.warning(f"{dep.ref} {bindir} does not exist")
                 continue
-            count = _flatten_directory(dep, conanfile, bindir, output_folder)
-            conanfile.output.info(f"Copied {count} files from {dep.ref}, directory named {bindir}")
+            count += _flatten_directory(dep, conanfile, bindir, output_folder)
 
         for libdir in dep.cpp_info.libdirs:
             if not os.path.isdir(libdir):
-                conanfile.output.warning(f"{libdir} does not exist")
+                output.warning(f"{dep.ref} {libdir} does not exist")
                 continue
-            count = _flatten_directory(dep, conanfile, libdir, output_folder, [".dylib", ".so"])
-            conanfile.output.info(f"Copied {count} files from {dep.ref}, directory named {libdir}")
-    conanfile.output.info(f"Runtime deployed!")
+            count += _flatten_directory(dep, conanfile, libdir, output_folder, [".dylib", ".so"])
+
+        output.info(f"Copied {count} files from {dep.ref}")
+    conanfile.output.success(f"Runtime deployed to folder: {output_folder}")
 
 
 def _flatten_directory(dep, conanfile, src_dir, output_dir, extension_filter=None):
@@ -140,7 +139,7 @@ def _flatten_directory(dep, conanfile, src_dir, output_dir, extension_filter=Non
             try:
                 file_count += 1
                 shutil.copy2(src_filepath, dest_filepath, follow_symlinks=symlinks)
-                conanfile.output.verbose(f"Copied {src_filename} into {output_dir}")
+                conanfile.output.verbose(f"Copied {src_filepath} into {output_dir}")
             except Exception as e:
                 if "WinError 1314" in str(e):
                     ConanOutput().error("runtime_deploy: Symlinks in Windows require admin privileges "
