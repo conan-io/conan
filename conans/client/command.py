@@ -143,6 +143,7 @@ class Command(object):
         Creates a new package recipe template with a 'conanfile.py' and optionally,
         'test_package' testing files.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.new.__doc__,
                                          prog="conan new",
                                          formatter_class=SmartFormatter)
@@ -280,6 +281,7 @@ class Command(object):
         neither definition of package() or package_info() methods. The package
         to be tested must exist in the local cache or any configured remote.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.test.__doc__,
                                          prog="conan test",
                                          formatter_class=SmartFormatter)
@@ -414,7 +416,7 @@ class Command(object):
         is specified, it will download all packages from the specified remote.
         If no remote is specified, it will use the default remote.
         """
-
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.download.__doc__,
                                          prog="conan download",
                                          formatter_class=SmartFormatter)
@@ -672,6 +674,7 @@ class Command(object):
         It can be used with a recipe or a reference for any existing package in
         your local cache.
         """
+        self._warn_conan_version()
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
                              "required", "date", "author", "description", "provides", "deprecated",
@@ -825,6 +828,7 @@ class Command(object):
 
         Usually downloads and uncompresses the package sources.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.source.__doc__,
                                          prog="conan source",
                                          formatter_class=SmartFormatter)
@@ -1000,7 +1004,7 @@ class Command(object):
         will execute package() method over '--source-folder' and '--build-folder' to create
         the binary package.
         """
-
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg",
                                          formatter_class=SmartFormatter)
@@ -1084,6 +1088,7 @@ class Command(object):
         it. Once the recipe is in the local cache it can be shared and reused
         with any remote with the 'conan upload' command.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.export.__doc__,
                                          prog="conan export",
                                          formatter_class=SmartFormatter)
@@ -1209,6 +1214,8 @@ class Command(object):
         Useful to promote packages (e.g. from "beta" to "stable") or transfer
         them from one user to another.
         """
+        self._out.warning("Command 'conan copy' is highly discouraged and it has been removed"
+                          " in Conan 2")
         parser = argparse.ArgumentParser(description=self.copy.__doc__,
                                          prog="conan copy",
                                          formatter_class=SmartFormatter)
@@ -1338,6 +1345,7 @@ class Command(object):
         insensitive file systems, like Windows, case sensitive search
         can be forced with '--case-sensitive'.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.search.__doc__,
                                          prog="conan search",
                                          formatter_class=SmartFormatter)
@@ -1458,6 +1466,7 @@ class Command(object):
         If no remote is specified, the first configured remote (by default conan-center, use
         'conan remote list' to list the remotes) will be used.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload",
                                          formatter_class=SmartFormatter)
@@ -1563,6 +1572,7 @@ class Command(object):
         """
         Manages the remote list and the package recipes associated with a remote.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.remote.__doc__,
                                          prog="conan remote",
                                          formatter_class=SmartFormatter)
@@ -1935,6 +1945,7 @@ class Command(object):
         """
         Generates and manipulates lock files.
         """
+        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.lock.__doc__,
                                          prog="conan lock",
                                          formatter_class=SmartFormatter)
@@ -2182,9 +2193,11 @@ class Command(object):
 
     def _warn_conan_version(self):
         width = 70
-        self._out.writeln(textwrap.fill("Conan 1 is on a deprecation path, "
-                                        "please consider migrating to Conan 2", width),
+        self._out.writeln("*"*70, front=Color.BRIGHT_YELLOW)
+        self._out.writeln(textwrap.fill("Conan 1 is legacy and on a deprecation path, "
+                                        "please upgrade to Conan 2", width),
                           front=Color.BRIGHT_YELLOW)
+        self._out.writeln("*" * 70, front=Color.BRIGHT_YELLOW)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class

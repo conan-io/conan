@@ -240,9 +240,15 @@ class ConanAPIV1(object):
         conan_v2_error("Using code from cache/python not allowed", os.path.isdir(python_folder))
         sys.path.append(python_folder)
 
+    _counter_warn_revisions = 0
+
     def create_app(self, quiet_output=None):
+        self._counter_warn_revisions += 1
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
                             self.runner, quiet_output=quiet_output)
+        if not self.app.config.revisions_enabled and self._counter_warn_revisions == 1:
+            self.app.out.warning("Revisions are disabled. Using Conan without revisions enabled "
+                                 "is deprecated.")
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
