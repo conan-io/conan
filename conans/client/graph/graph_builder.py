@@ -1,11 +1,11 @@
 import copy
-import os
-import re
+
 from collections import deque
 
+from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -13,8 +13,8 @@ from conans.client.graph.profile_node_definer import initialize_conanfile_profil
 from conans.client.graph.provides import check_graph_provides
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
-from conans.model.options import Options
-from conans.model.package_ref import PkgReference
+from conans.model.options import Options, _PackageOptions
+from conans.model.pkg_type import PackageType
 from conans.model.recipe_ref import RecipeReference, ref_matches
 from conans.model.requires import Requirement
 
@@ -97,9 +97,30 @@ class DepsGraphBuilder(object):
             # print("Closing a loop from ", node, "=>", prev_node)
             # Keep previous "test" status only if current is also test
             prev_node.test = prev_node.test and (node.test or require.test)
+            self._save_options_conflicts(node, require, prev_node, graph)
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
+
+    def _save_options_conflicts(self, node, require, prev_node, graph):
+        """ Store the discrepancies of options when closing a diamond, to later report
+        them. This list is not exhaustive, only the diamond vertix, not other transitives
+        """
+        down_options = self._compute_down_options(node, require, prev_node.ref)
+        down_options = down_options._deps_package_options  # noqa
+        if not down_options:
+            return
+        down_pkg_options = _PackageOptions()
+        for pattern, options in down_options.items():
+            if ref_matches(prev_node.ref, pattern, is_consumer=False):
+                down_pkg_options.update_options(options)
+        prev_options = {k: v for k, v in prev_node.conanfile.options.items()}
+        for k, v in down_pkg_options.items():
+            prev_value = prev_options.get(k)
+            if prev_value is not None and prev_value != v:
+                d = graph.options_conflicts.setdefault(str(prev_node.ref), {})
+                conflicts = d.setdefault(k, {"value": prev_value}).setdefault("conflicts", [])
+                conflicts.append((node.ref, v))
 
     @staticmethod
     def _conflicting_version(require, node,
@@ -194,10 +215,11 @@ class DepsGraphBuilder(object):
             try:
                 result = self._proxy.get_recipe(alias, self._remotes, self._update,
                                                 self._check_update)
-                conanfile_path, recipe_status, remote, new_ref = result
+                layout, recipe_status, remote = result
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
+            conanfile_path = layout.conanfile()
             dep_conanfile = self._loader.load_basic(conanfile_path)
             try:
                 pointed_ref = RecipeReference.loads(dep_conanfile.alias)
@@ -212,17 +234,26 @@ class DepsGraphBuilder(object):
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
-        conanfile_path, recipe_status, remote, new_ref = result
+        layout, recipe_status, remote = result
+        conanfile_path = layout.conanfile()
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        return new_ref, dep_conanfile, recipe_status, remote
+        return layout, dep_conanfile, recipe_status, remote
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
-        dep_type = "platform_tool_requires" if require.build else "platform_requires"
-        system_reqs = getattr(profile, dep_type)
+        if node.context == CONTEXT_BUILD:
+            # If we are in the build context, the platform_tool_requires ALSO applies to the
+            # regular requires. It is not possible in the build context to have tool-requires
+            # and regular requires to the same package from Conan and from Platform
+            system_reqs = profile.platform_tool_requires
+            if not require.build:
+                system_reqs = system_reqs + profile.platform_requires
+        else:
+            system_reqs = profile.platform_tool_requires if require.build \
+                else profile.platform_requires
         if system_reqs:
             version_range = require.version_range
             for d in system_reqs:
@@ -230,12 +261,14 @@ class DepsGraphBuilder(object):
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
-                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
+                            layout = BasicLayout(require.ref, None)
+                            return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
                             require.ref.revision = d.revision
-                            return d, ConanFile(str(d)), RECIPE_PLATFORM, None
+                            layout = BasicLayout(require.ref, None)
+                            return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
@@ -280,11 +313,12 @@ class DepsGraphBuilder(object):
             tracking_ref = require_version.split(':', 1)
             ref = require.ref
             if len(tracking_ref) > 1:
-                ref = RecipeReference.loads(str(node.ref))
+                ref = RecipeReference.loads(str(require.ref))
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None:
+            if transitive is None or transitive.require.ref.user != ref.user \
+                    or transitive.require.ref.channel != ref.channel:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
@@ -305,15 +339,10 @@ class DepsGraphBuilder(object):
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
-        new_ref, dep_conanfile, recipe_status, remote = resolved
-        # TODO: Proxy could return the recipe_layout() and it can be reused
-        # TODO: Recipe layout could be cached from this point in Node to avoid re-reading it
-        if recipe_status == RECIPE_EDITABLE:
-            recipe_metadata = os.path.join(dep_conanfile.recipe_folder, "metadata")
-            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
-        elif recipe_status != RECIPE_PLATFORM:
-            recipe_metadata = self._cache.recipe_layout(new_ref).metadata()
-            dep_conanfile.folders.set_base_recipe_metadata(recipe_metadata)
+        layout, dep_conanfile, recipe_status, remote = resolved
+
+        new_ref = layout.reference
+        dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
         # If the node is virtual or a test package, the require is also "root"
         is_test_package = getattr(node.conanfile, "tested_reference_str", False)
         if node.conanfile._conan_is_consumer and (node.recipe == RECIPE_VIRTUAL or is_test_package):
@@ -326,6 +355,29 @@ class DepsGraphBuilder(object):
         new_node.recipe = recipe_status
         new_node.remote = remote
 
+        down_options = self._compute_down_options(node, require, new_ref)
+
+        if recipe_status != RECIPE_PLATFORM:
+            self._prepare_node(new_node, profile_host, profile_build, down_options)
+        if dep_conanfile.package_type is PackageType.CONF and node.recipe != RECIPE_VIRTUAL:
+            raise ConanException(f"Configuration package {dep_conanfile} cannot be used as "
+                                 f"requirement, but {node.ref} is requiring it")
+
+        require.process_package_type(node, new_node)
+        graph.add_node(new_node)
+        graph.add_edge(node, new_node, require)
+        if node.propagate_downstream(require, new_node):
+            raise GraphRuntimeError(node, new_node)
+
+        # This is necessary to prevent infinite loops even when visibility is False
+        ancestor = node.check_loops(new_node)
+        if ancestor is not None:
+            raise GraphLoopError(new_node, require, ancestor)
+
+        return new_node
+
+    @staticmethod
+    def _compute_down_options(node, require, new_ref):
         # The consumer "up_options" are the options that come from downstream to this node
         if require.options is not None:
             # If the consumer has specified "requires(options=xxx)", we need to use it
@@ -346,20 +398,7 @@ class DepsGraphBuilder(object):
                 down_options = node.conanfile.private_up_options
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
-
-        self._prepare_node(new_node, profile_host, profile_build, down_options)
-        require.process_package_type(node, new_node)
-        graph.add_node(new_node)
-        graph.add_edge(node, new_node, require)
-        if node.propagate_downstream(require, new_node):
-            raise GraphRuntimeError(node, new_node)
-
-        # This is necessary to prevent infinite loops even when visibility is False
-        ancestor = node.check_loops(new_node)
-        if ancestor is not None:
-            raise GraphLoopError(new_node, require, ancestor)
-
-        return new_node
+        return down_options
 
     @staticmethod
     def _remove_overrides(dep_graph):

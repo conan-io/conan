@@ -4,8 +4,7 @@ import shutil
 from conan.internal.cache.home_paths import HomePaths
 from conan.api.output import ConanOutput
 from conans.client.loader import load_python_file
-from conans.errors import ConanException
-from conans.model.recipe_ref import ref_matches
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.files import rmdir, mkdir
 
 
@@ -42,15 +41,23 @@ def do_deploys(conan_api, graph, deploy, deploy_package, deploy_folder):
     mkdir(deploy_folder)
     # handle the recipe deploy()
     if deploy_package:
+        # Similar processing as BuildMode class
+        excluded = [p[1:] for p in deploy_package if p[0] in ["!", "~"]]
+        included = [p for p in deploy_package if p[0] not in ["!", "~"]]
         for node in graph.ordered_iterate():
             conanfile = node.conanfile
-            if not conanfile.ref or not any(ref_matches(conanfile.ref, p, None)
-                                            for p in deploy_package):
+            if not conanfile.ref:  # virtual or conanfile.txt, can't have deployer
+                continue
+            consumer = conanfile._conan_is_consumer
+            if any(conanfile.ref.matches(p, consumer) for p in excluded):
+                continue
+            if not any(conanfile.ref.matches(p, consumer) for p in included):
                 continue
             if hasattr(conanfile, "deploy"):
                 conanfile.output.info("Executing deploy()")
                 conanfile.deploy_folder = deploy_folder
-                conanfile.deploy()
+                with conanfile_exception_formatter(conanfile, "deploy"):
+                    conanfile.deploy()
     # Handle the deploys
     cache = HomePaths(conan_api.cache_folder)
     for d in deploy or []:
@@ -89,7 +96,7 @@ def _deploy_single(dep, conanfile, output_folder, folder_name):
     except Exception as e:
         if "WinError 1314" in str(e):
             ConanOutput().error("full_deploy: Symlinks in Windows require admin privileges "
-                                "or 'Developer mode = ON'")
+                                "or 'Developer mode = ON'", error_type="exception")
         raise ConanException(f"full_deploy: The copy of '{dep}' files failed: {e}.\nYou can "
                              f"use 'tools.deployer:symlinks' conf to disable symlinks")
     dep.set_deploy_folder(new_folder)

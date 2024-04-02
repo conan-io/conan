@@ -5,8 +5,9 @@ from jinja2 import Template
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
+from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
-    apple_sdk_path
+    apple_sdk_path, get_apple_sdk_fullname
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
@@ -38,6 +39,15 @@ class MesonToolchain(object):
     {{it}} = {{value}}
     {% endfor %}
 
+    {% for subproject, listkeypair in subproject_options -%}
+    [{{subproject}}:project options]
+    {% for keypair in listkeypair -%}
+    {% for it, value in keypair.items() -%}
+    {{it}} = {{value}}
+    {% endfor %}
+    {% endfor %}
+    {% endfor %}
+
     [binaries]
     {% if c %}c = {{c}}{% endif %}
     {% if cpp %}cpp = {{cpp}}{% endif %}
@@ -53,6 +63,7 @@ class MesonToolchain(object):
     {% if as %}as = '{{as}}'{% endif %}
     {% if windres %}windres = '{{windres}}'{% endif %}
     {% if pkgconfig %}pkgconfig = '{{pkgconfig}}'{% endif %}
+    {% if pkgconfig %}pkg-config = '{{pkgconfig}}'{% endif %}
 
     [built-in options]
     {% if buildtype %}buildtype = '{{buildtype}}'{% endif %}
@@ -64,6 +75,7 @@ class MesonToolchain(object):
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
+    {% if build_pkg_config_path %}build.pkg_config_path = '{{build_pkg_config_path}}'{% endif %}
     # C/C++ arguments
     c_args = {{c_args}} + preprocessor_definitions
     c_link_args = {{c_link_args}}
@@ -91,6 +103,7 @@ class MesonToolchain(object):
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
         """
+        raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
         self._os = self._conanfile.settings.get_safe("os")
         self._is_apple_system = is_apple_os(self._conanfile)
@@ -141,10 +154,14 @@ class MesonToolchain(object):
         self.preprocessor_definitions = {}
         # Add all the default dirs
         self.project_options.update(self._get_default_dirs())
-
+        #: Dict-like object that defines Meson ``subproject options``.
+        self.subproject_options = {}
         #: Defines the Meson ``pkg_config_path`` variable
         self.pkg_config_path = self._conanfile.generators_folder
-
+        #: Defines the Meson ``build.pkg_config_path`` variable (build context)
+        # Issue: https://github.com/conan-io/conan/issues/12342
+        # Issue: https://github.com/conan-io/conan/issues/14935
+        self.build_pkg_config_path = None
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
 
         #: Dict-like object with the build, host, and target as the Meson machine context
@@ -174,6 +191,7 @@ class MesonToolchain(object):
             elif compiler == "gcc":
                 default_comp = "gcc"
                 default_comp_cpp = "g++"
+
         if "Visual" in compiler or compiler == "msvc":
             default_comp = "cl"
             default_comp_cpp = "cl"
@@ -214,7 +232,8 @@ class MesonToolchain(object):
         self.windres = build_env.get("WINDRES")
         #: Defines the Meson ``pkgconfig`` variable. Defaulted to ``PKG_CONFIG``
         #: build environment value
-        self.pkgconfig = build_env.get("PKG_CONFIG")
+        self.pkgconfig = (self._conanfile.conf.get("tools.gnu:pkg_config", check_type=str) or
+                          build_env.get("PKG_CONFIG"))
         #: Defines the Meson ``c_args`` variable. Defaulted to ``CFLAGS`` build environment value
         self.c_args = self._get_env_list(build_env.get("CFLAGS", []))
         #: Defines the Meson ``c_link_args`` variable. Defaulted to ``LDFLAGS`` build
@@ -295,13 +314,8 @@ class MesonToolchain(object):
                 "Apple SDK path not found. For cross-compilation, you must "
                 "provide a valid SDK path in 'tools.apple:sdk_path' config."
             )
-
-        # TODO: Delete this os_sdk check whenever the _guess_apple_sdk_name() function disappears
-        os_sdk = self._conanfile.settings.get_safe('os.sdk')
-        if not os_sdk and self._os != "Macos":
-            raise ConanException("Please, specify a suitable value for os.sdk.")
-
         # Calculating the main Apple flags
+        os_sdk = get_apple_sdk_fullname(self._conanfile)
         arch = to_apple_arch(self._conanfile)
         self.apple_arch_flag = ["-arch", arch] if arch else []
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
@@ -333,8 +347,10 @@ class MesonToolchain(object):
                           'armv8': 'aarch64-linux-android',
                           'x86': 'i686-linux-android',
                           'x86_64': 'x86_64-linux-android'}.get(arch)
-        self.c = os.path.join(ndk_bin, "{}{}-clang".format(android_target, android_api_level))
-        self.cpp = os.path.join(ndk_bin, "{}{}-clang++".format(android_target, android_api_level))
+        os_build = self._conanfile.settings_build.get_safe('os')
+        compiler_extension = ".cmd" if os_build == "Windows" else ""
+        self.c = os.path.join(ndk_bin, "{}{}-clang{}".format(android_target, android_api_level, compiler_extension))
+        self.cpp = os.path.join(ndk_bin, "{}{}-clang++{}".format(android_target, android_api_level, compiler_extension))
         self.ar = os.path.join(ndk_bin, "llvm-ar")
 
     def _get_extra_flags(self):
@@ -387,11 +403,20 @@ class MesonToolchain(object):
         if self.gcc_cxx11_abi:
             self.cpp_args.append("-D{}".format(self.gcc_cxx11_abi))
 
+        subproject_options = {}
+        for subproject, listkeypair in self.subproject_options.items():
+            if listkeypair is not None and listkeypair is not []:
+                subproject_options[subproject] = []
+                for keypair in listkeypair:
+                    subproject_options[subproject].append({k: to_meson_value(v) for k, v in keypair.items()})
+
         return {
             # https://mesonbuild.com/Machine-files.html#properties
             "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
             # https://mesonbuild.com/Machine-files.html#project-specific-options
             "project_options": {k: to_meson_value(v) for k, v in self.project_options.items()},
+            # https://mesonbuild.com/Subprojects.html#build-options-in-subproject
+            "subproject_options": subproject_options.items(),
             # https://mesonbuild.com/Builtin-options.html#directories
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
@@ -426,6 +451,7 @@ class MesonToolchain(object):
             "objcpp_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_args)),
             "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
+            "build_pkg_config_path": self.build_pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build,
             "is_apple_system": self._is_apple_system

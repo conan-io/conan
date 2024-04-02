@@ -40,7 +40,6 @@ def install(conan_api, parser, *args):
                         help='Whether the provided path is a build-require')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-
     # basic paths
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None

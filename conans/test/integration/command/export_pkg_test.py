@@ -126,7 +126,9 @@ class TestConan(ConanFile):
                      "libs/what": "",
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
-        client.run("export-pkg . --user=lasote --channel=stable -s os=Windows")
+        client.run("export-pkg . --user=lasote --channel=stable -s os=Windows -vvv")
+        assert "copy(pattern=*.h) copied 1 files" in client.out
+        assert "copy(pattern=*.lib) copied 1 files" in client.out
         package_folder = client.created_layout().package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -283,8 +285,8 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
 
         # Wrong folders
-        client.run("export-pkg . --format=json")
-        graph = json.loads(client.stdout)
+        client.run("export-pkg . --format=json", redirect_stdout="exported.json")
+        graph = json.loads(client.load("exported.json"))
         node = graph["graph"]["nodes"]["0"]
         assert "pkg/0.1" in node["ref"]
         # https://github.com/conan-io/conan/issues/15041
@@ -294,6 +296,12 @@ class TestConan(ConanFile):
         assert "Build" == node["binary"]
         assert node["rrev_timestamp"] is not None
         assert node["prev_timestamp"] is not None
+
+        # Make sure the exported json file can be used for ``conan lsit --graph`` input to upload
+        client.run("list --graph=exported.json -gb=build --format=json")
+        pkglist = json.loads(client.stdout)
+        revs = pkglist["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]
+        assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in revs["packages"]
 
     def test_export_pkg_no_ref(self):
         client = TestClient()

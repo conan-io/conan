@@ -128,7 +128,7 @@ def test_transitive_libs_consuming(shared):
 
         cc_shared_library(
             name = "mysecondlib_shared",
-            shared_lib_name = "libmysecondlib.{}",
+            shared_lib_name = "libmysecondlib_shared.{}",
             deps = [":mysecondlib"],
         )
         """.format("dylib" if os_ == "Darwin" else "dll"))

@@ -94,11 +94,13 @@ def _get_libs(dep, cpp_info=None) -> list:
                 "static-library": False}.get(str(dep.package_type), default_value)
 
     def _save_lib_path(lib_, lib_path_):
-        _, ext_ = os.path.splitext(lib_path_)
+        """Add each lib with its full library path"""
+        formatted_path = lib_path_.replace("\\", "/")
+        _, ext_ = os.path.splitext(formatted_path)
         if is_shared and ext_ == ".lib":  # Windows interface library
-            interface_lib_paths[lib_] = lib_path_
+            interface_lib_paths[lib_] = formatted_path
         else:
-            lib_paths[lib_] = lib_path_
+            lib_paths[lib_] = formatted_path
 
     cpp_info = cpp_info or dep.cpp_info
     is_shared = _is_shared()
@@ -115,26 +117,25 @@ def _get_libs(dep, cpp_info=None) -> list:
             full_path = os.path.join(libdir, f)
             if not os.path.isfile(full_path):  # Make sure that directories are excluded
                 continue
-            # Users may not name their libraries in a conventional way. For example, directly
-            # use the basename of the lib file as lib name.
-            if f in libs:
-                lib = f
-                # libs.remove(f)
-                lib_path = full_path
-                _save_lib_path(lib, lib_path)
-                continue
             name, ext = os.path.splitext(f)
+            # Users may not name their libraries in a conventional way. For example, directly
+            # use the basename of the lib file as lib name, e.g., cpp_info.libs = ["liblib1.a"]
+            # Issue related: https://github.com/conan-io/conan/issues/11331
+            if ext and f in libs:  # let's ensure that it has any extension
+                _save_lib_path(f, full_path)
+                continue
             if name not in libs and name.startswith("lib"):
-                name = name[3:]
-            if name in libs:
-                # FIXME: Should it read a conf variable to know unexpected extensions?
-                if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
-                   (not is_shared and ext in (".a", ".lib")):
-                    lib = name
-                    # libs.remove(name)
-                    lib_path = full_path
-                    _save_lib_path(lib, lib_path)
+                name = name[3:]  # libpkg -> pkg
+            # FIXME: Should it read a conf variable to know unexpected extensions?
+            if (is_shared and ext in (".so", ".dylib", ".lib", ".dll")) or \
+               (not is_shared and ext in (".a", ".lib")):
+                if name in libs:
+                    _save_lib_path(name, full_path)
                     continue
+                else:  # last chance: some cases the name could be pkg.if instead of pkg
+                    name = name.split(".", maxsplit=1)[0]
+                    if name in libs:
+                        _save_lib_path(name, full_path)
 
     libraries = []
     for lib, lib_path in lib_paths.items():

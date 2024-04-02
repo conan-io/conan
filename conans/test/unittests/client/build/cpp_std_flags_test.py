@@ -1,16 +1,17 @@
 import unittest
 
 from conan.internal.api.detect_api import default_cppstd
-from conan.tools.build.flags import cppstd_flag
+from conan.tools.build import cppstd_flag
 from conans.model.version import Version
-from conans.test.utils.mocks import MockSettings
+from conans.test.utils.mocks import MockSettings, ConanFileMock
 
 
 def _make_cppstd_flag(compiler, compiler_version, cppstd=None):
-    settings = MockSettings({"compiler": compiler,
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"compiler": compiler,
                              "compiler.version": compiler_version,
                              "compiler.cppstd": cppstd})
-    return cppstd_flag(settings)
+    return cppstd_flag(conanfile)
 
 
 def _make_cppstd_default(compiler, compiler_version):

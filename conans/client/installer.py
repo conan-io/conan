@@ -7,7 +7,7 @@ from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.generators import write_generators
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_PLATFORM, BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
+    BINARY_UPDATE, BINARY_EDITABLE_BUILD, BINARY_SKIP
 from conans.client.graph.install_graph import InstallGraph
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, conanfile_exception_formatter, conanfile_remove_attr)
@@ -97,7 +97,7 @@ class _PackageBuilder(object):
             conanfile.output.success("Package '%s' built" % pref.package_id)
             conanfile.output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
-            conanfile.output.error("\nPackage '%s' build failed" % pref.package_id)
+            conanfile.output.error(f"\nPackage '{pref.package_id}' build failed", error_type="exception")
             conanfile.output.warning("Build folder %s" % conanfile.build_folder)
             if isinstance(exc, ConanException):
                 raise exc
@@ -168,8 +168,9 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app, global_conf):
+    def __init__(self, app, global_conf, editable_packages):
         self._app = app
+        self._editable_packages = editable_packages
         self._cache = app.cache
         self._remote_manager = app.remote_manager
         self._hook_manager = app.hook_manager
@@ -198,9 +199,10 @@ class BinaryInstaller:
         config_source(export_source_folder, conanfile, self._hook_manager)
 
     @staticmethod
-    def install_system_requires(graph, only_info=False):
-        install_graph = InstallGraph(graph)
-        install_order = install_graph.install_order()
+    def install_system_requires(graph, only_info=False, install_order=None):
+        if install_order is None:
+            install_graph = InstallGraph(graph)
+            install_order = install_graph.install_order()
 
         for level in install_order:
             for install_reference in level:
@@ -235,15 +237,14 @@ class BinaryInstaller:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
 
-    def install(self, deps_graph, remotes):
+    def install(self, deps_graph, remotes, install_order=None):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
+        if install_order is None:
+            install_graph = InstallGraph(deps_graph)
+            install_graph.raise_errors()
+            install_order = install_graph.install_order()
 
         ConanOutput().title("Installing packages")
-
-        # order by levels and separate the root node (ref=None) from the rest
-        install_graph = InstallGraph(deps_graph)
-        install_graph.raise_errors()
-        install_order = install_graph.install_order()
 
         package_count = sum([sum(len(install_reference.packages.values())
                                  for level in install_order
@@ -294,9 +295,6 @@ class BinaryInstaller:
         self._remote_manager.get_package(node.pref, node.binary_remote)
 
     def _handle_package(self, package, install_reference, handled_count, total_count):
-        if package.binary == BINARY_PLATFORM:
-            return
-
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return
@@ -348,7 +346,7 @@ class BinaryInstaller:
         node = install_node.nodes[0]
         conanfile = node.conanfile
         ref = node.ref
-        editable = self._cache.editable_packages.get(ref)
+        editable = self._editable_packages.get(ref)
         conanfile_path = editable["path"]
         output_folder = editable.get("output_folder")
 

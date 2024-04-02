@@ -6,7 +6,6 @@ from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 from conan.cli import make_abs_path
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
-from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import Lockfile, LOCKFILE
 from conans.model.recipe_ref import RecipeReference
 
@@ -99,6 +98,8 @@ def lock_add(conan_api, parser, subparser, *args):
                            help='Add build-requires to lockfile')
     subparser.add_argument('--python-requires', action="append",
                            help='Add python-requires to lockfile')
+    subparser.add_argument('--config-requires', action="append",
+                           help='Add config-requires to lockfile')
     subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
                            help="Filename of the created lockfile")
     subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
@@ -118,9 +119,38 @@ def lock_add(conan_api, parser, subparser, *args):
     requires = _parse_requires(args.requires)
     build_requires = _parse_requires(args.build_requires)
     python_requires = _parse_requires(args.python_requires)
+    config_requires = _parse_requires(args.config_requires)
 
     lockfile = conan_api.lockfile.add_lockfile(lockfile,
                                                requires=requires,
                                                python_requires=python_requires,
-                                               build_requires=build_requires)
+                                               build_requires=build_requires,
+                                               config_requires=config_requires)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
+
+
+@conan_subcommand()
+def lock_remove(conan_api, parser, subparser, *args):
+    """
+    Remove requires, build-requires or python-requires from an existing or new lockfile.
+    References can be supplied with and without revisions like "--requires=pkg/version",
+    """
+    subparser.add_argument('--requires', action="append", help='Remove references to lockfile.')
+    subparser.add_argument('--build-requires', action="append",
+                           help='Remove build-requires from lockfile')
+    subparser.add_argument('--python-requires', action="append",
+                           help='Remove python-requires from lockfile')
+    subparser.add_argument('--config-requires', action="append",
+                           help='Remove config-requires from lockfile')
+    subparser.add_argument("--lockfile-out", action=OnceArgument, default=LOCKFILE,
+                           help="Filename of the created lockfile")
+    subparser.add_argument("--lockfile", action=OnceArgument, help="Filename of the input lockfile")
+    args = parser.parse_args(*args)
+
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
+    lockfile = conan_api.lockfile.remove_lockfile(lockfile,
+                                                  requires=args.requires,
+                                                  python_requires=args.python_requires,
+                                                  build_requires=args.build_requires,
+                                                  config_requires=args.config_requires)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)

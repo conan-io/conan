@@ -22,6 +22,7 @@ def test_lock_packages(requires):
     prev = client.created_package_revision("pkg/0.1")
 
     client.run("lock create consumer/conanfile.txt --lockfile-packages")
+    assert "ERROR: The --lockfile-packages arg is private and shouldn't be used" in client.out
     assert "pkg/0.1#" in client.out
     lock = client.load("consumer/conan.lock")
     assert NO_SETTINGS_PACKAGE_ID in lock

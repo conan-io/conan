@@ -35,17 +35,13 @@ def client():
     return client
 
 
-@pytest.mark.xfail(reason="Winbash is broken for multi-profile. Ongoing https://github.com/conan-io/conan/pull/9755")
 @pytest.mark.parametrize("win_bash", [True, False, None])
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_virtualenv_deactivated(client, win_bash):
-    conanfile = str(GenConanfile().with_settings("os")
-                    .with_generator("VirtualBuildEnv").with_generator("VirtualRunEnv")
-                    .with_require("foo/1.0"))
-    conanfile += """
-    {}
-    """.format("" if win_bash is None else "win_bash = False"
-               if win_bash is False else "win_bash = True")
+    conanfile = GenConanfile().with_settings("os").with_require("foo/1.0")
+    if win_bash:
+        conanfile.with_class_attribute("win_bash = True")
+
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Windows")
 
