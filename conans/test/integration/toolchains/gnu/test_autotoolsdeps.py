@@ -42,7 +42,7 @@ def test_cpp_info_aggregation():
          compiler.cppstd=17
     """)
 
-    dep_conanfile = textwrap.dedent("""
+    dep_conanfile = textwrap.dedent(r"""
 
     from conan import ConanFile
 
