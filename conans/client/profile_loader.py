@@ -126,8 +126,14 @@ class ProfileLoader:
                    "profile_name": file_path,
                    "conan_version": conan_version,
                    "detect_api": detect_api}
+
         rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
-        text = rtemplate.render(context)
+
+        try:
+            text = rtemplate.render(context)
+        except Exception as e:
+            raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
+                                 f"Check your Jinja2 syntax: {str(e)}")
 
         try:
             return self._recurse_load_profile(text, profile_path)
@@ -223,7 +229,8 @@ class _ProfileValueParser(object):
                                                          "system_tools",  # DEPRECATED: platform_tool_requires
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
-                                                         "options", "conf", "buildenv", "runenv"])
+                                                         "options", "conf", "buildenv", "runenv",
+                                                         "replace_requires", "replace_tool_requires"])
 
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
@@ -238,6 +245,26 @@ class _ProfileValueParser(object):
         platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
         platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
 
+        def load_replace(doc_replace_requires):
+            result = {}
+            for r in doc_replace_requires.splitlines():
+                r = r.strip()
+                if not r or r.startswith("#"):
+                    continue
+                try:
+                    src, target = r.split(":")
+                    target = RecipeReference.loads(target.strip())
+                    src = RecipeReference.loads(src.strip())
+                except Exception as e:
+                    raise ConanException(f"Error in [replace_xxx] '{r}'.\nIt should be in the form"
+                                         f" 'pattern: replacement', without package-ids.\n"
+                                         f"Original error: {str(e)}")
+                result[src] = target
+            return result
+
+        replace_requires = load_replace(doc.replace_requires) if doc.replace_requires else {}
+        replace_tool = load_replace(doc.replace_tool_requires) if doc.replace_tool_requires else {}
+
         if doc.conf:
             conf = ConfDefinition()
             conf.loads(doc.conf, profile=True)
@@ -248,6 +275,9 @@ class _ProfileValueParser(object):
 
         # Create or update the profile
         base_profile = base_profile or Profile()
+        base_profile.replace_requires.update(replace_requires)
+        base_profile.replace_tool_requires.update(replace_tool)
+
         current_platform_tool_requires = {r.name: r for r in base_profile.platform_tool_requires}
         current_platform_tool_requires.update({r.name: r for r in platform_tool_requires})
         base_profile.platform_tool_requires = list(current_platform_tool_requires.values())

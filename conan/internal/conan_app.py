@@ -36,16 +36,18 @@ class ConanFileHelpers:
         self.cache = cache
 
 
-class ConanApp(object):
-    def __init__(self, cache_folder, global_conf):
-
+class ConanApp:
+    def __init__(self, conan_api):
+        global_conf = conan_api.config.global_conf
+        cache_folder = conan_api.home_folder
+        self._configure(global_conf)
         self.cache_folder = cache_folder
         self.cache = ClientCache(self.cache_folder, global_conf)
 
         home_paths = HomePaths(self.cache_folder)
         self.hook_manager = HookManager(home_paths.hooks_path)
+
         # Wraps an http_requester to inject proxies, certs, etc
-        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings", check_type=list))
         self.requester = ConanRequester(global_conf, cache_folder)
         # To handle remote connections
         rest_client_factory = RestApiClientFactory(self.requester, global_conf)
@@ -54,10 +56,17 @@ class ConanApp(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager)
 
-        self.proxy = ConanProxy(self)
-        self.range_resolver = RangeResolver(self, global_conf)
+        self.proxy = ConanProxy(self, conan_api.local.editable_packages)
+        self.range_resolver = RangeResolver(self, global_conf, conan_api.local.editable_packages)
 
         self.pyreq_loader = PyRequireLoader(self, global_conf)
         cmd_wrap = CmdWrapper(home_paths.wrapper_path)
         conanfile_helpers = ConanFileHelpers(self.requester, cmd_wrap, global_conf, self.cache)
         self.loader = ConanFileLoader(self.pyreq_loader, conanfile_helpers)
+
+    @staticmethod
+    def _configure(global_conf):
+        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
+                                                           default=[], check_type=list))
+        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings",
+                                                            default=[], check_type=list))

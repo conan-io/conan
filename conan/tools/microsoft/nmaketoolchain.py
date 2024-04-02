@@ -38,7 +38,7 @@ class NMakeToolchain(object):
                 if value and not value.isnumeric():
                     value = f'\\"{value}\\"'
                 define = f"{macro}#{value}"
-            formated_defines.append(f"/D{define}")
+            formated_defines.append(f"/D\"{define}\"")
         return formated_defines
 
     @property
@@ -54,7 +54,7 @@ class NMakeToolchain(object):
         cflags.extend(self.extra_cflags)
 
         cxxflags = []
-        cppstd = cppstd_flag(self._conanfile.settings)
+        cppstd = cppstd_flag(self._conanfile)
         if cppstd:
             cxxflags.append(cppstd)
         cxxflags.extend(self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list))

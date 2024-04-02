@@ -1,7 +1,4 @@
-import textwrap
 import unittest
-
-import pytest
 
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
@@ -75,7 +72,6 @@ class TransitiveIdsTest(unittest.TestCase):
              "libe/1.0": ("f93a37dd8bc53991d7485235c6b3e448942c52ff", "Build")
              })
 
-    @pytest.mark.xfail(reason="package_id have changed")
     def test_transitive_unrelated(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
@@ -96,14 +92,13 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . --name=libd --version=1.0")
         # LibE -> LibD, LibA/2.0
         client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
-                    .with_require("liba/2.0")})
+                    .with_requirement("liba/2.0", force=True)})
         client.run("create . --name=libe --version=1.0", assert_error=True)
-        self.assertIn("liba/2.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
-        self.assertIn("libb/1.0:e71235a6f57633221a2b85f9b6aca14cda69e1fd - Missing", client.out)
-        self.assertIn("libc/1.0:e3884c6976eb7debb8ec57aada7c0c2beaabe8ac - Missing", client.out)
-        self.assertIn("libd/1.0:9b0b7b0905c9bc2cb9b7329f842b3b7c6663e8c3 - Missing", client.out)
+        client.assert_listed_binary({"liba/2.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+                                     "libb/1.0": ("9c5273fc489264e39c2c16494d8a4178f239e6e2", "Missing"),
+                                     "libc/1.0": ("9c5273fc489264e39c2c16494d8a4178f239e6e2", "Missing"),
+                                     "libd/1.0": ("060865748907651202e4caa396a4c11a11f91e28", "Missing")})
 
-    @pytest.mark.xfail(reason="package_id have changed")
     def test_transitive_second_level_header_only(self):
         # https://github.com/conan-io/conan/issues/6450
         client = TestClient()
@@ -123,19 +118,18 @@ class TransitiveIdsTest(unittest.TestCase):
         # LibD -> LibC
         client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")})
         client.run("create . --name=libd --version=1.0")
-        self.assertIn("libc/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+        client.assert_listed_binary({"libc/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache")})
 
         # LibE -> LibD, LibA/2.0
         client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
-                                                   .with_require("liba/2.0")})
+                                                   .with_requirement("liba/2.0", force=True)})
         client.run("create . --name=libe --version=1.0", assert_error=True)  # LibD is NOT missing!
-        self.assertIn("libd/1.0:119e0b2903330cef59977f8976cb82a665b510c1 - Cache", client.out)
-        # USE THE NEW FIXED PACKAGE_ID
-        client.run("create . --name=libe --version=1.0", assert_error=True)
-        self.assertIn("liba/2.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
-        self.assertIn("libb/1.0:e71235a6f57633221a2b85f9b6aca14cda69e1fd - Missing", client.out)
-        self.assertIn("libc/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
-        self.assertIn("libd/1.0:95b14a919aa70f9a7e24afbf48d1101cff344a67 - Missing", client.out)
+
+        client.assert_listed_binary(
+            {"liba/2.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+             "libb/1.0": ("9c5273fc489264e39c2c16494d8a4178f239e6e2", "Missing"),
+             "libc/1.0": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Cache"),
+             "libd/1.0": ("060865748907651202e4caa396a4c11a11f91e28", "Missing")})
 
     def test_transitive_header_only(self):
         # https://github.com/conan-io/conan/issues/6450

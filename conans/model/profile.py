@@ -17,6 +17,8 @@ class Profile(object):
         self.package_settings = defaultdict(OrderedDict)
         self.options = Options()
         self.tool_requires = OrderedDict()  # ref pattern: list of ref
+        self.replace_requires = {}
+        self.replace_tool_requires = {}
         self.platform_tool_requires = []
         self.platform_requires = []
         self.conf = ConfDefinition()
@@ -119,6 +121,9 @@ class Profile(object):
                      if not isinstance(req, RecipeReference) else req
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
+
+        self.replace_requires.update(other.replace_requires)
+        self.replace_tool_requires.update(other.replace_tool_requires)
 
         current_platform_tool_requires = {r.name: r for r in self.platform_tool_requires}
         current_platform_tool_requires.update({r.name: r for r in other.platform_tool_requires})

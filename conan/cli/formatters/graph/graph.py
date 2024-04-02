@@ -3,7 +3,7 @@ import os
 
 from jinja2 import Template, select_autoescape
 
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli.formatters.graph.graph_info_text import filter_graph
 from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
 from conan.cli.formatters.graph.info_graph_html import graph_info_html
@@ -54,8 +54,22 @@ class _PrinterGraphItem(object):
 class _Grapher(object):
     def __init__(self, deps_graph):
         self._deps_graph = deps_graph
-        self.node_map, self.edges = self._build_graph()
-        self.nodes = self.node_map.values()
+        self.node_map, self._edges = self._build_graph()
+        self._nodes = self.node_map.values()
+
+    @property
+    def nodes(self):
+        ConanOutput().warning("--format=html/dot rendering using 'graph' object is deprecated and "
+                              "will be removed in future 2.X version. Please upgrade your template "
+                              "to use 'deps_graph' instead", warn_tag="deprecated")
+        return self._nodes
+
+    @property
+    def edges(self):
+        ConanOutput().warning("--format=html/dot rendering using 'graph' object is deprecated and "
+                              "will be removed in future 2.X version. Please upgrade your template "
+                              "to use 'deps_graph' instead", warn_tag="deprecated")
+        return self._edges
 
     def _build_graph(self):
         graph_nodes = self._deps_graph.by_levels()
@@ -88,21 +102,18 @@ class _Grapher(object):
 
 
 def _render_graph(graph, error, template, template_folder):
+    deps_graph = graph.serialize()
     graph = _Grapher(graph)
     from conans import __version__ as client_version
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
-    return template.render(graph=graph, error=error, base_template_path=template_folder,
-                           version=client_version)
+    return template.render(deps_graph=deps_graph, graph=graph, error=error,
+                           base_template_path=template_folder, version=client_version)
 
 
 def format_graph_html(result):
     graph = result["graph"]
     conan_api = result["conan_api"]
-    package_filter = result["package_filter"]
-    serial = graph.serialize()
-    # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
-    #  instead of the native graph
-    serial = filter_graph(serial, package_filter)
+
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.html")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_html
@@ -122,11 +133,7 @@ def format_graph_html(result):
 def format_graph_dot(result):
     graph = result["graph"]
     conan_api = result["conan_api"]
-    package_filter = result["package_filter"]
-    serial = graph.serialize()
-    # TODO: This is not used, it is necessary to update the renderings to use the serialized graph
-    #  instead of the native graph
-    serial = filter_graph(serial, package_filter)
+
     template_folder = os.path.join(conan_api.cache_folder, "templates")
     user_template = os.path.join(template_folder, "graph.dot")
     template = load(user_template) if os.path.isfile(user_template) else graph_info_dot

@@ -1,19 +1,16 @@
-import os
 import types
 
 import pytest
 from mock import Mock
 
-from conan.tools.cmake import CMakeToolchain
 from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.toolchain.blocks import Block
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 @pytest.fixture
@@ -198,7 +195,7 @@ def conanfile_msvc():
     c = ConanFile(None)
     c.settings = Settings({"os": ["Windows"],
                            "compiler": {"msvc": {"version": ["193"], "cppstd": ["20"],
-                                                 "update": [None]}},
+                                                 "update": [None, 8, 9]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]})
     c.settings.build_type = "Release"
@@ -223,6 +220,12 @@ def test_toolset(conanfile_msvc):
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
 
 
+def test_toolset_update_version(conanfile_msvc):
+    conanfile_msvc.settings.compiler.update = "8"
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.38" CACHE STRING "" FORCE)' in toolchain.content
+
+
 def test_toolset_x64(conanfile_msvc):
     # https://github.com/conan-io/conan/issues/11144
     conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_arch", "x64")
@@ -230,6 +233,12 @@ def test_toolset_x64(conanfile_msvc):
     assert 'set(CMAKE_GENERATOR_TOOLSET "v143,host=x64" CACHE STRING "" FORCE)' in toolchain.content
     assert 'Visual Studio 17 2022' in toolchain.generator
     assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+
+
+def test_toolset_cuda(conanfile_msvc):
+    conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_cuda", "C:/Path/To/CUDA")
+    toolchain = CMakeToolchain(conanfile_msvc)
+    assert 'set(CMAKE_GENERATOR_TOOLSET "v143,cuda=C:/Path/To/CUDA" CACHE STRING "" FORCE)' in toolchain.content
 
 
 def test_older_msvc_toolset():
@@ -256,6 +265,32 @@ def test_older_msvc_toolset():
     assert 'CMAKE_GENERATOR_TOOLSET "v110"' in content
     # As by the CMake docs, this has no effect for VS < 2015
     assert 'CMAKE_CXX_STANDARD 98' in content
+
+
+def test_older_msvc_toolset_update():
+    # https://github.com/conan-io/conan/issues/15787
+    c = ConanFile(None)
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"msvc": {"version": ["192"], "update": [8, 9],
+                                                 "cppstd": ["14"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]})
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "msvc"
+    c.settings.compiler.version = "192"
+    c.settings.compiler.update = 9
+    c.settings.compiler.cppstd = "14"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'CMAKE_GENERATOR_TOOLSET "v142,version=14.29"' in content
 
 
 def test_msvc_xp_toolsets():
@@ -525,20 +560,6 @@ def test_apple_cmake_osx_sysroot_sdk_mandatory(os, arch, expected_sdk):
     with pytest.raises(ConanException) as excinfo:
         CMakeToolchain(c).content()
         assert "Please, specify a suitable value for os.sdk." % expected_sdk in str(excinfo.value)
-
-
-def test_variables_types(conanfile):
-    generator_folder = temp_folder()
-    conanfile.folders.set_base_generators(generator_folder)
-    # This is a trick for 1.X to use base_generator and not install folder
-    conanfile.folders.generators = "here"
-
-    toolchain = CMakeToolchain(conanfile)
-    toolchain.variables["FOO"] = True
-    toolchain.generate()
-
-    contents = load(os.path.join(conanfile.generators_folder, "conan_toolchain.cmake"))
-    assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in contents
 
 
 def test_compilers_block(conanfile):

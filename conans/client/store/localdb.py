@@ -11,11 +11,27 @@ REMOTES_USER_TABLE = "users_remotes"
 _localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
 
 
-class LocalDB(object):
+class LocalDB:
 
     def __init__(self, dbfile):
         self.dbfile = dbfile
         self.encryption_key = _localdb_encryption_key
+
+        # Create the database file if it doesn't exist
+        if not os.path.exists(dbfile):
+            par = os.path.dirname(dbfile)
+            os.makedirs(par, exist_ok=True)
+            open(dbfile, 'w').close()
+
+            with self._connect() as connection:
+                try:
+                    cursor = connection.cursor()
+                    cursor.execute("create table if not exists %s "
+                                   "(remote_url TEXT UNIQUE, user TEXT, "
+                                   "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
+                except Exception as e:
+                    message = f"Could not initialize local sqlite database {dbfile}"
+                    raise ConanException(message, e)
 
     def _encode(self, value):
         if value and self.encryption_key:
@@ -43,29 +59,6 @@ class LocalDB(object):
                     pass
             except Exception as e:
                 raise ConanException("Could not initialize local sqlite database", e)
-
-    @staticmethod
-    def create(dbfile):
-        # Create the database file if it doesn't exist
-        if not os.path.exists(dbfile):
-            par = os.path.dirname(dbfile)
-            if not os.path.exists(par):
-                os.makedirs(par)
-            db = open(dbfile, 'w+')
-            db.close()
-
-        db = LocalDB(dbfile)
-        with db._connect() as connection:
-            try:
-                cursor = connection.cursor()
-                cursor.execute("create table if not exists %s "
-                               "(remote_url TEXT UNIQUE, user TEXT, "
-                               "token TEXT, refresh_token TEXT)" % REMOTES_USER_TABLE)
-            except Exception as e:
-                message = "Could not initialize local sqlite database"
-                raise ConanException(message, e)
-
-        return db
 
     @contextmanager
     def _connect(self):

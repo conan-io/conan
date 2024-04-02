@@ -109,7 +109,7 @@ def prepare_pkglist_compact(pkglist):
             new_rrev = f"{ref}#{rrev}"
             timestamp = rrev_info.pop("timestamp", None)
             if timestamp:
-                new_rrev += f" ({timestamp_to_str(timestamp)})"
+                new_rrev += f"%{timestamp} ({timestamp_to_str(timestamp)})"
 
             packages = rrev_info.pop("packages", None)
             if packages:
@@ -212,6 +212,12 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument('-p', '--package-query', default=None, action=OnceArgument,
                         help="List only the packages matching a specific query, e.g, os=Windows AND "
                              "(arch=x86 OR compiler=gcc)")
+    parser.add_argument('-fp', '--filter-profile', action="append",
+                        help="Profiles to filter the binaries")
+    parser.add_argument('-fs', '--filter-settings', action="append",
+                        help="Settings to filter the binaries")
+    parser.add_argument('-fo', '--filter-options', action="append",
+                        help="Options to filter the binaries")
     parser.add_argument("-r", "--remote", default=None, action="append",
                         help="Remote names. Accepts wildcards ('*' means all the remotes available)")
     parser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
@@ -227,10 +233,13 @@ def list(conan_api: ConanAPI, parser, *args):
 
     if args.pattern is None and args.graph is None:
         raise ConanException("Missing pattern or graph json file")
-    if args.pattern and args.graph:
-        raise ConanException("Cannot define both the pattern and the graph json file")
-    if args.graph and args.lru:
-        raise ConanException("Cannot define lru when loading a graph json file")
+    if args.graph:  # a few arguments are not compatible with this
+        if args.pattern:
+            raise ConanException("Cannot define both the pattern and the graph json file")
+        if args.lru:
+            raise ConanException("Cannot define lru when loading a graph json file")
+        if args.filter_profile or args.filter_settings or args.filter_options:
+            raise ConanException("Filtering binaries cannot be done when loading a graph json file")
     if (args.graph_recipes or args.graph_binaries) and not args.graph:
         raise ConanException("--graph-recipes and --graph-binaries require a --graph input")
     if args.remote and args.lru:
@@ -241,12 +250,20 @@ def list(conan_api: ConanAPI, parser, *args):
         pkglist = MultiPackagesList.load_graph(graphfile, args.graph_recipes, args.graph_binaries)
     else:
         ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
+        if not ref_pattern.package_id and (args.package_query or args.filter_profile or
+                                           args.filter_settings or args.filter_options):
+            raise ConanException("--package-query and --filter-xxx can only be done for binaries, "
+                                 "a 'pkgname/version:*' pattern is necessary")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
+        profile = conan_api.profiles.get_profile(args.filter_profile or [],
+                                                 args.filter_settings,
+                                                 args.filter_options) \
+            if args.filter_profile or args.filter_settings or args.filter_options else None
         if args.cache or not args.remote:
             try:
                 cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
-                                                   lru=args.lru)
+                                                   lru=args.lru, profile=profile)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:
@@ -255,7 +272,8 @@ def list(conan_api: ConanAPI, parser, *args):
             remotes = conan_api.remotes.list(args.remote)
             for remote in remotes:
                 try:
-                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote)
+                    remote_list = conan_api.list.select(ref_pattern, args.package_query, remote,
+                                                        profile=profile)
                 except Exception as e:
                     pkglist.add_error(remote.name, str(e))
                 else:

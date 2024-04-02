@@ -8,6 +8,7 @@ from mock import patch
 from conan import conan_version
 from conan.internal.api import detect_api
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, load
 from conans.test.utils.tools import TestClient
 
@@ -130,7 +131,7 @@ def test_new_config_file(client):
             """)
     save(client.cache.new_config_path, conf)
     client.run("install .", assert_error=True)
-    assert "[conf] 'cache:read_only' does not exist in configuration list" in client.out
+    assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
 
 
 @patch("conans.client.conf.required_version.client_version", "1.26.0")
@@ -222,7 +223,8 @@ def test_jinja_global_conf_paths():
     global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
     save(c.cache.new_config_path, global_conf)
     c.run("config show *")
-    assert f"user.mycompany:myfile: {os.path.join(c.cache_folder, 'myfile')}" in c.out
+    cache_folder = c.cache_folder.replace("\\", "/")
+    assert f"user.mycompany:myfile: {os.path.join(cache_folder, 'myfile')}" in c.out
 
 
 def test_profile_detect_os_arch():
@@ -246,7 +248,7 @@ def test_empty_conf_valid():
     tc = TestClient()
     profile = textwrap.dedent(r"""
     [conf]
-    user.unset=
+    user:unset=
     """)
     conanfile = textwrap.dedent(r"""
     from conan import ConanFile
@@ -256,8 +258,8 @@ def test_empty_conf_valid():
         version = "1.0"
 
         def generate(self):
-            self.output.warning(f'My unset conf variable is: "{self.conf.get("user.unset")}"')
-            self.output.warning(f'My unset conf is {"NOT" if self.conf.get("user.unset") == None else ""} set')
+            self.output.warning(f'My unset conf variable is: "{self.conf.get("user:unset")}"')
+            self.output.warning(f'My unset conf is {"NOT" if self.conf.get("user:unset") == None else ""} set')
     """)
     tc.save({"conanfile.py": conanfile, "profile": profile})
 
@@ -268,16 +270,16 @@ def test_empty_conf_valid():
     assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
     assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
 
-    tc.run("create . -c user.unset=")
+    tc.run("create . -c user:unset=")
     assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
     assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
 
-    tc.run('create . -c user.unset=""')
+    tc.run('create . -c user:unset=""')
     assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
     assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
 
     # And ensure this actually works for the normal case, just in case
-    tc.run("create . -c user.unset=Hello")
+    tc.run("create . -c user:unset=Hello")
     assert 'pkg/1.0: WARN: My unset conf variable is: "Hello"' in tc.out
     assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
 
@@ -286,10 +288,10 @@ def test_nonexisting_conf():
     c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run("install . -c tools.unknown:conf=value", assert_error=True)
-    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
+    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
     c.run("install . -c user.some:var=value")  # This doesn't fail
     c.run("install . -c tool.build:verbosity=v", assert_error=True)
-    assert "ERROR: [conf] 'tool.build:verbosity' does not exist in configuration list" in c.out
+    assert "ERROR: [conf] Either 'tool.build:verbosity' does not exist in configuration" in c.out
 
 
 def test_nonexisting_conf_global_conf():
@@ -297,7 +299,7 @@ def test_nonexisting_conf_global_conf():
     save(c.cache.new_config_path, "tools.unknown:conf=value")
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
-    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration list" in c.out
+    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
 
 
 def test_global_conf_auto_created():
@@ -305,6 +307,28 @@ def test_global_conf_auto_created():
     c.run("config list")  # all commands will trigger
     global_conf = load(c.cache.new_config_path)
     assert "# core:non_interactive = True" in global_conf
+
+
+def test_command_line_core_conf():
+    c = TestClient()
+    c.run("config show * -cc core:default_profile=potato")
+    assert "core:default_profile: potato" in c.out
+    c.run("config show * -cc core:default_profile=potato -cc core:default_build_profile=orange")
+    assert "core:default_profile: potato" in c.out
+    assert "core:default_build_profile: orange" in c.out
+
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+
+    tfolder = temp_folder()
+    c.run(f'list * -cc core.cache:storage_path="{tfolder}"')
+    assert "WARN: There are no matching recipe references" in c.out
+    c.run(f'list *')
+    assert "WARN: There are no matching recipe references" not in c.out
+    assert "pkg/0.1" in c.out
+
+    c.run("list * -cc user.xxx:yyy=zzz", assert_error=True)
+    assert "ERROR: Only core. values are allowed in --core-conf. Got user.xxx:yyy=zzz" in c.out
 
 
 def test_build_test_consumer_only():
@@ -373,3 +397,20 @@ def test_conf_should_be_immutable():
     assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
     # The pkg/0.1 output should be non-modified
     assert "pkg/0.1: user.myteam:myconf: ['root_value']" in c.out
+
+
+def test_especial_strings_fail():
+    # https://github.com/conan-io/conan/issues/15777
+    c = TestClient()
+    global_conf = textwrap.dedent("""
+        user.mycompany:myfile = re
+        user.mycompany:myother = fnmatch
+        user.mycompany:myfunct = re.search
+        user.mycompany:mydict = {1: 're', 2: 'fnmatch'}
+        """)
+    save(c.cache.new_config_path, global_conf)
+    c.run("config show *")
+    assert "user.mycompany:myfile: re" in c.out
+    assert "user.mycompany:myother: fnmatch" in c.out
+    assert "user.mycompany:myfunct: re.search" in c.out
+    assert "user.mycompany:mydict: {1: 're', 2: 'fnmatch'}" in c.out

@@ -66,18 +66,33 @@ class TestGraphCreatedUpload:
         assert "Uploading package 'zlib" in c.out
 
 
+class TestExportUpload:
+    def test_export_upload(self):
+        c = TestClient(default_server_user=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("export zlib --format=pkglist", redirect_stdout="pkglist.json")
+        c.run("upload --list=pkglist.json -r=default -c")
+        assert "Uploading recipe 'zlib/1.0#c570d63921c5f2070567da4bf64ff261'" in c.out
+
+
 class TestCreateGraphToPkgList:
     def test_graph_pkg_list_only_built(self):
         c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
-                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")
+                                                              .with_settings("os")
+                                                              .with_shared_option(False)})
         c.run("create zlib")
-        c.run("create app --format=json", redirect_stdout="graph.json")
+        c.run("create app --format=json -s os=Windows", redirect_stdout="graph.json")
         c.run("list --graph=graph.json --graph-binaries=build --format=json")
         pkglist = json.loads(c.stdout)["Local Cache"]
         assert len(pkglist) == 1
-        assert len(pkglist["app/1.0"]["revisions"]
-                   ["0fa1ff1b90576bb782600e56df642e19"]["packages"]) == 1
+        pkgs = pkglist["app/1.0"]["revisions"]["8263c3c32802e14a2f03a0b1fcce0d95"]["packages"]
+        assert len(pkgs) == 1
+        pkg_app = pkgs["e0bcc80c3f095670b71e535c193114d0155426cb"]
+        assert pkg_app["info"]["requires"] == ["zlib/1.0.Z"]
+        assert pkg_app["info"]["settings"] == {'os': 'Windows'}
+        assert pkg_app["info"]["options"] == {'shared': 'False'}
 
     def test_graph_pkg_list_all_recipes_only(self):
         """

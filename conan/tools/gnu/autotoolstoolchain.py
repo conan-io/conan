@@ -1,4 +1,5 @@
 from conan.internal import check_duplicated_generator
+from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, apple_sdk_path
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
@@ -6,7 +7,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
 from conan.tools.env import Environment
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path
+from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.errors import ConanException
 from conans.model.pkg_type import PackageType
 
@@ -24,6 +25,8 @@ class AutotoolsToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
+        raise_on_universal_arch(conanfile)
+
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix
@@ -44,15 +47,16 @@ class AutotoolsToolchain:
         self.build_type_flags = build_type_flags(self._conanfile.settings)
         self.build_type_link_flags = build_type_link_flags(self._conanfile.settings)
 
-        self.cppstd = cppstd_flag(self._conanfile.settings)
+        self.cppstd = cppstd_flag(self._conanfile)
         self.arch_flag = architecture_flag(self._conanfile.settings)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
         self.msvc_runtime_flag = self._get_msvc_runtime_flag()
+        self.msvc_extra_flags = self._msvc_extra_flags()
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
-        self._build = None
+        self._build = self._conanfile.conf.get("tools.gnu:build_triplet")
         self._target = None
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
@@ -74,7 +78,8 @@ class AutotoolsToolchain:
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             # Build triplet
-            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+            if not self._build:
+                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos" and is_apple_os(conanfile):
                 # SDK path is mandatory for cross-building
@@ -103,6 +108,15 @@ class AutotoolsToolchain:
             flag = "-{}".format(flag)
         return flag
 
+    def _msvc_extra_flags(self):
+        if is_msvc(self._conanfile) and check_min_vs(self._conanfile, "180", raise_invalid=False):
+            return ["-FS"]
+        return []
+
+    def _add_msvc_flags(self, flags):
+        # This is to avoid potential duplicate with users recipes -FS (alreday some in ConanCenter)
+        return [f for f in self.msvc_extra_flags if f not in flags]
+
     @staticmethod
     def _filter_list_empty_fields(v):
         return list(filter(bool, v))
@@ -114,7 +128,8 @@ class AutotoolsToolchain:
                self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + conf_flags
+        vs_flag = self._add_msvc_flags(self.extra_cxxflags)
+        ret = ret + self.build_type_flags + apple_flags + self.extra_cxxflags + vs_flag + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -123,7 +138,8 @@ class AutotoolsToolchain:
         ret = [self.arch_flag, fpic, self.msvc_runtime_flag, self.sysroot_flag]
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + conf_flags
+        vs_flag = self._add_msvc_flags(self.extra_cflags)
+        ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -134,7 +150,8 @@ class AutotoolsToolchain:
                                               check_type=list)
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                    check_type=list))
-        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[],
+                                                  check_type=list)
         conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
         ret = ret + self.build_type_link_flags + apple_flags + self.extra_ldflags + conf_flags
         return self._filter_list_empty_fields(ret)
@@ -147,9 +164,10 @@ class AutotoolsToolchain:
 
     def environment(self):
         env = Environment()
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
         if compilers_by_conf:
-            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
+            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC", "rc": "RC"}
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
                     compiler = compilers_by_conf[comp]

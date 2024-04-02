@@ -2,7 +2,6 @@ import os
 from typing import List
 
 from conan.internal.cache.cache import DataCache, RecipeLayout, PackageLayout
-from conans.client.cache.editable import EditablePackages
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.package_ref import PkgReference
@@ -20,7 +19,6 @@ class ClientCache(object):
 
     def __init__(self, cache_folder, global_conf):
         self.cache_folder = cache_folder
-        self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = global_conf.get("core.cache:storage_path") or \
                              os.path.join(self.cache_folder, "p")
@@ -37,11 +35,11 @@ class ClientCache(object):
         """ temporary folder where Conan puts exports and packages before the final revision
         is computed"""
         # TODO: Improve the path definitions, this is very hardcoded
-        return os.path.join(self.cache_folder, "p", "t")
+        return os.path.join(self._store_folder, "t")
 
     @property
     def builds_folder(self):
-        return os.path.join(self.cache_folder, "p", "b")
+        return os.path.join(self._store_folder, "b")
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         return self._data_cache.create_export_recipe_layout(ref)
@@ -132,4 +130,4 @@ class ClientCache(object):
     @property
     def localdb(self):
         localdb_filename = os.path.join(self.cache_folder, LOCALDB)
-        return LocalDB.create(localdb_filename)
+        return LocalDB(localdb_filename)

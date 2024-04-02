@@ -74,7 +74,7 @@ class MergeDirectoriesTest(unittest.TestCase):
 
     def test_same_directory(self):
         # Same directory cannot be merged, this should never happen
-        with pytest.raises(AssertionError):
+        with pytest.raises(ConanException):
             merge_directories(self.source, self.source)
 
     def test_parent_directory(self):
@@ -89,26 +89,3 @@ class MergeDirectoriesTest(unittest.TestCase):
         self.assertEqual(load(join(self.dest, "file.txt")), "fromsrc")
         self.assertEqual(load(join(self.dest, "subdir2/file2.txt")), "fromdest")
         self.assertEqual(load(join(self.dest, "subdir/file2.txt")), "fromsrc")
-
-    def test_excluded_dirs(self):
-        files = ["file.txt", "subdir/file2.txt", "subdir/file3.txt", "other_dir/somefile.txt",
-                 "other_dir/somefile2.txt"]
-        self._save(self.source, files, "fromsrc")
-
-        files_dest = ["file.txt", "subdir2/file2.txt"]
-        self._save(self.dest, files_dest, "fromdest")
-
-        # Excluded one file from other_dir and the whole subdir
-        merge_directories(self.source, self.dest, excluded=["other_dir/somefile.txt", "subdir"])
-        self._assert_equals(self._get_paths(self.dest), ["file.txt",
-                                                         "subdir2/file2.txt",
-                                                         "other_dir/somefile2.txt"])
-
-        # Excluded one from dest (no sense) and one from origin
-        merge_directories(self.source, self.dest, excluded=["subdir2/file2.txt",
-                                                            "subdir",
-                                                            "other_dir/somefile.txt"])
-
-        self._assert_equals(self._get_paths(self.dest), ["file.txt",
-                                                         "subdir2/file2.txt",
-                                                         "other_dir/somefile2.txt"])

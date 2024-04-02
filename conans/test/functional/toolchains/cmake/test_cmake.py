@@ -7,7 +7,6 @@ import unittest
 import pytest
 from parameterized.parameterized import parameterized
 
-from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
@@ -379,10 +378,11 @@ class LinuxTest(Base):
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "_GLIBCXX_USE_CXX11_ABI=0;" if libcxx == "libstdc++" else ""
-        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
-                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
-                  '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
-                  '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
+        defines = '%sMYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;' \
+                  '$<$<CONFIG:debug>:MYDEFINE_CONFIG="MYDEF_DEBUG">' \
+                  '$<$<CONFIG:release>:MYDEFINE_CONFIG="MYDEF_RELEASE">;' \
+                  '$<$<CONFIG:debug>:MYDEFINEINT_CONFIG=421>' \
+                  '$<$<CONFIG:release>:MYDEFINEINT_CONFIG=422>' % cxx11_abi_str
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
@@ -624,6 +624,7 @@ class TestCmakeTestMethod:
                     cmake.configure()
                     cmake.build()
                     cmake.test()
+                    cmake.ctest()
             """)
 
         cmakelist = textwrap.dedent("""
@@ -648,7 +649,8 @@ class TestCmakeTestMethod:
 
         # The create flow must work
         c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
-        assert "1/1 Test #1: example ..........................   Passed" in c.out
+        assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
+        assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
 
 
 @pytest.mark.tool("cmake")
