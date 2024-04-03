@@ -99,4 +99,8 @@ def _get_gnu_triplet(os_, arch, compiler=None):
         if arch == "armv8_32" and os_ == "Linux":
             op_system += "_ilp32"  # https://wiki.linaro.org/Platform/arm64-ilp32
 
-    return "%s-%s" % (machine, op_system)
+    return {
+        'machine': machine,
+        'op_system': op_system,
+        'triplet': f"{machine}-{op_system}"
+    }
