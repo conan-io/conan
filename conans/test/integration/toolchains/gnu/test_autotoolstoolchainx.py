@@ -307,6 +307,8 @@ def test_autotools_crossbuild_ux():
         compiler.libcxx=libc++
         compiler.version=15
         os=Macos
+        [conf]
+        tools.apple:sdk_path=/my/sdk/path
         """)
     conanfile = textwrap.dedent("""
             from conan import ConanFile
