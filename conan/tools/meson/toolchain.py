@@ -396,6 +396,14 @@ class MesonToolchain(object):
         # These link_args have already the LDFLAGS env value so let's add only the new possible ones
         self.objc_link_args.extend(apple_flags + extra_flags["ldflags"])
         self.objcpp_link_args.extend(apple_flags + extra_flags["ldflags"])
+        # Meson properties
+        sys_root = self._conanfile.conf.get("tools.build:sysroot", check_type=str)
+        if sys_root:
+            self.properties["sys_root"] = sys_root
+            self.c_args.append("--sysroot=" + sys_root)
+            self.cpp_args.append("--sysroot=" + sys_root)
+            self.c_link_args.append("--sysroot=" + sys_root)
+            self.cpp_link_args.append("--sysroot=" + sys_root)
 
         if self.libcxx:
             self.cpp_args.append(self.libcxx)

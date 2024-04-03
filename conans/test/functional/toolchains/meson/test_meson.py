@@ -309,3 +309,64 @@ def test_meson_using_prefix_path_in_application():
     client.run("build .")
     assert "unrecognized character escape sequence" not in str(client.out)  # if Visual
     assert "unknown escape sequence" not in str(client.out)  # if mingw
+
+
+@pytest.mark.tool("meson")
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
+def test_meson_sysroot_flag():
+    """
+    Testing when users pass tools.build:sysroot on the profile
+    """
+    profile = textwrap.dedent("""
+        [settings]
+        os = Macos
+        os.version=10.11
+        arch = armv7
+        compiler = apple-clang
+        compiler.version = 12.0
+        compiler.libcxx = libc++
+
+        [conf]
+        tools.build:sysroot = /my/new/sysroot/path
+   """)
+    myfilename = textwrap.dedent("""
+        [project options]
+        my_option = 'fake-option'
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import Meson
+        class Pkg(ConanFile):
+            name = "test_name"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "MesonToolchain"
+            exports_sources = "meson.build", "src/*"
+            def build(self):
+                meson = Meson(self)
+                meson.configure()
+                meson.build()
+            def layout(self):
+                self.folders.build = "./test-build"
+    """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "build/myfilename.ini": myfilename,
+                 "meson.build": "project('tutorial', 'cpp')",  # dummy one
+                 "profile": profile})
+
+    client.run("install . -pr=profile")
+    client.run("build . -pr=profile", assert_error=False)
+
+    # Check the meson configuration file
+    conan_meson = client.load("conan_meson_cross.ini")
+    assert re.search(r"sys_root = '/my/new/sysroot/path'", conan_meson)
+    assert re.search(r"c_args =.+--sysroot=/my/new/sysroot/path.+", conan_meson)
+    assert re.search(r"c_link_args =.+--sysroot=/my/new/sysroot/path.+", conan_meson)
+    assert re.search(r"cpp_args =.+--sysroot=/my/new/sysroot/path.+", conan_meson)
+    assert re.search(r"cpp_link_args =.+--sysroot=/my/new/sysroot/path.+", conan_meson)
+
+    # Check the meson-log.txt
+    conan_log = client.load("./test-build/meson-logs/meson-log.txt")
+    assert r"--sysroot=/my/new/sysroot/path" in conan_log
