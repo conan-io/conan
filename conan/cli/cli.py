@@ -292,5 +292,4 @@ def main(args):
         _warn_python_version()
     except BaseException as e:
         error = cli.exception_exit_error(e)
-
     sys.exit(error)
