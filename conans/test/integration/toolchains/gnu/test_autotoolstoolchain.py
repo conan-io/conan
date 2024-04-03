@@ -1,6 +1,9 @@
 import os
 import platform
 import textwrap
+import re
+
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -276,3 +279,41 @@ def test_toolchain_and_compilers_build_context():
     })
     client.run("export tool")
     client.run("create consumer -pr:h host -pr:b build --build=missing")
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
+def test_autotools_crossbuild_ux():
+    client = TestClient()
+    profile_build = textwrap.dedent("""
+        [settings]
+        os = Macos
+        os.version=10.11
+        arch = armv7
+        compiler = apple-clang
+        compiler.version = 12.0
+        compiler.libcxx = libc++
+        """)
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.gnu import AutotoolsToolchain
+            from conan.tools.build import cross_building
+            class Pkg(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def generate(self):
+                    tc = AutotoolsToolchain(self)
+                    if cross_building(self):
+                        host_arch = tc.cross_build["host"]["arch"]
+                        build_arch = tc.cross_build["build"]["arch"]
+                        if host_arch and build_arch:
+                            tc.cross_build["host"]["triplet"] = f"{host_arch}-my-triplet-host"
+                            tc.cross_build["build"]["triplet"] = f"{build_arch}-my-triplet-build"
+                    tc.generate()
+                    """)
+
+    client.save({"conanfile.py": conanfile,
+                 "profile_build": profile_build})
+    client.run("install . --profile:build=profile_build --profile:host=default")
+    conanbuild = client.load("conanbuild.conf")
+    assert re.search(r"--host=.*-my-triplet-host", conanbuild)
+    assert re.search(r"--build=.*-my-triplet-build", conanbuild)
+

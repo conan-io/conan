@@ -188,9 +188,6 @@ class AutotoolsToolchain:
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
-        if self.cross_build:
-            self.update_configure_args({"--host": self.cross_build["host"]["triplet"],
-                                        "--build": self.cross_build["build"]["triplet"]})
         check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env = env.vars(self._conanfile, scope=scope)
@@ -293,6 +290,9 @@ class AutotoolsToolchain:
         setattr(self, attr_name, _dict_to_list(options))
 
     def generate_args(self):
+        if self.cross_build:
+            self.update_configure_args({"--host": self.cross_build["host"]["triplet"],
+                                        "--build": self.cross_build["build"]["triplet"]})
         args = {"configure_args": cmd_args_to_string(self.configure_args),
                 "make_args":  cmd_args_to_string(self.make_args),
                 "autoreconf_args": cmd_args_to_string(self.autoreconf_args)}
