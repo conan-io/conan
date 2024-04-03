@@ -7,6 +7,7 @@ from shutil import which
 
 import pytest
 
+from conan.api.output import ConanOutput, LEVEL_STATUS
 from conans.client.conf.detect_vs import vswhere
 
 """
@@ -347,6 +348,9 @@ def pytest_runtest_teardown(item):
     if hasattr(item, "old_environ"):
         os.environ.clear()
         os.environ.update(item.old_environ)
+    ConanOutput._conan_output_level = LEVEL_STATUS
+    ConanOutput._silent_warn_tags = []
+    ConanOutput._warnings_as_errors = []
 
 
 def pytest_runtest_setup(item):
