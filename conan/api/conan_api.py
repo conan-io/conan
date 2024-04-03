@@ -1,5 +1,6 @@
 import sys
 
+from conan.api.output import ConanOutput
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
