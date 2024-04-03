@@ -398,6 +398,7 @@ class Command(object):
                                       profile_build=profile_build,
                                       is_build_require=args.build_require,
                                       require_overrides=args.require_override)
+            self._warn_revisions()
         except ConanException as exc:
             info = exc.info
             raise
@@ -569,6 +570,8 @@ class Command(object):
                                                      is_build_require=args.build_require,
                                                      require_overrides=args.require_override)
 
+            self._warn_revisions()
+
         except ConanException as exc:
             info = exc.info
             raise
@@ -674,8 +677,6 @@ class Command(object):
         It can be used with a recipe or a reference for any existing package in
         your local cache.
         """
-        self._warn_conan_version()
-
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
                              "required", "date", "author", "description", "provides", "deprecated",
                              "None"]
@@ -1345,7 +1346,6 @@ class Command(object):
         insensitive file systems, like Windows, case sensitive search
         can be forced with '--case-sensitive'.
         """
-        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.search.__doc__,
                                          prog="conan search",
                                          formatter_class=SmartFormatter)
@@ -1466,7 +1466,6 @@ class Command(object):
         If no remote is specified, the first configured remote (by default conan-center, use
         'conan remote list' to list the remotes) will be used.
         """
-        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload",
                                          formatter_class=SmartFormatter)
@@ -1572,7 +1571,6 @@ class Command(object):
         """
         Manages the remote list and the package recipes associated with a remote.
         """
-        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.remote.__doc__,
                                          prog="conan remote",
                                          formatter_class=SmartFormatter)
@@ -1945,7 +1943,6 @@ class Command(object):
         """
         Generates and manipulates lock files.
         """
-        self._warn_conan_version()
         parser = argparse.ArgumentParser(description=self.lock.__doc__,
                                          prog="conan lock",
                                          formatter_class=SmartFormatter)
@@ -2195,6 +2192,10 @@ class Command(object):
         self._out.warning("*** Conan 1 is legacy and on a deprecation path ***")
         self._out.warning("*** Please upgrade to Conan 2 ***")
 
+    def _warn_revisions(self):
+        if self._conan.app and not self._conan.app.config.revisions_enabled:
+            self._conan.app.out.warning("Revisions are disabled. Using Conan without revisions "
+                                        "enabled is deprecated")
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
