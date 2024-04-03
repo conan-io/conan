@@ -173,6 +173,11 @@ class Cli:
         except IndexError:  # No parameters
             self._output_help_cli()
             return
+        version = sys.version_info
+        if command_argument in ("install", "create") and version.minor == 6:
+            ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
+                                  "Conan future versions will drop support for it, "
+                                  "please upgrade Python", warn_tag="deprecated")
         try:
             command = self._commands[command_argument]
         except KeyError as exc:

@@ -1,6 +1,5 @@
 import sys
 
-from conan.api.output import ConanOutput
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
 from conan.api.subapi.local import LocalAPI
@@ -26,16 +25,12 @@ from conans.model.version import Version
 from conans.paths import get_conan_user_home
 
 
-class ConanAPI:
+class ConanAPI(object):
     def __init__(self, cache_folder=None):
 
         version = sys.version_info
         if version.major == 2 or version.minor < 6:
             raise ConanException("Conan needs Python >= 3.6")
-        if version.minor == 6:
-            ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
-                                  "Conan future versions will drop support for it, "
-                                  "please upgrade Python", warn_tag="deprecated")
 
         init_colorama(sys.stderr)
         self.cache_folder = cache_folder or get_conan_user_home()
