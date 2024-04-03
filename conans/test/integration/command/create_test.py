@@ -811,3 +811,53 @@ def test_python_requires_with_test_package():
     c.run("create .")
     # Ensure that creating a deps graph does not break the testing
     assert "pyreq/1.0 (test package): 42!!!" in c.out
+
+
+def test_create_test_package_only_build():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+            "test_package/conanfile.py": GenConanfile().with_test("self.output.info('TEST1!!!')"),
+            "test_package2/conanfile.py": GenConanfile().with_test("self.output.info('TEST2!!!')")})
+    # As it doesn't exist, it builds and test it
+    c.run("create . -tm")
+    assert "Testing the package" in c.out
+    assert "TEST1!!!" in c.out
+    # this will not create the binary, so it won't test it
+    c.run("create . --build=missing --test-missing")
+    assert "Testing the package" not in c.out
+    assert "TEST" not in c.out
+    c.run("create . -tf=test_package2 -tm")
+    assert "Testing the package" in c.out
+    assert "TEST2!!!" in c.out
+    assert "TEST1!!!" not in c.out
+    c.run("create . -tf=test_package2 --build=missing --test-missing")
+    assert "Testing the package" not in c.out
+    assert "TEST2!!!" not in c.out
+    assert "TEST1!!!" not in c.out
+
+    # error
+    c.run("create . -tm -tf=", assert_error=True)
+    assert '--test-folder="" is incompatible with --test-missing' in c.out
+
+
+def test_create_test_package_only_build_python_require():
+    c = TestClient()
+    test = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Tool(ConanFile):
+            python_requires = "tested_reference_str"
+            def test(self):
+                self.output.info("TEST!!!!")
+        """)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_type("python-require"),
+            "test_package/conanfile.py": test})
+    c.run("create .")
+    assert "Testing the package" in c.out
+    assert "pkg/0.1 (test package): TEST!!!" in c.out
+    c.run("create . -tm")
+    assert "Testing the package" in c.out
+    assert "pkg/0.1 (test package): TEST!!!" in c.out
+    c.run("create . -tm --build=missing")
+    assert "Testing the package" in c.out
+    assert "pkg/0.1 (test package): TEST!!!" in c.out
