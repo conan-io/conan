@@ -527,14 +527,3 @@ class AutotoolsToolchainX:
         }
         save_toolchain_args(args, namespace=self._namespace)
         VCVars(self._conanfile).generate(scope=scope)
-
-
-    def adfsdfas(self):
-        if cross_building(self) and is_msvc(self):
-            # tc.cross_build could contain all the information (like MesonToolchain)
-            host_arch = tc.cross_build["host"]["arch"]
-            build_arch = tc.cross_build["build"]["arch"]
-            # Let's trust that AutotoolsToolchain is getting the correct GNU arch
-            if host_arch and build_arch:
-                tc.configure_args["--host"] = f"{host_arch}-w64-mingw32"
-                tc.configure_args["--build"] = f"{build_arch}-w64-mingw32"

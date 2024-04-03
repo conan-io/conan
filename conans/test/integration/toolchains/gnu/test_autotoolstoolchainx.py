@@ -1,6 +1,7 @@
 import os
 import platform
 import textwrap
+import re
 
 import pytest
 
@@ -284,3 +285,54 @@ def test_toolchain_and_compilers_build_context():
     })
     client.run("export tool")
     client.run("create consumer -pr:h host -pr:b build --build=missing")
+
+
+def test_autotools_crossbuild_ux():
+    client = TestClient()
+    profile_build = textwrap.dedent("""
+        [settings]
+        os = Macos
+        os.version=10.11
+        arch = armv7
+        compiler = apple-clang
+        compiler.version = 12.0
+        compiler.libcxx = libc++
+        """)
+    profile_host = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        build_type=Release
+        compiler=apple-clang
+        compiler.cppstd=gnu17
+        compiler.libcxx=libc++
+        compiler.version=15
+        os=Macos
+        """)
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.gnu import AutotoolsToolchainX
+            from conan.tools.build import cross_building
+            class Pkg(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def generate(self):
+                    tc = AutotoolsToolchainX(self)
+                    if cross_building(self):
+                        host_arch = tc.cross_build["host"]["machine"]
+                        build_arch = tc.cross_build["build"]["machine"]
+                        if host_arch and build_arch:
+                            tc.configure_args["--host"] = f"{host_arch}-my-triplet-host"
+                            tc.configure_args["--build"] = f"{build_arch}-my-triplet-build"
+                    tc.generate()
+                    """)
+
+    client.save({"conanfile.py": conanfile,
+                 "profile_build": profile_build,
+                 "profile_host": profile_host})
+    client.run("install . --profile:build=profile_build --profile:host=profile_host")
+    conanbuild = client.load("conanbuild.conf")
+    host_flags = re.findall(r"--host=[\w-]*\b", conanbuild)
+    build_flags = re.findall(r"--build=[\w-]*\b", conanbuild)
+    assert len(host_flags) == 1
+    assert len(build_flags) == 1
+    assert host_flags[0] == '--host=x86_64-my-triplet-host'
+    assert build_flags[0] == '--build=arm-my-triplet-build'
