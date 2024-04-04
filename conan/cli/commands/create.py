@@ -97,8 +97,9 @@ def create(conan_api, parser, *args):
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
 
-    test_package_folder = getattr(conanfile, "test_package_folder", None)
-    test_conanfile_path = _get_test_conanfile_path(args.test_folder or test_package_folder, path)
+    test_package_folder = getattr(conanfile, "test_package_folder", None) \
+        if args.test_folder is None else args.test_folder
+    test_conanfile_path = _get_test_conanfile_path(test_package_folder, path)
     # If the user provide --test-missing and the binary was not built from source, skip test_package
     if args.test_missing and deps_graph.root.dependencies\
             and deps_graph.root.dependencies[0].dst.binary != BINARY_BUILD:
