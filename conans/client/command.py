@@ -1026,6 +1026,8 @@ class Command(object):
                             help="folder containing a locally created package. If a value is given,"
                                  " it won't call the recipe 'package()' method, and will run a copy"
                                  " of the provided folder.")
+        parser.add_argument("-of", "--output-folder", action=OnceArgument,
+                            help="To be used with 'layout()' recipes, useless otherwise")
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
@@ -1062,6 +1064,7 @@ class Command(object):
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
                                           install_folder=args.install_folder,
+                                          output_folder=args.output_folder,
                                           profile_names=args.profile_host,
                                           env=args.env_host,
                                           settings=args.settings_host,
