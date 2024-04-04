@@ -57,8 +57,17 @@ def get_apple_sdk_fullname(conanfile):
         raise ConanException("Please, specify a suitable value for os.sdk.")
 
 
-def apple_min_version_flag(os_version, os_sdk, subsystem):
+def apple_min_version_flag(conanfile):
     """compiler flag name which controls deployment target"""
+    os_ = conanfile.settings.get_safe('os')
+    os_sdk = conanfile.settings.get_safe('os.sdk')
+    os_sdk = os_sdk or ("macosx" if os_ == "Macos" else None)
+    if os_sdk is None:
+        raise ConanException("Please, specify a suitable value for os.sdk")
+
+    # FIXME: Why using os.version and not the os.sdk_version???
+    os_version = conanfile.settings.get_safe("os.version")
+    subsystem = conanfile.settings.get_safe("os.subsystem")
     if not os_version or not os_sdk:
         return ''
 

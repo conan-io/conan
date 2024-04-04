@@ -7,7 +7,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
-    apple_sdk_path, get_apple_sdk_fullname
+    apple_sdk_path
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
@@ -315,13 +315,11 @@ class MesonToolchain(object):
                 "provide a valid SDK path in 'tools.apple:sdk_path' config."
             )
         # Calculating the main Apple flags
-        os_sdk = get_apple_sdk_fullname(self._conanfile)
+
         arch = to_apple_arch(self._conanfile)
         self.apple_arch_flag = ["-arch", arch] if arch else []
         self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
-        os_version = self._conanfile.settings.get_safe("os.version")
-        subsystem = self._conanfile.settings.get_safe("os.subsystem")
-        self.apple_min_version_flag = [apple_min_version_flag(os_version, os_sdk, subsystem)]
+        self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")

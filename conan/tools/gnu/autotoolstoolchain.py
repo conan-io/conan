@@ -1,7 +1,6 @@
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, apple_sdk_path
-from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, build_type_flags, cppstd_flag, build_type_link_flags, libcxx_flags
@@ -60,11 +59,7 @@ class AutotoolsToolchain:
         self._target = None
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
-
-        os_sdk = get_apple_sdk_fullname(conanfile)
-        os_version = conanfile.settings.get_safe("os.version")
-        subsystem = conanfile.settings.get_safe("os.subsystem")
-        self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
+        self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
 
         self.sysroot_flag = None
 
