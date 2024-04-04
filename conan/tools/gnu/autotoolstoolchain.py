@@ -178,7 +178,11 @@ class AutotoolsToolchain:
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
-        env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        pkg_config_path = env.vars(self._conanfile).get("PKG_CONFIG_PATH")
+        if pkg_config_path:
+            env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
+        else:
+            env.define_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         return env
 
     def vars(self):
