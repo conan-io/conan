@@ -227,16 +227,16 @@ class CMakeToolchain(object):
         check_duplicated_generator(self, self._conanfile)
         toolchain_file = self._conanfile.conf.get("tools.cmake.cmaketoolchain:toolchain_file")
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
-            save(os.path.join(self._conanfile.generators_folder, self.filename), self.content)
-            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {self.filename}")
+            toolchain_file = self.filename
+            save(os.path.join(self._conanfile.generators_folder, toolchain_file), self.content)
+            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {toolchain_file}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
         # Generators like Ninja or NMake requires an active vcvars
         elif self.generator is not None and "Visual" not in self.generator:
             VCVars(self._conanfile).generate()
-        toolchain = os.path.abspath(os.path.join(self._conanfile.generators_folder,
-                                                 toolchain_file or self.filename))
+
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
@@ -266,7 +266,7 @@ class CMakeToolchain(object):
 
             cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None) or self._find_cmake_exe()
 
-        write_cmake_presets(self._conanfile, toolchain, self.generator, cache_variables,
+        write_cmake_presets(self._conanfile, toolchain_file, self.generator, cache_variables,
                             self.user_presets_path, self.presets_prefix, buildenv, runenv,
                             cmake_executable)
 

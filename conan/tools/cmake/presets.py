@@ -1,8 +1,9 @@
 import json
 import os
 import platform
+import textwrap
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, Color
 from conan.tools.cmake.layout import get_build_folder_custom_vars
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
@@ -28,6 +29,11 @@ class _CMakePresets:
     @staticmethod
     def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv,
                  cmake_executable):
+        toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
+        try:  # Make it relative to the build dir if possible
+            toolchain_file = os.path.relpath(toolchain_file, conanfile.build_folder)
+        except ValueError:
+            pass
         cache_variables = cache_variables or {}
         if platform.system() == "Windows" and generator == "MinGW Makefiles":
             if "CMAKE_SH" not in cache_variables:
@@ -74,7 +80,7 @@ class _CMakePresets:
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
-        ConanOutput(str(conanfile)).info("CMakeToolchain generated: CMakePresets.json")
+        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {preset_path}")
         return preset_path, data
 
     @staticmethod
@@ -172,13 +178,11 @@ class _CMakePresets:
         except:
             is_consumer = False
         if is_consumer:
-            conanfile.output.info(
-                f"Preset '{name}' added to CMakePresets.json. Invoke it manually using "
-                f"'cmake --preset {name}' if using CMake>=3.23")
-            conanfile.output.info(f"If your CMake version is not compatible with "
-                                  f"CMakePresets (<3.23) call cmake like: 'cmake <path> "
-                                  f"-G {_format_val(generator)} {add_toolchain_cache}"
-                                  f"{cache_variables_info}'")
+            msg = textwrap.dedent(f"""\
+                CMakeToolchain: Preset '{name}' added to CMakePresets.json.
+                    (cmake>=3.23) cmake --preset {name}
+                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {add_toolchain_cache} {cache_variables_info}""")
+            conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
     @staticmethod
@@ -283,14 +287,15 @@ class _IncludingPresets:
 
         if inherited_user:
             _IncludingPresets._clean_user_inherits(data, preset_data)
+
+        try:  # Make it relative to the build dir if possible
+            preset_path = os.path.relpath(preset_path, output_dir)
+        except ValueError:
+            pass
         data = _IncludingPresets._append_user_preset_path(data, preset_path)
 
         data = json.dumps(data, indent=4)
-        try:
-            presets_path = os.path.relpath(user_presets_path, conanfile.generators_folder)
-        except ValueError:  # in Windows this fails if in another drive
-            presets_path = user_presets_path
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {presets_path}")
+        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
 
     @staticmethod
