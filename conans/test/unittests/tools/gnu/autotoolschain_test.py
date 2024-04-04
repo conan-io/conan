@@ -1,3 +1,4 @@
+import pathlib
 from unittest.mock import patch
 
 import pytest
@@ -211,3 +212,18 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     at.update_make_args({"--new-complex-flag": "new-value"})
     new_make_args = cmd_args_to_string(at.make_args)
     assert "--new-complex-flag=new-value" in new_make_args
+
+
+def test_pkg_config_path():
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    settings = MockSettings({"build_type": "Release",
+                             "os": "Windows",
+                             "arch": "x86_64",
+                             "compiler": "msvc"})
+    conanfile.settings = settings
+    autotoolschain = AutotoolsToolchain(conanfile)
+    env = autotoolschain.environment().vars(conanfile)
+    pkg_config_path = str(env["PKG_CONFIG_PATH"])
+    assert not pkg_config_path.endswith((':', ';'))
+
