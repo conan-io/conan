@@ -1,4 +1,3 @@
-from conan.tools.apple import is_apple_os
 from conan.tools.files import save
 
 import glob
@@ -44,6 +43,30 @@ class CPSDeps:
             self.conanfile.output.error(f"[CPSDeps] Could not locate library: {libname}")
             return None
 
+    def _component(self, package_type, cpp_info, build_type):
+        component = {}
+        component["Type"] = self._package_type_map.get(str(package_type), "unknown")
+        component["Definitions"] = cpp_info.defines
+        component["Includes"] = [x.replace("\\", "/") for x in cpp_info.includedirs]
+
+        if not cpp_info.libs:  # No compiled libraries, header-only
+            return component
+        is_shared = package_type == "shared-library"
+        if is_shared and self.conanfile.settings.os == "Windows":
+            dll_location = self.find_library(cpp_info.libdirs, cpp_info.bindirs,
+                                             cpp_info.libs, is_shared, dll=True)
+            import_library = self.find_library(cpp_info.libdirs, cpp_info.bindirs,
+                                               cpp_info.libs, is_shared, dll=False)
+            locations = {'Location': dll_location,
+                         'Link-Location': import_library}
+            component["Configurations"] = {build_type: locations}  # noqa
+        elif package_type == "static-library":
+            library_location = self.find_library(cpp_info.libdirs, cpp_info.bindirs,
+                                                 cpp_info.libs, is_shared, dll=False)
+            component["Configurations"] = {build_type: {'Location': library_location}}
+
+        return component
+
     def generate(self):
         self.conanfile.output.info(f"[CPSDeps] generators folder {self.conanfile.generators_folder}")
         deps = self.conanfile.dependencies.host.items()
@@ -53,45 +76,26 @@ class CPSDeps:
             cps = {"Cps-Version": "0.8.1",
                    "Name": dep.ref.name,
                    "Version": str(dep.ref.version)}
-            """
-                   "Platform": {
-                       "Isa": "arm64" if self.conanfile.settings.arch == "armv8" else self.conanfile.settings.arch,
-                       "Kernel": "darwin" if is_apple_os(self.conanfile) else str(
-                           self.conanfile.settings.os).lower()
-                   }}
-            """
+
             build_type = str(self.conanfile.settings.build_type).lower()
             cps["Configurations"] = [build_type]
 
             if not dep.cpp_info.has_components:
                 # single component, called same as library
-                component = {}
-                component["Type"] = self._package_type_map.get(str(dep.package_type), "unknown")
-                component["Definitions"] = dep.cpp_info.defines
-                component["Includes"] = [x.replace("\\", "/") for x in dep.cpp_info.includedirs]
-
-                """is_shared = dep.package_type == "shared-library"
-                if is_shared and self.conanfile.settings.os == "Windows":
-                    dll_location = self.find_library(dep.cpp_info.libdirs, dep.cpp_info.bindirs,
-                                                     dep.cpp_info.libs, is_shared, dll=True)
-                    import_library = self.find_library(dep.cpp_info.libdirs, dep.cpp_info.bindirs,
-                                                       dep.cpp_info.libs, is_shared, dll=False)
-                    component["Configurations"] = {
-                        build_type: {'Location': dll_location, 'Link-Location': import_library}}
-                else:
-                    library_location = self.find_library(dep.cpp_info.libdirs, dep.cpp_info.bindirs,
-                                                         dep.cpp_info.libs, is_shared, dll=False)
-                    component["Configurations"] = {build_type: {'Location': library_location}}
-
+                component = self._component(dep.package_type, dep.cpp_info, build_type)
                 if dep.dependencies:
                     for transitive_dep in dep.dependencies.items():
-                        self.conanfile.output.info(
-                            f"[CPSGEN] {dep} has a dependency on: {transitive_dep[0].ref}")
                         dep_name = transitive_dep[0].ref.name
                         component["Requires"] = [f"{dep_name}:{dep_name}"]
-"""
+
                 cps["Default-Components"] = [f"{dep.ref.name}"]
                 cps["Components"] = {f"{dep.ref.name}": component}
+            else:
+                sorted_comps = dep.cpp_info.get_sorted_components()
+                for comp_name, comp in sorted_comps.items():
+                    component = self._component(dep.package_type, comp, build_type)
+                    cps.setdefault("Components", {})[comp_name] = component
+                cps["Default-Components"] = [comp_name for comp_name in sorted_comps]
 
             output_file = os.path.join(self.conanfile.generators_folder, f"{dep.ref.name}.cps")
             cps_json = json.dumps(cps, indent=4)
