@@ -4972,3 +4972,5 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 """
 
 settings_1_64_0 = settings_1_63_0
+
+settings_1_65_0 = settings_1_64_0
