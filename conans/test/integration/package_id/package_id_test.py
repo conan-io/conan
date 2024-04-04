@@ -219,3 +219,33 @@ class TestBuildRequiresHeaderOnly:
         c.run("create tool --version=1.2")
         c.run("install --requires=pkg/0.1")
         c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
+
+
+def test_explicit_implements():
+    c = TestClient()
+    pkg = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os"
+            options = {"header_only": [True, False]}
+
+            def package_id(self):
+                if self.package_type == "header-library":
+                    self.info.clear()
+             """)
+    c.save({"conanfile.py": pkg})
+    c.run("create . -s os=Windows -o *:header_only=True")
+    pkgid = c.created_package_id("pkg/0.1")
+    c.run("create . -s os=Linux -o *:header_only=True")
+    pkgid2 = c.created_package_id("pkg/0.1")
+    assert pkgid == pkgid2
+
+    c.run("create . -s os=Windows -o *:header_only=False")
+    pkgid3 = c.created_package_id("pkg/0.1")
+    assert pkgid3 != pkgid
+    c.run("create . -s os=Linux -o *:header_only=False")
+    pkgid4 = c.created_package_id("pkg/0.1")
+    assert pkgid4 != pkgid
+    assert pkgid3 != pkgid4
