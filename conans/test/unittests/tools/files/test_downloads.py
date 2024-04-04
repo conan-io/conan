@@ -12,8 +12,8 @@ from conans.test.utils.tools import redirect_output, TestRequester
 from conans.util.files import save, load, chdir, mkdir
 
 
-@pytest.mark.skip(msg="This causes more troubles than benefits, external ftp download is testing "
-                      "very little conan code, mostly python")
+@pytest.mark.skip(reason="This causes more troubles than benefits, external ftp download is testing "
+                         "very little conan code, mostly python")
 class TestFTP:
 
     def test_ftp_auth(self):
