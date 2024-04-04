@@ -693,7 +693,7 @@ def test_cmake_presets_multiple_settings_single_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -710,7 +710,7 @@ def test_cmake_presets_multiple_settings_single_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 2
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -887,7 +887,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 1
     assert len(presets["testPresets"]) == 1
@@ -904,7 +904,7 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert os.path.exists(user_presets_path)
     user_presets = json.loads(load(user_presets_path))
     assert len(user_presets["include"]) == 1
-    presets = json.loads(load(user_presets["include"][0]))
+    presets = json.loads(client.load(user_presets["include"][0]))
     assert len(presets["configurePresets"]) == 1
     assert len(presets["buildPresets"]) == 2
     assert len(presets["testPresets"]) == 2

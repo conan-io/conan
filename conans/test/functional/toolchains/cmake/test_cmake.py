@@ -216,13 +216,9 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         save(self.client.cache.new_config_path, "tools.build:jobs=1")
-        install_out = self._run_build(settings, options)
-
-        # FIXME: Hardcoded VS version and partial toolset check
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
+        self._run_build(settings, options)
         self.assertIn('cmake -G "Visual Studio 15 2017" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
@@ -312,12 +308,10 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        install_out = self._run_build(settings, options)
+        self._run_build(settings, options)
         self.assertIn("The C compiler identification is GNU", self.client.out)
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('cmake -G "MinGW Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
         assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
