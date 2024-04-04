@@ -66,6 +66,10 @@ class MultiPackagesList:
         return {k: v.serialize() if isinstance(v, PackagesList) else v
                 for k, v in self.lists.items()}
 
+    def merge(self, other):
+        for k, v in other.lists.items():
+            self.lists.setdefault(k, PackagesList()).merge(v)
+
     @staticmethod
     def load(file):
         content = json.loads(load(file))
@@ -145,6 +149,16 @@ class MultiPackagesList:
 class PackagesList:
     def __init__(self):
         self.recipes = {}
+
+    def merge(self, other):
+        def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
+            for k, v in u.items():
+                if isinstance(v, dict):
+                    d[k] = recursive_dict_update(d.get(k, {}), v)
+                else:
+                    d[k] = v
+            return d
+        recursive_dict_update(self.recipes, other.recipes)
 
     def split(self):
         """
