@@ -292,7 +292,7 @@ class _IncludingPresets:
             preset_path = os.path.relpath(preset_path, output_dir)
         except ValueError:
             pass
-        data = _IncludingPresets._append_user_preset_path(data, preset_path)
+        data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
 
         data = json.dumps(data, indent=4)
         ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
@@ -331,7 +331,7 @@ class _IncludingPresets:
             other[:] = [p for p in other if p["name"] not in presets_names]
 
     @staticmethod
-    def _append_user_preset_path(data, preset_path):
+    def _append_user_preset_path(data, preset_path, output_dir):
         """ - Appends a 'include' to preset_path if the schema supports it.
             - Otherwise it merges to "data" all the configurePresets, buildPresets etc from the
               read preset_path.
@@ -339,7 +339,8 @@ class _IncludingPresets:
         if "include" not in data:
             data["include"] = []
         # Clear the folders that have been deleted
-        data["include"] = [i for i in data.get("include", []) if os.path.exists(i)]
+        data["include"] = [i for i in data.get("include", [])
+                           if os.path.exists(os.path.join(output_dir, i))]
         if preset_path not in data["include"]:
             data["include"].append(preset_path)
         return data
