@@ -400,10 +400,10 @@ class MesonToolchain(object):
         sys_root = self._conanfile.conf.get("tools.build:sysroot", check_type=str)
         if sys_root:
             self.properties["sys_root"] = sys_root
-            self.c_args.append("--sysroot=" + sys_root)
-            self.cpp_args.append("--sysroot=" + sys_root)
-            self.c_link_args.append("--sysroot=" + sys_root)
-            self.cpp_link_args.append("--sysroot=" + sys_root)
+            # self.c_args.append("--sysroot=" + sys_root)
+            # self.cpp_args.append("--sysroot=" + sys_root)
+            # self.c_link_args.append("--sysroot=" + sys_root)
+            # self.cpp_link_args.append("--sysroot=" + sys_root)
 
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
