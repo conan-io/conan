@@ -904,7 +904,7 @@ class TestBazelGenerationBuildContext:
                 def build(self):
                     # Build context
                     assert os.path.exists(os.path.join("build-wayland", "BUILD.bazel"))
-                    # Revisit this after investigation -> build_req = conanfile.dependencies.direct_build 
+                    # Revisit this after investigation -> build_req = conanfile.dependencies.direct_build
                     # assert os.path.exists(os.path.join("build-dep", "BUILD.bazel"))
                     # Host context
                     assert os.path.exists(os.path.join("wayland", "BUILD.bazel"))

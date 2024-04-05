@@ -28,9 +28,9 @@ def _get_package_reference_name(dep):
     return dep.ref.name
 
 
-def _get_repository_name(dep, is_build_context=False):
+def _get_repository_name(dep, is_build_require=False):
     pkg_name = dep.cpp_info.get_property("bazel_repository_name") or _get_package_reference_name(dep)
-    return f"build-{pkg_name}" if is_build_context else pkg_name
+    return f"build-{pkg_name}" if is_build_require else pkg_name
 
 
 def _get_target_name(dep):
@@ -460,7 +460,7 @@ class _InfoGenerator:
         self._conanfile = conanfile
         self._dep = dep
         self._req = require
-        self._is_build_context = require.build
+        self._is_build_require = require.build
         self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
 
     def _get_cpp_info_requires_names(self, cpp_info):
@@ -493,7 +493,7 @@ class _InfoGenerator:
                 try:
                     req_conanfile = self._transitive_reqs[pkg_ref_name]
                     # Requirements declared in another dependency BUILD file
-                    prefix = f"@{_get_repository_name(req_conanfile, is_build_context=self._is_build_context)}//:"
+                    prefix = f"@{_get_repository_name(req_conanfile, is_build_require=self._is_build_require)}//:"
                 except KeyError:
                     continue  # If the dependency is not in the transitive, might be skipped
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
@@ -529,7 +529,7 @@ class _InfoGenerator:
 
         :return: `_BazelTargetInfo` object with the package information
         """
-        repository_name = _get_repository_name(self._dep, is_build_context=self._is_build_context)
+        repository_name = _get_repository_name(self._dep, is_build_require=self._is_build_require)
         pkg_name = _get_target_name(self._dep)
         # At first, let's check if we have defined some global requires, e.g., "other::cmp1"
         requires = self._get_cpp_info_requires_names(self._dep.cpp_info)
@@ -538,7 +538,7 @@ class _InfoGenerator:
             # If no requires were found, let's try to get all the direct dependencies,
             # e.g., requires = "other_pkg/1.0"
             requires = [
-                f"@{_get_repository_name(req, is_build_context=self._is_build_context)}//:{_get_target_name(req)}"
+                f"@{_get_repository_name(req, is_build_require=self._is_build_require)}//:{_get_target_name(req)}"
                 for req in self._transitive_reqs.values()
             ]
         cpp_info = self._dep.cpp_info
