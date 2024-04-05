@@ -60,7 +60,7 @@ def _get_requirements(conanfile, build_context_activated):
     """
     # All the requirements
     host_req = conanfile.dependencies.host
-    build_req = conanfile.dependencies.build  # tool_requires
+    build_req = conanfile.dependencies.direct_build  # tool_requires
     test_req = conanfile.dependencies.test
 
     for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
