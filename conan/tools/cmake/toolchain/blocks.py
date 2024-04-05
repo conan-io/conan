@@ -244,24 +244,39 @@ class LinkerScriptsBlock(Block):
 
 class CppStdBlock(Block):
     template = textwrap.dedent("""
+        {% if cppstd %}
         message(STATUS "Conan toolchain: C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
+        {% endif %}
+        {% if cstd %}
+        message(STATUS "Conan toolchain: C Standard {{ cstd }} with extensions {{ cstd_extensions }}")
+        set(CMAKE_C_STANDARD {{ cstd }})
+        set(CMAKE_C_EXTENSIONS {{ cstd_extensions }})
+        set(CMAKE_C_STANDARD_REQUIRED ON)
+        {% endif %}
         """)
 
     def context(self):
         compiler_cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        if compiler_cppstd is None:
-            return None
-
-        if compiler_cppstd.startswith("gnu"):
-            cppstd = compiler_cppstd[3:]
-            cppstd_extensions = "ON"
-        else:
-            cppstd = compiler_cppstd
-            cppstd_extensions = "OFF"
-        return {"cppstd": cppstd, "cppstd_extensions": cppstd_extensions}
+        compiler_cstd = self._conanfile.settings.get_safe("compiler.cstd")
+        result = {}
+        if compiler_cppstd is not None:
+            if compiler_cppstd.startswith("gnu"):
+                result["cppstd"] = compiler_cppstd[3:]
+                result["cppstd_extensions"] = "ON"
+            else:
+                result["cppstd"] = compiler_cppstd
+                result["cppstd_extensions"] = "OFF"
+        if compiler_cstd is not None:
+            if compiler_cstd.startswith("gnu"):
+                result["cstd"] = compiler_cstd[3:]
+                result["cstd_extensions"] = "ON"
+            else:
+                result["cstd"] = compiler_cstd
+                result["cstd_extensions"] = "OFF"
+        return result or None
 
 
 class SharedLibBock(Block):

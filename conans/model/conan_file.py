@@ -48,6 +48,7 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
+    languages = []
 
     implements = []
 
@@ -92,6 +93,8 @@ class ConanFile:
 
         if isinstance(self.generators, str):
             self.generators = [self.generators]
+        if isinstance(self.languages, str):
+            self.languages = [self.languages]
         if isinstance(self.settings, str):
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
