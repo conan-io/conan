@@ -5,6 +5,7 @@ import os
 import platform
 import shutil
 import stat
+import sys
 import tarfile
 import time
 
@@ -373,3 +374,12 @@ def human_size(size_bytes):
         formatted_size = str(round(num, ndigits=the_precision))
 
     return "%s%s" % (formatted_size, the_suffix)
+
+
+# FIXME: completely remove disutils once we don't support <3.8 any more
+def copytree_compat(source_folder, dest_folder):
+    if sys.version_info >= (3, 8):
+        shutil.copytree(source_folder, dest_folder, dirs_exist_ok=True)
+    else:
+        from distutils.dir_util import copy_tree
+        copy_tree(source_folder, dest_folder)

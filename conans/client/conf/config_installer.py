@@ -8,12 +8,12 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir
+from conans.util.files import mkdir, rmdir, remove, unzip, chdir, load
 from conans.util.runners import detect_runner
 
 
 class _ConanIgnoreMatcher:
-    def __init__(self, conanignore_path):
+    def __init__(self, conanignore_path, ignore=None):
         conanignore_path = os.path.abspath(conanignore_path)
         self._ignored_entries = {".conanignore"}
         if os.path.exists(conanignore_path):
@@ -22,6 +22,8 @@ class _ConanIgnoreMatcher:
                     line_content = line.strip()
                     if line_content != "":
                         self._ignored_entries.add(line_content)
+        if ignore:
+            self._ignored_entries.update(ignore)
 
     def matches(self, path):
         for ignore_entry in self._ignored_entries:
@@ -112,13 +114,13 @@ def _process_file(directory, filename, config, cache, folder):
         _filecopy(directory, filename, target_folder)
 
 
-def _process_folder(config, folder, cache):
+def _process_folder(config, folder, cache, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
     conanignore_path = os.path.join(folder, '.conanignore')
-    conanignore = _ConanIgnoreMatcher(conanignore_path)
+    conanignore = _ConanIgnoreMatcher(conanignore_path, ignore)
     for root, dirs, files in os.walk(folder):
         # .git is always ignored by default, even if not present in .conanignore
         dirs[:] = [d for d in dirs if d != ".git"]
@@ -178,14 +180,14 @@ def _is_compressed_file(filename):
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
-                          args=None, source_folder=None, target_folder=None):
+                          args=None, source_folder=None, target_folder=None, ignore=None):
     cache, requester = app.cache, app.requester
     config = _ConfigOrigin(uri, config_type, verify_ssl, args, source_folder, target_folder)
     try:
         if config.type == "git":
             _process_git_repo(config, cache)
         elif config.type == "dir":
-            _process_folder(config, config.uri, cache)
+            _process_folder(config, config.uri, cache, ignore)
         elif config.type == "file":
             if _is_compressed_file(config.uri):
                 with tmp_config_install_folder(cache) as tmp_folder:

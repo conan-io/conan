@@ -4,6 +4,7 @@ import sys
 import textwrap
 import unittest
 
+import pytest
 import yaml
 
 from conans.model.recipe_ref import RecipeReference
@@ -323,6 +324,53 @@ def test_conandata_trim():
     assert "1.1" not in data2
     assert data1 == data2
     assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    # If I now try to create version 1.2 which has no patches, and then change a patch
+    # its revision should not change either
+    conandata_yml3 = textwrap.dedent("""\
+    sources:
+      "1.0":
+        url: "url1"
+        sha256: "sha1"
+      "1.1":
+        url: "url2"
+        sha256: "sha2"
+      "1.3":
+        url: "url3"
+        sha256: "sha3"
+    patches:
+      "1.1":
+        - patch_file: "patches/some_patch2"
+          base_path: "source_subfolder"
+      "1.0":
+        - patch_file: "patches/some_patch"
+          base_path: "source_subfolder"
+    something: else""")
+    c.save({"conandata.yml": conandata_yml3})
+    c.run("export . --version=1.3")
+    initial_v13_rev = c.exported_recipe_revision()
+    conandata_yml4 = textwrap.dedent("""\
+        sources:
+          "1.0":
+            url: "url1"
+            sha256: "sha1"
+          "1.1":
+            url: "url2"
+            sha256: "sha2"
+          "1.3":
+            url: "url3"
+            sha256: "sha3"
+        patches:
+          "1.1":
+            - patch_file: "patches/some_patch2-v2"
+              base_path: "source_subfolder"
+          "1.0":
+            - patch_file: "patches/some_patch"
+              base_path: "source_subfolder"
+        something: else""")
+    c.save({"conandata.yml": conandata_yml4})
+    c.run("export . --version=1.3")
+    second_v13_rev = c.exported_recipe_revision()
+    assert initial_v13_rev == second_v13_rev
 
 
 def test_trim_conandata_as_hook():
@@ -375,3 +423,22 @@ def test_trim_conandata_as_hook():
     assert "1.1" not in data2
     assert data1 == data2
     assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+
+
+@pytest.mark.parametrize("raise_if_missing", [True, False])
+def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
+    c = TestClient()
+    c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent(f"""
+    from conan.tools.files import trim_conandata
+
+    def post_export(conanfile):
+        trim_conandata(conanfile, raise_if_missing={raise_if_missing})
+    """)})
+
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    if raise_if_missing:
+        with pytest.raises(Exception, match="conandata.yml file doesn't exist") as exception:
+            c.run("export . --version=1.0")
+    else:
+        c.run("export . --version=1.0")
+        assert c.exported_recipe_revision() == "a9ec2e5fbb166568d4670a9cd1ef4b26"

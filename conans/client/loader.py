@@ -323,7 +323,8 @@ def _load_python_file(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
 
     def new_print(*args, **kwargs):  # Make sure that all user python files print() goes to stderr
-        print(*args, **kwargs, file=sys.stderr)
+        kwargs.setdefault("file", sys.stderr)
+        print(*args, **kwargs)
 
     module_id = str(uuid.uuid1())
     current_dir = os.path.dirname(conan_file_path)

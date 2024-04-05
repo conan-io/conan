@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -280,3 +281,202 @@ def test_check_c_cpp_ld_list_formats():
     assert "c = ['aarch64-poky-linux-gcc', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
     assert "cpp = ['aarch64-poky-linux-g++', '-mcpu=cortex-a53', '-march=armv8-a+crc+crypto']" in content
     assert "ld = ['aarch64-poky-linux-ld', '--sysroot=/opt/sysroots/cortexa53-crypto-poky-linux']" in content
+
+
+def test_check_pkg_config_paths():
+    # Issue: https://github.com/conan-io/conan/issues/12342
+    # Issue: https://github.com/conan-io/conan/issues/14935
+    t = TestClient()
+    t.save({"conanfile.txt": "[generators]\nMesonToolchain"})
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    assert f"pkg_config_path = '{t.current_folder}'" in content
+    assert f"build.pkg_config_path = " not in content
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.build_pkg_config_path = os.path.join(self.generators_folder, "build")
+            tc.generate()
+    """)
+    t.save({"conanfile.py": conanfile}, clean_first=True)
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    base_folder = t.current_folder
+    assert f"pkg_config_path = '{base_folder}'" in content
+    assert f"build.pkg_config_path = '{os.path.join(base_folder, 'build')}'" in content
+
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how MesonToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf).
+
+    It should create both native and cross files.
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"asm": "clang", "c": "clang", "cpp": "clang++"}
+    """)
+    conanfile = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import replace_in_file
+    class helloRecipe(ConanFile):
+        name = "hello"
+        version = "1.0.0"
+        package_type = "application"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "MesonToolchain"
+
+        def build(self):
+            native_path = os.path.join(self.generators_folder, "conan_meson_native.ini")
+            cross_path = os.path.join(self.generators_folder, "conan_meson_cross.ini")
+            assert os.path.exists(cross_path)  # sanity check
+            assert os.path.exists(native_path)  # sanity check
+            # This should not raise anything!! Notice the strict=True
+            replace_in_file(self, cross_path, 'c = gcc', "#Hey", strict=True)
+            replace_in_file(self, cross_path, 'cpp = g++', "#Hey", strict=True)
+            replace_in_file(self, native_path, 'c = clang', "#Hey", strict=True)
+            replace_in_file(self, native_path, 'cpp = clang++', "#Hey", strict=True)
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "conanfile.py": conanfile
+    })
+    client.run("build . -pr:h host -pr:b build")
+
+
+def test_toolchain_and_compilers_build_context():
+    """
+    Tests how MesonToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf).
+
+    It should create both native and cross files.
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+
+    [conf]
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    os=Linux
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class toolRecipe(ConanFile):
+        name = "tool"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "MesonToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_meson_native.ini")
+            content = load(self, toolchain)
+            assert "c = 'clang'" in content
+            assert "cpp = 'clang++'" in content
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "MesonToolchain"
+        tool_requires = "tool/1.0"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conan_meson_cross.ini")
+            content = load(self, toolchain)
+            assert "c = 'gcc'" in content
+            assert "cpp = 'g++'" in content
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("create consumer -pr:h host -pr:b build --build=missing")
+
+
+def test_subproject_options():
+    t = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.subproject_options["subproject1"] = [{"option1": "enabled"}, {"option2": "disabled"}]
+                tc.subproject_options["subproject2"] = [{"option3": "enabled"}]
+                tc.subproject_options["subproject2"].append({"option4": "disabled"})
+                tc.generate()
+        """)
+    t.save({"conanfile.py": conanfile})
+    t.run("install .")
+    content = t.load(MesonToolchain.native_filename)
+    assert "[subproject1:project options]" in content
+    assert "[subproject2:project options]" in content
+    assert "option1 = 'enabled'" in content
+    assert "option2 = 'disabled'" in content
+    assert "option3 = 'enabled'" in content
+    assert "option4 = 'disabled'" in content

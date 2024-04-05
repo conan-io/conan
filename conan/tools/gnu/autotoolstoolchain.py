@@ -1,4 +1,5 @@
 from conan.internal import check_duplicated_generator
+from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, apple_sdk_path
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
@@ -24,6 +25,8 @@ class AutotoolsToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
+        raise_on_universal_arch(conanfile)
+
         self._conanfile = conanfile
         self._namespace = namespace
         self._prefix = prefix
@@ -53,7 +56,7 @@ class AutotoolsToolchain:
 
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
-        self._build = None
+        self._build = self._conanfile.conf.get("tools.gnu:build_triplet")
         self._target = None
 
         self.apple_arch_flag = self.apple_isysroot_flag = None
@@ -75,7 +78,8 @@ class AutotoolsToolchain:
             if not self._host:
                 self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
             # Build triplet
-            self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+            if not self._build:
+                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
             # Apple Stuff
             if os_build == "Macos" and is_apple_os(conanfile):
                 # SDK path is mandatory for cross-building
@@ -163,7 +167,7 @@ class AutotoolsToolchain:
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
         if compilers_by_conf:
-            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
+            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC", "rc": "RC"}
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
                     compiler = compilers_by_conf[comp]

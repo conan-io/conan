@@ -5,7 +5,8 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools.apple.apple import get_apple_sdk_fullname
+from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
+from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
@@ -110,6 +111,55 @@ class VSRuntimeBlock(Block):
                     config_dict["Debug"] = clang_rt
 
         return {"vs_runtimes": config_dict}
+
+
+class VSDebuggerEnvironment(Block):
+    template = textwrap.dedent("""
+        {% if vs_debugger_path %}
+        # Definition of CMAKE_VS_DEBUGGER_ENVIRONMENT
+        set(CMAKE_VS_DEBUGGER_ENVIRONMENT "{{ vs_debugger_path }}")
+        {% endif %}
+        """)
+
+    def context(self):
+        os_ = self._conanfile.settings.get_safe("os")
+        build_type = self._conanfile.settings.get_safe("build_type")
+
+        if (os_ and "Windows" not in os_) or not build_type:
+            return None
+
+        if "Visual" not in self._toolchain.generator:
+            return None
+
+        config_dict = {}
+        if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
+            existing_include = load(CONAN_TOOLCHAIN_FILENAME)
+            pattern = r"set\(CMAKE_VS_DEBUGGER_ENVIRONMENT \"PATH=([^)]*);%PATH%\"\)"
+            vs_debugger_environment = re.search(pattern, existing_include)
+            if vs_debugger_environment:
+                capture = vs_debugger_environment.group(1)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>", capture)
+                config_dict = dict(matches)
+
+        host_deps = self._conanfile.dependencies.host.values()
+        test_deps = self._conanfile.dependencies.test.values()
+        bin_dirs = [p for dep in host_deps for p in dep.cpp_info.aggregated_components().bindirs]
+        test_bindirs = [p for dep in test_deps for p in dep.cpp_info.aggregated_components().bindirs]
+        bin_dirs.extend(test_bindirs)
+        bin_dirs = [p.replace("\\", "/") for p in bin_dirs]
+
+        bin_dirs = ";".join(bin_dirs) if bin_dirs else None
+        if bin_dirs:
+            config_dict[build_type] = bin_dirs
+
+        if not config_dict:
+            return None
+
+        vs_debugger_path = ""
+        for config, value in config_dict.items():
+            vs_debugger_path += f"$<$<CONFIG:{config}>:{value}>"
+        vs_debugger_path = f"PATH={vs_debugger_path};%PATH%"
+        return {"vs_debugger_path": vs_debugger_path}
 
 
 class FPicBlock(Block):
@@ -348,10 +398,19 @@ class AppleSystemBlock(Block):
         if not is_apple_os(self._conanfile):
             return None
 
+        def to_apple_archs(conanfile, default=None):
+            f"""converts conan-style architectures into Apple-style archs
+            to be used by CMake also supports multiple architectures
+            separated by '{universal_arch_separator}'"""
+            arch_ = conanfile.settings.get_safe("arch") if conanfile else None
+            if arch_ is not None:
+                return ";".join([_to_apple_arch(arch, default) for arch in
+                                 arch_.split(universal_arch_separator)])
+
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
         # if multiple archs are specified "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        host_architecture = to_apple_arch(self._conanfile)
+        host_architecture = to_apple_archs(self._conanfile)
 
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._conanfile.conf.get("tools.apple:sdk_path") or get_apple_sdk_fullname(self._conanfile)
@@ -554,7 +613,9 @@ class ExtraFlagsBlock(Block):
         {% endif %}
         {% if defines %}
         {% if config %}
-        add_compile_definitions($<$<CONFIG:{{config}}>:{% for define in defines %}" {{ define }}"{% endfor %}>)
+        {% for define in defines %}
+        add_compile_definitions($<$<CONFIG:{{config}}>:"{{ define }}">)
+        {% endfor %}
         {% else %}
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}
@@ -807,6 +868,11 @@ class GenericSystemBlock(Block):
                 return cmake_system_name_map.get(os_host, os_host)
 
     def _is_apple_cross_building(self):
+
+        if is_universal_arch(self._conanfile.settings.get_safe("arch"),
+                             self._conanfile.settings.possible_values().get("arch")):
+            return False
+
         os_host = self._conanfile.settings.get_safe("os")
         arch_host = self._conanfile.settings.get_safe("arch")
         arch_build = self._conanfile.settings_build.get_safe("arch")
@@ -821,7 +887,9 @@ class GenericSystemBlock(Block):
         system_version = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_version")
         system_processor = self._conanfile.conf.get("tools.cmake.cmaketoolchain:system_processor")
 
-        if not user_toolchain:  # try to detect automatically
+        # try to detect automatically
+        if not user_toolchain and not is_universal_arch(self._conanfile.settings.get_safe("arch"),
+                                                        self._conanfile.settings.possible_values().get("arch")):
             os_host = self._conanfile.settings.get_safe("os")
             arch_host = self._conanfile.settings.get_safe("arch")
             if arch_host == "armv8":

@@ -1,3 +1,7 @@
+import json
+import os
+from collections import OrderedDict
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conans.client.graph.build_mode import BuildMode
@@ -10,7 +14,11 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        BINARY_PLATFORM)
 from conans.client.graph.proxy import should_update_reference
 from conans.errors import NoRemoteAvailable, NotFoundException, \
-    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError
+    PackageNotFoundException, conanfile_exception_formatter, ConanConnectionError, ConanException
+from conans.model.info import RequirementInfo, RequirementsInfo
+from conans.model.package_ref import PkgReference
+from conans.model.recipe_ref import RecipeReference
+from conans.util.files import load
 
 
 class GraphBinariesAnalyzer(object):
@@ -96,6 +104,8 @@ class GraphBinariesAnalyzer(object):
             node.binary_remote = previous_node.binary_remote
             node.prev = previous_node.prev
             node.pref_timestamp = previous_node.pref_timestamp
+            node.should_build = previous_node.should_build
+            node.build_allowed = previous_node.build_allowed
 
             # this line fixed the compatible_packages with private case.
             # https://github.com/conan-io/conan/issues/9880
@@ -321,8 +331,30 @@ class GraphBinariesAnalyzer(object):
             node.pref_timestamp = cache_latest_prev.timestamp
             assert node.prev, "PREV for %s is None" % str(node.pref)
 
-    def _evaluate_package_id(self, node):
-        compute_package_id(node, self._global_conf)
+    def _config_version(self):
+        config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
+        if config_mode is None:
+            return
+        config_version_file = HomePaths(self._cache.cache_folder).config_version_path
+        try:
+            config_refs = json.loads(load(config_version_file))["config_version"]
+            result = OrderedDict()
+            for r in config_refs:
+                try:
+                    config_ref = PkgReference.loads(r)
+                    req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
+                except ConanException:
+                    config_ref = RecipeReference.loads(r)
+                    req_info = RequirementInfo(config_ref, None, config_mode)
+                result[config_ref] = req_info
+        except Exception as e:
+            raise ConanException(f"core.package_id:config_mode defined, but error while loading "
+                                 f"'{os.path.basename(config_version_file)}'"
+                                 f" file in cache: {self._cache.cache_folder}: {e}")
+        return RequirementsInfo(result)
+
+    def _evaluate_package_id(self, node, config_version):
+        compute_package_id(node, self._global_conf, config_version=config_version)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for
@@ -359,9 +391,10 @@ class GraphBinariesAnalyzer(object):
             self._evaluate_node(n, mode, remotes, update)
 
         levels = deps_graph.by_levels()
+        config_version = self._config_version()
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
-                self._evaluate_package_id(node)
+                self._evaluate_package_id(node, config_version)
             # group by pref to paralelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
@@ -382,7 +415,7 @@ class GraphBinariesAnalyzer(object):
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._global_conf)
+                compute_package_id(node, self._global_conf, config_version=config_version)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):

@@ -50,7 +50,7 @@ class TestFileServer:
             auth = bottle.request.auth
             if auth is not None:
                 if auth != ("user", "password"):
-                    return bottle.HTTPError(401, "Not authorized")
+                    return bottle.HTTPError(401, "Bad credentials")
                 return bottle.static_file(file, store)
 
             auth = bottle.request.headers.get("Authorization")

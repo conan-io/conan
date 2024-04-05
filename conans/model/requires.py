@@ -574,3 +574,6 @@ class Requirements:
 
     def serialize(self):
         return [v.serialize() for v in self._requires.values()]
+
+    def __len__(self):
+        return len(self._requires)

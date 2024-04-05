@@ -7,10 +7,11 @@ import textwrap
 import pytest
 
 from conan.tools.cmake.presets import load_cmake_presets
-from conans.model.recipe_ref import RecipeReference
 from conan.tools.microsoft.visual import vcvars_command
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import save, load, rmdir
 
@@ -187,6 +188,59 @@ def test_cmake_toolchain_without_build_type():
     toolchain = client.load("conan_toolchain.cmake")
     assert "CMAKE_MSVC_RUNTIME_LIBRARY" not in toolchain
     assert "CMAKE_BUILD_TYPE" not in toolchain
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only on Windows with msvc")
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+    client.run("create . -s build_type=Debug")
+    client.run("create . -s build_type=MinSizeRel")
+
+    client.run("install --require=pkg/1.0 -s build_type=Debug -g CMakeToolchain --format=json")
+    debug_graph = json.loads(client.stdout)
+    debug_bindir = debug_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    debug_bindir = debug_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain --format=json")
+    release_graph = json.loads(client.stdout)
+    release_bindir = release_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    release_bindir = release_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+
+    client.run("install --require=pkg/1.0 -s build_type=MinSizeRel -g CMakeToolchain --format=json")
+    minsizerel_graph = json.loads(client.stdout)
+    minsizerel_bindir = minsizerel_graph['graph']['nodes']['1']['cpp_info']['root']['bindirs'][0]
+    minsizerel_bindir = minsizerel_bindir.replace('\\', '/')
+
+    toolchain = client.load("conan_toolchain.cmake")
+    debugger_environment = f"PATH=$<$<CONFIG:Debug>:{debug_bindir}>" \
+                           f"$<$<CONFIG:Release>:{release_bindir}>" \
+                           f"$<$<CONFIG:MinSizeRel>:{minsizerel_bindir}>;%PATH%"
+    assert debugger_environment in toolchain
+@pytest.mark.tool("cmake")
+def test_cmake_toolchain_cmake_vs_debugger_environment_not_needed():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_type("shared-library")
+                                                           .with_settings("build_type")})
+    client.run("create . -s build_type=Release")
+
+    cmake_generator = "" if platform.system() != "Windows" else "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    client.run(f"install --require=pkg/1.0 -s build_type=Release -g CMakeToolchain {cmake_generator}")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_VS_DEBUGGER_ENVIRONMENT" not in toolchain
+
 
 
 @pytest.mark.tool("cmake")
@@ -908,6 +962,33 @@ def test_cmake_presets_multiple_settings_multi_config():
     assert "MSVC_LANG2017" in client.out
 
 
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+# Test both with a local folder and an absolute folder
+@pytest.mark.parametrize("build", ["mybuild", "temp"])
+def test_cmake_presets_build_folder(build):
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_exe -d name=hello -d version=0.1")
+
+    build = temp_folder() if build == "temp" else build
+    settings_layout = f' -c tools.cmake.cmake_layout:build_folder="{build}" '\
+                      '-c tools.cmake.cmake_layout:build_folder_vars=' \
+                      '\'["settings.compiler.runtime", "settings.compiler.cppstd"]\''
+    # But If we change, for example, the cppstd and the compiler version, the toolchain
+    # and presets will be different, but it will be appended to the UserPresets.json
+    settings = "-s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
+               "-s compiler.cppstd=17"
+    client.run("install . {} {}".format(settings, settings_layout))
+    assert os.path.exists(os.path.join(client.current_folder, build, "static-17", "generators"))
+
+    client.run_command("cmake . --preset conan-static-17")
+    client.run_command("cmake --build --preset conan-static-17-release")
+    client.run_command("ctest --preset conan-static-17-release")
+    client.run_command(f"{build}\\static-17\\Release\\hello")
+    assert "Hello World Release!" in client.out
+    assert "MSVC_LANG2017" in client.out
+
+
 @pytest.mark.tool("cmake")
 def test_cmaketoolchain_sysroot():
     client = TestClient(path_with_spaces=False)
@@ -1395,7 +1476,7 @@ def test_cmaketoolchain_conf_from_tool_require():
     assert "set(CMAKE_SYSTEM_PROCESSOR ARM-POTATO)" in toolchain
 
 
-def test_inject_user_toolchain_profile():
+def test_inject_user_toolchain():
     client = TestClient()
 
     conanfile = textwrap.dedent("""
@@ -1428,8 +1509,17 @@ def test_inject_user_toolchain_profile():
     save(os.path.join(client.cache.profiles_path, "myvars.cmake"), 'set(MY_USER_VAR1 "MYVALUE1")')
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmake})
-    client.run("create . -pr=myprofile")
+    client.run("build . -pr=myprofile")
     assert "-- MYVAR1 MYVALUE1!!" in client.out
+
+    # Now test with the global.conf
+    global_conf = 'tools.cmake.cmaketoolchain:user_toolchain=' \
+                  '["{{conan_home_folder}}/my.cmake"]'
+    save(client.cache.new_config_path, global_conf)
+    save(os.path.join(client.cache_folder, "my.cmake"), 'message(STATUS "IT WORKS!!!!")')
+    client.run("build .")
+    # The toolchain is found and can be used
+    assert "IT WORKS!!!!" in client.out
 
 
 def test_no_build_type():
@@ -1743,7 +1833,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
     profile_release = textwrap.dedent(r"""
         include(default)
         [conf]
-        tools.build:defines=["answer=42"]
+        tools.build:defines=["conan_test_answer=42", "conan_test_other=24"]
         tools.build:cxxflags=["/Zc:__cplusplus"]
         """)
     profile_debug = textwrap.dedent(r"""
@@ -1751,7 +1841,7 @@ def test_cmake_toolchain_cxxflags_multi_config():
         [settings]
         build_type=Debug
         [conf]
-        tools.build:defines=["answer=123"]
+        tools.build:defines=["conan_test_answer=123"]
         tools.build:cxxflags=["/W4"]
         """)
 
@@ -1778,10 +1868,13 @@ def test_cmake_toolchain_cxxflags_multi_config():
         #include <stdio.h>
 
         #define STR(x)   #x
-        #define SHOW_DEFINE(x) printf("%s=%s\n", #x, STR(x))
+        #define SHOW_DEFINE(x) printf("DEFINE %s=%s!\n", #x, STR(x))
 
         int main() {
-            SHOW_DEFINE(answer);
+            SHOW_DEFINE(conan_test_answer);
+            #ifdef conan_test_other
+            SHOW_DEFINE(conan_test_other);
+            #endif
             char a = 123L;  // to trigger warnings
 
             #if __cplusplus
@@ -1812,9 +1905,11 @@ def test_cmake_toolchain_cxxflags_multi_config():
         assert "warning C4189" in c.out
 
     c.run_command(r"build\Release\example.exe")
-    assert 'answer=42' in c.out
+    assert 'DEFINE conan_test_answer=42!' in c.out
+    assert 'DEFINE conan_test_other=24!' in c.out
     assert "CPLUSPLUS: __cplusplus20" in c.out
 
     c.run_command(r"build\Debug\example.exe")
-    assert 'answer=123' in c.out
+    assert 'DEFINE conan_test_answer=123' in c.out
+    assert 'other=' not in c.out
     assert "CPLUSPLUS: __cplusplus19" in c.out
