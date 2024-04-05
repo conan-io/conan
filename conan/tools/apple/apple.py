@@ -98,7 +98,7 @@ def resolve_apple_flags(conanfile, is_cross_building=False):
     :return: tuple of Apple flags (apple_min_version_flag, apple_arch, apple_isysroot_flag).
     """
     if not is_apple_os(conanfile):
-        return
+        return None, None, None
     # SDK path is mandatory for cross-building
     arch = to_apple_arch(conanfile)
     sdk_path = apple_sdk_path(conanfile, is_cross_building=is_cross_building)
