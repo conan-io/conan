@@ -902,9 +902,12 @@ class TestBazelGenerationBuildContext:
                     tc.build_context_activated = ["wayland", "dep"]
                     tc.generate()
                 def build(self):
-                    context = "build-" if self.context == "build" else ""
-                    assert os.path.exists(os.path.join(f"{context}wayland", "BUILD.bazel"))
-                    assert os.path.exists(os.path.join(f"{context}dep", "BUILD.bazel"))
+                    # Build context
+                    assert os.path.exists(os.path.join("build-wayland", "BUILD.bazel"))
+                    assert os.path.exists(os.path.join("build-dep", "BUILD.bazel"))
+                    # Host context
+                    assert os.path.exists(os.path.join("wayland", "BUILD.bazel"))
+                    assert os.path.exists(os.path.join("dep", "BUILD.bazel"))
                 """)
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
                 "wayland/conanfile.py": GenConanfile("wayland", "1.0").with_requires("dep/1.0"),
@@ -935,9 +938,12 @@ class TestBazelGenerationBuildContext:
                     tc.build_context_activated = ["wayland", "dep"]
                     tc.generate()
                 def build(self):
-                    context = "build-" if self.context == "build" else ""
-                    assert os.path.exists(os.path.join(f"{context}wayland", "BUILD.bazel"))
-                    assert os.path.exists(os.path.join(f"{context}dep", "BUILD.bazel"))
+                    # Build context
+                    assert os.path.exists(os.path.join("build-wayland", "BUILD.bazel"))
+                    assert os.path.exists(os.path.join("build-dep", "BUILD.bazel"))
+                    # Host context
+                    assert os.path.exists(os.path.join("wayland", "BUILD.bazel"))
+                    assert os.path.exists(os.path.join("dep", "BUILD.bazel"))
                 """)
         wayland = textwrap.dedent("""
             from conan import ConanFile
