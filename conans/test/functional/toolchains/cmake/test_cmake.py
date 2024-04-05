@@ -364,10 +364,8 @@ class LinuxTest(Base):
                     "arch": arch,
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
@@ -424,10 +422,8 @@ class AppleTest(Base):
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
 
-        toolchain_path = os.path.join(self.client.current_folder, "build",
-                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,
