@@ -74,7 +74,7 @@ def test_shorthand_syntax():
             """)})
 
     tc.run("profile show -pr:a=pre -pr:a=mid -pr:a=post -f=json")
-    out = json.loads(tc.out)
+    out = json.loads(tc.stdout)
     assert out == {'build': {'build_env': '',
                              'conf': {},
                              'options': {},
