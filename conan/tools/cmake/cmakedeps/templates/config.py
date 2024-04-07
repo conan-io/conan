@@ -83,7 +83,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         # Check that the specified components in the find_package(Foo COMPONENTS x y z) are there
         # This is the variable filled by CMake with the requested components in find_package
         if({{ file_name }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ pkg_name(file_name, 'FIND_COMPONENTS') }})
+            foreach(_FIND_COMPONENT {{ pkg_name(file_name, 'FIND_COMPONENTS', '') }})
                 if (TARGET ${_FIND_COMPONENT})
                     message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
                 else()
