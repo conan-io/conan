@@ -138,12 +138,12 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               # COMPOUND VARIABLES
               set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
-                  "$<$<COMPILE_LANGUAGE:CXX>{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
-                  "$<$<COMPILE_LANGUAGE:C>{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
+                  "$<$<COMPILE_LANGUAGE:CXX>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
+                  "$<$<COMPILE_LANGUAGE:C>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
               set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>{{ pkg_var(pkg_name, 'EXE_LINK_FLAGS', config_suffix) }}>")
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
+                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ pkg_var(pkg_name, 'EXE_LINK_FLAGS', config_suffix) }}>")
 
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
