@@ -247,7 +247,7 @@ class RemoteModificationTest(unittest.TestCase):
         for remote in data["remotes"]:
             self.assertEqual(remote["disabled"], True)
 
-        data = json.loads(client.out)
+        data = json.loads(client.stdout)
         for remote in data:
             assert remote["enabled"] is False
 
