@@ -288,7 +288,7 @@ class _IncludingPresets:
         if inherited_user:
             _IncludingPresets._clean_user_inherits(data, preset_data)
 
-        try:  # Make it relative to the build dir if possible
+        try:  # Make it relative to the CMakeUserPresets.json if possible
             preset_path = os.path.relpath(preset_path, output_dir)
         except ValueError:
             pass
