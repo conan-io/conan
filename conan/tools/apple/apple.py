@@ -95,7 +95,8 @@ def resolve_apple_flags(conanfile, is_cross_building=False):
     :return: tuple of Apple flags (apple_min_version_flag, apple_arch, apple_isysroot_flag).
     """
     if not is_apple_os(conanfile):
-        return None, None, None
+        # Keeping legacy defaults
+        return "", None, None
 
     apple_arch_flag = apple_isysroot_flag = None
     if is_cross_building:
