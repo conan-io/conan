@@ -178,8 +178,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                       $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp_var(pkg_name, comp_variable_name, 'EXE_LINK_FLAGS', config_suffix) }}>
               )
               set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
-                  "$<$<COMPILE_LANGUAGE:CXX>{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
-                  "$<$<COMPILE_LANGUAGE:C>{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
+                  "$<$<COMPILE_LANGUAGE:CXX>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
+                  "$<$<COMPILE_LANGUAGE:C>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
 
               {%- endfor %}
           """)
