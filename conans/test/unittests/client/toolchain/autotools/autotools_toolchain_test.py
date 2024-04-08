@@ -349,7 +349,7 @@ def test_crossbuild_from_macos_to_non_apple_os():
     conanfile.settings = MockSettings({"os": "Android", "arch": "armv8"})
     conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
     be = AutotoolsToolchain(conanfile)
-    assert be.apple_min_version_flag == ''
+    assert be.apple_min_version_flag == ""
     assert be.apple_arch_flag is None
     assert be.apple_isysroot_flag is None
 
