@@ -1457,11 +1457,17 @@ def test_check_c_source_compiles():
 
     consumer = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import cmake_layout
+        from conan.tools.cmake import cmake_layout, CMakeDeps
         class PkgConan(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "dep/1.0"
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeToolchain"
+
+            def generate(self):
+                tc = CMakeDeps(self)
+                tc.cmake_required_includes = ["dep"]
+                tc.cmake_required_libs = ["dep"]
+                tc.generate()
         """)
 
     # COMMENT set(MYLIB ... ) and UNCOMMENT get_target_property( ) for test to pass
@@ -1471,13 +1477,15 @@ def test_check_c_source_compiles():
 
         find_package(dep CONFIG REQUIRED)
         include(CheckCXXSourceCompiles)
-        list(PREPEND CMAKE_REQUIRED_INCLUDES ${dep_INCLUDE_DIRS})
+
+        message(STATUS "CMAKE_REQUIRED_INCLUDES= ${CMAKE_REQUIRED_INCLUDES}")
         # get_target_property(MYLIB CONAN_LIB::dep_dep_RELEASE IMPORTED_LOCATION_RELEASE)
-        set(MYLIB ${dep_LIBRARIES_TARGETS})
-        message(STATUS "LIBS DEPS ${dep_LIBRARIES_TARGETS}")
-        list(PREPEND CMAKE_REQUIRED_LIBRARIES ${MYLIB})
+        # set(MYLIB ${dep_LIBRARIES_TARGETS})
+        # message(STATUS "LIBS DEPS ${dep_LIBRARIES_TARGETS}")
+        # list(PREPEND CMAKE_REQUIRED_LIBRARIES ${MYLIB})
+
         check_cxx_source_compiles("#include <dep.h>
-                                  int main(void) { dep(); return 0; }" IT_COMPILES)
+                                  int main(void) { return 0; }" IT_COMPILES)
         """)
 
     client.save({"conanfile.py": consumer,

@@ -26,13 +26,15 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
+        cmake_required_inc = self.filename in getattr(self.cmakedeps, "cmake_required_includes", [])
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
                 "file_name": self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
-                "targets_include_file": targets_include}
+                "targets_include_file": targets_include,
+                "cmake_required_includes": cmake_required_inc}
 
     @property
     def template(self):
@@ -69,6 +71,9 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         set({{ file_name }}_INCLUDE_DIR {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }} )
         set({{ file_name }}_LIBRARIES {{ '${' + pkg_name + '_LIBRARIES' + config_suffix + '}' }} )
         set({{ file_name }}_DEFINITIONS {{ '${' + pkg_name + '_DEFINITIONS' + config_suffix + '}' }} )
+        {% if cmake_required_includes %}
+        list(PREPEND CMAKE_REQUIRED_INCLUDES {{ '${' + pkg_name + '_INCLUDE_DIRS' + config_suffix + '}' }})
+        {% endif %}
 
         # Only the first installed configuration is included to avoid the collision
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
