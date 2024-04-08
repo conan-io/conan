@@ -308,8 +308,8 @@ class MesonToolchain(object):
         if not self._is_apple_system:
             return
         # Calculating the main Apple flags
-        min_flag, arch_flag, isysroot_flag = resolve_apple_flags(self._conanfile,
-                                                                 is_cross_build=bool(self.cross_build))
+        min_flag, arch_flag, isysroot_flag = (
+            resolve_apple_flags(self._conanfile, is_cross_building=bool(self.cross_build)))
         self.apple_arch_flag = arch_flag.split() if arch_flag else []
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]

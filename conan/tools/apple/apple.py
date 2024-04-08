@@ -67,9 +67,9 @@ def apple_min_version_flag(conanfile):
     os_sdk = conanfile.settings.get_safe('os.sdk')
     os_sdk = os_sdk or ("macosx" if os_ == "Macos" else None)
     os_version = conanfile.settings.get_safe("os.version")
-    if os_sdk is None or not os_version:
-        raise ConanException("Please, specify a suitable value for os.sdk")
-    # especial case, despite Catalyst is macOS, it requires an iOS version argument
+    if not os_sdk or not os_version:
+        # Legacy behavior
+        return ""
     if conanfile.settings.get_safe("os.subsystem") == 'catalyst':
         os_sdk = "iphoneos"
     return {
@@ -96,12 +96,13 @@ def resolve_apple_flags(conanfile, is_cross_building=False):
     """
     if not is_apple_os(conanfile):
         return None, None, None
-    # SDK path is mandatory for cross-building
-    arch = to_apple_arch(conanfile)
-    sdk_path = apple_sdk_path(conanfile, is_cross_building=is_cross_building)
-    # Calculating the main Apple flags
-    apple_isysroot_flag = f"-isysroot {sdk_path}" if sdk_path else ""
-    apple_arch_flag = f"-arch {arch}" if arch else ""
+
+    apple_arch_flag = apple_isysroot_flag = None
+    if is_cross_building:
+        arch = to_apple_arch(conanfile)
+        sdk_path = apple_sdk_path(conanfile, is_cross_building=is_cross_building)
+        apple_isysroot_flag = f"-isysroot {sdk_path}" if sdk_path else ""
+        apple_arch_flag = f"-arch {arch}" if arch else ""
     min_version_flag = apple_min_version_flag(conanfile)
     return min_version_flag, apple_arch_flag, apple_isysroot_flag
 
