@@ -14,18 +14,11 @@ intelprofile = textwrap.dedent("""\
 [settings]
 os=%s
 arch=x86_64
-arch_build=x86_64
 compiler=intel-cc
 compiler.mode=dpcpp
 compiler.version=2021.3
 compiler.libcxx=libstdc++
 build_type=Release
-[options]
-
-[build_requires]
-[env]
-CC=dpcpp
-CXX=dpcpp
 
 [conf]
 tools.intel:installation_path=%s

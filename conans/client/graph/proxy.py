@@ -1,173 +1,154 @@
-import os
-
-from requests.exceptions import RequestException
-
+from conan.api.output import ConanOutput
+from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
-                                       RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
-                                       RECIPE_UPDATED, RECIPE_EDITABLE)
-from conans.client.output import ScopedOutput
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
-from conans.client.remover import DiskRemover
-from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
-from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.util.tracer import log_recipe_got_from_local_cache
+                                       RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
+                                       RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
+from conans.errors import ConanException, NotFoundException
 
 
-# TODO: Remove warning message when this URL is no longer available
-DEPRECATED_CONAN_CENTER_BINTRAY_URL = "https://conan.bintray.com"
-
-
-class ConanProxy(object):
-    def __init__(self, cache, output, remote_manager):
+class ConanProxy:
+    def __init__(self, conan_app, editable_packages):
         # collaborators
-        self._cache = cache
-        self._out = output
-        self._remote_manager = remote_manager
+        self._editable_packages = editable_packages
+        self._cache = conan_app.cache
+        self._remote_manager = conan_app.remote_manager
+        self._resolved = {}  # Cache of the requested recipes to optimize calls
 
-    def get_recipe(self, ref, check_updates, update, remotes, recorder):
-        layout = self._cache.package_layout(ref)
-        if isinstance(layout, PackageEditableLayout):
-            conanfile_path = layout.conanfile()
-            status = RECIPE_EDITABLE
-            # TODO: log_recipe_got_from_editable(reference)
-            # TODO: recorder.recipe_fetched_as_editable(reference)
-            return conanfile_path, status, None, ref
+    def get_recipe(self, ref, remotes, update, check_update):
+        """
+        :return: Tuple (layout, status, remote)
+        """
+        # TODO: cache2.0 Check with new locks
+        # with layout.conanfile_write_lock(self._out):
+        resolved = self._resolved.get(ref)
+        if resolved is None:
+            resolved = self._get_recipe(ref, remotes, update, check_update)
+            self._resolved[ref] = resolved
+        return resolved
 
-        with layout.conanfile_write_lock(self._out):
-            result = self._get_recipe(layout, ref, check_updates, update, remotes, recorder)
-            conanfile_path, status, remote, new_ref = result
+    # return the remote where the recipe was found or None if the recipe was not found
+    def _get_recipe(self, reference, remotes, update, check_update):
+        output = ConanOutput(scope=str(reference))
 
-            if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
-                log_recipe_got_from_local_cache(new_ref)
-                recorder.recipe_fetched_from_cache(new_ref)
+        conanfile_path = self._editable_packages.get_path(reference)
+        if conanfile_path is not None:
+            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
 
-        return conanfile_path, status, remote, new_ref
-
-    def _get_recipe(self, layout, ref, check_updates, update, remotes, recorder):
-        output = ScopedOutput(str(ref), self._out)
-        # check if it is in disk
-        conanfile_path = layout.conanfile()
-
-        # NOT in disk, must be retrieved from remotes
-        if not os.path.exists(conanfile_path):
-            remote, new_ref = self._download_recipe(layout, ref, output, remotes, remotes.selected,
-                                                    recorder)
+        # check if it there's any revision of this recipe in the local cache
+        try:
+            recipe_layout = self._cache.recipe_layout(reference)
+            ref = recipe_layout.reference  # latest revision if it was not defined
+        except ConanException:
+            # NOT in disk, must be retrieved from remotes
+            # we will only check all servers for latest revision if we did a --update
+            layout, remote = self._download_recipe(reference, remotes, output, update, check_update)
             status = RECIPE_DOWNLOADED
-            return conanfile_path, status, remote, new_ref
+            return layout, status, remote
 
-        metadata = layout.load_metadata()
-        cur_revision = metadata.recipe.revision
-        cur_remote = metadata.recipe.remote
-        cur_remote = remotes[cur_remote] if cur_remote else None
-        selected_remote = remotes.selected or cur_remote
+        self._cache.update_recipe_lru(ref)
 
-        check_updates = check_updates or update
-        requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
-        if requested_different_revision:
-            if check_updates or self._cache.new_config["core:allow_explicit_revision_update"]:
-                remote, new_ref = self._download_recipe(layout, ref, output, remotes,
-                                                        selected_remote, recorder)
-                status = RECIPE_DOWNLOADED
-                return conanfile_path, status, remote, new_ref
-            else:
-                raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
-                                        "match the requested '%s'."
-                                        " Use '--update' to check in the remote."
-                                        % (cur_revision, repr(ref)))
-
-        if not check_updates:
+        # TODO: cache2.0: check with new --update flows
+        # TODO: If the revision is given, then we don't need to check for updates?
+        if not (check_update or should_update_reference(reference, update)):
             status = RECIPE_INCACHE
-            ref = ref.copy_with_rev(cur_revision)
-            return conanfile_path, status, cur_remote, ref
+            return recipe_layout, status, None
 
-        # Checking updates in the server
-        if not selected_remote:
-            status = RECIPE_NO_REMOTE
-            ref = ref.copy_with_rev(cur_revision)
-            return conanfile_path, status, None, ref
-
-        try:  # get_recipe_manifest can fail, not in server
-            upstream_manifest, ref = self._remote_manager.get_recipe_manifest(ref, selected_remote)
-        except NotFoundException:
+        # Need to check updates
+        remote, remote_ref = self._find_newest_recipe_in_remotes(reference, remotes,
+                                                                 update, check_update)
+        if remote_ref is None:  # Nothing found in remotes
             status = RECIPE_NOT_IN_REMOTE
-            ref = ref.copy_with_rev(cur_revision)
-            return conanfile_path, status, selected_remote, ref
+            return recipe_layout, status, None
 
-        read_manifest = layout.recipe_manifest()
-        if upstream_manifest != read_manifest:
-            if upstream_manifest.time > read_manifest.time:
-                if update:
-                    DiskRemover().remove_recipe(layout, output=output)
-                    output.info("Retrieving from remote '%s'..." % selected_remote.name)
-                    self._download_recipe(layout, ref, output, remotes, selected_remote, recorder)
+        # Something found in remotes, check if we already have the latest in local cache
+        # TODO: cache2.0 here if we already have a revision in the cache but we add the
+        #  --update argument and we find that same revision in server, we will not
+        #  download anything but we will UPDATE the date of that revision in the
+        #  local cache and WE ARE ALSO UPDATING THE REMOTE
+        #  Check if this is the flow we want to follow
+        assert ref.timestamp
+        cache_time = ref.timestamp
+        if remote_ref.revision != ref.revision:
+            if cache_time < remote_ref.timestamp:
+                # the remote one is newer
+                if should_update_reference(remote_ref, update):
+                    output.info("Retrieving from remote '%s'..." % remote.name)
+                    new_recipe_layout = self._download(remote_ref, remote)
                     status = RECIPE_UPDATED
-                    return conanfile_path, status, selected_remote, ref
+                    return new_recipe_layout, status, remote
                 else:
                     status = RECIPE_UPDATEABLE
             else:
                 status = RECIPE_NEWER
+                # If your recipe in cache is newer it does not make sense to return a remote?
+                remote = None
         else:
-            status = RECIPE_INCACHE
-
-        ref = ref.copy_with_rev(cur_revision)
-        return conanfile_path, status, selected_remote, ref
-
-    def _download_recipe(self, layout, ref, output, remotes, remote, recorder):
-
-        def _retrieve_from_remote(the_remote):
-            output.info("Trying with '%s'..." % the_remote.name)
-            # If incomplete, resolve the latest in server
-            if the_remote.url.startswith(DEPRECATED_CONAN_CENTER_BINTRAY_URL):
-                output.warn("Remote https://conan.bintray.com is deprecated and will be shut down "
-                            "soon.")
-                output.warn("Please use the new 'conancenter' default remote.")
-                output.warn("Add it to your remotes with: conan remote add -i 0 conancenter "
-                            "https://center.conan.io")
-            _ref = self._remote_manager.get_recipe(ref, the_remote)
-            output.info("Downloaded recipe revision %s" % _ref.revision)
-            recorder.recipe_downloaded(ref, the_remote.url)
-            return _ref
-
-        if remote:
-            output.info("Retrieving from server '%s' " % remote.name)
-        else:
-            try:
-                remote_name = layout.load_metadata().recipe.remote
-                if remote_name:
-                    remote = remotes[remote_name]
-            except (IOError, RecipeNotFoundException):
-                pass
+            # TODO: cache2.0 we are returning RECIPE_UPDATED just because we are updating
+            #  the date
+            if cache_time >= remote_ref.timestamp:
+                status = RECIPE_INCACHE
             else:
-                if remote:
-                    output.info("Retrieving from predefined remote '%s'" % remote.name)
+                self._cache.update_recipe_timestamp(remote_ref)
+                status = RECIPE_INCACHE_DATE_UPDATED
+        return recipe_layout, status, remote
 
-        if remote:
+    def _find_newest_recipe_in_remotes(self, reference, remotes, update, check_update):
+        output = ConanOutput(scope=str(reference))
+
+        results = []
+        for remote in remotes:
+            if remote.allowed_packages and not any(reference.matches(f, is_consumer=False)
+                                                   for f in remote.allowed_packages):
+                output.debug(f"Excluding remote {remote.name} because recipe is filtered out")
+                continue
+            output.info(f"Checking remote: {remote.name}")
             try:
-                new_ref = _retrieve_from_remote(remote)
-                return remote, new_ref
+                if not reference.revision:
+                    ref = self._remote_manager.get_latest_recipe_reference(reference, remote)
+                else:
+                    ref = self._remote_manager.get_recipe_revision_reference(reference, remote)
+                if not should_update_reference(reference, update) and not check_update:
+                    return remote, ref
+                results.append({'remote': remote, 'ref': ref})
             except NotFoundException:
-                msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
-                recorder.recipe_install_error(ref, INSTALL_ERROR_MISSING,
-                                              msg, remote.url)
-                raise NotFoundException(msg)
-            except RequestException as exc:
-                recorder.recipe_install_error(ref, INSTALL_ERROR_NETWORK,
-                                              str(exc), remote.url)
-                raise exc
+                pass
 
-        output.info("Not found in local cache, looking in remotes...")
-        remotes = remotes.values()
+        if len(results) == 0:
+            return None, None
+
+        remotes_results = sorted(results, key=lambda k: k['ref'].timestamp, reverse=True)
+        # get the latest revision from all remotes
+        found_rrev = remotes_results[0]
+        return found_rrev.get("remote"), found_rrev.get("ref")
+
+    def _download_recipe(self, ref, remotes, scoped_output, update, check_update):
+        # When a recipe doesn't existin local cache, it is retrieved from servers
+        scoped_output.info("Not found in local cache, looking in remotes...")
         if not remotes:
             raise ConanException("No remote defined")
-        for remote in remotes:
-            try:
-                new_ref = _retrieve_from_remote(remote)
-                return remote, new_ref
-            # If not found continue with the next, else raise
-            except NotFoundException:
-                pass
-        else:
-            msg = "Unable to find '%s' in remotes" % ref.full_str()
-            recorder.recipe_install_error(ref, INSTALL_ERROR_MISSING,
-                                          msg, None)
+
+        remote, latest_rref = self._find_newest_recipe_in_remotes(ref, remotes, update, check_update)
+        if not latest_rref:
+            msg = "Unable to find '%s' in remotes" % repr(ref)
             raise NotFoundException(msg)
+
+        recipe_layout = self._download(latest_rref, remote)
+        return recipe_layout, remote
+
+    def _download(self, ref, remote):
+        assert ref.revision
+        assert ref.timestamp
+        recipe_layout = self._remote_manager.get_recipe(ref, remote)
+        output = ConanOutput(scope=str(ref))
+        output.info("Downloaded recipe revision %s" % ref.revision)
+        return recipe_layout
+
+
+def should_update_reference(reference, update):
+    if update is None:
+        return False
+    # Old API usages only ever passed a bool
+    if isinstance(update, bool):
+        return update
+    # Legacy syntax had --update without pattern, it manifests as a "*" pattern
+    return any(name == "*" or reference.name == name for name in update)

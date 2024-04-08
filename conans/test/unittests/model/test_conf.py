@@ -1,4 +1,3 @@
-import sys
 import textwrap
 
 import pytest
@@ -10,7 +9,7 @@ from conans.model.conf import ConfDefinition
 @pytest.fixture()
 def conf_definition():
     text = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=someflags
     """)
     c = ConfDefinition()
@@ -23,28 +22,40 @@ def test_conf_definition(conf_definition):
     # Round trip
     assert c.dumps() == text
     # access
-    assert c["tools.microsoft.msbuild:verbosity"] == "minimal"
-    assert c["user.company.toolchain:flags"] == "someflags"
-    assert c["tools.microsoft.msbuild:nonexist"] is None
-    assert c["nonexist:nonexist"] is None
+    assert c.get("tools.build:verbosity") == "quiet"
+    assert c.get("user.company.toolchain:flags") == "someflags"
+    assert c.get("user.microsoft.msbuild:nonexist") is None
+    assert c.get("user:nonexist") is None
     # bool
     assert bool(c)
     assert not bool(ConfDefinition())
+
+
+@pytest.mark.parametrize("conf_name", [
+    "tools.doesnotexist:never",
+    "tools:doesnotexist",
+    "core.doesnotexist:never",
+    "core:doesnotexist"
+])
+def test_conf_definition_error(conf_definition, conf_name):
+    c, text = conf_definition
+    with pytest.raises(ConanException):
+        c.get(conf_name)
 
 
 def test_conf_update(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
         user.company.toolchain:flags=newvalue
-        another.something:key=value
+        user.something:key=value
     """)
     c2 = ConfDefinition()
     c2.loads(text)
     c.update_conf_definition(c2)
     result = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=newvalue
-        another.something:key=value
+        user.something:key=value
     """)
     assert c.dumps() == result
 
@@ -53,23 +64,23 @@ def test_conf_rebase(conf_definition):
     c, _ = conf_definition
     text = textwrap.dedent("""\
        user.company.toolchain:flags=newvalue
-       another.something:key=value""")
+       tools.build:verbosity=verbose""")
     c2 = ConfDefinition()
     c2.loads(text)
     c.rebase_conf_definition(c2)
     # The c profile will have precedence, and "
     result = textwrap.dedent("""\
-        tools.microsoft.msbuild:verbosity=minimal
+        tools.build:verbosity=quiet
         user.company.toolchain:flags=someflags
     """)
     assert c.dumps() == result
 
 
 def test_conf_error_per_package():
-    text = "*:core:verbosity=minimal"
+    text = "*:core:non_interactive=minimal"
     c = ConfDefinition()
     with pytest.raises(ConanException,
-                       match=r"Conf '\*:core:verbosity' cannot have a package pattern"):
+                       match=r"Conf '\*:core:non_interactive' cannot have a package pattern"):
         c.loads(text)
 
 
@@ -86,10 +97,10 @@ def test_conf_error_uppercase():
 
 
 def test_parse_spaces():
-    text = "core:verbosity = minimal"
+    text = "core:non_interactive = minimal"
     c = ConfDefinition()
     c.loads(text)
-    assert c["core:verbosity"] == "minimal"
+    assert c.get("core:non_interactive") == "minimal"
 
 
 @pytest.mark.parametrize("text, expected", [
@@ -97,7 +108,7 @@ def test_parse_spaces():
     ("user.company.cpu:jobs=10", 10),
     ("user.company.build:ccflags=--m superflag", "--m superflag"),
     ("zlib:user.company.check:shared=True", True),
-    ("zlib:user.company.check:shared_str='True'", '"True"'),
+    ("zlib:user.company.check:shared_str='True'", "'True'"),
     ("user.company.list:objs=[1, 2, 3, 4, 'mystr', {'a': 1}]", [1, 2, 3, 4, 'mystr', {'a': 1}]),
     ("user.company.network:proxies={'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'}",
      {'url': 'http://api.site.com/api', 'dataType': 'json', 'method': 'GET'})
@@ -176,19 +187,27 @@ def test_compose_conf_complex():
     c2.loads(text)
     c.update_conf_definition(c2)
     expected_text = textwrap.dedent("""\
-        user.company.cpu:jobs=5
         user.company.build:ccflags=--m otherflag
+        user.company.cpu:jobs=5
         user.company.list:objs=[0, 1, 2, 3, 4, 'mystr', {'a': 1}, 5, 6, {'b': 2}]
         user.company.network:proxies={'url': 'http://api.site.com/apiv2'}
         zlib:user.company.check:shared=!
         zlib:user.company.check:shared_str="False"
     """)
 
-    if sys.version_info.major == 2:  # problems with the order in Python 2.x
-        text = c.dumps()
-        assert all([line in text for line in expected_text.splitlines()])
-    else:
-        assert c.dumps() == expected_text
+    assert c.dumps() == expected_text
+
+
+def test_compose_conf_dict_updates():
+    c = ConfDefinition()
+    c.loads("user.company:mydict={'1': 'a'}\n"
+            "user.company:mydict2={'1': 'a'}")
+    c2 = ConfDefinition()
+    c2.loads("user.company:mydict={'2': 'b'}\n"
+             "user.company:mydict2*={'2': 'b'}")
+    c.update_conf_definition(c2)
+    assert c.dumps() == ("user.company:mydict={'2': 'b'}\n"
+                         "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
 
 def test_conf_get_check_type_and_default():
@@ -201,6 +220,7 @@ def test_conf_get_check_type_and_default():
         zlib:user.company.check:shared_str="False"
         zlib:user.company.check:static_str=off
         user.company.list:newnames+=myname
+        core.download:parallel=True
     """)
     c = ConfDefinition()
     c.loads(text)
@@ -210,7 +230,7 @@ def test_conf_get_check_type_and_default():
         c.get("user.company.cpu:jobs", check_type=list)
         assert "[conf] user.company.cpu:jobs must be a list-like object." in str(exc_info.value)
     # Check type does not affect to default value
-    assert c.get("non:existing:conf", default=0, check_type=dict) == 0
+    assert c.get("user.non:existing", default=0, check_type=dict) == 0
     assert c.get("zlib:user.company.check:shared") is None  # unset value
     assert c.get("zlib:user.company.check:shared", default=[]) == []  # returning default
     assert c.get("zlib:user.company.check:shared", default=[], check_type=list) == []  # not raising exception
@@ -219,6 +239,10 @@ def test_conf_get_check_type_and_default():
     assert c.get("zlib:user.company.check:static_str") == "off"
     assert c.get("zlib:user.company.check:static_str", check_type=bool) is False  # smart conversion
     assert c.get("user.company.list:newnames") == ["myname"]  # Placeholder is removed
+    with pytest.raises(ConanException) as exc_info:
+        c.get("core.download:parallel", check_type=int)
+    assert ("[conf] core.download:parallel must be a int-like object. "
+            "The value 'True' introduced is a bool object") in str(exc_info.value)
 
 
 def test_conf_pop():
@@ -234,6 +258,54 @@ def test_conf_pop():
     c.loads(text)
 
     assert c.pop("user.company.network:proxies") == {'url': 'http://api.site.com/apiv2', 'dataType': 'json', 'method': 'GET'}
-    assert c.pop("tools.microsoft.msbuild:missing") is None
-    assert c.pop("tools.microsoft.msbuild:missing", default="fake") == "fake"
+    assert c.pop("user.microsoft.msbuild:missing") is None
+    assert c.pop("user.microsoft.msbuild:missing", default="fake") == "fake"
     assert c.pop("zlib:user.company.check:shared_str") == '"False"'
+
+
+def test_conf_choices():
+    confs = textwrap.dedent("""
+    user.category:option1=1
+    user.category:option2=3""")
+    c = ConfDefinition()
+    c.loads(confs)
+    assert c.get("user.category:option1", choices=[1, 2]) == 1
+    with pytest.raises(ConanException):
+        c.get("user.category:option2", choices=[1, 2])
+
+
+def test_conf_choices_default():
+    # Does not conflict with the default value
+    confs = textwrap.dedent("""
+        user.category:option1=1""")
+    c = ConfDefinition()
+    c.loads(confs)
+    assert c.get("user.category:option1", choices=[1, 2], default=7) == 1
+    assert c.get("user.category:option2", choices=[1, 2], default=7) == 7
+
+
+@pytest.mark.parametrize("scope", ["", "pkg/1.0:"])
+@pytest.mark.parametrize("conf", [
+    "user.foo:bar=1",
+    "user:bar=1"
+])
+def test_conf_scope_patterns_ok(scope, conf):
+    final_conf = scope + conf
+    c = ConfDefinition()
+    c.loads(final_conf)
+    # Check it doesn't raise
+    c.validate()
+
+
+@pytest.mark.parametrize("conf", ["user.foo.bar=1"])
+@pytest.mark.parametrize("scope, assert_message", [
+    ("", "Either 'user.foo.bar' does not exist in configuration list"),
+    ("pkg/1.0:", "Either 'pkg/1.0:user.foo.bar' does not exist in configuration list"),
+])
+def test_conf_scope_patterns_bad(scope, conf, assert_message):
+    final_conf = scope + conf
+    c = ConfDefinition()
+    with pytest.raises(ConanException) as exc_info:
+        c.loads(final_conf)
+        c.validate()
+    assert assert_message in str(exc_info.value)

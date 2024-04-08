@@ -35,10 +35,10 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
-    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join("build", "Release", "generators", "conan_toolchain.cmake"))
     # bitcode
     assert 'set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")' in toolchain
     assert 'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")' in toolchain
@@ -50,9 +50,9 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
     assert 'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")' in toolchain
     assert 'set(VISIBILITY "-fvisibility=default")' in toolchain
 
-    client.run("create . --profile:build=default --profile:host=host -tf None")
+    client.run("create . --profile:build=default --profile:host=host -tf=")
     # flags
-    assert "-- CONAN_C_FLAGS:  -fembed-bitcode -fobjc-arc" in client.out
+    assert "-- CONAN_C_FLAGS:  -fembed-bitcode -fvisibility=default -fobjc-arc" in client.out
     assert "-- CONAN_CXX_FLAGS:  -fembed-bitcode -fvisibility=default -fobjc-arc" in client.out
     assert "[100%] Built target hello" in client.out
 
@@ -83,9 +83,9 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled_and_xcode_generato
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
-    client.run("create . --profile:build=default --profile:host=host -tf None "
+    client.run("create . --profile:build=default --profile:host=host -tf=\"\" "
                "-c tools.cmake.cmaketoolchain:generator=Xcode")
     assert "** BUILD SUCCEEDED **" in client.out
     # flags are not appended when Xcode generator is used
@@ -118,10 +118,10 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
-    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join("build", "Release", "generators", "conan_toolchain.cmake"))
     # bitcode
     assert 'set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")' in toolchain
     assert 'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")' not in toolchain
@@ -133,9 +133,9 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
     assert 'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")' in toolchain
     assert 'set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")' in toolchain
 
-    client.run("create . --profile:build=default --profile:host=host -tf None")
+    client.run("create . --profile:build=default --profile:host=host -tf=\"\"")
     # flags
-    assert "-- CONAN_C_FLAGS:   -fno-objc-arc" in client.out
+    assert "-- CONAN_C_FLAGS:   -fvisibility=hidden -fvisibility-inlines-hidden -fno-objc-arc" in client.out
     assert "-- CONAN_CXX_FLAGS:   -fvisibility=hidden -fvisibility-inlines-hidden -fno-objc-arc" in client.out
     assert "[100%] Built target hello" in client.out
 
@@ -160,10 +160,10 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_ver
 
     client = TestClient(path_with_spaces=False)
     client.save({"host": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
+    client.run("new -d name=hello -d version=0.1 cmake_lib")
     _add_message_status_flags(client)
     client.run("install . --profile:build=default --profile:host=host")
-    toolchain = client.load(os.path.join("build", "generators", "conan_toolchain.cmake"))
+    toolchain = client.load(os.path.join("build", "Release", "generators", "conan_toolchain.cmake"))
     # bitcode
     assert 'set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")' not in toolchain
     assert 'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")' not in toolchain
@@ -175,7 +175,7 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_ver
     assert 'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN' not in toolchain
     assert 'set(VISIBILITY "-' not in toolchain
 
-    client.run("create . --profile:build=default --profile:host=host -tf None")
+    client.run("create . --profile:build=default --profile:host=host -tf=\"\"")
     # flags are not appended
     for flag in ["-fembed-bitcode", "-fno-objc-arc", "-fobjc-arc", "-fvisibility"]:
         assert flag not in client.out

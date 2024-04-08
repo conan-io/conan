@@ -1,275 +1,133 @@
-import json
 import os
+import sqlite3
 import textwrap
-import unittest
 
-from six import StringIO
+import pytest
 
-from conans import __version__
-from conans.client.cache.editable import EDITABLE_PACKAGES_FILE
-from conans.client.migrations import migrate_plugins_to_hooks, migrate_to_default_profile, \
-    migrate_editables_use_conanfile_name, remove_buggy_cacert
-from conans.client.output import ConanOutput
-from conans.client.rest.cacert import cacert_default
-from conans.client.tools.version import Version
-from conans.migrations import CONAN_VERSION
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, CACERT_FILE
-from conans.test.utils.mocks import TestBufferConanOutput
+from conan import conan_version
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
-from conans.util.files import load, save
-from conans.client import migrations_settings
-from conans.client.conf import get_default_settings_yml
+from conans.test.utils.tools import TestClient
+from conans.util.files import save, load
 
 
-class TestMigrations(unittest.TestCase):
+def _drop_lru_column(db_folder):
+    db = os.path.join(db_folder, "cache.sqlite3")
+    connection = sqlite3.connect(db, isolation_level=None, timeout=1, check_same_thread=False)
+    rec_cols = 'reference, rrev, path, timestamp'
+    pkg_cols = 'reference, rrev, pkgid, prev, path, timestamp, build_id'
+    try:
+        for table in ("recipes", "packages"):
+            columns = pkg_cols if table == "packages" else rec_cols
+            connection.execute(f"CREATE TABLE {table}_backup AS SELECT {columns} FROM {table};")
+            connection.execute(f"DROP TABLE {table};")
+            connection.execute(f"ALTER TABLE {table}_backup RENAME TO {table};")
+    finally:
+        connection.close()
 
-    def test_migrations_matches_config(self):
-        # Check that the current settings matches what is stored in the migrations file
-        current_settings = get_default_settings_yml()
-        v = Version(__version__)
-        var_name = "settings_{}".format("_".join([v.major, v.minor, v.patch]))
 
-        self.assertTrue(hasattr(migrations_settings, var_name),
-                        "Migrations var '{}' not found".format(var_name))
-        migrations_settings_content = getattr(migrations_settings, var_name)
-        assert current_settings == migrations_settings_content
+@pytest.mark.parametrize(["plugin_path", "string_replace", "new_string"],
+                         [("profile.py", "msvc", "EME_ESE_VC"),
+                          ("compatibility/compatibility.py", "conanfile", "conian_file"),
+                          ("compatibility/cppstd_compat.py", "conanfile", "conian_file")])
+def test_migration_profile_checker_plugin(plugin_path, string_replace, new_string):
+    t = TestClient()
+    # Any command generates the profile and compatibility plugin files
+    t.run("-v")
 
-    def test_is_there_var_for_settings_previous_version(self):
-        from conans import __version__ as current_version
+    profile_plugin_path = os.path.join(t.cache.plugins_path, plugin_path)
+    contents = load(profile_plugin_path)
 
-        tmp = Version(current_version)
-        if int(tmp.minor) == 0:
-            return unittest.skip("2.0, this will make sense for 2.1")
-        if int(tmp.patch) > 0:
-            previous_version = "{}.{}.{}".format(tmp.major, tmp.minor, int(tmp.patch) - 1)
-        else:
-            previous_version = "{}.{}.0".format(tmp.major, int(tmp.minor) - 1)
+    # Let's change the version
+    version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
+    save(version_txt_file_path, "1.0.0")
+    db = os.path.join(t.cache_folder, 'p')
+    _drop_lru_column(db)
 
-        from conans.client import migrations_settings
-        var_name = "settings_{}".format(previous_version.replace(".", "_"))
-        self.assertTrue(any([i for i in dir(migrations_settings) if i == var_name]),
-                        "Introduce the previous settings.yml file in the 'migrations_settings.yml")
+    # Do a modification to the profile plugin without changing the comment
+    contents = contents.replace(string_replace, new_string)
+    save(profile_plugin_path, contents)
 
-    def test_migrate_revision_metadata(self):
-        # https://github.com/conan-io/conan/issues/4898
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
-        client.run("create . user/testing")
-        ref = ConanFileReference.loads("Hello/0.1@user/testing")
-        layout1 = client.cache.package_layout(ref)
-        metadata = json.loads(load(layout1.package_metadata()))
-        metadata["recipe"]["revision"] = None
-        metadata["packages"]["WRONG"] = {"revision": ""}
-        metadata["packages"]["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]["revision"] = None
-        metadata["packages"]["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]["recipe_revision"] = None
-        save(layout1.package_metadata(), json.dumps(metadata))
+    # Trigger the migrations
+    t.run("-v")
+    assert "WARN: Running 2.0.14 Cache DB migration to add LRU column" in t.out
+    assert f"Migration: Successfully updated {os.path.basename(plugin_path)}" in t.out
+    contents = load(profile_plugin_path)
+    # Our changes are removed!!!
+    assert string_replace in contents
+    assert new_string not in contents
 
-        client.run("create . user/stable")
-        ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
-        layout2 = client.cache.package_layout(ref2)
-        metadata = json.loads(load(layout2.package_metadata()))
-        metadata["recipe"]["revision"] = "Other"
-        save(layout2.package_metadata(), json.dumps(metadata))
+    # New client, everything new
+    t2 = TestClient()
+    # This generates the new plugin file
+    t2.run("-v")
 
-        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
-        save(version_file, "1.14.1")
-        client.run("search")  # This will fire a migration
+    # Do a modification to the profile plugin but changing the comment
+    profile_plugin_path2 = os.path.join(t2.cache.plugins_path, plugin_path)
+    contents = load(profile_plugin_path2)
+    contents = contents.replace(string_replace, new_string)
+    contents = contents.replace("This file was generated by Conan", "This file is from ACME corp, "
+                                                                    "please don't touch it.")
+    save(profile_plugin_path2, contents)
 
-        metadata_ref1 = client.cache.package_layout(ref).load_metadata()
-        self.assertEqual(metadata_ref1.recipe.revision, "f9e0ab84b47b946f4c7c848d8f82d14e")
-        pkg_metadata = metadata_ref1.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]
-        self.assertEqual(pkg_metadata.recipe_revision, "f9e0ab84b47b946f4c7c848d8f82d14e")
-        self.assertEqual(pkg_metadata.revision, "fa1923ec4342a0d9dc33eff7250432e8")
-        self.assertEqual(list(metadata_ref1.packages.keys()),
-                         ["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"])
+    # Let's change the version
+    version_txt_file_path2 = os.path.join(t2.cache_folder, "version.txt")
+    save(version_txt_file_path2, "1.0.0")
+    db = os.path.join(t2.cache_folder, 'p')
+    _drop_lru_column(db)
+    # Trigger the migrations
+    t2.run("-v")
+    assert "WARN: Running 2.0.14 Cache DB migration to add LRU column" in t2.out
+    assert f"Migration: Successfully updated" not in t2.out
+    contents = load(profile_plugin_path2)
+    # Our Changes are kept!
+    assert "This file is from ACME corp, " in contents
+    assert string_replace not in contents
+    assert new_string in contents
 
-        metadata_ref2 = client.cache.package_layout(ref2).load_metadata()
-        self.assertEqual(metadata_ref2.recipe.revision, "Other")
 
-    def test_migrate_config_install(self):
-        client = TestClient()
-        client.run('config set general.config_install="url, http:/fake.url, None, None"')
-        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
-        save(version_file, "1.12.0")
-        client.run("search")
-        self.assertEqual(load(version_file), __version__)
-        conf = load(client.cache.conan_conf_path)
-        self.assertNotIn("http:/fake.url", conf)
-        self.assertNotIn("config_install", conf)
-        self.assertIn("http:/fake.url", load(client.cache.config_install_file))
+def test_migration_db_lru():
+    t = TestClient()
+    storage = temp_folder()
+    save(t.cache.global_conf_path, f"core.cache:storage_path={storage}")
+    t.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    t.run("create .")
+    # Any command generates the profile and compatibility plugin files
+    # Let's change the version
+    version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
+    save(version_txt_file_path, "1.0.0")
+    _drop_lru_column(storage)
 
-    def test_migration_to_default_profile(self):
-        tmp = temp_folder()
-        old_conf = """
-[general]
-the old general
+    # Trigger the migrations
+    t.run("list *")
+    assert "WARN: Running 2.0.14 Cache DB migration to add LRU column" in t.out
+    assert "pkg/0.1" in t.out
 
-[settings_defaults]
-some settings
 
-[other_section]
+def test_back_migrations():
+    t = TestClient()
 
-with other values
-
-"""
-        conf_path = os.path.join(tmp, "conan.conf")
-        default_profile_path = os.path.join(tmp, "conan_default")
-        save(conf_path, old_conf)
-
-        migrate_to_default_profile(conf_path, default_profile_path)
-
-        new_content = load(conf_path)
-        self.assertEqual(new_content, """
-[general]
-the old general
-
-[other_section]
-
-with other values
-
-""")
-
-        default_profile = load(default_profile_path)
-        self.assertEqual(default_profile, """[settings]
-some settings""")
-
-        old_conf = """
-[general]
-the old general
-
-[settings_defaults]
-some settings
-
-"""
-        conf_path = os.path.join(tmp, "conan.conf")
-        default_profile_path = os.path.join(tmp, "conan_default")
-        save(conf_path, old_conf)
-
-        migrate_to_default_profile(conf_path, default_profile_path)
-        default_profile = load(default_profile_path)
-        self.assertEqual(default_profile, """[settings]
-some settings""")
-
-        new_content = load(conf_path)
-        self.assertEqual(new_content, """
-[general]
-the old general
-
-""")
-
-    def test_migration_from_plugins_to_hooks(self):
-
-        def _create_old_layout():
-            old_user_home = temp_folder()
-            old_conan_folder = old_user_home
-            old_conf_path = os.path.join(old_conan_folder, "conan.conf")
-            old_attribute_checker_plugin = os.path.join(old_conan_folder, "plugins",
-                                                        "attribute_checker.py")
-            save(old_conf_path, "\n[general]\n[plugins]    # CONAN_PLUGINS\nattribute_checker")
-            save(old_attribute_checker_plugin, "")
-            # Do not adjust cpu_count, it is reusing a cache
-            cache = TestClient(cache_folder=old_user_home, cpu_count=False).cache
-            assert old_conan_folder == cache.cache_folder
-            return old_user_home, old_conan_folder, old_conf_path, \
-                   old_attribute_checker_plugin, cache
-
-        output = ConanOutput(StringIO())
-        _, old_cf, old_cp, old_acp, cache = _create_old_layout()
-        migrate_plugins_to_hooks(cache, output=output)
-        self.assertFalse(os.path.exists(old_acp))
-        self.assertTrue(os.path.join(old_cf, "hooks"))
-        conf_content = load(old_cp)
-        self.assertNotIn("[plugins]", conf_content)
-        self.assertIn("[hooks]", conf_content)
-
-        # Test with a hook folder: Maybe there was already a hooks folder and a plugins folder
-        _, old_cf, old_cp, old_acp, cache = _create_old_layout()
-        existent_hook = os.path.join(old_cf, "hooks", "hook.py")
-        save(existent_hook, "")
-        migrate_plugins_to_hooks(cache, output=output)
-        self.assertTrue(os.path.exists(old_acp))
-        self.assertTrue(os.path.join(old_cf, "hooks"))
-        conf_content = load(old_cp)
-        self.assertNotIn("[plugins]", conf_content)
-        self.assertIn("[hooks]", conf_content)
-
-    def test_migration_editables_to_conanfile_name(self):
-        # Create the old editable_packages.json file (and user workspace)
-        tmp_folder = temp_folder()
-        conanfile1 = os.path.join(tmp_folder, 'dir1', 'conanfile.py')
-        conanfile2 = os.path.join(tmp_folder, 'dir2', 'conanfile.py')
-        save(conanfile1, "anything")
-        save(conanfile2, "anything")
-        save(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE),
-             json.dumps({"name/version": {"path": os.path.dirname(conanfile1), "layout": None},
-                         "other/version@user/testing": {"path": os.path.dirname(conanfile2),
-                                                        "layout": "anyfile"}}))
-
-        cache = TestClient(cache_folder=tmp_folder).cache
-        migrate_editables_use_conanfile_name(cache)
-
-        # Now we have same info and full paths
-        with open(os.path.join(tmp_folder, EDITABLE_PACKAGES_FILE)) as f:
-            data = json.load(f)
-
-        self.assertEqual(data["name/version"]["path"], conanfile1)
-        self.assertEqual(data["name/version"]["layout"], None)
-        self.assertEqual(data["other/version@user/testing"]["path"], conanfile2)
-        self.assertEqual(data["other/version@user/testing"]["layout"], "anyfile")
-
-    def test_migration_tgz_location(self):
-        client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                exports = "*.txt"
-                exports_sources = "*.h"
+    # add 3 migrations
+    for number in (1, 2, 3):
+        migration_file = os.path.join(t.cache_folder, "migrations", f"2.100.0_{number}-migrate.py")
+        migrate = textwrap.dedent(f"""
+            import os
+            def migrate(cache_folder):
+                os.remove(os.path.join(cache_folder, "file{number}.txt"))
             """)
-        client.save({"conanfile.py": conanfile,
-                     "file.h": "contents",
-                     "file.txt": "contents"})
-        client.run("create . pkg/1.0@")
-        ref = ConanFileReference.loads("pkg/1.0")
-        layout = client.cache.package_layout(ref)
-        export_tgz = os.path.join(layout.export(), EXPORT_TGZ_NAME)
-        export_src_tgz = os.path.join(layout.export(), EXPORT_SOURCES_TGZ_NAME)
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        pkg_tgz = os.path.join(layout.package(pref), PACKAGE_TGZ_NAME)
-        save(export_tgz, "")
-        save(export_src_tgz, "")
-        save(pkg_tgz, "")
-        self.assertTrue(os.path.isfile(export_tgz))
-        self.assertTrue(os.path.isfile(export_src_tgz))
-        self.assertTrue(os.path.isfile(pkg_tgz))
+        save(migration_file, migrate)
+        save(os.path.join(t.cache_folder, f"file{number}.txt"), "some content")
+        # Some older versions migrations that shouldn't be applied if we downgrade to current
+        wrong_migration_file = os.path.join(t.cache_folder, "migrations", f"2.0_{number}-migrate.py")
+        save(wrong_migration_file, "this is not python, it would crash")
 
-        client2 = TestClient(client.cache_folder)
-        save(os.path.join(client.cache_folder, "version.txt"), "1.30.0")
-        client2.run("search")
-        self.assertIn("Removing temporary .tgz files, they are stored in a different location now",
-                      client2.out)
-        self.assertFalse(os.path.isfile(export_tgz))
-        self.assertFalse(os.path.isfile(export_src_tgz))
-        self.assertFalse(os.path.isfile(pkg_tgz))
-
-    def test_cacert_migration(self):
-        client = TestClient()
-        client.run("search foo")
-        cacert_path = os.path.join(client.cache_folder, CACERT_FILE)
-        out = TestBufferConanOutput()
-        remove_buggy_cacert(client.cache, out)
-        assert "Conan 'cacert.pem' is up to date..." in out
-
-        modified_cacert_content = load(cacert_path) + "other_info"
-        save(cacert_path, modified_cacert_content)
-        remove_buggy_cacert(client.cache, out)
-        assert "'cacert.pem' is locally modified, can't be updated" in out
-        new_path = cacert_path + ".new"
-        assert os.path.exists(new_path)
-
-        old_cacert = cacert_default
-        save(cacert_path, old_cacert)
-        remove_buggy_cacert(client.cache, out)
-        assert "Removing the 'cacert.pem' file..." in out
-        assert not os.path.exists(cacert_path)
+    # Let's change the old version
+    version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
+    save(version_txt_file_path, "200.0")
+    t.run("-v")  # Fire the backward migration
+    assert f"WARN: Downgrading cache from Conan 200.0 to {conan_version}" in t.out
+    for number in (1, 2, 3):
+        assert f"WARN: Applying downgrade migration 2.100.0_{number}-migrate.py" in t.out
+        assert not os.path.exists(os.path.join(t.cache_folder, f"file{number}.txt"))
+        migration_file = os.path.join(t.cache_folder, "migrations", f"2.100.0_{number}-migrate.py")
+        assert not os.path.exists(migration_file)

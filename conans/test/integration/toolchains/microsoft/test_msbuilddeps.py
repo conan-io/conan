@@ -1,9 +1,11 @@
 import os
+import platform
 import textwrap
 from xml.dom import minidom
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -17,9 +19,9 @@ from conans.test.utils.tools import TestClient
     ],
 )
 def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
-    client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=msbuild_lib")
-    client.run(f"install . -g MSBuildDeps -s arch={arch} -pr:b=default -if=install")
+    client = TestClient()
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
+    client.run(f"install . -g MSBuildDeps -s arch={arch} -pr:b=default")
     toolchain = client.load(os.path.join("conan", "conantoolchain.props"))
     expected_import = f"""<Import Condition="'$(Configuration)' == 'Release' And '$(Platform)' == '{exp_platform}'" Project="conantoolchain_release_{exp_platform.lower()}.props"/>"""
     assert expected_import in toolchain
@@ -42,7 +44,7 @@ def test_msbuilddeps_format_names():
     c.save({"conanfile.py": conanfile})
     c.run("create . -s arch=x86_64")
     # Issue: https://github.com/conan-io/conan/issues/11822
-    c.run("install pkg.name-more+/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
+    c.run("install --require=pkg.name-more+/1.0@ -g MSBuildDeps -s build_type=Release -s arch=x86_64")
     # Checking that MSBuildDeps builds correctly the XML file
     # loading all .props and xml parse them to check no errors
     pkg_more = c.load("conan_pkg_name-more_.props")
@@ -65,3 +67,58 @@ def test_msbuilddeps_format_names():
             minidom.parseString(content)
             counter += 1
     assert counter == 8
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+class TestMSBuildDepsSkips:
+    # https://github.com/conan-io/conan/issues/15624
+    def test_msbuilddeps_skipped_deps(self):
+        c = TestClient()
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "0.1").with_package_type("static-library")
+                                                                .with_requires("liba/0.1"),
+                "app/conanfile.py": GenConanfile().with_requires("libb/0.1")
+                                                  .with_settings("arch", "build_type")})
+        c.run("create liba")
+        c.run("create libb")
+        c.run("install app -g MSBuildDeps")
+        assert not os.path.exists(os.path.join(c.current_folder, "app", "conan_liba.props"))
+        assert os.path.exists(os.path.join(c.current_folder, "app", "conan_libb.props"))
+        libb = c.load("app/conan_libb.props")
+        assert "conan_liba" not in libb
+        libb = c.load("app/conan_libb_release_x64.props")
+        assert "conan_liba" not in libb
+        libb = c.load("app/conan_libb_vars_release_x64.props")
+        assert "conan_liba" not in libb
+
+    def test_msbuilddeps_skipped_deps_components(self):
+        c = TestClient()
+        libb = textwrap.dedent("""
+            from conan import ConanFile
+            class Libb(ConanFile):
+                name = "libb"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "liba/0.1"
+                def package_info(self):
+                    self.cpp_info.components["mycomp"].libs = ["mycomplib"]
+                    self.cpp_info.components["mycomp"].requires = ["liba::liba"]
+            """)
+
+        c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("header-library"),
+                "libb/conanfile.py": libb,
+                "app/conanfile.py": GenConanfile().with_requires("libb/0.1")
+                                                  .with_settings("arch", "build_type")})
+        c.run("create liba")
+        c.run("create libb")
+        c.run("install app -g MSBuildDeps")
+        assert not os.path.exists(os.path.join(c.current_folder, "app", "conan_liba.props"))
+        assert os.path.exists(os.path.join(c.current_folder, "app", "conan_libb.props"))
+        libb = c.load("app/conan_libb.props")
+        assert "conan_liba" not in libb
+        libb = c.load("app/conan_libb_mycomp.props")
+        assert "conan_liba" not in libb
+        libb = c.load("app/conan_libb_mycomp_release_x64.props")
+        assert "conan_liba" not in libb
+        libb = c.load("app/conan_libb_mycomp_vars_release_x64.props")
+        assert "conan_liba" not in libb

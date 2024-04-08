@@ -1,11 +1,10 @@
 import os
-import sys
 import tarfile
 import zipfile
 from unittest import TestCase
 
-from conans.client.output import ConanOutput
-from conans.client.tools.files import unzip
+from conan.tools.files import unzip
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save_files
 
@@ -63,7 +62,7 @@ class FilesExtractPatternTest(TestCase):
             for (pattern, paths) in matches.items():
                 # WHEN a pattern is used for file extraction
                 dst_dir = temp_folder()
-                unzip(archive, dst_dir, pattern=pattern, output=ConanOutput(sys.stdout))
+                unzip(ConanFileMock(), archive, dst_dir, pattern=pattern)
 
                 # THEN only and all files matching the pattern are extracted
                 actual = set()

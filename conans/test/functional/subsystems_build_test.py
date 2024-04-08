@@ -4,17 +4,17 @@ import tempfile
 import pytest
 import textwrap
 
-from conans.client.tools import environment_append
 from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run, check_vs_runtime
 from conans.test.utils.tools import TestClient
+from conans.util.env import environment_update
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystems:
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys2_available(self):
         """
         Msys2 needs to be installed:
@@ -27,7 +27,7 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MSYS" in client.out
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin_available(self):
         """ Cygwin is necessary
         - Install from https://www.cygwin.com/install.html, use the default packages
@@ -38,8 +38,8 @@ class TestSubsystems:
         client.run_command('uname')
         assert "CYGWIN" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32_available(self):
         """ Mingw32 needs to be installed. We use msys2, don't know if others work
         - Inside msys2, install pacman -S mingw-w64-i686-toolchain (all pkgs)
@@ -48,8 +48,8 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MINGW32_NT" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_ucrt64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("ucrt64")
     def test_ucrt64_available(self):
         """ ucrt64 needs to be installed. We use msys2, don't know if others work
         - Inside msys2, install pacman -S mingw-w64-ucrt-x86_64-toolchain (all pkgs)
@@ -58,15 +58,15 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_clang64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("msys2_clang64")
     def test_clang64_available(self):
         client = TestClient()
         client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw64")
     def test_mingw64_available(self):
         """ Mingw64 needs to be installed. We use msys2, don't know if others work
         - Inside msys2, install pacman -S mingw-w64-x86_64-toolchain (all pkgs)
@@ -93,8 +93,8 @@ class TestSubsystemsBuild:
         client.run_command(make)
         client.run_command("app")
 
+    @pytest.mark.tool("msys2")
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_msys2
     def test_msys2(self, static):
         """
         native MSYS environment, binaries depend on MSYS runtime (msys-2.0.dll)
@@ -112,7 +112,7 @@ class TestSubsystemsBuild:
                          subsystem="msys2")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_mingw
+    @pytest.mark.tool("mingw")
     def test_mingw(self, static):
         """
         This will work if you installed the Mingw toolchain outside msys2, from
@@ -128,8 +128,8 @@ class TestSubsystemsBuild:
                          subsystem="mingw64")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw64")
     def test_mingw64(self, static):
         """
         This will work if you installed the Mingw toolchain inside msys2 as TestSubystems above
@@ -146,8 +146,8 @@ class TestSubsystemsBuild:
                          subsystem="mingw64")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_clang64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("msys2_clang64")
     def test_msys2_clang64(self, static):
         """
         in msys2
@@ -164,8 +164,65 @@ class TestSubsystemsBuild:
         check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
                          subsystem="clang64")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw64_clang64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw64")
+    def test_mingw64_recipe(self):
+        """
+        A recipe with self.run_bash=True and msys2 configured, using mingw to build stuff with make
+        from the subsystem
+        """
+        client = TestClient()
+        makefile = gen_makefile(apps=["app"])
+        main_cpp = gen_function_cpp(name="main")
+        conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+        from conan.tools.layout import basic_layout
+        from conan.tools.files import copy
+        class HelloConan(ConanFile):
+            exports_sources = "*.cpp", "Makefile"
+            generators = "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                self.output.warning(self.build_folder)
+                auto = Autotools(self)
+                auto.make()
+
+            def package(self):
+                copy(self, "app*", self.build_folder, os.path.join(self.package_folder, "bin"))
+
+        """)
+        test_conanfile = textwrap.dedent("""
+                import os
+                from conan import ConanFile
+                class TestConan(ConanFile):
+
+                    def requirements(self):
+                        self.tool_requires(self.tested_reference_str)
+
+                    def test(self):
+                        self.run("app")
+                """)
+        profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+        """)
+        client.save({"conanfile.py": conanfile,
+                     "Makefile": makefile,
+                     "app.cpp": main_cpp,
+                     "test_package/conanfile.py": test_conanfile,
+                     "myprofile": profile})
+
+        client.run("create . --name foo --version 1.0 --profile:build myprofile --build-require")
+        assert "__MINGW64__" in client.out
+        assert "__CYGWIN__" not in client.out
+
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
         """
         in msys2
@@ -175,7 +232,7 @@ class TestSubsystemsBuild:
         client = TestClient()
         static = False  # This variant needs --static-glibc -static-libstdc++ (weird) to link static
         # Need to redefine CXX otherwise is gcc
-        with environment_append({"CXX": "clang++"}):
+        with environment_update({"CXX": "clang++"}):
             self._build(client, static_runtime=static)
 
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
@@ -186,8 +243,8 @@ class TestSubsystemsBuild:
                          subsystem="mingw64")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32(self, static):
         """
         This will work if you installed the Mingw toolchain inside msys2 as TestSubystems above
@@ -204,14 +261,13 @@ class TestSubsystemsBuild:
                          subsystem="mingw32")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_ucrt64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("ucrt64")
     def test_ucrt64(self, static):
         """
         This will work if you installed the Mingw toolchain inside msys2 as TestSubystems above
         """
         client = TestClient()
-
         self._build(client, static_runtime=static)
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="mingw32")
         # it also defines the VS macro
@@ -220,7 +276,7 @@ class TestSubsystemsBuild:
                          subsystem="ucrt64")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin(self, static):
         """
         Cygwin environment, binaries depend on Cygwin runtime (cygwin1.dll)
@@ -260,7 +316,7 @@ class TestSubsystemsAutotoolsBuild:
         client.run_command("make")
         client.run_command("app")
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys(self):
         """
         native MSYS environment, binaries depend on MSYS runtime (msys-2.0.dll)
@@ -272,8 +328,8 @@ class TestSubsystemsAutotoolsBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="msys2")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="msys2")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw64")
     def test_mingw64(self):
         """
         64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -284,8 +340,8 @@ class TestSubsystemsAutotoolsBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="mingw64")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32(self):
         """
         32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
@@ -296,7 +352,7 @@ class TestSubsystemsAutotoolsBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="mingw32")
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin(self):
         """
         Cygwin environment, binaries depend on Cygwin runtime (cygwin1.dll)
@@ -345,7 +401,7 @@ class TestSubsystemsCMakeBuild:
         client.run_command(app)
         return build_out
 
-    @pytest.mark.tool_msys2
+    @pytest.mark.tool("msys2")
     def test_msys(self):
         """
         pacman -S cmake
@@ -355,8 +411,8 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="msys2")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="msys2")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw64")
     def test_mingw64(self):
         """
         $ pacman -S mingw-w64-x86_64-cmake
@@ -366,8 +422,8 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="mingw64")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_clang64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("msys2_clang64")
     @pytest.mark.skip(reason="This doesn't work, seems CMake issue")
     def test_msys2_clang64(self):
         """
@@ -381,9 +437,9 @@ class TestSubsystemsCMakeBuild:
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_clang64
-    @pytest.mark.tool_cmake(version="3.19")
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("msys2_clang64")
+    @pytest.mark.tool("cmake", "3.19")
     def test_msys2_clang64_external(self):
         """
         Exactly the same as the previous tests, but with a native cmake 3.19 (higher priority)
@@ -395,21 +451,21 @@ class TestSubsystemsCMakeBuild:
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_msys2_mingw64_clang64
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
         """
         """
         client = TestClient()
         # IMPORTANT: Need to redefine the CXX, otherwise CMake will use GCC by default
-        with environment_append({"CXX": "clang++"}):
+        with environment_update({"CXX": "clang++"}):
             self._build(client, generator="MinGW Makefiles")
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="mingw64")
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_mingw32
+    @pytest.mark.tool("msys2")
+    @pytest.mark.tool("mingw32")
     def test_mingw32(self):
         """
         $ pacman -S mingw-w64-i686-cmake
@@ -419,7 +475,7 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="mingw32")
 
-    @pytest.mark.tool_cygwin
+    @pytest.mark.tool("cygwin")
     def test_cygwin(self):
         """
         Needs to install cmake from the cygwin setup.exe
@@ -430,7 +486,7 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="cygwin")
 
-    @pytest.mark.tool_clang
+    @pytest.mark.tool("clang", "13")
     def test_clang(self):
         """
         native, LLVM/Clang compiler
@@ -442,8 +498,8 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None, subsystem=None)
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem=None)
 
-    @pytest.mark.tool_cmake(version="3.23")
-    @pytest.mark.tool_visual_studio(version="17")
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.tool("visual_studio", "17")
     def test_vs_clang(self):
         """
         native, LLVM/Clang compiler installed with VS 2022 -T ClangCL

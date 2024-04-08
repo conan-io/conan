@@ -1,7 +1,8 @@
 import os
 
+from conan.internal import check_duplicated_generator
+from conan.tools import CppInfo
 from conan.tools.env import Environment
-from conans.model.new_build_info import NewCppInfo
 
 
 class NMakeDeps(object):
@@ -15,7 +16,7 @@ class NMakeDeps(object):
 
     # TODO: This is similar from AutotoolsDeps: Refactor and make common
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo(self._conanfile)
         deps = self._conanfile.dependencies.host.topological_sort
         deps = [dep for dep in reversed(deps.values())]
         for dep in deps:
@@ -41,11 +42,23 @@ class NMakeDeps(object):
             ret.extend(cpp_info.exelinkflags or [])
             ret.extend(cpp_info.sharedlinkflags or [])
             ret.extend([format_lib(lib) for lib in cpp_info.libs or []])
+            ret.extend([format_lib(lib) for lib in cpp_info.system_libs or []])
             link_args = " ".join(ret)
+
+            def format_define(define):
+                if "=" in define:
+                    # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
+                    # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+                    macro, value = define.split("=", 1)
+                    if value and not value.isnumeric():
+                        value = f'\"{value}\"'
+                    define = f"{macro}#{value}"
+                return f"/D\"{define}\""
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
             cl_flags.extend(cpp_info.cxxflags or [])
+            cl_flags.extend([format_define(define) for define in cpp_info.defines or []])
 
             env = Environment()
             env.append("CL", " ".join(cl_flags))
@@ -58,4 +71,5 @@ class NMakeDeps(object):
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conannmakedeps")

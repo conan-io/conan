@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def _get_gnu_triplet(os_, arch, compiler=None):
@@ -15,7 +15,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
                              "needed for os=Windows")
 
     # Calculate the arch
-    machine = {"x86": "i686" if os_ != "Linux" else "x86",
+    machine = {"x86": "i686",
                "x86_64": "x86_64",
                "armv8": "aarch64",
                "armv8_32": "aarch64",  # https://wiki.linaro.org/Platform/arm64-ilp32
@@ -58,6 +58,10 @@ def _get_gnu_triplet(os_, arch, compiler=None):
         elif "e2k" in arch:
             # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
             machine = "e2k-unknown"
+        elif "riscv64" in arch:
+            machine = 'riscv64'
+        elif 'riscv32' in arch:
+            machine = "riscv32"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
@@ -67,10 +71,8 @@ def _get_gnu_triplet(os_, arch, compiler=None):
     # Calculate the OS
     if compiler == "gcc":
         windows_op = "w64-mingw32"
-    elif compiler == "Visual Studio":
-        windows_op = "windows-msvc"
     else:
-        windows_op = "windows"
+        windows_op = "unknown-windows"
 
     op_system = {"Windows": windows_op,
                  "Linux": "linux-gnu",
@@ -80,6 +82,7 @@ def _get_gnu_triplet(os_, arch, compiler=None):
                  "iOS": "apple-ios",
                  "watchOS": "apple-watchos",
                  "tvOS": "apple-tvos",
+                 "visionOS": "apple-xros",
                  # NOTE: it technically must be "asmjs-unknown-emscripten" or
                  # "wasm32-unknown-emscripten", but it's not recognized by old config.sub versions
                  "Emscripten": "local-emscripten",

@@ -1,14 +1,13 @@
 import os
 
+from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 
 
-def runenv_from_cpp_info(conanfile, dep, os_name):
+def runenv_from_cpp_info(dep, os_name):
     """ return an Environment deducing the runtime information from a cpp_info
     """
-    # FIXME: Remove conanfile arg
     dyn_runenv = Environment()
-
     cpp_info = dep.cpp_info.aggregated_components()
 
     def _prepend_path(envvar, paths):
@@ -26,13 +25,19 @@ def runenv_from_cpp_info(conanfile, dep, os_name):
 
 
 class VirtualRunEnv:
-    """ captures the conanfile environment that is defined from its
-    dependencies, and also from profiles
+    """ Calculates the environment variables of the runtime context and produces a conanrunenv
+        .bat or .sh script
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, auto_generate=False):
+        """
+
+        :param conanfile:  The current recipe object. Always use ``self``.
+        """
+        self._runenv = None
         self._conanfile = conanfile
-        self._conanfile.virtualrunenv = False
+        if not auto_generate:
+            self._conanfile.virtualrunenv = False
         self.basename = "conanrunenv"
         self.configuration = conanfile.settings.get_safe("build_type")
         if self.configuration:
@@ -51,29 +56,45 @@ class VirtualRunEnv:
         return f
 
     def environment(self):
-        """ collects the runtime information from dependencies. For normal libraries should be
-        very occasional
         """
-        runenv = Environment()
+        Returns an ``Environment`` object containing the environment variables of the run context.
+
+        :return: an ``Environment`` object instance containing the obtained variables.
+        """
+
+        if self._runenv is None:
+            self._runenv = Environment()
+        else:
+            return self._runenv
 
         # Top priority: profile
         profile_env = self._conanfile.runenv
-        runenv.compose_env(profile_env)
-        # FIXME: Cache value?
+        self._runenv.compose_env(profile_env)
 
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        for _, dep in list(host_req.items()) + list(test_req.items()):
+        for require, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
-                runenv.compose_env(dep.runenv_info)
-            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep,
-                                                    self._conanfile.settings.get_safe("os")))
+                self._runenv.compose_env(dep.runenv_info)
+            if require.run:  # Only if the require is run (shared or application to be run)
+                _os = self._conanfile.settings.get_safe("os")
+                self._runenv.compose_env(runenv_from_cpp_info(dep, _os))
 
-        return runenv
+        return self._runenv
 
     def vars(self, scope="run"):
+        """
+        :param scope: Scope to be used.
+        :return: An ``EnvVars`` instance containing the computed environment variables.
+        """
         return self.environment().vars(self._conanfile, scope=scope)
 
     def generate(self, scope="run"):
+        """
+        Produces the launcher scripts activating the variables for the run context.
+
+        :param scope: Scope to be used.
+        """
+        check_duplicated_generator(self, self._conanfile)
         run_env = self.environment()
         run_env.vars(self._conanfile, scope=scope).save_script(self._filename)

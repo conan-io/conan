@@ -28,7 +28,7 @@ int {{name}}(){
     #endif
 
     #ifdef _M_ARM64
-    std::cout << "   {{ msg or name }} _M_ARM64 defined\n";
+    std::cout << "  {{ msg or name }}: _M_ARM64 defined\n";
     #endif
 
     #if __i386__

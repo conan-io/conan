@@ -1,47 +1,27 @@
-# coding=utf-8
-
 import os
 import textwrap
-import unittest
 
-import six
-from mock import patch
-
-from conans.client.hook_manager import HookManager
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_MANIFEST
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
-class PostExportTestCase(unittest.TestCase):
-
-    def test_called_before_digest(self):
-        """ Test that 'post_export' hook is called before computing the digest of the
-            exported folders
-        """
-
-        ref = ConanFileReference.loads("name/version@user/channel")
-        conanfile = textwrap.dedent("""\
-            from conans import ConanFile
-            
-            class MyLib(ConanFile):
-                pass
+def test_called_before_digest():
+    """ Test that 'post_export' hook is called before computing the digest of the
+        exported folders
+    """
+    t = TestClient()
+    complete_hook = textwrap.dedent("""\
+        import os
+        from conan.tools.files import save
+        def post_export(conanfile):
+            save(conanfile, os.path.join(conanfile.export_folder, "myfile.txt"), "content!!")
         """)
-
-        t = TestClient()
-        t.save({'conanfile.py': conanfile})
-        package_layout = t.cache.package_layout(ref)
-
-        def mocked_post_export(*args, **kwargs):
-            # There shouldn't be a digest yet
-            with six.assertRaisesRegex(self, IOError, "No such file or directory"):
-                FileTreeManifest.load(package_layout.export())
-            self.assertFalse(os.path.exists(os.path.join(package_layout.export(), CONAN_MANIFEST)))
-
-        def mocked_load_hooks(hook_manager):
-            hook_manager.hooks["post_export"] = [("_", mocked_post_export)]
-
-        with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-            t.run("export . {}".format(ref))
-        self.assertTrue(os.path.exists(os.path.join(package_layout.export(), CONAN_MANIFEST)))
+    hook_path = os.path.join(t.cache.hooks_path, "complete_hook", "hook_complete.py")
+    save(hook_path, complete_hook)
+    t.save({'conanfile.py': GenConanfile("pkg", "0.1")})
+    t.run("export .")
+    ref_layout = t.exported_layout()
+    manifest = FileTreeManifest.load(ref_layout.export())
+    assert "myfile.txt" in manifest.file_sums

@@ -4,37 +4,42 @@ import shutil
 
 import patch_ng
 
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conans.util.files import mkdir
 
 
 class PatchLogHandler(logging.Handler):
-    def __init__(self, conanfile, patch_file):
+    def __init__(self, scoped_output, patch_file):
         logging.Handler.__init__(self, logging.DEBUG)
-        self._output = conanfile.output
+        self._scoped_output = scoped_output
         self.patchname = patch_file or "patch_ng"
 
     def emit(self, record):
         logstr = self.format(record)
         if record.levelno == logging.WARN:
-            self._output.warn("%s: %s" % (self.patchname, logstr))
+            self._scoped_output.warning("%s: %s" % (self.patchname, logstr))
         else:
-            self._output.info("%s: %s" % (self.patchname, logstr))
+            self._scoped_output.info("%s: %s" % (self.patchname, logstr))
 
 
 def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0, fuzz=False, **kwargs):
-    """ Applies a diff from file (patch_file)  or string (patch_string)
-        in base_path directory or current dir if None
-    :param base_path: Base path where the patch should be applied.
-    :param patch_file: Patch file that should be applied.
+    """
+    Applies a diff from file (patch_file) or string (patch_string) in the conanfile.source_folder
+    directory. The folder containing the sources can be customized with the self.folders attribute
+    in the layout(self) method.
+
+    :param conanfile: the current recipe, always pass 'self'
+    :param base_path: The path is a relative path to conanfile.export_sources_folder unless an
+           absolute path is provided.
+    :param patch_file: Patch file that should be applied. The path is relative to the
+           conanfile.source_folder unless an absolute path is provided.
     :param patch_string: Patch string that should be applied.
     :param strip: Number of folders to be stripped from the path.
-    :param output: Stream object.
     :param fuzz: Should accept fuzzy patches.
     :param kwargs: Extra parameters that can be added and will contribute to output information
     """
 
-    patch_type = kwargs.get('patch_type')
+    patch_type = kwargs.get('patch_type') or ("file" if patch_file else "string")
     patch_description = kwargs.get('patch_description')
 
     if patch_type or patch_description:
@@ -44,7 +49,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
 
     patchlog = logging.getLogger("patch_ng")
     patchlog.handlers = []
-    patchlog.addHandler(PatchLogHandler(conanfile, patch_file))
+    patchlog.addHandler(PatchLogHandler(conanfile.output, patch_file))
 
     if patch_file:
         # trick *1: patch_file path could be absolute (e.g. conanfile.build_folder), in that case
@@ -65,34 +70,12 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
 
 def apply_conandata_patches(conanfile):
     """
-    Applies patches stored in 'conanfile.conan_data' (read from 'conandata.yml' file). It will apply
-    all the patches under 'patches' entry that matches the given 'conanfile.version'. If versions are
-    not defined in 'conandata.yml' it will apply all the patches directly under 'patches' keyword.
+    Applies patches stored in ``conanfile.conan_data`` (read from ``conandata.yml`` file).
+    It will apply all the patches under ``patches`` entry that matches the given
+    ``conanfile.version``. If versions are not defined in ``conandata.yml`` it will apply all the
+    patches directly under ``patches`` keyword.
 
-    Example of 'conandata.yml' without versions defined:
-
-    ```
-    patches:
-    - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-      base_path: "source_subfolder"
-    - patch_file: "patches/0002-implicit-copy-constructor.patch"
-      patch_type: backport
-      patch_source: https://github.com/google/flatbuffers/pull/5650
-      patch_description: Needed to build with modern clang compilers (adapted to 1.11.0 tagged sources).
-    ```
-
-    Example of 'conandata.yml' with different patches for different versions:
-    ```
-    patches:
-      "1.11.0":
-        - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-        - patch_file: "patches/0002-implicit-copy-constructor.patch"
-          patch_type: backport
-          patch_source: https://github.com/google/flatbuffers/pull/5650
-          patch_description: Needed to build with modern clang compilers (adapted to 1.11.0 tagged sources).
-      "1.12.0":
-        - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-    ```
+    The key entries will be passed as kwargs to the ``patch`` function.
     """
     if conanfile.conan_data is None:
         raise ConanException("conandata.yml not defined")
@@ -104,7 +87,10 @@ def apply_conandata_patches(conanfile):
 
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be applied if conanfile.version is already defined"
-        entries = patches.get(conanfile.version, [])
+        entries = patches.get(str(conanfile.version), [])
+        if entries is None:
+            conanfile.output.warning(f"apply_conandata_patches(): No patches defined for version {conanfile.version} in conandata.yml")
+            return
     elif isinstance(patches, list):
         entries = patches
     else:
@@ -113,10 +99,15 @@ def apply_conandata_patches(conanfile):
         if "patch_file" in it:
             # The patch files are located in the root src
             entry = it.copy()
-            patch_file = os.path.join(conanfile.folders.base_source, entry.pop("patch_file"))
-            patch(conanfile, patch_file=patch_file, **entry)
+            patch_file = entry.pop("patch_file")
+            patch_file_path = os.path.join(conanfile.export_sources_folder, patch_file)
+            if "patch_description" not in entry:
+                entry["patch_description"] = patch_file
+            patch(conanfile, patch_file=patch_file_path, **entry)
         elif "patch_string" in it:
             patch(conanfile, **it)
+        elif "patch_user" in it:
+            pass  # This will be managed directly by users, can be a command or a script execution
         else:
             raise ConanException("The 'conandata.yml' file needs a 'patch_file' or 'patch_string'"
                                  " entry for every patch to be applied")
@@ -139,6 +130,9 @@ def export_conandata_patches(conanfile):
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be exported if conanfile.version is already defined"
         entries = patches.get(conanfile.version, [])
+        if entries is None:
+            conanfile.output.warning(f"export_conandata_patches(): No patches defined for version {conanfile.version} in conandata.yml")
+            return
     elif isinstance(patches, list):
         entries = patches
     else:

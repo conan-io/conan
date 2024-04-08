@@ -1,73 +1,32 @@
-# coding=utf-8
-
 import os
-import unittest
+import textwrap
 
-from mock import patch
-
-from conans.client.hook_manager import HookManager
-from conans.model.ref import ConanFileReference
-from conans.paths import CONAN_MANIFEST
-from conans.test.utils.tools import TurboTestClient
+from conans.model.manifest import FileTreeManifest
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
-class PostPackageTestCase(unittest.TestCase):
+def test_post_package():
+    """ Test that 'post_package' hook is called before computing the manifest
+    """
+    t = TestClient()
+    complete_hook = textwrap.dedent("""\
+        import os
+        from conan.tools.files import save
+        def post_package(conanfile):
+            save(conanfile, os.path.join(conanfile.package_folder, "myfile.txt"), "content!!")
+        """)
+    hook_path = os.path.join(t.cache.hooks_path, "complete_hook", "hook_complete.py")
+    save(hook_path, complete_hook)
+    t.save({'conanfile.py': GenConanfile("pkg", "0.1")})
+    t.run("create .")
+    pref_layout = t.created_layout()
+    manifest = FileTreeManifest.load(pref_layout.package())
+    assert "myfile.txt" in manifest.file_sums
 
-    def test_create_command(self):
-        """ Test that 'post_package' hook is called before computing the manifest
-        """
-        t = TurboTestClient()
-        filename = "hook_file"
-
-        def post_package_hook(conanfile, **kwargs):
-            # There shouldn't be a manifest yet
-            post_package_hook.manifest_path = os.path.join(conanfile.package_folder, CONAN_MANIFEST)
-            self.assertFalse(os.path.exists(post_package_hook.manifest_path))
-            # Add a file
-            open(os.path.join(conanfile.package_folder, filename), "w").close()
-
-        def mocked_load_hooks(hook_manager):
-            hook_manager.hooks["post_package"] = [("_", post_package_hook)]
-
-        with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-            pref = t.create(ConanFileReference.loads("name/version@user/channel"))
-
-        # Check that we are considering the same file
-        package_layout = t.cache.package_layout(pref.ref)
-        self.assertEqual(post_package_hook.manifest_path,
-                         os.path.join(package_layout.package(pref), CONAN_MANIFEST))
-        # Now the file exists and contains info about created file
-        self.assertTrue(os.path.exists(post_package_hook.manifest_path))
-        with open(post_package_hook.manifest_path) as f:
-            content = f.read()
-            self.assertIn(filename, content)
-
-    def test_export_pkg_command(self):
-        """ Test that 'post_package' hook is called before computing the manifest
-        """
-        t = TurboTestClient()
-        filename = "hook_file"
-
-        def post_package_hook(conanfile, **kwargs):
-            # There shouldn't be a manifest yet
-            post_package_hook.manifest_path = os.path.join(conanfile.package_folder, CONAN_MANIFEST)
-            self.assertFalse(os.path.exists(post_package_hook.manifest_path))
-            # Add a file
-            open(os.path.join(conanfile.package_folder, filename), "w").close()
-
-        def mocked_load_hooks(hook_manager):
-            hook_manager.hooks["post_package"] = [("_", post_package_hook)]
-
-        with patch.object(HookManager, "load_hooks", new=mocked_load_hooks):
-            pref = t.export_pkg(ref=ConanFileReference.loads("name/version@user/channel"),
-                                args="--package-folder=.")
-
-        # Check that we are considering the same file
-        package_layout = t.cache.package_layout(pref.ref)
-        self.assertEqual(post_package_hook.manifest_path,
-                         os.path.join(package_layout.package(pref), CONAN_MANIFEST))
-        # Now the file exists and contains info about created file
-        self.assertTrue(os.path.exists(post_package_hook.manifest_path))
-        with open(post_package_hook.manifest_path) as f:
-            content = f.read()
-            self.assertIn(filename, content)
+    t.run("remove * -c")
+    t.run("export-pkg .")
+    pref_layout = t.created_layout()
+    manifest = FileTreeManifest.load(pref_layout.package())
+    assert "myfile.txt" in manifest.file_sums

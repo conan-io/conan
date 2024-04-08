@@ -1,82 +1,45 @@
 import os
-import unittest
+import textwrap
 
-from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
-class NoCopySourceTest(unittest.TestCase):
+def test_no_copy_source():
+    conanfile = textwrap.dedent('''
+        from conan import ConanFile
+        from conan.tools.files import copy, save, load
+        import os
 
-    def test_basic(self):
-        conanfile = '''
-from conans import ConanFile
-from conans.util.files import save, load
-import os
+        class ConanFileToolsTest(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            exports_sources = "*"
+            no_copy_source = True
 
-class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    exports_sources = "*"
-    no_copy_source = True
+            def source(self):
+                save(self, "header.h", "artifact contents!")
 
-    def build(self):
-        self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
-        save("myartifact.lib", "artifact contents!")
+            def build(self):
+                self.output.info("Source files: %s" % load(self,
+                                          os.path.join(self.source_folder, "file.h")))
+                save(self, "myartifact.lib", "artifact contents!")
 
-    def package(self):
-        self.copy("*")
-'''
+            def package(self):
+                copy(self, "*", self.source_folder, self.package_folder)
+                copy(self, "*", self.build_folder, self.package_folder)
+        ''')
 
-        client = TestClient()
-        client.save({"conanfile.py": conanfile,
-                     "file.h": "myfile.h contents"})
-        client.run("export . lasote/testing")
-        client.run("install Pkg/0.1@lasote/testing --build")
-        self.assertIn("Source files: myfile.h contents", client.out)
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "file.h": "myfile.h contents"})
+    client.run("create .")
+    assert "Source files: myfile.h contents" in client.out
+    layout = client.created_layout()
+    build_folder = layout.build()
+    package_folder = layout.package()
 
-        builds = client.cache.package_layout(ref).builds()
-        pid = os.listdir(builds)[0]
-        build_folder = os.path.join(builds, pid)
-        self.assertNotIn("file.h", os.listdir(build_folder))
-        packages = client.cache.package_layout(ref).packages()
-        package_folder = os.path.join(packages, pid)
-        self.assertIn("file.h", os.listdir(package_folder))
-        self.assertIn("myartifact.lib", os.listdir(package_folder))
-
-    def test_source_folder(self):
-        conanfile = '''
-from conans import ConanFile
-from conans.util.files import save, load
-import os
-
-class ConanFileToolsTest(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    no_copy_source = %s
-
-    def source(self):
-        save("header.h", "artifact contents!")
-    
-    def package(self):
-        self.copy("*.h", dst="include")
-'''
-        client = TestClient()
-        client.save({"conanfile.py": conanfile % "True"})
-        client.run("create . lasote/testing --build")
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-
-        packages = client.cache.package_layout(ref).packages()
-        pid = os.listdir(packages)[0]
-        package_folder = os.path.join(packages, pid, "include")
-        self.assertIn("header.h", os.listdir(package_folder))
-
-        client = TestClient()
-        client.save({"conanfile.py": conanfile % "False"})
-        client.run("create . lasote/testing --build")
-        ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
-
-        packages = client.cache.package_layout(ref).packages()
-        pid = os.listdir(packages)[0]
-        package_folder = os.path.join(packages, pid, "include")
-        self.assertIn("header.h", os.listdir(package_folder))
+    assert "file.h" not in os.listdir(build_folder)
+    assert "header.h" not in os.listdir(build_folder)
+    assert "file.h" in os.listdir(package_folder)
+    assert "header.h" in os.listdir(package_folder)
+    assert "myartifact.lib" in os.listdir(package_folder)

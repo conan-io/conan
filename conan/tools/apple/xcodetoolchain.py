@@ -1,8 +1,7 @@
 import textwrap
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools._compilers import cppstd_flag
-from conan.tools.apple import to_apple_arch
+from conan.internal import check_duplicated_generator
+from conan.tools.apple.apple import to_apple_arch
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_includes_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
 from conans.util.files import save
@@ -36,10 +35,8 @@ class XcodeToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         arch = conanfile.settings.get_safe("arch")
-        self.architecture = to_apple_arch(self._conanfile) or arch
+        self.architecture = to_apple_arch(self._conanfile, default=arch)
         self.configuration = conanfile.settings.build_type
-        self.sdk = conanfile.settings.get_safe("os.sdk")
-        self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
         self.libcxx = conanfile.settings.get_safe("compiler.libcxx")
         self.os_version = conanfile.settings.get_safe("os.version")
         self._global_defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
@@ -48,9 +45,9 @@ class XcodeToolchain(object):
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         self._global_ldflags = sharedlinkflags + exelinkflags
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
         save(self._vars_xconfig_filename, self._vars_xconfig_content)
         if self._check_if_extra_flags:
@@ -59,28 +56,29 @@ class XcodeToolchain(object):
 
     @property
     def _cppstd(self):
-        cppstd = cppstd_flag(self._conanfile.settings)
+        from conan.tools.build.flags import cppstd_flag
+        cppstd = cppstd_flag(self._conanfile)
         if cppstd.startswith("-std="):
             return cppstd[5:]
         return cppstd
 
     @property
     def _macosx_deployment_target(self):
-        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
+        return 'MACOSX_DEPLOYMENT_TARGET{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
                                                       self.os_version) if self.os_version else ""
 
     @property
     def _clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def _clang_cxx_language_standard(self):
-        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings),
+        return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
                                                          self._cppstd) if self._cppstd else ""
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings),
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings, self.configuration),
                                                                        self.extension)
 
     @property

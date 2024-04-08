@@ -1,21 +1,23 @@
+import copy
 import os
 import textwrap
 import unittest
 
 from requests.models import Response
 
-from conans.client import tools
 from conans.errors import AuthenticationException
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestRequester
 from conans.test.utils.tools import TestServer
+from conans.util.env import environment_update
 from conans.util.files import save
 
 conan_content = """
-from conans import ConanFile
+from conan import ConanFile
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
@@ -28,7 +30,7 @@ class AuthorizeTest(unittest.TestCase):
 
     def setUp(self):
         self.servers = {}
-        self.ref = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
+        self.ref = RecipeReference.loads("openssl/2.0.1@lasote/testing")
         # Create a default remote. R/W is not authorized for ref,
         # just for pepe, nacho and owner
         self.test_server = TestServer([(str(self.ref), "pepe,nacho@gmail.com")],  # read permissions
@@ -40,30 +42,31 @@ class AuthorizeTest(unittest.TestCase):
 
     def test_retries(self):
         """Bad login 2 times"""
-        self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                         ("baduser", "badpass2"),
-                                                                         ("pepe", "pepepass")]})
+        self.conan = TestClient(servers=self.servers, inputs=["bad", "1",
+                                                              "bad2", "2",
+                                                              "nacho@gmail.com", "nachopass"])
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
-        errors = self.conan.run("upload %s" % str(self.ref))
+        self.conan.run("export . --user=lasote --channel=testing")
+        errors = self.conan.run("upload %s -r default --only-recipe" % str(self.ref))
         # Check that return was  ok
         self.assertFalse(errors)
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
-
-        # Check that login failed two times before ok
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
+        self.assertIn('Please enter a password for "bad"', self.conan.out)
+        self.assertIn('Please enter a password for "bad2"', self.conan.out)
+        self.assertIn('Please enter a password for "nacho@gmail.com"', self.conan.out)
 
     def test_auth_with_env(self):
 
         def _upload_with_credentials(credentials):
-            cli = TestClient(servers=self.servers, users={})
+            cli = TestClient(servers=self.servers)
             save(os.path.join(cli.current_folder, CONANFILE), conan_content)
-            cli.run("export . lasote/testing")
-            with tools.environment_append(credentials):
-                cli.run("upload %s" % str(self.ref))
+            cli.run("export . --user=lasote --channel=testing")
+            with environment_update(credentials):
+                cli.run("upload %s -r default --only-recipe" % str(self.ref))
             return cli
 
         # Try with remote name in credentials
@@ -92,12 +95,12 @@ class AuthorizeTest(unittest.TestCase):
 
     def test_max_retries(self):
         """Bad login 3 times"""
-        self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
-                                                                         ("baduser", "badpass2"),
-                                                                         ("baduser3", "badpass3")]})
-        save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
-        errors = self.conan.run("upload %s" % str(self.ref), assert_error=True)
+        client = TestClient(servers=self.servers, inputs=["baduser", "badpass",
+                                                          "baduser", "badpass2",
+                                                          "baduser3", "badpass3"])
+        save(os.path.join(client.current_folder, CONANFILE), conan_content)
+        client.run("export . --user=lasote --channel=testing")
+        errors = client.run("upload %s -r default --only-recipe" % str(self.ref), assert_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
@@ -105,37 +108,42 @@ class AuthorizeTest(unittest.TestCase):
         self.assertIsNone(rev)
 
         # Check that login failed all times
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
+        self.assertIn("Too many failed login attempts, bye!", client.out)
 
     def test_no_client_username_checks(self):
         """Checks whether client username checks are disabled."""
 
         # Try with a load of names that contain special characters
-        self.conan = TestClient(servers=self.servers, users={"default": [
-                                        ("some_random.special!characters", "badpass"),
-                                        ("nacho@gmail.com", "nachopass"),
-                                        ]})
-        save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
-        self.conan.run("export . lasote/testing")
-        self.conan.run("upload %s" % str(self.ref))
+        client = TestClient(servers=self.servers, inputs=["some_random.special!characters",
+                                                          "badpass",
+                                                          "nacho@gmail.com", "nachopass"])
+
+        save(os.path.join(client.current_folder, CONANFILE), conan_content)
+        client.run("export . --user=lasote --channel=testing")
+        client.run("upload %s -r default --only-recipe" % str(self.ref))
 
         # Check that upload was granted
         rev = self.test_server.server_store.get_last_revision(self.ref).revision
-        ref = self.ref.copy_with_rev(rev)
+        ref = copy.copy(self.ref)
+        ref.revision = rev
         self.assertTrue(os.path.exists(self.test_server.server_store.export(ref)))
+        self.assertIn('Please enter a password for "some_random.special!characters"', client.out)
 
-        # Check that login failed once before ok
-        self.assertEqual(self.conan.api.app.user_io.login_index["default"], 2)
-
+    def test_authorize_disabled_remote(self):
+        tc = TestClient(servers=self.servers)
+        # Sanity check, this should not fail
+        tc.run("remote login default pepe -p pepepass")
+        tc.run("remote logout default")
+        # This used to fail when the authentication was not possible for disabled remotes
+        tc.run("remote disable default")
+        tc.run("remote login default pepe -p pepepass")
+        self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'pepe' (authenticated)", tc.out)
 
 class AuthenticationTest(unittest.TestCase):
 
     def test_unauthorized_during_capabilities(self):
 
-        class RequesterMock(object):
-
-            def __init__(self, *args, **kwargs):
-                pass
+        class RequesterMock(TestRequester):
 
             @staticmethod
             def get(url, **kwargs):
@@ -147,6 +155,8 @@ class AuthenticationTest(unittest.TestCase):
                     resp_basic_auth._content = b"TOKEN"
                     resp_basic_auth.headers = {"Content-Type": "text/plain"}
                 elif "ping" in url:
+                    resp_basic_auth.headers = {"Content-Type": "application/json",
+                                               "X-Conan-Server-Capabilities": "revisions"}
                     token = getattr(kwargs["auth"], "token", None)
                     password = getattr(kwargs["auth"], "password", None)
                     if token and token != "TOKEN":
@@ -166,11 +176,11 @@ class AuthenticationTest(unittest.TestCase):
                 return resp_basic_auth
 
         client = TestClient(requester_class=RequesterMock, default_server_user=True)
-        client.run("user user -p PASSWORD! -r=default")
+        client.run("remote login default user -p PASSWORD!")
         self.assertIn("Changed user of remote 'default' from 'None' (anonymous) to 'user'",
                       client.out)
         client.run("search pkg -r=default")
-        self.assertIn("There are no packages matching the 'pkg' pattern", client.out)
+        self.assertIn("ERROR: Recipe 'pkg' not found", client.out)
 
 
 def test_token_expired():
@@ -192,10 +202,10 @@ def test_token_expired():
     save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
     server = TestServer(base_path=server_folder, users={"admin": "password"})
 
-    c = TestClient(servers={"default": server}, users={"default": [("admin", "password")]})
+    c = TestClient(servers={"default": server}, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile()})
-    c.run("create . pkg/0.1@user/stable")
-    c.run("upload * -r=default --all -c")
+    c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
+    c.run("upload * -r=default -c")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is not None
@@ -203,9 +213,19 @@ def test_token_expired():
     import time
     time.sleep(3)
     c.users = {}
-    c.run("config set general.non_interactive=1")
-    c.run("remove * -f")
-    c.run("install pkg/0.1@user/stable")
+    conan_conf = "core:non_interactive=True"
+    c.save({"global.conf": conan_conf}, path=c.cache.cache_folder)
+    c.run("remove * -c")
+    c.run("install --requires=pkg/0.1@user/stable")
     user, token, _ = c.cache.localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is None
+
+
+def test_auth_username_space():
+    server = TestServer(users={"super admin": "password"})
+    c = TestClient(servers={"default": server}, inputs=["super admin", "password"])
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("export .")
+    c.run("upload * -r=default -c")
+    # it doesn't crash, it accepts user with space

@@ -18,7 +18,7 @@ def test_crossbuild_triplet_from_conf():
                 libcxx: [libstdc++11]
         build_type: [None, Debug, Release]
         """)
-    
+
     host_profile = textwrap.dedent("""
         [settings]
         os=Linux
@@ -38,7 +38,7 @@ def test_crossbuild_triplet_from_conf():
         compiler=gcc
         compiler.version=11
         compiler.libcxx=libstdc++11
-        build_type=Release   
+        build_type=Release
     """)
 
     client = TestClient(path_with_spaces=False)
@@ -46,8 +46,8 @@ def test_crossbuild_triplet_from_conf():
     client.save({"host_profile": host_profile})
     client.save({"build_profile": build_profile})
 
-    client.run("new hello/0.1 --template=autotools_lib")
-    client.run("create . --profile:build=build_profile --profile:host=host_profile -tf None")
+    client.run("new autotools_lib -d name=hello -d version=0.1")
+    client.run("create . --profile:build=build_profile --profile:host=host_profile -tf=\"\"")
 
     assert "--host=hexagon-acme-linux-gnu" in client.out
     assert "checking host system type... hexagon-acme-linux-gnu" in client.out

@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("op_system", ["Macos", "iOS"])
+@pytest.mark.tool("cmake")
 def test_m1(op_system):
     os_version = "os.version=12.0" if op_system == "iOS" else ""
     os_sdk = "" if op_system == "Macos" else "os.sdk=iphoneos"
@@ -25,8 +26,8 @@ def test_m1(op_system):
 
     client = TestClient(path_with_spaces=False)
     client.save({"m1": profile}, clean_first=True)
-    client.run("new hello/0.1 --template=cmake_lib")
-    client.run("create . --profile:build=default --profile:host=m1 -tf None")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
+    client.run("create . --profile:build=default --profile:host=m1 -tf=\"\"")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     custom_content = 'message("CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}") \n' \
@@ -35,7 +36,7 @@ def test_m1(op_system):
                                 custom_content=custom_content)
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
         class TestConan(ConanFile):
@@ -57,8 +58,7 @@ def test_m1(op_system):
                  "CMakeLists.txt": cmakelists,
                  "main.cpp": main,
                  "m1": profile}, clean_first=True)
-    client.run("install . --profile:build=default --profile:host=m1")
-    client.run("build .")
+    client.run("build . --profile:build=default --profile:host=m1")
     system_name = 'Darwin' if op_system == 'Macos' else 'iOS'
     assert "CMAKE_SYSTEM_NAME: {}".format(system_name) in client.out
     assert "CMAKE_SYSTEM_PROCESSOR: arm64" in client.out

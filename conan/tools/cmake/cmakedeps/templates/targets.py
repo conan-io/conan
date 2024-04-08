@@ -19,7 +19,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        data_pattern = "${_DIR}/" if not self.generating_module else "${_DIR}/module-"
+        data_pattern = "${CMAKE_CURRENT_LIST_DIR}/" if not self.generating_module else "${CMAKE_CURRENT_LIST_DIR}/module-"
         data_pattern += "{}-*-data.cmake".format(self.file_name)
 
         target_pattern = "" if not self.generating_module else "module-"
@@ -55,7 +55,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
     def template(self):
         return textwrap.dedent("""\
         # Load the debug and release variables
-        get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
         file(GLOB DATA_FILES "{{data_pattern}}")
 
         foreach(f ${DATA_FILES})
@@ -66,13 +65,13 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
             if(NOT TARGET ${_COMPONENT})
                 add_library(${_COMPONENT} INTERFACE IMPORTED)
-                message(STATUS "Conan: Component target declared '${_COMPONENT}'")
+                message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Component target declared '${_COMPONENT}'")
             endif()
         endforeach()
 
         if(NOT TARGET {{ root_target_name }})
             add_library({{ root_target_name }} INTERFACE IMPORTED)
-            message(STATUS "Conan: Target declared '{{ root_target_name }}'")
+            message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Target declared '{{ root_target_name }}'")
         endif()
 
         {%- for alias, target in cmake_target_aliases.items() %}
@@ -80,8 +79,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
-        else()
-            message(WARNING "Target name '{{alias}}' already exists.")
         endif()
 
         {%- endfor %}
@@ -93,8 +90,6 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         if(NOT TARGET {{alias}})
             add_library({{alias}} INTERFACE IMPORTED)
             set_property(TARGET {{ alias }} PROPERTY INTERFACE_LINK_LIBRARIES {{target}})
-        else()
-            message(WARNING "Target name '{{alias}}' already exists.")
         endif()
 
             {%- endfor %}
@@ -102,8 +97,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         {%- endfor %}
 
         # Load the debug and release library finders
-        get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-        file(GLOB CONFIG_FILES "${_DIR}/{{ target_pattern }}")
+        file(GLOB CONFIG_FILES "${CMAKE_CURRENT_LIST_DIR}/{{ target_pattern }}")
 
         foreach(f ${CONFIG_FILES})
             include(${f})

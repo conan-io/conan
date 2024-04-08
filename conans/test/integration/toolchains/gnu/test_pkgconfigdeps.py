@@ -2,6 +2,8 @@ import glob
 import os
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -21,7 +23,7 @@ def test_pkg_config_dirs():
         from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package_info(self):
@@ -31,36 +33,38 @@ def test_pkg_config_dirs():
                 fake_dir = os.path.join("/", "my_absoulte_path", "fake")
                 include_dir = os.path.join(fake_dir, libname, "include")
                 lib_dir = os.path.join(fake_dir, libname, "lib")
-                lib_dir2 = os.path.join(self.package_folder, "lib2")
+                lib_dir1 = os.path.join(self.package_folder, "lib2")
                 self.cpp_info.includedirs = [include_dir]
-                self.cpp_info.libdirs = [lib_dir, lib_dir2]
+                self.cpp_info.libdirs = [lib_dir, lib_dir1]
+                self.cpp_info.bindirs = ["mybin"]
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
-
-    assert 'Name: MyLib' in pc_content
-    assert 'Description: Conan package: MyLib' in pc_content
+    assert 'Name: mylib' in pc_content
+    assert 'Description: Conan package: mylib' in pc_content
     assert 'Version: 0.1' in pc_content
-    assert 'Libs: -L"${libdir1}" -L"${libdir2}"' in pc_content
-    assert 'Cflags: -I"${includedir1}"' in pc_content
+    assert 'Libs: -L"${libdir}" -L"${libdir1}"' in pc_content
+    assert 'Cflags: -I"${includedir}"' in pc_content
+    # https://github.com/conan-io/conan/pull/13623
+    assert 'bindir=${prefix}/mybin' in pc_content
 
     def assert_is_abs(path):
         assert os.path.isabs(path) is True
 
     for line in pc_content.splitlines():
-        if line.startswith("includedir1="):
-            assert_is_abs(line[len("includedir1="):])
+        if line.startswith("includedir="):
+            assert_is_abs(line[len("includedir="):])
             assert line.endswith("include")
-        elif line.startswith("libdir1="):
-            assert_is_abs(line[len("libdir1="):])
+        elif line.startswith("libdir="):
+            assert_is_abs(line[len("libdir="):])
             assert line.endswith("lib")
-        elif line.startswith("libdir2="):
+        elif line.startswith("libdir1="):
             assert "${prefix}/lib2" in line
 
 
@@ -71,7 +75,7 @@ def test_empty_dirs():
         from conan import ConanFile
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package_info(self):
@@ -84,32 +88,30 @@ def test_empty_dirs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "MyLib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected = textwrap.dedent("""
-        Name: MyLib
-        Description: Conan package: MyLib
-        Version: 0.1
-        Libs:%s
-        Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
+        Name: mylib
+        Description: Conan package: mylib
+        Version: 0.1""")
     assert "\n".join(pc_content.splitlines()[1:]) == expected
 
 
 def test_system_libs():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
 
         class PkgConfigConan(ConanFile):
-            name = "MyLib"
+            name = "mylib"
             version = "0.1"
 
             def package(self):
-                save(os.path.join(self.package_folder, "lib", "file"), "")
+                save(self, os.path.join(self.package_folder, "lib", "file"), "")
 
             def package_info(self):
                 self.cpp_info.libs = ["mylib1", "mylib2"]
@@ -118,23 +120,23 @@ def test_system_libs():
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .")
-    client.run("install MyLib/0.1@ -g PkgConfigDeps")
+    client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("MyLib.pc")
-    assert 'Libs: -L"${libdir1}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
+    pc_content = client.load("mylib.pc")
+    assert 'Libs: -L"${libdir}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 
 def test_multiple_include():
     # https://github.com/conan-io/conan/issues/7056
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
 
         class PkgConfigConan(ConanFile):
             def package(self):
                 for p in ["inc1", "inc2", "inc3/foo", "lib1", "lib2"]:
-                    save(os.path.join(self.package_folder, p, "file"), "")
+                    save(self, os.path.join(self.package_folder, p, "file"), "")
 
             def package_info(self):
                 self.cpp_info.includedirs = ["inc1", "inc2", "inc3/foo"]
@@ -142,38 +144,39 @@ def test_multiple_include():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
-    client.run("install pkg/0.1@ -g PkgConfigDeps")
+    client.run("create . --name=pkg --version=0.1")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "includedir1=${prefix}/inc1" in pc_content
-    assert "includedir2=${prefix}/inc2" in pc_content
-    assert "includedir3=${prefix}/inc3/foo" in pc_content
-    assert "libdir1=${prefix}/lib1" in pc_content
-    assert "libdir2=${prefix}/lib2" in pc_content
-    assert 'Libs: -L"${libdir1}" -L"${libdir2}"' in pc_content
-    assert 'Cflags: -I"${includedir1}" -I"${includedir2}" -I"${includedir3}"' in pc_content
+    assert "includedir=${prefix}/inc1" in pc_content
+    assert "includedir1=${prefix}/inc2" in pc_content
+    assert "includedir2=${prefix}/inc3/foo" in pc_content
+    assert "libdir=${prefix}/lib1" in pc_content
+    assert "libdir1=${prefix}/lib2" in pc_content
+    assert 'Libs: -L"${libdir}" -L"${libdir1}"' in pc_content
+    assert 'Cflags: -I"${includedir}" -I"${includedir1}" -I"${includedir2}"' in pc_content
 
 
 def test_custom_content():
     # https://github.com/conan-io/conan/issues/7661
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
+        from conan.tools.files import save
         import os
         import textwrap
 
         class PkgConfigConan(ConanFile):
 
             def package(self):
-                save(os.path.join(self.package_folder, "include" ,"file"), "")
-                save(os.path.join(self.package_folder, "lib" ,"file"), "")
+                save(self, os.path.join(self.package_folder, "include" ,"file"), "")
+                save(self, os.path.join(self.package_folder, "lib" ,"file"), "")
 
             def package_info(self):
                 custom_content = textwrap.dedent(\"""
+                        bindir=${prefix}/my/bin/folder
+                        fakelibdir=${prefix}/my/lib/folder
                         datadir=${prefix}/share
                         schemasdir=${datadir}/mylib/schemas
-                        bindir=${prefix}/bin
                     \""")
                 self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                 self.cpp_info.includedirs = ["include"]
@@ -181,23 +184,32 @@ def test_custom_content():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
-    client.run("install pkg/0.1@ -g PkgConfigDeps")
+    client.run("create . --name=pkg --version=0.1")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
     pc_content = client.load("pkg.pc")
-    assert "libdir1=${prefix}/lib" in pc_content
-    assert "datadir=${prefix}/share" in pc_content
-    assert "schemasdir=${datadir}/mylib/schemas" in pc_content
-    assert "bindir=${prefix}/bin" in pc_content
-    assert "Name: pkg" in pc_content
+    prefix = pc_content.splitlines()[0]
+    expected = textwrap.dedent(f"""\
+    {prefix}
+    libdir=${{prefix}}/lib
+    includedir=${{prefix}}/include
+    bindir=${{prefix}}/my/bin/folder
+    fakelibdir=${{prefix}}/my/lib/folder
+    datadir=${{prefix}}/share
+    schemasdir=${{datadir}}/mylib/schemas
+
+    Name: pkg
+    Description: Conan package: pkg
+    Version: 0.1
+    Libs: -L"${{libdir}}"
+    Cflags: -I"${{includedir}}"
+    """)
+    assert expected == pc_content
 
 
 def test_custom_content_and_version_components():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conans.tools import save
-        import os
-        import textwrap
 
         class PkgConfigConan(ConanFile):
 
@@ -209,8 +221,8 @@ def test_custom_content_and_version_components():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
-    client.run("install pkg/0.1@ -g PkgConfigDeps")
+    client.run("create . --name=pkg --version=0.1")
+    client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
     assert "Version: 19.8.199" in pc_content
@@ -252,7 +264,7 @@ def test_pkg_with_public_deps_and_component_requires():
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . first/0.1@")
+    client.run("create . --name=first --version=0.1")
     client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
     client.run("create .")
 
@@ -268,7 +280,7 @@ def test_pkg_with_public_deps_and_component_requires():
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . second/0.1@")
+    client.run("create . --name=second --version=0.1")
     client.save({"conanfile.py": GenConanfile("third", "0.1").with_package_file("file.h", "0.1")
                                                              .with_require("second/0.1")
                                                              .with_require("other/0.1")},
@@ -336,7 +348,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
                 self.cpp_info.components["cmp3"].set_property("pkg_config_name", "component3")
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . other/1.0@")
+    client.run("create . --name=other --version=1.0")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -348,7 +360,7 @@ def test_pkg_with_public_deps_and_component_requires_2():
                 self.cpp_info.requires = ["other::cmp1"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . pkg/0.1@")
+    client.run("create . --name=pkg --version=0.1")
 
     client2 = TestClient(cache_folder=client.cache_folder)
     conanfile = textwrap.dedent("""
@@ -384,19 +396,26 @@ def test_pkg_config_name_full_aliases():
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
+        import textwrap
         from conan import ConanFile
 
         class Recipe(ConanFile):
 
             def package_info(self):
+                custom_content = textwrap.dedent(\"""
+                datadir=${prefix}/share
+                schemasdir=${datadir}/mylib/schemas
+                \""")
                 self.cpp_info.set_property("pkg_config_name", "pkg_other_name")
                 self.cpp_info.set_property("pkg_config_aliases", ["pkg_alias1", "pkg_alias2"])
+                # Custom content only added to root pc file -> pkg_other_name.pc
+                self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                 self.cpp_info.components["cmp1"].libs = ["libcmp1"]
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "compo1")
                 self.cpp_info.components["cmp1"].set_property("pkg_config_aliases", ["compo1_alias"])
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . first/0.3@")
+    client.run("create . --name=first --version=0.3")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -409,7 +428,7 @@ def test_pkg_config_name_full_aliases():
 
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . second/0.2@")
+    client.run("create . --name=second --version=0.2")
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -422,11 +441,14 @@ def test_pkg_config_name_full_aliases():
     client.run("install .")
 
     pc_content = client.load("compo1.pc")
+    prefix = pc_content.splitlines()[0]
     assert "Description: Conan component: pkg_other_name-compo1" in pc_content
     assert "Requires" not in pc_content
 
     pc_content = client.load("compo1_alias.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
     Version: 0.3
@@ -435,11 +457,27 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_other_name.pc")
-    assert "Description: Conan package: pkg_other_name" in pc_content
-    assert "Requires: compo1" in pc_content
+    content = textwrap.dedent(f"""\
+    {prefix}
+    libdir=${{prefix}}/lib
+    includedir=${{prefix}}/include
+    bindir=${{prefix}}/bin
+    datadir=${{prefix}}/share
+    schemasdir=${{datadir}}/mylib/schemas
+
+    Name: pkg_other_name
+    Description: Conan package: pkg_other_name
+    Version: 0.3
+    Libs: -L"${{libdir}}"
+    Cflags: -I"${{includedir}}"
+    Requires: compo1
+    """)
+    assert content == pc_content
 
     pc_content = client.load("pkg_alias1.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
     Version: 0.3
@@ -448,7 +486,9 @@ def test_pkg_config_name_full_aliases():
     assert content == pc_content
 
     pc_content = client.load("pkg_alias2.pc")
-    content = textwrap.dedent("""\
+    content = textwrap.dedent(f"""\
+    {prefix}
+
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
     Version: 0.3
@@ -479,7 +519,7 @@ def test_components_and_package_pc_creation_order():
                 self.cpp_info.components["_opencl-other"].set_property("pkg_config_name", "OtherCL")
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . opencl/1.0@")
+    client.run("create . --name=opencl --version=1.0")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -492,7 +532,7 @@ def test_components_and_package_pc_creation_order():
                 self.cpp_info.components["comp"].requires.append("opencl::_opencl-headers")
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . pkgb/1.0@")
+    client.run("create . --name=pkgb --version=1.0")
 
     conanfile = textwrap.dedent("""
         [requires]
@@ -530,12 +570,10 @@ def test_pkgconfigdeps_with_test_requires():
         """)
     with client.chdir("app"):
         client.save({"conanfile.py": conanfile % "app"})
-        # client.run("create . --name=app --version=1.0")
-        client.run("create . app/1.0@")
+        client.run("create . --name=app --version=1.0")
     with client.chdir("test"):
         client.save({"conanfile.py": conanfile % "test"})
-        # client.run("create . --name=test --version=1.0")
-        client.run("create . test/1.0@")
+        client.run("create . --name=test --version=1.0")
     # Create library having build and test requires
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -570,13 +608,13 @@ def test_with_editable_layout():
                  "dep/include/header.h": "",
                  "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/0.1")})
     client.run("create dep")
-    client.run("editable add dep dep/0.1")
+    client.run("editable add dep")
     with client.chdir("pkg"):
         client.run("install . -g PkgConfigDeps")
         pc = client.load("dep.pc")
-        assert "Libs: -lmylib" in pc
-        assert 'includedir1=' in pc
-        assert 'Cflags: -I"${includedir1}"' in pc
+        assert 'Libs: -L"${libdir}" -lmylib' in pc
+        assert 'includedir=' in pc
+        assert 'Cflags: -I"${includedir}"' in pc
 
 
 def test_tool_requires():
@@ -595,7 +633,7 @@ def test_tool_requires():
                 self.cpp_info.libs = ["libtool"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . tool/1.0@")
+    client.run("create . --name tool --version 1.0")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -611,7 +649,7 @@ def test_tool_requires():
                 self.cpp_info.components["cmp3"].set_property("pkg_config_name", "component3")
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("create . other/1.0@")
+    client.run("create . --name other --version 1.0")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -666,7 +704,7 @@ def test_tool_requires_not_created_if_no_activated():
                 self.cpp_info.libs = ["libtool"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . tool/1.0@")
+    client.run("create . --name tool --version 1.0")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -687,7 +725,7 @@ def test_tool_requires_not_created_if_no_activated():
     assert pc_files == []
 
 
-def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
+def test_tool_requires_error_if_no_build_suffix():
     """
     Testing if same dependency exists in both require and build require (without suffix)
     """
@@ -701,7 +739,7 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
                 self.cpp_info.libs = ["libtool"]
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . tool/1.0@")
+    client.run("create . --name tool --version 1.0")
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -725,3 +763,289 @@ def test_tool_requires_raise_exception_if_exist_both_require_and_build_one():
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -pr:h default -pr:b default", assert_error=True)
     assert "The packages ['tool'] exist both as 'require' and as 'build require'" in client.out
+
+
+def test_error_missing_pc_build_context():
+    """
+    PkgConfigDeps was failing, not generating the zlib.pc in the
+    build context, for a test_package that both requires(example/1.0) and
+    tool_requires(example/1.0), which depends on zlib
+    # https://github.com/conan-io/conan/issues/12664
+    """
+    c = TestClient()
+    example = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Example(ConanFile):
+            name = "example"
+            version = "1.0"
+            requires = "game/1.0"
+            generators = "PkgConfigDeps"
+            settings = "build_type"
+            def build(self):
+                assert os.path.exists("math.pc")
+                assert os.path.exists("engine.pc")
+                assert os.path.exists("game.pc")
+            """)
+    c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
+                                                                .with_require("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_settings("build_type")
+                                                            .with_requires("engine/1.0"),
+            "example/conanfile.py": example,
+            # With ``with_test()`` it already generates a requires(example/1.0)
+            "example/test_package/conanfile.py": GenConanfile().with_build_requires("example/1.0")
+                                                               .with_test("pass")})
+    c.run("create math")
+    c.run("create engine")
+    c.run("create game")
+    # This used to crash because of the assert inside the build() method
+    c.run("create example -pr:b=default -pr:h=default")
+    # Now make sure we can actually build with build!=host context
+    # The debug binaries are missing, so adding --build=missing
+    c.run("create example -pr:b=default -pr:h=default -s:h build_type=Debug --build=missing "
+          "--build=example")
+
+    c.assert_listed_require({"example/1.0": "Cache"})
+    c.assert_listed_require({"example/1.0": "Cache"}, build=True)
+
+
+class TestPCGenerationBuildContext:
+    """
+    https://github.com/conan-io/conan/issues/14920
+    """
+    def test_pc_generate(self):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_suffix = {"wayland": "_BUILD", "dep": "_BUILD"}
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland_BUILD.pc")
+                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("dep_BUILD.pc")
+                """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": GenConanfile("wayland", "1.0").with_requires("dep/1.0"),
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Deprecation warning!
+        assert "PkgConfigDeps.build_context_suffix attribute has been deprecated" in c.out
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    def test_pc_generate_components(self):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_suffix = {"wayland": "_BUILD", "dep": "_BUILD"}
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland-client.pc")
+                    assert os.path.exists("wayland-server.pc")
+                    assert os.path.exists("wayland_BUILD.pc")
+                    assert os.path.exists("wayland_BUILD-client.pc")
+                    assert os.path.exists("wayland_BUILD-server.pc")
+                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("dep_BUILD.pc")
+
+                    # Issue: https://github.com/conan-io/conan/issues/12342
+                    # Issue: https://github.com/conan-io/conan/issues/14935
+                    assert not os.path.exists("build/wayland.pc")
+                    assert not os.path.exists("build/wayland-client.pc")
+                    assert not os.path.exists("build/wayland-server.pc")
+                    assert not os.path.exists("build/dep.pc")
+                """)
+        wayland = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "wayland"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.components["client"].libs = []
+                    self.cpp_info.components["server"].libs = []
+            """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    @pytest.mark.parametrize("build_folder_name", ["build", ""])
+    def test_pc_generate_components_in_build_context_folder(self, build_folder_name):
+        c = TestClient()
+        tool = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class Example(ConanFile):
+                name = "tool"
+                version = "1.0"
+                requires = "wayland/1.0"
+                tool_requires = "wayland/1.0"
+
+                def generate(self):
+                    deps = PkgConfigDeps(self)
+                    deps.build_context_activated = ["wayland", "dep"]
+                    deps.build_context_folder = "{build_folder_name}"
+                    deps.generate()
+
+                def build(self):
+                    assert os.path.exists("wayland.pc")
+                    assert os.path.exists("wayland-client.pc")
+                    assert os.path.exists("wayland-server.pc")
+                    assert os.path.exists("dep.pc")
+
+                    # Issue: https://github.com/conan-io/conan/issues/12342
+                    # Issue: https://github.com/conan-io/conan/issues/14935
+                    if "{build_folder_name}":
+                        assert os.path.exists("{build_folder_name}/wayland.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-client.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-server.pc")
+                        assert os.path.exists("{build_folder_name}/dep.pc")
+                """.format(build_folder_name=build_folder_name))
+        wayland = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "wayland"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.components["client"].libs = []
+                    self.cpp_info.components["server"].libs = []
+            """)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
+                "wayland/conanfile.py": wayland,
+                "tool/conanfile.py": tool,
+                "app/conanfile.py": GenConanfile().with_tool_requires("tool/1.0")})
+        c.run("export dep")
+        c.run("export wayland")
+        c.run("export tool")
+        c.run("install app --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+        # Now make sure we can actually build with build!=host context
+        c.run("install app -s:h build_type=Debug --build=missing")
+        assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
+
+    def test_tool_requires_error_if_folder_and_suffix(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class PkgConfigConan(ConanFile):
+
+                def package_info(self):
+                    self.cpp_info.libs = ["libtool"]
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name tool --version 1.0")
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfigDeps
+
+            class PkgConfigConan(ConanFile):
+                name = "demo"
+                version = "1.0"
+
+                def requirements(self):
+                    self.requires("tool/1.0")
+
+                def build_requirements(self):
+                    self.build_requires("tool/1.0")
+
+                def generate(self):
+                    tc = PkgConfigDeps(self)
+                    tc.build_context_activated = ["tool"]
+                    tc.build_context_folder = "build"
+                    tc.build_context_suffix = {"tool": "_bt"}
+                    tc.generate()
+            """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("install . -pr:h default -pr:b default", assert_error=True)
+        assert ("It's not allowed to define both PkgConfigDeps.build_context_folder "
+                "and PkgConfigDeps.build_context_suffix (deprecated).") in client.out
+
+
+def test_pkg_config_deps_and_private_deps():
+    """
+    Testing that no errors are raised when the dependency tree has a private one in the middle
+    of it.
+
+    Issue related: https://github.com/conan-io/conan/issues/15311
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("private", "0.1")})
+    client.run("create .")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class ConsumerConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "PkgConfigDeps"
+        name = "pkg"
+        version = "0.1"
+        def requirements(self):
+            self.requires("private/0.1", visible=False)
+    """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create .")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    class ConsumerConan(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "PkgConfigDeps"
+
+        def requirements(self):
+            self.requires("pkg/0.1")
+    """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    # Now, it passes and creates the pc files correctly (the skipped one is not created)
+    client.run("install .")
+    assert "Requires:" not in client.load("pkg.pc")

@@ -23,16 +23,16 @@ xcode_project = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_xcodedeps_build_configurations():
     client = TestClient(path_with_spaces=False)
 
-    client.run("new hello/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=hello -d version=0.1")
     client.run("export .")
 
-    client.run("new bye/0.1 -m=cmake_lib")
+    client.run("new cmake_lib -d name=bye -d version=0.1 -f")
     client.run("export .")
 
     main = textwrap.dedent("""
@@ -69,9 +69,9 @@ def test_xcodedeps_build_configurations():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_cmake
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("cmake")
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_frameworks():
     client = TestClient(path_with_spaces=False)
 
@@ -79,7 +79,7 @@ def test_frameworks():
                                            .with_package_info(cpp_info={"frameworks":
                                                                         ['CoreFoundation']},
                                                               env_info={})})
-    client.run("export hello.py hello/0.1@")
+    client.run("export hello.py --name=hello --version=0.1")
 
     main = textwrap.dedent("""
         #include <CoreFoundation/CoreFoundation.h>
@@ -101,8 +101,8 @@ def test_frameworks():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_xcodedeps_dashes_names_and_arch():
     # https://github.com/conan-io/conan/issues/9949
     client = TestClient(path_with_spaces=False)
@@ -121,12 +121,12 @@ def test_xcodedeps_dashes_names_and_arch():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-@pytest.mark.tool_xcodebuild
-@pytest.mark.tool_xcodegen
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
 def test_xcodedeps_definitions_escape():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent('''
-        from conans import ConanFile
+        from conan import ConanFile
 
         class HelloLib(ConanFile):
             def package_info(self):
@@ -134,7 +134,7 @@ def test_xcodedeps_definitions_escape():
                 self.cpp_info.defines.append('OTHER="other.h"')
         ''')
     client.save({"conanfile.py": conanfile})
-    client.run("export . hello/1.0@")
+    client.run("export . --name=hello --version=1.0")
     main = textwrap.dedent("""
                                 #include <stdio.h>
                                 #define STR(x)   #x

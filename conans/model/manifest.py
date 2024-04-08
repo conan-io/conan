@@ -1,53 +1,9 @@
 import os
+from collections import defaultdict
 
-from conans.errors import ConanException
 from conans.paths import CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.util.dates import timestamp_now, timestamp_to_str
-from conans.util.env_reader import get_env
-from conans.util.files import load, md5, md5sum, save, walk
-
-
-def discarded_file(filename, keep_python):
-    """
-    # The __conan pattern is to be prepared for the future, in case we want to manage our
-    own files that shouldn't be uploaded
-    """
-    if not keep_python:
-        return (filename == ".DS_Store" or filename.endswith(".pyc") or
-                filename.endswith(".pyo") or filename == "__pycache__" or
-                filename.startswith("__conan"))
-    else:
-        return filename == ".DS_Store"
-
-
-def gather_files(folder):
-    file_dict = {}
-    symlinks = {}
-    keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
-    for root, dirs, files in walk(folder):
-        if not keep_python:
-            dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
-        for d in dirs:
-            abs_path = os.path.join(root, d)
-            if os.path.islink(abs_path):
-                rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-                symlinks[rel_path] = os.readlink(abs_path)
-        for f in files:
-            if discarded_file(f, keep_python):
-                continue
-            abs_path = os.path.join(root, f)
-            rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
-            if os.path.exists(abs_path):
-                file_dict[rel_path] = abs_path
-            else:
-                if not get_env("CONAN_SKIP_BROKEN_SYMLINKS_CHECK", False):
-                    raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'."
-                                         "You can skip this check adjusting the "
-                                         "'general.skip_broken_symlinks_check' at the conan.conf "
-                                         "file."
-                                         % abs_path)
-    return file_dict, symlinks
+from conans.util.files import load, md5, md5sum, save, gather_files
 
 
 class FileTreeManifest(object):
@@ -66,10 +22,6 @@ class FileTreeManifest(object):
         s.append("")
         return md5("\n".join(s))
 
-    @property
-    def time_str(self):
-        return timestamp_to_str(self.time)
-
     @staticmethod
     def loads(text):
         """ parses a string representation, generated with __repr__
@@ -77,13 +29,10 @@ class FileTreeManifest(object):
         tokens = text.split("\n")
         the_time = int(tokens[0])
         file_sums = {}
-        keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
         for md5line in tokens[1:]:
             if md5line:
                 filename, file_md5 = md5line.rsplit(": ", 1)
-                # FIXME: This is weird, it should never happen, maybe remove?
-                if not discarded_file(filename, keep_python):
-                    file_sums[filename] = file_md5
+                file_sums[filename] = file_md5
         return FileTreeManifest(the_time, file_sums)
 
     @staticmethod
@@ -115,23 +64,49 @@ class FileTreeManifest(object):
         path = os.path.join(folder, filename)
         save(path, repr(self))
 
+    def report_summary(self, output, suffix="Copied"):
+        ext_files = defaultdict(list)
+        for f in self.file_sums:
+            if f == "conaninfo.txt":
+                continue
+            _, ext = os.path.splitext(f)
+            ext_files[ext].append(os.path.basename(f))
+        if not ext_files:
+            if suffix != "Copied":
+                output.warning("No files in this package!")
+            return
+
+        for ext, files in ext_files.items():
+            files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
+            file_or_files = "file" if len(files) == 1 else "files"
+            if not ext:
+                output.info("%s %d %s%s" % (suffix, len(files), file_or_files, files_str))
+            else:
+                output.info("%s %d '%s' %s%s" % (suffix, len(files), ext, file_or_files, files_str))
+
     @classmethod
     def create(cls, folder, exports_sources_folder=None):
         """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
         files, _ = gather_files(folder)
+        # The folders symlinks are discarded for the manifest
         for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
             files.pop(f, None)
 
         file_dict = {}
         for name, filepath in files.items():
-            file_dict[name] = md5sum(filepath)
+            # For a symlink: md5 of the pointing path, no matter if broken, relative or absolute.
+            value = md5(os.readlink(filepath)) if os.path.islink(filepath) else md5sum(filepath)
+            file_dict[name] = value
 
         if exports_sources_folder:
             export_files, _ = gather_files(exports_sources_folder)
+            # The folders symlinks are discarded for the manifest
             for name, filepath in export_files.items():
-                file_dict["export_source/%s" % name] = md5sum(filepath)
+                # For a symlink: md5 of the pointing path, no matter if broken, relative or absolute.
+                value = md5(os.readlink(filepath)) if os.path.islink(filepath) else md5sum(filepath)
+                file_dict["export_source/%s" % name] = value
 
         date = timestamp_now()
 
@@ -141,9 +116,6 @@ class FileTreeManifest(object):
         """ Two manifests are equal if file_sums
         """
         return self.file_sums == other.file_sums
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
     def difference(self, other):
         result = {}

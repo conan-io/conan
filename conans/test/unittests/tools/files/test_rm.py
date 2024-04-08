@@ -1,8 +1,7 @@
 import os
 
 # Check it is importable from tools
-from conan.tools.files import rm
-from conans.client.tools.files import chdir
+from conan.tools.files import rm, chdir
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save_files
 
@@ -10,7 +9,7 @@ from conans.util.files import save_files
 def test_remove_files_by_mask_recursively():
     tmpdir = temp_folder()
 
-    with chdir(tmpdir):
+    with chdir(None, tmpdir):
         os.makedirs("subdir")
         os.makedirs("dir.pdb")
         os.makedirs(os.path.join("subdir", "deepdir"))
@@ -48,7 +47,7 @@ def test_remove_files_by_mask_recursively():
 
 def test_remove_files_by_mask_non_recursively():
     tmpdir = temp_folder()
-    with chdir(tmpdir):
+    with chdir(None, tmpdir):
         os.makedirs("subdir")
 
     save_files(tmpdir, {"1.txt": "",

@@ -3,8 +3,8 @@
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
 
-from conan.tools.microsoft import is_msvc
 from conan.tools.apple.apple import is_apple_os
+from conan.tools.microsoft import is_msvc
 from conans.client.subsystems import subsystem_path, deduce_subsystem
 
 
@@ -52,7 +52,7 @@ class GnuDepsFlags(object):
         if str(compiler) not in self._GCC_LIKE:
             return []
         if is_path:
-            return ["-F %s" % self._adjust_path(framework_path) for framework_path in frameworks]
+            return ["-F\"%s\"" % self._adjust_path(framework_path) for framework_path in frameworks]
         else:
             return ["-framework %s" % framework for framework in frameworks]
 
@@ -75,8 +75,10 @@ class GnuDepsFlags(object):
             return []
 
         result = []
+
+        is_visual = is_msvc(self._conanfile)
         for library in libraries:
-            if is_msvc(self._conanfile):
+            if is_visual:
                 if not library.endswith(".lib"):
                     library += ".lib"
                 result.append(library)

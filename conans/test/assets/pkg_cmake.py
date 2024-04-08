@@ -1,18 +1,19 @@
 import textwrap
 
-from conans.model.ref import ConanFileReference
+from conans.model.recipe_ref import RecipeReference
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 
 
 def pkg_cmake(name, version, requires=None, exe=False):
-    refs = [ConanFileReference.loads(r) for r in requires or []]
+    refs = [RecipeReference.loads(r) for r in requires or []]
     pkg_name = name
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
-        import os
-        from conans import ConanFile
+        from os.path import join
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
+        from conan.tools.files import copy
 
         class Pkg(ConanFile):
             name = "{pkg_name}"
@@ -20,9 +21,18 @@ def pkg_cmake(name, version, requires=None, exe=False):
             exports_sources = "CMakeLists.txt", "src/*", "include/*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
-            options = {{"shared": [True, False]}}
-            default_options = {{"shared": False}}
+            options = {{"shared": [True, False],
+                        "fPIC": [True, False]}}
+            default_options = {{"shared": False, "fPIC": True}}
             generators = "CMakeToolchain", "CMakeDeps"
+
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    self.options.rm_safe("fPIC")
+
+            def configure(self):
+                if self.options.shared:
+                    self.options.rm_safe("fPIC")
 
             def layout(self):
                 cmake_layout(self)
@@ -33,14 +43,14 @@ def pkg_cmake(name, version, requires=None, exe=False):
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="include")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.dll", dst="bin", keep_path=False)
-                self.copy("*.dylib*", dst="lib", keep_path=False)
-                self.copy("*.so", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
-                self.copy("*app.exe", dst="bin", keep_path=False)
-                self.copy("*app", dst="bin", keep_path=False)
+                copy(self, "*.h", join(self.source_folder, "include"), join(self.package_folder, "include"))
+                copy(self, "*.lib", self.build_folder, join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.dll", self.build_folder, join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*.dylib*", self.build_folder, join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.so", self.build_folder, join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", self.build_folder, join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*app.exe", self.build_folder, join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*app", self.build_folder, join(self.package_folder, "bin"), keep_path=False)
 
             def package_info(self):
                 self.cpp_info.libs = ["{name}"]
@@ -70,12 +80,15 @@ def pkg_cmake(name, version, requires=None, exe=False):
 def pkg_cmake_test(require_name):
     conanfile = textwrap.dedent("""\
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps", "VirtualRunEnv"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
 
             def layout(self):
                 cmake_layout(self)
@@ -100,13 +113,14 @@ def pkg_cmake_test(require_name):
 
 
 def pkg_cmake_app(name, version, requires=None):
-    refs = [ConanFileReference.loads(r) for r in requires or []]
+    refs = [RecipeReference.loads(r) for r in requires or []]
     pkg_name = name
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
-        import os
-        from conans import ConanFile
+        from os.path import join
+        from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
+        from conan.tools.files import copy
 
         class Pkg(ConanFile):
             name = "{pkg_name}"
@@ -115,6 +129,7 @@ def pkg_cmake_app(name, version, requires=None):
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"
+            package_type = "application"
 
             def layout(self):
                 cmake_layout(self)
@@ -125,8 +140,8 @@ def pkg_cmake_app(name, version, requires=None):
                 cmake.build()
 
             def package(self):
-                self.copy("*/app.exe", dst="bin", keep_path=False)
-                self.copy("*app", dst="bin", keep_path=False)
+                copy(self, "*/app.exe", self.build_folder, join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*app", self.build_folder, join(self.package_folder, "bin"), keep_path=False)
         """)
     deps = "requires = " + ", ".join('"{}"'.format(r) for r in requires) if requires else ""
     conanfile = conanfile.format(pkg_name=pkg_name, name=name, version=version, deps=deps)

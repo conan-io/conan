@@ -53,7 +53,7 @@ class MesonPreprocessorDefinitionsTest(TestMesonBase):
                      "hello.cpp": hello_cpp,
                      "main.cpp": app})
 
-        self.t.run("install . %s" % self._settings_str)
+        self.t.run("install .")
 
         content = self.t.load("conan_meson_native.ini")
 

@@ -5,12 +5,13 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_build_modules_alias_target():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "hello"
@@ -19,7 +20,8 @@ def test_build_modules_alias_target():
             exports_sources = ["target-alias.cmake"]
 
             def package(self):
-                self.copy("target-alias.cmake", dst="share/cmake")
+                copy(self, "target-alias.cmake", self.source_folder,
+                     os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 module = os.path.join("share", "cmake", "target-alias.cmake")
@@ -34,7 +36,8 @@ def test_build_modules_alias_target():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
             name = "consumer"
@@ -60,7 +63,68 @@ def test_build_modules_alias_target():
     assert "otherhello link libraries: hello::hello" in client.out
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
+def test_build_modules_custom_script():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+
+        class Conan(ConanFile):
+            name = "myfunctions"
+            version = "1.0"
+            exports_sources = ["*.cmake"]
+
+            def package(self):
+                copy(self, "*.cmake", self.source_folder, self.package_folder)
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_build_modules", ["myfunction.cmake"])
+        """)
+
+    myfunction = textwrap.dedent("""
+        function(myfunction)
+            message("Hello myfunction!!!!")
+        endfunction()
+        """)
+    client.save({"conanfile.py": conanfile, "myfunction.cmake": myfunction})
+    client.run("create .")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeDeps
+
+        class Conan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+            tool_requires = "myfunctions/1.0"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.build_context_activated = ["myfunctions"]
+                deps.build_context_build_modules = ["myfunctions"]
+                deps.set_property("myfunctions", "cmake_find_mode", "module", build_context=True)
+                deps.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.0)
+        project(test)
+        find_package(myfunctions MODULE REQUIRED)
+        myfunction()
+        """)
+    client.save({"conanfile.py": consumer,
+                 "CMakeLists.txt": cmakelists},
+                clean_first=True)
+    client.run("build .")
+    assert "Hello myfunction!!!!" in client.out
+
+
+@pytest.mark.tool("cmake")
 def test_build_modules_components_is_not_possible():
     """
     The "cmake_build_module" property declared in the components is useless
@@ -68,7 +132,8 @@ def test_build_modules_components_is_not_possible():
     client = TestClient()
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "openssl"
@@ -77,7 +142,7 @@ def test_build_modules_components_is_not_possible():
             exports_sources = ["crypto.cmake", "root.cmake"]
 
             def package(self):
-                self.copy("*.cmake", dst="share/cmake")
+                copy(self, "*.cmake", self.source_folder, os.path.join(self.package_folder, "share/cmake"))
 
             def package_info(self):
                 crypto_module = os.path.join("share", "cmake", "crypto.cmake")
@@ -103,7 +168,8 @@ def test_build_modules_components_is_not_possible():
     client.run("create .")
 
     consumer = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
 
         class Conan(ConanFile):
             name = "consumer"

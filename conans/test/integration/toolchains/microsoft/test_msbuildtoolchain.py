@@ -20,13 +20,13 @@ def test_msbuildtoolchain_props_with_extra_flags():
     tools.build:exelinkflags+=["--flag6"]
     tools.build:defines+=["DEF1", "DEF2"]
     """)
-    client = TestClient(path_with_spaces=False)
-    client.run("new hello/0.1 --template=msbuild_lib")
+    client = TestClient()
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
     client.save({
         "myprofile": profile
     })
     # Local flow works
-    client.run("install . -pr myprofile -if=install")
+    client.run("install . -pr myprofile")
     toolchain = client.load(os.path.join("conan", "conantoolchain_release_x64.props"))
     expected_cl_compile = """
     <ClCompile>
@@ -39,7 +39,6 @@ def test_msbuildtoolchain_props_with_extra_flags():
     expected_resource_compile = """
     <ResourceCompile>
       <PreprocessorDefinitions>DEF1;DEF2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>--flag1 --flag2 --flag3 --flag4 %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>"""
     assert expected_cl_compile in toolchain
     assert expected_link in toolchain

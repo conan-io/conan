@@ -1,75 +1,49 @@
 # coding=utf-8
-
+import sys
 import unittest
-from types import MethodType
+from unittest import mock
 
+import pytest
 from parameterized import parameterized
-from six import StringIO
 
-from conans.client.output import ConanOutput, colorama_initialize
-from mock import mock
+from conan.api.output import ConanOutput
+from conans.client.userio import init_colorama
 
 
 class ConanOutputTest(unittest.TestCase):
 
-    def test_blocked_output(self):
-        # https://github.com/conan-io/conan/issues/4277
-        stream = StringIO()
-
-        def write_raise(self, data):
-            write_raise.counter = getattr(write_raise, "counter", 0) + 1
-            if write_raise.counter < 2:
-                raise IOError("Stdout locked")
-            self.super_write(data)
-        stream.super_write = stream.write
-        stream.write = MethodType(write_raise, stream)
-        out = ConanOutput(stream)
-
-        with mock.patch("time.sleep") as sleep:
-            out.write("Hello world")
-            sleep.assert_any_call(0.02)
-        self.assertEqual("Hello world", stream.getvalue())
-
-    @parameterized.expand([(False, {}),
-                           (False, {"CONAN_COLOR_DISPLAY": "0"}),
-                           (True, {"CONAN_COLOR_DISPLAY": "0"}),
-                           (False, {"PYCHARM_HOSTED": "1"}),
-                           (True, {"PYCHARM_HOSTED": "1", "CONAN_COLOR_DISPLAY": "0"}),
-                           (True, {"NO_COLOR": ""}),
-                           (True, {"CLICOLOR": "0"}),
-                           (True, {"CLICOLOR": "0", "CONAN_COLOR_DISPLAY": "1"}),
-                           (False, {"CLICOLOR": "1"}),
-                           (False, {"CLICOLOR_FORCE": "0"}),
-                           (True,
-                            {"CLICOLOR": "1", "CLICOLOR_FORCE": "1", "CONAN_COLOR_DISPLAY": "1",
-                             "PYCHARM_HOSTED": "1", "NO_COLOR": "1"})])
-    def test_output_no_color(self, isatty, env):
-        with mock.patch("colorama.init") as init:
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert not colorama_initialize()
-                init.assert_not_called()
-
-    @parameterized.expand([(True, {}),
-                           (False, {"CONAN_COLOR_DISPLAY": "1"}),
-                           (True, {"CONAN_COLOR_DISPLAY": "1"}),
-                           (True, {"CLICOLOR": "1"}),
-                           (True, {"CLICOLOR_FORCE": "0"})])
-    def test_output_color(self, isatty, env):
-        with mock.patch("colorama.init") as init:
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
-                 mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with()
-
-    @parameterized.expand([(False, {"PYCHARM_HOSTED": "1", "CONAN_COLOR_DISPLAY": "1"}),
-                           (True, {"PYCHARM_HOSTED": "1"}),
-                           (False, {"CLICOLOR_FORCE": "1"}),
-                           (True, {"CLICOLOR_FORCE": "1", "CLICOLOR": "0"}),
-                           (True, {"CLICOLOR_FORCE": "1", "CONAN_COLOR_DISPLAY": "0"})])
+    @parameterized.expand([(True, {"NO_COLOR": "1"}),
+                           (True, {"NO_COLOR": "0"})])
     def test_output_color_prevent_strip(self, isatty, env):
         with mock.patch("colorama.init") as init:
-            with mock.patch("sys.stdout.isatty", return_value=isatty), \
+            with mock.patch("sys.stderr.isatty", return_value=isatty), \
                  mock.patch.dict("os.environ", env, clear=True):
-                assert colorama_initialize()
-                init.assert_called_once_with(convert=False, strip=False)
+                init_colorama(sys.stderr)
+                out = ConanOutput()
+                assert out.color is False
+                init.assert_not_called()
+
+
+@pytest.mark.parametrize("force", ["1", "0", "foo"])
+def test_output_forced(force):
+    env = {"CLICOLOR_FORCE": force}
+    forced = force != "0"
+    with mock.patch("colorama.init") as init:
+        with mock.patch("sys.stderr.isatty", return_value=False), \
+             mock.patch.dict("os.environ", env, clear=True):
+            init_colorama(sys.stderr)
+            out = ConanOutput()
+
+            assert out.color is forced
+            if not forced:
+                init.assert_not_called()
+
+
+def test_output_chainable():
+    try:
+        ConanOutput(scope="My package")\
+            .title("My title")\
+            .highlight("Worked")\
+            .info("But there was more that needed to be said")
+    except Exception as e:
+        assert False, f"Chained ConanOutput write methods raised an exception {e}"

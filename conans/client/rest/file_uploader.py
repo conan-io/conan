@@ -1,19 +1,17 @@
-import os
 import time
-
 from copy import copy
 
+from conan.api.output import ConanOutput
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, ConanException, \
     NotFoundException, ForbiddenException, RequestErrorException, InternalErrorException
-from conans.util import progress_bar
 from conans.util.files import sha1sum
 
 
 class FileUploader(object):
 
-    def __init__(self, requester, output, verify, config):
-        self._output = output
+    def __init__(self, requester, verify, config):
+        self._output = ConanOutput()
         self._requester = requester
         self._config = config
         self._verify_ssl = verify
@@ -48,12 +46,16 @@ class FileUploader(object):
         if response.status_code == 201:  # Artifactory returns 201 if the file is there
             return response
 
+    def exists(self, url, auth):
+        response = self._requester.head(url, verify=self._verify_ssl, auth=auth)
+        return bool(response.ok)
+
     def upload(self, url, abs_path, auth=None, dedup=False, retry=None, retry_wait=None,
-               headers=None, display_name=None):
-        retry = retry if retry is not None else self._config.retry
-        retry = retry if retry is not None else 1
-        retry_wait = retry_wait if retry_wait is not None else self._config.retry_wait
-        retry_wait = retry_wait if retry_wait is not None else 5
+               headers=None):
+        retry = retry if retry is not None else self._config.get("core.upload:retry", default=1,
+                                                                 check_type=int)
+        retry_wait = retry_wait if retry_wait is not None else \
+            self._config.get("core.upload:retry_wait", default=5, check_type=int)
 
         # Send always the header with the Sha1
         headers = copy(headers) or {}
@@ -65,7 +67,7 @@ class FileUploader(object):
 
         for counter in range(retry + 1):
             try:
-                return self._upload_file(url, abs_path, headers, auth, display_name)
+                return self._upload_file(url, abs_path, headers, auth)
             except (NotFoundException, ForbiddenException, AuthenticationException,
                     RequestErrorException):
                 raise
@@ -74,32 +76,14 @@ class FileUploader(object):
                     raise
                 else:
                     if self._output:
-                        self._output.error(exc)
+                        self._output.warning(exc, warn_tag="network")
                         self._output.info("Waiting %d seconds to retry..." % retry_wait)
                     time.sleep(retry_wait)
 
-    def _upload_file(self, url, abs_path,  headers, auth, display_name):
-        file_size = os.stat(abs_path).st_size
-        file_name = os.path.basename(abs_path)
-        description = "Uploading {}".format(file_name)
-        post_description = "Uploaded {}".format(
-            file_name) if not display_name else "Uploaded {} -> {}".format(file_name, display_name)
-
-        def load_in_chunks(_file):
-            """Lazy function (generator) to read a file piece by piece.
-            Default chunk size: 1k."""
-            while True:
-                chunk = _file.read(1024)
-                if not chunk:
-                    break
-                yield chunk
-
+    def _upload_file(self, url, abs_path,  headers, auth):
         with open(abs_path, mode='rb') as file_handler:
-            progress = progress_bar.Progress(file_size, self._output, description, post_description)
-            data = progress.update(load_in_chunks(file_handler))
-            iterable_to_file = IterableToFileAdapter(data, file_size)
             try:
-                response = self._requester.put(url, data=iterable_to_file, verify=self._verify_ssl,
+                response = self._requester.put(url, data=file_handler, verify=self._verify_ssl,
                                                headers=headers, auth=auth)
                 self._handle_400_response(response, auth)
                 response.raise_for_status()  # Raise HTTPError for bad http response status
@@ -108,18 +92,3 @@ class FileUploader(object):
                 raise
             except Exception as exc:
                 raise ConanException(exc)
-
-
-class IterableToFileAdapter(object):
-    def __init__(self, iterable, total_size):
-        self.iterator = iter(iterable)
-        self.total_size = total_size
-
-    def read(self, size=-1):  # @UnusedVariable
-        return next(self.iterator, b'')
-
-    def __len__(self):
-        return self.total_size
-
-    def __iter__(self):
-        return self.iterator.__iter__()

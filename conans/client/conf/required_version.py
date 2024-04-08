@@ -1,19 +1,20 @@
-import six
-
-from conans.client.cache.cache import ClientCache
-from semver import satisfies
 from conans import __version__ as client_version
 from conans.errors import ConanException
+from conans.model.version import Version
+from conans.model.version_range import VersionRange
 
 
 def validate_conan_version(required_range):
-    result = satisfies(client_version, required_range, loose=True, include_prerelease=True)
-    if not result:
+    clientver = Version(client_version)
+    version_range = VersionRange(required_range)
+    for conditions in version_range.condition_sets:
+        conditions.prerelease = True
+    if not version_range.contains(clientver, resolve_prerelease=None):
         raise ConanException("Current Conan version ({}) does not satisfy "
-                             "the defined one ({}).".format(client_version, required_range))
+                             "the defined one ({}).".format(clientver, required_range))
 
 
-def check_required_conan_version(cache_folder, out):
+def check_required_conan_version(global_conf):
     """ Check if the required Conan version in config file matches to the current Conan version
 
             When required_conan_version is not configured, it's skipped
@@ -21,17 +22,9 @@ def check_required_conan_version(cache_folder, out):
             version
             When it doesn't match, an ConanException is raised
 
-        :param cache_folder: Conan cache folder
-        :param out: Output stream
+        :param global_conf: the global configura
         :return: None
     """
-    cache = ClientCache(cache_folder, out)
-    required_range = cache.config.required_conan_version
-    if required_range:
-        validate_conan_version(required_range)
-
-    required_range_new = cache.new_config["core:required_conan_version"]
+    required_range_new = global_conf.get("core:required_conan_version")
     if required_range_new:
-        if six.PY2 and not isinstance(required_range_new, str):
-            required_range_new = required_range_new.encode()
         validate_conan_version(required_range_new)

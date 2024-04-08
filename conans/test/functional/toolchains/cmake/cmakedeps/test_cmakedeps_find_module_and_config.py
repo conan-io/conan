@@ -16,8 +16,9 @@ def client():
     cmake = gen_cmakelists(libname="mydep", libsources=["mydep.cpp"])
     conanfile = textwrap.dedent("""
         import os
-        from conans import ConanFile
+        from conan import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.files import copy
 
         class Conan(ConanFile):
             name = "mydep"
@@ -32,12 +33,17 @@ def client():
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include")
-                self.copy("*.lib", dst="lib", keep_path=False)
-                self.copy("*.dll", dst="bin", keep_path=False)
-                self.copy("*.dylib*", dst="lib", keep_path=False)
-                self.copy("*.so", dst="lib", keep_path=False)
-                self.copy("*.a", dst="lib", keep_path=False)
+                copy(self, "*.h", self.source_folder, os.path.join(self.package_folder, "include"))
+                copy(self, "*.lib", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.dll", self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
+                copy(self, "*.dylib*", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.so", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
+                copy(self, "*.a", self.build_folder,
+                     os.path.join(self.package_folder, "lib"), keep_path=False)
 
             def package_info(self):
 
@@ -50,6 +56,8 @@ def client():
                 self.cpp_info.set_property("cmake_module_target_name", "mi_dependencia_namespace::mi_dependencia_target")
 
                 self.cpp_info.components["crispin"].libs = ["mydep"]
+                self.cpp_info.components["crispin"].libdirs = ["lib"]
+                self.cpp_info.components["crispin"].includedirs = ["include"]
                 self.cpp_info.components["crispin"].set_property("cmake_target_name",
                                                                  "MyDepTarget::MyCrispinTarget")
                 self.cpp_info.components["crispin"].set_property("cmake_module_target_name",
@@ -65,7 +73,7 @@ def client():
     return t
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool("cmake")
 def test_reuse_with_modules_and_config(client):
     cpp = gen_function_cpp(name="main")
 
@@ -99,8 +107,8 @@ def test_reuse_with_modules_and_config(client):
                  "main.cpp": cpp,
                  "CMakeLists.txt": cmake.format(cmake_exe_config)})
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
     # test modules
     conanfile = GenConanfile().with_name("myapp")\
@@ -109,8 +117,8 @@ def test_reuse_with_modules_and_config(client):
                  "main.cpp": cpp,
                  "CMakeLists.txt": cmake.format(cmake_exe_module)}, clean_first=True)
 
-    client.run("install . -if=install")
-    client.run("build . -if=install")
+    client.run("install .")
+    client.run("build .")
 
 
 find_modes = [
@@ -123,6 +131,7 @@ find_modes = [
 ]
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.parametrize("find_mode_PKGA, find_mode_PKGB, find_mode_consumer", find_modes)
 def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_consumer):
     """
@@ -182,9 +191,10 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
                  "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='unicorns', mode=find_mode_PKGA),
                  "consumer.py": consumer,
                  "CMakeLists.txt": cmakelist.format(find_mode=find_mode_consumer)})
-    client.run("create pkga.py pkga/1.0@")
-    client.run("create pkgb.py pkgb/1.0@")
-    client.run("create consumer.py consumer/1.0@")
+
+    client.run("create pkga.py --name=pkga --version=1.0")
+    client.run("create pkgb.py --name=pkgb --version=1.0")
+    client.run("create consumer.py --name=consumer --version=1.0")
 
     assert "MYPKGB_VERSION: 1.0" in client.out
     assert "MYPKGB_VERSION_STRING: 1.0" in client.out

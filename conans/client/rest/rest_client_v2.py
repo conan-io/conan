@@ -1,157 +1,102 @@
+import copy
+import fnmatch
 import os
-import time
-import traceback
 
-from conans import DEFAULT_REVISION_V1
-from conans.client.downloaders.download import run_downloader
-from conans.client.remote_manager import check_compressed_files
+from conan.api.output import ConanOutput
+
+from conans.client.downloaders.caching_file_downloader import ConanInternalCacheDownloader
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
-from conans.model.info import ConanInfo
-from conans.model.manifest import FileTreeManifest
-from conans.model.ref import PackageReference
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
-from conans.util.files import decode_text
-from conans.util.log import logger
+from conans.model.package_ref import PkgReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
+from conans.util.dates import from_iso8601_to_timestamp
+from conans.util.thread import ExceptionThread
 
 
 class RestV2Methods(RestCommonMethods):
 
-    def __init__(self, remote_url, token, custom_headers, output, requester, config, verify_ssl,
-                 artifacts_properties=None, checksum_deploy=False, matrix_params=False):
+    def __init__(self, remote_url, token, custom_headers, requester, config, verify_ssl,
+                 checksum_deploy=False):
 
-        super(RestV2Methods, self).__init__(remote_url, token, custom_headers, output, requester,
-                                            config, verify_ssl, artifacts_properties, matrix_params)
+        super(RestV2Methods, self).__init__(remote_url, token, custom_headers, requester,
+                                            config, verify_ssl)
         self._checksum_deploy = checksum_deploy
 
     @property
     def router(self):
-        return ClientV2Router(self.remote_url.rstrip("/"), self._artifacts_properties,
-                              self._matrix_params)
+        return ClientV2Router(self.remote_url.rstrip("/"))
 
     def _get_file_list_json(self, url):
         data = self.get_json(url)
         # Discarding (.keys()) still empty metadata for files
-        data["files"] = list(data["files"].keys())
+        # and make sure the paths like metadata/sign/signature are normalized to /
+        data["files"] = list(d.replace("\\", "/") for d in data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url, use_cache, headers=None):
-        # We don't want traces in output of these downloads, they are ugly in output
-        retry = self._config.retry
-        retry_wait = self._config.retry_wait
-        download_cache = False if not use_cache else self._config.download_cache
-        contents = run_downloader(self.requester, None, self.verify_ssl, retry=retry,
-                                  retry_wait=retry_wait, download_cache=download_cache, url=url,
-                                  auth=self.auth, headers=headers)
-        return contents
-
-    def _get_snapshot(self, url):
-        try:
-            data = self._get_file_list_json(url)
-            files_list = [os.path.normpath(filename) for filename in data["files"]]
-        except NotFoundException:
-            files_list = []
-        return files_list
-
-    def get_recipe_manifest(self, ref):
-        # If revision not specified, check latest
-        if not ref.revision:
-            ref = self.get_latest_recipe_revision(ref)
-        url = self.router.recipe_manifest(ref)
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
-        return FileTreeManifest.loads(decode_text(content))
-
-    def get_package_manifest(self, pref):
-        url = self.router.package_manifest(pref)
-        cache = (pref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
-        try:
-            return FileTreeManifest.loads(decode_text(content))
-        except Exception as e:
-            msg = "Error retrieving manifest file for package " \
-                  "'{}' from remote ({}): '{}'".format(repr(pref), self.remote_url, e)
-            logger.error(msg)
-            logger.error(traceback.format_exc())
-            raise ConanException(msg)
-
-    def get_package_info(self, pref, headers):
-        url = self.router.package_info(pref)
-        cache = (pref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache, headers=headers)
-        return ConanInfo.loads(decode_text(content))
-
-    def get_recipe(self, ref, dest_folder):
+    def get_recipe(self, ref, dest_folder, metadata, only_metadata):
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
-        files = data["files"]
-        check_compressed_files(EXPORT_TGZ_NAME, files)
-        if EXPORT_SOURCES_TGZ_NAME in files:
-            files.remove(EXPORT_SOURCES_TGZ_NAME)
+        server_files = data["files"]
+        result = {}
 
-        # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret
+        if not only_metadata:
+            accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt",
+                              "metadata/sign"]
+            files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
+            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
+            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, parallel=True)
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        if metadata:
+            metadata = [f"metadata/{m}" for m in metadata]
+            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
+            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, parallel=True, metadata=True)
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        return result
 
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
-        if not ref.revision:
-            ref = self.get_latest_recipe_revision(ref)
+        assert ref.revision, f"get_recipe_sources() called without revision {ref}"
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        check_compressed_files(EXPORT_SOURCES_TGZ_NAME, files)
         if EXPORT_SOURCES_TGZ_NAME not in files:
             return None
         files = [EXPORT_SOURCES_TGZ_NAME, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
+        self._download_and_save_files(urls, dest_folder, files, scope=str(ref))
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
-    def get_package(self, pref, dest_folder):
+    def get_package(self, pref, dest_folder, metadata, only_metadata):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
-        files = data["files"]
-        check_compressed_files(PACKAGE_TGZ_NAME, files)
-        # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.package_file(pref, fn) for fn in files}
-        cache = (pref.revision != DEFAULT_REVISION_V1)
-        self._download_and_save_files(urls, dest_folder, files, use_cache=cache)
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
-        return ret
+        server_files = data["files"]
+        result = {}
+        # Download only known files, but not metadata (except sign)
+        if not only_metadata:  # Retrieve package first, then metadata
+            accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt",
+                              "metadata/sign"]
+            files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
+            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
+            urls = {fn: self.router.package_file(pref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
 
-    def get_recipe_path(self, ref, path):
-        url = self.router.recipe_snapshot(ref)
-        files = self._get_file_list_json(url)
-        if self._is_dir(path, files):
-            return self._list_dir_contents(path, files)
-        else:
-            url = self.router.recipe_file(ref, path)
-            cache = (ref.revision != DEFAULT_REVISION_V1)
-            content = self._get_remote_file_contents(url, use_cache=cache)
-            return decode_text(content)
-
-    def get_package_path(self, pref, path):
-        """Gets a file content or a directory list"""
-        url = self.router.package_snapshot(pref)
-        files = self._get_file_list_json(url)
-        if self._is_dir(path, files):
-            return self._list_dir_contents(path, files)
-        else:
-            url = self.router.package_file(pref, path)
-            cache = (pref.revision != DEFAULT_REVISION_V1)
-            content = self._get_remote_file_contents(url, use_cache=cache)
-            return decode_text(content)
+        if metadata:
+            metadata = [f"metadata/{m}" for m in metadata]
+            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
+            urls = {fn: self.router.package_file(pref, fn) for fn in files}
+            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref),
+                                          metadata=True)
+            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        return result
 
     @staticmethod
     def _is_dir(path, files):
@@ -174,128 +119,120 @@ class RestV2Methods(RestCommonMethods):
                     ret.append(tmp)
         return sorted(ret)
 
-    def _upload_recipe(self, ref, files_to_upload, retry, retry_wait):
+    def _upload_recipe(self, ref, files_to_upload):
         # Direct upload the recipe
-        urls = {fn: self.router.recipe_file(ref, fn, add_matrix_params=True)
+        urls = {fn: self.router.recipe_file(ref, fn)
                 for fn in files_to_upload}
-        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=str(ref))
+        self._upload_files(files_to_upload, urls)
 
-    def _upload_package(self, pref, files_to_upload, retry, retry_wait):
-        urls = {fn: self.router.package_file(pref, fn, add_matrix_params=True)
+    def _upload_package(self, pref, files_to_upload):
+        urls = {fn: self.router.package_file(pref, fn)
                 for fn in files_to_upload}
+        self._upload_files(files_to_upload, urls)
 
-        short_pref_name = "%s:%s" % (pref.ref, pref.id[0:4])
-        self._upload_files(files_to_upload, urls, retry, retry_wait, display_name=short_pref_name)
-
-    def _upload_files(self, files, urls, retry, retry_wait, display_name=None):
-        t1 = time.time()
+    def _upload_files(self, files, urls):
         failed = []
-        uploader = FileUploader(self.requester, self._output, self.verify_ssl, self._config)
+        uploader = FileUploader(self.requester, self.verify_ssl, self._config)
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
+        output = ConanOutput()
         for filename in sorted(files):
-            if self._output and not self._output.is_terminal:
-                msg = "Uploading: %s" % filename if not display_name else (
-                    "Uploading %s -> %s" % (filename, display_name))
-                self._output.writeln(msg)
+            # As the filenames are sorted, the last one is always "conanmanifest.txt"
             resource_url = urls[filename]
             try:
-                headers = self._artifacts_properties if not self._matrix_params else {}
+                headers = {}
                 uploader.upload(resource_url, files[filename], auth=self.auth,
-                                dedup=self._checksum_deploy, retry=retry, retry_wait=retry_wait,
-                                headers=headers, display_name=display_name)
+                                dedup=self._checksum_deploy,
+                                headers=headers)
             except (AuthenticationException, ForbiddenException):
                 raise
             except Exception as exc:
-                self._output.error("\nError uploading file: %s, '%s'" % (filename, exc))
+                output.error(f"\nError uploading file: {filename}, '{exc}'", error_type="exception")
                 failed.append(filename)
 
         if failed:
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
-        else:
-            logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
-    def _download_and_save_files(self, urls, dest_folder, files, use_cache):
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None,
+                                 metadata=False):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
-        retry = self._config.retry
-        retry_wait = self._config.retry_wait
-        download_cache = False if not use_cache else self._config.download_cache
+        retry = self._config.get("core.download:retry", check_type=int, default=2)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
+        downloader = ConanInternalCacheDownloader(self.requester, self._config, scope=scope)
+        threads = []
+
         for filename in sorted(files, reverse=True):
-            if self._output and not self._output.is_terminal:
-                self._output.writeln("Downloading %s" % filename)
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            run_downloader(self.requester, self._output, self.verify_ssl, retry=retry,
-                           retry_wait=retry_wait, download_cache=download_cache,
-                           url=resource_url, file_path=abs_path, auth=self.auth)
+            os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
+            if parallel:
+                kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
+                          "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
+                          "auth": self.auth, "metadata": metadata}
+                thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
+                threads.append(thread)
+                thread.start()
+            else:
+                downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
+                                    verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait,
+                                    metadata=metadata)
+        for t in threads:
+            t.join()
+        for t in threads:  # Need to join all before raising errors
+            t.raise_errors()
 
-    def _remove_conanfile_files(self, ref, files):
-        # V2 === revisions, do not remove files, it will create a new revision if the files changed
-        return
-
-    def remove_packages(self, ref, package_ids):
-        """ Remove any packages specified by package_ids"""
+    def remove_all_packages(self, ref):
+        """ Remove all packages from the specified reference"""
         self.check_credentials()
+        assert ref.revision is not None, "remove_packages needs RREV"
 
-        if ref.revision is None:
-            # Remove the packages from all the RREVs
-            revisions = self.get_recipe_revisions(ref)
-            refs = [ref.copy_with_rev(rev["revision"]) for rev in revisions]
-        else:
-            refs = [ref]
+        url = self.router.remove_all_packages(ref)
+        response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
+                                         headers=self.custom_headers)
+        if response.status_code == 404:
+            # Double check if it is a 404 because there are no packages
+            try:
+                package_search_url = self.router.search_packages(ref)
+                if not self.get_json(package_search_url):
+                    return
+            except Exception as e:
+                pass
+        if response.status_code != 200:  # Error message is text
+            # To be able to access ret.text (ret.content are bytes)
+            response.charset = "utf-8"
+            raise get_exception_from_error(response.status_code)(response.text)
 
-        for ref in refs:
-            assert ref.revision is not None, "remove_packages needs RREV"
-            if not package_ids:
-                url = self.router.remove_all_packages(ref)
-                response = self.requester.delete(url, auth=self.auth, verify=self.verify_ssl,
-                                                 headers=self.custom_headers)
+    def remove_packages(self, prefs):
+        self.check_credentials()
+        for pref in prefs:
+            if not pref.revision:
+                prevs = self.get_package_revisions_references(pref)
+            else:
+                prevs = [pref]
+            for prev in prevs:
+                url = self.router.remove_package(prev)
+                response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
+                                                 verify=self.verify_ssl)
                 if response.status_code == 404:
-                    # Double check if it is a 404 because there are no packages
-                    try:
-                        package_search_url = self.router.search_packages(ref)
-                        if not self.get_json(package_search_url):
-                            return
-                    except Exception as e:
-                        logger.warning("Unexpected error searching {} packages"
-                                       " in remote {}: {}".format(ref, self.remote_url, e))
+                    raise PackageNotFoundException(pref)
                 if response.status_code != 200:  # Error message is text
                     # To be able to access ret.text (ret.content are bytes)
                     response.charset = "utf-8"
                     raise get_exception_from_error(response.status_code)(response.text)
-            else:
-                for pid in package_ids:
-                    pref = PackageReference(ref, pid)
-                    revisions = self.get_package_revisions(pref)
-                    prefs = [pref.copy_with_revs(ref.revision, rev["revision"])
-                             for rev in revisions]
-                    for pref in prefs:
-                        url = self.router.remove_package(pref)
-                        response = self.requester.delete(url, auth=self.auth,
-                                                         headers=self.custom_headers,
-                                                         verify=self.verify_ssl)
-                        if response.status_code == 404:
-                            raise PackageNotFoundException(pref)
-                        if response.status_code != 200:  # Error message is text
-                            # To be able to access ret.text (ret.content are bytes)
-                            response.charset = "utf-8"
-                            raise get_exception_from_error(response.status_code)(response.text)
 
-    def remove_conanfile(self, ref):
+    def remove_recipe(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
         if ref.revision is None:
             # Remove all the RREVs
-            revisions = self.get_recipe_revisions(ref)
-            refs = [ref.copy_with_rev(rev["revision"]) for rev in revisions]
+            refs = self.get_recipe_revisions_references(ref)
         else:
             refs = [ref]
 
         for ref in refs:
             url = self.router.remove_recipe(ref)
-            logger.debug("REST: remove: %s" % url)
             response = self.requester.delete(url, auth=self.auth, headers=self.custom_headers,
                                              verify=self.verify_ssl)
             if response.status_code == 404:
@@ -305,36 +242,73 @@ class RestV2Methods(RestCommonMethods):
                 response.charset = "utf-8"
                 raise get_exception_from_error(response.status_code)(response.text)
 
-    def get_recipe_revisions(self, ref):
+    def get_recipe_revision_reference(self, ref):
+        # FIXME: implement this new endpoint in the remotes?
+        assert ref.revision, "recipe_exists has to be called with a complete reference"
+        ref_without_rev = copy.copy(ref)
+        ref_without_rev.revision = None
+        try:
+            remote_refs = self.get_recipe_revisions_references(ref_without_rev)
+        except NotFoundException:
+            raise RecipeNotFoundException(ref)
+        for r in remote_refs:
+            if r == ref:
+                return r
+        raise RecipeNotFoundException(ref)
+
+    def get_package_revision_reference(self, pref):
+        # FIXME: implement this endpoint in the remotes?
+        assert pref.revision, "get_package_revision_reference has to be called with a complete reference"
+        pref_without_rev = copy.copy(pref)
+        pref_without_rev.revision = None
+        try:
+            remote_prefs = self.get_package_revisions_references(pref_without_rev)
+        except NotFoundException:
+            raise PackageNotFoundException(pref)
+        for p in remote_prefs:
+            if p == pref:
+                return p
+        raise PackageNotFoundException(pref)
+
+    def get_recipe_revisions_references(self, ref):
         url = self.router.recipe_revisions(ref)
         tmp = self.get_json(url)["revisions"]
-        if ref.revision:
-            for r in tmp:
-                if r["revision"] == ref.revision:
-                    return [r]
-            raise RecipeNotFoundException(ref, print_rev=True)
-        return tmp
+        remote_refs = []
+        for item in tmp:
+            _tmp = copy.copy(ref)
+            _tmp.revision = item.get("revision")
+            _tmp.timestamp = from_iso8601_to_timestamp(item.get("time"))
+            remote_refs.append(_tmp)
 
-    def get_package_revisions(self, pref):
-        url = self.router.package_revisions(pref)
-        tmp = self.get_json(url)["revisions"]
-        if pref.revision:
-            for r in tmp:
-                if r["revision"] == pref.revision:
-                    return [r]
-            raise PackageNotFoundException(pref, print_rev=True)
-        return tmp
+        if ref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
+            assert "This shoudln't be happening, get_recipe_revisions_references"
+        return remote_refs
 
-    def get_latest_recipe_revision(self, ref):
+    def get_latest_recipe_reference(self, ref):
         url = self.router.recipe_latest(ref)
         data = self.get_json(url)
-        rev = data["revision"]
-        # Ignored data["time"]
-        return ref.copy_with_rev(rev)
+        remote_ref = copy.copy(ref)
+        remote_ref.revision = data.get("revision")
+        remote_ref.timestamp = from_iso8601_to_timestamp(data.get("time"))
+        return remote_ref
 
-    def get_latest_package_revision(self, pref, headers):
+    def get_package_revisions_references(self, pref, headers=None):
+        url = self.router.package_revisions(pref)
+        tmp = self.get_json(url, headers=headers)["revisions"]
+        remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
+                        from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
+
+        if pref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
+            for _pref in remote_prefs:
+                if _pref.revision == pref.revision:
+                    return [_pref]
+            raise PackageNotFoundException(pref)
+        return remote_prefs
+
+    def get_latest_package_reference(self, pref: PkgReference, headers):
         url = self.router.package_latest(pref)
         data = self.get_json(url, headers=headers)
-        prev = data["revision"]
-        # Ignored data["time"]
-        return pref.copy_with_revs(pref.ref.revision, prev)
+        remote_pref = copy.copy(pref)
+        remote_pref.revision = data.get("revision")
+        remote_pref.timestamp = from_iso8601_to_timestamp(data.get("time"))
+        return remote_pref

@@ -8,10 +8,11 @@ import pytest
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
 from conans.client.subsystems import WINDOWS
-from conans.client.tools import chdir, environment_append
+from conans.model.recipe_ref import RecipeReference
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conans.util.env import environment_update
+from conans.util.files import save, chdir
 
 
 def test_compose():
@@ -88,7 +89,7 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
         env2.unset("MyVar")
     env.compose_env(env2)
     env = env.vars(ConanFileMock())
-    with environment_append({"MyVar": "MyVar"}):
+    with environment_update({"MyVar": "MyVar"}):
         assert env.get("MyVar") == result
     assert env._values["MyVar"].get_str("{name}", None, None) == result
 
@@ -159,9 +160,9 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_profile_env("")
+    env = profile_env.get_profile_env("", is_consumer=True)
     env = env.vars(ConanFileMock())
-    with environment_append({"MyVar1": "$MyVar1",
+    with environment_update({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",
                              "MyVar3": "$MyVar3",
                              "MyVar4": "$MyVar4"}):
@@ -171,7 +172,7 @@ def test_profile():
         assert env.get("MyVar4") == ""
         assert env.get("MyVar5") == ''
 
-        env = profile_env.get_profile_env("mypkg1/1.0")
+        env = profile_env.get_profile_env(RecipeReference.loads("mypkg1/1.0"))
         env = env.vars(ConanFileMock())
         assert env.get("MyVar1") == "MyValue1"
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
@@ -187,7 +188,9 @@ def env():
     env.append("MYVAR1", "MyValue1B")
     env.define("MyVar2", "MyNewValue2")
 
-    env = env.vars(ConanFileMock())
+    conanfile = ConanFileMock()
+    conanfile.settings_build = MockSettings({"os": "Windows", "arch": "x86_64"})
+    env = env.vars(conanfile)
     env._subsystem = WINDOWS
 
     return env
@@ -284,10 +287,11 @@ def test_dict_access():
     old_env = dict(os.environ)
     os.environ.update({"MyVar": "PreviousValue"})
     env_vars = env.vars(ConanFileMock())
+    env_vars._subsystem = WINDOWS
     try:
-        assert env_vars["MyVar"] == "PreviousValue{}MyValue".format(os.pathsep)
+        assert env_vars["MyVar"] == "PreviousValue;MyValue"
         with env_vars.apply():
-            assert os.getenv("MyVar") == "PreviousValue{}MyValue".format(os.pathsep)
+            assert os.getenv("MyVar") == "PreviousValue;MyValue"
     finally:
         os.environ.clear()
         os.environ.update(old_env)
@@ -322,11 +326,12 @@ def test_public_access():
     env.define_path("MyPath", "c:/path/to/something")
     env.append_path("MyPath", "D:/Otherpath")
     env_vars = env.vars(ConanFileMock())
+    env_vars._subsystem = WINDOWS
     for name, values in env_vars.items():
         if name == "MyVar":
             assert values == "MyValue MyValue2"
         if name == "MyPath":
-            assert values == "c:/path/to/something{}D:/Otherpath".format(os.pathsep)
+            assert values == "c:/path/to/something;D:/Otherpath"
 
     env.remove("MyPath", "D:/Otherpath")
     assert env_vars.get("MyPath") == "c:/path/to/something"
@@ -418,6 +423,6 @@ def test_custom_placeholder():
     env.append_path("MyVar", "MyValue")
     env = env.vars(ConanFileMock())
     assert env.get("MyVar", variable_reference="$penv{{{name}}}") == \
-           f"$penv{{MyVar}}{os.pathsep}MyValue"
+           f"$penv{{MyVar}}:MyValue"
     items = {k: v for k, v in env.items(variable_reference="$penv{{{name}}}")}
-    assert  items == {"MyVar": f"$penv{{MyVar}}{os.pathsep}MyValue"}
+    assert items == {"MyVar": f"$penv{{MyVar}}:MyValue"}

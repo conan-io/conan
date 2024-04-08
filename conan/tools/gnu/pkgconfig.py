@@ -1,15 +1,19 @@
-import subprocess
+from io import StringIO
 
+from conan.tools.build import cmd_args_to_string
 from conan.tools.env import Environment
-from conans.errors import ConanException
-from conans.util.runners import check_output_runner
+from conan.errors import ConanException
 
 
 class PkgConfig:
 
     def __init__(self, conanfile, library, pkg_config_path=None):
         """
-        :param library: library (package) name, such as libastral
+
+        :param conanfile: The current recipe object. Always use ``self``.
+        :param library: The library which ``.pc`` file is to be parsed. It must exist in the pkg_config path.
+        :param pkg_config_path:  If defined it will be prepended to ``PKG_CONFIG_PATH`` environment
+               variable, so the execution finds the required files.
         """
         self._conanfile = conanfile
         self._library = library
@@ -19,15 +23,17 @@ class PkgConfig:
 
     def _parse_output(self, option):
         executable = self._conanfile.conf.get("tools.gnu:pkg_config", default="pkg-config")
-        command = [executable, '--' + option, self._library, '--print-errors']
-        try:
-            env = Environment()
-            if self._pkg_config_path:
-                env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
-            with env.vars(self._conanfile).apply():
-                return check_output_runner(command).strip()
-        except subprocess.CalledProcessError as e:
-            raise ConanException('pkg-config command %s failed with error: %s' % (command, e))
+        command = cmd_args_to_string([executable, '--' + option, self._library, '--print-errors'])
+
+        env = Environment()
+        if self._pkg_config_path:
+            env.prepend_path("PKG_CONFIG_PATH", self._pkg_config_path)
+        with env.vars(self._conanfile).apply():
+            # This way we get the environment from ConanFile, from profile (default buildenv)
+            output = StringIO()
+            self._conanfile.run(command, stdout=output, quiet=True)
+        value = output.getvalue().strip()
+        return value
 
     def _get_option(self, option):
         if option not in self._info:
@@ -78,8 +84,17 @@ class PkgConfig:
         return self._variables
 
     def fill_cpp_info(self, cpp_info, is_system=True, system_libs=None):
+        """
+        Method to fill a cpp_info object from the PkgConfig configuration
+
+        :param cpp_info: Can be the global one (self.cpp_info) or a component one (self.components["foo"].cpp_info).
+        :param is_system: If ``True``, all detected libraries will be assigned to ``cpp_info.system_libs``, and none to ``cpp_info.libs``.
+        :param system_libs: If ``True``, all detected libraries will be assigned to ``cpp_info.system_libs``, and none to ``cpp_info.libs``.
+
+        """
         if not self.provides:
             raise ConanException("PkgConfig error, '{}' files not available".format(self._library))
+        self._conanfile.output.verbose(f"PkgConfig fill cpp_info for {self._library}")
         if is_system:
             cpp_info.system_libs = self.libs
         else:

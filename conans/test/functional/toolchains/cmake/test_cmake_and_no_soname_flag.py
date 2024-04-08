@@ -1,137 +1,72 @@
+import os
 import platform
-import textwrap
+import shutil
 
 import pytest
 
-from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conan.tools.env.environment import environment_wrap_command
+from conan.tools.files import replace_in_file
+from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
-@pytest.mark.tool_cmake
-def test_no_soname_flag():
+@pytest.mark.tool("cmake")
+@pytest.mark.parametrize("nosoname_property", [
+    True,  # without SONAME
+    False  # By default, with SONAME
+])
+def test_no_soname_flag(nosoname_property):
     """ This test case is testing this graph structure:
-            *   'LibNoSoname' -> 'OtherLib' -> 'Executable'
+            *   'Executable' -> 'LibB' -> 'LibNoSoname'
         Where:
             *   LibNoSoname: is a package built as shared and without the SONAME flag.
-            *   OtherLib: is a package which requires LibNoSoname.
+            *   LibB: is a package which requires LibNoSoname.
             *   Executable: is the final consumer building an application and depending on OtherLib.
+        How:
+            1- Creates LibNoSoname and upload it to remote server
+            2- Creates LibB and upload it to remote server
+            3- Remove the Conan cache folder
+            4- Creates an application and consume LibB
+        Goal:
+            * If `self.cpp_info.set_property("nosoname", True), then the `Executable` runs OK.
+            * If `self.cpp_info.set_property("nosoname", False), then the `Executable` fails.
     """
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-    from conans import ConanFile
-    from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+    client = TestClient(default_server_user=True)
+    # Creating nosoname/0.1 library
+    client.save(pkg_cmake("nosoname", "0.1"))
+    replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "conanfile.py"),
+                    'self.cpp_info.libs = ["nosoname"]',
+                    f'self.cpp_info.libs = ["nosoname"]\n        self.cpp_info.set_property("nosoname", {nosoname_property})')
+    replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakeLists.txt"),
+                    'target_include_directories(nosoname PUBLIC "include")',
+                    'target_include_directories(nosoname PUBLIC "include")\nset_target_properties(nosoname PROPERTIES NO_SONAME 1)')
+    client.run("create . -o nosoname/*:shared=True")
+    # Creating lib_b/0.1 library (depends on nosoname/0.1)
+    client.save(pkg_cmake("lib_b", "0.1", requires=["nosoname/0.1"]), clean_first=True)
+    client.run("create . -o lib_b/*:shared=True -o nosoname/*:shared=True")
+    # Creating app/0.1 application (depends on lib_b/0.1)
+    client.save(pkg_cmake_app("app", "0.1", requires=["lib_b/0.1"]), clean_first=True)
+    client.run("create . -o nosoname/*:shared=True -o lib_b/*:shared=True")
+    client.run("upload * -c -r default")
+    # Removing everything from the .conan2/p to ensure that we don't have anything saved in the cache
+    shutil.rmtree(client.cache.store)
 
-    class {name}Conan(ConanFile):
-        name = "{name}"
-        version = "1.0"
+    client = TestClient(servers=client.servers)
+    client.run("install --requires=app/0.1@ -o nosoname*:shared=True -o lib_b/*:shared=True -g VirtualRunEnv")
+    # This only finds "app" executable because the "app/0.1" is declaring package_type="application"
+    # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
+    command = environment_wrap_command("conanrun", client.current_folder, "app")
 
-        # Binary configuration
-        settings = "os", "compiler", "build_type", "arch"
-        options = {{"shared": [True, False], "fPIC": [True, False]}}
-        default_options = {{"shared": True, "fPIC": True}}
-
-        # Sources are located in the same place as this recipe, copy them to the recipe
-        exports_sources = "CMakeLists.txt", "src/*"
-        {generators}
-        {requires}
-
-        def config_options(self):
-            if self.settings.os == "Windows":
-                del self.options.fPIC
-
-        def layout(self):
-            cmake_layout(self)
-
-        def generate(self):
-            tc = CMakeToolchain(self)
-            tc.generate()
-
-        def build(self):
-            cmake = CMake(self)
-            cmake.configure()
-            cmake.build()
-
-        def package(self):
-            cmake = CMake(self)
-            cmake.install()
-
-        def package_info(self):
-            self.cpp_info.libs = ["{name}"]
-    """)
-    cmakelists_nosoname = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(nosoname CXX)
-
-        add_library(nosoname SHARED src/nosoname.cpp)
-
-        # Adding NO_SONAME flag to main library
-        set_target_properties(nosoname PROPERTIES PUBLIC_HEADER "src/nosoname.h" NO_SONAME 1)
-        install(TARGETS nosoname DESTINATION "."
-                PUBLIC_HEADER DESTINATION include
-                RUNTIME DESTINATION bin
-                ARCHIVE DESTINATION lib
-                LIBRARY DESTINATION lib
-                )
-    """)
-    cpp = gen_function_cpp(name="nosoname")
-    h = gen_function_h(name="nosoname")
-    client.save({"CMakeLists.txt": cmakelists_nosoname,
-                 "src/nosoname.cpp": cpp,
-                 "src/nosoname.h": h,
-                 "conanfile.py": conanfile.format(name="nosoname", requires="", generators="")})
-    # Now, let's create both libraries
-    client.run("create .")
-    cmakelists_libB = textwrap.dedent("""
-    cmake_minimum_required(VERSION 3.15)
-    project(libB CXX)
-
-    find_package(nosoname CONFIG REQUIRED)
-
-    add_library(libB SHARED src/libB.cpp)
-    target_link_libraries(libB nosoname::nosoname)
-
-    set_target_properties(libB PROPERTIES PUBLIC_HEADER "src/libB.h")
-    install(TARGETS libB DESTINATION "."
-            PUBLIC_HEADER DESTINATION include
-            RUNTIME DESTINATION bin
-            ARCHIVE DESTINATION lib
-            LIBRARY DESTINATION lib
-            )
-    """)
-    cpp = gen_function_cpp(name="libB", includes=["nosoname"], calls=["nosoname"])
-    h = gen_function_h(name="libB")
-    client.save({"CMakeLists.txt": cmakelists_libB,
-                 "src/libB.cpp": cpp,
-                 "src/libB.h": h,
-                 "conanfile.py": conanfile.format(name="libB", requires='requires = "nosoname/1.0"',
-                                                  generators='generators = "CMakeDeps"')},
-                clean_first=True)
-    # Now, let's create both libraries
-    client.run("create .")
-    # Now, let's create the application consuming libB
-    cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(PackageTest CXX)
-
-        find_package(libB CONFIG REQUIRED)
-
-        add_executable(example src/example.cpp)
-        target_link_libraries(example libB::libB)
-    """)
-    conanfile = textwrap.dedent("""
-        [requires]
-        libB/1.0
-
-        [generators]
-        CMakeDeps
-        CMakeToolchain
-    """)
-    cpp = gen_function_cpp(name="main", includes=["libB"], calls=["libB"])
-    client.save({"CMakeLists.txt": cmakelists.format(current_folder=client.current_folder),
-                 "src/example.cpp": cpp,
-                 "conanfile.txt": conanfile},
-                clean_first=True)
-    client.run('install . ')
-    client.run_command('cmake -G "Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="./conan_toolchain.cmake" .'
-                       ' -DCMAKE_BUILD_TYPE=Release && cmake --build . && ./example')
+    # If `nosoname_property` is False, and we have a library without the SONAME flag,
+    # then it should fail
+    if nosoname_property is False:
+        with pytest.raises(Exception, match=r"libnosoname.so: cannot open shared object "
+                                            r"file: No such file or directory"):
+            client.run_command(command)
+    else:
+        client.run_command(command)
+        assert "main: Release!" in client.out
+        assert "lib_b: Release!" in client.out
+        assert "nosoname: Release!" in client.out

@@ -23,16 +23,25 @@ class ConanFileInterface:
     def __hash__(self):
         return hash(self._conanfile)
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
+    @property
+    def options(self):
+        return self._conanfile.options
 
     @property
     def recipe_folder(self):
         return self._conanfile.recipe_folder
 
     @property
+    def recipe_metadata_folder(self):
+        return self._conanfile.recipe_metadata_folder
+
+    @property
     def package_folder(self):
         return self._conanfile.package_folder
+
+    @property
+    def package_metadata_folder(self):
+        return self._conanfile.package_metadata_folder
 
     @property
     def package_path(self) -> Path:
@@ -57,7 +66,7 @@ class ConanFileInterface:
 
     @property
     def cpp_info(self):
-        return self._conanfile.new_cpp_info
+        return self._conanfile.cpp_info
 
     @property
     def settings(self):
@@ -66,10 +75,6 @@ class ConanFileInterface:
     @property
     def settings_build(self):
         return self._conanfile.settings_build
-
-    @property
-    def options(self):
-        return self._conanfile.options
 
     @property
     def context(self):
@@ -84,8 +89,23 @@ class ConanFileInterface:
         return self._conanfile.dependencies
 
     @property
+    def folders(self):
+        return self._conanfile.folders
+
+    @property
     def is_build_context(self):
         return self._conanfile.context == CONTEXT_BUILD
+
+    @property
+    def package_type(self):
+        return self._conanfile.package_type
+
+    @property
+    def info(self):
+        return self._conanfile.info
+
+    def set_deploy_folder(self, deploy_folder):
+        self._conanfile.set_deploy_folder(deploy_folder)
 
     @property
     def conan_data(self):

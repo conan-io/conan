@@ -1,8 +1,8 @@
-from conans.model.build_info import _CppInfo
+from conans.model.build_info import CppInfo
 
 
 def test_set_get_properties():
-    cpp_info = _CppInfo()
+    cpp_info = CppInfo()
 
     assert not cpp_info.get_property("my_property")
 

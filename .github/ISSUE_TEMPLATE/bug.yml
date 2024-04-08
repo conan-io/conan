@@ -1,0 +1,23 @@
+name: Bug Report
+description: Report a bug, something does not work as it's supposed to
+title: '[bug]'
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: Include the bug description and environment details
+      placeholder: |
+        Environment details: OS, compiler, Conan version, Conan profiles, etc.
+        Description: xxxx
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      description: It would be great to know how to reproduce it locally
+      placeholder: |
+        Commands to reproduce it, remote repository to use it locally, etc. Every detail is more than welcome!
+    validations:
+      required: false

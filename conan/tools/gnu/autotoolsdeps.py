@@ -1,25 +1,24 @@
-from conan.tools._check_build_profile import check_using_build_profile
+from conan.internal import check_duplicated_generator
+from conan.tools import CppInfo
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
-from conans.model.new_build_info import NewCppInfo
 
 
 class AutotoolsDeps:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._environment = None
-        self._ordered_deps = []
-        check_using_build_profile(self._conanfile)
+        self._ordered_deps = None
 
     @property
     def ordered_deps(self):
-        if not self._ordered_deps:
+        if self._ordered_deps is None:
             deps = self._conanfile.dependencies.host.topological_sort
             self._ordered_deps = [dep for dep in reversed(deps.values())]
         return self._ordered_deps
 
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo(self._conanfile)
         for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             # In case we have components, aggregate them, we do not support isolated
@@ -36,7 +35,11 @@ class AutotoolsDeps:
 
     @property
     def environment(self):
-        # TODO: Seems we want to make this uniform, equal to other generators
+        """
+
+        :return: An ``Environment`` object containing the computed variables. If you need
+                 to modify some of the computed values you can access to the ``environment`` object.
+        """
         if self._environment is None:
             flags = GnuDepsFlags(self._conanfile, self._get_cpp_info())
 
@@ -52,7 +55,7 @@ class AutotoolsDeps:
             ldflags.extend(flags.framework_paths)
             ldflags.extend(flags.lib_paths)
 
-            ## set the rpath in Macos so that the library are found in the configure step
+            # set the rpath in Macos so that the library are found in the configure step
             if self._conanfile.settings.get_safe("os") == "Macos":
                 ldflags.extend(self._rpaths_flags())
 
@@ -77,4 +80,5 @@ class AutotoolsDeps:
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self,  scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conanautotoolsdeps")

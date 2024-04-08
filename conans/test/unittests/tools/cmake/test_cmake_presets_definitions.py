@@ -1,24 +1,21 @@
 import pytest
 from mock import mock
-from mock.mock import Mock
 
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
-from conan.tools.files.files import save_toolchain_args
-from conans import ConanFile, Settings
+from conans.model.conan_file import ConanFile
 from conans.model.conf import Conf
-from conans.model.env_info import EnvValues
+from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 
 
 @pytest.fixture(scope="module")
 def conanfile():
-    c = ConanFile(Mock(), None)
-    c.settings = "os", "compiler", "build_type", "arch"
-    c.initialize(Settings({"os": ["Windows"],
+    c = ConanFile("")
+    c.settings = Settings({"os": ["Windows"],
                            "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
-                           "arch": ["x86"]}), EnvValues())
+                           "arch": ["x86"]})
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.settings.compiler = "gcc"
@@ -32,8 +29,19 @@ def conanfile():
     return c
 
 
+def test_cmake_cmake_program(conanfile):
+    mycmake = "C:\\mycmake.exe"
+    conanfile.conf.define("tools.cmake:cmake_program", mycmake)
+
+    with mock.patch("platform.system", mock.MagicMock(return_value='Windows')):
+        write_cmake_presets(conanfile, "the_toolchain.cmake", "MinGW Makefiles", {})
+
+    cmake = CMake(conanfile)
+    assert cmake._cmake_program == mycmake
+
+
 def test_cmake_make_program(conanfile):
-    def run(command):
+    def run(command, **kwargs):
         assert '-DCMAKE_MAKE_PROGRAM="C:/mymake.exe"' in command
 
     conanfile.run = run
@@ -44,4 +52,3 @@ def test_cmake_make_program(conanfile):
 
     cmake = CMake(conanfile)
     cmake.configure()
-
