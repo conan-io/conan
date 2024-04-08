@@ -197,13 +197,15 @@ class Git:
         folder = self.run("rev-parse --show-toplevel")
         return folder.replace("\\", "/")
 
-    def clone(self, url, target="", args=None):
+    def clone(self, url, target="", args=None, hide_url=True):
         """
         Performs a ``git clone <url> <args> <target>`` operation, where target is the target directory.
 
         :param url: URL of remote repository.
         :param target: Target folder.
         :param args: Extra arguments to pass to the git clone as a list.
+        :param hide_url: Hides the URL from the log output to prevent accidental
+                     credential leaks. Can be disabled by passing ``False``.
         """
         args = args or []
         if os.path.exists(url):
@@ -212,18 +214,24 @@ class Git:
         self._conanfile.output.info("Cloning git repo")
         target_path = f'"{target}"' if target else ""  # quote in case there are spaces in path
         # Avoid printing the clone command, it can contain tokens
-        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path), hidden_output=url)
+        self.run('clone "{}" {} {}'.format(url, " ".join(args), target_path),
+                 hidden_output=url if hide_url else None)
 
-    def fetch_commit(self, url, commit):
+    def fetch_commit(self, url, commit, hide_url=True):
         """
-        Experimental: does a 1 commit fetch and checkout, instead of a full clone,
+        Experimental: does a single commit fetch and checkout, instead of a full clone,
         should be faster.
+
+        :param url: URL of remote repository.
+        :param commit: The commit ref to checkout.
+        :param hide_url: Hides the URL from the log output to prevent accidental
+                     credential leaks. Can be disabled by passing ``False``.
         """
         if os.path.exists(url):
             url = url.replace("\\", "/")  # Windows local directory
         self._conanfile.output.info("Shallow fetch of git repo")
         self.run('init')
-        self.run(f'remote add origin "{url}"', hidden_output=url)
+        self.run(f'remote add origin "{url}"', hidden_output=url if hide_url else None)
         self.run(f'fetch --depth 1 origin {commit}')
         self.run('checkout FETCH_HEAD')
 
