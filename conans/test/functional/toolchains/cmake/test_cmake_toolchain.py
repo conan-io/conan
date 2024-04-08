@@ -1466,7 +1466,7 @@ def test_check_c_source_compiles():
             def generate(self):
                 tc = CMakeDeps(self)
                 tc.cmake_required_includes = ["dep"]
-                tc.cmake_required_libs = ["dep"]
+                # tc.cmake_required_libs = ["dep"]
                 tc.generate()
         """)
 

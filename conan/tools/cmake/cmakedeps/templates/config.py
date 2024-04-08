@@ -26,7 +26,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
-        cmake_required_inc = self.filename in getattr(self.cmakedeps, "cmake_required_includes", [])
+        cmake_required_inc = self.file_name in getattr(self.cmakedeps, "cmake_required_includes", [])
         return {"is_module": self.generating_module,
                 "version": self.conanfile.ref.version,
                 "file_name": self.file_name,
