@@ -353,83 +353,53 @@ def test_find_builddirs():
         assert "/path/to/builddir" in contents
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
-def test_lib_dirs_windows():
+@pytest.fixture
+def lib_dir_setup():
     client = TestClient()
     conanfile = textwrap.dedent("""
-        from conan import ConanFile
+            from conan import ConanFile
 
-        class Conan(ConanFile):
+            class Conan(ConanFile):
 
-            def package_info(self):
-                self.cpp_info.builddirs = ["/path/to/builddir"]
-        """)
+                def package_info(self):
+                    self.cpp_info.builddirs = ["/path/to/builddir"]
+            """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=dep --version=1.0")
 
-    conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import CMakeToolchain
-
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                requires = "dep/1.0@"
-
-                def generate(self):
-                    cmake = CMakeToolchain(self)
-                    cmake.generate()
-            """)
+    conanfile = (GenConanfile().with_requires("dep/1.0").with_generator("CMakeToolchain")
+                 .with_settings("os", "arch", "compiler", "build_type"))
 
     client.save({"conanfile.py": conanfile})
     client.run("install . ")
-    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
-        contents = f.read()
-        pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*?)"\)'
-        pattern_lib_dirs = r'list\(PREPEND CONAN_RUNTIME_LIB_DIRS "(.*?)"\)'
-        lib_path_group = re.search(pattern_lib_path, contents).groups()
-        lib_dirs_group = re.search(pattern_lib_dirs, contents).groups()
+    return client
 
-        assert len(lib_path_group) == len(lib_dirs_group)
-        assert all(lib_dir[-3:] == "bin" for lib_dir in lib_dirs_group)
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows")
+def test_lib_dirs_windows(lib_dir_setup):
+    client = lib_dir_setup
+
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*?)"\)'
+    pattern_lib_dirs = r'list\(PREPEND CONAN_RUNTIME_LIB_DIRS "(.*?)"\)'
+    lib_path_group = re.search(pattern_lib_path, contents).groups()
+    lib_dirs_group = re.search(pattern_lib_dirs, contents).groups()
+
+    assert len(lib_path_group) == len(lib_dirs_group)
+    assert all(lib_dir[-3:] == "bin" for lib_dir in lib_dirs_group)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Only Linux and OSX")
-def test_lib_dirs_no_windows():
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
+def test_lib_dirs_no_windows(lib_dir_setup):
+    client = lib_dir_setup
 
-        class Conan(ConanFile):
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
+    pattern_lib_dirs = r'list\(PREPEND CONAN_RUNTIME_LIB_DIRS (.*)\)'
+    lib_path = re.search(pattern_lib_path, contents).group(1)
+    lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
 
-            def package_info(self):
-                self.cpp_info.builddirs = ["/path/to/builddir"]
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create . --name=dep --version=1.0")
-
-    conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.cmake import CMakeToolchain
-
-            class Conan(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                requires = "dep/1.0@"
-
-                def generate(self):
-                    cmake = CMakeToolchain(self)
-                    cmake.generate()
-            """)
-
-    client.save({"conanfile.py": conanfile})
-    client.run("install . ")
-    with open(os.path.join(client.current_folder, "conan_toolchain.cmake")) as f:
-        contents = f.read()
-        pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
-        pattern_lib_dirs = r'list\(PREPEND CONAN_RUNTIME_LIB_DIRS (.*)\)'
-        lib_path = re.search(pattern_lib_path, contents).group(1)
-        lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
-
-        assert lib_path == lib_dirs
+    assert lib_path == lib_dirs
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")

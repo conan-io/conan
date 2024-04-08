@@ -480,8 +480,8 @@ class FindFiles(Block):
         {% if cmake_include_path %}
         list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
-        {% if lib_dirs %}
-        list(PREPEND CONAN_RUNTIME_LIB_DIRS {{ lib_dirs }})
+        {% if host_lib_dirs %}
+        list(PREPEND CONAN_RUNTIME_LIB_DIRS {{ host_lib_dirs }})
         {% endif %}
 
         {% if cross_building %}
@@ -561,7 +561,7 @@ class FindFiles(Block):
             "cmake_include_path": self._join_paths(host_include_paths),
             "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
-            "lib_dirs": self._join_paths(host_lib_dirs)
+            "host_lib_dirs": self._join_paths(host_lib_dirs)
         }
 
 
