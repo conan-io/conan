@@ -86,6 +86,32 @@ class TestConanToolFiles:
         client.save({"profile": profile})
         client.run("create . -pr=profile")
 
+    def test_download_export_sources(self):
+        client = TestClient(light=True)
+        file_server = TestFileServer()
+        client.servers["file_server"] = file_server
+        save(os.path.join(file_server.store, "myfile.txt"), "some content")
+        save(os.path.join(file_server.store, "myfile2.txt"), "some content")
+
+        conanfile = textwrap.dedent(f"""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import download
+
+            class Pkg(ConanFile):
+                name = "mypkg"
+                version = "1.0"
+                def export(self):
+                    download(self, "{file_server.fake_url}/myfile.txt", "myfile.txt")
+                    assert os.path.exists("myfile.txt")
+                def export_sources(self):
+                    download(self, "{file_server.fake_url}/myfile2.txt", "myfile2.txt")
+                    assert os.path.exists("myfile2.txt")
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("create .")
+
 
 def test_patch(mock_patch_ng):
     conanfile = textwrap.dedent("""
