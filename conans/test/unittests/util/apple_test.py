@@ -9,6 +9,7 @@ import pytest
 
 from conan.tools.apple.apple import _to_apple_arch, apple_min_version_flag, \
     is_apple_os, XCRun
+from conans.errors import ConanException
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.util.runners import conan_run
 
@@ -35,24 +36,34 @@ class FakeSettings(object):
 
 
 class TestApple:
-    @pytest.mark.parametrize("os_, version, sdk, subsystem, flag",
-                             [("Macos", "10.1", "macosx", None, '-mmacosx-version-min=10.1'),
-                              ("iOS", "10.1", "iphoneos", None, '-mios-version-min=10.1'),
+    @pytest.mark.parametrize("os_, version, sdk, subsystem, flag, exc_expected",
+                             [("Macos", "10.1", "macosx", None, '-mmacosx-version-min=10.1', False),
+                              ("iOS", "10.1", "iphoneos", None, '-mios-version-min=10.1', False),
                               ("iOS", "10.1", "iphonesimulator", None,
-                               '-mios-simulator-version-min=10.1'),
-                              ("watchOS", "10.1", "watchos", None, '-mwatchos-version-min=10.1'),
+                               '-mios-simulator-version-min=10.1', False),
+                              ("watchOS", "10.1", "watchos", None, '-mwatchos-version-min=10.1', False),
                               ("watchOS", "10.1", "watchsimulator", None,
-                               '-mwatchos-simulator-version-min=10.1'),
-                              ("tvOS", "10.1", "appletvos", None, '-mtvos-version-min=10.1'),
+                               '-mwatchos-simulator-version-min=10.1', False),
+                              ("tvOS", "10.1", "appletvos", None, '-mtvos-version-min=10.1', False),
                               ("tvOS", "10.1", "appletvsimulator", None,
-                               '-mtvos-simulator-version-min=10.1'),
-                              ("Macos", "10.1", "macosx", "catalyst", '-mios-version-min=10.1'),
-                              ("Solaris", "10.1", None, None, ''),
-                              ("Macos", "10.1", None, None, ''),
-                              ("Macos", None, "macosx", None, '')
+                               '-mtvos-simulator-version-min=10.1', False),
+                              ("Macos", "10.1", "macosx", "catalyst", '-mios-version-min=10.1', False),
+                              ("Solaris", "10.1", None, None, '', True),
+                              ("Macos", "10.1", None, None, '-mmacosx-version-min=10.1', False),
+                              ("Macos", None, "macosx", None, '', True)
                               ])
-    def test_deployment_target_flag_name(self, os_, version, sdk, subsystem, flag):
-        assert apple_min_version_flag(version, sdk, subsystem) == flag
+    def test_deployment_target_flag_name(self, os_, version, sdk, subsystem, flag, exc_expected):
+        conanfile = ConanFileMock()
+        settings = MockSettings({"os": os_,
+                                 "os.version": version,
+                                 "os.sdk": sdk,
+                                 "os.subsystem": subsystem})
+        conanfile.settings = settings
+        if exc_expected:
+            with pytest.raises(ConanException):
+                apple_min_version_flag(conanfile)
+        else:
+            assert apple_min_version_flag(conanfile) == flag
 
 
 class AppleTest(unittest.TestCase):

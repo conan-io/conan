@@ -67,25 +67,22 @@ def apple_min_version_flag(conanfile):
     os_sdk = conanfile.settings.get_safe('os.sdk')
     os_sdk = os_sdk or ("macosx" if os_ == "Macos" else None)
     os_version = conanfile.settings.get_safe("os.version")
-    subsystem = conanfile.settings.get_safe("os.subsystem")
     if os_sdk is None or not os_version:
         raise ConanException("Please, specify a suitable value for os.sdk")
-    flag = {
-        "macosx": "-mmacosx-version-min",
-        "iphoneos": "-mios-version-min",
-        "iphonesimulator": "-mios-simulator-version-min",
-        "watchos": "-mwatchos-version-min",
-        "watchsimulator": "-mwatchos-simulator-version-min",
-        "appletvos": "-mtvos-version-min",
-        "appletvsimulator": "-mtvos-simulator-version-min",
-        # need early return as string did not fit into the "normal" schema
+    # especial case, despite Catalyst is macOS, it requires an iOS version argument
+    if conanfile.settings.get_safe("os.subsystem") == 'catalyst':
+        os_sdk = "iphoneos"
+    return {
+        "macosx": f"-mmacosx-version-min={os_version}",
+        "iphoneos": f"-mios-version-min={os_version}",
+        "iphonesimulator": f"-mios-simulator-version-min={os_version}",
+        "watchos": f"-mwatchos-version-min={os_version}",
+        "watchsimulator": f"-mwatchos-simulator-version-min={os_version}",
+        "appletvos": f"-mtvos-version-min={os_version}",
+        "appletvsimulator": f"-mtvos-simulator-version-min={os_version}",
         "xros": f"-target arm64-apple-xros{os_version}",
-        # need early return as string did not fit into the "normal" schema
         "xrsimulator": f"-target arm64-apple-xros{os_version}-simulator",
-    }.get(os_sdk,
-          # especial case, despite Catalyst is macOS, it requires an iOS version argument
-          '-mios-version-min' if subsystem == 'catalyst' else '')
-    return f"{flag}={os_version}" if flag else ''
+    }.get(os_sdk, "")
 
 
 def resolve_apple_flags(conanfile, is_cross_building=False):
