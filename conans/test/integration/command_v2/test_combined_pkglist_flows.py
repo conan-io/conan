@@ -180,6 +180,7 @@ class TestPkgListFindRemote:
         c.run("create zlib")
         c.run("create app ")
         c.run("upload zlib* -c -r=default")
+        c.run("upload zlib* -c -r=remote2")
         c.run("upload app* -c -r=remote2")
 
         # This install, packages will be in the cache
@@ -197,8 +198,9 @@ class TestPkgListFindRemote:
         assert "Local Cache" not in pkglist
         assert len(pkglist["default"]) == 1
         assert "zlib/1.0" in pkglist["default"]
-        assert len(pkglist["remote2"]) == 1
+        assert len(pkglist["remote2"]) == 2
         assert "app/1.0" in pkglist["remote2"]
+        assert "zlib/1.0" in pkglist["remote2"]
 
         c.run("download --list=remotepkg.json -r=default --metadata=*")
         assert "zlib/1.0: Retrieving recipe metadata from remote 'default'" in c.out
