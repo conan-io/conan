@@ -169,7 +169,7 @@ class TestGraphInfoToPkgList:
         assert len(pkglist["default"]) == 2
 
 
-class TestListXFindRemote:
+class TestPkgListFindRemote:
     """ we can recover a list of remotes for an already installed graph, for metadata download
     """
     def test_graph_2_pkg_list_remotes(self):
@@ -208,7 +208,7 @@ class TestListXFindRemote:
         assert "app/1.0: Retrieving package metadata" in c.out
 
 
-class TestListXMerge:
+class TestPkgListMerge:
     """ deep merge lists
     """
     def test_graph_2_pkg_list_remotes(self):
