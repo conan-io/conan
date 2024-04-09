@@ -25,6 +25,7 @@ def cmd_export(app, global_conf, conanfile_path, name, version, user, channel, g
     ref.validate_ref(allow_uppercase=global_conf.get("core:allow_uppercase_pkg_names",
                                                      check_type=bool))
 
+    conanfile.conf = global_conf.get_conanfile_conf(ref, is_consumer=True)
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
