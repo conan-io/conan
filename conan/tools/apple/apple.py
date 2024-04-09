@@ -30,11 +30,16 @@ def to_apple_arch(conanfile, default=None):
     return _to_apple_arch(arch_, default)
 
 
-def apple_sdk_path(conanfile):
+def apple_sdk_path(conanfile, is_cross_building=True):
     sdk_path = conanfile.conf.get("tools.apple:sdk_path")
     if not sdk_path:
         # XCRun already knows how to extract os.sdk from conanfile.settings
         sdk_path = XCRun(conanfile).sdk_path
+    if not sdk_path and is_cross_building:
+        raise ConanException(
+            "Apple SDK path not found. For cross-compilation, you must "
+            "provide a valid SDK path in 'tools.apple:sdk_path' config."
+        )
     return sdk_path
 
 
@@ -48,7 +53,6 @@ def get_apple_sdk_fullname(conanfile):
     os_ = conanfile.settings.get_safe('os')
     os_sdk = conanfile.settings.get_safe('os.sdk')
     os_sdk_version = conanfile.settings.get_safe('os.sdk_version') or ""
-
     if os_sdk:
         return "{}{}".format(os_sdk, os_sdk_version)
     elif os_ == "Macos":  # it has only a single value for all the architectures
@@ -57,39 +61,51 @@ def get_apple_sdk_fullname(conanfile):
         raise ConanException("Please, specify a suitable value for os.sdk.")
 
 
-def apple_min_version_flag(os_version, os_sdk, subsystem):
+def apple_min_version_flag(conanfile):
     """compiler flag name which controls deployment target"""
-    if not os_version or not os_sdk:
-        return ''
+    os_ = conanfile.settings.get_safe('os')
+    os_sdk = conanfile.settings.get_safe('os.sdk')
+    os_sdk = os_sdk or ("macosx" if os_ == "Macos" else None)
+    os_version = conanfile.settings.get_safe("os.version")
+    if not os_sdk or not os_version:
+        # Legacy behavior
+        return ""
+    if conanfile.settings.get_safe("os.subsystem") == 'catalyst':
+        os_sdk = "iphoneos"
+    return {
+        "macosx": f"-mmacosx-version-min={os_version}",
+        "iphoneos": f"-mios-version-min={os_version}",
+        "iphonesimulator": f"-mios-simulator-version-min={os_version}",
+        "watchos": f"-mwatchos-version-min={os_version}",
+        "watchsimulator": f"-mwatchos-simulator-version-min={os_version}",
+        "appletvos": f"-mtvos-version-min={os_version}",
+        "appletvsimulator": f"-mtvos-simulator-version-min={os_version}",
+        "xros": f"-target arm64-apple-xros{os_version}",
+        "xrsimulator": f"-target arm64-apple-xros{os_version}-simulator",
+    }.get(os_sdk, "")
 
-    # FIXME: This guess seems wrong, nothing has to be guessed, but explicit
-    flag = ''
-    if 'macosx' in os_sdk:
-        flag = '-mmacosx-version-min'
-    elif 'iphoneos' in os_sdk:
-        flag = '-mios-version-min'
-    elif 'iphonesimulator' in os_sdk:
-        flag = '-mios-simulator-version-min'
-    elif 'watchos' in os_sdk:
-        flag = '-mwatchos-version-min'
-    elif 'watchsimulator' in os_sdk:
-        flag = '-mwatchos-simulator-version-min'
-    elif 'appletvos' in os_sdk:
-        flag = '-mtvos-version-min'
-    elif 'appletvsimulator' in os_sdk:
-        flag = '-mtvos-simulator-version-min'
-    elif 'xros' in os_sdk:
-        # need early return as string did not fit into the "normal" schema
-        return f'-target arm64-apple-xros{os_version}'
-    elif 'xrsimulator' in os_sdk:
-        # need early return as string did not fit into the "normal" schema
-        return f'-target arm64-apple-xros{os_version}-simulator'
 
-    if subsystem == 'catalyst':
-        # especial case, despite Catalyst is macOS, it requires an iOS version argument
-        flag = '-mios-version-min'
+def resolve_apple_flags(conanfile, is_cross_building=False):
+    """
+    Gets the most common flags in Apple systems. If it's a cross-building context
+    SDK path is mandatory so if it could raise an exception if SDK is not found.
 
-    return f"{flag}={os_version}" if flag else ''
+    :param conanfile: <ConanFile> instance.
+    :param is_cross_building: boolean to indicate if it's a cross-building context.
+    :return: tuple of Apple flags (apple_min_version_flag, apple_arch, apple_isysroot_flag).
+    """
+    if not is_apple_os(conanfile):
+        # Keeping legacy defaults
+        return "", None, None
+
+    apple_arch_flag = apple_isysroot_flag = None
+    if is_cross_building:
+        arch = to_apple_arch(conanfile)
+        sdk_path = apple_sdk_path(conanfile, is_cross_building=is_cross_building)
+        apple_isysroot_flag = f"-isysroot {sdk_path}" if sdk_path else ""
+        apple_arch_flag = f"-arch {arch}" if arch else ""
+    min_version_flag = apple_min_version_flag(conanfile)
+    return min_version_flag, apple_arch_flag, apple_isysroot_flag
 
 
 class XCRun:
