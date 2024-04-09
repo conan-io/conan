@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from conan.tools.build import cmd_args_to_string
-from conan.tools.gnu import AutotoolsToolchainX
+from conan.tools.gnu import GnuToolchain
 from conans.errors import ConanException
 from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings
@@ -40,7 +40,7 @@ def test_get_gnu_triplet_for_cross_building():
     conanfile = ConanFileMock()
     conanfile.settings = settings
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     assert at.configure_args["--host"] == "x86_64-w64-mingw32"
     assert at.configure_args["--build"] == "i686-solaris"
 
@@ -55,10 +55,10 @@ def test_get_toolchain_cppstd():
     conanfile = ConanFileMock()
     conanfile.settings = settings
     conanfile.settings_build = settings
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     assert at.cppstd == "-std=c++2a"
     settings.values["compiler.version"] = "12"
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     assert at.cppstd == "-std=c++20"
 
 
@@ -81,7 +81,7 @@ def test_msvc_runtime(runtime, runtime_type, expected):
     conanfile = ConanFileMock()
     conanfile.settings = settings
     conanfile.settings_build = settings
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     expected_flag = "-{}".format(expected)
     assert at.msvc_runtime_flag == expected_flag
     env = at.environment().vars(conanfile)
@@ -104,7 +104,7 @@ def test_visual_runtime(runtime):
     conanfile = ConanFileMock()
     conanfile.settings = settings
     conanfile.settings_build = settings
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     expected_flag = "-{}".format(runtime)
     assert at.msvc_runtime_flag == expected_flag
     env = at.environment().vars(conanfile)
@@ -125,7 +125,7 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
     conanfile.settings = settings
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
     with pytest.raises(ConanException) as conan_error:
-        AutotoolsToolchainX(conanfile)
+        GnuToolchain(conanfile)
         msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and " \
               "needed for os=Windows"
         assert msg == str(conan_error.value)
@@ -143,7 +143,7 @@ def test_compilers_mapping():
     conanfile.conf = Conf()
     conanfile.conf.define("tools.build:compiler_executables", compilers)
     conanfile.settings = settings
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     env = at.environment().vars(conanfile)
     for compiler, env_var in autotools_mapping.items():
         assert env[env_var] == f"path_to_{compiler}"
@@ -158,7 +158,7 @@ def test_linker_scripts():
                              "compiler": "gcc",
                              "arch": "x86_64"})
     conanfile.settings = settings
-    at = AutotoolsToolchainX(conanfile)
+    at = GnuToolchain(conanfile)
     env = at.environment().vars(conanfile)
     assert "-T'path_to_first_linker_script'" in env["LDFLAGS"]
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
@@ -166,13 +166,13 @@ def test_linker_scripts():
 
 def test_update_or_prune_any_args(cross_building_conanfile):
     # Issue: https://github.com/conan-io/conan/issues/12642
-    at = AutotoolsToolchainX(cross_building_conanfile)
+    at = GnuToolchain(cross_building_conanfile)
     at.configure_args.update({
         "--with-cross-build": "my_path",
         "--something-host": "my_host",
         "--prefix": "/my/other/prefix"
     })
-    new_configure_args = cmd_args_to_string(AutotoolsToolchainX._dict_to_list(at.configure_args))
+    new_configure_args = cmd_args_to_string(GnuToolchain._dict_to_list(at.configure_args))
     assert "--build=x86_64-linux-gnu" in new_configure_args
     assert "--host=wasm32-local-emscripten" in new_configure_args
     assert "--with-cross-build=my_path" in new_configure_args
@@ -181,16 +181,16 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     # https://github.com/conan-io/conan/issues/12431
     at.configure_args.pop("--build")
     at.configure_args.pop("--host")
-    new_configure_args = cmd_args_to_string(AutotoolsToolchainX._dict_to_list(at.configure_args))
+    new_configure_args = cmd_args_to_string(GnuToolchain._dict_to_list(at.configure_args))
     assert "--build=x86_64-linux-gnu" not in new_configure_args  # removed
     assert "--host=wasm32-local-emscripten" not in new_configure_args  # removed
     assert "--with-cross-build=my_path" in new_configure_args
     assert "--something-host=my_host" in new_configure_args
     # Update autoreconf_args
     at.autoreconf_args.pop("--force")
-    new_autoreconf_args = cmd_args_to_string(AutotoolsToolchainX._dict_to_list(at.autoreconf_args))
+    new_autoreconf_args = cmd_args_to_string(GnuToolchain._dict_to_list(at.autoreconf_args))
     assert "'--force" not in new_autoreconf_args
     # Add new value to make_args
     at.make_args.update({"--new-complex-flag": "new-value"})
-    new_make_args = cmd_args_to_string(AutotoolsToolchainX._dict_to_list(at.make_args))
+    new_make_args = cmd_args_to_string(GnuToolchain._dict_to_list(at.make_args))
     assert "--new-complex-flag=new-value" in new_make_args

@@ -31,12 +31,13 @@ def test_extra_flags_via_conf(os_):
         {os_sdk}
         """)
     client = TestClient()
-    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
-        .with_generator("AutotoolsToolchainX")
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+        .with_generator("GnuToolchain")
     client.save({"conanfile.py": conanfile,
-                "profile": profile})
+                 "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
+    toolchain = client.load(
+        "conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
     if os_ == "Windows":
         assert 'set "CPPFLAGS=%CPPFLAGS% -DNDEBUG -DDEF1 -DDEF2"' in toolchain
         assert 'set "CXXFLAGS=%CXXFLAGS% -O3 --flag1 --flag2"' in toolchain
@@ -61,14 +62,14 @@ def test_extra_flags_order():
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.gnu import AutotoolsToolchainX
+        from conan.tools.gnu import GnuToolchain
 
         class Conan(ConanFile):
             name = "pkg"
             version = "0.1"
             settings = "os", "arch", "build_type"
             def generate(self):
-                at = AutotoolsToolchainX(self)
+                at = GnuToolchain(self)
                 at.extra_cxxflags = ["extra_cxxflags"]
                 at.extra_cflags = ["extra_cflags"]
                 at.extra_ldflags = ["extra_ldflags"]
@@ -86,7 +87,8 @@ def test_extra_flags_order():
         """)
     client.save({"conanfile.py": conanfile, "profile": profile})
     client.run('install . -pr=./profile')
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if platform.system() == "Windows" else '.sh'))
+    toolchain = client.load(
+        "conanautotoolstoolchain{}".format('.bat' if platform.system() == "Windows" else '.sh'))
 
     assert '-Dextra_defines -Ddefines' in toolchain
     assert 'extra_cxxflags cxxflags' in toolchain
@@ -98,12 +100,12 @@ def test_autotools_custom_environment():
     client = TestClient()
     conanfile = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.gnu import AutotoolsToolchainX
+            from conan.tools.gnu import GnuToolchain
 
             class Conan(ConanFile):
                 settings = "os"
                 def generate(self):
-                    at = AutotoolsToolchainX(self)
+                    at = GnuToolchain(self)
                     env = at.environment()
                     env.define("FOO", "BAR")
                     at.generate(env)
@@ -111,7 +113,7 @@ def test_autotools_custom_environment():
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Linux -s:h os=Linux")
-    content = load(os.path.join(client.current_folder,  "conanautotoolstoolchain.sh"))
+    content = load(os.path.join(client.current_folder, "conanautotoolstoolchain.sh"))
     assert 'export FOO="BAR"' in content
 
 
@@ -127,17 +129,19 @@ def test_linker_scripts_via_conf(os_):
         build_type=Release
 
         [conf]
+
         tools.build:sharedlinkflags+=["--flag5"]
         tools.build:exelinkflags+=["--flag6"]
         tools.build:linker_scripts+=["/linker/scripts/flash.ld", "/linker/scripts/extra_data.ld"]
         """ % os_)
     client = TestClient()
-    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
-        .with_generator("AutotoolsToolchainX")
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+        .with_generator("GnuToolchain")
     client.save({"conanfile.py": conanfile,
-                "profile": profile})
+                 "profile": profile})
     client.run("install . --profile:build=profile --profile:host=profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
+    toolchain = client.load(
+        "conanautotoolstoolchain{}".format('.bat' if os_ == "Windows" else '.sh'))
     if os_ == "Windows":
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
     else:
@@ -145,17 +149,16 @@ def test_linker_scripts_via_conf(os_):
 
 
 def test_not_none_values():
-
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.gnu import AutotoolsToolchainX
+        from conan.tools.gnu import GnuToolchain
 
         class Foo(ConanFile):
             name = "foo"
             version = "1.0"
 
             def generate(self):
-                tc = AutotoolsToolchainX(self)
+                tc = GnuToolchain(self)
                 assert None not in tc.defines
                 assert None not in tc.cxxflags
                 assert None not in tc.cflags
@@ -169,10 +172,9 @@ def test_not_none_values():
 
 
 def test_set_prefix():
-
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.gnu import AutotoolsToolchainX
+        from conan.tools.gnu import GnuToolchain
         from conan.tools.layout import basic_layout
 
 
@@ -182,14 +184,15 @@ def test_set_prefix():
             def layout(self):
                 basic_layout(self)
             def generate(self):
-                at_toolchain = AutotoolsToolchainX(self, prefix="/somefolder")
+                at_toolchain = GnuToolchain(self, prefix="/somefolder")
                 at_toolchain.generate()
     """)
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("install .")
-    conanbuild = client.load(os.path.join(client.current_folder, "build", "conan", "conanbuild.conf"))
+    conanbuild = client.load(
+        os.path.join(client.current_folder, "build", "conan", "conanbuild.conf"))
     assert "--prefix=/somefolder" in conanbuild
     assert conanbuild.count("--prefix") == 1
 
@@ -200,15 +203,16 @@ def test_unknown_compiler():
     settings = settings.replace("gcc:", "xlc:\n    gcc:", 1)
     save(client.cache.settings_path, settings)
     client.save({"conanfile.py": GenConanfile().with_settings("compiler", "build_type")
-                                               .with_generator("AutotoolsToolchainX")})
-    # this used to crash, because of build_type_flags in AutotoolsToolchainX returning empty string
+                .with_generator("GnuToolchain")
+                 })
+    # this used to crash, because of build_type_flags in GnuToolchain returning empty string
     client.run("install . -s compiler=xlc")
-    assert "conanfile.py: Generator 'AutotoolsToolchainX' calling 'generate()'" in client.out
+    assert "conanfile.py: Generator 'GnuToolchain' calling 'generate()'" in client.out
 
 
 def test_toolchain_and_compilers_build_context():
     """
-    Tests how AutotoolsToolchainX manages the build context profile if the build profile is
+    Tests how GnuToolchain manages the build context profile if the build profile is
     specifying another compiler path (using conf)
 
     Issue related: https://github.com/conan-io/conan/issues/15878
@@ -248,7 +252,7 @@ def test_toolchain_and_compilers_build_context():
         version = "1.0"
         # Binary configuration
         settings = "os", "compiler", "build_type", "arch"
-        generators = "AutotoolsToolchainX"
+        generators = "GnuToolchain"
 
         def build(self):
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
@@ -266,7 +270,7 @@ def test_toolchain_and_compilers_build_context():
         version = "1.0"
         # Binary configuration
         settings = "os", "compiler", "build_type", "arch"
-        generators = "AutotoolsToolchainX"
+        generators = "GnuToolchain"
         tool_requires = "tool/1.0"
 
         def build(self):
@@ -311,21 +315,21 @@ def test_autotools_crossbuild_ux():
         tools.apple:sdk_path=/my/sdk/path
         """)
     conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.gnu import AutotoolsToolchainX
-            from conan.tools.build import cross_building
-            class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                def generate(self):
-                    tc = AutotoolsToolchainX(self)
-                    if cross_building(self):
-                        host_arch = tc.cross_build["host"]["machine"]
-                        build_arch = tc.cross_build["build"]["machine"]
-                        if host_arch and build_arch:
-                            tc.configure_args["--host"] = f"{host_arch}-my-triplet-host"
-                            tc.configure_args["--build"] = f"{build_arch}-my-triplet-build"
-                    tc.generate()
-                    """)
+    from conan import ConanFile
+    from conan.tools.gnu import GnuToolchain
+    from conan.tools.build import cross_building
+    class Pkg(ConanFile):
+        settings = "os", "arch", "compiler", "build_type"
+        def generate(self):
+            tc = GnuToolchain(self)
+            if cross_building(self):
+                host_arch = tc.cross_build["host"]["machine"]
+                build_arch = tc.cross_build["build"]["machine"]
+                if host_arch and build_arch:
+                    tc.configure_args["--host"] = f"{host_arch}-my-triplet-host"
+                    tc.configure_args["--build"] = f"{build_arch}-my-triplet-build"
+            tc.generate()
+            """)
 
     client.save({"conanfile.py": conanfile,
                  "profile_build": profile_build,
