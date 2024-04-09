@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conan.tools.meson import MesonToolchain
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -137,7 +138,6 @@ def test_correct_quotes():
        compiler=gcc
        compiler.version=9
        compiler.cppstd=17
-       compiler.cstd=11
        compiler.libcxx=libstdc++11
        build_type=Release
        """)
@@ -148,6 +148,28 @@ def test_correct_quotes():
     t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_std = 'c++17'" in content
+    assert "backend = 'ninja'" in content
+    assert "buildtype = 'release'" in content
+
+
+def test_c_std():
+    profile = textwrap.dedent("""
+       [settings]
+       os=Windows
+       arch=x86_64
+       compiler=gcc
+       compiler.version=9
+       compiler.cstd=11
+       build_type=Release
+       """)
+    t = TestClient()
+    t.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+                                          .with_generator("MesonToolchain")
+                                          .with_class_attribute("languages='C'"),
+            "profile": profile})
+
+    t.run("install . -pr:h=profile -pr:b=profile")
+    content = t.load(MesonToolchain.native_filename)
     assert "c_std = 'c11'" in content
     assert "backend = 'ninja'" in content
     assert "buildtype = 'release'" in content
