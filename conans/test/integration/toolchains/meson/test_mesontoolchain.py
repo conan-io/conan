@@ -137,6 +137,7 @@ def test_correct_quotes():
        compiler=gcc
        compiler.version=9
        compiler.cppstd=17
+       compiler.cstd=11
        compiler.libcxx=libstdc++11
        build_type=Release
        """)
@@ -147,6 +148,7 @@ def test_correct_quotes():
     t.run("install . -pr:h=profile -pr:b=profile")
     content = t.load(MesonToolchain.native_filename)
     assert "cpp_std = 'c++17'" in content
+    assert "c_std = 'c11'" in content
     assert "backend = 'ninja'" in content
     assert "buildtype = 'release'" in content
 

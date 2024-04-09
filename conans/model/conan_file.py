@@ -138,6 +138,7 @@ class ConanFile:
         result["version"] = str(self.version) if self.version is not None else None
         result["topics"] = list(self.topics) if self.topics is not None else None
         result["package_type"] = str(self.package_type)
+        result["languages"] = self.languages
 
         settings = self.settings
         if settings is not None:

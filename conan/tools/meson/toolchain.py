@@ -73,6 +73,7 @@ class MesonToolchain(object):
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = '{{cpp_std}}' {% endif %}
+    {% if c_std %}c_std = '{{c_std}}' {% endif %}
     {% if backend %}backend = '{{backend}}' {% endif %}
     {% if pkg_config_path %}pkg_config_path = '{{pkg_config_path}}'{% endif %}
     {% if build_pkg_config_path %}build.pkg_config_path = '{{build_pkg_config_path}}'{% endif %}
@@ -137,6 +138,9 @@ class MesonToolchain(object):
 
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
+
+        cstd = self._conanfile.settings.get_safe("compiler.cstd")
+        self._c_std = to_cstd_flag(cstd)
 
         self._b_vscrt = None
         if compiler in ("msvc", "clang"):
@@ -433,6 +437,7 @@ class MesonToolchain(object):
             "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
             "cpp_std": self._cpp_std,
+            "c_std": self._c_std,
             "c_args": to_meson_value(self._filter_list_empty_fields(self.c_args)),
             "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
             "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),
