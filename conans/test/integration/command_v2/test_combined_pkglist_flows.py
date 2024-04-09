@@ -192,7 +192,7 @@ class TestListXFindRemote:
         assert "default" not in pkglist  # The remote doesn't even exist
 
         # Lets now compute a list finding in the remotes
-        c.run("listx find-remote pkglist.json --format=json", redirect_stdout="remotepkg.json")
+        c.run("pkglist find-remote pkglist.json --format=json", redirect_stdout="remotepkg.json")
         pkglist = json.loads(c.stdout)
         assert "Local Cache" not in pkglist
         assert len(pkglist["default"]) == 1
@@ -225,7 +225,7 @@ class TestListXMerge:
         c.run("list zlib:* --format=json", redirect_stdout="list1.json")
         c.run("list bzip2:* --format=json", redirect_stdout="list2.json")
         c.run("list app:* --format=json", redirect_stdout="list3.json")
-        c.run("listx merge --list=list1.json --list=list2.json --list=list3.json --format=json",
+        c.run("pkglist merge --list=list1.json --list=list2.json --list=list3.json --format=json",
               redirect_stdout="release.json")
         final = json.loads(c.stdout)
         assert "app/1.0" in final["Local Cache"]
@@ -236,7 +236,7 @@ class TestListXMerge:
         c.run("create bzip2 -s build_type=Debug")
         c.run("create app -s build_type=Debug")
         c.run("list *:* -fs build_type=Debug --format=json", redirect_stdout="debug.json")
-        c.run("listx merge --list=release.json --list=debug.json --format=json",
+        c.run("pkglist merge --list=release.json --list=debug.json --format=json",
               redirect_stdout="release.json")
         final = json.loads(c.stdout)
         rev = final["Local Cache"]["zlib/1.0"]["revisions"]["11f74ff5f006943c6945117511ac8b64"]

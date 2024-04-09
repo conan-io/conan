@@ -10,7 +10,7 @@ from conans.errors import NotFoundException
 
 
 @conan_command(group="Consumer")
-def listx(conan_api: ConanAPI, parser, *args):  # noqa
+def pkglist(conan_api: ConanAPI, parser, *args):  # noqa
     """
     Several operations over package lists
     """
@@ -19,7 +19,7 @@ def listx(conan_api: ConanAPI, parser, *args):  # noqa
 @conan_subcommand(formatters={"text": print_list_text,
                               "json": print_list_json,
                               "html": list_packages_html})
-def listx_find_remote(conan_api, parser, subparser, *args):
+def pkglist_find_remote(conan_api, parser, subparser, *args):
     """
     (Experimental) Find the remotes of a list of packages in the cache
     """
@@ -72,7 +72,7 @@ def listx_find_remote(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters={"text": print_list_text,
                               "json": print_list_json,
                               "html": list_packages_html})
-def listx_merge(conan_api, parser, subparser, *args):
+def pkglist_merge(conan_api, parser, subparser, *args):
     """
     (Experimental) Merge several package lists into a single one
     """
