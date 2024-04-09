@@ -84,8 +84,17 @@ class MultiPackagesList:
         return pkglist
 
     @staticmethod
+    def from_graph(graph, graph_recipes=None, graph_binaries=None):
+        graph = {"graph": graph.serialize()}
+        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+
+    @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
         graph = json.loads(load(graphfile))
+        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+
+    @staticmethod
+    def _define_graph(graph, graph_recipes=None, graph_binaries=None):
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
