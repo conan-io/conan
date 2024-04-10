@@ -371,7 +371,7 @@ def lib_dir_setup():
                  .with_settings("os", "arch", "compiler", "build_type"))
 
     client.save({"conanfile.py": conanfile})
-    client.run("install . ")
+    client.run("install . -s build_type=Release")
     return client
 
 
@@ -380,8 +380,8 @@ def test_lib_dirs_windows(lib_dir_setup):
     client = lib_dir_setup
 
     contents = client.load("conan_toolchain.cmake")
-    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*?)"\)'
-    pattern_lib_dirs = r'list\(PREPEND CONAN_RUNTIME_LIB_DIRS "(.*?)"\)'
+    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*)"\)'
+    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS     \$<\$<CONFIG:Release>:"(.*)">'
     lib_path_group = re.search(pattern_lib_path, contents).groups()
     lib_dirs_group = re.search(pattern_lib_dirs, contents).groups()
 
@@ -394,12 +394,24 @@ def test_lib_dirs_no_windows(lib_dir_setup):
     client = lib_dir_setup
 
     contents = client.load("conan_toolchain.cmake")
-    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH (.*)\)'
-    pattern_lib_dirs = r'list\(PREPEND CONAN_RUNTIME_LIB_DIRS (.*)\)'
+    pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*)"\)'
+    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS     \$<\$<CONFIG:Release>:"(.*)">'
     lib_path = re.search(pattern_lib_path, contents).group(1)
     lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
 
     assert lib_path == lib_dirs
+
+
+def test_lib_dirs_multiconf(lib_dir_setup):
+    client = lib_dir_setup
+    client.run("install . -s build_type=Debug")
+
+    contents = client.load("conan_toolchain.cmake")
+    pattern_lib_dris = r"list\(PREPEND CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+    msvc_runtime_value = re.search(pattern_lib_dris, contents).group(1)
+
+    assert "<CONFIG:Release>" in msvc_runtime_value
+    assert "<CONFIG:Debug>" in msvc_runtime_value
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
