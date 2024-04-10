@@ -63,7 +63,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     [runner]
     type=docker
     dockerfile={dockerfile_path()}
-    docker_build_context={conan_base_path()}
+    build_context={conan_base_path()}
     image=conan-runner-default-test
     cache=copy
     remove=True
@@ -81,7 +81,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     [runner]
     type=docker
     dockerfile={dockerfile_path()}
-    docker_build_context={conan_base_path()}
+    build_context={conan_base_path()}
     image=conan-runner-default-test
     cache=clean
     remove=True
@@ -149,7 +149,7 @@ def test_create_docker_runner_dockerfile_file_path():
     [runner]
     type=docker
     dockerfile={dockerfile_path("Dockerfile_test")}
-    docker_build_context={conan_base_path()}
+    build_context={conan_base_path()}
     image=conan-runner-default-test
     cache=copy
     remove=True
@@ -235,7 +235,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     type=docker
     image=conan-runner-ninja-test
     dockerfile={dockerfile_path("Dockerfile_ninja")}
-    docker_build_context={conan_base_path()}
+    build_context={conan_base_path()}
     cache=copy
     remove=True
     """)
@@ -275,8 +275,75 @@ def test_create_docker_runner_profile_abs_path():
     [runner]
     type=docker
     dockerfile={dockerfile_path("Dockerfile_test")}
-    docker_build_context={conan_base_path()}
+    build_context={conan_base_path()}
     image=conan-runner-default-test
+    cache=copy
+    remove=True
+    """)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            name = "pkg"
+            version = "0.2"
+            settings = "build_type", "compiler"
+            author = "John Doe"
+            license = "MIT"
+            url = "https://foo.bar.baz"
+            homepage = "https://foo.bar.site"
+            topics = "foo", "bar", "qux"
+            provides = "libjpeg", "libjpg"
+            deprecated = "other-pkg"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+        """)
+    client.save({"conanfile.py": conanfile, "host": profile_host, "build": profile_build})
+    client.run(f"create . -pr:h '{os.path.join(client.current_folder, 'host')}' -pr:b '{os.path.join(client.current_folder, 'build')}'")
+
+    assert "Restore: pkg/0.2" in client.out
+    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307" in client.out
+    assert "Restore: pkg/0.2:a0826e5ee3b340fcc7a8ccde40224e3562316307 metadata" in client.out
+    assert "Removing container" in client.out
+
+
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+# @pytest.mark.xfail(reason="conan inside docker optional test")
+def test_create_docker_runner_profile_abs_path_from_configfile():
+    """
+    Tests the ``conan create . ``
+    """
+    client = TestClient()
+    configfile = textwrap.dedent(f"""
+        image: conan-runner-default-test
+        build:
+            dockerfile: {dockerfile_path("Dockerfile_test")}
+            build_context: {conan_base_path()}
+        """)
+    client.save({"configfile.yaml": configfile})
+
+
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    configfile={os.path.join(client.current_folder, 'configfile.yaml')}
     cache=copy
     remove=True
     """)
