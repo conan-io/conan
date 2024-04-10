@@ -5,7 +5,6 @@ from conan.tools.cmake.cmakedeps import FIND_MODE_NONE, FIND_MODE_CONFIG, FIND_M
     FIND_MODE_BOTH
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
 
 
 """
@@ -202,7 +201,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.cpp_info.get_sorted_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        transitive_requires = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        transitive_requires = self.cmakedeps.get_transitive_requires(self.conanfile)
         for comp_name, comp in sorted_comps.items():
             deps_cpp_cmake = _TargetDataContext(comp, pfolder_var_name, self._root_folder,
                                                 self.require, self.cmake_package_type,
@@ -236,7 +235,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.require.build:
             return []
 
-        transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        transitive_reqs = self.cmakedeps.get_transitive_requires(self.conanfile)
         # Previously it was filtering here components, but not clear why the file dependency
         # should be skipped if components are not being required, why would it declare a
         # dependency to it?
@@ -248,7 +247,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret = {}
         if self.require.build:
             return ret
-        deps = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        deps = self.cmakedeps.get_transitive_requires(self.conanfile)
         for dep in deps.values():
             dep_file_name = self.cmakedeps.get_cmake_package_name(dep, self.generating_module)
             find_mode = self.cmakedeps.get_find_mode(dep)

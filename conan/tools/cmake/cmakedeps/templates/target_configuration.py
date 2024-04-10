@@ -1,7 +1,6 @@
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
-from conans.model.dependencies import get_transitive_requires
 
 """
 
@@ -238,7 +237,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         # Get a list of dependencies target names
         # Declared cppinfo.requires or .components[].requires
-        transitive_reqs = get_transitive_requires(self.cmakedeps._conanfile, self.conanfile)
+        transitive_reqs = self.cmakedeps.get_transitive_requires(self.conanfile)
         if self.conanfile.cpp_info.required_components:
             for dep_name, component_name in self.conanfile.cpp_info.required_components:
                 try:
