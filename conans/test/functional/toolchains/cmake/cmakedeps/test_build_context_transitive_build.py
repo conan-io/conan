@@ -135,3 +135,21 @@ def test_error_cmakedeps_transitive_build_requires():
     c.run("export tool")
     c.run("install consumer --build=missing -s:b build_type=Release -s:h build_type=Debug")
     assert "tool/0.1: Created package" in c.out
+
+
+def test():
+    c = TestClient()
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_package_type("application"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_tool_requirement("tool/0.1", visible=True),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_requires("pkgb/0.1")
+                                                          .with_settings("build_type")
+                                                          .with_tool_requirement("tool/0.1", visible=True)
+                                                          .with_generator("CMakeDeps")})
+
+    c.run("create tool")
+    c.run("create pkgb")
+    c.run("install app")
+    print(c.current_folder)
+    cmake = c.load("app/pkgb-release-data.cmake")
+    assert "list(APPEND pkgb_FIND_DEPENDENCY_NAMES )" in cmake
+
