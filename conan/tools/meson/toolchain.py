@@ -6,8 +6,8 @@ from jinja2 import Template
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
-    apple_sdk_path, resolve_apple_flags
+from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
+    resolve_apple_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
