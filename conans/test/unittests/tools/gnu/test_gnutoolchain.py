@@ -84,7 +84,7 @@ def test_msvc_runtime(runtime, runtime_type, expected):
     at = GnuToolchain(conanfile)
     expected_flag = "-{}".format(expected)
     assert at.msvc_runtime_flag == expected_flag
-    env = at.environment().vars(conanfile)
+    env = at._environment.vars(conanfile)
     assert expected_flag in env["CFLAGS"]
     assert expected_flag in env["CXXFLAGS"]
 
@@ -107,7 +107,7 @@ def test_visual_runtime(runtime):
     at = GnuToolchain(conanfile)
     expected_flag = "-{}".format(runtime)
     assert at.msvc_runtime_flag == expected_flag
-    env = at.environment().vars(conanfile)
+    env = at._environment.vars(conanfile)
     assert expected_flag in env["CFLAGS"]
     assert expected_flag in env["CXXFLAGS"]
 
@@ -144,7 +144,7 @@ def test_compilers_mapping():
     conanfile.conf.define("tools.build:compiler_executables", compilers)
     conanfile.settings = settings
     at = GnuToolchain(conanfile)
-    env = at.environment().vars(conanfile)
+    env = at._environment.vars(conanfile)
     for compiler, env_var in autotools_mapping.items():
         assert env[env_var] == f"path_to_{compiler}"
 
@@ -159,7 +159,7 @@ def test_linker_scripts():
                              "arch": "x86_64"})
     conanfile.settings = settings
     at = GnuToolchain(conanfile)
-    env = at.environment().vars(conanfile)
+    env = at._environment.vars(conanfile)
     assert "-T'path_to_first_linker_script'" in env["LDFLAGS"]
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
 
