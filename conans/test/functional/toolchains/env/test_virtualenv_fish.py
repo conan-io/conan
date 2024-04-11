@@ -2,7 +2,6 @@ import os
 import platform
 
 import pytest
-import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -32,7 +31,7 @@ def test_virtualenv_fish():
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
 
     assert os.path.exists(os.path.join(client.current_folder, "conanbuildenv.fish"))
-    assert os.path.exists(os.path.join(client.current_folder, "conanrunenv.fish"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.fish"))
 
     with open(os.path.join(client.current_folder, "conanbuildenv.fish"), "r") as f:
         buildenv = f.read()
@@ -41,17 +40,17 @@ def test_virtualenv_fish():
     client.run_command("fish -c 'source conanbuildenv.fish && set'")
     assert 'MYPATH1 /path/to/ar' in client.out
 
-    client.run_command("fish -c 'source conanbuildenv.fish && set && source deactivate_conanbuildenv.fish && set'")
+    client.run_command("fish -c 'source conanbuildenv.fish && set && deactivate_conanbuildenv && set'")
     assert str(client.out).count('MYPATH1 /path/to/ar') == 1
 
 
 @pytest.mark.tool("fish")
-@pytest.mark.parametrize("fish_value", [True, False])
-def test_transitive_tool_requires(fish_value):
+@pytest.mark.parametrize("fish_value, path_with_spaces", ([True, False], [False, True], [False, False], [True, True]))
+def test_transitive_tool_requires(fish_value, path_with_spaces):
     """Generate a tool require package, which provides and binary and a custom environment variable.
     Using fish, the binary should be available in the path, and the environment variable too.
     """
-    client = TestClient()
+    client = TestClient(path_with_spaces=path_with_spaces)
     save(client.cache.new_config_path, f"tools.env.virtualenv:fish={fish_value}\n")
 
     # Generate the tool package with pkg-echo-tool binary that prints the value of LADY env var

@@ -1,9 +1,12 @@
 import os
 import textwrap
+from jinja2 import Template
 from collections import OrderedDict
 from contextlib import contextmanager
+from pathlib import Path
 
-from conans.client.generators import relativize_paths, relativize_generated_file
+
+from conans.client.generators import relativize_paths
 from conans.client.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conans.model.recipe_ref import ref_matches
@@ -19,9 +22,9 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     if not env_filenames:
         return cmd
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
-    bats, shs, ps1s = [], [], []
+    bats, shs, ps1s, fishs = [], [], [], []
 
-    accept = accepted_extensions or ("ps1", "bat", "sh")
+    accept = accepted_extensions or ("ps1", "bat", "sh", "fish")
     # TODO: This implemantation is dirty, improve it
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(env_folder, f)
@@ -29,6 +32,10 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             if os.path.isfile(f) and "sh" in accept:
                 f = subsystem_path(subsystem, f)
                 shs.append(f)
+        elif f.lower().endswith(".fish"):
+            if os.path.isfile(f) and "fish" in accept:
+                f = subsystem_path(subsystem, f)
+                fishs.append(f)
         elif f.lower().endswith(".bat"):
             if os.path.isfile(f) and "bat" in accept:
                 bats.append(f)
@@ -39,6 +46,7 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
             path_ps1 = "{}.ps1".format(f)
+            path_fish = "{}.fish".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
             if os.path.isfile(path_ps1) and "ps1" in accept:
@@ -46,10 +54,13 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
+            if os.path.isfile(path_fish) and "fish" in accept:
+                path_fish = subsystem_path(subsystem, path_fish)
+                fishs.append(path_fish)
 
-    if bool(bats + ps1s) + bool(shs) > 1:
+    if bool(bats + ps1s) + bool(shs) > 1 + bool(fishs) > 1:
         raise ConanException("Cannot wrap command with different envs,"
-                             "{} - {}".format(bats+ps1s, shs))
+                             "{} - {} - {}".format(bats+ps1s, shs, fishs))
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
@@ -62,6 +73,10 @@ def environment_wrap_command(env_filenames, env_folder, cmd, subsystem=None,
     elif shs:
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
         return '{} && {}'.format(launchers, cmd)
+    elif fishs:
+        launchers = " && ".join('. "{}"'.format(f) for f in fishs)
+        print(f"LAUNCHERS: {launchers}")
+        return 'fish -c "{} && {}"'.format(launchers, cmd)
     elif ps1s:
         # TODO: at the moment it only works with path without spaces
         launchers = " ; ".join('"&\'{}\'"'.format(f) for f in ps1s)
@@ -520,43 +535,55 @@ class EnvVars:
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
-    def save_fish(self, file_location, generate_deactivate=True):
-        filepath, filename = os.path.split(file_location)
-        deactivate_file = os.path.join(filepath, "deactivate_{}".format(filename))
-        values = self._values.keys()
-        if len(values) == 0:
-            # Empty environment, nothing to restore (Easier to handle in Fish)
-            deactivate = ("""echo "echo Nothing to restore" > {deactivate_file}"""
-                          .format(deactivate_file=deactivate_file))
-        else:
-            deactivate = textwrap.dedent("""\
-               echo "echo Restoring environment" > "{deactivate_file}"
-               for v in {vars}
-                   set is_defined "true"
-                   set value (printenv $v); or set is_defined ""
-                   if test -n "$value" -o -n "$is_defined"
-                       echo set -gx "$v" "$value" >> "{deactivate_file}"
-                   else
-                       echo set -ge "$v" >> "{deactivate_file}"
-                   end
-               end
-               """.format(deactivate_file=deactivate_file, vars=" ".join(self._values.keys())))
-        capture = textwrap.dedent("""\
-              {deactivate}
-              """).format(deactivate=deactivate if generate_deactivate else "")
-        result = [capture]
-        for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep)
-            value = value.replace('"', '\\"')
-            if value:
-                result.append('set -gx {} "{}"'.format(varname, value))
-            else:
-                result.append('set -ge {}'.format(varname))
+    def save_fish(self, file_location):
+        """Save a fish script file with the environment variables defined in the Environment object.
 
-        content = "\n".join(result)
-        content = relativize_generated_file(content, self._conanfile, "$script_folder")
-        content = f'set script_folder "{os.path.abspath(filepath)}"\n' + content
-        save(file_location, content)
+        It generates a function to deactivate the environment variables configured in the Environment object.
+
+        :param file_location: The path to the file to save the fish script.
+        """
+        filepath, filename = os.path.split(file_location)
+        function_name = f"deactivate_{Path(filename).stem}"
+        script_content = Template(textwrap.dedent("""\
+            function {{ function_name }}
+                echo "echo Restoring environment"
+                {% for item in vars_unset %}
+                set -e {{ item }}
+                {% endfor %}
+                {% for item, value in vars_restore.items() %}
+                set -gx {{ item }} {{ value }}
+                {% endfor %}
+            end
+            {% for item, value in vars_prepend.items() %}
+            set -pgx {{ item }} '{{ value }}'
+            {% endfor %}
+            {% for item, value in vars_define.items() %}
+            set -gx {{ item }} '{{ value }}'
+            {% endfor %}
+            """))
+        values = self._values.keys()
+        vars_unset = []
+        vars_restore = {}
+        vars_prepend = {}
+        vars_define = {}
+        for varname, varvalues in self._values.items():
+            current_value = os.getenv(varname)
+            abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
+            value = varvalues.get_str("", self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
+            value = value.replace('"', '\\"')
+            if current_value:
+                vars_restore[varname] = current_value
+                vars_prepend[varname] = value
+            else:
+                vars_define[varname] = value
+                vars_unset.append(varname)
+
+        if values:
+            content = script_content.render(function_name=function_name, vars_unset=vars_unset,
+                                            vars_restore=vars_restore, vars_prepend=vars_prepend,
+                                            vars_define=vars_define)
+            save(file_location, content)
 
     def save_script(self, filename):
         """
