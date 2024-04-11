@@ -88,8 +88,8 @@ class _ConditionSet:
             if expression[1] == "=":
                 operator += "="
                 index = 2
-        elif operator == "=" and expression[1] == "=":
-            raise ConanException(f"Invalid version range operator '==' in {expression}")
+        elif expression[1] == "=":
+            raise ConanException(f"Invalid version range operator '{operator}=' in {expression}")
         version = expression[index:]
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
@@ -113,7 +113,7 @@ class _ConditionSet:
         else:
             return [_Condition(operator, Version(version))]
 
-    def _valid(self, version, conf_resolve_prepreleases):
+    def valid(self, version, conf_resolve_prepreleases):
         if version.pre:
             # Follow the expression desires only if core.version_ranges:resolve_prereleases is None,
             # else force to the conf's value
@@ -182,7 +182,7 @@ class VersionRange:
         """
         assert isinstance(version, Version), type(version)
         for condition_set in self.condition_sets:
-            if condition_set._valid(version, resolve_prerelease):
+            if condition_set.valid(version, resolve_prerelease):
                 return True
         return False
 
