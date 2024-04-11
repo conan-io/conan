@@ -116,7 +116,6 @@ def test_range_prereleases_conf(version_range, resolve_prereleases, versions_in,
 def test_wrong_range_syntax(version_range):
     with pytest.raises(ConanException) as e:
         VersionRange(version_range)
-    print(e)
 
 
 @pytest.mark.parametrize("version_range", [
