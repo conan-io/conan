@@ -509,9 +509,10 @@ class FindFiles(Block):
     def _multiconfig_generator(prop):
         return ''.join(f'$<$<CONFIG:{c}>:{v}>' for c, v in prop.items())
 
-    def _get_host_runtime_dirs_mc(self, is_win, host_req):
+    def _get_host_runtime_dirs_mc(self, host_req):
         settings = self._conanfile.settings
         host_runtime_dirs = {}
+        is_win = self._conanfile.settings.get_safe("os") == "Windows"
 
         # Get the previous configuration
         if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
@@ -525,17 +526,14 @@ class FindFiles(Block):
         build_type = settings.get_safe("build_type")
 
         # Calculate the dirs for the actual build_type
-        host_runtime_dirs[build_type] = []
+        build_type_runtime_dirs = []
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
-            if is_win:
-                host_runtime_dirs[build_type].extend(cppinfo.bindirs)
-            else:
-                host_runtime_dirs[build_type].extend(cppinfo.libdirs)
-        host_runtime_dirs[build_type] = self._join_paths(host_runtime_dirs[build_type])
+            build_type_runtime_dirs.extend(cppinfo.bindirs if is_win else cppinfo.libdirs)
+
+        host_runtime_dirs[build_type] = self._join_paths(build_type_runtime_dirs)
 
         return host_runtime_dirs
-
 
     @staticmethod
     def _join_paths(paths):
@@ -553,15 +551,13 @@ class FindFiles(Block):
             find_package_prefer_config = "OFF"
 
         is_apple_ = is_apple_os(self._conanfile)
-        is_win = self._conanfile.settings.get_safe("os") == "Windows"
-        build_type = self._conanfile.settings.get_safe("build_type")
 
         # Read information from host context
         # TODO: Add here in 2.0 the "skip": False trait
         host_req = self._conanfile.dependencies.filter({"build": False}).values()
         build_paths = []
         host_lib_paths = []
-        host_runtime_dirs = self._get_host_runtime_dirs_mc(is_win, host_req)
+        host_runtime_dirs = self._get_host_runtime_dirs_mc(host_req)
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
