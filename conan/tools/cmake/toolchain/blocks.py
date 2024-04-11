@@ -446,14 +446,6 @@ class AppleSystemBlock(Block):
 
 class FindFiles(Block):
     template = textwrap.dedent("""
-        {% macro multiconfig_generator(dict) %}
-            {% set output = namespace(str='') %}
-            {% for c, v in dict.items() %}
-                {% set output.str = output.str + '$<$<CONFIG:' + c + '>:' + v|string + '>' %}
-            {% endfor %}
-            {{ output.str }}
-        {% endmacro %}
-
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
@@ -488,8 +480,8 @@ class FindFiles(Block):
         {% if cmake_include_path %}
         list(PREPEND CMAKE_INCLUDE_PATH {{ cmake_include_path }})
         {% endif %}
-        {% if host_lib_dirs %}
-        list(PREPEND CONAN_RUNTIME_LIB_DIRS {{ multiconfig_generator(host_lib_dirs) }} )
+        {% if host_runtime_dirs %}
+        list(PREPEND CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
         {% endif %}
 
         {% if cross_building %}
@@ -513,9 +505,15 @@ class FindFiles(Block):
         {% endif %}
     """)
 
-    def _get_host_lib_dirs_mc(self):
+    @staticmethod
+    def _multiconfig_generator(prop):
+        return ''.join(f'$<$<CONFIG:{c}>:{v}>' for c, v in prop.items())
+
+    def _get_host_runtime_dirs_mc(self, is_win, host_req):
         settings = self._conanfile.settings
-        host_lib_dirs = {}
+        host_runtime_dirs = {}
+
+        # Get the previous configuration
         if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
             existing_include = load(CONAN_TOOLCHAIN_FILENAME)
             pattern_lib_dris = r"list\(PREPEND CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
@@ -523,10 +521,20 @@ class FindFiles(Block):
             if msvc_runtime_value:
                 capture = msvc_runtime_value.group(1)
                 matches = re.findall(r"\$<\$<CONFIG:(.*)>:(.*)>", capture)
-                host_lib_dirs = dict(matches)
+                host_runtime_dirs = dict(matches)
         build_type = settings.get_safe("build_type")
-        host_lib_dirs[build_type] = []
-        return host_lib_dirs
+
+        # Calculate the dirs for the actual build_type
+        host_runtime_dirs[build_type] = []
+        for req in host_req:
+            cppinfo = req.cpp_info.aggregated_components()
+            if is_win:
+                host_runtime_dirs[build_type].extend(cppinfo.bindirs)
+            else:
+                host_runtime_dirs[build_type].extend(cppinfo.libdirs)
+        host_runtime_dirs[build_type] = self._join_paths(host_runtime_dirs[build_type])
+
+        return host_runtime_dirs
 
 
     @staticmethod
@@ -553,7 +561,7 @@ class FindFiles(Block):
         host_req = self._conanfile.dependencies.filter({"build": False}).values()
         build_paths = []
         host_lib_paths = []
-        host_lib_dirs = self._get_host_lib_dirs_mc()
+        host_runtime_dirs = self._get_host_runtime_dirs_mc(is_win, host_req)
         host_framework_paths = []
         host_include_paths = []
         for req in host_req:
@@ -563,11 +571,6 @@ class FindFiles(Block):
             if is_apple_:
                 host_framework_paths.extend(cppinfo.frameworkdirs)
             host_include_paths.extend(cppinfo.includedirs)
-            if is_win:
-                host_lib_dirs[build_type].extend(cppinfo.bindirs)
-            else:
-                host_lib_dirs[build_type].extend(cppinfo.libdirs)
-        host_lib_dirs[build_type] = self._join_paths(host_lib_dirs[build_type])
 
         # Read information from build context
         build_req = self._conanfile.dependencies.build.values()
@@ -587,7 +590,7 @@ class FindFiles(Block):
             "cmake_include_path": self._join_paths(host_include_paths),
             "is_apple": is_apple_,
             "cross_building": cross_building(self._conanfile),
-            "host_lib_dirs": host_lib_dirs
+            "host_runtime_dirs": self._multiconfig_generator(host_runtime_dirs)
         }
 
 
