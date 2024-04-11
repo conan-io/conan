@@ -381,7 +381,7 @@ def test_lib_dirs_windows(lib_dir_setup):
 
     contents = client.load("conan_toolchain.cmake")
     pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*)"\)'
-    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS     \$<\$<CONFIG:Release>:"(.*)">'
+    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS \$<\$<CONFIG:Release>:"(.*)">'
     lib_path_group = re.search(pattern_lib_path, contents).groups()
     lib_dirs_group = re.search(pattern_lib_dirs, contents).groups()
 
@@ -395,7 +395,7 @@ def test_lib_dirs_no_windows(lib_dir_setup):
 
     contents = client.load("conan_toolchain.cmake")
     pattern_lib_path = r'list\(PREPEND CMAKE_LIBRARY_PATH "(.*)"\)'
-    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS     \$<\$<CONFIG:Release>:"(.*)">'
+    pattern_lib_dirs = r'PREPEND CONAN_RUNTIME_LIB_DIRS \$<\$<CONFIG:Release>:"(.*)">'
     lib_path = re.search(pattern_lib_path, contents).group(1)
     lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
 
