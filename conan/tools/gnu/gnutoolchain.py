@@ -43,7 +43,8 @@ class GnuToolchain:
         self.extra_cflags = []
         self.extra_ldflags = []
         self.extra_defines = []
-
+        # Extra environment definitions
+        self.extra_env = Environment()
         # Defines
         self.ndebug = None
         build_type = self._conanfile.settings.get_safe("build_type")
@@ -95,7 +96,21 @@ class GnuToolchain:
         self.apple_min_version_flag = None
         self._resolve_apple_flags_and_variables()
         # MSVC common stuff
-        # self._add_common_msvc_env_variables()
+        self._add_common_msvc_env_variables()
+
+    def yes_no(self, option_name, default=None, negated=False):
+        """
+        Simple wrapper to return "yes" or "no" depending on whether option_name is
+        evaluated as True or False.
+
+        :param option_name: option name.
+        :param default: Default value to return
+        :param negated: Negates the option value if True.
+        :return: "yes" or "no" depending on whether option_name is True or False.
+        """
+        option_value = self._conanfile.options.get_safe(option_name, default=default)
+        option_value = not option_value if negated else option_value
+        return "yes" if bool(option_value) else "no"
 
     def _resolve_apple_flags_and_variables(self):
         if not self._is_apple_system:
@@ -124,20 +139,17 @@ class GnuToolchain:
             # -isysroot makes all includes for your library relative to the build directory
             self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
-    # def _add_common_msvc_env_variables(self):
-    #     env = Environment()
-    #     if is_msvc(self):
-    #         compile_wrapper = unix_path(self, self.conf.get("user.automake:compile-wrapper",
-    #                                                         check_type=str))
-    #         ar_wrapper = unix_path(self, self.conf.get("user.automake:lib-wrapper", check_type=str))
-    #         env.define("CC", f"{compile_wrapper} cl -nologo")
-    #         env.define("CXX", f"{compile_wrapper} cl -nologo")
-    #         env.define("LD", f"{compile_wrapper} link -nologo")
-    #         env.define("AR", f"{ar_wrapper} \"lib -nologo\"")
-    #         env.define("NM", "dumpbin -symbols")
-    #         env.define("OBJDUMP", ":")
-    #         env.define("RANLIB", ":")
-    #         env.define("STRIP", ":")
+    def _add_common_msvc_env_variables(self):
+        """Normally, these are the most common default flags used by MSVC in Windows"""
+        if is_msvc(self):
+            self.extra_env.define("CC", "cl -nologo")
+            self.extra_env.define("CXX", "cl -nologo")
+            self.extra_env.define("LD", "link -nologo")
+            self.extra_env.define("AR", "\"lib -nologo\"")
+            self.extra_env.define("NM", "dumpbin -symbols")
+            self.extra_env.define("OBJDUMP", ":")
+            self.extra_env.define("RANLIB", ":")
+            self.extra_env.define("STRIP", ":")
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -213,9 +225,7 @@ class GnuToolchain:
         return args
 
     def _get_default_configure_install_flags(self):
-        configure_install_flags = {
-            "--prefix": self._prefix
-        }
+        configure_install_flags = {"--prefix": self._prefix}
         # If someone want arguments but not the defaults can pass them in args manually
         for flag_name, cppinfo_name in [("bindir", "bindirs"), ("sbindir", "bindirs"),
                                         ("libdir", "libdirs"), ("includedir", "includedirs"),
@@ -234,33 +244,45 @@ class GnuToolchain:
                 triplets[f"--{context}"] = info["triplet"]
         return triplets
 
-    def environment(self):
+    @property
+    def _environment(self):
         env = Environment()
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
-        if compilers_by_conf:
-            compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC", "rc": "RC"}
-            for comp, env_var in compilers_mapping.items():
-                if comp in compilers_by_conf:
-                    compiler = compilers_by_conf[comp]
-                    # https://github.com/conan-io/conan/issues/13780
-                    compiler = unix_path(self._conanfile, compiler)
-                    env.define(env_var, compiler)
+        # Flags and defines
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
-        return env
+        # Configuration map
+        compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
+                             "rc": "RC", "ld": "LD", "ar": "AR"}
+        # Compiler definitions by conf
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
 
-    def vars(self):
-        return self.environment().vars(self._conanfile, scope="build")
+        if compilers_by_conf:
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_by_conf:
+                    compiler = compilers_by_conf[comp]
+                    # https://github.com/conan-io/conan/issues/13780
+                    compiler = unix_path(self._conanfile, compiler)
+                    env.append(env_var, compiler)
+        # Now, let's analyze the compiler wrappers if exist
+        compilers_wrappers = self._conanfile.conf.get("tools.build:compiler_wrappers", default={},
+                                                      check_type=dict)
+        if compilers_wrappers:
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_wrappers:
+                    compiler_wrap = unix_path(self._conanfile, compilers_wrappers[comp])
+                    env.prepend(env_var, compiler_wrap)
+        # Let's compose with user extra env variables defined (user ones have precedence)
+        return self.extra_env.compose_env(env)
 
-    def generate(self, env=None, scope="build"):
+    def generate(self):
         check_duplicated_generator(self, self._conanfile)
-        env = env or self.environment()
-        env = env.vars(self._conanfile, scope=scope)
-        env.save_script("conanautotoolstoolchain")
+        # Composing both environments. User extra_env definitions has precedence
+        env_vars = self._environment.vars(self._conanfile)
+        env_vars.save_script("conanautotoolstoolchain")
         # Converts all the arguments into strings
         args = {
             "configure_args": cmd_args_to_string(self._dict_to_list(self.configure_args)),
@@ -268,47 +290,4 @@ class GnuToolchain:
             "autoreconf_args": cmd_args_to_string(self._dict_to_list(self.autoreconf_args))
         }
         save_toolchain_args(args, namespace=self._namespace)
-        VCVars(self._conanfile).generate(scope=scope)
-
-"""
-    def generate(self):
-        env = VirtualBuildEnv(self)
-        env.generate()
-
-        tc = AutotoolsToolchain(self)
-        yes_no = lambda v: "yes" if v else "no"
-        tc.configure_args.extend([
-            f'--with-pic={yes_no(self.options.get_safe("fPIC", True))}',
-            f'--enable-assembly={yes_no(not self.options.get_safe("disable_assembly", False))}',
-            f'--enable-fat={yes_no(self.options.get_safe("enable_fat", False))}',
-            f'--enable-cxx={yes_no(self.options.enable_cxx)}',
-            f'--srcdir={"../src"}', # Use relative path to avoid issues with #include "$srcdir/gmp-h.in" on Windows
-        ])
-        if is_msvc(self):
-            tc.configure_args.extend([
-                "ac_cv_c_restrict=restrict",
-                "gmp_cv_asm_label_suffix=:",
-                "lt_cv_sys_global_symbol_pipe=cat",  # added to get further in shared MSVC build, but it gets stuck later
-            ])
-            tc.extra_cxxflags.append("-EHsc")
-            if check_min_vs(self, "180", raise_invalid=False):
-                tc.extra_cflags.append("-FS")
-                tc.extra_cxxflags.append("-FS")
-        env = tc.environment() # Environment must be captured *after* setting extra_cflags, etc. to pick up changes
-        if is_msvc(self):
-            yasm_wrapper = unix_path(self, os.path.join(self.source_folder, "yasm_wrapper.sh"))
-            yasm_machine = {
-                "x86": "x86",
-                "x86_64": "amd64",
-            }[str(self.settings.arch)]
-            ar_wrapper = unix_path(self, self.conf.get("user.automake:lib-wrapper"))
-            dumpbin_nm = unix_path(self, os.path.join(self.source_folder, "dumpbin_nm.py"))
-            env.define("CC", "cl -nologo")
-            env.define("CCAS", f"{yasm_wrapper} -a x86 -m {yasm_machine} -p gas -r raw -f win32 -g null -X gnu")
-            env.define("CXX", "cl -nologo")
-            env.define("LD", "link -nologo")
-            env.define("AR", f'{ar_wrapper} "lib -nologo"')
-            env.define("NM", f"python {dumpbin_nm}")
-        tc.generate(env)
-
-"""
+        VCVars(self._conanfile).generate()
