@@ -347,11 +347,11 @@ def test_autotools_crossbuild_ux():
 def test_msvc_and_compilers_wrappers_build_context():
     """
     Tests how GnuToolchain manages the build context profile if the build profile is
-    specifying another compiler path (using conf)
+    specifying another compiler wrapper path (using conf).
 
-    Issue related: https://github.com/conan-io/conan/issues/15878
+    Apart from that, it tests the behavior of GnuToolchain and MSVC (defualt env variables).
     """
-    profile = textwrap.dedent("""
+    profile = textwrap.dedent("""\
     [settings]
     os=Windows
     arch=x86_64
@@ -362,10 +362,11 @@ def test_msvc_and_compilers_wrappers_build_context():
 
     [conf]
     tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    # Fake installation path
+    tools.microsoft.msbuild:installation_path={{os.getcwd()}}
     """)
-    tool = textwrap.dedent("""
+    tool = textwrap.dedent("""\
     from conan import ConanFile
-
     class toolRecipe(ConanFile):
         name = "automake"
         version = "1.0"
@@ -381,13 +382,14 @@ def test_msvc_and_compilers_wrappers_build_context():
 
             # Defining some compiler wrappers
             wrappers = {
-                "c": "c_wrapper",
-                "cpp": "cpp_wrapper",
-                "ar": "lib_wrapper"
+                "c": r"c\my\win\c_wrapper",
+                "cpp": r"c\my\win\cpp_wrapper",
+                "ar": r"c\my\win\lib_wrapper"
             }
             self.conf_info.define("tools.build:compiler_wrappers", wrappers)
     """)
-    consumer = textwrap.dedent("""
+    # Consumer with default values
+    consumer = textwrap.dedent("""\
     import os
     from conan import ConanFile
     from conan.tools.files import load
@@ -400,12 +402,62 @@ def test_msvc_and_compilers_wrappers_build_context():
         generators = "GnuToolchain"
         tool_requires = "automake/1.0"
 
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.bat")
+            content = load(self, toolchain)
+            # Default values
+            assert r'set "CC=c\my\win\c_wrapper clang"' in content
+            assert r'set "CXX=c\my\win\cpp_wrapper clang++"' in content
+            assert 'set "LD=link -nologo"' in content
+            assert r'set "AR=c\my\win\lib_wrapper lib"' in content
+            assert 'set "NM=dumpbin -symbols"' in content
+            assert 'set "OBJDUMP=:"' in content
+            assert 'set "RANLIB=:"' in content
+            assert 'set "STRIP=:"' in content
     """)
     client = TestClient()
     client.save({
         "profile": profile,
-        "tool/conanfile.py": tool,
+        "automake/conanfile.py": tool,
         "consumer/conanfile.py": consumer
     })
-    client.run("export tool")
-    client.run("install consumer -pr:a profile --build=missing")
+    client.run("export automake")
+    client.run("create consumer -pr:a profile --build=missing")
+    # Consumer changing default values
+    consumer = textwrap.dedent("""\
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+    from conan.tools.gnu import GnuToolchain
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        tool_requires = "automake/1.0"
+
+        def generate(self):
+            tc = GnuToolchain(self)
+            tc.extra_env.append("LD", "-fixed")
+            tc.extra_env.define("OBJDUMP", "other-value")
+            tc.extra_env.unset("RANLIB")
+            tc.generate()
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.bat")
+            content = load(self, toolchain)
+            # Default values
+            assert r'set "CC=c\my\win\c_wrapper clang"' in content
+            assert r'set "CXX=c\my\win\cpp_wrapper clang++"' in content
+            assert 'set "LD=link -nologo -fixed"' in content  # appended new value
+            assert r'set "AR=c\my\win\lib_wrapper lib"' in content
+            assert 'set "NM=dumpbin -symbols"' in content
+            assert 'set "OBJDUMP=other-value"' in content  # redefined
+            assert 'set "RANLIB=:"' not in content  # removed
+            assert 'set "STRIP=:"' in content
+    """)
+    client.save({
+        "consumer/conanfile.py": consumer
+    })
+    client.run("create consumer -pr:a profile --build=missing")

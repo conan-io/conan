@@ -127,8 +127,8 @@ class GnuToolchain:
         if is_msvc(self._conanfile):
             extra_env_vars = {"CC": "cl -nologo",
                               "CXX": "cl -nologo",
-                              "LD": "link",
-                              "AR": "\"lib -nologo\"",
+                              "LD": "link -nologo",
+                              "AR": "lib",
                               "NM": "dumpbin -symbols",
                               "OBJDUMP": ":",
                               "RANLIB": ":",
