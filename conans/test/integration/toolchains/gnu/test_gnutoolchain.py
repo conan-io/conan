@@ -52,9 +52,9 @@ def test_extra_flags_via_conf(os_):
         assert f'export PKG_CONFIG_PATH="{client.current_folder}:$PKG_CONFIG_PATH"' in toolchain
     else:  # macOS
         assert 'export CPPFLAGS="$CPPFLAGS -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'export CXXFLAGS="$CXXFLAGS -O3 -isysroot /my/sdk/path -arch arm64 --flag1 --flag2"' in toolchain
-        assert 'export CFLAGS="$CFLAGS -O3 -isysroot /my/sdk/path -arch arm64 --flag3 --flag4"' in toolchain
-        assert 'export LDFLAGS="$LDFLAGS -isysroot /my/sdk/path -arch arm64 --flag5 --flag6"' in toolchain
+        assert 'export CXXFLAGS="$CXXFLAGS -O3 --flag1 --flag2"' in toolchain
+        assert 'export CFLAGS="$CFLAGS -O3 --flag3 --flag4"' in toolchain
+        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
         assert f'export PKG_CONFIG_PATH="{client.current_folder}:$PKG_CONFIG_PATH"' in toolchain
 
 

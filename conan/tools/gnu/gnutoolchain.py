@@ -2,7 +2,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import apple_min_version_flag, is_apple_os, to_apple_arch, \
-    apple_sdk_path
+    apple_sdk_path, resolve_apple_flags
 from conan.tools.apple.apple import get_apple_sdk_fullname
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
@@ -67,7 +67,8 @@ class GnuToolchain:
             "host": {"triplet": self._conanfile.conf.get("tools.gnu:host_triplet")},
             "build": {"triplet": self._conanfile.conf.get("tools.gnu:build_triplet")}
         }
-        if cross_building(self._conanfile):
+        is_cross_building = cross_building(self._conanfile)
+        if is_cross_building:
             compiler = self._conanfile.settings.get_safe("compiler")
             # Host triplet
             if not self.cross_build["host"]["triplet"]:
@@ -91,10 +92,17 @@ class GnuToolchain:
         self.configure_args.update(self._get_default_configure_install_flags())
         self.configure_args.update(self._get_default_triplets())
         # Apple stuff
-        self.apple_arch_flag = None
-        self.apple_isysroot_flag = None
-        self.apple_min_version_flag = None
-        self._resolve_apple_flags_and_variables()
+        is_cross_building_osx = (is_cross_building
+                                 and conanfile.settings_build.get_safe('os') == "Macos"
+                                 and is_apple_os(conanfile))
+        min_flag, arch_flag, isysroot_flag = (
+            resolve_apple_flags(conanfile, is_cross_building=is_cross_building_osx)
+        )
+        # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
+        self.apple_arch_flag = arch_flag
+        # -isysroot makes all includes for your library relative to the build directory
+        self.apple_isysroot_flag = isysroot_flag
+        self.apple_min_version_flag = min_flag
         # MSVC common stuff
         self._add_common_msvc_env_variables()
 
@@ -104,40 +112,13 @@ class GnuToolchain:
         evaluated as True or False.
 
         :param option_name: option name.
-        :param default: Default value to return
+        :param default: Default value to return.
         :param negated: Negates the option value if True.
         :return: "yes" or "no" depending on whether option_name is True or False.
         """
         option_value = bool(self._conanfile.options.get_safe(option_name, default=default))
         option_value = not option_value if negated else option_value
         return "yes" if option_value else "no"
-
-    def _resolve_apple_flags_and_variables(self):
-        if not self._is_apple_system:
-            return
-        # SDK path is mandatory for cross-building
-        sdk_path = apple_sdk_path(self._conanfile)
-        if not sdk_path and self.cross_build:
-            raise ConanException(
-                "Apple SDK path not found. For cross-compilation, you must "
-                "provide a valid SDK path in 'tools.apple:sdk_path' config."
-            )
-        # Calculating the main Apple flags
-        os_sdk = get_apple_sdk_fullname(self._conanfile)
-        os_version = self._conanfile.settings.get_safe("os.version")
-        subsystem = self._conanfile.settings.get_safe("os.subsystem")
-        self.apple_min_version_flag = apple_min_version_flag(os_version, os_sdk, subsystem)
-
-        if self._conanfile.settings_build.get_safe('os') == "Macos":
-            # SDK path is mandatory for cross-building
-            sdk_path = apple_sdk_path(self._conanfile)
-            if not sdk_path:
-                raise ConanException("You must provide a valid SDK path for cross-compilation.")
-            apple_arch = to_apple_arch(self._conanfile)
-            # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
-            self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
-            # -isysroot makes all includes for your library relative to the build directory
-            self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
     def _add_common_msvc_env_variables(self):
         """Normally, these are the most common default flags used by MSVC in Windows"""
@@ -257,7 +238,6 @@ class GnuToolchain:
         # Compiler definitions by conf
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
-
         if compilers_by_conf:
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
