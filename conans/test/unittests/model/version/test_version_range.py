@@ -114,7 +114,7 @@ def test_range_prereleases_conf(version_range, resolve_prereleases, versions_in,
     "==1.0",  "~=1.0",  "^=1.0", "v=1.0"  # https://github.com/conan-io/conan/issues/16066
 ])
 def test_wrong_range_syntax(version_range):
-    with pytest.raises(ConanException) as e:
+    with pytest.raises(ConanException):
         VersionRange(version_range)
 
 
