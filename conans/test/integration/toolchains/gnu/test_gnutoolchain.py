@@ -257,8 +257,8 @@ def test_toolchain_and_compilers_build_context():
         def build(self):
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
             content = load(self, toolchain)
-            assert 'export CC="clang $CC"' in content
-            assert 'export CXX="clang++ $CXX"' in content
+            assert 'export CC="clang"' in content
+            assert 'export CXX="clang++"' in content
     """)
     consumer = textwrap.dedent("""
     import os
@@ -276,9 +276,9 @@ def test_toolchain_and_compilers_build_context():
         def build(self):
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
             content = load(self, toolchain)
-            assert 'export CC="gcc $CC"' in content
-            assert 'export CXX="g++ $CXX"' in content
-            assert 'export RC="windres $RC"' in content
+            assert 'export CC="gcc"' in content
+            assert 'export CXX="g++"' in content
+            assert 'export RC="windres"' in content
     """)
     client = TestClient()
     client.save({
@@ -342,3 +342,70 @@ def test_autotools_crossbuild_ux():
     assert len(build_flags) == 1
     assert host_flags[0] == '--host=x86_64-my-triplet-host'
     assert build_flags[0] == '--build=arm-my-triplet-build'
+
+
+def test_msvc_and_compilers_wrappers_build_context():
+    """
+    Tests how GnuToolchain manages the build context profile if the build profile is
+    specifying another compiler path (using conf)
+
+    Issue related: https://github.com/conan-io/conan/issues/15878
+    """
+    profile = textwrap.dedent("""
+    [settings]
+    os=Windows
+    arch=x86_64
+    compiler=msvc
+    compiler.version=191
+    compiler.runtime=dynamic
+    build_type=Release
+
+    [conf]
+    tools.build:compiler_executables={"c": "clang", "cpp": "clang++"}
+    """)
+    tool = textwrap.dedent("""
+    from conan import ConanFile
+
+    class toolRecipe(ConanFile):
+        name = "automake"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "GnuToolchain"
+
+        def package_info(self):
+            self.cpp_info.libdirs = []
+            self.cpp_info.includedirs = []
+            self.cpp_info.frameworkdirs = []
+            self.cpp_info.resdirs = ["res"]
+
+            # Defining some compiler wrappers
+            wrappers = {
+                "c": "c_wrapper",
+                "cpp": "cpp_wrapper",
+                "ar": "lib_wrapper"
+            }
+            self.conf_info.define("tools.build:compiler_wrappers", wrappers)
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        # Binary configuration
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "GnuToolchain"
+        tool_requires = "automake/1.0"
+
+    """)
+    client = TestClient()
+    client.save({
+        "profile": profile,
+        "tool/conanfile.py": tool,
+        "consumer/conanfile.py": consumer
+    })
+    client.run("export tool")
+    client.run("install consumer -pr:a profile --build=missing")

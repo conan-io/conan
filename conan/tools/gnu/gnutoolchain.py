@@ -104,7 +104,7 @@ class GnuToolchain:
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
         # MSVC common stuff
-        self._add_common_msvc_env_variables()
+        self._initialize_default_extra_env()
 
     def yes_no(self, option_name, default=None, negated=False):
         """
@@ -120,17 +120,47 @@ class GnuToolchain:
         option_value = not option_value if negated else option_value
         return "yes" if option_value else "no"
 
-    def _add_common_msvc_env_variables(self):
-        """Normally, these are the most common default flags used by MSVC in Windows"""
+    def _initialize_default_extra_env(self):
+        """Initialize the default environment variables."""
+        extra_env_vars = dict()
+        # Normally, these are the most common default flags used by MSVC in Windows
         if is_msvc(self._conanfile):
-            self.extra_env.define("CC", "cl -nologo")
-            self.extra_env.define("CXX", "cl -nologo")
-            self.extra_env.define("LD", "link")
-            self.extra_env.define("AR", "\"lib -nologo\"")
-            self.extra_env.define("NM", "dumpbin -symbols")
-            self.extra_env.define("OBJDUMP", ":")
-            self.extra_env.define("RANLIB", ":")
-            self.extra_env.define("STRIP", ":")
+            extra_env_vars = {"CC": "cl -nologo",
+                              "CXX": "cl -nologo",
+                              "LD": "link",
+                              "AR": "\"lib -nologo\"",
+                              "NM": "dumpbin -symbols",
+                              "OBJDUMP": ":",
+                              "RANLIB": ":",
+                              "STRIP": ":"}
+        # Configuration map
+        compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
+                             "rc": "RC", "ld": "LD", "ar": "AR", "nm": "NM", "ranlib": "RANLIB",
+                             "objdump": "OBJDUMP", "strip": "STRIP"}
+        # Compiler definitions by conf
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        if compilers_by_conf:
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_by_conf:
+                    compiler = compilers_by_conf[comp]
+                    # https://github.com/conan-io/conan/issues/13780
+                    compiler = unix_path(self._conanfile, compiler)
+                    extra_env_vars[env_var] = compiler  # User/tools ones have precedence
+        # Now, let's analyze the compiler wrappers if exist
+        compilers_wrappers = self._conanfile.conf.get("tools.build:compiler_wrappers", default={},
+                                                      check_type=dict)
+        if compilers_wrappers:
+            for comp, env_var in compilers_mapping.items():
+                if comp in compilers_wrappers:
+                    compiler_wrap = unix_path(self._conanfile, compilers_wrappers[comp])
+                    if env_var in extra_env_vars:
+                        extra_env_vars[env_var] = f"{compiler_wrap} {extra_env_vars[env_var]}"
+                    else:
+                        extra_env_vars[env_var] = compiler_wrap
+        # Update the extra_env attribute with all the compiler values
+        for env_var, env_value in extra_env_vars.items():
+            self.extra_env.define(env_var, env_value)
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
@@ -232,27 +262,6 @@ class GnuToolchain:
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
-        # Configuration map
-        compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
-                             "rc": "RC", "ld": "LD", "ar": "AR"}
-        # Compiler definitions by conf
-        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
-        if compilers_by_conf:
-            for comp, env_var in compilers_mapping.items():
-                if comp in compilers_by_conf:
-                    compiler = compilers_by_conf[comp]
-                    # https://github.com/conan-io/conan/issues/13780
-                    compiler = unix_path(self._conanfile, compiler)
-                    env.prepend(env_var, compiler)
-        # Now, let's analyze the compiler wrappers if exist
-        compilers_wrappers = self._conanfile.conf.get("tools.build:compiler_wrappers", default={},
-                                                      check_type=dict)
-        if compilers_wrappers:
-            for comp, env_var in compilers_mapping.items():
-                if comp in compilers_wrappers:
-                    compiler_wrap = unix_path(self._conanfile, compilers_wrappers[comp])
-                    env.prepend(env_var, compiler_wrap)
         # Let's compose with user extra env variables defined (user ones have precedence)
         return self.extra_env.compose_env(env)
 
