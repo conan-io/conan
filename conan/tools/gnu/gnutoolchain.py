@@ -108,9 +108,9 @@ class GnuToolchain:
         :param negated: Negates the option value if True.
         :return: "yes" or "no" depending on whether option_name is True or False.
         """
-        option_value = self._conanfile.options.get_safe(option_name, default=default)
+        option_value = bool(self._conanfile.options.get_safe(option_name, default=default))
         option_value = not option_value if negated else option_value
-        return "yes" if bool(option_value) else "no"
+        return "yes" if option_value else "no"
 
     def _resolve_apple_flags_and_variables(self):
         if not self._is_apple_system:
@@ -141,10 +141,10 @@ class GnuToolchain:
 
     def _add_common_msvc_env_variables(self):
         """Normally, these are the most common default flags used by MSVC in Windows"""
-        if is_msvc(self):
+        if is_msvc(self._conanfile):
             self.extra_env.define("CC", "cl -nologo")
             self.extra_env.define("CXX", "cl -nologo")
-            self.extra_env.define("LD", "link -nologo")
+            self.extra_env.define("LD", "link")
             self.extra_env.define("AR", "\"lib -nologo\"")
             self.extra_env.define("NM", "dumpbin -symbols")
             self.extra_env.define("OBJDUMP", ":")
@@ -153,9 +153,7 @@ class GnuToolchain:
 
     def _get_msvc_runtime_flag(self):
         flag = msvc_runtime_flag(self._conanfile)
-        if flag:
-            flag = "-{}".format(flag)
-        return flag
+        return f"-{flag}" if flag else ""
 
     def _msvc_extra_flags(self):
         if is_msvc(self._conanfile) and check_min_vs(self._conanfile, "180", raise_invalid=False):
@@ -266,7 +264,7 @@ class GnuToolchain:
                     compiler = compilers_by_conf[comp]
                     # https://github.com/conan-io/conan/issues/13780
                     compiler = unix_path(self._conanfile, compiler)
-                    env.append(env_var, compiler)
+                    env.prepend(env_var, compiler)
         # Now, let's analyze the compiler wrappers if exist
         compilers_wrappers = self._conanfile.conf.get("tools.build:compiler_wrappers", default={},
                                                       check_type=dict)

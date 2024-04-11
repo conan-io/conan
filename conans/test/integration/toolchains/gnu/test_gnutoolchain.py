@@ -106,9 +106,9 @@ def test_autotools_custom_environment():
                 settings = "os"
                 def generate(self):
                     at = GnuToolchain(self)
-                    env = at.environment()
+                    env = at.extra_env
                     env.define("FOO", "BAR")
-                    at.generate(env)
+                    at.generate()
             """)
 
     client.save({"conanfile.py": conanfile})
@@ -257,8 +257,8 @@ def test_toolchain_and_compilers_build_context():
         def build(self):
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
             content = load(self, toolchain)
-            assert 'export CC="clang"' in content
-            assert 'export CXX="clang++"' in content
+            assert 'export CC="clang $CC"' in content
+            assert 'export CXX="clang++ $CXX"' in content
     """)
     consumer = textwrap.dedent("""
     import os
@@ -276,9 +276,9 @@ def test_toolchain_and_compilers_build_context():
         def build(self):
             toolchain = os.path.join(self.generators_folder, "conanautotoolstoolchain.sh")
             content = load(self, toolchain)
-            assert 'export CC="gcc"' in content
-            assert 'export CXX="g++"' in content
-            assert 'export RC="windres"' in content
+            assert 'export CC="gcc $CC"' in content
+            assert 'export CXX="g++ $CXX"' in content
+            assert 'export RC="windres $RC"' in content
     """)
     client = TestClient()
     client.save({
