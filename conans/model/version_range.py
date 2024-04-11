@@ -88,6 +88,8 @@ class _ConditionSet:
             if expression[1] == "=":
                 operator += "="
                 index = 2
+        elif operator == "=" and expression[1] == "=":
+            raise ConanException(f"Invalid version range operator '==' in {expression}")
         version = expression[index:]
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
