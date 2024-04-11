@@ -6,8 +6,8 @@ from jinja2 import Template
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
-from conan.tools.apple.apple import to_apple_arch, is_apple_os, apple_min_version_flag, \
-    apple_sdk_path, get_apple_sdk_fullname
+from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
+    resolve_apple_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import libcxx_flags
 from conan.tools.env import VirtualBuildEnv
@@ -307,21 +307,12 @@ class MesonToolchain(object):
     def _resolve_apple_flags_and_variables(self, build_env, compilers_by_conf):
         if not self._is_apple_system:
             return
-        # SDK path is mandatory for cross-building
-        sdk_path = apple_sdk_path(self._conanfile)
-        if not sdk_path and self.cross_build:
-            raise ConanException(
-                "Apple SDK path not found. For cross-compilation, you must "
-                "provide a valid SDK path in 'tools.apple:sdk_path' config."
-            )
         # Calculating the main Apple flags
-        os_sdk = get_apple_sdk_fullname(self._conanfile)
-        arch = to_apple_arch(self._conanfile)
-        self.apple_arch_flag = ["-arch", arch] if arch else []
-        self.apple_isysroot_flag = ["-isysroot", sdk_path] if sdk_path else []
-        os_version = self._conanfile.settings.get_safe("os.version")
-        subsystem = self._conanfile.settings.get_safe("os.subsystem")
-        self.apple_min_version_flag = [apple_min_version_flag(os_version, os_sdk, subsystem)]
+        min_flag, arch_flag, isysroot_flag = (
+            resolve_apple_flags(self._conanfile, is_cross_building=bool(self.cross_build)))
+        self.apple_arch_flag = arch_flag.split() if arch_flag else []
+        self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
+        self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")
