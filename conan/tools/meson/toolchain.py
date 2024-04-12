@@ -147,11 +147,13 @@ class MesonToolchain(object):
         """
         raise_on_universal_arch(conanfile)
         self._conanfile = conanfile
-        self._os = self._conanfile.settings.get_safe("os")
-        self._is_apple_system = is_apple_os(self._conanfile)
         self._native = native
+        self._is_cross_building = cross_building(conanfile, skip_x64_x86=True)
+        if not self._is_cross_building and native:
+            raise ConanException("You can only pass native=True if you're cross-building, "
+                                 "otherwise, it could cause unexpected results.")
+        self._is_apple_system = is_apple_os(self._conanfile)
         self._conanfile_conf = self._conanfile.conf_build if native else self._conanfile.conf
-
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
@@ -212,7 +214,7 @@ class MesonToolchain(object):
         self.cross_build = {}
         default_comp = ""
         default_comp_cpp = ""
-        if native is False and cross_building(conanfile, skip_x64_x86=True):
+        if native is False and self._is_cross_building:
             os_host = conanfile.settings.get_safe("os")
             arch_host = conanfile.settings.get_safe("arch")
             os_build = conanfile.settings_build.get_safe('os')
@@ -355,7 +357,7 @@ class MesonToolchain(object):
             return
         # Calculating the main Apple flags
         min_flag, arch_flag, isysroot_flag = (
-            resolve_apple_flags(self._conanfile, is_cross_building=bool(self.cross_build)))
+            resolve_apple_flags(self._conanfile, is_cross_building=self._is_cross_building))
         self.apple_arch_flag = arch_flag.split() if arch_flag else []
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
@@ -368,7 +370,7 @@ class MesonToolchain(object):
         self.objcpp_link_args = self._get_env_list(build_env.get('LDFLAGS', []))
 
     def _resolve_android_cross_compilation(self):
-        if not self.cross_build or not self.cross_build["host"]["system"] == "android":
+        if not self._is_cross_building or not self.cross_build["host"]["system"] == "android":
             return
 
         ndk_path = self._conanfile_conf.get("tools.android:ndk_path")
@@ -498,9 +500,9 @@ class MesonToolchain(object):
 
     @property
     def _filename(self):
-        if self.cross_build and self._native:
+        if self._is_cross_building and self._native:
             return self.native_filename
-        elif self.cross_build:
+        elif self._is_cross_building:
             return self.cross_filename
         else:
             return self.native_filename
