@@ -48,6 +48,7 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
+    repackage = False
 
     implements = []
 
