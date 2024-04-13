@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
@@ -62,6 +63,8 @@ def test_repackage():
     assert "pkga" in c.out
     assert c.load("full_deploy/host/app/0.1/app.exe") == "app"
     assert c.load("full_deploy/host/app/0.1/pkga.dll") == "newdll"
+    # This shoulnd't happen, no visibility over transitive dependencies of app
+    assert not os.path.exists(os.path.join(c.current_folder, "full_deploy", "host", "pkga"))
 
     # lets remove the binary
     c.run("remove app:* -c")
@@ -72,3 +75,42 @@ def test_repackage():
            "enable 'tools.graph:repackage'" in c.out
     c.run("install --requires=app/0.1 --build=missing  -c tools.graph:repackage=True")
     assert "pkga" in c.out  # it works
+
+
+def test_repackage_editable():
+    c = TestClient()
+    pkgb = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy, save
+
+        class App(ConanFile):
+            name = "pkgb"
+            version = "0.1"
+            package_type = "shared-library"
+            repackage = True
+            requires = "pkga/0.1"
+            def layout(self):
+                self.folders.build = "build"
+                self.cpp.build.bindirs = ["build"]
+            def generate(self):
+                copy(self, "*", src=self.dependencies["pkga"].package_folder,
+                     dst=self.build_folder)
+            def build(self):
+                save(self, os.path.join(self.build_folder, "pkgb.dll"), "dll")
+            """)
+
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_package_type("shared-library")
+                                                            .with_package_file("bin/pkga.dll", "d"),
+            "pkgb/conanfile.py": pkgb,
+            "app/conanfile.py": GenConanfile("app", "0.1").with_settings("os")
+                                                          .with_requires("pkgb/0.1")
+            })
+    c.run("create pkga")
+    c.run("editable add pkgb")
+    c.run("install app -s os=Linux")
+    print(c.out)
+    assert "pkga" in c.out
+    envfile = c.load("app/conanrunenv.sh")
+    print(envfile)
+

@@ -5,7 +5,7 @@ from collections import deque
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
 from conans.client.graph.graph import RECIPE_PLATFORM
 from conans.client.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, \
     GraphRuntimeError, GraphError
@@ -53,7 +53,7 @@ class DepsGraphBuilder(object):
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
                 conanfile = new_node.conanfile
-                if new_node and (not conanfile.repackage or
+                if new_node and (not conanfile.repackage or new_node.recipe == RECIPE_EDITABLE or
                                  conanfile.conf.get("tools.graph:repackage", check_type=bool)):
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
