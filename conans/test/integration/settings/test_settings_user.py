@@ -81,3 +81,15 @@ def test_settings_user_convert_list_dict():
     c.run("install . -s arch=x86_64 -s arch.subarch=2 ")
     assert "arch=x86_64" in c.out
     assert "arch.subarch=2" in c.out
+
+
+def test_settings_user_error():
+    c = TestClient()
+    settings_user = textwrap.dedent("""\
+        os:
+            Windows:
+                libc: null
+        """)
+    save(os.path.join(c.cache_folder, "settings_user.yml"), settings_user)
+    c.run("profile show", assert_error=True)
+    assert "ERROR: Definition of settings.yml 'settings.os.libc' cannot be null" in c.out
