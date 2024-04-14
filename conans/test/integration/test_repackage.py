@@ -109,8 +109,10 @@ def test_repackage_editable():
     c.run("create pkga")
     c.run("editable add pkgb")
     c.run("install app -s os=Linux")
-    print(c.out)
     assert "pkga" in c.out
-    envfile = c.load("app/conanrunenv.sh")
-    print(envfile)
-
+    # The environment file of "app" doesn't have any visibility of the "pkga" paths
+    envfile_app = c.load("app/conanrunenv.sh")
+    assert "pkga" not in envfile_app
+    # But the environment file needed to build "pkgb" has visibility over the "pkga" paths
+    envfile_pkgb = c.load("pkgb/conanrunenv.sh")
+    assert "pkga" in envfile_pkgb
