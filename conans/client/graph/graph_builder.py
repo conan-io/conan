@@ -52,9 +52,9 @@ class DepsGraphBuilder(object):
                     continue
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
-                conanfile = new_node.conanfile
-                if new_node and (not conanfile.repackage or new_node.recipe == RECIPE_EDITABLE or
-                                 conanfile.conf.get("tools.graph:repackage", check_type=bool)):
+                if new_node and (not new_node.conanfile.repackage
+                                 or new_node.recipe == RECIPE_EDITABLE or
+                                 new_node.conanfile.conf.get("tools.graph:repackage", check_type=bool)):
                     self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
                                               profile_host)
                     open_requires.extendleft((r, new_node)
