@@ -47,6 +47,9 @@ class MultiPackagesList:
     def __init__(self):
         self.lists = {}
 
+    def setdefault(self, key, default):
+        return self.lists.setdefault(key, default)
+
     def __getitem__(self, name):
         try:
             return self.lists[name]
@@ -63,6 +66,10 @@ class MultiPackagesList:
         return {k: v.serialize() if isinstance(v, PackagesList) else v
                 for k, v in self.lists.items()}
 
+    def merge(self, other):
+        for k, v in other.lists.items():
+            self.lists.setdefault(k, PackagesList()).merge(v)
+
     @staticmethod
     def load(file):
         content = json.loads(load(file))
@@ -77,8 +84,17 @@ class MultiPackagesList:
         return pkglist
 
     @staticmethod
+    def from_graph(graph, graph_recipes=None, graph_binaries=None):
+        graph = {"graph": graph.serialize()}
+        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+
+    @staticmethod
     def load_graph(graphfile, graph_recipes=None, graph_binaries=None):
         graph = json.loads(load(graphfile))
+        return MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries)
+
+    @staticmethod
+    def _define_graph(graph, graph_recipes=None, graph_binaries=None):
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
@@ -142,6 +158,16 @@ class MultiPackagesList:
 class PackagesList:
     def __init__(self):
         self.recipes = {}
+
+    def merge(self, other):
+        def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
+            for k, v in u.items():
+                if isinstance(v, dict):
+                    d[k] = recursive_dict_update(d.get(k, {}), v)
+                else:
+                    d[k] = v
+            return d
+        recursive_dict_update(self.recipes, other.recipes)
 
     def split(self):
         """

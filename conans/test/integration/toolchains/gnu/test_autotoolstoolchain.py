@@ -215,7 +215,7 @@ def test_toolchain_and_compilers_build_context():
     os=Linux
 
     [conf]
-    tools.build:compiler_executables={"c": "gcc", "cpp": "g++"}
+    tools.build:compiler_executables={"c": "gcc", "cpp": "g++", "rc": "windres"}
     """)
     build = textwrap.dedent("""
     [settings]
@@ -265,6 +265,7 @@ def test_toolchain_and_compilers_build_context():
             content = load(self, toolchain)
             assert 'export CC="gcc"' in content
             assert 'export CXX="g++"' in content
+            assert 'export RC="windres"' in content
     """)
     client = TestClient()
     client.save({

@@ -128,7 +128,12 @@ class DetectCompilersTest(unittest.TestCase):
         assert "MyProfile2' already exists" in c.out
 
         c.run("profile detect --name=./MyProfile2 --force")  # will not raise error
-    
+        assert "build_type=Release" in c.load("MyProfile2")
+        c.save({"MyProfile2": "potato"})
+        c.run("profile detect --name=./MyProfile2 --exist-ok")  # wont raise, won't overwrite
+        assert "Profile './MyProfile2' already exists, skipping detection" in c.out
+        assert c.load("MyProfile2") == "potato"
+
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows and msvc")
     def test_profile_new_msvc_vcvars(self):
         c = TestClient()
@@ -140,8 +145,8 @@ class DetectCompilersTest(unittest.TestCase):
         cl_executable = c.out.splitlines()[-1]
         assert os.path.isfile(cl_executable)
         cl_location = os.path.dirname(cl_executable)
-        
-        # Try different variations, including full path and full path with quotes 
+
+        # Try different variations, including full path and full path with quotes
         for var in ["cl", "cl.exe", cl_executable, f'"{cl_executable}"']:
             output = RedirectedTestOutput()
             with redirect_output(output):

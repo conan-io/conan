@@ -171,7 +171,7 @@ class VCVars:
 
         is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
         if is_ps1:
-            content_ps1 = textwrap.dedent(f"""\
+            content_ps1 = textwrap.dedent(rf"""\
             if (-not $env:VSCMD_ARG_VCVARS_VER){{
                 Push-Location "$PSScriptRoot"
                 cmd /c "conanvcvars.bat&set" |
@@ -309,7 +309,7 @@ def _vcvars_arch(conanfile):
                 'x86_64': 'amd64',
                 'armv7': 'amd64_arm',
                 'armv8': 'amd64_arm64',
-                'arm64ec':'amd64_arm64'}.get(arch_host)
+                'arm64ec': 'amd64_arm64'}.get(arch_host)
     elif arch_build == 'x86':
         arch = {'x86': 'x86',
                 'x86_64': 'x86_amd64',

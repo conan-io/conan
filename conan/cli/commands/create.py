@@ -9,6 +9,7 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
+from conans.client.graph.graph import BINARY_BUILD
 from conans.util.files import mkdir
 
 
@@ -26,14 +27,19 @@ def create(conan_api, parser, *args):
     parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                         help='Alternative test folder name. By default it is "test_package". '
                              'Use "" to skip the test stage')
+    parser.add_argument("-tm", "--test-missing", action='store_true', default=False,
+                        help='Run the test_package checks only if the package is built from source'
+                             ' but not if it already existed (using --build=missing)')
     parser.add_argument("-bt", "--build-test", action="append",
                         help="Same as '--build' but only for the test_package requires. By default"
                              " if not specified it will take the '--build' value if specified")
     args = parser.parse_args(*args)
 
+    if args.test_missing and args.test_folder == "":
+        raise ConanException('--test-folder="" is incompatible with --test-missing')
+
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
-    test_conanfile_path = _get_test_conanfile_path(args.test_folder, path)
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                conanfile_path=path,
@@ -90,6 +96,14 @@ def create(conan_api, parser, *args):
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
+
+    test_package_folder = getattr(conanfile, "test_package_folder", None) \
+        if args.test_folder is None else args.test_folder
+    test_conanfile_path = _get_test_conanfile_path(test_package_folder, path)
+    # If the user provide --test-missing and the binary was not built from source, skip test_package
+    if args.test_missing and deps_graph.root.dependencies\
+            and deps_graph.root.dependencies[0].dst.binary != BINARY_BUILD:
+        test_conanfile_path = None  # disable it
 
     if test_conanfile_path:
         # TODO: We need arguments for:
