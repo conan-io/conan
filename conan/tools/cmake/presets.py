@@ -44,7 +44,7 @@ class _CMakePresets:
 
         if "BUILD_TESTING" not in cache_variables:
             if conanfile.conf.get("tools.build:skip_test", check_type=bool):
-                cache_variables["BUILD_TESTING"] = "OFF"
+                cache_variables["BUILD_TESTING"] = {"value": "OFF", "type": "BOOL"}
 
         preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
         multiconfig = is_multi_configuration(generator)
@@ -116,7 +116,7 @@ class _CMakePresets:
         if preset_prefix:
             name = f"{preset_prefix}-{name}"
         if not multiconfig and build_type:
-            cache_variables["CMAKE_BUILD_TYPE"] = build_type
+            cache_variables["CMAKE_BUILD_TYPE"] = {"value": build_type, "type": "STRING"}
         ret = {
             "name": name,
             "displayName": "'{}' config".format(name),
@@ -158,12 +158,22 @@ class _CMakePresets:
             ret["binaryDir"] = conanfile.build_folder
 
         def _format_val(val):
-            return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+            return f'"{val}"' if isinstance(val, str) and " " in val else f"{val}"
+
+        def _format_var(var, value_or_dict):
+            type_str = ""
+            if isinstance(value_or_dict, dict):
+                value = value_or_dict["value"]
+                type_str = f":{value_or_dict['type']}"
+            else:
+                value = value_or_dict
+
+            return f"-D{var}{type_str}={_format_val(value)}"
 
         # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
         cache_variables_info = " ".join(
-            [f"-D{var}={_format_val(value)}" for var, value in cache_variables.items()])
-        add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file} " \
+            [_format_var(var, value) for var, value in cache_variables.items()])
+        add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE:FILEPATH={toolchain_file} " \
             if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
 
         try:

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import textwrap
 from collections import OrderedDict
 
@@ -240,14 +241,21 @@ class CMakeToolchain(object):
         cache_variables = {}
         for name, value in self.cache_variables.items():
             if isinstance(value, bool):
-                cache_variables[name] = "ON" if value else "OFF"
+                cache_variables[name] = {"value": "ON" if value else "OFF", "type": "BOOL"}
+            elif isinstance(value, Path):
+                cache_variables[name] = {
+                    "value": str(value),
+                    "type": "FILEPATH" if value.is_file() else 'PATH'
+                }
+            elif isinstance(value, str):
+                cache_variables[name] = {"value": value, "type": "STRING"}
             elif isinstance(value, _PackageOption):
                 if str(value).lower() in ["true", "false", "none"]:
-                    cache_variables[name] = "ON" if bool(value) else "OFF"
+                    cache_variables[name] = {"value": "ON" if bool(value) else "OFF", "type": "BOOL"}
                 elif str(value).isdigit():
                     cache_variables[name] = int(value)
                 else:
-                    cache_variables[name] = str(value)
+                    cache_variables[name] = {"value": str(value), "type": "STRING"}
             else:
                 cache_variables[name] = value
 
