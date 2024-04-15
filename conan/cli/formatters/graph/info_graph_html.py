@@ -47,7 +47,7 @@ graph_info_html = r"""
                     <input type="search" placeholder="Search packages..." oninput="searchPackages(this)">
                 </div>
                  <div>
-                    <input type="search" placeholder="Filter packages..." oninput="filterPackages(this)">
+                    <input type="search" placeholder="Filter packages..." title="Add a comma to filter an additional package" oninput="filterPackages(this)">
                 </div>
                 <div>
                     <input type="checkbox" onchange="showhideclass('controls')" id="show_controls"/>
