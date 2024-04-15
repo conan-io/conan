@@ -544,9 +544,6 @@ class EnvVars:
         filepath, filename = os.path.split(file_location)
         function_name = f"deactivate_{Path(filename).stem}"
         group = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-        # TODO: Use local variables to store previous values when running the activate script instead
-        # https://fishshell.com/docs/current/language.html#variable-scope
-        # set -l varname $varname
         script_content = Template(textwrap.dedent("""
             function {{ function_name }}
                 echo "echo Restoring environment"
@@ -561,6 +558,10 @@ class EnvVars:
                 {% endfor %}
             end
             {% for item, value in vars_define.items() %}
+            {% if item == "PATH" %}
+            set -g conan_{{ group }}_{{ item }} "${{ item }}"
+            fish_add_path -pg "{{ value }}"
+            {% else %}
             if not set -q {{ item }}
                 set -ga conan_{{ group }}_del {{ item }}
                 set -gx {{ item }} "{{ value }}"
@@ -568,6 +569,7 @@ class EnvVars:
                 set -g conan_{{ group }}_{{ item }} "${{ item }}"
                 set -pgx {{ item }} "{{ value }}"
             end
+            {% endif %}
             {% endfor %}
             """))
         values = self._values.keys()

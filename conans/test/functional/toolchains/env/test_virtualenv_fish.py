@@ -10,7 +10,12 @@ from conans.util.files import save
 
 
 @pytest.mark.tool("fish")
-def test_virtualenv_fish():
+def test_define_new_vars():
+    """Test when defining new path and new variable in buildenv_info.
+
+    Variables should be available as environment variables in the buildenv script.
+    And, should be deleted when deactivate_conanbuildenv is called.
+    """
     cache_folder = os.path.join(temp_folder(), "[sub] folder")
     client = TestClient(cache_folder)
     conanfile = str(GenConanfile("pkg", "0.1"))
@@ -18,6 +23,8 @@ def test_virtualenv_fish():
 
     def package_info(self):
         self.buildenv_info.define_path("MYPATH1", "/path/to/ar")
+        self.buildenv_info.define("MYVAR1", "myvalue")
+        self.buildenv_info.prepend_path("PATH", "/path/to/fake/folder")
     """
     client.save({"conanfile.py": conanfile})
     client.run("create .")
@@ -36,12 +43,58 @@ def test_virtualenv_fish():
     with open(os.path.join(client.current_folder, "conanbuildenv.fish"), "r") as f:
         buildenv = f.read()
         assert 'set -gx MYPATH1 "/path/to/ar"' in buildenv
+        assert 'set -gx MYVAR1 "myvalue"' in buildenv
 
     client.run_command("fish -c 'source conanbuildenv.fish && set'")
     assert 'MYPATH1 /path/to/ar' in client.out
+    assert 'MYVAR1 myvalue' in client.out
 
     client.run_command("fish -c 'source conanbuildenv.fish && set && deactivate_conanbuildenv && set'")
     assert str(client.out).count('MYPATH1 /path/to/ar') == 1
+    assert str(client.out).count('MYVAR1 myvalue') == 1
+
+
+@pytest.mark.tool("fish")
+def test_append_path():
+    """Test when appending to an existing path in buildenv_info.
+
+    Path should be available as environment variable in the buildenv script, including the new value
+    as first element.
+    Once deactivate_conanbuildenv is called, the path should be restored as before.
+    """
+    fake_path = "/path/to/fake/folder"
+    cache_folder = os.path.join(temp_folder(), "[sub] folder")
+    client = TestClient(cache_folder)
+    conanfile = str(GenConanfile("pkg", "0.1"))
+    conanfile += f"""
+
+    def package_info(self):
+        self.buildenv_info.prepend_path("PATH", "{fake_path}")
+    """
+    client.save({"conanfile.py": conanfile})
+    current_path = os.environ["PATH"]
+    client.run("create .")
+    save(client.cache.new_config_path, "tools.env.virtualenv:fish=True\n")
+    client.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1")})
+    client.run("install . -s:a os=Linux")
+
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+
+    assert os.path.exists(os.path.join(client.current_folder, "conanbuildenv.fish"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.fish"))
+
+    with open(os.path.join(client.current_folder, "conanbuildenv.fish"), "r") as f:
+        buildenv = f.read()
+        assert f'set -pgx PATH "{fake_path}"' in buildenv
+
+    client.run_command("fish -c 'source conanbuildenv.fish and set'")
+    assert f'PATH {fake_path}' in client.out
+
+    client.run_command("deactivate_conanbuildenv && set'")
+    assert str(client.out).count(f'MYPATH1 {fake_path}') == 1
 
 
 @pytest.mark.tool("fish")
