@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import platform
 import textwrap
 
@@ -663,6 +664,7 @@ def test_cmake_presets_singleconfig():
 def test_toolchain_cache_variables():
     client = TestClient()
     conanfile = textwrap.dedent("""
+        from pathlib import Path
         from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain
 
@@ -681,6 +683,8 @@ def test_toolchain_cache_variables():
                 toolchain.cache_variables["NUMBER"] = self.options.number
                 toolchain.cache_variables["CMAKE_SH"] = "THIS VALUE HAS PRIORITY"
                 toolchain.cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] = "THIS VALUE HAS PRIORITY"
+                toolchain.cache_variables["MY_FILE_PATH"] = Path(__file__).resolve()
+                toolchain.cache_variables["MY_DIR_PATH"] = Path(__file__).resolve().parent
                 toolchain.cache_variables["CMAKE_MAKE_PROGRAM"] = "THIS VALUE HAS NO PRIORITY"
                 toolchain.generate()
         """)
@@ -692,23 +696,34 @@ def test_toolchain_cache_variables():
 
     presets = json.loads(client.load("CMakePresets.json"))
     cache_variables = presets["configurePresets"][0]["cacheVariables"]
-    assert cache_variables["foo"] == 'ON'
-    assert cache_variables["foo2"] == 'OFF'
-    assert cache_variables["var"] == '23'
-    assert cache_variables["CMAKE_SH"] == "THIS VALUE HAS PRIORITY"
-    assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == "THIS VALUE HAS PRIORITY"
+    assert cache_variables["foo"] == {'value': 'ON', 'type': 'BOOL'}
+    assert cache_variables["foo2"] == {'value': 'OFF', 'type': 'BOOL'}
+    assert cache_variables["var"] == {'value': '23', 'type': 'STRING'}
+    assert cache_variables["CMAKE_SH"] == {'value': "THIS VALUE HAS PRIORITY", 'type': 'STRING'}
+    assert cache_variables["CMAKE_POLICY_DEFAULT_CMP0091"] == {"value": "THIS VALUE HAS PRIORITY", 'type': 'STRING'}
     assert cache_variables["CMAKE_MAKE_PROGRAM"] == "MyMake"
-    assert cache_variables["BUILD_TESTING"] == 'OFF'
-    assert cache_variables["ENABLE_FOOBAR"] == 'ON'
-    assert cache_variables["QUX"] == 'baz'
+    assert cache_variables["BUILD_TESTING"] == {'value': 'OFF', 'type': 'BOOL'}
+    assert cache_variables["ENABLE_FOOBAR"] == {'value': 'ON', 'type': 'BOOL'}
+    assert cache_variables["QUX"] == {'value': 'baz', 'type': 'STRING'}
     assert cache_variables["NUMBER"] == 1
+    assert cache_variables["MY_FILE_PATH"] == {'value': str(Path(client.current_folder).resolve() / 'conanfile.py'), 'type': 'FILEPATH'}
+    assert cache_variables["MY_DIR_PATH"] == {'value': str(Path(client.current_folder).resolve()), 'type': 'PATH'}
 
     def _format_val(val):
-        return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+        return f'"{val}"' if isinstance(val, str) and " " in val else f"{val}"
+
+    def _format_var(var, value_or_dict):
+        type_str = ""
+        if isinstance(value_or_dict, dict):
+            value = value_or_dict["value"]
+            type_str = f":{value_or_dict['type']}"
+        else:
+            value = value_or_dict
+        return f"-D{var}{type_str}={_format_val(value)}"
 
     for var, value in cache_variables.items():
-        assert f"-D{var}={_format_val(value)}" in client.out
-    assert "-DCMAKE_TOOLCHAIN_FILE=" in client.out
+        assert _format_var(var, value) in client.out
+    assert "-DCMAKE_TOOLCHAIN_FILE:FILEPATH=" in client.out
     assert f"-G {_format_val('MinGW Makefiles')}" in client.out
 
     client.run("install . --name=mylib --version=1.0 -c tools.gnu:make_program='MyMake'")
